@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useState } from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 
@@ -7,12 +7,16 @@ interface DashboardLayoutProps {
 }
 
 export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <div className="min-h-screen bg-background">
-      <DashboardSidebar />
-      <div className="pl-64 transition-all duration-300">
-        <DashboardHeader />
-        <main className="min-h-[calc(100vh-4rem)] p-6">
+      <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      
+      {/* Main content area */}
+      <div className="lg:pl-64">
+        <DashboardHeader onMenuClick={() => setSidebarOpen(true)} />
+        <main className="min-h-[calc(100vh-3.5rem)] p-4 lg:min-h-[calc(100vh-4rem)] lg:p-6">
           {children}
         </main>
       </div>

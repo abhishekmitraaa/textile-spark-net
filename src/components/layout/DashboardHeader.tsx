@@ -1,27 +1,48 @@
-import { Bell, Search, Plus } from "lucide-react";
+import { Bell, Search, Plus, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 
-export const DashboardHeader = () => {
+interface DashboardHeaderProps {
+  onMenuClick: () => void;
+}
+
+export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-4">
-        <div className="relative">
+    <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 lg:h-16 lg:px-6">
+      <div className="flex items-center gap-3">
+        {/* Mobile menu button */}
+        <button
+          onClick={onMenuClick}
+          className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
+        >
+          <Menu size={22} />
+        </button>
+
+        {/* Search - hidden on mobile, shown on tablet+ */}
+        <div className="relative hidden sm:block">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search products, ads..."
-            className="w-64 pl-10"
+            className="w-48 pl-10 md:w-64"
           />
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
+        {/* Mobile search button */}
+        <button className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:hidden">
+          <Search size={20} />
+        </button>
+
         <Link to="/upload">
-          <Button variant="gold" size="sm">
+          <Button variant="gold" size="sm" className="hidden sm:inline-flex">
             <Plus className="mr-2 h-4 w-4" />
             New Product
+          </Button>
+          <Button variant="gold" size="icon" className="h-9 w-9 sm:hidden">
+            <Plus className="h-4 w-4" />
           </Button>
         </Link>
 
