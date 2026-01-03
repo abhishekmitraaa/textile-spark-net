@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Package,
@@ -9,10 +8,10 @@ import {
   Settings,
   HelpCircle,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
@@ -26,123 +25,122 @@ const secondaryNav = [
   { name: "Help & Support", href: "/help", icon: HelpCircle },
 ];
 
-export const DashboardSidebar = () => {
-  const [collapsed, setCollapsed] = useState(false);
+interface DashboardSidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const location = useLocation();
+  const isMobile = useIsMobile();
+
+  // On desktop, sidebar is always visible
+  const shouldShow = !isMobile || isOpen;
 
   return (
-    <motion.aside
-      initial={{ x: -20, opacity: 0 }}
-      animate={{ x: 0, opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col bg-sidebar transition-all duration-300",
-        collapsed ? "w-20" : "w-64"
-      )}
-    >
-      {/* Logo */}
-      <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
-        {!collapsed && (
+    <>
+      {/* Mobile overlay */}
+      <AnimatePresence>
+        {isMobile && isOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="flex items-center gap-2"
-          >
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-foreground/50 backdrop-blur-sm"
+            onClick={onClose}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
+          isMobile
+            ? isOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+            : "translate-x-0"
+        )}
+      >
+        {/* Logo */}
+        <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4 lg:h-16">
+          <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
               <span className="font-display text-lg font-bold text-accent-foreground">F</span>
             </div>
-            <span className="font-display text-lg font-semibold text-sidebar-foreground">
+            <span className="font-display text-base font-semibold text-sidebar-foreground lg:text-lg">
               FashionConnect
             </span>
-          </motion.div>
-        )}
-        {collapsed && (
-          <div className="mx-auto flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-            <span className="font-display text-lg font-bold text-accent-foreground">F</span>
           </div>
-        )}
-      </div>
-
-      {/* Toggle button */}
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-20 flex h-6 w-6 items-center justify-center rounded-full border border-sidebar-border bg-sidebar text-sidebar-foreground shadow-md transition-colors hover:bg-sidebar-accent"
-      >
-        {collapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
-      </button>
-
-      {/* Main navigation */}
-      <nav className="flex-1 space-y-1 p-4">
-        <p className={cn(
-          "mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50",
-          collapsed && "sr-only"
-        )}>
-          Main Menu
-        </p>
-        {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-accent text-accent-foreground shadow-gold"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
             >
-              <item.icon size={20} className={cn(
-                "shrink-0 transition-transform duration-200 group-hover:scale-110",
-                collapsed && "mx-auto"
-              )} />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
-          );
-        })}
-      </nav>
+              <X size={20} />
+            </button>
+          )}
+        </div>
 
-      {/* Secondary navigation */}
-      <div className="border-t border-sidebar-border p-4">
-        <p className={cn(
-          "mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50",
-          collapsed && "sr-only"
-        )}>
-          Support
-        </p>
-        {secondaryNav.map((item) => {
-          const isActive = location.pathname === item.href;
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={cn(
-                "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                isActive
-                  ? "bg-sidebar-accent text-sidebar-foreground"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )}
-            >
-              <item.icon size={20} className={cn(
-                "shrink-0",
-                collapsed && "mx-auto"
-              )} />
-              {!collapsed && <span>{item.name}</span>}
-            </Link>
-          );
-        })}
-      </div>
+        {/* Main navigation */}
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3 lg:p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+            Main Menu
+          </p>
+          {navigation.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={isMobile ? onClose : undefined}
+                className={cn(
+                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 lg:py-2.5",
+                  isActive
+                    ? "bg-accent text-accent-foreground shadow-gold"
+                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                <item.icon size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
 
-      {/* User section */}
-      <div className="border-t border-sidebar-border p-4">
-        <div className={cn(
-          "flex items-center gap-3",
-          collapsed && "justify-center"
-        )}>
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-sidebar-accent">
-            <span className="text-sm font-medium text-sidebar-foreground">TM</span>
-          </div>
-          {!collapsed && (
+        {/* Secondary navigation */}
+        <div className="border-t border-sidebar-border p-3 lg:p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+            Support
+          </p>
+          {secondaryNav.map((item) => {
+            const isActive = location.pathname === item.href;
+            return (
+              <Link
+                key={item.name}
+                to={item.href}
+                onClick={isMobile ? onClose : undefined}
+                className={cn(
+                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                  isActive
+                    ? "bg-sidebar-accent text-sidebar-foreground"
+                    : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )}
+              >
+                <item.icon size={20} className="shrink-0" />
+                <span>{item.name}</span>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* User section */}
+        <div className="border-t border-sidebar-border p-3 lg:p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent lg:h-10 lg:w-10">
+              <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">TM</span>
+            </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-sidebar-foreground">
                 Textile Manufacturer
@@ -151,14 +149,12 @@ export const DashboardSidebar = () => {
                 Premium Member
               </p>
             </div>
-          )}
-          {!collapsed && (
             <button className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
               <LogOut size={18} />
             </button>
-          )}
+          </div>
         </div>
-      </div>
-    </motion.aside>
+      </aside>
+    </>
   );
 };

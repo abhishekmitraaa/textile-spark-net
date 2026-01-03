@@ -119,30 +119,30 @@ const Advertisements = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between lg:mb-8"
       >
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Advertisements
           </h1>
-          <p className="mt-1 text-muted-foreground">
-            Create and manage your promotional campaigns
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your promotional campaigns
           </p>
         </div>
         <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
-            <Button variant="gold">
+            <Button variant="gold" size="sm" className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Create Ad
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-2xl">
             <DialogHeader>
-              <DialogTitle className="font-display text-xl">
+              <DialogTitle className="font-display text-lg sm:text-xl">
                 Create New Advertisement
               </DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateAd} className="mt-4 space-y-6">
+            <form onSubmit={handleCreateAd} className="mt-4 space-y-4 sm:space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="ad-title">Campaign Title</Label>
                 <Input
@@ -150,7 +150,7 @@ const Advertisements = () => {
                   placeholder="e.g., Summer Collection Launch"
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="ad-type">Ad Type</Label>
                   <Select>
@@ -174,7 +174,7 @@ const Advertisements = () => {
                   </div>
                 </div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="start-date">Start Date</Label>
                   <Input id="start-date" type="date" />
@@ -196,26 +196,25 @@ const Advertisements = () => {
                 <Label>Target Products</Label>
                 <Select>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select products to promote" />
+                    <SelectValue placeholder="Select products" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Products</SelectItem>
                     <SelectItem value="silk">Italian Silk Collection</SelectItem>
                     <SelectItem value="cotton">Premium Cotton Blend</SelectItem>
-                    <SelectItem value="linen">Sustainable Linen</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex gap-3 pt-4">
+              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1"
+                  className="order-2 flex-1 sm:order-1"
                   onClick={() => setIsCreateOpen(false)}
                 >
                   Cancel
                 </Button>
-                <Button type="submit" variant="gold" className="flex-1">
+                <Button type="submit" variant="gold" className="order-1 flex-1 sm:order-2">
                   Create Campaign
                 </Button>
               </div>
@@ -229,25 +228,25 @@ const Advertisements = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="mb-8 grid gap-4 sm:grid-cols-4"
+        className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-3 lg:mb-8 lg:grid-cols-4 lg:gap-4"
       >
         {[
-          { label: "Total Impressions", value: "26.9K", icon: Eye },
-          { label: "Total Clicks", value: "664", icon: MousePointer },
+          { label: "Impressions", value: "26.9K", icon: Eye },
+          { label: "Clicks", value: "664", icon: MousePointer },
           { label: "Avg. CTR", value: "2.47%", icon: TrendingUp },
-          { label: "Total Spent", value: "$571", icon: Calendar },
-        ].map((stat, index) => (
+          { label: "Spent", value: "$571", icon: Calendar },
+        ].map((stat) => (
           <div
             key={stat.label}
-            className="rounded-xl border border-border bg-card p-4"
+            className="rounded-xl border border-border bg-card p-3 sm:p-4"
           >
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-secondary p-2">
-                <stat.icon className="h-5 w-5 text-accent" />
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="rounded-lg bg-secondary p-1.5 sm:p-2">
+                <stat.icon className="h-4 w-4 text-accent sm:h-5 sm:w-5" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-                <p className="font-display text-xl font-semibold text-card-foreground">
+                <p className="text-xs text-muted-foreground">{stat.label}</p>
+                <p className="font-display text-base font-semibold text-card-foreground sm:text-lg lg:text-xl">
                   {stat.value}
                 </p>
               </div>
@@ -261,7 +260,7 @@ const Advertisements = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="space-y-4"
+        className="space-y-3 sm:space-y-4"
       >
         {advertisements.map((ad, index) => (
           <motion.div
@@ -271,66 +270,65 @@ const Advertisements = () => {
             transition={{ delay: 0.3 + index * 0.1 }}
             className="group overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-elegant"
           >
-            <div className="flex flex-col lg:flex-row">
+            <div className="flex flex-col sm:flex-row">
               {/* Image */}
-              <div className="relative h-48 overflow-hidden lg:h-auto lg:w-64">
+              <div className="relative h-32 overflow-hidden sm:h-auto sm:w-48 lg:w-64">
                 <img
                   src={ad.image}
                   alt={ad.title}
                   className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-gradient-to-r from-foreground/10 to-transparent" />
               </div>
 
               {/* Content */}
-              <div className="flex flex-1 flex-col p-6">
-                <div className="mb-4 flex items-start justify-between">
+              <div className="flex flex-1 flex-col p-3 sm:p-4 lg:p-6">
+                <div className="mb-3 flex items-start justify-between gap-2 sm:mb-4">
                   <div>
-                    <div className="mb-2 flex items-center gap-2">
+                    <div className="mb-1.5 flex flex-wrap items-center gap-1.5 sm:mb-2 sm:gap-2">
                       <span
                         className={cn(
-                          "rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+                          "rounded-full px-2 py-0.5 text-[10px] font-medium capitalize sm:text-xs",
                           statusStyles[ad.status]
                         )}
                       >
                         {ad.status}
                       </span>
-                      <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium capitalize text-secondary-foreground">
+                      <span className="rounded-full bg-secondary px-2 py-0.5 text-[10px] font-medium capitalize text-secondary-foreground sm:text-xs">
                         {ad.type}
                       </span>
                     </div>
-                    <h3 className="font-display text-lg font-semibold text-card-foreground">
+                    <h3 className="font-display text-sm font-semibold text-card-foreground sm:text-base lg:text-lg">
                       {ad.title}
                     </h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-xs text-muted-foreground sm:text-sm">
                       {ad.startDate} - {ad.endDate}
                     </p>
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 sm:gap-2">
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-7 w-7 sm:h-8 sm:w-8"
                     >
                       {ad.status === "active" ? (
-                        <Pause className="h-4 w-4" />
+                        <Pause className="h-3 w-3 sm:h-4 sm:w-4" />
                       ) : (
-                        <Play className="h-4 w-4" />
+                        <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                       )}
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVertical className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-7 w-7 sm:h-8 sm:w-8">
+                          <MoreVertical className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" /> Edit Campaign
+                          <Edit className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <Eye className="mr-2 h-4 w-4" /> View Analytics
+                          <Eye className="mr-2 h-4 w-4" /> Analytics
                         </DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive">
                           <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -341,28 +339,28 @@ const Advertisements = () => {
                 </div>
 
                 {/* Stats */}
-                <div className="mt-auto grid grid-cols-2 gap-4 border-t border-border pt-4 sm:grid-cols-4">
+                <div className="mt-auto grid grid-cols-2 gap-2 border-t border-border pt-3 sm:grid-cols-4 sm:gap-4 sm:pt-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">Impressions</p>
-                    <p className="font-medium text-card-foreground">
+                    <p className="text-[10px] text-muted-foreground sm:text-xs">Impressions</p>
+                    <p className="text-xs font-medium text-card-foreground sm:text-sm">
                       {ad.impressions.toLocaleString()}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Clicks</p>
-                    <p className="font-medium text-card-foreground">{ad.clicks}</p>
+                    <p className="text-[10px] text-muted-foreground sm:text-xs">Clicks</p>
+                    <p className="text-xs font-medium text-card-foreground sm:text-sm">{ad.clicks}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">CTR</p>
-                    <p className="font-medium text-card-foreground">
+                    <p className="text-[10px] text-muted-foreground sm:text-xs">CTR</p>
+                    <p className="text-xs font-medium text-card-foreground sm:text-sm">
                       {((ad.clicks / ad.impressions) * 100).toFixed(2)}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-[10px] text-muted-foreground sm:text-xs">
                       Budget (${ad.spent}/${ad.budget})
                     </p>
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-secondary">
+                    <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-secondary sm:h-2">
                       <div
                         className="h-full rounded-full bg-accent transition-all"
                         style={{ width: `${(ad.spent / ad.budget) * 100}%` }}

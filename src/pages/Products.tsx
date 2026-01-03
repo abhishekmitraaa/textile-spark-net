@@ -76,26 +76,6 @@ const allProducts = [
     views: 456,
     inquiries: 22,
   },
-  {
-    id: "7",
-    name: "Denim Classic Blue",
-    category: "Casual Wear",
-    price: "$18.99/yard",
-    image: "https://images.unsplash.com/photo-1565084888279-aca607ecce0c?w=400&h=500&fit=crop",
-    status: "active" as const,
-    views: 789,
-    inquiries: 45,
-  },
-  {
-    id: "8",
-    name: "Cashmere Blend Premium",
-    category: "Luxury",
-    price: "$129.99/yard",
-    image: "https://images.unsplash.com/photo-1617038220319-276d3cfab638?w=400&h=500&fit=crop",
-    status: "pending" as const,
-    views: 123,
-    inquiries: 6,
-  },
 ];
 
 const Products = () => {
@@ -107,18 +87,18 @@ const Products = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between lg:mb-8"
       >
         <div>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
             Products
           </h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage your product catalog and listings
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage your product catalog
           </p>
         </div>
         <Link to="/upload">
-          <Button variant="gold">
+          <Button variant="gold" size="sm" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
             Add Product
           </Button>
@@ -130,27 +110,34 @@ const Products = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.1 }}
-        className="mb-6 flex flex-col gap-4 rounded-xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between"
+        className="mb-4 space-y-3 rounded-xl border border-border bg-card p-3 sm:mb-6 sm:p-4"
       >
-        <div className="flex flex-1 gap-3">
-          <div className="relative flex-1 sm:max-w-xs">
+        {/* Search row */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input placeholder="Search products..." className="pl-10" />
           </div>
+          <Button variant="outline" size="icon" className="shrink-0">
+            <Filter className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Filter row */}
+        <div className="flex items-center gap-2">
           <Select defaultValue="all">
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="flex-1 sm:w-[140px] sm:flex-none">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Categories</SelectItem>
               <SelectItem value="textiles">Textiles</SelectItem>
-              <SelectItem value="premium">Premium Fabrics</SelectItem>
+              <SelectItem value="premium">Premium</SelectItem>
               <SelectItem value="eco">Eco-Friendly</SelectItem>
-              <SelectItem value="luxury">Luxury</SelectItem>
             </SelectContent>
           </Select>
           <Select defaultValue="all">
-            <SelectTrigger className="w-[120px]">
+            <SelectTrigger className="flex-1 sm:w-[120px] sm:flex-none">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -160,39 +147,37 @@ const Products = () => {
               <SelectItem value="draft">Draft</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
 
-        <div className="flex gap-1 rounded-lg border border-border p-1">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={cn(
-              "rounded-md p-2 transition-colors",
-              viewMode === "grid"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={cn(
-              "rounded-md p-2 transition-colors",
-              viewMode === "list"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <List className="h-4 w-4" />
-          </button>
+          {/* View toggle - hidden on mobile */}
+          <div className="ml-auto hidden gap-1 rounded-lg border border-border p-1 sm:flex">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={cn(
+                "rounded-md p-2 transition-colors",
+                viewMode === "grid"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <Grid3X3 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "rounded-md p-2 transition-colors",
+                viewMode === "list"
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </motion.div>
 
       {/* Products grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
         {allProducts.map((product, index) => (
           <ProductCard key={product.id} {...product} delay={0.2 + index * 0.05} />
         ))}
@@ -203,10 +188,10 @@ const Products = () => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.6 }}
-        className="mt-8 flex items-center justify-between"
+        className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row"
       >
-        <p className="text-sm text-muted-foreground">
-          Showing 1-8 of 48 products
+        <p className="text-xs text-muted-foreground sm:text-sm">
+          Showing 1-6 of 48 products
         </p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled>

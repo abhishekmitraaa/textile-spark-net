@@ -36,7 +36,6 @@ const Upload = () => {
     e.stopPropagation();
     setDragActive(false);
 
-    // Simulate image upload with placeholder
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const newImages = Array.from(e.dataTransfer.files).map(
         () => `https://images.unsplash.com/photo-${Math.random().toString(36).slice(2)}?w=400&h=400&fit=crop`
@@ -74,38 +73,38 @@ const Upload = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-4 lg:mb-8"
       >
         <Link
           to="/products"
-          className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-3 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground lg:mb-4"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to Products
         </Link>
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
           Upload Product
         </h1>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-sm text-muted-foreground">
           Add a new product to your catalog
         </p>
       </motion.div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
           {/* Main content */}
           <motion.div
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.1 }}
-            className="space-y-6 lg:col-span-2"
+            className="space-y-4 lg:col-span-2 lg:space-y-6"
           >
             {/* Basic info */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
                 Basic Information
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3 lg:space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Product Name</Label>
                   <Input
@@ -113,7 +112,7 @@ const Upload = () => {
                     placeholder="e.g., Premium Cotton Blend Fabric"
                   />
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="category">Category</Label>
                     <Select>
@@ -125,7 +124,6 @@ const Upload = () => {
                         <SelectItem value="premium">Premium Fabrics</SelectItem>
                         <SelectItem value="eco">Eco-Friendly</SelectItem>
                         <SelectItem value="luxury">Luxury</SelectItem>
-                        <SelectItem value="casual">Casual Wear</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -138,21 +136,21 @@ const Upload = () => {
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your product, its features, and benefits..."
-                    className="min-h-[120px]"
+                    placeholder="Describe your product..."
+                    className="min-h-[100px]"
                   />
                 </div>
               </div>
             </div>
 
             {/* Images */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
                 Product Images
               </h2>
               <div
                 className={cn(
-                  "relative rounded-lg border-2 border-dashed p-8 text-center transition-all",
+                  "relative rounded-lg border-2 border-dashed p-6 text-center transition-all lg:p-8",
                   dragActive
                     ? "border-accent bg-accent/5"
                     : "border-border hover:border-accent/50"
@@ -162,14 +160,14 @@ const Upload = () => {
                 onDragOver={handleDrag}
                 onDrop={handleDrop}
               >
-                <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
-                  <UploadIcon className="h-6 w-6 text-muted-foreground" />
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-secondary lg:mb-4 lg:h-12 lg:w-12">
+                  <UploadIcon className="h-5 w-5 text-muted-foreground lg:h-6 lg:w-6" />
                 </div>
-                <p className="mb-2 text-sm font-medium text-foreground">
-                  Drag and drop your images here
+                <p className="mb-1 text-sm font-medium text-foreground lg:mb-2">
+                  Drag and drop images here
                 </p>
-                <p className="mb-4 text-xs text-muted-foreground">
-                  PNG, JPG, or WEBP up to 10MB (max 6 images)
+                <p className="mb-3 text-xs text-muted-foreground lg:mb-4">
+                  PNG, JPG up to 10MB (max 6)
                 </p>
                 <Button
                   type="button"
@@ -178,12 +176,12 @@ const Upload = () => {
                   onClick={addPlaceholderImage}
                 >
                   <Image className="mr-2 h-4 w-4" />
-                  Browse Files
+                  Browse
                 </Button>
               </div>
 
               {images.length > 0 && (
-                <div className="mt-4 grid grid-cols-3 gap-4 sm:grid-cols-6">
+                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:mt-4 lg:gap-4">
                   {images.map((src, index) => (
                     <motion.div
                       key={index}
@@ -197,14 +195,14 @@ const Upload = () => {
                         className="h-full w-full object-cover"
                       />
                       {index === 0 && (
-                        <span className="absolute bottom-1 left-1 rounded bg-accent px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">
+                        <span className="absolute bottom-1 left-1 rounded bg-accent px-1 py-0.5 text-[8px] font-medium text-accent-foreground lg:px-1.5 lg:text-[10px]">
                           Main
                         </span>
                       )}
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
-                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground opacity-0 transition-opacity group-hover:opacity-100"
+                        className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -215,17 +213,17 @@ const Upload = () => {
             </div>
 
             {/* Specifications */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
                 Specifications
               </h2>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="material">Material Composition</Label>
-                  <Input id="material" placeholder="e.g., 80% Cotton, 20% Polyester" />
+                  <Label htmlFor="material">Material</Label>
+                  <Input id="material" placeholder="e.g., 80% Cotton" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="weight">Fabric Weight</Label>
+                  <Label htmlFor="weight">Weight</Label>
                   <Input id="weight" placeholder="e.g., 200 GSM" />
                 </div>
                 <div className="space-y-2">
@@ -233,7 +231,7 @@ const Upload = () => {
                   <Input id="width" placeholder="e.g., 58 inches" />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="moq">Minimum Order Quantity</Label>
+                  <Label htmlFor="moq">Min. Order Qty</Label>
                   <Input id="moq" placeholder="e.g., 100 yards" />
                 </div>
               </div>
@@ -245,14 +243,14 @@ const Upload = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="space-y-6"
+            className="space-y-4 lg:space-y-6"
           >
             {/* Pricing */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
                 Pricing
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3 lg:space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="price">Price per Unit</Label>
                   <div className="relative">
@@ -280,8 +278,8 @@ const Upload = () => {
             </div>
 
             {/* Status */}
-            <div className="rounded-xl border border-border bg-card p-6">
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
                 Status
               </h2>
               <Select defaultValue="draft">
@@ -294,12 +292,12 @@ const Upload = () => {
                 </SelectContent>
               </Select>
               <p className="mt-2 text-xs text-muted-foreground">
-                Draft products won't be visible to buyers until approved.
+                Drafts won't be visible until approved.
               </p>
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2 sm:gap-3">
               <Button type="submit" variant="gold" size="lg" className="w-full">
                 <Check className="mr-2 h-4 w-4" />
                 Publish Product

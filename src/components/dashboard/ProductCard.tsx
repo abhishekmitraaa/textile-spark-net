@@ -52,8 +52,8 @@ export const ProductCard = ({
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
         
-        {/* Quick actions overlay */}
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-2 p-4 opacity-0 transition-all duration-300 group-hover:opacity-100">
+        {/* Quick actions overlay - hidden on mobile */}
+        <div className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-2 p-4 opacity-0 transition-all duration-300 group-hover:opacity-100 sm:flex">
           <Button size="sm" variant="secondary" className="backdrop-blur">
             <Eye className="h-4 w-4" />
           </Button>
@@ -63,15 +63,15 @@ export const ProductCard = ({
         </div>
       </div>
 
-      <div className="p-4">
-        <div className="mb-2 flex items-start justify-between">
-          <div>
-            <h3 className="font-medium text-card-foreground line-clamp-1">{name}</h3>
+      <div className="p-3 sm:p-4">
+        <div className="mb-2 flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate font-medium text-card-foreground">{name}</h3>
             <p className="text-sm text-muted-foreground">{category}</p>
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+              <button className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
                 <MoreVertical size={16} />
               </button>
             </DropdownMenuTrigger>
@@ -90,21 +90,21 @@ export const ProductCard = ({
         </div>
 
         <div className="mb-3 flex items-center justify-between">
-          <span className="font-display text-lg font-semibold text-card-foreground">
+          <span className="font-display text-base font-semibold text-card-foreground sm:text-lg">
             {price}
           </span>
           <span className={cn(
-            "rounded-full px-2.5 py-0.5 text-xs font-medium capitalize",
+            "rounded-full px-2 py-0.5 text-xs font-medium capitalize",
             statusStyles[status]
           )}>
             {status}
           </span>
         </div>
 
-        <div className="flex items-center gap-4 border-t border-border pt-3 text-sm text-muted-foreground">
-          <span className="flex items-center gap-1.5">
+        <div className="flex items-center gap-3 border-t border-border pt-3 text-xs text-muted-foreground sm:gap-4 sm:text-sm">
+          <span className="flex items-center gap-1">
             <Eye size={14} />
-            {views} views
+            {views}
           </span>
           <span>{inquiries} inquiries</span>
         </div>
