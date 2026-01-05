@@ -10,6 +10,7 @@ import {
   LogOut,
   X,
   Users,
+  Crown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -20,6 +21,7 @@ const navigation = [
   { name: "Upload Product", href: "/upload", icon: Upload },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
+  { name: "Subscription", href: "/subscription", icon: Crown },
 ];
 
 const secondaryNav = [
