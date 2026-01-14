@@ -11,6 +11,7 @@ import {
   X,
   Users,
   Crown,
+  FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -19,6 +20,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Products", href: "/products", icon: Package },
   { name: "Upload Product", href: "/upload", icon: Upload },
+  { name: "Quotes", href: "/quotes", icon: FileText },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
   { name: "Subscription", href: "/subscription", icon: Crown },
