@@ -12,6 +12,7 @@ import {
   Users,
   Crown,
   FileText,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -27,6 +28,7 @@ const navigation = [
 ];
 
 const secondaryNav = [
+  { name: "My Profile", href: "/profile", icon: UserCircle },
   { name: "Settings", href: "/settings", icon: Settings },
   { name: "Help & Support", href: "/help", icon: HelpCircle },
 ];

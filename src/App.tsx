@@ -10,6 +10,7 @@ import Leads from "./pages/Leads";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
 import Quotes from "./pages/Quotes";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/advertisements" element={<Advertisements />} />
           <Route path="/subscription" element={<Subscription />} />
           <Route path="/quotes" element={<Quotes />} />
+          <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
