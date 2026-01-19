@@ -13,17 +13,36 @@ import {
   Crown,
   FileText,
   UserCircle,
+  ShoppingBag,
+  Factory,
+  ClipboardList,
+  TrendingUp,
+  Truck,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import { RoleSwitcher } from "./RoleSwitcher";
 
-const navigation = [
+// Buyer navigation (Clothing Brands)
+const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Products", href: "/products", icon: Package },
+  { name: "Browse Products", href: "/products", icon: ShoppingBag },
+  { name: "My Quotes", href: "/quotes", icon: FileText },
+  { name: "Orders", href: "/orders", icon: Truck },
+  { name: "Saved Vendors", href: "/saved-vendors", icon: Building2 },
+];
+
+// Seller navigation (Manufacturers)
+const sellerNavigation = [
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "My Products", href: "/products", icon: Package },
   { name: "Upload Product", href: "/upload", icon: Upload },
-  { name: "Quotes", href: "/quotes", icon: FileText },
+  { name: "Quote Requests", href: "/quotes", icon: ClipboardList },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
+  { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "Subscription", href: "/subscription", icon: Crown },
 ];
 
@@ -41,6 +60,10 @@ interface DashboardSidebarProps {
 export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const location = useLocation();
   const isMobile = useIsMobile();
+  const { role } = useUserRole();
+
+  // Select navigation based on role
+  const navigation = role === "buyer" ? buyerNavigation : sellerNavigation;
 
   // On desktop, sidebar is always visible
   const shouldShow = !isMobile || isOpen;
@@ -91,10 +114,18 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           )}
         </div>
 
+        {/* Role Switcher */}
+        <div className="border-b border-sidebar-border p-3 lg:p-4">
+          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
+            Switch Mode
+          </p>
+          <RoleSwitcher variant="mobile" />
+        </div>
+
         {/* Main navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3 lg:p-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-            Main Menu
+            {role === "buyer" ? "Buyer Menu" : "Seller Menu"}
           </p>
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
@@ -147,14 +178,16 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         <div className="border-t border-sidebar-border p-3 lg:p-4">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent lg:h-10 lg:w-10">
-              <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">TM</span>
+              <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">
+                {role === "buyer" ? "CB" : "TM"}
+              </span>
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-medium text-sidebar-foreground">
-                Textile Manufacturer
+                {role === "buyer" ? "Fashion Brand" : "Textile Manufacturer"}
               </p>
               <p className="truncate text-xs text-sidebar-foreground/60">
-                Premium Member
+                {role === "buyer" ? "Verified Buyer" : "Premium Seller"}
               </p>
             </div>
             <button className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
