@@ -1,6 +1,7 @@
 import { ReactNode, useState } from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
+import { MobileBottomNav } from "./MobileBottomNav";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -16,10 +17,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Main content area */}
       <div className="lg:pl-64">
         <DashboardHeader onMenuClick={() => setSidebarOpen(true)} />
-        <main className="min-h-[calc(100vh-3.5rem)] p-4 lg:min-h-[calc(100vh-4rem)] lg:p-6">
+        <main className="min-h-[calc(100vh-3.5rem)] pb-20 lg:pb-0 p-4 lg:min-h-[calc(100vh-4rem)] lg:p-6">
           {children}
         </main>
       </div>
+      
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav />
     </div>
   );
 };

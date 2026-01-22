@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Truck,
   Building2,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,6 +31,7 @@ const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Browse Products", href: "/products", icon: ShoppingBag },
   { name: "My Quotes", href: "/quotes", icon: FileText },
+  { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Orders", href: "/orders", icon: Truck },
   { name: "Saved Vendors", href: "/saved-vendors", icon: Building2 },
 ];
@@ -40,6 +42,7 @@ const sellerNavigation = [
   { name: "My Products", href: "/products", icon: Package },
   { name: "Upload Product", href: "/upload", icon: Upload },
   { name: "Quote Requests", href: "/quotes", icon: ClipboardList },
+  { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
