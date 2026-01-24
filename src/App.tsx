@@ -13,6 +13,7 @@ import Subscription from "./pages/Subscription";
 import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
+import PostRequirement from "./pages/PostRequirement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/chat" element={<Chat />} />
+            <Route path="/post-requirement" element={<PostRequirement />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
