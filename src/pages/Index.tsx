@@ -1,6 +1,9 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ProductCard } from "@/components/dashboard/ProductCard";
+import { PromoBanner } from "@/components/dashboard/PromoBanner";
+import { BusinessProfileScore } from "@/components/dashboard/BusinessProfileScore";
+import { SellerQuickActionsGrid } from "@/components/dashboard/SellerQuickActionsGrid";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -184,6 +187,21 @@ const Index = () => {
         </p>
       </motion.div>
 
+      {/* Seller-specific promo and profile section */}
+      {role === "seller" && (
+        <div className="mb-6 space-y-4 lg:mb-8">
+          <PromoBanner />
+          <BusinessProfileScore score={45} />
+        </div>
+      )}
+
+      {/* Seller Quick Actions Grid */}
+      {role === "seller" && (
+        <div className="mb-6 lg:mb-8">
+          <SellerQuickActionsGrid />
+        </div>
+      )}
+
       {/* Stats grid */}
       <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:mb-8 lg:grid-cols-4 lg:gap-6">
         {stats.map((stat, index) => (
@@ -191,31 +209,33 @@ const Index = () => {
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="mb-6 rounded-xl border border-border bg-card p-4 lg:mb-8 lg:p-6"
-      >
-        <h3 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-          Quick Actions
-        </h3>
-        <div className="flex flex-wrap gap-2 sm:gap-3">
-          {quickActions.map((action) => (
-            <Link key={action.name} to={action.href}>
-              <Button 
-                variant={action.variant} 
-                size="sm" 
-                className="text-xs sm:text-sm gap-2"
-              >
-                <action.icon className="h-4 w-4" />
-                {action.name}
-              </Button>
-            </Link>
-          ))}
-        </div>
-      </motion.div>
+      {/* Buyer Quick Actions */}
+      {role === "buyer" && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="mb-6 rounded-xl border border-border bg-card p-4 lg:mb-8 lg:p-6"
+        >
+          <h3 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
+            Quick Actions
+          </h3>
+          <div className="flex flex-wrap gap-2 sm:gap-3">
+            {quickActions.map((action) => (
+              <Link key={action.name} to={action.href}>
+                <Button 
+                  variant={action.variant} 
+                  size="sm" 
+                  className="text-xs sm:text-sm gap-2"
+                >
+                  <action.icon className="h-4 w-4" />
+                  {action.name}
+                </Button>
+              </Link>
+            ))}
+          </div>
+        </motion.div>
+      )}
 
       {/* Two column layout for Activity and Products */}
       <div className="grid gap-6 lg:grid-cols-3">
