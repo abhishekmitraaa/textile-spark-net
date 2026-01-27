@@ -15,6 +15,7 @@ import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
 import Analytics from "./pages/Analytics";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/analytics" element={<Analytics />} />
+            <Route path="/help" element={<Help />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
