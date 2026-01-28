@@ -11,15 +11,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion } from "framer-motion";
-import { Upload as UploadIcon, X, Image, Check, ArrowLeft } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { CategorySelector } from "@/components/upload/CategorySelector";
+import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
+import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
+import { getCategoryById, getFieldsForCategory } from "@/data/sellerCategories";
+import { Progress } from "@/components/ui/progress";
+
+type Step = "category" | "subcategory" | "details" | "images" | "pricing";
+
+const steps: { id: Step; label: string }[] = [
+  { id: "category", label: "Category" },
+  { id: "subcategory", label: "Sub-category" },
+  { id: "details", label: "Details" },
+  { id: "images", label: "Images" },
+  { id: "pricing", label: "Pricing" },
+];
 
 const Upload = () => {
+  const [currentStep, setCurrentStep] = useState<Step>("category");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  const [formValues, setFormValues] = useState<Record<string, string | string[]>>({});
+  const [productName, setProductName] = useState("");
+  const [productDescription, setProductDescription] = useState("");
+  const [sku, setSku] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState("");
+  const [status, setStatus] = useState("draft");
+
+  const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
+  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+
+  const category = selectedCategory ? getCategoryById(selectedCategory) : null;
+  const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined) : [];
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -60,11 +91,53 @@ const Upload = () => {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const handleFieldChange = (fieldId: string, value: string | string[]) => {
+    setFormValues((prev) => ({ ...prev, [fieldId]: value }));
+  };
+
+  const canProceed = () => {
+    switch (currentStep) {
+      case "category":
+        return !!selectedCategory;
+      case "subcategory":
+        return !!selectedSubCategory;
+      case "details":
+        return !!productName;
+      case "images":
+        return true;
+      case "pricing":
+        return !!price;
+      default:
+        return false;
+    }
+  };
+
+  const goToNextStep = () => {
+    const idx = steps.findIndex((s) => s.id === currentStep);
+    if (idx < steps.length - 1) {
+      setCurrentStep(steps[idx + 1].id);
+    }
+  };
+
+  const goToPreviousStep = () => {
+    const idx = steps.findIndex((s) => s.id === currentStep);
+    if (idx > 0) {
+      setCurrentStep(steps[idx - 1].id);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success("Product uploaded successfully!", {
-      description: "Your product is now pending review.",
+    const categoryName = category?.name || "Unknown";
+    toast.success(`${category?.type === "service" ? "Service" : "Product"} uploaded successfully!`, {
+      description: `Your ${categoryName} listing is now pending review.`,
     });
+  };
+
+  const handleCategorySelect = (categoryId: string) => {
+    setSelectedCategory(categoryId);
+    setSelectedSubCategory(null);
+    setFormValues({});
   };
 
   return (
@@ -73,7 +146,7 @@ const Upload = () => {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 lg:mb-8"
+        className="mb-4 lg:mb-6"
       >
         <Link
           to="/products"
@@ -83,70 +156,180 @@ const Upload = () => {
           Back to Products
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          Upload Product
+          {category?.type === "service" ? "Add Service" : category?.type === "freelancer" ? "Add Profile" : "Upload Product"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Add a new product to your catalog
+          {category ? `Adding to: ${category.name}` : "Select a category to get started"}
         </p>
       </motion.div>
 
+      {/* Progress bar */}
+      <div className="mb-6">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-xs font-medium text-muted-foreground">
+            Step {currentStepIndex + 1} of {steps.length}
+          </span>
+          <span className="text-xs font-medium text-accent">
+            {steps[currentStepIndex].label}
+          </span>
+        </div>
+        <Progress value={progress} className="h-2" />
+        <div className="mt-2 hidden justify-between sm:flex">
+          {steps.map((step, index) => (
+            <button
+              key={step.id}
+              type="button"
+              onClick={() => {
+                if (index <= currentStepIndex || (index === currentStepIndex + 1 && canProceed())) {
+                  setCurrentStep(step.id);
+                }
+              }}
+              className={cn(
+                "text-xs transition-colors",
+                index <= currentStepIndex
+                  ? "font-medium text-accent"
+                  : "text-muted-foreground"
+              )}
+            >
+              {step.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit}>
-        <div className="grid gap-4 lg:grid-cols-3 lg:gap-8">
-          {/* Main content */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 }}
-            className="space-y-4 lg:col-span-2 lg:space-y-6"
-          >
-            {/* Basic info */}
-            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-                Basic Information
+        <AnimatePresence mode="wait">
+          {/* Step 1: Category Selection */}
+          {currentStep === "category" && (
+            <motion.div
+              key="category"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="rounded-xl border border-border bg-card p-4 lg:p-6"
+            >
+              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                What are you listing?
               </h2>
-              <div className="space-y-3 lg:space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Product Name</Label>
-                  <Input
-                    id="name"
-                    placeholder="e.g., Premium Cotton Blend Fabric"
-                  />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
+              <CategorySelector
+                selectedCategory={selectedCategory}
+                onSelectCategory={handleCategorySelect}
+              />
+            </motion.div>
+          )}
+
+          {/* Step 2: Sub-category Selection */}
+          {currentStep === "subcategory" && selectedCategory && (
+            <motion.div
+              key="subcategory"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="rounded-xl border border-border bg-card p-4 lg:p-6"
+            >
+              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                Select Sub-category
+              </h2>
+              <SubCategorySelector
+                categoryId={selectedCategory}
+                selectedSubCategory={selectedSubCategory}
+                onSelectSubCategory={setSelectedSubCategory}
+              />
+            </motion.div>
+          )}
+
+          {/* Step 3: Product/Service Details */}
+          {currentStep === "details" && (
+            <motion.div
+              key="details"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-4 lg:space-y-6"
+            >
+              {/* Basic info */}
+              <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+                <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                  Basic Information
+                </h2>
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Select>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="textiles">Textiles</SelectItem>
-                        <SelectItem value="premium">Premium Fabrics</SelectItem>
-                        <SelectItem value="eco">Eco-Friendly</SelectItem>
-                        <SelectItem value="luxury">Luxury</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="name">
+                      {category?.type === "service" ? "Service Name" : category?.type === "freelancer" ? "Profile Title" : "Product Name"}
+                      <span className="ml-1 text-destructive">*</span>
+                    </Label>
+                    <Input
+                      id="name"
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      placeholder={
+                        category?.type === "service"
+                          ? "e.g., Premium Screen Printing Services"
+                          : category?.type === "freelancer"
+                          ? "e.g., Senior Fashion Designer"
+                          : "e.g., Premium Cotton Blend Fabric"
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Category</Label>
+                      <Input value={category?.name || ""} disabled className="bg-muted" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="sku">SKU / Reference ID</Label>
+                      <Input
+                        id="sku"
+                        value={sku}
+                        onChange={(e) => setSku(e.target.value)}
+                        placeholder="e.g., FCT-001"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="sku">SKU</Label>
-                    <Input id="sku" placeholder="e.g., FCT-001" />
+                    <Label htmlFor="description">Description</Label>
+                    <Textarea
+                      id="description"
+                      value={productDescription}
+                      onChange={(e) => setProductDescription(e.target.value)}
+                      placeholder={
+                        category?.type === "service"
+                          ? "Describe your service, capabilities, and what sets you apart..."
+                          : "Describe your product, specifications, and unique features..."
+                      }
+                      className="min-h-[100px]"
+                    />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your product..."
-                    className="min-h-[100px]"
-                  />
                 </div>
               </div>
-            </div>
 
-            {/* Images */}
-            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-                Product Images
+              {/* Dynamic category-specific fields */}
+              {dynamicFields.length > 0 && (
+                <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+                  <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                    {category?.type === "service" ? "Service Details" : category?.type === "freelancer" ? "Profile Details" : "Specifications"}
+                  </h2>
+                  <DynamicFormFields
+                    fields={dynamicFields}
+                    values={formValues}
+                    onChange={handleFieldChange}
+                  />
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {/* Step 4: Images */}
+          {currentStep === "images" && (
+            <motion.div
+              key="images"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="rounded-xl border border-border bg-card p-4 lg:p-6"
+            >
+              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                {category?.type === "service" ? "Portfolio Images" : category?.type === "freelancer" ? "Profile & Work Samples" : "Product Images"}
               </h2>
               <div
                 className={cn(
@@ -181,7 +364,7 @@ const Upload = () => {
               </div>
 
               {images.length > 0 && (
-                <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:mt-4 lg:gap-4">
+                <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:gap-4">
                   {images.map((src, index) => (
                     <motion.div
                       key={index}
@@ -191,7 +374,7 @@ const Upload = () => {
                     >
                       <img
                         src={src}
-                        alt={`Product ${index + 1}`}
+                        alt={`Image ${index + 1}`}
                         className="h-full w-full object-cover"
                       />
                       {index === 0 && (
@@ -210,103 +393,171 @@ const Upload = () => {
                   ))}
                 </div>
               )}
-            </div>
+            </motion.div>
+          )}
 
-            {/* Specifications */}
-            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-                Specifications
-              </h2>
-              <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="material">Material</Label>
-                  <Input id="material" placeholder="e.g., 80% Cotton" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="weight">Weight</Label>
-                  <Input id="weight" placeholder="e.g., 200 GSM" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="width">Width</Label>
-                  <Input id="width" placeholder="e.g., 58 inches" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="moq">Min. Order Qty</Label>
-                  <Input id="moq" placeholder="e.g., 100 yards" />
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Sidebar */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="space-y-4 lg:space-y-6"
-          >
-            {/* Pricing */}
-            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-                Pricing
-              </h2>
-              <div className="space-y-3 lg:space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="price">Price per Unit</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      $
-                    </span>
-                    <Input id="price" className="pl-7" placeholder="0.00" />
+          {/* Step 5: Pricing */}
+          {currentStep === "pricing" && (
+            <motion.div
+              key="pricing"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="grid gap-4 lg:grid-cols-2 lg:gap-6"
+            >
+              <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+                <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                  Pricing
+                </h2>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">
+                      {category?.type === "service" ? "Starting Price" : "Price per Unit"}
+                      <span className="ml-1 text-destructive">*</span>
+                    </Label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        ₹
+                      </span>
+                      <Input
+                        id="price"
+                        type="number"
+                        className="pl-7"
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">Unit</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {category?.type === "product" ? (
+                          <>
+                            <SelectItem value="yard">Per Yard</SelectItem>
+                            <SelectItem value="meter">Per Meter</SelectItem>
+                            <SelectItem value="kg">Per Kilogram</SelectItem>
+                            <SelectItem value="piece">Per Piece</SelectItem>
+                            <SelectItem value="dozen">Per Dozen</SelectItem>
+                            <SelectItem value="set">Per Set</SelectItem>
+                          </>
+                        ) : category?.type === "service" ? (
+                          <>
+                            <SelectItem value="project">Per Project</SelectItem>
+                            <SelectItem value="hour">Per Hour</SelectItem>
+                            <SelectItem value="day">Per Day</SelectItem>
+                            <SelectItem value="month">Per Month</SelectItem>
+                            <SelectItem value="piece">Per Piece</SelectItem>
+                          </>
+                        ) : (
+                          <>
+                            <SelectItem value="hour">Per Hour</SelectItem>
+                            <SelectItem value="day">Per Day</SelectItem>
+                            <SelectItem value="project">Per Project</SelectItem>
+                            <SelectItem value="month">Per Month</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="unit">Unit</Label>
-                  <Select>
+              </div>
+
+              <div className="space-y-4 lg:space-y-6">
+                <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+                  <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                    Status
+                  </h2>
+                  <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select unit" />
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="yard">Per Yard</SelectItem>
-                      <SelectItem value="meter">Per Meter</SelectItem>
-                      <SelectItem value="kg">Per Kilogram</SelectItem>
-                      <SelectItem value="piece">Per Piece</SelectItem>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="pending">Submit for Review</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Drafts won't be visible until approved.
+                  </p>
+                </div>
+
+                {/* Summary */}
+                <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 lg:p-6">
+                  <h3 className="mb-3 font-display text-sm font-semibold text-foreground">
+                    Listing Summary
+                  </h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Category</span>
+                      <span className="font-medium text-foreground">{category?.name}</span>
+                    </div>
+                    {selectedSubCategory && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Sub-category</span>
+                        <span className="font-medium text-foreground">
+                          {category?.subCategories.find((s) => s.id === selectedSubCategory)?.name}
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Name</span>
+                      <span className="max-w-[150px] truncate font-medium text-foreground">
+                        {productName || "—"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Images</span>
+                      <span className="font-medium text-foreground">{images.length}/6</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-            {/* Status */}
-            <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-              <h2 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-                Status
-              </h2>
-              <Select defaultValue="draft">
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="pending">Submit for Review</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="mt-2 text-xs text-muted-foreground">
-                Drafts won't be visible until approved.
-              </p>
-            </div>
+        {/* Navigation buttons */}
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goToPreviousStep}
+            disabled={currentStepIndex === 0}
+            className="gap-2"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-2 sm:gap-3">
-              <Button type="submit" variant="gold" size="lg" className="w-full">
-                <Check className="mr-2 h-4 w-4" />
-                Publish Product
+          <div className="flex gap-2">
+            {currentStep === "pricing" ? (
+              <>
+                <Button type="button" variant="outline" size="lg">
+                  Save as Draft
+                </Button>
+                <Button type="submit" variant="gold" size="lg" className="gap-2">
+                  <Check className="h-4 w-4" />
+                  Publish
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                variant="gold"
+                onClick={goToNextStep}
+                disabled={!canProceed()}
+                className="gap-2"
+              >
+                Continue
+                <ArrowRight className="h-4 w-4" />
               </Button>
-              <Button type="button" variant="outline" size="lg" className="w-full">
-                Save as Draft
-              </Button>
-            </div>
-          </motion.div>
+            )}
+          </div>
         </div>
       </form>
     </DashboardLayout>
