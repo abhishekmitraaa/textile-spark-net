@@ -72,7 +72,7 @@ export const CategorySelector = ({ selectedCategory, onSelectCategory }: Categor
               {groupedCategories[type]?.length || 0} categories
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {groupedCategories[type]?.map((category, index) => {
               const Icon = iconMap[category.icon] || Package;
               const isSelected = selectedCategory === category.id;
@@ -86,7 +86,7 @@ export const CategorySelector = ({ selectedCategory, onSelectCategory }: Categor
                   transition={{ delay: index * 0.02 }}
                   onClick={() => onSelectCategory(category.id)}
                   className={cn(
-                    "group relative flex flex-col items-center gap-2 rounded-xl border p-3 text-center transition-all lg:p-4",
+                    "group relative flex flex-col items-center gap-1.5 rounded-xl border p-2.5 text-center transition-all sm:gap-2 sm:p-3 lg:p-4 min-h-[100px] sm:min-h-[110px]",
                     isSelected
                       ? "border-accent bg-accent/10 ring-2 ring-accent/30"
                       : "border-border bg-card hover:border-accent/50 hover:bg-accent/5"
@@ -94,24 +94,24 @@ export const CategorySelector = ({ selectedCategory, onSelectCategory }: Categor
                 >
                   <div
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-lg transition-colors lg:h-12 lg:w-12",
+                      "flex h-8 w-8 items-center justify-center rounded-lg transition-colors sm:h-10 sm:w-10 lg:h-12 lg:w-12",
                       isSelected
                         ? "bg-accent text-accent-foreground"
                         : "bg-secondary text-muted-foreground group-hover:bg-accent/20 group-hover:text-accent"
                     )}
                   >
-                    <Icon className="h-5 w-5 lg:h-6 lg:w-6" />
+                    <Icon className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />
                   </div>
                   <span
                     className={cn(
-                      "text-xs font-medium leading-tight lg:text-sm",
+                      "text-[10px] font-medium leading-tight sm:text-xs lg:text-sm line-clamp-2 px-0.5",
                       isSelected ? "text-accent" : "text-foreground"
                     )}
                   >
                     {category.name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground lg:text-xs">
-                    {category.subCategories.length} sub-categories
+                  <span className="text-[9px] text-muted-foreground sm:text-[10px] lg:text-xs">
+                    {category.subCategories.length} sub-cat
                   </span>
                 </motion.button>
               );

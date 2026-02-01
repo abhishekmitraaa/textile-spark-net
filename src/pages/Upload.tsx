@@ -36,6 +36,7 @@ const Upload = () => {
   const [currentStep, setCurrentStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+  const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, string | string[]>>({});
@@ -137,7 +138,13 @@ const Upload = () => {
   const handleCategorySelect = (categoryId: string) => {
     setSelectedCategory(categoryId);
     setSelectedSubCategory(null);
+    setSelectedSubType(null);
     setFormValues({});
+  };
+
+  const handleSubCategorySelect = (subCategoryId: string) => {
+    setSelectedSubCategory(subCategoryId);
+    setSelectedSubType(null);
   };
 
   return (
@@ -233,7 +240,9 @@ const Upload = () => {
               <SubCategorySelector
                 categoryId={selectedCategory}
                 selectedSubCategory={selectedSubCategory}
-                onSelectSubCategory={setSelectedSubCategory}
+                onSelectSubCategory={handleSubCategorySelect}
+                selectedSubType={selectedSubType}
+                onSelectSubType={setSelectedSubType}
               />
             </motion.div>
           )}
