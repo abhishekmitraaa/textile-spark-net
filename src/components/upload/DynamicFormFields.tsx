@@ -9,9 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { X } from "lucide-react";
-import { useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { X, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DynamicFormFieldsProps {
@@ -42,12 +41,12 @@ interface FieldRendererProps {
 }
 
 const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
-  const [inputValue, setInputValue] = useState("");
+  const containerClass = field.fullWidth ? "sm:col-span-2" : "";
 
   switch (field.type) {
     case "text":
       return (
-        <div className="space-y-2">
+        <div className={cn("space-y-2", containerClass)}>
           <Label htmlFor={field.id}>
             {field.label}
             {field.required && <span className="ml-1 text-destructive">*</span>}
@@ -63,7 +62,7 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
 
     case "number":
       return (
-        <div className="space-y-2">
+        <div className={cn("space-y-2", containerClass)}>
           <Label htmlFor={field.id}>
             {field.label}
             {field.required && <span className="ml-1 text-destructive">*</span>}
@@ -81,7 +80,7 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
 
     case "textarea":
       return (
-        <div className="space-y-2 sm:col-span-2">
+        <div className={cn("space-y-2", containerClass || "sm:col-span-2")}>
           <Label htmlFor={field.id}>
             {field.label}
             {field.required && <span className="ml-1 text-destructive">*</span>}
@@ -98,7 +97,7 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
 
     case "select":
       return (
-        <div className="space-y-2">
+        <div className={cn("space-y-2", containerClass)}>
           <Label htmlFor={field.id}>
             {field.label}
             {field.required && <span className="ml-1 text-destructive">*</span>}
@@ -118,12 +117,12 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
         </div>
       );
 
-    case "multiselect":
+    case "multiselect": {
       const selectedValues = (value as string[]) || [];
       
       return (
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor={field.id}>
+        <div className={cn("space-y-2", containerClass || "sm:col-span-2")}>
+          <Label>
             {field.label}
             {field.required && <span className="ml-1 text-destructive">*</span>}
           </Label>
@@ -154,19 +153,151 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
               );
             })}
           </div>
-          {selectedValues.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {selectedValues.map((val) => (
-                <Badge key={val} variant="secondary" className="text-xs">
-                  {val}
-                </Badge>
-              ))}
-            </div>
+        </div>
+      );
+    }
+
+    case "size-selector": {
+      const selectedSizes = (value as string[]) || [];
+      
+      return (
+        <div className={cn("space-y-2", containerClass || "sm:col-span-2")}>
+          <Label>
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {field.options?.map((size) => {
+              const isSelected = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      onChange(selectedSizes.filter((s) => s !== size));
+                    } else {
+                      onChange([...selectedSizes, size]);
+                    }
+                  }}
+                  className={cn(
+                    "flex h-10 min-w-[40px] items-center justify-center rounded-lg border px-3 text-sm font-medium transition-all",
+                    isSelected
+                      ? "border-accent bg-accent text-accent-foreground"
+                      : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5"
+                  )}
+                >
+                  {size}
+                  {isSelected && <Check className="ml-1 h-3 w-3" />}
+                </button>
+              );
+            })}
+          </div>
+          {selectedSizes.length > 0 && (
+            <p className="text-xs text-muted-foreground">
+              Selected: {selectedSizes.join(", ")}
+            </p>
           )}
         </div>
       );
+    }
+
+    case "checkbox": {
+      const checked = value === "true";
+      return (
+        <div className={cn("flex items-center space-x-2", containerClass)}>
+          <Checkbox
+            id={field.id}
+            checked={checked}
+            onCheckedChange={(checked) => onChange(checked ? "true" : "false")}
+          />
+          <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+        </div>
+      );
+    }
+
+    case "color-picker": {
+      const selectedColors = (value as string[]) || [];
+      const colorOptions = field.options || [
+        "Black", "White", "Red", "Blue", "Green", "Yellow", "Orange", "Pink", 
+        "Purple", "Brown", "Grey", "Navy", "Beige", "Cream", "Maroon", "Teal"
+      ];
+      
+      return (
+        <div className={cn("space-y-2", containerClass || "sm:col-span-2")}>
+          <Label>
+            {field.label}
+            {field.required && <span className="ml-1 text-destructive">*</span>}
+          </Label>
+          <div className="flex flex-wrap gap-2">
+            {colorOptions.map((color) => {
+              const isSelected = selectedColors.includes(color);
+              const colorClass = getColorClass(color);
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => {
+                    if (isSelected) {
+                      onChange(selectedColors.filter((c) => c !== color));
+                    } else {
+                      onChange([...selectedColors, color]);
+                    }
+                  }}
+                  className={cn(
+                    "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-all",
+                    isSelected
+                      ? "border-accent bg-accent/10 text-accent"
+                      : "border-border bg-card text-muted-foreground hover:border-accent/50"
+                  )}
+                >
+                  <span 
+                    className={cn("h-3 w-3 rounded-full border", colorClass)}
+                  />
+                  {color}
+                  {isSelected && <X className="h-3 w-3" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
 
     default:
       return null;
   }
+};
+
+// Helper function to get color classes
+const getColorClass = (color: string): string => {
+  const colorMap: Record<string, string> = {
+    Black: "bg-black",
+    White: "bg-white",
+    Red: "bg-red-500",
+    Blue: "bg-blue-500",
+    Green: "bg-green-500",
+    Yellow: "bg-yellow-400",
+    Orange: "bg-orange-500",
+    Pink: "bg-pink-400",
+    Purple: "bg-purple-500",
+    Brown: "bg-amber-800",
+    Grey: "bg-gray-500",
+    Navy: "bg-blue-900",
+    Beige: "bg-amber-100",
+    Cream: "bg-amber-50",
+    Maroon: "bg-red-900",
+    Teal: "bg-teal-500",
+    Tan: "bg-amber-300",
+    Cognac: "bg-amber-700",
+    Burgundy: "bg-red-800",
+    Gold: "bg-yellow-500",
+    Silver: "bg-gray-300",
+    Tortoise: "bg-amber-600",
+    Transparent: "bg-transparent border-dashed",
+  };
+  return colorMap[color] || "bg-gray-400";
 };
