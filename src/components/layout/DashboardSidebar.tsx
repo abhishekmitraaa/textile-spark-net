@@ -22,6 +22,8 @@ import {
   Building2,
   MessageCircle,
   Sparkles,
+  Wrench,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,12 +35,12 @@ const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "For You", href: "/for-you", icon: Sparkles },
   { name: "Browse Products", href: "/browse", icon: ShoppingBag },
+  { name: "Service Vendors", href: "/service-vendors", icon: Wrench },
+  { name: "Freelancers", href: "/freelancers", icon: Briefcase },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
   { name: "Recently Viewed", href: "/recently-viewed", icon: History },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
-  { name: "Orders", href: "/orders", icon: Truck },
-  { name: "Saved Vendors", href: "/saved-vendors", icon: Building2 },
 ];
 
 // Seller navigation (Manufacturers)

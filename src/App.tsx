@@ -18,6 +18,8 @@ import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
 import RecentlyViewed from "./pages/RecentlyViewed";
+import ServiceVendors from "./pages/ServiceVendors";
+import Freelancers from "./pages/Freelancers";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -46,6 +48,8 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
+            <Route path="/service-vendors" element={<ServiceVendors />} />
+            <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
