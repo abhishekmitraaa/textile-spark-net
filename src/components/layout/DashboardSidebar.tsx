@@ -21,6 +21,7 @@ import {
   History,
   Building2,
   MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -30,8 +31,9 @@ import { RoleSwitcher } from "./RoleSwitcher";
 // Buyer navigation (Clothing Brands)
 const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
-  { name: "Post Requirement", href: "/post-requirement", icon: FileText },
+  { name: "For You", href: "/for-you", icon: Sparkles },
   { name: "Browse Products", href: "/browse", icon: ShoppingBag },
+  { name: "Post Requirement", href: "/post-requirement", icon: FileText },
   { name: "Recently Viewed", href: "/recently-viewed", icon: History },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
