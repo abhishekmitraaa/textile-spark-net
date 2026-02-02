@@ -2,13 +2,13 @@ import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Home,
-  LayoutGrid,
   MessageCircle,
   UserCircle,
   Plus,
   FileText,
   Package,
   Upload,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -24,7 +24,7 @@ export const MobileBottomNav = () => {
   // Buyer navigation items
   const buyerNavItems = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Browse", href: "/browse", icon: LayoutGrid },
+    { name: "For You", href: "/for-you", icon: Sparkles },
     { name: "Post RFQ", href: "/post-requirement", icon: FileText, isCenter: true },
     { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },
     { name: "Profile", href: "/profile", icon: UserCircle },
