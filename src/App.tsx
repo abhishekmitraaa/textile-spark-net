@@ -16,6 +16,7 @@ import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
+import RecentlyViewed from "./pages/RecentlyViewed";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -42,6 +43,7 @@ const App = () => (
             <Route path="/profile" element={<Profile />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
+            <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

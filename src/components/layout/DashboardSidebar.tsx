@@ -18,6 +18,7 @@ import {
   ClipboardList,
   TrendingUp,
   Truck,
+  History,
   Building2,
   MessageCircle,
 } from "lucide-react";
@@ -31,6 +32,7 @@ const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
   { name: "Browse Products", href: "/browse", icon: ShoppingBag },
+  { name: "Recently Viewed", href: "/recently-viewed", icon: History },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Orders", href: "/orders", icon: Truck },
