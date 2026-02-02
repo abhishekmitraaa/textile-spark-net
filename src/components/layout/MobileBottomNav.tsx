@@ -24,7 +24,7 @@ export const MobileBottomNav = () => {
   // Buyer navigation items
   const buyerNavItems = [
     { name: "Home", href: "/", icon: Home },
-    { name: "Products", href: "/products", icon: LayoutGrid },
+    { name: "Browse", href: "/browse", icon: LayoutGrid },
     { name: "Post RFQ", href: "/post-requirement", icon: FileText, isCenter: true },
     { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },
     { name: "Profile", href: "/profile", icon: UserCircle },

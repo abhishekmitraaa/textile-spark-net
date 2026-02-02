@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
 import Index from "./pages/Index";
 import Products from "./pages/Products";
+import BrowseProducts from "./pages/BrowseProducts";
 import Upload from "./pages/Upload";
 import Leads from "./pages/Leads";
 import Advertisements from "./pages/Advertisements";
@@ -30,6 +31,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/products" element={<Products />} />
+            <Route path="/browse" element={<BrowseProducts />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/leads" element={<Leads />} />
             <Route path="/advertisements" element={<Advertisements />} />
