@@ -30,7 +30,7 @@ import { RoleSwitcher } from "./RoleSwitcher";
 const buyerNavigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
-  { name: "Browse Products", href: "/products", icon: ShoppingBag },
+  { name: "Browse Products", href: "/browse", icon: ShoppingBag },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Orders", href: "/orders", icon: Truck },
