@@ -24,6 +24,7 @@ import {
   Sparkles,
   Wrench,
   Briefcase,
+   Heart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -39,6 +40,7 @@ const buyerNavigation = [
   { name: "Freelancers", href: "/freelancers", icon: Briefcase },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
   { name: "Recently Viewed", href: "/recently-viewed", icon: History },
+   { name: "Wishlist", href: "/wishlist", icon: Heart },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
 ];
