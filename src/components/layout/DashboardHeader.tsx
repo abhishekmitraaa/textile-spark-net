@@ -1,4 +1,4 @@
-import { Bell, Search, Plus, Menu, FileText } from "lucide-react";
+ import { Bell, Search, Plus, Menu, FileText, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
@@ -40,6 +40,17 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
       </div>
 
       <div className="flex items-center gap-2 sm:gap-3">
+       {/* Admin Button */}
+       <Link to="/admin">
+         <Button variant="outline" size="sm" className="hidden sm:inline-flex gap-2 border-primary/30 text-primary hover:bg-primary/10">
+           <Shield className="h-4 w-4" />
+           Admin
+         </Button>
+         <Button variant="outline" size="icon" className="h-9 w-9 sm:hidden border-primary/30 text-primary hover:bg-primary/10">
+           <Shield className="h-4 w-4" />
+         </Button>
+       </Link>
+ 
         {/* Mobile search button */}
         <button className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:hidden">
           <Search size={20} />
