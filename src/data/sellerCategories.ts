@@ -532,7 +532,7 @@ export const sellerCategories: SellerCategory[] = [
     id: "machinery-equipment",
     name: "Machinery & Equipment",
     icon: "Cog",
-    type: "product",
+    type: "service",
     subCategories: [
       { id: "sewing-machines", name: "Sewing Machines", fields: [
         { id: "machineType", label: "Machine Type", type: "select", options: ["Single Needle Lockstitch", "Double Needle", "Overlock", "Flatlock", "Bartack", "Buttonhole", "Button Attach", "Feed Off Arm", "Post Bed"], required: true },
