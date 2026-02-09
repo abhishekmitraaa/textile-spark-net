@@ -1105,6 +1105,67 @@ export const sellerCategories: SellerCategory[] = [
       { id: "languages", label: "Languages", type: "text", placeholder: "e.g., English, Hindi" },
     ],
   },
+  {
+    id: "home-textiles",
+    name: "Home Textiles",
+    icon: "Package",
+    type: "product",
+    subCategories: [
+      { id: "bedding", name: "Bedding & Bed Linen", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Bed Sheets", "Duvet Covers", "Pillow Covers", "Mattress Protectors", "Comforters", "Quilts", "Blankets", "Bed Skirts"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Silk", "Satin", "Polyester", "Bamboo", "Microfiber", "Blended"], required: true },
+        { id: "threadCount", label: "Thread Count", type: "select", options: ["200 TC", "300 TC", "400 TC", "600 TC", "800 TC", "1000 TC"] },
+        { id: "sizes", label: "Sizes", type: "size-selector", options: ["Single", "Double", "Queen", "King", "Super King", "Custom"] },
+        { id: "colors", label: "Colors", type: "multiselect", options: ["White", "Ivory", "Grey", "Navy", "Beige", "Blush", "Sage", "Charcoal"], fullWidth: true },
+      ]},
+      { id: "towels-bath", name: "Towels & Bath Linen", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Bath Towels", "Hand Towels", "Face Towels", "Beach Towels", "Bath Mats", "Bathrobes", "Washcloths"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Egyptian Cotton", "Turkish Cotton", "Bamboo", "Microfiber", "Linen"], required: true },
+        { id: "gsm", label: "GSM (Weight)", type: "select", options: ["300 GSM", "400 GSM", "500 GSM", "600 GSM", "700 GSM", "800 GSM"] },
+        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 70x140 cm" },
+      ]},
+      { id: "curtains-drapes", name: "Curtains & Drapes", fields: [
+        { id: "type", label: "Type", type: "select", options: ["Sheer Curtains", "Blackout Curtains", "Semi-Sheer", "Thermal Curtains", "Valances", "Blinds"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Polyester", "Cotton", "Linen", "Velvet", "Silk", "Jacquard", "Organza"], required: true },
+        { id: "hangingStyle", label: "Hanging Style", type: "select", options: ["Eyelet", "Rod Pocket", "Tab Top", "Pinch Pleat", "Grommet"] },
+        { id: "dimensions", label: "Dimensions (WxH)", type: "text", placeholder: "e.g., 150x250 cm" },
+      ]},
+      { id: "cushions-covers", name: "Cushions & Covers", fields: [
+        { id: "type", label: "Type", type: "select", options: ["Cushion Covers", "Throw Pillows", "Floor Cushions", "Bolster Covers", "Sofa Covers", "Chair Pads"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Velvet", "Silk", "Linen", "Jute", "Canvas", "Polyester"], required: true },
+        { id: "sizes", label: "Sizes", type: "size-selector", options: ["12x12 in", "16x16 in", "18x18 in", "20x20 in", "24x24 in", "Custom"] },
+        { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Printed", "Embroidered", "Woven", "Block Print", "Geometric", "Floral"], fullWidth: true },
+      ]},
+      { id: "table-linen", name: "Table Linen", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Tablecloths", "Table Runners", "Placemats", "Napkins", "Coasters", "Table Skirts"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Polyester", "Jute", "PVC", "Blended"], required: true },
+        { id: "shape", label: "Shape", type: "select", options: ["Rectangular", "Round", "Square", "Oval"] },
+        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 150x250 cm" },
+      ]},
+      { id: "carpets-rugs", name: "Carpets & Rugs", fields: [
+        { id: "type", label: "Type", type: "select", options: ["Area Rugs", "Runners", "Doormats", "Carpet Tiles", "Wall-to-Wall", "Prayer Mats", "Dhurries"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Wool", "Cotton", "Jute", "Silk", "Polyester", "Nylon", "Polypropylene", "Sisal"], required: true },
+        { id: "technique", label: "Technique", type: "select", options: ["Hand Knotted", "Hand Tufted", "Hand Woven", "Machine Woven", "Flatweave", "Shag"] },
+        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 200x300 cm" },
+        { id: "pileHeight", label: "Pile Height", type: "select", options: ["Low (0-5mm)", "Medium (5-15mm)", "High (15-25mm)", "Shag (25mm+)"] },
+      ]},
+      { id: "upholstery-fabric", name: "Upholstery Fabric", fields: [
+        { id: "type", label: "Type", type: "select", options: ["Sofa Fabric", "Chair Fabric", "Automotive Upholstery", "Marine Upholstery", "Wall Covering"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Polyester", "Velvet", "Leather", "Faux Leather", "Chenille", "Jacquard", "Canvas"], required: true },
+        { id: "width", label: "Width (inches)", type: "select", options: ["44", "48", "54", "60", "72"] },
+        { id: "martindale", label: "Martindale (Rub Test)", type: "select", options: ["10,000+", "20,000+", "30,000+", "50,000+", "100,000+"] },
+      ]},
+      { id: "kitchen-textiles", name: "Kitchen Textiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Aprons", "Oven Mitts", "Pot Holders", "Kitchen Towels", "Tea Cozies", "Bread Baskets"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Terry", "Waffle Weave", "Canvas"], required: true },
+        { id: "colors", label: "Colors", type: "multiselect", options: ["White", "Grey", "Navy", "Red", "Green", "Natural", "Striped"], fullWidth: true },
+      ]},
+    ],
+    commonFields: [
+      { id: "finish", label: "Finish / Treatment", type: "multiselect", options: ["Pre-Shrunk", "Wrinkle Resistant", "Stain Resistant", "Fire Retardant", "Anti-Microbial", "Eco-Friendly", "OEKO-TEX Certified"], fullWidth: true },
+      { id: "customization", label: "Customization", type: "multiselect", options: ["Custom Sizes", "Custom Colors", "Logo Embroidery", "Custom Prints", "Private Labeling"], fullWidth: true },
+    ],
+  },
 ];
 
 // Helper function to get category by ID
