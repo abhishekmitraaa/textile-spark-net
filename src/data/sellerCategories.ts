@@ -603,13 +603,6 @@ export const sellerCategories: SellerCategory[] = [
         { id: "commercialGrade", label: "Commercial Grade", type: "select", options: ["Yes", "No"] },
         { id: "warranty", label: "Warranty", type: "text", placeholder: "e.g., 2 years" },
       ]},
-      { id: "mannequins", name: "Mannequins & Display", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Full Body", "Half Body", "Torso", "Head", "Leg Form", "Hand Form", "Child"], required: true },
-        { id: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Child", "Abstract"] },
-        { id: "material", label: "Material", type: "select", options: ["Fiberglass", "Plastic", "Fabric Wrapped", "Wood"] },
-        { id: "finish", label: "Finish", type: "select", options: ["Matte", "Glossy", "Skin Tone", "Abstract Color"] },
-        { id: "baseType", label: "Base Type", type: "select", options: ["Glass Base", "Metal Base", "Hanging", "Wall Mount", "No Base"] },
-      ]},
       { id: "clothing-machinery", name: "Other Clothing Machinery", fields: [
         { id: "machineType", label: "Machine Type", type: "text", placeholder: "e.g., Fusing, Interlining", required: true },
         { id: "brand", label: "Brand", type: "text", placeholder: "e.g., Brand name", required: true },
