@@ -4,7 +4,7 @@ import { sellerCategories, SellerCategory } from "@/data/sellerCategories";
 import { Badge } from "@/components/ui/badge";
 import {
   Gem, Layers, Scissors, Tag, Package, Shirt, Cog, FlaskConical,
-  Printer, Wrench, Truck, Monitor, Calculator, Camera, User
+  Printer, Wrench, Truck, Monitor, Calculator, Camera, User, Recycle
 } from "lucide-react";
 
 interface CategorySelectorProps {
@@ -28,6 +28,7 @@ const iconMap: Record<string, React.ElementType> = {
   Calculator: Calculator,
   Camera: Camera,
   User: User,
+  Recycle: Recycle,
 };
 
 const typeColors: Record<string, { bg: string; text: string; border: string }> = {
