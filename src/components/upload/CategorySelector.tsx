@@ -28,6 +28,7 @@ const iconMap: Record<string, React.ElementType> = {
   Calculator: Calculator,
   Camera: Camera,
   User: User,
+  Recycle: Recycle,
 };
 
 const typeColors: Record<string, { bg: string; text: string; border: string }> = {

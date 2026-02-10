@@ -998,7 +998,7 @@ export const sellerCategories: SellerCategory[] = [
   {
     id: "thrift-secondhand",
     name: "Thrift & Second-Hand",
-    icon: "Tag",
+    icon: "Recycle",
     type: "service",
     subCategories: [
       { id: "thrift-store", name: "Thrift Store / Resale Shop", fields: [
