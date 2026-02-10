@@ -996,6 +996,50 @@ export const sellerCategories: SellerCategory[] = [
     ],
   },
   {
+    id: "thrift-secondhand",
+    name: "Thrift & Second-Hand",
+    icon: "Tag",
+    type: "service",
+    subCategories: [
+      { id: "thrift-store", name: "Thrift Store / Resale Shop", fields: [
+        { id: "itemTypes", label: "Item Types", type: "multiselect", options: ["Men's Clothing", "Women's Clothing", "Kids' Clothing", "Footwear", "Accessories", "Bags", "Jewellery", "Home Textiles"], required: true, fullWidth: true },
+        { id: "condition", label: "Condition Grading", type: "select", options: ["Like New", "Gently Used", "Good", "Fair", "Vintage"], required: true },
+        { id: "brands", label: "Brand Types", type: "multiselect", options: ["Luxury / Premium", "High Street", "Fast Fashion", "Local / Indie", "Mixed / Assorted"], fullWidth: true },
+        { id: "sourcing", label: "Sourcing", type: "multiselect", options: ["Consumer Collection", "Bulk Import", "Charity Tie-ups", "Warehouse Clearance", "Brand Partnerships"], fullWidth: true },
+      ]},
+      { id: "dead-stock-surplus", name: "Dead Stock & Surplus", fields: [
+        { id: "stockType", label: "Stock Type", type: "multiselect", options: ["Dead Stock Garments", "Surplus Fabrics", "Overrun Production", "Cancelled Orders", "End-of-Season Stock", "Sample Lots"], required: true, fullWidth: true },
+        { id: "category", label: "Category", type: "multiselect", options: ["Menswear", "Womenswear", "Kidswear", "Fabrics", "Accessories", "Home Textiles"], fullWidth: true },
+        { id: "quantity", label: "Typical Lot Size", type: "select", options: ["<100 pcs", "100-500 pcs", "500-2000 pcs", "2000-10000 pcs", "10000+ pcs"] },
+        { id: "priceRange", label: "Price Range vs MRP", type: "select", options: ["60-80% off MRP", "40-60% off MRP", "20-40% off MRP", "Custom Negotiation"] },
+      ]},
+      { id: "vintage-retro", name: "Vintage & Retro Clothing", fields: [
+        { id: "era", label: "Era / Period", type: "multiselect", options: ["Pre-1960s", "1960s-70s", "1980s", "1990s", "2000s", "Y2K"], required: true, fullWidth: true },
+        { id: "itemTypes", label: "Item Types", type: "multiselect", options: ["Denim", "T-shirts", "Dresses", "Jackets", "Ethnic Wear", "Accessories", "Footwear"], fullWidth: true },
+        { id: "authenticity", label: "Authenticity", type: "select", options: ["Verified Original", "Reproduction", "Mixed"] },
+      ]},
+      { id: "upcycled-reworked", name: "Upcycled & Reworked Fashion", fields: [
+        { id: "techniques", label: "Upcycling Techniques", type: "multiselect", options: ["Patchwork", "Dyeing / Overdyeing", "Embroidery Add-on", "Deconstruction", "Printing", "Embellishment", "Resizing"], required: true, fullWidth: true },
+        { id: "sourceItems", label: "Source Items", type: "multiselect", options: ["Denim", "Sarees", "T-shirts", "Military Surplus", "Work Wear", "Curtains / Home Textiles"], fullWidth: true },
+        { id: "outputType", label: "Output Type", type: "multiselect", options: ["Ready-to-Wear", "One-of-a-Kind", "Small Batch", "Custom / Made-to-Order"], fullWidth: true },
+      ]},
+      { id: "rental-fashion", name: "Rental Fashion", fields: [
+        { id: "rentalItems", label: "Rental Items", type: "multiselect", options: ["Bridal Wear", "Evening Gowns", "Designer Sarees", "Sherwanis", "Suits / Blazers", "Accessories", "Jewellery"], required: true, fullWidth: true },
+        { id: "rentalModel", label: "Rental Model", type: "select", options: ["Per Event", "Weekly", "Monthly Subscription", "Try-before-Buy"], required: true },
+        { id: "coverage", label: "Service Coverage", type: "multiselect", options: ["Local", "City-wide", "State-wide", "PAN India", "International Shipping"], fullWidth: true },
+      ]},
+      { id: "fabric-scrap-recycling", name: "Fabric Scrap & Recycling", fields: [
+        { id: "scrapType", label: "Scrap Type", type: "multiselect", options: ["Cutting Waste", "Defective Fabric", "End Rolls", "Yarn Waste", "Mixed Fiber Waste", "Post-consumer Textile"], required: true, fullWidth: true },
+        { id: "recyclingMethod", label: "Recycling Method", type: "multiselect", options: ["Mechanical Recycling", "Chemical Recycling", "Shredding", "Re-spinning", "Rag Making", "Insulation"], fullWidth: true },
+        { id: "output", label: "Output Product", type: "multiselect", options: ["Recycled Yarn", "Non-woven Fabric", "Filling Material", "Wiping Cloths", "Insulation", "Industrial Use"], fullWidth: true },
+      ]},
+    ],
+    commonFields: [
+      { id: "sustainability", label: "Sustainability Certifications", type: "multiselect", options: ["GRS (Global Recycled Standard)", "GOTS", "Fair Trade", "B Corp", "None"], fullWidth: true },
+      { id: "pickupService", label: "Pickup / Collection Service", type: "select", options: ["Yes - Free", "Yes - Paid", "Drop-off Only", "Courier Only"] },
+    ],
+  },
+  {
     id: "freelancers-job-workers",
     name: "Freelancers & Job Workers",
     icon: "User",
