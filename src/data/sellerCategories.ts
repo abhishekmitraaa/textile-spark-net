@@ -1210,6 +1210,64 @@ export const sellerCategories: SellerCategory[] = [
       { id: "customization", label: "Customization", type: "multiselect", options: ["Custom Sizes", "Custom Colors", "Logo Embroidery", "Custom Prints", "Private Labeling"], fullWidth: true },
     ],
   },
+  {
+    id: "technical-textiles",
+    name: "Technical Textiles",
+    icon: "Cog",
+    type: "product",
+    subCategories: [
+      { id: "industrial-textiles", name: "Industrial Textiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Conveyor Belts", "Filter Fabrics", "Abrasive Substrates", "Insulation Materials", "Protective Covers", "Hose Fabrics", "Bolting Cloth"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Polyester", "Nylon", "Aramid (Kevlar)", "PTFE", "Fiberglass", "Carbon Fiber", "Polypropylene", "UHMWPE"], required: true },
+        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 300" },
+        { id: "tensileStrength", label: "Tensile Strength", type: "text", placeholder: "e.g., 500 N/5cm" },
+        { id: "tempResistance", label: "Temperature Resistance (°C)", type: "text", placeholder: "e.g., -40 to 260°C" },
+        { id: "application", label: "Application", type: "multiselect", options: ["Filtration", "Conveying", "Reinforcement", "Insulation", "Abrasion Protection", "Packaging"], fullWidth: true },
+      ]},
+      { id: "medical-textiles", name: "Medical & Healthcare Textiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Surgical Gowns", "Drapes", "Wound Dressings", "Bandages", "Implantable Textiles", "Compression Garments", "Hospital Bed Linen", "Face Masks"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Non-Woven PP", "Non-Woven SMS", "Cotton", "Polyester", "PTFE", "Biodegradable Polymers", "Antimicrobial Fiber"], required: true },
+        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 40" },
+        { id: "barrierLevel", label: "Barrier Level", type: "select", options: ["Level 1 (Minimal)", "Level 2 (Low)", "Level 3 (Moderate)", "Level 4 (High)"] },
+        { id: "sterilization", label: "Sterilization", type: "select", options: ["ETO", "Gamma", "Autoclave", "Non-Sterile"] },
+        { id: "certifications", label: "Certifications", type: "multiselect", options: ["FDA 510(k)", "CE Marked", "ISO 13485", "AAMI Level", "EN 13795", "Biocompatibility Tested"], fullWidth: true },
+      ]},
+      { id: "automotive-textiles", name: "Automotive Textiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Seat Covers", "Headliners", "Door Panels", "Carpet/Flooring", "Trunk Lining", "Airbag Fabric", "Seatbelts", "Tire Cord"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Polyester", "Nylon", "Polypropylene", "PET", "Aramid", "Faux Leather", "Woven Fabric", "Non-Woven"], required: true },
+        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 250" },
+        { id: "flammability", label: "Flammability Rating", type: "select", options: ["FMVSS 302", "ISO 3795", "DIN 75200", "Custom Spec"] },
+        { id: "uvResistance", label: "UV Resistance", type: "select", options: ["Standard", "High", "Extreme (1000+ hrs)"] },
+        { id: "properties", label: "Properties", type: "multiselect", options: ["Abrasion Resistant", "Stain Resistant", "Anti-Static", "Noise Dampening", "Flame Retardant", "Low VOC", "Recyclable"], fullWidth: true },
+      ]},
+      { id: "geotextiles", name: "Geotextiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Woven Geotextile", "Non-Woven Geotextile", "Geogrids", "Geomembranes", "Geocomposites", "Geonets", "Geosynthetic Clay Liner"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Polypropylene", "Polyester", "HDPE", "LDPE", "PET", "Polyamide"], required: true },
+        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 200" },
+        { id: "tensileStrength", label: "Tensile Strength (kN/m)", type: "text", placeholder: "e.g., 30 kN/m" },
+        { id: "permeability", label: "Permeability", type: "text", placeholder: "e.g., 50 l/m²/s" },
+        { id: "application", label: "Application", type: "multiselect", options: ["Road Construction", "Erosion Control", "Drainage", "Soil Stabilization", "Landfill", "Railway", "Coastal Protection"], fullWidth: true },
+      ]},
+      { id: "protective-textiles", name: "Protective & Safety Textiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Fire-Resistant Fabrics", "Cut-Resistant Fabrics", "Chemical-Resistant Fabrics", "High-Visibility Fabrics", "Ballistic Fabrics", "Arc Flash Fabrics", "Anti-Static Fabrics"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["Aramid (Nomex/Kevlar)", "FR Cotton", "Modacrylic", "UHMWPE", "PBI", "Carbon Fiber", "FR Polyester"], required: true },
+        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 220" },
+        { id: "standard", label: "Safety Standard", type: "multiselect", options: ["EN ISO 11612", "EN ISO 11611", "NFPA 2112", "EN 388", "EN 1149", "ASTM F1506", "EN ISO 20471"], fullWidth: true },
+        { id: "protection", label: "Protection Level", type: "text", placeholder: "e.g., Arc Rating 8 cal/cm²" },
+      ]},
+      { id: "agrotextiles", name: "Agrotextiles", fields: [
+        { id: "type", label: "Product Type", type: "select", options: ["Shade Nets", "Crop Covers", "Mulch Mats", "Anti-Hail Nets", "Anti-Insect Nets", "Greenhouse Fabrics", "Root Barriers"], required: true },
+        { id: "material", label: "Material", type: "select", options: ["HDPE", "Polypropylene", "Polyester", "Biodegradable Polymer", "Jute"], required: true },
+        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 60" },
+        { id: "shadePercentage", label: "Shade %", type: "select", options: ["30%", "40%", "50%", "60%", "70%", "80%", "90%"] },
+        { id: "uvStabilized", label: "UV Stabilized", type: "select", options: ["Yes – 3 Years", "Yes – 5 Years", "Yes – 7 Years", "No"] },
+      ]},
+    ],
+    commonFields: [
+      { id: "certification", label: "Certifications", type: "multiselect", options: ["ISO 9001", "ISO 14001", "OEKO-TEX", "REACH Compliant", "RoHS", "GRS", "BIS"], fullWidth: true },
+      { id: "testingReport", label: "Testing Reports Available", type: "multiselect", options: ["Tensile Test", "Tear Strength", "Burst Strength", "UV Resistance", "Chemical Resistance", "Flammability", "Abrasion Test"], fullWidth: true },
+    ],
+  },
 ];
 
 // Helper function to get category by ID
