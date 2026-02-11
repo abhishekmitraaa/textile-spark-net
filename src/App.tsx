@@ -18,13 +18,12 @@ import Profile from "./pages/Profile";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
 import RecentlyViewed from "./pages/RecentlyViewed";
- import Wishlist from "./pages/Wishlist";
 import ServiceVendors from "./pages/ServiceVendors";
 import Freelancers from "./pages/Freelancers";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
+import CosoraStudio from "./pages/CosoraStudio";
 import NotFound from "./pages/NotFound";
- import Admin from "./pages/Admin";
 
 const queryClient = new QueryClient();
 
@@ -50,12 +49,11 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
-             <Route path="/wishlist" element={<Wishlist />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
             <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
-           <Route path="/admin" element={<Admin />} />
+            <Route path="/cosora-studio" element={<CosoraStudio />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

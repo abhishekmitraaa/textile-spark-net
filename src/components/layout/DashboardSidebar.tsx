@@ -24,7 +24,7 @@ import {
   Sparkles,
   Wrench,
   Briefcase,
-   Heart,
+  Camera,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -40,7 +40,7 @@ const buyerNavigation = [
   { name: "Freelancers", href: "/freelancers", icon: Briefcase },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
   { name: "Recently Viewed", href: "/recently-viewed", icon: History },
-   { name: "Wishlist", href: "/wishlist", icon: Heart },
+  { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
   { name: "My Quotes", href: "/quotes", icon: ClipboardList },
   { name: "Messages", href: "/chat", icon: MessageCircle },
 ];
@@ -54,6 +54,7 @@ const sellerNavigation = [
   { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
+  { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "Subscription", href: "/subscription", icon: Crown },
 ];

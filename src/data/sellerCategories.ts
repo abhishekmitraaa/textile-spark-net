@@ -526,13 +526,22 @@ export const sellerCategories: SellerCategory[] = [
         { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Work", "Outdoor"], fullWidth: true },
       ]},
     ],
-    commonFields: [],
+    commonFields: [
+      { id: "apparelPattern", label: "Pattern", type: "select", options: ["Solid", "Striped", "Checked", "Printed", "Floral", "Geometric", "Abstract", "Polka Dot", "Camo", "Color Block", "Tie-Dye", "Graphic", "Embroidered", "Self Textured"] },
+      { id: "apparelFitType", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Tailored", "Boxy", "A-Line", "Bodycon", "Straight", "Muscle Fit"] },
+      { id: "apparelSizes", label: "Sizes", type: "size-selector", options: standardSizes, fullWidth: true },
+      { id: "apparelNeckCollar", label: "Neck / Collar Type", type: "select", options: ["Round Neck", "V-Neck", "Crew Neck", "Polo Collar", "Mandarin", "Henley", "Spread Collar", "Button Down", "Boat Neck", "Square Neck", "Sweetheart", "Off-Shoulder", "Halter", "High Neck", "Keyhole", "Cowl Neck", "Shirt Collar", "Stand Collar", "Hood", "N/A"] },
+      { id: "apparelSleeveLength", label: "Sleeve / Length Type", type: "select", options: ["Sleeveless", "Cap Sleeve", "Half Sleeve", "3/4 Sleeve", "Full Sleeve", "Bell Sleeve", "Puff Sleeve", "Raglan", "Cold Shoulder", "Rolled Up", "Mini", "Midi", "Maxi", "Knee Length", "Ankle Length", "Floor Length", "N/A"] },
+      { id: "apparelBottomType", label: "Bottom Type", type: "select", options: ["Trouser", "Chino", "Jogger", "Cargo", "Legging", "Palazzo", "Culottes", "Shorts", "Skirt", "Dhoti", "Salwar", "Churidar", "N/A"] },
+      { id: "apparelClosure", label: "Closure / Additional Details", type: "select", options: ["Button", "Zipper", "Hook & Eye", "Snap", "Drawstring", "Elastic Waist", "Tie/Wrap", "Pullover", "Magnetic", "Velcro", "Back Zip", "Side Zip", "None"] },
+      { id: "apparelCertificates", label: "Certificates", type: "multiselect", options: ["OEKO-TEX Standard 100", "GOTS (Organic)", "BCI (Better Cotton)", "GRS (Recycled)", "Fair Trade", "SA8000", "WRAP", "ISO 9001", "Sedex/SMETA", "BSCI", "OCS (Organic Content)", "None"], fullWidth: true },
+    ],
   },
   {
     id: "machinery-equipment",
     name: "Machinery & Equipment",
     icon: "Cog",
-    type: "service",
+    type: "product",
     subCategories: [
       { id: "sewing-machines", name: "Sewing Machines", fields: [
         { id: "machineType", label: "Machine Type", type: "select", options: ["Single Needle Lockstitch", "Double Needle", "Overlock", "Flatlock", "Bartack", "Buttonhole", "Button Attach", "Feed Off Arm", "Post Bed"], required: true },
@@ -603,6 +612,13 @@ export const sellerCategories: SellerCategory[] = [
         { id: "commercialGrade", label: "Commercial Grade", type: "select", options: ["Yes", "No"] },
         { id: "warranty", label: "Warranty", type: "text", placeholder: "e.g., 2 years" },
       ]},
+      { id: "mannequins", name: "Mannequins & Display", fields: [
+        { id: "type", label: "Type", type: "select", options: ["Full Body", "Half Body", "Torso", "Head", "Leg Form", "Hand Form", "Child"], required: true },
+        { id: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Child", "Abstract"] },
+        { id: "material", label: "Material", type: "select", options: ["Fiberglass", "Plastic", "Fabric Wrapped", "Wood"] },
+        { id: "finish", label: "Finish", type: "select", options: ["Matte", "Glossy", "Skin Tone", "Abstract Color"] },
+        { id: "baseType", label: "Base Type", type: "select", options: ["Glass Base", "Metal Base", "Hanging", "Wall Mount", "No Base"] },
+      ]},
       { id: "clothing-machinery", name: "Other Clothing Machinery", fields: [
         { id: "machineType", label: "Machine Type", type: "text", placeholder: "e.g., Fusing, Interlining", required: true },
         { id: "brand", label: "Brand", type: "text", placeholder: "e.g., Brand name", required: true },
@@ -641,55 +657,6 @@ export const sellerCategories: SellerCategory[] = [
         { id: "application", label: "Application", type: "text", placeholder: "e.g., Garment wash, Fabric finish" },
         { id: "packSize", label: "Pack Size", type: "text", placeholder: "e.g., 50kg drum" },
         { id: "ecoFriendly", label: "Eco-friendly", type: "select", options: ["Yes - Certified", "Yes - Claim", "No"] },
-      ]},
-    ],
-    commonFields: [],
-  },
-  {
-    id: "mannequins-display",
-    name: "Mannequins & Display",
-    icon: "User",
-    type: "product",
-    subCategories: [
-      { id: "full-body-mannequins", name: "Full Body Mannequins", fields: [
-        { id: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Child", "Abstract"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Fiberglass", "Plastic", "Fabric Wrapped", "Wood", "Chrome"], required: true },
-        { id: "finish", label: "Finish", type: "select", options: ["Matte", "Glossy", "Skin Tone", "Abstract Color", "Chrome"] },
-        { id: "pose", label: "Pose", type: "select", options: ["Standing", "Sitting", "Walking", "Dynamic", "Casual"] },
-        { id: "baseType", label: "Base Type", type: "select", options: ["Glass Base", "Metal Base", "Hanging", "No Base"] },
-        { id: "height", label: "Height (cm)", type: "number", placeholder: "e.g., 180" },
-      ]},
-      { id: "half-body-mannequins", name: "Half Body / Torso Mannequins", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Upper Torso", "Lower Torso", "3/4 Body", "Bust Form"], required: true },
-        { id: "gender", label: "Gender", type: "select", options: ["Male", "Female", "Child", "Abstract"] },
-        { id: "material", label: "Material", type: "select", options: ["Fiberglass", "Plastic", "Fabric Wrapped", "Wood"] },
-        { id: "finish", label: "Finish", type: "select", options: ["Matte", "Glossy", "Skin Tone", "Fabric Covered"] },
-        { id: "mountType", label: "Mount Type", type: "select", options: ["Table Top Stand", "Hanging", "Wall Mount", "Tripod Stand"] },
-      ]},
-      { id: "body-forms", name: "Body Forms & Dress Forms", fields: [
-        { id: "formType", label: "Form Type", type: "select", options: ["Dress Form", "Tailor Form", "Adjustable Form", "Professional Fitting Form"], required: true },
-        { id: "sizeRange", label: "Size Range", type: "text", placeholder: "e.g., S-XL or 36-44" },
-        { id: "adjustable", label: "Adjustable", type: "select", options: ["Yes", "No"] },
-        { id: "material", label: "Material", type: "select", options: ["Fabric Covered", "Foam", "Fiberglass", "Pinnable"] },
-        { id: "baseType", label: "Base Type", type: "select", options: ["Wooden Tripod", "Metal Stand", "Wheeled Base"] },
-      ]},
-      { id: "speciality-forms", name: "Speciality Forms", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Head Form", "Hand Form", "Leg Form", "Foot Form", "Jewellery Display Hand"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Fiberglass", "Plastic", "Foam", "Velvet Covered", "Wood"] },
-        { id: "finish", label: "Finish", type: "select", options: ["Matte", "Glossy", "Skin Tone", "Abstract"] },
-      ]},
-      { id: "display-racks-stands", name: "Display Racks & Stands", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Garment Rack", "Display Stand", "Gondola Shelf", "Slat Wall Panel", "Grid Wall Panel", "Hanger Stand"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Metal", "Wood", "Chrome", "Stainless Steel", "Acrylic"] },
-        { id: "dimensions", label: "Dimensions (LxWxH)", type: "text", placeholder: "e.g., 120x60x160 cm" },
-        { id: "capacity", label: "Capacity", type: "text", placeholder: "e.g., 50 garments" },
-        { id: "wheels", label: "With Wheels", type: "select", options: ["Yes", "No"] },
-      ]},
-      { id: "hangers", name: "Hangers", fields: [
-        { id: "hangerType", label: "Hanger Type", type: "select", options: ["Wooden", "Plastic", "Velvet", "Metal Wire", "Padded", "Clip Hanger", "Suit Hanger", "Kids Hanger"], required: true },
-        { id: "size", label: "Size", type: "select", options: ["Standard (17\")", "Large (19\")", "Kids (12\")", "Custom"] },
-        { id: "packQuantity", label: "Pack Quantity", type: "select", options: ["10", "25", "50", "100", "500", "1000"] },
-        { id: "customBranding", label: "Custom Branding", type: "select", options: ["Yes", "No"] },
       ]},
     ],
     commonFields: [],
@@ -996,50 +963,6 @@ export const sellerCategories: SellerCategory[] = [
     ],
   },
   {
-    id: "thrift-secondhand",
-    name: "Thrift & Second-Hand",
-    icon: "Recycle",
-    type: "service",
-    subCategories: [
-      { id: "thrift-store", name: "Thrift Store / Resale Shop", fields: [
-        { id: "itemTypes", label: "Item Types", type: "multiselect", options: ["Men's Clothing", "Women's Clothing", "Kids' Clothing", "Footwear", "Accessories", "Bags", "Jewellery", "Home Textiles"], required: true, fullWidth: true },
-        { id: "condition", label: "Condition Grading", type: "select", options: ["Like New", "Gently Used", "Good", "Fair", "Vintage"], required: true },
-        { id: "brands", label: "Brand Types", type: "multiselect", options: ["Luxury / Premium", "High Street", "Fast Fashion", "Local / Indie", "Mixed / Assorted"], fullWidth: true },
-        { id: "sourcing", label: "Sourcing", type: "multiselect", options: ["Consumer Collection", "Bulk Import", "Charity Tie-ups", "Warehouse Clearance", "Brand Partnerships"], fullWidth: true },
-      ]},
-      { id: "dead-stock-surplus", name: "Dead Stock & Surplus", fields: [
-        { id: "stockType", label: "Stock Type", type: "multiselect", options: ["Dead Stock Garments", "Surplus Fabrics", "Overrun Production", "Cancelled Orders", "End-of-Season Stock", "Sample Lots"], required: true, fullWidth: true },
-        { id: "category", label: "Category", type: "multiselect", options: ["Menswear", "Womenswear", "Kidswear", "Fabrics", "Accessories", "Home Textiles"], fullWidth: true },
-        { id: "quantity", label: "Typical Lot Size", type: "select", options: ["<100 pcs", "100-500 pcs", "500-2000 pcs", "2000-10000 pcs", "10000+ pcs"] },
-        { id: "priceRange", label: "Price Range vs MRP", type: "select", options: ["60-80% off MRP", "40-60% off MRP", "20-40% off MRP", "Custom Negotiation"] },
-      ]},
-      { id: "vintage-retro", name: "Vintage & Retro Clothing", fields: [
-        { id: "era", label: "Era / Period", type: "multiselect", options: ["Pre-1960s", "1960s-70s", "1980s", "1990s", "2000s", "Y2K"], required: true, fullWidth: true },
-        { id: "itemTypes", label: "Item Types", type: "multiselect", options: ["Denim", "T-shirts", "Dresses", "Jackets", "Ethnic Wear", "Accessories", "Footwear"], fullWidth: true },
-        { id: "authenticity", label: "Authenticity", type: "select", options: ["Verified Original", "Reproduction", "Mixed"] },
-      ]},
-      { id: "upcycled-reworked", name: "Upcycled & Reworked Fashion", fields: [
-        { id: "techniques", label: "Upcycling Techniques", type: "multiselect", options: ["Patchwork", "Dyeing / Overdyeing", "Embroidery Add-on", "Deconstruction", "Printing", "Embellishment", "Resizing"], required: true, fullWidth: true },
-        { id: "sourceItems", label: "Source Items", type: "multiselect", options: ["Denim", "Sarees", "T-shirts", "Military Surplus", "Work Wear", "Curtains / Home Textiles"], fullWidth: true },
-        { id: "outputType", label: "Output Type", type: "multiselect", options: ["Ready-to-Wear", "One-of-a-Kind", "Small Batch", "Custom / Made-to-Order"], fullWidth: true },
-      ]},
-      { id: "rental-fashion", name: "Rental Fashion", fields: [
-        { id: "rentalItems", label: "Rental Items", type: "multiselect", options: ["Bridal Wear", "Evening Gowns", "Designer Sarees", "Sherwanis", "Suits / Blazers", "Accessories", "Jewellery"], required: true, fullWidth: true },
-        { id: "rentalModel", label: "Rental Model", type: "select", options: ["Per Event", "Weekly", "Monthly Subscription", "Try-before-Buy"], required: true },
-        { id: "coverage", label: "Service Coverage", type: "multiselect", options: ["Local", "City-wide", "State-wide", "PAN India", "International Shipping"], fullWidth: true },
-      ]},
-      { id: "fabric-scrap-recycling", name: "Fabric Scrap & Recycling", fields: [
-        { id: "scrapType", label: "Scrap Type", type: "multiselect", options: ["Cutting Waste", "Defective Fabric", "End Rolls", "Yarn Waste", "Mixed Fiber Waste", "Post-consumer Textile"], required: true, fullWidth: true },
-        { id: "recyclingMethod", label: "Recycling Method", type: "multiselect", options: ["Mechanical Recycling", "Chemical Recycling", "Shredding", "Re-spinning", "Rag Making", "Insulation"], fullWidth: true },
-        { id: "output", label: "Output Product", type: "multiselect", options: ["Recycled Yarn", "Non-woven Fabric", "Filling Material", "Wiping Cloths", "Insulation", "Industrial Use"], fullWidth: true },
-      ]},
-    ],
-    commonFields: [
-      { id: "sustainability", label: "Sustainability Certifications", type: "multiselect", options: ["GRS (Global Recycled Standard)", "GOTS", "Fair Trade", "B Corp", "None"], fullWidth: true },
-      { id: "pickupService", label: "Pickup / Collection Service", type: "select", options: ["Yes - Free", "Yes - Paid", "Drop-off Only", "Courier Only"] },
-    ],
-  },
-  {
     id: "freelancers-job-workers",
     name: "Freelancers & Job Workers",
     icon: "User",
@@ -1149,125 +1072,6 @@ export const sellerCategories: SellerCategory[] = [
       { id: "languages", label: "Languages", type: "text", placeholder: "e.g., English, Hindi" },
     ],
   },
-  {
-    id: "home-textiles",
-    name: "Home Textiles",
-    icon: "Package",
-    type: "product",
-    subCategories: [
-      { id: "bedding", name: "Bedding & Bed Linen", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Bed Sheets", "Duvet Covers", "Pillow Covers", "Mattress Protectors", "Comforters", "Quilts", "Blankets", "Bed Skirts"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Silk", "Satin", "Polyester", "Bamboo", "Microfiber", "Blended"], required: true },
-        { id: "threadCount", label: "Thread Count", type: "select", options: ["200 TC", "300 TC", "400 TC", "600 TC", "800 TC", "1000 TC"] },
-        { id: "sizes", label: "Sizes", type: "size-selector", options: ["Single", "Double", "Queen", "King", "Super King", "Custom"] },
-        { id: "colors", label: "Colors", type: "multiselect", options: ["White", "Ivory", "Grey", "Navy", "Beige", "Blush", "Sage", "Charcoal"], fullWidth: true },
-      ]},
-      { id: "towels-bath", name: "Towels & Bath Linen", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Bath Towels", "Hand Towels", "Face Towels", "Beach Towels", "Bath Mats", "Bathrobes", "Washcloths"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Egyptian Cotton", "Turkish Cotton", "Bamboo", "Microfiber", "Linen"], required: true },
-        { id: "gsm", label: "GSM (Weight)", type: "select", options: ["300 GSM", "400 GSM", "500 GSM", "600 GSM", "700 GSM", "800 GSM"] },
-        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 70x140 cm" },
-      ]},
-      { id: "curtains-drapes", name: "Curtains & Drapes", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Sheer Curtains", "Blackout Curtains", "Semi-Sheer", "Thermal Curtains", "Valances", "Blinds"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Polyester", "Cotton", "Linen", "Velvet", "Silk", "Jacquard", "Organza"], required: true },
-        { id: "hangingStyle", label: "Hanging Style", type: "select", options: ["Eyelet", "Rod Pocket", "Tab Top", "Pinch Pleat", "Grommet"] },
-        { id: "dimensions", label: "Dimensions (WxH)", type: "text", placeholder: "e.g., 150x250 cm" },
-      ]},
-      { id: "cushions-covers", name: "Cushions & Covers", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Cushion Covers", "Throw Pillows", "Floor Cushions", "Bolster Covers", "Sofa Covers", "Chair Pads"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Velvet", "Silk", "Linen", "Jute", "Canvas", "Polyester"], required: true },
-        { id: "sizes", label: "Sizes", type: "size-selector", options: ["12x12 in", "16x16 in", "18x18 in", "20x20 in", "24x24 in", "Custom"] },
-        { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Printed", "Embroidered", "Woven", "Block Print", "Geometric", "Floral"], fullWidth: true },
-      ]},
-      { id: "table-linen", name: "Table Linen", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Tablecloths", "Table Runners", "Placemats", "Napkins", "Coasters", "Table Skirts"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Polyester", "Jute", "PVC", "Blended"], required: true },
-        { id: "shape", label: "Shape", type: "select", options: ["Rectangular", "Round", "Square", "Oval"] },
-        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 150x250 cm" },
-      ]},
-      { id: "carpets-rugs", name: "Carpets & Rugs", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Area Rugs", "Runners", "Doormats", "Carpet Tiles", "Wall-to-Wall", "Prayer Mats", "Dhurries"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Wool", "Cotton", "Jute", "Silk", "Polyester", "Nylon", "Polypropylene", "Sisal"], required: true },
-        { id: "technique", label: "Technique", type: "select", options: ["Hand Knotted", "Hand Tufted", "Hand Woven", "Machine Woven", "Flatweave", "Shag"] },
-        { id: "dimensions", label: "Dimensions", type: "text", placeholder: "e.g., 200x300 cm" },
-        { id: "pileHeight", label: "Pile Height", type: "select", options: ["Low (0-5mm)", "Medium (5-15mm)", "High (15-25mm)", "Shag (25mm+)"] },
-      ]},
-      { id: "upholstery-fabric", name: "Upholstery Fabric", fields: [
-        { id: "type", label: "Type", type: "select", options: ["Sofa Fabric", "Chair Fabric", "Automotive Upholstery", "Marine Upholstery", "Wall Covering"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Polyester", "Velvet", "Leather", "Faux Leather", "Chenille", "Jacquard", "Canvas"], required: true },
-        { id: "width", label: "Width (inches)", type: "select", options: ["44", "48", "54", "60", "72"] },
-        { id: "martindale", label: "Martindale (Rub Test)", type: "select", options: ["10,000+", "20,000+", "30,000+", "50,000+", "100,000+"] },
-      ]},
-      { id: "kitchen-textiles", name: "Kitchen Textiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Aprons", "Oven Mitts", "Pot Holders", "Kitchen Towels", "Tea Cozies", "Bread Baskets"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Cotton", "Linen", "Terry", "Waffle Weave", "Canvas"], required: true },
-        { id: "colors", label: "Colors", type: "multiselect", options: ["White", "Grey", "Navy", "Red", "Green", "Natural", "Striped"], fullWidth: true },
-      ]},
-    ],
-    commonFields: [
-      { id: "finish", label: "Finish / Treatment", type: "multiselect", options: ["Pre-Shrunk", "Wrinkle Resistant", "Stain Resistant", "Fire Retardant", "Anti-Microbial", "Eco-Friendly", "OEKO-TEX Certified"], fullWidth: true },
-      { id: "customization", label: "Customization", type: "multiselect", options: ["Custom Sizes", "Custom Colors", "Logo Embroidery", "Custom Prints", "Private Labeling"], fullWidth: true },
-    ],
-  },
-  {
-    id: "technical-textiles",
-    name: "Technical Textiles",
-    icon: "Cog",
-    type: "product",
-    subCategories: [
-      { id: "industrial-textiles", name: "Industrial Textiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Conveyor Belts", "Filter Fabrics", "Abrasive Substrates", "Insulation Materials", "Protective Covers", "Hose Fabrics", "Bolting Cloth"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Polyester", "Nylon", "Aramid (Kevlar)", "PTFE", "Fiberglass", "Carbon Fiber", "Polypropylene", "UHMWPE"], required: true },
-        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 300" },
-        { id: "tensileStrength", label: "Tensile Strength", type: "text", placeholder: "e.g., 500 N/5cm" },
-        { id: "tempResistance", label: "Temperature Resistance (°C)", type: "text", placeholder: "e.g., -40 to 260°C" },
-        { id: "application", label: "Application", type: "multiselect", options: ["Filtration", "Conveying", "Reinforcement", "Insulation", "Abrasion Protection", "Packaging"], fullWidth: true },
-      ]},
-      { id: "medical-textiles", name: "Medical & Healthcare Textiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Surgical Gowns", "Drapes", "Wound Dressings", "Bandages", "Implantable Textiles", "Compression Garments", "Hospital Bed Linen", "Face Masks"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Non-Woven PP", "Non-Woven SMS", "Cotton", "Polyester", "PTFE", "Biodegradable Polymers", "Antimicrobial Fiber"], required: true },
-        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 40" },
-        { id: "barrierLevel", label: "Barrier Level", type: "select", options: ["Level 1 (Minimal)", "Level 2 (Low)", "Level 3 (Moderate)", "Level 4 (High)"] },
-        { id: "sterilization", label: "Sterilization", type: "select", options: ["ETO", "Gamma", "Autoclave", "Non-Sterile"] },
-        { id: "certifications", label: "Certifications", type: "multiselect", options: ["FDA 510(k)", "CE Marked", "ISO 13485", "AAMI Level", "EN 13795", "Biocompatibility Tested"], fullWidth: true },
-      ]},
-      { id: "automotive-textiles", name: "Automotive Textiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Seat Covers", "Headliners", "Door Panels", "Carpet/Flooring", "Trunk Lining", "Airbag Fabric", "Seatbelts", "Tire Cord"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Polyester", "Nylon", "Polypropylene", "PET", "Aramid", "Faux Leather", "Woven Fabric", "Non-Woven"], required: true },
-        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 250" },
-        { id: "flammability", label: "Flammability Rating", type: "select", options: ["FMVSS 302", "ISO 3795", "DIN 75200", "Custom Spec"] },
-        { id: "uvResistance", label: "UV Resistance", type: "select", options: ["Standard", "High", "Extreme (1000+ hrs)"] },
-        { id: "properties", label: "Properties", type: "multiselect", options: ["Abrasion Resistant", "Stain Resistant", "Anti-Static", "Noise Dampening", "Flame Retardant", "Low VOC", "Recyclable"], fullWidth: true },
-      ]},
-      { id: "geotextiles", name: "Geotextiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Woven Geotextile", "Non-Woven Geotextile", "Geogrids", "Geomembranes", "Geocomposites", "Geonets", "Geosynthetic Clay Liner"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Polypropylene", "Polyester", "HDPE", "LDPE", "PET", "Polyamide"], required: true },
-        { id: "gsm", label: "GSM / Weight", type: "number", placeholder: "e.g., 200" },
-        { id: "tensileStrength", label: "Tensile Strength (kN/m)", type: "text", placeholder: "e.g., 30 kN/m" },
-        { id: "permeability", label: "Permeability", type: "text", placeholder: "e.g., 50 l/m²/s" },
-        { id: "application", label: "Application", type: "multiselect", options: ["Road Construction", "Erosion Control", "Drainage", "Soil Stabilization", "Landfill", "Railway", "Coastal Protection"], fullWidth: true },
-      ]},
-      { id: "protective-textiles", name: "Protective & Safety Textiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Fire-Resistant Fabrics", "Cut-Resistant Fabrics", "Chemical-Resistant Fabrics", "High-Visibility Fabrics", "Ballistic Fabrics", "Arc Flash Fabrics", "Anti-Static Fabrics"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["Aramid (Nomex/Kevlar)", "FR Cotton", "Modacrylic", "UHMWPE", "PBI", "Carbon Fiber", "FR Polyester"], required: true },
-        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 220" },
-        { id: "standard", label: "Safety Standard", type: "multiselect", options: ["EN ISO 11612", "EN ISO 11611", "NFPA 2112", "EN 388", "EN 1149", "ASTM F1506", "EN ISO 20471"], fullWidth: true },
-        { id: "protection", label: "Protection Level", type: "text", placeholder: "e.g., Arc Rating 8 cal/cm²" },
-      ]},
-      { id: "agrotextiles", name: "Agrotextiles", fields: [
-        { id: "type", label: "Product Type", type: "select", options: ["Shade Nets", "Crop Covers", "Mulch Mats", "Anti-Hail Nets", "Anti-Insect Nets", "Greenhouse Fabrics", "Root Barriers"], required: true },
-        { id: "material", label: "Material", type: "select", options: ["HDPE", "Polypropylene", "Polyester", "Biodegradable Polymer", "Jute"], required: true },
-        { id: "gsm", label: "GSM", type: "number", placeholder: "e.g., 60" },
-        { id: "shadePercentage", label: "Shade %", type: "select", options: ["30%", "40%", "50%", "60%", "70%", "80%", "90%"] },
-        { id: "uvStabilized", label: "UV Stabilized", type: "select", options: ["Yes – 3 Years", "Yes – 5 Years", "Yes – 7 Years", "No"] },
-      ]},
-    ],
-    commonFields: [
-      { id: "certification", label: "Certifications", type: "multiselect", options: ["ISO 9001", "ISO 14001", "OEKO-TEX", "REACH Compliant", "RoHS", "GRS", "BIS"], fullWidth: true },
-      { id: "testingReport", label: "Testing Reports Available", type: "multiselect", options: ["Tensile Test", "Tear Strength", "Burst Strength", "UV Resistance", "Chemical Resistance", "Flammability", "Abrasion Test"], fullWidth: true },
-    ],
-  },
 ];
 
 // Helper function to get category by ID
@@ -1281,7 +1085,13 @@ export const getSubCategoryById = (categoryId: string, subCategoryId: string): S
   return category?.subCategories.find((sub) => sub.id === subCategoryId);
 };
 
-// Get all fields for a category + subcategory combination
+// Get optional category-level common fields (e.g. apparel specs)
+export const getOptionalCategoryFields = (categoryId: string): FormField[] => {
+  const category = getCategoryById(categoryId);
+  return category?.commonFields || [];
+};
+
+// Get all fields for a category + subcategory combination (excluding optional category commonFields)
 export const getFieldsForCategory = (categoryId: string, subCategoryId?: string): FormField[] => {
   const category = getCategoryById(categoryId);
   if (!category) return [];
@@ -1293,9 +1103,6 @@ export const getFieldsForCategory = (categoryId: string, subCategoryId?: string)
     ? serviceCommonFields 
     : freelancerCommonFields;
 
-  // Get category-level common fields
-  const categoryFields = category.commonFields || [];
-  
   // Get subcategory-specific fields
   let subCategoryFields: FormField[] = [];
   if (subCategoryId) {
@@ -1303,6 +1110,6 @@ export const getFieldsForCategory = (categoryId: string, subCategoryId?: string)
     subCategoryFields = subCategory?.fields || [];
   }
 
-  // Return fields in order: subcategory-specific first, then category common, then base common
-  return [...subCategoryFields, ...categoryFields, ...baseFields];
+  // Return fields in order: subcategory-specific first, then base common (category commonFields handled separately)
+  return [...subCategoryFields, ...baseFields];
 };
