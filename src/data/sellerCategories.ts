@@ -526,7 +526,16 @@ export const sellerCategories: SellerCategory[] = [
         { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Work", "Outdoor"], fullWidth: true },
       ]},
     ],
-    commonFields: [],
+    commonFields: [
+      { id: "apparelPattern", label: "Pattern", type: "select", options: ["Solid", "Striped", "Checked", "Printed", "Floral", "Geometric", "Abstract", "Polka Dot", "Camo", "Color Block", "Tie-Dye", "Graphic", "Embroidered", "Self Textured"] },
+      { id: "apparelFitType", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Tailored", "Boxy", "A-Line", "Bodycon", "Straight", "Muscle Fit"] },
+      { id: "apparelSizes", label: "Sizes", type: "size-selector", options: standardSizes, fullWidth: true },
+      { id: "apparelNeckCollar", label: "Neck / Collar Type", type: "select", options: ["Round Neck", "V-Neck", "Crew Neck", "Polo Collar", "Mandarin", "Henley", "Spread Collar", "Button Down", "Boat Neck", "Square Neck", "Sweetheart", "Off-Shoulder", "Halter", "High Neck", "Keyhole", "Cowl Neck", "Shirt Collar", "Stand Collar", "Hood", "N/A"] },
+      { id: "apparelSleeveLength", label: "Sleeve / Length Type", type: "select", options: ["Sleeveless", "Cap Sleeve", "Half Sleeve", "3/4 Sleeve", "Full Sleeve", "Bell Sleeve", "Puff Sleeve", "Raglan", "Cold Shoulder", "Rolled Up", "Mini", "Midi", "Maxi", "Knee Length", "Ankle Length", "Floor Length", "N/A"] },
+      { id: "apparelBottomType", label: "Bottom Type", type: "select", options: ["Trouser", "Chino", "Jogger", "Cargo", "Legging", "Palazzo", "Culottes", "Shorts", "Skirt", "Dhoti", "Salwar", "Churidar", "N/A"] },
+      { id: "apparelClosure", label: "Closure / Additional Details", type: "select", options: ["Button", "Zipper", "Hook & Eye", "Snap", "Drawstring", "Elastic Waist", "Tie/Wrap", "Pullover", "Magnetic", "Velcro", "Back Zip", "Side Zip", "None"] },
+      { id: "apparelCertificates", label: "Certificates", type: "multiselect", options: ["OEKO-TEX Standard 100", "GOTS (Organic)", "BCI (Better Cotton)", "GRS (Recycled)", "Fair Trade", "SA8000", "WRAP", "ISO 9001", "Sedex/SMETA", "BSCI", "OCS (Organic Content)", "None"], fullWidth: true },
+    ],
   },
   {
     id: "machinery-equipment",
