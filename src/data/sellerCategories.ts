@@ -1085,7 +1085,13 @@ export const getSubCategoryById = (categoryId: string, subCategoryId: string): S
   return category?.subCategories.find((sub) => sub.id === subCategoryId);
 };
 
-// Get all fields for a category + subcategory combination
+// Get optional category-level common fields (e.g. apparel specs)
+export const getOptionalCategoryFields = (categoryId: string): FormField[] => {
+  const category = getCategoryById(categoryId);
+  return category?.commonFields || [];
+};
+
+// Get all fields for a category + subcategory combination (excluding optional category commonFields)
 export const getFieldsForCategory = (categoryId: string, subCategoryId?: string): FormField[] => {
   const category = getCategoryById(categoryId);
   if (!category) return [];
@@ -1097,9 +1103,6 @@ export const getFieldsForCategory = (categoryId: string, subCategoryId?: string)
     ? serviceCommonFields 
     : freelancerCommonFields;
 
-  // Get category-level common fields
-  const categoryFields = category.commonFields || [];
-  
   // Get subcategory-specific fields
   let subCategoryFields: FormField[] = [];
   if (subCategoryId) {
@@ -1107,6 +1110,6 @@ export const getFieldsForCategory = (categoryId: string, subCategoryId?: string)
     subCategoryFields = subCategory?.fields || [];
   }
 
-  // Return fields in order: subcategory-specific first, then category common, then base common
-  return [...subCategoryFields, ...categoryFields, ...baseFields];
+  // Return fields in order: subcategory-specific first, then base common (category commonFields handled separately)
+  return [...subCategoryFields, ...baseFields];
 };

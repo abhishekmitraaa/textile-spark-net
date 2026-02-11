@@ -12,14 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft } from "lucide-react";
+import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
-import { getCategoryById, getFieldsForCategory } from "@/data/sellerCategories";
+import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields } from "@/data/sellerCategories";
 import { Progress } from "@/components/ui/progress";
 
 type Step = "category" | "subcategory" | "details" | "images" | "pricing";
@@ -52,6 +52,8 @@ const Upload = () => {
 
   const category = selectedCategory ? getCategoryById(selectedCategory) : null;
   const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined) : [];
+  const optionalFields = selectedCategory ? getOptionalCategoryFields(selectedCategory) : [];
+  const [showOptionalSpecs, setShowOptionalSpecs] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -323,6 +325,49 @@ const Upload = () => {
                     values={formValues}
                     onChange={handleFieldChange}
                   />
+                </div>
+              )}
+
+              {/* Optional category-level specifications */}
+              {optionalFields.length > 0 && (
+                <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionalSpecs(!showOptionalSpecs)}
+                    className="flex w-full items-center justify-between text-left"
+                  >
+                    <div>
+                      <h2 className="font-display text-lg font-semibold text-card-foreground">
+                        Optional
+                      </h2>
+                      <p className="text-xs text-muted-foreground">Additional specifications</p>
+                    </div>
+                    <div className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-full bg-accent text-accent-foreground transition-transform",
+                      showOptionalSpecs && "rotate-180"
+                    )}>
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
+                  </button>
+                  <AnimatePresence>
+                    {showOptionalSpecs && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-4">
+                          <DynamicFormFields
+                            fields={optionalFields}
+                            values={formValues}
+                            onChange={handleFieldChange}
+                          />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               )}
             </motion.div>
