@@ -54,6 +54,7 @@ const sellerNavigation = [
   { name: "Messages", href: "/chat", icon: MessageCircle },
   { name: "Leads", href: "/leads", icon: Users },
   { name: "Advertisements", href: "/advertisements", icon: Megaphone },
+  { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "Subscription", href: "/subscription", icon: Crown },
 ];

@@ -53,6 +53,7 @@ const App = () => (
             <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/cosora-studio" element={<CosoraStudio />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
