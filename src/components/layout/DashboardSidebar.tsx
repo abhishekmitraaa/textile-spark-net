@@ -24,6 +24,7 @@ import {
   Sparkles,
   Wrench,
   Briefcase,
+  Camera,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
