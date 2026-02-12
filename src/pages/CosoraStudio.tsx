@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -10,151 +11,33 @@ import {
   MapPin,
   MessageCircle,
   Search,
-  Filter,
   Heart,
   Eye,
   ArrowRight,
   CheckCircle2,
   Sparkles,
   X,
+  UserPlus,
+  Mail,
+  Phone,
 } from "lucide-react";
 import heroImage from "@/assets/cosora-studio-hero.jpg";
+import { allPhotographers } from "./PhotographerProfile";
 
 const shootCategories = [
   "All",
-  "Lookbook",
-  "E-Commerce",
-  "Editorial",
+  "Apparel Shoot",
+  "Footwear Shoot",
+  "Accessories Shoot",
+  "Jewelry Shoot",
+  "Fabric Shoot",
   "Flat Lay",
   "Model Shoot",
-  "Lifestyle",
-  "360° Product",
-];
-
-const photographers = [
-  {
-    id: 1,
-    name: "Aarav Mehta Studios",
-    location: "Mumbai, India",
-    rating: 4.9,
-    reviews: 127,
-    specialties: ["Lookbook", "Editorial", "Model Shoot"],
-    startingAt: "₹8,000",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=500&fit=crop",
-    ],
-    verified: true,
-    featured: true,
-    description: "10+ years in fashion photography. Specialized in high-end lookbooks and editorial campaigns for leading brands.",
-    productsShot: 2400,
-  },
-  {
-    id: 2,
-    name: "Priya Lens Co.",
-    location: "Delhi, India",
-    rating: 4.8,
-    reviews: 94,
-    specialties: ["E-Commerce", "Flat Lay", "360° Product"],
-    startingAt: "₹5,000",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1485968579580-b6d095142e6e?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1581044777550-4cfa60707998?w=400&h=500&fit=crop",
-    ],
-    verified: true,
-    featured: false,
-    description: "E-commerce product photography experts. Clean, conversion-focused images for online stores.",
-    productsShot: 5200,
-  },
-  {
-    id: 3,
-    name: "Studio Luxe",
-    location: "Bangalore, India",
-    rating: 4.7,
-    reviews: 68,
-    specialties: ["Lifestyle", "Model Shoot", "Lookbook"],
-    startingAt: "₹12,000",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1506634572416-48cdfe530110?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=400&h=500&fit=crop",
-    ],
-    verified: true,
-    featured: true,
-    description: "Premium lifestyle and editorial photography. Cinematic visuals that tell your brand story.",
-    productsShot: 1800,
-  },
-  {
-    id: 4,
-    name: "ClickCraft Studio",
-    location: "Surat, India",
-    rating: 4.6,
-    reviews: 53,
-    specialties: ["E-Commerce", "Flat Lay", "360° Product"],
-    startingAt: "₹3,500",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1434389677669-e08b4cda3a0d?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=400&h=500&fit=crop",
-    ],
-    verified: false,
-    featured: false,
-    description: "Affordable product photography for textile manufacturers. Quick turnaround, bulk discounts available.",
-    productsShot: 8700,
-  },
-  {
-    id: 5,
-    name: "Vogue Visuals",
-    location: "Jaipur, India",
-    rating: 4.9,
-    reviews: 112,
-    specialties: ["Editorial", "Lookbook", "Lifestyle"],
-    startingAt: "₹15,000",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1504703395950-b89145a5425b?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1502716119720-b23a1e3b3c35?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=400&h=500&fit=crop",
-    ],
-    verified: true,
-    featured: true,
-    description: "Award-winning fashion photographer. Featured in Vogue India, Harper's Bazaar. Luxury brand specialist.",
-    productsShot: 1200,
-  },
-  {
-    id: 6,
-    name: "Frame & Focus",
-    location: "Tirupur, India",
-    rating: 4.5,
-    reviews: 41,
-    specialties: ["E-Commerce", "Flat Lay", "Model Shoot"],
-    startingAt: "₹2,500",
-    perLook: true,
-    portfolio: [
-      "https://images.unsplash.com/photo-1495385794356-15371f348c31?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1475180098004-ca77a66827be?w=400&h=500&fit=crop",
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=400&h=500&fit=crop",
-    ],
-    verified: true,
-    featured: false,
-    description: "Budget-friendly studio in the heart of Tirupur's textile hub. Specialized in bulk product photography.",
-    productsShot: 15000,
-  },
+  "Lifestyle Shoot",
 ];
 
 const CosoraStudio = () => {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [showChat, setShowChat] = useState(false);
@@ -163,7 +46,7 @@ const CosoraStudio = () => {
     { from: "cosora", text: "Hi! 👋 Welcome to Cosora Studio. Tell us about your product shoot requirements and we'll match you with the perfect photographer." },
   ]);
 
-  const filteredPhotographers = photographers.filter((p) => {
+  const filteredPhotographers = allPhotographers.filter((p) => {
     const matchesCategory = selectedCategory === "All" || p.specialties.includes(selectedCategory);
     const matchesSearch =
       searchQuery === "" ||
@@ -208,7 +91,7 @@ const CosoraStudio = () => {
                 Cosora Studio
               </h1>
               <p className="mt-2 max-w-lg text-sm text-white/80 md:text-base">
-                Get professional model shoots for your products. Browse top photographers, pick your style, and we'll handle the booking for you.
+                Professional product shoots made simple. Pick a category, choose your photographer, and we'll handle everything.
               </p>
               <div className="mt-4 flex gap-3">
                 <Button
@@ -230,7 +113,7 @@ const CosoraStudio = () => {
         {/* How it Works */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {[
-            { step: "01", title: "Browse Studios", desc: "Explore verified photographers and their portfolios" },
+            { step: "01", title: "Pick Your Shoot Type", desc: "Apparel, Footwear, Accessories, Jewelry — choose what you need" },
             { step: "02", title: "Chat with Us", desc: "Tell us your requirements, budget and preferred style" },
             { step: "03", title: "We Book for You", desc: "We handle scheduling, coordination and delivery" },
           ].map((item, i) => (
@@ -288,11 +171,12 @@ const CosoraStudio = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="group overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-lg"
+              className="group cursor-pointer overflow-hidden rounded-xl border border-border bg-card transition-shadow hover:shadow-lg"
+              onClick={() => navigate(`/cosora-studio/${photographer.id}`)}
             >
-              {/* Portfolio Preview - 4 image grid like reference */}
+              {/* Portfolio Preview - 4 image grid */}
               <div className="grid grid-cols-4 gap-0.5">
-                {photographer.portfolio.map((img, i) => (
+                {photographer.portfolio.slice(0, 4).map((img, i) => (
                   <div key={i} className="relative aspect-[3/4] overflow-hidden">
                     <img
                       src={img}
@@ -321,7 +205,10 @@ const CosoraStudio = () => {
                       {photographer.location}
                     </div>
                   </div>
-                  <button className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent">
+                  <button
+                    className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-accent/10 hover:text-accent"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <Heart className="h-4 w-4" />
                   </button>
                 </div>
@@ -357,12 +244,14 @@ const CosoraStudio = () => {
                 </div>
 
                 <Button
-                  onClick={() => setShowChat(true)}
                   className="mt-3 w-full bg-foreground text-background hover:bg-foreground/90"
                   size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/cosora-studio/${photographer.id}`);
+                  }}
                 >
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Chat to Book
+                  View Profile
                   <ArrowRight className="ml-auto h-4 w-4" />
                 </Button>
               </div>
@@ -377,6 +266,67 @@ const CosoraStudio = () => {
             <p className="text-xs text-muted-foreground/70">Try a different category or search term</p>
           </div>
         )}
+
+        {/* Register as Photographer / Contact Us */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-8 overflow-hidden rounded-2xl border border-border bg-card"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2">
+            {/* Register as Photographer */}
+            <div className="border-b border-border p-6 md:border-b-0 md:border-r md:p-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
+                <UserPlus className="h-6 w-6 text-accent" />
+              </div>
+              <h3 className="mt-4 font-display text-xl font-bold text-foreground">
+                Register as a Photographer
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Are you a professional photographer specializing in product, fashion, or textile photography? Join Cosora Studio and get discovered by thousands of brands.
+              </p>
+              <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Get featured on our marketplace</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Receive booking requests from top brands</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Set your own pricing & availability</li>
+                <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent shrink-0" /> Zero commission on your first 10 shoots</li>
+              </ul>
+              <Button className="mt-6 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => setShowChat(true)}>
+                <UserPlus className="mr-2 h-4 w-4" /> Apply to Join
+              </Button>
+            </div>
+
+            {/* Contact Us */}
+            <div className="p-6 md:p-8">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
+                <MessageCircle className="h-6 w-6 text-accent" />
+              </div>
+              <h3 className="mt-4 font-display text-xl font-bold text-foreground">
+                Contact Us
+              </h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Have questions about our studio services? Need a custom shoot package? We're here to help you get the perfect product visuals.
+              </p>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Mail className="h-4 w-4 text-accent" />
+                  <span>studio@cosora.com</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Phone className="h-4 w-4 text-accent" />
+                  <span>+91 98765 43210</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4 text-accent" />
+                  <span>Mumbai • Delhi • Bangalore • Surat • Tirupur</span>
+                </div>
+              </div>
+              <Button variant="outline" className="mt-6" onClick={() => setShowChat(true)}>
+                <MessageCircle className="mr-2 h-4 w-4" /> Chat with Us
+              </Button>
+            </div>
+          </div>
+        </motion.div>
       </div>
 
       {/* Floating Chat Widget */}
@@ -388,7 +338,6 @@ const CosoraStudio = () => {
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             className="fixed bottom-20 right-4 z-50 flex h-[420px] w-[340px] flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-2xl lg:bottom-6 lg:right-6"
           >
-            {/* Chat Header */}
             <div className="flex items-center justify-between bg-foreground px-4 py-3">
               <div className="flex items-center gap-2">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent">
@@ -399,35 +348,21 @@ const CosoraStudio = () => {
                   <p className="text-[10px] text-background/60">Usually replies within 5 min</p>
                 </div>
               </div>
-              <button
-                onClick={() => setShowChat(false)}
-                className="rounded-full p-1 text-background/60 transition-colors hover:text-background"
-              >
+              <button onClick={() => setShowChat(false)} className="rounded-full p-1 text-background/60 transition-colors hover:text-background">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {/* Chat Messages */}
             <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {chatMessages.map((msg, i) => (
-                <div
-                  key={i}
-                  className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs ${
-                      msg.from === "user"
-                        ? "bg-accent text-accent-foreground rounded-br-sm"
-                        : "bg-muted text-foreground rounded-bl-sm"
-                    }`}
-                  >
+                <div key={i} className={`flex ${msg.from === "user" ? "justify-end" : "justify-start"}`}>
+                  <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-xs ${msg.from === "user" ? "bg-accent text-accent-foreground rounded-br-sm" : "bg-muted text-foreground rounded-bl-sm"}`}>
                     {msg.text}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Chat Input */}
             <div className="border-t border-border p-3">
               <div className="flex gap-2">
                 <Input
@@ -446,7 +381,6 @@ const CosoraStudio = () => {
         )}
       </AnimatePresence>
 
-      {/* Floating Chat Button (when chat is closed) */}
       {!showChat && (
         <motion.button
           initial={{ scale: 0 }}
