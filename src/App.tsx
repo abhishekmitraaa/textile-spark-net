@@ -23,6 +23,7 @@ import Freelancers from "./pages/Freelancers";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import CosoraStudio from "./pages/CosoraStudio";
+import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
