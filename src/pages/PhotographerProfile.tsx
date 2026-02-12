@@ -376,7 +376,7 @@ const PhotographerProfile = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/80 p-4"
           onClick={() => setSelectedImage(null)}
         >
           <img src={selectedImage} alt="Portfolio" className="max-h-[85vh] max-w-full rounded-lg object-contain" />
