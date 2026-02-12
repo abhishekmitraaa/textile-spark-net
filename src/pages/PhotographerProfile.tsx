@@ -265,7 +265,7 @@ const PhotographerProfile = () => {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {photographer.location}</span>
-              <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {photographer.rating} ({photographer.reviews} reviews)</span>
+              <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-accent text-accent" /> {photographer.rating} ({photographer.reviews} reviews)</span>
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {photographer.turnaround} delivery</span>
               <span className="flex items-center gap-1"><Award className="h-4 w-4" /> {photographer.experience}</span>
             </div>
