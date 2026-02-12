@@ -260,7 +260,7 @@ const PhotographerProfile = () => {
               </h1>
               {photographer.verified && <CheckCircle2 className="h-5 w-5 text-accent" />}
               {photographer.featured && (
-                <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/20">Featured</Badge>
+                <Badge className="bg-accent/10 text-accent border-accent/20">Featured</Badge>
               )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
