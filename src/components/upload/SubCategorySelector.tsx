@@ -72,6 +72,21 @@ const subTypesBySubCategory: Record<string, string[]> = {
   "home-textiles": ["Bedsheet", "Duvet Cover", "Curtains", "Cushion Cover", "Towel", "Table Linen", "Blanket", "Rug"],
   // Ready-made Garments
   "ready-made-garments": ["Jackets", "Blazers", "Suits", "Activewear", "Sportswear", "Uniforms", "Workwear", "Swimwear"],
+  // Cosmetics & Beauty
+  "skincare": ["Moisturizer", "Serum", "Cleanser", "Toner", "Sunscreen", "Face Mask", "Exfoliator", "Eye Cream", "Night Cream", "Day Cream", "Peel", "Face Mist"],
+  "makeup-face": ["Foundation", "Concealer", "Compact Powder", "Blush", "Bronzer", "Highlighter", "Primer", "Setting Spray", "BB Cream", "CC Cream", "Contour Kit"],
+  "lip-products": ["Lipstick", "Lip Gloss", "Liquid Lipstick", "Lip Tint", "Lip Crayon", "Lip Liner", "Lip Balm", "Lip Oil"],
+  "eye-products": ["Eyeshadow Palette", "Eyeliner", "Kajal", "Mascara", "Eyebrow Pencil", "False Lashes", "Eye Primer"],
+  "haircare": ["Shampoo", "Conditioner", "Hair Oil", "Hair Mask", "Hair Serum", "Hair Color", "Dry Shampoo", "Scalp Treatment"],
+  "nail-products": ["Nail Polish", "Gel Polish", "Press-on Nails", "Nail Art Kit", "Base Coat", "Top Coat", "Cuticle Oil", "Dip Powder"],
+  "fragrances": ["Eau de Parfum", "Eau de Toilette", "Body Mist", "Attar", "Perfume Oil", "Deodorant", "Solid Perfume"],
+  "bath-body": ["Body Wash", "Body Lotion", "Body Butter", "Soap Bar", "Body Scrub", "Bath Bomb", "Hand Cream", "Body Oil"],
+  "beauty-tools": ["Makeup Brushes", "Brush Set", "Beauty Blender", "Face Roller", "Gua Sha", "Derma Roller", "Eyelash Curler"],
+  "mens-grooming": ["Beard Oil", "Shaving Cream", "After Shave", "Face Wash", "Hair Wax", "Pomade", "Grooming Kit"],
+  "oral-care": ["Toothpaste", "Mouthwash", "Teeth Whitening Kit", "Tooth Powder", "Tongue Cleaner"],
+  "baby-kids-care": ["Baby Shampoo", "Baby Lotion", "Baby Oil", "Baby Wash", "Diaper Cream", "Baby Sunscreen"],
+  "essential-oils-aromatherapy": ["Essential Oil", "Carrier Oil", "Blend Oil", "Diffuser Oil", "Aromatherapy Candle"],
+  "sun-care": ["Sunscreen", "After-Sun Lotion", "Tan Remover", "Self-tanning Lotion", "Sun Protection Lip Balm"],
 };
 
 export const SubCategorySelector = ({
