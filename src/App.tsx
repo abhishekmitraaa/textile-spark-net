@@ -23,6 +23,7 @@ import Freelancers from "./pages/Freelancers";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import CosoraStudio from "./pages/CosoraStudio";
+import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -54,6 +55,7 @@ const App = () => (
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
+            <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
