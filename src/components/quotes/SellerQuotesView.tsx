@@ -247,7 +247,7 @@ const SellerQuotesView = () => {
   };
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -269,7 +269,7 @@ const SellerQuotesView = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4"
       >
         {[
           { label: "Total Sent", value: stats.totalSent, icon: Send, color: "text-accent" },
@@ -278,14 +278,14 @@ const SellerQuotesView = () => {
           { label: "Total Value", value: stats.totalValue, icon: TrendingUp, color: "text-primary" },
         ].map((stat) => (
           <Card key={stat.label} className="border-border/50 bg-card">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
-                  <p className="mt-1 text-2xl font-bold text-foreground">{stat.value}</p>
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-center justify-between gap-1">
+                <div className="min-w-0">
+                  <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{stat.label}</p>
+                  <p className="mt-0.5 text-xl sm:text-2xl font-bold text-foreground">{stat.value}</p>
                 </div>
-                <div className={`rounded-lg bg-muted p-2 ${stat.color}`}>
-                  <stat.icon size={20} />
+                <div className={`shrink-0 rounded-lg bg-muted p-1.5 sm:p-2 ${stat.color}`}>
+                  <stat.icon size={16} className="sm:w-5 sm:h-5" />
                 </div>
               </div>
             </CardContent>
@@ -294,39 +294,39 @@ const SellerQuotesView = () => {
       </motion.div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="bg-muted/50 p-1">
-          <TabsTrigger value="sent" className="gap-2">
-            <Send size={16} />
-            Sent Quotes
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-3 lg:space-y-4">
+        <TabsList className="bg-muted/50 p-1 w-full grid grid-cols-3">
+          <TabsTrigger value="sent" className="gap-1.5 text-xs sm:text-sm">
+            <Send size={14} />
+            <span className="hidden sm:inline">Sent</span> Quotes
           </TabsTrigger>
-          <TabsTrigger value="rfqs" className="gap-2">
-            <Inbox size={16} />
-            Incoming RFQs ({incomingRFQs.length})
+          <TabsTrigger value="rfqs" className="gap-1.5 text-xs sm:text-sm">
+            <Inbox size={14} />
+            RFQs ({incomingRFQs.length})
           </TabsTrigger>
-          <TabsTrigger value="analytics" className="gap-2">
-            <BarChart3 size={16} />
-            Performance
+          <TabsTrigger value="analytics" className="gap-1.5 text-xs sm:text-sm">
+            <BarChart3 size={14} />
+            <span className="hidden sm:inline">Performance</span><span className="sm:hidden">Stats</span>
           </TabsTrigger>
         </TabsList>
 
         {/* Sent Quotes Tab */}
-        <TabsContent value="sent" className="space-y-4">
+        <TabsContent value="sent" className="space-y-3">
           {/* Filters */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
               <Input
                 placeholder="Search by product or buyer..."
-                className="pl-10"
+                className="pl-9 h-9 text-sm"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[160px]">
-                  <Filter size={16} className="mr-2" />
+                <SelectTrigger className="w-[140px] h-9 text-sm">
+                  <Filter size={14} className="mr-1.5" />
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -337,14 +337,14 @@ const SellerQuotesView = () => {
                   <SelectItem value="expired">Expired</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon">
-                <ArrowUpDown size={18} />
+              <Button variant="outline" size="icon" className="h-9 w-9">
+                <ArrowUpDown size={16} />
               </Button>
             </div>
           </div>
 
           {/* Sent Quote Cards */}
-          <div className="grid gap-4">
+          <div className="grid gap-3">
             <AnimatePresence>
               {filteredQuotes.map((quote, index) => {
                 const status = statusConfig[quote.status as keyof typeof statusConfig];
@@ -359,8 +359,8 @@ const SellerQuotesView = () => {
                     transition={{ delay: index * 0.05 }}
                   >
                     <Card className="group overflow-hidden border-border/50 bg-card transition-all hover:border-accent/30 hover:shadow-md">
-                      <CardContent className="p-4 lg:p-5">
-                        <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+                      <CardContent className="p-3 sm:p-4 lg:p-5">
+                        <div className="flex flex-col gap-3 lg:flex-row lg:justify-between">
                           {/* Left Section */}
                           <div className="flex-1 space-y-3">
                             <div className="flex items-start justify-between gap-2">
@@ -374,7 +374,7 @@ const SellerQuotesView = () => {
                                     {status.label}
                                   </Badge>
                                 </div>
-                                <h3 className="font-display text-lg font-semibold text-foreground">
+                                <h3 className="font-display text-base sm:text-lg font-semibold text-foreground leading-tight">
                                   {quote.productName}
                                 </h3>
                               </div>
@@ -403,25 +403,25 @@ const SellerQuotesView = () => {
                             </div>
 
                             {/* Meta Info */}
-                            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Calendar size={14} />
+                            <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs sm:text-sm">
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Calendar size={12} />
                                 <span>Sent: {quote.sentDate}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Clock size={14} />
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Clock size={12} />
                                 <span>Expires: {quote.expiryDate}</span>
                               </div>
-                              <div className="flex items-center gap-1.5 text-muted-foreground">
-                                <Truck size={14} />
+                              <div className="flex items-center gap-1 text-muted-foreground">
+                                <Truck size={12} />
                                 <span>Lead: {quote.leadTime}</span>
                               </div>
                             </div>
 
                             {/* Specs */}
-                            <div className="flex flex-wrap gap-2">
+                            <div className="hidden sm:flex flex-wrap gap-1.5">
                               {Object.entries(quote.specifications).map(([key, value]) => (
-                                <Badge key={key} variant="secondary" className="text-xs">
+                                <Badge key={key} variant="secondary" className="text-[10px]">
                                   {key}: {value}
                                 </Badge>
                               ))}
@@ -429,54 +429,54 @@ const SellerQuotesView = () => {
                           </div>
 
                           {/* Right Section - Pricing */}
-                          <div className="flex flex-col gap-3 lg:items-end lg:text-right lg:min-w-[200px]">
+                          <div className="flex items-center gap-4 sm:flex-col sm:gap-3 lg:items-end lg:text-right lg:min-w-[200px]">
                             <div>
-                              <p className="text-xs text-muted-foreground">Quoted Price</p>
-                              <p className="text-xl font-bold text-accent">{quote.quotedPrice}</p>
+                              <p className="text-[10px] sm:text-xs text-muted-foreground">Quoted Price</p>
+                              <p className="text-lg sm:text-xl font-bold text-accent">{quote.quotedPrice}</p>
                             </div>
-                            <div className="flex gap-4 lg:flex-col lg:gap-1">
+                            <div className="flex gap-4 sm:flex-col sm:gap-1">
                               <div>
-                                <p className="text-xs text-muted-foreground">Quantity</p>
-                                <p className="text-sm font-medium">{quote.quantity}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">Qty</p>
+                                <p className="text-xs sm:text-sm font-medium">{quote.quantity}</p>
                               </div>
                               <div>
-                                <p className="text-xs text-muted-foreground">Total Value</p>
-                                <p className="text-sm font-bold text-foreground">{quote.totalValue}</p>
+                                <p className="text-[10px] sm:text-xs text-muted-foreground">Total</p>
+                                <p className="text-xs sm:text-sm font-bold text-foreground">{quote.totalValue}</p>
                               </div>
                             </div>
                           </div>
                         </div>
 
                         {/* Actions */}
-                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                        <div className="mt-3 flex items-center gap-2 border-t border-border pt-3">
                           <Button
                             variant="gold"
                             size="sm"
-                            className="gap-1.5"
+                            className="gap-1.5 h-8 text-xs"
                             onClick={() => {
                               setSelectedQuote(quote);
                               setIsDetailOpen(true);
                             }}
                           >
-                            <Eye size={14} />
-                            View Details
+                            <Eye size={12} />
+                            Details
                           </Button>
                           {quote.status === "pending" && (
-                            <Button variant="outline" size="sm" className="gap-1.5">
-                              <FileText size={14} />
-                              Edit Quote
+                            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
+                              <FileText size={12} />
+                              Edit
                             </Button>
                           )}
                           <div className="flex-1" />
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Phone size={16} />
+                          <div className="hidden sm:flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Phone size={14} />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MessageCircle size={16} />
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MessageCircle size={14} />
                             </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <Mail size={16} />
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <Mail size={14} />
                             </Button>
                           </div>
                         </div>
