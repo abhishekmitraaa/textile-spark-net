@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import SellerQuotesView from "@/components/quotes/SellerQuotesView";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -233,6 +235,7 @@ const statusConfig = {
 };
 
 const Quotes = () => {
+  const { role } = useUserRole();
   const [activeTab, setActiveTab] = useState("received");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -372,6 +375,14 @@ const Quotes = () => {
     if (quotes.length === 0) return null;
     return Math.max(...quotes.map(q => q.vendorRating));
   };
+
+  if (role === "seller") {
+    return (
+      <DashboardLayout>
+        <SellerQuotesView />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>

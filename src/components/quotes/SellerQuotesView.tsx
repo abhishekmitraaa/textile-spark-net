@@ -1,0 +1,706 @@
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
+import {
+  Search,
+  Filter,
+  Send,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Eye,
+  FileText,
+  Building2,
+  MapPin,
+  Calendar,
+  DollarSign,
+  Package,
+  Truck,
+  ArrowUpDown,
+  MessageCircle,
+  Phone,
+  Mail,
+  Star,
+  Inbox,
+  TrendingUp,
+  Reply,
+  BarChart3,
+} from "lucide-react";
+
+// Mock data for seller's sent quotes
+const sellerSentQuotes = [
+  {
+    id: "SQ001",
+    buyerName: "Urban Threads Fashion",
+    buyerLogo: "UT",
+    buyerLocation: "New York, USA",
+    buyerRating: 4.6,
+    rfqId: "RFQ-2024-0112",
+    productName: "Organic Cotton Poplin - 60s Count",
+    quantity: "5000 meters",
+    quotedPrice: "$2.50/meter",
+    totalValue: "$12,500",
+    leadTime: "15-20 days",
+    status: "pending",
+    sentDate: "2024-01-12",
+    expiryDate: "2024-01-27",
+    specifications: {
+      material: "100% Organic Cotton",
+      weight: "120 GSM",
+      width: "58 inches",
+      finish: "Pre-washed",
+    },
+  },
+  {
+    id: "SQ002",
+    buyerName: "Luxe Atelier",
+    buyerLogo: "LA",
+    buyerLocation: "Paris, France",
+    buyerRating: 4.9,
+    rfqId: "RFQ-2024-0098",
+    productName: "Mulberry Silk Charmeuse - Grade A",
+    quantity: "2000 meters",
+    quotedPrice: "$8.00/meter",
+    totalValue: "$16,000",
+    leadTime: "25-30 days",
+    status: "accepted",
+    sentDate: "2024-01-08",
+    expiryDate: "2024-01-23",
+    specifications: {
+      material: "100% Mulberry Silk",
+      weight: "90 GSM",
+      width: "45 inches",
+      finish: "Sand-washed",
+    },
+  },
+  {
+    id: "SQ003",
+    buyerName: "Denim Republic",
+    buyerLogo: "DR",
+    buyerLocation: "Los Angeles, USA",
+    buyerRating: 4.3,
+    rfqId: "RFQ-2024-0134",
+    productName: "Selvedge Denim - 14oz",
+    quantity: "8000 meters",
+    quotedPrice: "$4.20/meter",
+    totalValue: "$33,600",
+    leadTime: "20-25 days",
+    status: "rejected",
+    sentDate: "2024-01-05",
+    expiryDate: "2024-01-20",
+    specifications: {
+      material: "100% Cotton",
+      weight: "475 GSM",
+      width: "32 inches",
+      finish: "Raw / Unwashed",
+    },
+  },
+  {
+    id: "SQ004",
+    buyerName: "EcoWear Brand",
+    buyerLogo: "EW",
+    buyerLocation: "London, UK",
+    buyerRating: 4.7,
+    rfqId: "RFQ-2024-0150",
+    productName: "Hemp-Cotton Blend Jersey",
+    quantity: "3000 meters",
+    quotedPrice: "$3.80/meter",
+    totalValue: "$11,400",
+    leadTime: "18-22 days",
+    status: "pending",
+    sentDate: "2024-01-14",
+    expiryDate: "2024-01-29",
+    specifications: {
+      material: "55% Hemp, 45% Cotton",
+      weight: "180 GSM",
+      width: "60 inches",
+      finish: "Enzyme-washed",
+    },
+  },
+  {
+    id: "SQ005",
+    buyerName: "Silk Road Couture",
+    buyerLogo: "SR",
+    buyerLocation: "Dubai, UAE",
+    buyerRating: 4.8,
+    rfqId: "RFQ-2024-0167",
+    productName: "Viscose Crepe - Printed",
+    quantity: "4000 meters",
+    quotedPrice: "$3.00/meter",
+    totalValue: "$12,000",
+    leadTime: "12-15 days",
+    status: "expired",
+    sentDate: "2023-12-20",
+    expiryDate: "2024-01-05",
+    specifications: {
+      material: "100% Viscose",
+      weight: "130 GSM",
+      width: "54 inches",
+      finish: "Digital Print",
+    },
+  },
+];
+
+// Mock data for incoming RFQs the seller can respond to
+const incomingRFQs = [
+  {
+    id: "RFQ-2024-0180",
+    buyerName: "Nordic Style Co.",
+    buyerLocation: "Stockholm, Sweden",
+    productName: "Organic Linen Fabric",
+    quantity: "6000 meters",
+    targetPrice: "$4.00-5.00/meter",
+    deadline: "2024-01-30",
+    postedDate: "2024-01-15",
+    requirements: "GOTS certified, natural dye, 200 GSM minimum",
+    status: "new",
+  },
+  {
+    id: "RFQ-2024-0175",
+    buyerName: "Coastal Wear Ltd",
+    buyerLocation: "Sydney, Australia",
+    productName: "Recycled Polyester Knit",
+    quantity: "10000 meters",
+    targetPrice: "$2.00-3.00/meter",
+    deadline: "2024-02-05",
+    postedDate: "2024-01-13",
+    requirements: "GRS certified, moisture-wicking, 150 GSM",
+    status: "new",
+  },
+  {
+    id: "RFQ-2024-0160",
+    buyerName: "Heritage Textiles",
+    buyerLocation: "Milan, Italy",
+    productName: "Jacquard Woven Fabric",
+    quantity: "1500 meters",
+    targetPrice: "$10.00-15.00/meter",
+    deadline: "2024-01-25",
+    postedDate: "2024-01-10",
+    requirements: "Custom pattern, silk-cotton blend, minimum 200 GSM",
+    status: "viewed",
+  },
+];
+
+const statusConfig = {
+  pending: { label: "Awaiting Response", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Clock },
+  accepted: { label: "Accepted", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: CheckCircle2 },
+  rejected: { label: "Declined", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
+  expired: { label: "Expired", color: "bg-muted text-muted-foreground border-muted", icon: AlertCircle },
+};
+
+const SellerQuotesView = () => {
+  const [activeTab, setActiveTab] = useState("sent");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedQuote, setSelectedQuote] = useState<typeof sellerSentQuotes[0] | null>(null);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [isRespondOpen, setIsRespondOpen] = useState(false);
+  const [selectedRFQ, setSelectedRFQ] = useState<typeof incomingRFQs[0] | null>(null);
+
+  // Respond to RFQ form state
+  const [responsePrice, setResponsePrice] = useState("");
+  const [responseLeadTime, setResponseLeadTime] = useState("");
+  const [responseNotes, setResponseNotes] = useState("");
+
+  const filteredQuotes = sellerSentQuotes.filter((quote) => {
+    const matchesSearch =
+      quote.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      quote.buyerName.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const stats = {
+    totalSent: sellerSentQuotes.length,
+    pending: sellerSentQuotes.filter((q) => q.status === "pending").length,
+    accepted: sellerSentQuotes.filter((q) => q.status === "accepted").length,
+    totalValue: "$85,500",
+  };
+
+  const handleRespondToRFQ = () => {
+    toast.success("Quotation sent to buyer successfully!");
+    setIsRespondOpen(false);
+    setResponsePrice("");
+    setResponseLeadTime("");
+    setResponseNotes("");
+  };
+
+  return (
+    <div className="space-y-6 p-4 lg:p-6">
+      {/* Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <h1 className="font-display text-2xl font-bold text-foreground lg:text-3xl">
+            My Quotations
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Track sent quotations and respond to buyer requests
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Stats Cards */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="grid grid-cols-2 gap-4 lg:grid-cols-4"
+      >
+        {[
+          { label: "Total Sent", value: stats.totalSent, icon: Send, color: "text-accent" },
+          { label: "Awaiting Response", value: stats.pending, icon: Clock, color: "text-amber-500" },
+          { label: "Accepted", value: stats.accepted, icon: CheckCircle2, color: "text-emerald-500" },
+          { label: "Total Value", value: stats.totalValue, icon: TrendingUp, color: "text-primary" },
+        ].map((stat) => (
+          <Card key={stat.label} className="border-border/50 bg-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground">{stat.label}</p>
+                  <p className="mt-1 text-2xl font-bold text-foreground">{stat.value}</p>
+                </div>
+                <div className={`rounded-lg bg-muted p-2 ${stat.color}`}>
+                  <stat.icon size={20} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </motion.div>
+
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="bg-muted/50 p-1">
+          <TabsTrigger value="sent" className="gap-2">
+            <Send size={16} />
+            Sent Quotes
+          </TabsTrigger>
+          <TabsTrigger value="rfqs" className="gap-2">
+            <Inbox size={16} />
+            Incoming RFQs ({incomingRFQs.length})
+          </TabsTrigger>
+          <TabsTrigger value="analytics" className="gap-2">
+            <BarChart3 size={16} />
+            Performance
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Sent Quotes Tab */}
+        <TabsContent value="sent" className="space-y-4">
+          {/* Filters */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+              <Input
+                placeholder="Search by product or buyer..."
+                className="pl-10"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-[160px]">
+                  <Filter size={16} className="mr-2" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Awaiting Response</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="rejected">Declined</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon">
+                <ArrowUpDown size={18} />
+              </Button>
+            </div>
+          </div>
+
+          {/* Sent Quote Cards */}
+          <div className="grid gap-4">
+            <AnimatePresence>
+              {filteredQuotes.map((quote, index) => {
+                const status = statusConfig[quote.status as keyof typeof statusConfig];
+                const StatusIcon = status.icon;
+
+                return (
+                  <motion.div
+                    key={quote.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card className="group overflow-hidden border-border/50 bg-card transition-all hover:border-accent/30 hover:shadow-md">
+                      <CardContent className="p-4 lg:p-5">
+                        <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+                          {/* Left Section */}
+                          <div className="flex-1 space-y-3">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono">
+                                    {quote.rfqId}
+                                  </Badge>
+                                  <Badge className={`${status.color} border gap-1`}>
+                                    <StatusIcon size={12} />
+                                    {status.label}
+                                  </Badge>
+                                </div>
+                                <h3 className="font-display text-lg font-semibold text-foreground">
+                                  {quote.productName}
+                                </h3>
+                              </div>
+                            </div>
+
+                            {/* Buyer Info */}
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent text-xs font-bold text-accent-foreground">
+                                {quote.buyerLogo}
+                              </div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium text-foreground">
+                                    {quote.buyerName}
+                                  </span>
+                                  <div className="flex items-center gap-1 text-amber-500">
+                                    <Star size={12} fill="currentColor" />
+                                    <span className="text-xs">{quote.buyerRating}</span>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                                  <MapPin size={10} />
+                                  {quote.buyerLocation}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Meta Info */}
+                            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Calendar size={14} />
+                                <span>Sent: {quote.sentDate}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Clock size={14} />
+                                <span>Expires: {quote.expiryDate}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-muted-foreground">
+                                <Truck size={14} />
+                                <span>Lead: {quote.leadTime}</span>
+                              </div>
+                            </div>
+
+                            {/* Specs */}
+                            <div className="flex flex-wrap gap-2">
+                              {Object.entries(quote.specifications).map(([key, value]) => (
+                                <Badge key={key} variant="secondary" className="text-xs">
+                                  {key}: {value}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Right Section - Pricing */}
+                          <div className="flex flex-col gap-3 lg:items-end lg:text-right lg:min-w-[200px]">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Quoted Price</p>
+                              <p className="text-xl font-bold text-accent">{quote.quotedPrice}</p>
+                            </div>
+                            <div className="flex gap-4 lg:flex-col lg:gap-1">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Quantity</p>
+                                <p className="text-sm font-medium">{quote.quantity}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Total Value</p>
+                                <p className="text-sm font-bold text-foreground">{quote.totalValue}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-border pt-4">
+                          <Button
+                            variant="gold"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => {
+                              setSelectedQuote(quote);
+                              setIsDetailOpen(true);
+                            }}
+                          >
+                            <Eye size={14} />
+                            View Details
+                          </Button>
+                          {quote.status === "pending" && (
+                            <Button variant="outline" size="sm" className="gap-1.5">
+                              <FileText size={14} />
+                              Edit Quote
+                            </Button>
+                          )}
+                          <div className="flex-1" />
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Phone size={16} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MessageCircle size={16} />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <Mail size={16} />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        </TabsContent>
+
+        {/* Incoming RFQs Tab */}
+        <TabsContent value="rfqs" className="space-y-4">
+          <div className="grid gap-4">
+            {incomingRFQs.map((rfq, index) => (
+              <motion.div
+                key={rfq.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
+              >
+                <Card className="border-border/50 bg-card transition-all hover:border-accent/30 hover:shadow-md">
+                  <CardContent className="p-4 lg:p-5">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:justify-between">
+                      <div className="flex-1 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="font-mono text-[10px] px-1.5 py-0">
+                            {rfq.id}
+                          </Badge>
+                          {rfq.status === "new" && (
+                            <Badge className="bg-primary/10 text-primary border-primary/20 border">New</Badge>
+                          )}
+                        </div>
+                        <h3 className="font-display text-lg font-semibold text-foreground">
+                          {rfq.productName}
+                        </h3>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Building2 size={14} />
+                          <span className="font-medium text-foreground">{rfq.buyerName}</span>
+                          <span>•</span>
+                          <MapPin size={14} />
+                          <span>{rfq.buyerLocation}</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          <span className="font-medium text-foreground">Requirements:</span> {rfq.requirements}
+                        </p>
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-1.5">
+                            <Package size={14} />
+                            <span>{rfq.quantity}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <DollarSign size={14} />
+                            <span>Target: {rfq.targetPrice}</span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={14} />
+                            <span>Deadline: {rfq.deadline}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2 lg:flex-col">
+                        <Button
+                          variant="gold"
+                          size="sm"
+                          className="gap-1.5"
+                          onClick={() => {
+                            setSelectedRFQ(rfq);
+                            setIsRespondOpen(true);
+                          }}
+                        >
+                          <Reply size={14} />
+                          Send Quotation
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-1.5">
+                          <Eye size={14} />
+                          View Details
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        </TabsContent>
+
+        {/* Performance Tab */}
+        <TabsContent value="analytics" className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[
+              { label: "Quote Acceptance Rate", value: "40%", desc: "2 of 5 quotes accepted", color: "text-emerald-500" },
+              { label: "Avg. Response Time", value: "2.3 days", desc: "From RFQ to quotation sent", color: "text-accent" },
+              { label: "Total Revenue (Accepted)", value: "$16,000", desc: "From accepted quotations", color: "text-primary" },
+              { label: "Pending Value", value: "$23,900", desc: "Quotes awaiting response", color: "text-amber-500" },
+              { label: "Quotes This Month", value: "5", desc: "Sent in January 2024", color: "text-accent" },
+              { label: "Repeat Buyers", value: "1", desc: "Buyers who accepted before", color: "text-emerald-500" },
+            ].map((metric) => (
+              <Card key={metric.label} className="border-border/50 bg-card">
+                <CardContent className="p-5">
+                  <p className="text-xs font-medium text-muted-foreground">{metric.label}</p>
+                  <p className={`mt-1 text-2xl font-bold ${metric.color}`}>{metric.value}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{metric.desc}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Quote Detail Dialog */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Quote Details</DialogTitle>
+          </DialogHeader>
+          {selectedQuote && (
+            <div className="space-y-4 pt-2">
+              <div>
+                <h4 className="font-semibold text-foreground">{selectedQuote.productName}</h4>
+                <p className="text-sm text-muted-foreground mt-1">
+                  RFQ: {selectedQuote.rfqId} • Sent to {selectedQuote.buyerName}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Quoted Price</p>
+                  <p className="text-lg font-bold text-accent">{selectedQuote.quotedPrice}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Total Value</p>
+                  <p className="text-lg font-bold text-foreground">{selectedQuote.totalValue}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Quantity</p>
+                  <p className="font-medium">{selectedQuote.quantity}</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Lead Time</p>
+                  <p className="font-medium">{selectedQuote.leadTime}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Specifications</p>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(selectedQuote.specifications).map(([key, value]) => (
+                    <Badge key={key} variant="secondary" className="text-xs capitalize">
+                      {key}: {value}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Sent Date</p>
+                  <p className="font-medium">{selectedQuote.sentDate}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Expiry Date</p>
+                  <p className="font-medium">{selectedQuote.expiryDate}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Respond to RFQ Dialog */}
+      <Dialog open={isRespondOpen} onOpenChange={setIsRespondOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="font-display text-xl">Send Quotation</DialogTitle>
+          </DialogHeader>
+          {selectedRFQ && (
+            <div className="space-y-4 pt-2">
+              <div className="rounded-lg bg-muted/50 p-3">
+                <p className="text-sm font-medium text-foreground">{selectedRFQ.productName}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {selectedRFQ.buyerName} • {selectedRFQ.quantity} • Target: {selectedRFQ.targetPrice}
+                </p>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Your Price (per unit)</label>
+                  <Input
+                    placeholder="e.g., $4.50/meter"
+                    value={responsePrice}
+                    onChange={(e) => setResponsePrice(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Lead Time</label>
+                  <Input
+                    placeholder="e.g., 15-20 days"
+                    value={responseLeadTime}
+                    onChange={(e) => setResponseLeadTime(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Additional Notes</label>
+                <Textarea
+                  placeholder="Add details about MOQ, payment terms, certifications, etc."
+                  rows={4}
+                  value={responseNotes}
+                  onChange={(e) => setResponseNotes(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsRespondOpen(false)}>
+                  Cancel
+                </Button>
+                <Button variant="gold" className="gap-2" onClick={handleRespondToRFQ}>
+                  <Send size={16} />
+                  Send Quotation
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default SellerQuotesView;
