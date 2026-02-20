@@ -5,260 +5,278 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Search,
-  Filter,
-  Grid3X3,
-  List,
   Heart,
   Star,
   MapPin,
   Package,
   SlidersHorizontal,
+  Phone,
+  Grid3X3,
+  List,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Sample products data for buyers
 const allProducts = [
   {
     id: "1",
     name: "Premium Cotton Polo T-shirt",
     category: "Men's T-shirts",
     subType: "Polo T-shirt",
-    price: "₹299",
-    priceRange: "₹250 - ₹350",
-    moq: "100 pcs",
-    image: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=400&h=500&fit=crop",
-    rating: 4.8,
-    reviews: 156,
-    vendor: "Fashion Hub Pvt Ltd",
-    location: "Mumbai, India",
+    price: "₹499",
+    moq: "MOQ: 2",
+    enquiries: "800+ Enquiries",
+    manufacturer: "Fashion Hub Pvt Ltd",
+    location: "Bangalore, IND",
+    fabric: "Cotton",
+    gsm: "GSM: 220",
+    fitType: "Fit Type: Regular",
+    rating: 4.1,
+    reviews: 565,
     verified: true,
+    images: [
+      "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop",
+    ],
   },
   {
     id: "2",
-    name: "100% Organic Cotton Fabric",
-    category: "Knitted Fabrics",
-    subType: "Single Jersey",
-    price: "₹180/meter",
-    priceRange: "₹150 - ₹200",
-    moq: "500 meters",
-    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 234,
-    vendor: "Textile Mills India",
-    location: "Surat, India",
+    name: "Classic White Shirt",
+    category: "Men's Shirts",
+    subType: "Formal Shirt",
+    price: "₹599",
+    moq: "MOQ: 2",
+    enquiries: "800+ Enquiries",
+    manufacturer: "Textile Mills India",
+    location: "Mumbai, IND",
+    fabric: "Cotton",
+    gsm: "GSM: 200",
+    fitType: "Fit Type: Regular",
+    rating: 3.2,
+    reviews: 750,
     verified: true,
+    images: [
+      "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
+    ],
   },
   {
     id: "3",
-    name: "Industrial Sewing Machine",
-    category: "Machinery",
-    subType: "Lockstitch Machine",
-    price: "₹45,000",
-    priceRange: "₹40,000 - ₹55,000",
-    moq: "1 unit",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop",
+    name: "Women's Casual Tank Top",
+    category: "Women's Tops",
+    subType: "Tank Top",
+    price: "₹349",
+    moq: "MOQ: 5",
+    enquiries: "500+ Enquiries",
+    manufacturer: "Trendy Fashion Co",
+    location: "Delhi, IND",
+    fabric: "Linen",
+    gsm: "GSM: 180",
+    fitType: "Fit Type: Slim",
     rating: 4.7,
-    reviews: 89,
-    vendor: "Machine World",
-    location: "Delhi, India",
+    reviews: 320,
     verified: true,
+    images: [
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=500&fit=crop",
+    ],
   },
   {
     id: "4",
-    name: "Metal Buttons Collection",
-    category: "Trims & Accessories",
-    subType: "Metal Buttons",
-    price: "₹2.50/pc",
-    priceRange: "₹2 - ₹5",
-    moq: "1000 pcs",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
-    rating: 4.6,
-    reviews: 67,
-    vendor: "Trim Solutions",
-    location: "Ahmedabad, India",
-    verified: false,
+    name: "Oversized Cotton Tee",
+    category: "Men's T-shirts",
+    subType: "Oversized Fit",
+    price: "₹449",
+    moq: "MOQ: 10",
+    enquiries: "1200+ Enquiries",
+    manufacturer: "Urban Style Co",
+    location: "Bangalore, IND",
+    fabric: "Cotton",
+    gsm: "GSM: 240",
+    fitType: "Fit Type: Oversized",
+    rating: 4.9,
+    reviews: 880,
+    verified: true,
+    images: [
+      "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=400&h=500&fit=crop",
+    ],
   },
   {
     id: "5",
-    name: "Designer Silk Saree",
-    category: "Women's Ethnic",
-    subType: "Saree",
-    price: "₹2,499",
-    priceRange: "₹2,000 - ₹3,500",
-    moq: "50 pcs",
-    image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 312,
-    vendor: "Silk House",
-    location: "Varanasi, India",
-    verified: true,
+    name: "Summer Linen Shirt",
+    category: "Men's Shirts",
+    subType: "Casual Shirt",
+    price: "₹799",
+    moq: "MOQ: 5",
+    enquiries: "600+ Enquiries",
+    manufacturer: "Silk House India",
+    location: "Surat, IND",
+    fabric: "Linen",
+    gsm: "GSM: 160",
+    fitType: "Fit Type: Relaxed",
+    rating: 4.5,
+    reviews: 410,
+    verified: false,
+    images: [
+      "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1490578474895-699cd4e2cf59?w=400&h=500&fit=crop",
+    ],
   },
   {
     id: "6",
-    name: "Premium Denim Fabric",
-    category: "Raw Materials",
-    subType: "Stretch Denim",
-    price: "₹320/meter",
-    priceRange: "₹280 - ₹400",
-    moq: "300 meters",
-    image: "https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?w=400&h=500&fit=crop",
+    name: "Women's Floral Dress",
+    category: "Women's Dresses",
+    subType: "Casual Dress",
+    price: "₹899",
+    moq: "MOQ: 3",
+    enquiries: "900+ Enquiries",
+    manufacturer: "Bloom Designs",
+    location: "Jaipur, IND",
+    fabric: "Chiffon",
+    gsm: "GSM: 120",
+    fitType: "Fit Type: A-Line",
     rating: 4.8,
-    reviews: 178,
-    vendor: "Denim World",
-    location: "Bangalore, India",
+    reviews: 530,
     verified: true,
-  },
-  {
-    id: "7",
-    name: "Men's Casual Chino Pants",
-    category: "Men's Pants",
-    subType: "Chinos",
-    price: "₹599",
-    priceRange: "₹500 - ₹700",
-    moq: "50 pcs",
-    image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&h=500&fit=crop",
-    rating: 4.5,
-    reviews: 98,
-    vendor: "Urban Style Co",
-    location: "Chennai, India",
-    verified: true,
-  },
-  {
-    id: "8",
-    name: "Women's Crop Top",
-    category: "Women's Tops",
-    subType: "Crop Top",
-    price: "₹249",
-    priceRange: "₹200 - ₹350",
-    moq: "100 pcs",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 203,
-    vendor: "Trendy Fashion",
-    location: "Jaipur, India",
-    verified: true,
+    images: [
+      "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=400&h=500&fit=crop",
+      "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=400&h=500&fit=crop",
+    ],
   },
 ];
 
-const categories = [
-  "All Categories",
-  "Men's T-shirts",
-  "Men's Pants",
-  "Women's Tops",
-  "Women's Ethnic",
-  "Raw Materials",
-  "Knitted Fabrics",
-  "Trims & Accessories",
-  "Machinery",
-];
+const categories = ["All", "Men's T-shirts", "Men's Shirts", "Women's Tops", "Women's Dresses"];
+
+// Product card component
+const ProductCard = ({ product, index }: { product: typeof allProducts[0]; index: number }) => {
+  const [saved, setSaved] = useState(false);
+  const navigate = useNavigate();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.06 }}
+      className="flex flex-col rounded-xl border border-border bg-card overflow-hidden"
+    >
+      {/* Image */}
+      <div
+        className="relative aspect-[3/4] overflow-hidden bg-muted cursor-pointer"
+        onClick={() => navigate(`/product/${product.id}`)}
+      >
+        <img
+          src={product.images[0]}
+          alt={product.name}
+          className="h-full w-full object-cover"
+        />
+
+        {/* Bookmark button */}
+        <button
+          onClick={(e) => { e.stopPropagation(); setSaved(!saved); }}
+          className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm transition-all hover:scale-110"
+        >
+          <Heart className={cn("h-4 w-4 transition-colors", saved ? "fill-accent text-accent" : "text-muted-foreground")} />
+        </button>
+
+        {/* Verified badge */}
+        {product.verified && (
+          <div className="absolute left-2 top-2">
+            <Badge className="bg-accent text-accent-foreground text-[10px] px-1.5 py-0.5">
+              ✓ Verified
+            </Badge>
+          </div>
+        )}
+      </div>
+
+      {/* Info */}
+      <div className="flex flex-col flex-1 p-2.5 gap-1.5">
+        {/* Rating + MOQ row */}
+        <div className="flex items-center justify-between text-[11px]">
+          <div className="flex items-center gap-0.5 text-muted-foreground font-medium">
+            <Star className="h-3 w-3 fill-accent text-accent" />
+            <span>{product.rating}</span>
+            <span className="text-muted-foreground/60 ml-0.5">| {product.reviews}</span>
+          </div>
+          <span className="text-muted-foreground">{product.moq}</span>
+        </div>
+
+        {/* Price */}
+        <p className="text-base font-bold text-foreground leading-none">{product.price}</p>
+
+        {/* Enquiries */}
+        <p className="text-[10px] text-muted-foreground">{product.enquiries}</p>
+
+        {/* Manufacturer */}
+        <p className="text-[11px] font-semibold text-foreground truncate leading-tight">
+          {product.manufacturer}
+        </p>
+
+        {/* Location */}
+        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+          <MapPin className="h-2.5 w-2.5 shrink-0" />
+          <span>{product.location}</span>
+        </div>
+
+        {/* Specs */}
+        <div className="text-[10px] text-muted-foreground leading-snug">
+          <p>Fabric: {product.fabric} | {product.gsm}</p>
+          <p>{product.fitType}</p>
+        </div>
+
+        {/* Call Now button */}
+        <Button
+          size="sm"
+          className="mt-1 w-full bg-accent hover:bg-accent/90 text-accent-foreground h-9 rounded-lg gap-1.5 text-sm font-semibold shadow-sm"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Phone className="h-3.5 w-3.5" />
+          Call Now
+        </Button>
+      </div>
+    </motion.div>
+  );
+};
 
 const BrowseProducts = () => {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All Categories");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  const [sortBy, setSortBy] = useState("relevance");
 
-  // Filter products based on search and category
   const filteredProducts = useMemo(() => {
     return allProducts.filter((product) => {
-      const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        product.vendor.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === "All Categories" || product.category === selectedCategory;
+      const matchesSearch =
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.manufacturer.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "All" || product.category === selectedCategory;
       return matchesSearch && matchesCategory;
     });
   }, [searchQuery, selectedCategory]);
 
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
-
   return (
     <DashboardLayout>
-      {/* Header */}
+      {/* Page header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-4 sm:mb-6"
+        className="mb-3"
       >
-        <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-          Browse Products
-        </h1>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Discover products from verified manufacturers
-        </p>
-      </motion.div>
-
-      {/* Filters bar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-4 space-y-3 rounded-xl border border-border bg-card p-3 sm:mb-6 sm:p-4"
-      >
-        {/* Search row */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder="Search products, vendors..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-lg font-semibold text-foreground sm:text-xl">
+              Today's New In
+            </h1>
+            <p className="text-xs text-muted-foreground">New Everyday Fashion</p>
           </div>
-          <Button variant="outline" size="icon" className="shrink-0">
-            <SlidersHorizontal className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Filter row */}
-        <div className="flex items-center gap-2 overflow-x-auto">
-          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-            <SelectTrigger className="min-w-[140px] flex-shrink-0 sm:w-[180px]">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={sortBy} onValueChange={setSortBy}>
-            <SelectTrigger className="min-w-[120px] flex-shrink-0 sm:w-[140px]">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="price-low">Price: Low to High</SelectItem>
-              <SelectItem value="price-high">Price: High to Low</SelectItem>
-              <SelectItem value="rating">Highest Rated</SelectItem>
-              <SelectItem value="newest">Newest First</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* View toggle - hidden on mobile */}
-          <div className="ml-auto hidden gap-1 rounded-lg border border-border p-1 sm:flex">
+          <div className="flex items-center gap-1.5">
             <button
               onClick={() => setViewMode("grid")}
               className={cn(
-                "rounded-md p-2 transition-colors",
-                viewMode === "grid"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                "rounded-lg p-2 transition-colors",
+                viewMode === "grid" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:bg-muted"
               )}
             >
               <Grid3X3 className="h-4 w-4" />
@@ -266,10 +284,8 @@ const BrowseProducts = () => {
             <button
               onClick={() => setViewMode("list")}
               className={cn(
-                "rounded-md p-2 transition-colors",
-                viewMode === "list"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
+                "rounded-lg p-2 transition-colors",
+                viewMode === "list" ? "bg-accent/10 text-accent" : "text-muted-foreground hover:bg-muted"
               )}
             >
               <List className="h-4 w-4" />
@@ -277,135 +293,85 @@ const BrowseProducts = () => {
           </div>
         </div>
 
-        {/* Results count */}
-        <p className="text-xs text-muted-foreground">
-          {filteredProducts.length} products found
-        </p>
+        {/* Search */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search for items or brands..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-10 text-sm"
+            />
+          </div>
+          <Button variant="outline" size="icon" className="h-10 w-10 shrink-0">
+            <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+        </div>
       </motion.div>
 
-      {/* Products grid */}
-      <div className={cn(
-        "grid gap-3 sm:gap-4",
-        viewMode === "grid"
-          ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          : "grid-cols-1"
-      )}>
-        {filteredProducts.map((product, index) => (
-          <motion.div
-            key={product.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            onClick={() => handleProductClick(product.id)}
+      {/* Category chips */}
+      <div className="flex gap-2 overflow-x-auto scrollbar-none pb-2 mb-4">
+        {categories.map((cat) => (
+          <button
+            key={cat}
+            onClick={() => setSelectedCategory(cat)}
+            className={cn(
+              "shrink-0 rounded-full px-3.5 py-1.5 text-xs font-medium border transition-all",
+              selectedCategory === cat
+                ? "bg-foreground text-background border-foreground"
+                : "bg-background text-muted-foreground border-border hover:border-foreground/40"
+            )}
           >
-            <Card className="group overflow-hidden border-border/50 transition-all hover:border-accent/30 hover:shadow-lg cursor-pointer">
-              <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                
-                {/* Wishlist button */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Heart className="h-4 w-4" />
-                </button>
-
-                {/* Verified badge */}
-                {product.verified && (
-                  <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground text-[10px]">
-                    ✓ Verified
-                  </Badge>
-                )}
-              </div>
-
-              <CardContent className="p-3 sm:p-4">
-                <div className="mb-2">
-                  <h3 className="font-medium text-card-foreground line-clamp-2 text-sm sm:text-base">
-                    {product.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {product.subType}
-                  </p>
-                </div>
-
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="font-display text-base font-semibold text-card-foreground sm:text-lg">
-                    {product.price}
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-accent text-accent" />
-                    <span>{product.rating}</span>
-                    <span>({product.reviews})</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    <span>MOQ: {product.moq}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    <span className="truncate">{product.location}</span>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-xs text-muted-foreground truncate">
-                    by <span className="font-medium text-foreground">{product.vendor}</span>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
+            {cat}
+          </button>
         ))}
       </div>
 
-      {/* Empty state */}
-      {filteredProducts.length === 0 && (
-        <Card className="border-border/50">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No products found</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Try adjusting your search or filters
-            </p>
-            <Button variant="outline" onClick={() => {
-              setSearchQuery("");
-              setSelectedCategory("All Categories");
-            }}>
-              Clear filters
-            </Button>
-          </CardContent>
-        </Card>
+      {/* Results count + view all */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs text-muted-foreground">
+          {filteredProducts.length} products
+        </p>
+        <button className="flex items-center gap-0.5 text-xs font-medium text-accent hover:underline">
+          View All <ChevronRight className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* Products grid */}
+      {filteredProducts.length > 0 ? (
+        <div className={cn(
+          "grid gap-3",
+          viewMode === "grid"
+            ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4"
+            : "grid-cols-1 sm:grid-cols-2"
+        )}>
+          {filteredProducts.map((product, index) => (
+            <ProductCard key={product.id} product={product} index={index} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Package className="h-12 w-12 text-muted-foreground mb-3" />
+          <h3 className="text-base font-medium text-foreground mb-1">No products found</h3>
+          <p className="text-sm text-muted-foreground mb-4">Try adjusting your search or filters</p>
+          <Button variant="outline" size="sm" onClick={() => { setSearchQuery(""); setSelectedCategory("All"); }}>
+            Clear filters
+          </Button>
+        </div>
       )}
 
-      {/* Pagination */}
+      {/* Load more */}
       {filteredProducts.length > 0 && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row"
+          transition={{ delay: 0.5 }}
+          className="mt-6 flex justify-center"
         >
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            Showing 1-{filteredProducts.length} of {filteredProducts.length} products
-          </p>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled>
-              Previous
-            </Button>
-            <Button variant="outline" size="sm">
-              Next
-            </Button>
-          </div>
+          <Button variant="outline" className="w-full sm:w-auto gap-2">
+            Load More Products
+          </Button>
         </motion.div>
       )}
     </DashboardLayout>
