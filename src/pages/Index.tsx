@@ -14,7 +14,7 @@ import {
   ArrowRight,
   FileText,
   ShoppingBag,
-  Truck,
+  Truck
   Users,
   Building2,
   Upload,
