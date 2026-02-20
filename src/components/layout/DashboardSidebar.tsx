@@ -110,11 +110,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Logo */}
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4 lg:h-16">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent">
-              <span className="font-display text-lg font-bold text-accent-foreground">F</span>
-            </div>
-            <span className="font-display text-base font-semibold text-sidebar-foreground lg:text-lg">
-              FashionConnect
+            <span className="font-display text-xl font-bold italic text-accent lg:text-2xl tracking-tight">
+              Cosora
             </span>
           </div>
           {isMobile && (
