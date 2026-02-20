@@ -25,6 +25,7 @@ import Help from "./pages/Help";
 import CosoraStudio from "./pages/CosoraStudio";
 import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
+import Register from "./pages/Register";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
             <Route path="/help" element={<Help />} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
+            <Route path="/register" element={<Register />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
