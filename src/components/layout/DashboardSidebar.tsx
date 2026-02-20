@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
@@ -33,9 +33,8 @@ import { RoleSwitcher } from "./RoleSwitcher";
 
 // Buyer navigation (Clothing Brands)
 const buyerNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "New Arrivals", href: "/browse", icon: ShoppingBag },
   { name: "For You", href: "/for-you", icon: Sparkles },
-  { name: "Browse Products", href: "/browse", icon: ShoppingBag },
   { name: "Service Vendors", href: "/service-vendors", icon: Wrench },
   { name: "Freelancers", href: "/freelancers", icon: Briefcase },
   { name: "Post Requirement", href: "/post-requirement", icon: FileText },
@@ -47,7 +46,7 @@ const buyerNavigation = [
 
 // Seller navigation (Manufacturers)
 const sellerNavigation = [
-  { name: "Dashboard", href: "/", icon: LayoutDashboard },
+  { name: "Dashboard", href: "/seller-home", icon: LayoutDashboard },
   { name: "My Products", href: "/products", icon: Package },
   { name: "Upload Product", href: "/upload", icon: Upload },
   { name: "Quote Requests", href: "/quotes", icon: ClipboardList },
@@ -72,8 +71,13 @@ interface DashboardSidebarProps {
 
 export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
+
+  const handleSignOut = () => {
+    navigate("/");
+  };
 
   // Select navigation based on role
   const navigation = role === "buyer" ? buyerNavigation : sellerNavigation;
@@ -200,7 +204,11 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
                 {role === "buyer" ? "Verified Buyer" : "Premium Seller"}
               </p>
             </div>
-            <button className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground">
+            <button
+              onClick={handleSignOut}
+              title="Sign Out"
+              className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-accent/20 hover:text-accent"
+            >
               <LogOut size={18} />
             </button>
           </div>
