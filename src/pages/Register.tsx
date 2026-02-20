@@ -6,11 +6,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ArrowRight, Building2, ShoppingBag, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useUserRole } from "@/contexts/UserRoleContext";
 
 type Role = "buyer" | "seller";
 
 const Register = () => {
   const navigate = useNavigate();
+  const { setRole } = useUserRole();
   const [selectedRole, setSelectedRole] = useState<Role>("buyer");
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
@@ -30,7 +32,10 @@ const Register = () => {
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) setStep(2);
-    else navigate("/");
+    else {
+      setRole(selectedRole);
+      navigate(selectedRole === "buyer" ? "/browse" : "/seller-home");
+    }
   };
 
   const buyerBenefits = ["Browse 50,000+ manufacturers", "Post unlimited RFQs", "Get quotes in 24 hours", "Verified supplier network"];
