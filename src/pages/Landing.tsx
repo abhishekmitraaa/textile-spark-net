@@ -8,7 +8,7 @@ const Landing = () => {
     <div className="min-h-screen bg-foreground flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5 lg:px-12">
-        <span className="text-2xl font-bold italic text-background tracking-tight" style={{ fontFamily: "'Heading Now', sans-serif" }}>
+        <span className="font-display text-2xl font-bold italic text-background tracking-tight">
           Cosora
         </span>
         <div className="flex items-center gap-3">
