@@ -73,6 +73,12 @@ const App = () => (
             <Route path="/cosora-studio" element={<CosoraStudio />} />
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/auth/role-selection" element={<RoleSelection />} />
+            <Route path="/auth/sub-role" element={<SubRole />} />
+            <Route path="/auth/account-info" element={<AccountInfo />} />
+            <Route path="/auth/interest-preference" element={<InterestPreference />} />
+            <Route path="/auth/terms" element={<Terms />} />
+            <Route path="/auth/welcome" element={<Welcome />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
