@@ -65,7 +65,7 @@ const Register = () => {
 
         <div className="relative z-10">
           <Link to="/" className="inline-block">
-            <span className="font-display text-2xl font-bold italic text-background">
+            <span className="text-2xl font-bold italic text-background" style={{ fontFamily: "'Heading Now', sans-serif" }}>
               Cosora
             </span>
           </Link>
@@ -115,7 +115,7 @@ const Register = () => {
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
           <Link to="/">
-            <span className="font-display text-2xl font-bold italic text-foreground">
+            <span className="text-2xl font-bold italic text-foreground" style={{ fontFamily: "'Heading Now', sans-serif" }}>
               Cosora
             </span>
           </Link>

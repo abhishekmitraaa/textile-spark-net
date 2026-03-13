@@ -39,7 +39,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
           {/* Mobile logo */}
           {isMobile && (
-            <span className="font-display text-xl font-bold italic text-accent tracking-tight">
+            <span className="text-xl font-bold italic text-accent tracking-tight" style={{ fontFamily: "'Heading Now', sans-serif" }}>
               Cosora
             </span>
           )}
