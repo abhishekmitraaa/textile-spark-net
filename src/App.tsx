@@ -29,6 +29,7 @@ import CosoraStudio from "./pages/CosoraStudio";
 import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
+import OtpVerify from "./pages/OtpVerify";
 
 const queryClient = new QueryClient();
 
