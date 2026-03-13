@@ -43,6 +43,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/otp-verify" element={<OtpVerify />} />
             <Route path="/browse" element={<BrowseProducts />} />
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
