@@ -30,6 +30,12 @@ import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
 import OtpVerify from "./pages/OtpVerify";
+import RoleSelection from "./pages/RoleSelection";
+import SubRole from "./pages/SubRole";
+import AccountInfo from "./pages/AccountInfo";
+import InterestPreference from "./pages/InterestPreference";
+import Terms from "./pages/Terms";
+import Welcome from "./pages/Welcome";
 
 const queryClient = new QueryClient();
 
