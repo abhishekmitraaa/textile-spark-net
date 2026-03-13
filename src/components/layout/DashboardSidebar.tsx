@@ -114,7 +114,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Logo */}
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4 lg:h-16">
           <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold italic text-accent lg:text-2xl tracking-tight">
+            <span className="text-xl font-bold italic text-accent lg:text-2xl tracking-tight" style={{ fontFamily: "'Heading Now', sans-serif" }}>
               Cosora
             </span>
           </div>
