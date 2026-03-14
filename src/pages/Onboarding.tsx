@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -960,6 +960,172 @@ const StepFirstProduct = () => {
   );
 };
 
+/* ── Step 8: Partner Contract ── */
+const StepContract = ({
+  agreed,
+  setAgreed,
+  submitting,
+  onSubmit,
+}: {
+  agreed: boolean;
+  setAgreed: (v: boolean) => void;
+  submitting: boolean;
+  onSubmit: () => void;
+}) => {
+  const [signatureName, setSignatureName] = useState("Rajesh Kumar");
+  const [editingSignature, setEditingSignature] = useState(false);
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-display text-xl font-semibold text-foreground">
+        Almost there! Sign your partner agreement
+      </h2>
+
+      {/* Contract text */}
+      <div className="rounded-xl border border-border bg-muted/30 p-4 max-h-56 overflow-y-auto text-sm text-muted-foreground leading-relaxed relative">
+        <p className="mb-3">
+          <strong className="text-foreground">Cosora Supplier Agreement</strong>
+        </p>
+        <p className="mb-3">
+          This Supplier Agreement ("Agreement") is entered into between Cosora Technologies Pvt. Ltd.
+          ("Cosora") and the undersigned Supplier ("You" or "Supplier"). By signing below, you agree
+          to list and sell your products/services through the Cosora marketplace platform in accordance
+          with the terms set forth herein.
+        </p>
+        <p className="mb-3">
+          You represent and warrant that all information provided during registration is true, accurate,
+          and complete. You agree to maintain the quality standards required by Cosora, respond to buyer
+          inquiries within 24 hours, and fulfill orders within the committed timeline. Cosora reserves
+          the right to delist products or suspend accounts that violate community guidelines or receive
+          repeated negative feedback.
+        </p>
+        <p>
+          Commission and payment terms are as outlined in your selected subscription plan. Cosora shall
+          process payments within 7 business days of order completion and buyer confirmation. This
+          agreement is governed by the laws of India and any disputes shall be subject to the jurisdiction
+          of courts in Mumbai, Maharashtra.
+        </p>
+        <div className="sticky bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      </div>
+
+      {/* E-Signature */}
+      <div className="rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 p-6 text-center space-y-3">
+        <p className="text-xs text-muted-foreground uppercase tracking-wider">
+          Your Signature
+        </p>
+        <p className="font-display text-3xl italic text-accent">{signatureName}</p>
+        {editingSignature ? (
+          <Input
+            className="h-10 max-w-xs mx-auto text-center"
+            value={signatureName}
+            onChange={(e) => setSignatureName(e.target.value)}
+            onBlur={() => setEditingSignature(false)}
+            autoFocus
+          />
+        ) : (
+          <button
+            onClick={() => setEditingSignature(true)}
+            className="text-accent text-sm underline"
+          >
+            Change Signature
+          </button>
+        )}
+        <p className="text-xs text-muted-foreground">
+          This signature will be legally binding
+        </p>
+      </div>
+
+      {/* Agreement checkbox */}
+      <div className="flex items-start gap-2">
+        <Checkbox
+          id="agree"
+          checked={agreed}
+          onCheckedChange={(v) => setAgreed(!!v)}
+          className="mt-0.5"
+        />
+        <Label htmlFor="agree" className="text-sm text-foreground cursor-pointer leading-relaxed">
+          I agree to comply with Cosora's Supplier Agreement and confirm all submitted information
+          is accurate
+        </Label>
+      </div>
+
+      {/* Submit button */}
+      <Button
+        className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-base gap-2"
+        disabled={!agreed || submitting}
+        onClick={onSubmit}
+      >
+        {submitting ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" /> Submitting...
+          </>
+        ) : (
+          "Submit Application"
+        )}
+      </Button>
+    </div>
+  );
+};
+
+/* ── Welcome / Success Screen ── */
+const WelcomeScreen = () => {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const timer = setTimeout(() => navigate("/seller-home"), 4000);
+    return () => clearTimeout(timer);
+  }, [navigate]);
+
+  return (
+    <div className="min-h-screen bg-accent flex flex-col items-center justify-center px-4 text-center">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="space-y-6"
+      >
+        <p className="font-display text-4xl italic text-accent-foreground">Cosora</p>
+
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
+        >
+          <CheckCircle2 className="w-20 h-20 text-accent-foreground mx-auto" />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.6 }}
+          className="space-y-2"
+        >
+          <h1 className="font-display text-3xl font-bold text-accent-foreground">
+            The Good Times Start Now
+          </h1>
+          <p className="text-accent-foreground/80 text-lg">Welcome to Cosora</p>
+          <p className="text-accent-foreground/70 text-sm">
+            Your profile is 20% complete. Let's grow your business!
+          </p>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+        >
+          <Button
+            onClick={() => navigate("/seller-home")}
+            className="bg-accent-foreground text-accent font-semibold h-12 px-8 rounded-full hover:bg-accent-foreground/90"
+          >
+            Go to Dashboard
+          </Button>
+        </motion.div>
+      </motion.div>
+    </div>
+  );
+};
+
 /* ── Main Page ── */
 const stepTitles = [
   "Overview",
@@ -976,9 +1142,20 @@ const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [step4Success, setStep4Success] = useState(false);
   const [step6Success, setStep6Success] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [completed, setCompleted] = useState(false);
 
   const progress = (currentStep / 8) * 100;
   const showingSuccess = step4Success || step6Success;
+
+  const handleSubmit = () => {
+    setSubmitting(true);
+    setTimeout(() => {
+      setSubmitting(false);
+      setCompleted(true);
+    }, 1500);
+  };
 
   const handleContinue = () => {
     if (currentStep === 4) {
@@ -997,8 +1174,16 @@ const Onboarding = () => {
       }, 1000);
       return;
     }
+    if (currentStep === 8) {
+      handleSubmit();
+      return;
+    }
     setCurrentStep((s) => Math.min(8, s + 1));
   };
+
+  if (completed) {
+    return <WelcomeScreen />;
+  }
 
   const renderStep = () => {
     switch (currentStep) {
@@ -1016,6 +1201,15 @@ const Onboarding = () => {
         return <StepDocuments showSuccess={step6Success} />;
       case 7:
         return <StepFirstProduct />;
+      case 8:
+        return (
+          <StepContract
+            agreed={agreed}
+            setAgreed={setAgreed}
+            submitting={submitting}
+            onSubmit={handleSubmit}
+          />
+        );
       default:
         return <PlaceholderStep title={stepTitles[currentStep - 1]} />;
     }
@@ -1062,8 +1256,8 @@ const Onboarding = () => {
         </AnimatePresence>
       </main>
 
-      {/* Bottom Navigation */}
-      {!showingSuccess && (
+      {/* Bottom Navigation — hidden on step 8 (has own submit), during success, or while submitting */}
+      {!showingSuccess && currentStep !== 8 && (
         <div className="sticky bottom-0 bg-background border-t border-border px-4 py-3">
           <div className="max-w-lg mx-auto flex gap-3">
             {currentStep > 1 && (
@@ -1084,8 +1278,8 @@ const Onboarding = () => {
               className="flex-1 h-11 bg-accent text-accent-foreground hover:bg-accent/90 gap-1"
               onClick={handleContinue}
             >
-              {currentStep === 8 ? "Submit" : "Continue"}
-              {currentStep < 8 && <ChevronRight className="h-4 w-4" />}
+              Continue
+              <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
         </div>
