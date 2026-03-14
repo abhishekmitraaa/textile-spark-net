@@ -36,6 +36,7 @@ import AccountInfo from "./pages/AccountInfo";
 import InterestPreference from "./pages/InterestPreference";
 import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
+import VendorLanding from "./pages/VendorLanding";
 
 const queryClient = new QueryClient();
 
@@ -79,6 +80,7 @@ const App = () => (
             <Route path="/auth/interest-preference" element={<InterestPreference />} />
             <Route path="/auth/terms" element={<Terms />} />
             <Route path="/auth/welcome" element={<Welcome />} />
+            <Route path="/seller" element={<VendorLanding />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

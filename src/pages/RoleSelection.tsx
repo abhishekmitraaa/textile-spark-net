@@ -25,7 +25,7 @@ const RoleSelection = () => {
 
   const handleContinue = () => {
     if (selected === "buyer") navigate("/auth/sub-role");
-    if (selected === "seller") navigate("/register");
+    if (selected === "seller") navigate("/seller");
   };
 
   return (

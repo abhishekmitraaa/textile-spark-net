@@ -116,7 +116,7 @@ const Landing = () => {
           </Link>
 
           {/* Seller card */}
-          <Link to="/register" className="group">
+          <Link to="/seller" className="group">
             <div className="rounded-2xl border border-background/10 bg-background/5 p-6 text-left transition-all duration-300 hover:bg-background/10 hover:border-accent/40 cursor-pointer">
               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-background/10">
                 <Building2 className="h-6 w-6 text-background/70" />
