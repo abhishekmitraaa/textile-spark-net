@@ -975,8 +975,10 @@ const stepTitles = [
 const Onboarding = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [step4Success, setStep4Success] = useState(false);
+  const [step6Success, setStep6Success] = useState(false);
 
   const progress = (currentStep / 8) * 100;
+  const showingSuccess = step4Success || step6Success;
 
   const handleContinue = () => {
     if (currentStep === 4) {
@@ -984,6 +986,14 @@ const Onboarding = () => {
       setTimeout(() => {
         setStep4Success(false);
         setCurrentStep(5);
+      }, 1000);
+      return;
+    }
+    if (currentStep === 6) {
+      setStep6Success(true);
+      setTimeout(() => {
+        setStep6Success(false);
+        setCurrentStep(7);
       }, 1000);
       return;
     }
@@ -1002,6 +1012,10 @@ const Onboarding = () => {
         return <StepOwnerDetails showSuccess={step4Success} />;
       case 5:
         return <StepBusinessImages />;
+      case 6:
+        return <StepDocuments showSuccess={step6Success} />;
+      case 7:
+        return <StepFirstProduct />;
       default:
         return <PlaceholderStep title={stepTitles[currentStep - 1]} />;
     }
@@ -1037,7 +1051,7 @@ const Onboarding = () => {
       <main className="flex-1 max-w-lg mx-auto w-full px-4 py-8">
         <AnimatePresence mode="wait">
           <motion.div
-            key={step4Success ? "step4-success" : currentStep}
+            key={showingSuccess ? `success-${currentStep}` : currentStep}
             variants={stepSlide}
             initial="initial"
             animate="animate"
@@ -1049,7 +1063,7 @@ const Onboarding = () => {
       </main>
 
       {/* Bottom Navigation */}
-      {!step4Success && (
+      {!showingSuccess && (
         <div className="sticky bottom-0 bg-background border-t border-border px-4 py-3">
           <div className="max-w-lg mx-auto flex gap-3">
             {currentStep > 1 && (
@@ -1059,6 +1073,11 @@ const Onboarding = () => {
                 onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
               >
                 <ChevronLeft className="h-4 w-4" /> Previous
+              </Button>
+            )}
+            {currentStep === 7 && (
+              <Button variant="ghost" className="gap-1 text-muted-foreground">
+                Save as Draft
               </Button>
             )}
             <Button
