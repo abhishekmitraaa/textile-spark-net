@@ -315,7 +315,7 @@ const VendorLanding = () => {
           <div className="rounded-xl bg-muted h-40 flex items-center justify-center mb-6">
             <Globe className="h-16 w-16 text-muted-foreground/40" />
           </div>
-          <Link to="/register">
+          <Link to="/onboarding">
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 px-8 text-base gap-2">
               Get Started <ChevronRight className="h-4 w-4" />
             </Button>
