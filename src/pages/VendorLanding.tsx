@@ -68,7 +68,7 @@ const VendorLanding = () => {
             <Link to="#" className="text-sm text-muted-foreground hidden sm:inline">
               View Existing Applications
             </Link>
-            <Link to="/register">
+            <Link to="/onboarding">
               <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
                 Get Started
               </Button>
@@ -116,7 +116,7 @@ const VendorLanding = () => {
 
           {/* CTA */}
           <div className="space-y-3">
-            <Link to="/register" className="block">
+            <Link to="/onboarding" className="block">
               <Button className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-base font-semibold gap-2">
                 Get Started <ChevronRight className="h-4 w-4" />
               </Button>
@@ -186,7 +186,7 @@ const VendorLanding = () => {
           </div>
 
           <div className="text-center mt-6">
-            <Link to="/register">
+            <Link to="/onboarding">
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
                 Get Started <ChevronRight className="h-4 w-4" />
               </Button>
@@ -240,7 +240,7 @@ const VendorLanding = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/register">
+                <Link to="/onboarding">
                   <Button
                     className={`w-full mt-4 ${
                       plan.popular
@@ -315,7 +315,7 @@ const VendorLanding = () => {
           <div className="rounded-xl bg-muted h-40 flex items-center justify-center mb-6">
             <Globe className="h-16 w-16 text-muted-foreground/40" />
           </div>
-          <Link to="/register">
+          <Link to="/onboarding">
             <Button className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 px-8 text-base gap-2">
               Get Started <ChevronRight className="h-4 w-4" />
             </Button>
