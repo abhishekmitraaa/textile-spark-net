@@ -1,6 +1,6 @@
-import { Bell, Search, Menu, Sparkles } from "lucide-react";
+import { Bell, BellRing, Search, Menu, Sparkles, ArrowLeftRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { RoleSwitcher } from "./RoleSwitcher";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
@@ -20,9 +20,15 @@ const buyerTabs = [
 ];
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
-  const { role } = useUserRole();
+  const { role, setRole } = useUserRole();
   const isMobile = useIsMobile();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleSwitchToBuyer = () => {
+    setRole("buyer");
+    navigate("/browse");
+  };
 
   return (
     <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
@@ -37,11 +43,19 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             <Menu size={22} />
           </button>
 
-          {/* Mobile logo */}
+          {/* Mobile logo + vendor info */}
           {isMobile && (
-            <span className="font-display text-xl font-bold italic text-accent tracking-tight">
-              Cosora
-            </span>
+            <div>
+              <span className="font-display text-xl font-bold italic text-accent tracking-tight">
+                Cosora
+              </span>
+              {role === "seller" && (
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-medium text-foreground leading-none">Kumar Textiles</span>
+                  <span className="text-xs text-muted-foreground">• Mumbai</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* Desktop Role Switcher */}
@@ -93,12 +107,36 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             </Link>
           )}
 
+          {/* Alert bell for seller */}
+          {role === "seller" && (
+            <button className="relative rounded-lg p-2 text-amber-500 transition-colors hover:bg-secondary">
+              <BellRing size={20} />
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
+            </button>
+          )}
+
           <button className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
             <Bell size={20} />
             <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />
           </button>
         </div>
       </div>
+
+      {/* Switch to Buyer banner - seller only */}
+      {role === "seller" && (
+        <div className="bg-accent/10 border-b border-accent/20 py-2 px-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ArrowLeftRight className="text-accent w-4 h-4" />
+            <span className="text-sm text-accent font-medium">Switch To Buyer Account</span>
+          </div>
+          <button
+            onClick={handleSwitchToBuyer}
+            className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full font-medium"
+          >
+            Switch
+          </button>
+        </div>
+      )}
 
       {/* Buyer mobile horizontal tabs */}
       {role === "buyer" && isMobile && (
@@ -123,7 +161,6 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
                   <span className={cn(tab.accent && isActive ? "text-accent" : "")}>
                     {tab.name}
                   </span>
-                  {/* Active underline indicator */}
                   {isActive && (
                     <span
                       className={cn(

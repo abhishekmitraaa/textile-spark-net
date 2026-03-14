@@ -7,8 +7,7 @@ import {
   Star,
   FileText,
   Globe,
-  Calendar,
-  Award,
+  Share2,
   HelpCircle,
   Camera,
   Mail,
@@ -29,103 +28,29 @@ interface QuickActionItem {
 }
 
 const primaryActions: QuickActionItem[] = [
-  {
-    name: "Business Profile",
-    icon: Building2,
-    href: "/profile",
-    color: "text-blue-600",
-    bgColor: "bg-blue-100",
-  },
-  {
-    name: "Advertise",
-    icon: Megaphone,
-    href: "/advertisements",
-    color: "text-purple-600",
-    bgColor: "bg-purple-100",
-  },
-  {
-    name: "Add Products",
-    icon: Package,
-    href: "/upload",
-    color: "text-emerald-600",
-    bgColor: "bg-emerald-100",
-  },
-  {
-    name: "Reviews",
-    icon: Star,
-    href: "/profile",
-    color: "text-amber-600",
-    bgColor: "bg-amber-100",
-  },
+  { name: "Business Profile", icon: Building2, href: "/my-store", color: "text-blue-600", bgColor: "bg-blue-100" },
+  { name: "Advertise", icon: Megaphone, href: "/advertisements", color: "text-purple-600", bgColor: "bg-purple-100" },
+  { name: "Add Products", icon: Package, href: "/upload", color: "text-emerald-600", bgColor: "bg-emerald-100" },
+  { name: "Reviews", icon: Star, href: "/reviews", color: "text-amber-600", bgColor: "bg-amber-100" },
 ];
 
 const secondaryActions: QuickActionItem[] = [
-  {
-    name: "My Quotes",
-    icon: FileText,
-    href: "/quotes",
-    color: "text-rose-600",
-    bgColor: "bg-rose-100",
-  },
-  {
-    name: "Add Website",
-    icon: Globe,
-    href: "/profile",
-    color: "text-cyan-600",
-    bgColor: "bg-cyan-100",
-  },
-  {
-    name: "Add Event",
-    icon: Calendar,
-    href: "/profile",
-    color: "text-orange-600",
-    bgColor: "bg-orange-100",
-  },
-  {
-    name: "Badges",
-    icon: Award,
-    href: "/subscription",
-    color: "text-green-600",
-    bgColor: "bg-green-100",
-    badge: "FREE",
-    badgeVariant: "secondary",
-  },
+  { name: "My Quotes", icon: FileText, href: "/quotes", color: "text-rose-600", bgColor: "bg-rose-100" },
+  { name: "Add Website", icon: Globe, href: "/my-store", color: "text-cyan-600", bgColor: "bg-cyan-100" },
+  { name: "Add Social Links", icon: Share2, href: "/my-store", color: "text-orange-600", bgColor: "bg-orange-100" },
+  { name: "Upload Catalogue", icon: Upload, href: "/upload", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
 ];
 
 const tertiaryActions: QuickActionItem[] = [
-  {
-    name: "Help Center",
-    icon: HelpCircle,
-    href: "/help",
-    color: "text-indigo-600",
-    bgColor: "bg-indigo-100",
-  },
-  {
-    name: "Photo Studio",
-    icon: Camera,
-    href: "/upload",
-    color: "text-pink-600",
-    bgColor: "bg-pink-100",
-  },
-  {
-    name: "Add Email",
-    icon: Mail,
-    href: "/profile",
-    color: "text-teal-600",
-    bgColor: "bg-teal-100",
-  },
-  {
-    name: "Add Video",
-    icon: Video,
-    href: "/upload",
-    color: "text-red-600",
-    bgColor: "bg-red-100",
-  },
+  { name: "Help/Connect", icon: HelpCircle, href: "/help", color: "text-indigo-600", bgColor: "bg-indigo-100" },
+  { name: "Photo Studio", icon: Camera, href: "/cosora-studio", color: "text-pink-600", bgColor: "bg-pink-100" },
+  { name: "Add Email", icon: Mail, href: "/my-store", color: "text-teal-600", bgColor: "bg-teal-100" },
+  { name: "Add Video", icon: Video, href: "/upload", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
 const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: number }) => {
   const Icon = item.icon;
-  
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -167,32 +92,24 @@ export const SellerQuickActionsGrid = () => {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6"
     >
-      {/* Primary Actions */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4">
         {primaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index} />
         ))}
       </div>
-
       <div className="h-px bg-border" />
-
-      {/* Secondary Actions */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4">
         {secondaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index + 4} />
         ))}
       </div>
-
       <div className="h-px bg-border" />
-
-      {/* Tertiary Actions */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4">
         {tertiaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index + 8} />
         ))}
       </div>
 
-      {/* Upload Catalogue CTA */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -207,12 +124,8 @@ export const SellerQuickActionsGrid = () => {
               <Upload className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <h4 className="text-sm font-semibold text-foreground">
-                Upload Catalogue
-              </h4>
-              <p className="text-xs text-muted-foreground">
-                Add your product catalogue in bulk
-              </p>
+              <h4 className="text-sm font-semibold text-foreground">Upload Catalogue</h4>
+              <p className="text-xs text-muted-foreground">Add your product catalogue in bulk</p>
             </div>
           </div>
           <BookOpen className="h-5 w-5 text-accent" />
