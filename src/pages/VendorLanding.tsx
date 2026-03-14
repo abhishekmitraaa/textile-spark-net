@@ -68,7 +68,7 @@ const VendorLanding = () => {
             <Link to="#" className="text-sm text-muted-foreground hidden sm:inline">
               View Existing Applications
             </Link>
-            <Link to="/register">
+            <Link to="/onboarding">
               <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90">
                 Get Started
               </Button>
