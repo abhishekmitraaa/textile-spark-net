@@ -186,7 +186,7 @@ const VendorLanding = () => {
           </div>
 
           <div className="text-center mt-6">
-            <Link to="/register">
+            <Link to="/onboarding">
               <Button className="bg-accent text-accent-foreground hover:bg-accent/90 gap-2">
                 Get Started <ChevronRight className="h-4 w-4" />
               </Button>
