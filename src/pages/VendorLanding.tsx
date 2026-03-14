@@ -116,7 +116,7 @@ const VendorLanding = () => {
 
           {/* CTA */}
           <div className="space-y-3">
-            <Link to="/register" className="block">
+            <Link to="/onboarding" className="block">
               <Button className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-base font-semibold gap-2">
                 Get Started <ChevronRight className="h-4 w-4" />
               </Button>
