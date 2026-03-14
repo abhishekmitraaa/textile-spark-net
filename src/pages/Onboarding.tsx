@@ -490,7 +490,7 @@ const StepBusinessImages = () => {
   );
 };
 
-/* ── Placeholder Steps 6-8 ── */
+/* ── Placeholder Steps 8 ── */
 const PlaceholderStep = ({ title }: { title: string }) => (
   <div>
     <h2 className="font-display text-xl font-semibold text-foreground mb-4">
@@ -499,6 +499,466 @@ const PlaceholderStep = ({ title }: { title: string }) => (
     <p className="text-sm text-muted-foreground">This step is coming soon.</p>
   </div>
 );
+
+/* ── Step 6: Business Documents ── */
+const StepDocuments = ({ showSuccess }: { showSuccess: boolean }) => {
+  const [panVerifying, setPanVerifying] = useState(false);
+  const [panVerified, setPanVerified] = useState<boolean | null>(null);
+  const [hasGstin, setHasGstin] = useState(false);
+  const [aadhaar, setAadhaar] = useState("");
+
+  const handleVerifyPan = () => {
+    setPanVerifying(true);
+    setTimeout(() => {
+      setPanVerifying(false);
+      setPanVerified(true);
+    }, 1500);
+  };
+
+  const handleAadhaarChange = (val: string) => {
+    const digits = val.replace(/\D/g, "").slice(0, 12);
+    if (digits.length <= 4) {
+      setAadhaar(digits);
+    } else if (digits.length <= 8) {
+      setAadhaar("XXXX " + digits.slice(4));
+    } else {
+      setAadhaar("XXXX XXXX " + digits.slice(8));
+    }
+  };
+
+  if (showSuccess) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 gap-3">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+        >
+          <CheckCircle2 className="w-12 h-12 text-green-600" />
+        </motion.div>
+        <p className="text-green-600 font-medium">Business documents added ✓</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-display text-xl font-semibold text-foreground">
+        Verify your business
+      </h2>
+
+      <div className="flex items-start gap-2 bg-green-500/5 rounded-lg p-2">
+        <Shield className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          Your documents are encrypted and stored securely
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {/* PAN Number */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            PAN Number <span className="text-accent">*</span>
+          </Label>
+          <div className="flex gap-2">
+            <Input className="h-11 flex-1 uppercase" placeholder="ABCDE1234F" maxLength={10} />
+            {panVerified === true ? (
+              <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-600 rounded-full px-2 py-0.5 text-xs self-center">
+                <CheckCircle2 className="h-3 w-3" /> Verified
+              </span>
+            ) : (
+              <Button
+                variant="outline"
+                className="h-11 text-accent border-accent hover:bg-accent/5 whitespace-nowrap text-sm"
+                onClick={handleVerifyPan}
+                disabled={panVerifying}
+              >
+                {panVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
+              </Button>
+            )}
+          </div>
+          {panVerified === false && (
+            <p className="text-destructive text-xs">Verification failed: Name mismatch</p>
+          )}
+          {/* PAN upload */}
+          <div className="rounded-lg border-2 border-dashed border-border h-20 p-3 flex items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all">
+            <Upload className="h-4 w-4 text-muted-foreground" />
+            <div>
+              <p className="text-xs font-medium text-foreground">Upload PAN Card scan</p>
+              <p className="text-[10px] text-muted-foreground">PDF or Image</p>
+            </div>
+          </div>
+        </div>
+
+        {/* CIN Number */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            CIN Number <span className="text-accent">*</span>
+          </Label>
+          <Input className="h-11" placeholder="e.g. U12345MH2020PTC123456" />
+        </div>
+
+        {/* Aadhaar Number */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            Aadhaar Number <span className="text-accent">*</span>
+          </Label>
+          <Input
+            className="h-11"
+            placeholder="XXXX XXXX 1234"
+            value={aadhaar}
+            onChange={(e) => handleAadhaarChange(e.target.value)}
+          />
+        </div>
+
+        {/* GSTIN */}
+        <div className="space-y-2">
+          <Label className="text-sm">
+            GSTIN <span className="text-muted-foreground">(optional)</span>
+          </Label>
+          <div className="inline-flex rounded-full bg-muted p-1">
+            <button
+              onClick={() => setHasGstin(true)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                hasGstin ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+              }`}
+            >
+              Yes
+            </button>
+            <button
+              onClick={() => setHasGstin(false)}
+              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                !hasGstin ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+              }`}
+            >
+              No
+            </button>
+          </div>
+          {hasGstin && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="space-y-2"
+            >
+              <Input className="h-11" placeholder="e.g. 22AAAAA0000A1Z5" />
+              <div className="rounded-lg border-2 border-dashed border-border h-20 p-3 flex items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all">
+                <Upload className="h-4 w-4 text-muted-foreground" />
+                <div>
+                  <p className="text-xs font-medium text-foreground">Upload GST Certificate</p>
+                  <p className="text-[10px] text-muted-foreground">PDF or Image</p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── Step 7: Add First Product ── */
+const StepFirstProduct = () => {
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [editSheetOpen, setEditSheetOpen] = useState(false);
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [specsOpen, setSpecsOpen] = useState(false);
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [customAvailable, setCustomAvailable] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
+  const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
+  const productFileRef = useRef<HTMLInputElement>(null);
+
+  const sizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "Free Size", "Plus Size"];
+
+  const handleProductFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const urls = Array.from(files).map((f) => URL.createObjectURL(f));
+    setProductImages((prev) => [...prev, ...urls].slice(0, 6));
+  };
+
+  const removeProductImage = (idx: number) => {
+    setProductImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const toggleSize = (size: string) => {
+    setSelectedSizes((prev) =>
+      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
+    );
+  };
+
+  return (
+    <div className="space-y-5">
+      <h2 className="font-display text-xl font-semibold text-foreground">
+        Add your first product
+      </h2>
+
+      <div className="flex items-start gap-2 bg-amber-500/5 rounded-lg p-2">
+        <Clock className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+        <p className="text-xs text-muted-foreground">
+          Your products are reviewed by our team (24-48 hrs)
+        </p>
+      </div>
+
+      {/* Product image slots - horizontal scroll */}
+      <div>
+        <Label className="text-sm mb-2 block">Product Images</Label>
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {Array.from({ length: 6 }).map((_, i) => {
+            const img = productImages[i];
+            return (
+              <div
+                key={i}
+                className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex-shrink-0 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all relative overflow-hidden"
+                onClick={() => {
+                  if (!img) productFileRef.current?.click();
+                }}
+              >
+                {img ? (
+                  <>
+                    <img src={img} alt={`Product ${i + 1}`} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-foreground/0 hover:bg-foreground/30 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
+                      <div className="flex gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeProductImage(i);
+                          }}
+                          className="bg-background rounded-full p-1"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingIdx(i);
+                            setEditSheetOpen(true);
+                          }}
+                          className="bg-background rounded-full p-1"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </div>
+                    </div>
+                    {i === 0 && (
+                      <span className="absolute bottom-0 left-0 right-0 bg-accent text-accent-foreground text-[9px] text-center py-0.5 font-medium">
+                        Cover
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {i === 0 ? (
+                      <>
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-[9px] text-muted-foreground mt-0.5">Cover</span>
+                      </>
+                    ) : (
+                      <Plus className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <input
+          ref={productFileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          className="hidden"
+          onChange={handleProductFiles}
+        />
+      </div>
+
+      {/* Edit image sheet */}
+      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
+        <SheetContent side="bottom" className="rounded-t-2xl">
+          <SheetHeader>
+            <SheetTitle>Edit Image</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            {[
+              { icon: Trash2, label: "Remove Background" },
+              { icon: Sliders, label: "Adjust" },
+              { icon: Crop, label: "Crop" },
+              { icon: RotateCw, label: "Rotate" },
+            ].map(({ icon: Icon, label }) => (
+              <Button key={label} variant="outline" className="h-12 gap-2 text-sm">
+                <Icon className="h-4 w-4" /> {label}
+              </Button>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {/* Form fields */}
+      <div className="space-y-3">
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            Product Name <span className="text-accent">*</span>
+          </Label>
+          <Input className="h-11" placeholder="e.g. Premium Cotton Blend T-Shirt" />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5">
+            <Label className="text-sm">
+              Price <span className="text-accent">*</span>
+            </Label>
+            <Input className="h-11" placeholder="₹ 0.00" inputMode="numeric" />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm">Unit</Label>
+            <Select defaultValue="pieces">
+              <SelectTrigger className="h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {["pieces", "kg", "meters", "sets", "pairs", "dozen"].map((u) => (
+                  <SelectItem key={u} value={u}>
+                    {u.charAt(0).toUpperCase() + u.slice(1)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-sm">
+            MOQ (Minimum Order Quantity) <span className="text-accent">*</span>
+          </Label>
+          <Input className="h-11" placeholder="e.g. 50" inputMode="numeric" />
+        </div>
+
+        {/* Category */}
+        <div className="space-y-1.5">
+          <Label className="text-sm">Category</Label>
+          <CategorySelector
+            selectedCategory={selectedCategory}
+            onSelectCategory={(id) => {
+              setSelectedCategory(id);
+              setSelectedSubCategory(null);
+              setSelectedSubType(null);
+            }}
+          />
+        </div>
+
+        {/* Sub-category */}
+        {selectedCategory && (
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-1.5">
+            <Label className="text-sm">Sub-category</Label>
+            <SubCategorySelector
+              categoryId={selectedCategory}
+              selectedSubCategory={selectedSubCategory}
+              onSelectSubCategory={setSelectedSubCategory}
+              selectedSubType={selectedSubType}
+              onSelectSubType={setSelectedSubType}
+            />
+          </motion.div>
+        )}
+      </div>
+
+      {/* Specifications collapsible */}
+      <Collapsible open={specsOpen} onOpenChange={setSpecsOpen}>
+        <CollapsibleTrigger asChild>
+          <button className="flex items-center gap-2 text-sm font-medium text-foreground w-full py-2">
+            <ChevronDown className={`h-4 w-4 transition-transform ${specsOpen ? "rotate-180" : ""}`} />
+            Add Specifications
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <div className="space-y-3 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Fabric</Label>
+              <Select>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Select fabric" /></SelectTrigger>
+                <SelectContent>
+                  {["Cotton", "Polyester", "Poly Cotton", "Lycra", "Linen", "Silk", "Blend", "Other"].map((f) => (
+                    <SelectItem key={f} value={f.toLowerCase().replace(" ", "-")}>{f}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">GSM</Label>
+              <Select>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Select GSM" /></SelectTrigger>
+                <SelectContent>
+                  {["140", "160", "180", "200", "220", "240", "260+"].map((g) => (
+                    <SelectItem key={g} value={g}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Available Sizes</Label>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => toggleSize(size)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selectedSizes.includes(size)
+                        ? "bg-accent text-accent-foreground border-accent"
+                        : "bg-muted text-muted-foreground border-border hover:border-accent/50"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Available Colors</Label>
+              <Input className="h-11" placeholder="e.g. 15+ colors available" />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-sm">Gender</Label>
+              <Select>
+                <SelectTrigger className="h-11"><SelectValue placeholder="Select gender" /></SelectTrigger>
+                <SelectContent>
+                  {["Men", "Women", "Unisex", "Boys", "Girls", "Kids/Baby"].map((g) => (
+                    <SelectItem key={g} value={g.toLowerCase().replace("/", "-")}>{g}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Customization Available</Label>
+              <div className="inline-flex rounded-full bg-muted p-1">
+                <button
+                  onClick={() => setCustomAvailable(true)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    customAvailable ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  Yes
+                </button>
+                <button
+                  onClick={() => setCustomAvailable(false)}
+                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                    !customAvailable ? "bg-accent text-accent-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  No
+                </button>
+              </div>
+            </div>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </div>
+  );
+};
 
 /* ── Main Page ── */
 const stepTitles = [
