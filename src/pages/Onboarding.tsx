@@ -21,16 +21,39 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { CategorySelector } from "@/components/upload/CategorySelector";
+import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
+import {
   Clock,
   MessageCircle,
   Globe,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Check,
   MapPin,
   Upload,
   X,
   CheckCircle2,
+  Shield,
+  Loader2,
+  Camera,
+  Plus,
+  Pencil,
+  RotateCw,
+  Crop,
+  Sliders,
+  Trash2,
 } from "lucide-react";
 
 const stepSlide = {
