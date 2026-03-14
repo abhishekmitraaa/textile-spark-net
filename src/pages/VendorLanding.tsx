@@ -240,7 +240,7 @@ const VendorLanding = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/register">
+                <Link to="/onboarding">
                   <Button
                     className={`w-full mt-4 ${
                       plan.popular
