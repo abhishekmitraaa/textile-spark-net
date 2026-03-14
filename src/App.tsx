@@ -36,6 +36,7 @@ import AccountInfo from "./pages/AccountInfo";
 import InterestPreference from "./pages/InterestPreference";
 import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
+import VendorLanding from "./pages/VendorLanding";
 
 const queryClient = new QueryClient();
 
