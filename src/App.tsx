@@ -38,6 +38,7 @@ import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
+import MyStore from "./pages/MyStore";
 
 const queryClient = new QueryClient();
 
