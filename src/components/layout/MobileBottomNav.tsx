@@ -9,6 +9,7 @@ import {
   Package,
   Upload,
   FileText,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
