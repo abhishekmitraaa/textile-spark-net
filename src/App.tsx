@@ -39,6 +39,8 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import MyStore from "./pages/MyStore";
+import Reviews from "./pages/Reviews";
+import CompetitorAds from "./pages/CompetitorAds";
 
 const queryClient = new QueryClient();
 
