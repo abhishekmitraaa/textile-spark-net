@@ -39,6 +39,8 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import MyStore from "./pages/MyStore";
+import Reviews from "./pages/Reviews";
+import CompetitorAds from "./pages/CompetitorAds";
 
 const queryClient = new QueryClient();
 
@@ -85,6 +87,8 @@ const App = () => (
             <Route path="/seller" element={<VendorLanding />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/my-store" element={<MyStore />} />
+            <Route path="/reviews" element={<Reviews />} />
+            <Route path="/competitor-ads" element={<CompetitorAds />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
