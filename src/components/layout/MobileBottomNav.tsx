@@ -9,6 +9,7 @@ import {
   Package,
   Upload,
   FileText,
+  Store,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -34,7 +35,7 @@ export const MobileBottomNav = () => {
     { name: "Products", href: "/products", icon: Package },
     { name: "Upload", href: "/upload", icon: Upload, isCenter: true },
     { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },
-    { name: "My Profile", href: "/profile", icon: UserCircle },
+    { name: "My Store", href: "/my-store", icon: Store },
   ];
 
   const navItems = role === "buyer" ? buyerNavItems : sellerNavItems;
