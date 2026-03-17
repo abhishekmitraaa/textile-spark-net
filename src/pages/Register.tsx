@@ -31,8 +31,14 @@ const Register = () => {
 
   const handleNext = (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) setStep(2);
-    else {
+    if (step === 1) {
+      if (selectedRole === "seller") {
+        setRole("seller");
+        navigate("/seller");
+        return;
+      }
+      setStep(2);
+    } else {
       setRole(selectedRole);
       navigate(selectedRole === "buyer" ? "/browse" : "/seller");
     }
