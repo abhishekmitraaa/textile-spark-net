@@ -34,7 +34,7 @@ const Register = () => {
     if (step === 1) setStep(2);
     else {
       setRole(selectedRole);
-      navigate(selectedRole === "buyer" ? "/browse" : "/seller-home");
+      navigate(selectedRole === "buyer" ? "/browse" : "/seller");
     }
   };
 
