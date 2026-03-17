@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import { Facebook, Linkedin, Twitter, ArrowRight } from "lucide-react";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 
 const fadeIn = {
   initial: { opacity: 0, y: 16 },

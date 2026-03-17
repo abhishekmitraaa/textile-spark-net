@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { AlertTriangle, Lightbulb } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import DashboardLayout from "@/components/layout/DashboardLayout";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { toast } from "@/hooks/use-toast";
 
 const fadeIn = {
