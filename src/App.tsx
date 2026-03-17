@@ -41,6 +41,9 @@ import Onboarding from "./pages/Onboarding";
 import MyStore from "./pages/MyStore";
 import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
+import ReportFraud from "./pages/ReportFraud";
+import AppFeedback from "./pages/AppFeedback";
+import About from "./pages/About";
 
 const queryClient = new QueryClient();
 
