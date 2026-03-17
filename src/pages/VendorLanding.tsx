@@ -90,12 +90,15 @@ const VendorLanding = () => {
             <span className="text-accent">0% Commission</span>
           </h1>
 
-          {/* Video Placeholder */}
-          <div className="rounded-xl bg-muted aspect-video w-full flex flex-col items-center justify-center mb-6 relative overflow-hidden">
-            <div className="h-16 w-16 rounded-full bg-accent/20 flex items-center justify-center mb-2">
-              <Play className="h-8 w-8 text-accent ml-1" />
-            </div>
-            <p className="text-sm text-muted-foreground">Cosora Onboarding Video</p>
+          {/* Onboarding Video */}
+          <div className="rounded-xl aspect-video w-full mb-6 relative overflow-hidden">
+            <iframe
+              className="w-full h-full rounded-xl"
+              src="https://www.youtube.com/embed/quogY2hgYFY"
+              title="Cosora Onboarding Video"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+            />
           </div>
 
           {/* Document Checklist */}
