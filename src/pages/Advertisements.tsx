@@ -1,555 +1,507 @@
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { motion } from "framer-motion";
-import {
-  Plus,
-  Play,
-  Pause,
-  Eye,
-  Phone,
-  TrendingUp,
-  Users,
-  MoreVertical,
-  Edit,
-  Trash2,
-  Sparkles,
-  Target,
-  Megaphone,
-  Search,
-  Crown,
-  Zap,
-  ArrowUpRight,
-  MessageSquare,
-} from "lucide-react";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Checkbox } from "@/components/ui/checkbox";
+  Phone,
+  Eye,
+  Users,
+  TrendingUp,
+  PhoneMissed,
+  MousePointerClick,
+  Pause,
+  Play,
+  Copy,
+  Edit,
+  Megaphone,
+  Search,
+  Star,
+  Store,
+  Radio,
+  ShoppingBag,
+  Award,
+  Globe,
+  Smartphone,
+  Monitor,
+  Facebook,
+  BarChart3,
+  Shield,
+  BadgeCheck,
+  ChevronRight,
+  Check,
+} from "lucide-react";
 
-interface Advertisement {
+// ── Data ──
+
+const liveStats = [
+  { label: "Phone Calls", value: "142", icon: Phone },
+  { label: "Profile Views", value: "2.8K", icon: Eye },
+  { label: "Leads Contacted", value: "86", icon: Users },
+  { label: "Avg. Cost/Lead", value: "₹3.2", icon: TrendingUp },
+  { label: "Missed Calls", value: "12", icon: PhoneMissed },
+  { label: "Ad Clicks", value: "1.4K", icon: MousePointerClick },
+];
+
+interface Campaign {
   id: string;
-  title: string;
+  name: string;
   status: "active" | "paused" | "ended";
-  type: "featured" | "search-boost" | "category-spotlight" | "premium-listing";
+  startDate: string;
+  endDate: string;
+  targeting: string;
   views: number;
   leads: number;
   calls: number;
   inquiries: number;
-  budget: number;
-  spent: number;
   costPerLead: number;
-  startDate: string;
-  endDate: string;
-  products: string[];
-  targetAudience: string;
+  budgetTotal: number;
+  budgetUsed: number;
 }
 
-const advertisements: Advertisement[] = [
+const campaigns: Campaign[] = [
   {
-    id: "1",
-    title: "Premium Silk Collection - Featured",
-    status: "active",
-    type: "featured",
-    views: 12450,
-    leads: 86,
-    calls: 34,
-    inquiries: 52,
-    budget: 500,
-    spent: 235,
-    costPerLead: 2.73,
-    startDate: "2024-01-01",
-    endDate: "2024-01-31",
-    products: ["Italian Silk Fabric", "Silk Blend Premium"],
-    targetAudience: "Retailers & Wholesalers",
+    id: "1", name: "Premium Silk Collection", status: "active",
+    startDate: "01 Jan", endDate: "31 Jan", targeting: "Retailers & Wholesalers",
+    views: 12450, leads: 86, calls: 34, inquiries: 52, costPerLead: 2.73,
+    budgetTotal: 500, budgetUsed: 235,
   },
   {
-    id: "2",
-    title: "Sustainable Cotton - Category Spotlight",
-    status: "active",
-    type: "category-spotlight",
-    views: 8920,
-    leads: 62,
-    calls: 28,
-    inquiries: 34,
-    budget: 300,
-    spent: 180,
-    costPerLead: 2.90,
-    startDate: "2024-01-05",
-    endDate: "2024-02-05",
-    products: ["Organic Cotton Blend", "Recycled Cotton"],
-    targetAudience: "Eco-conscious Brands",
+    id: "2", name: "Sustainable Cotton Line", status: "active",
+    startDate: "05 Jan", endDate: "05 Feb", targeting: "Eco-conscious Brands",
+    views: 8920, leads: 62, calls: 28, inquiries: 34, costPerLead: 2.9,
+    budgetTotal: 300, budgetUsed: 180,
   },
   {
-    id: "3",
-    title: "Winter Wool Collection - Search Boost",
-    status: "paused",
-    type: "search-boost",
-    views: 5600,
-    leads: 38,
-    calls: 15,
-    inquiries: 23,
-    budget: 400,
-    spent: 156,
-    costPerLead: 4.10,
-    startDate: "2024-01-10",
-    endDate: "2024-02-10",
-    products: ["Merino Wool", "Wool Blend Fabric"],
-    targetAudience: "Fashion Brands",
+    id: "3", name: "Winter Wool Promo", status: "paused",
+    startDate: "10 Jan", endDate: "10 Feb", targeting: "Fashion Brands",
+    views: 5600, leads: 38, calls: 15, inquiries: 23, costPerLead: 4.1,
+    budgetTotal: 400, budgetUsed: 156,
   },
 ];
 
-const adTypeInfo = {
-  "featured": { 
-    icon: Crown, 
-    label: "Featured Listing", 
-    color: "bg-amber-100 text-amber-700",
-    description: "Top placement on homepage & category pages"
-  },
-  "search-boost": { 
-    icon: Search, 
-    label: "Search Boost", 
-    color: "bg-blue-100 text-blue-700",
-    description: "Appear first in buyer search results"
-  },
-  "category-spotlight": { 
-    icon: Target, 
-    label: "Category Spotlight", 
-    color: "bg-purple-100 text-purple-700",
-    description: "Dominate your product category"
-  },
-  "premium-listing": { 
-    icon: Zap, 
-    label: "Premium Listing", 
-    color: "bg-emerald-100 text-emerald-700",
-    description: "Enhanced visibility with verified badge"
-  },
-};
+interface AdType {
+  id: string;
+  name: string;
+  price: string;
+  unit: string;
+  icon: typeof Phone;
+  description: string;
+}
 
-const statusStyles = {
-  active: "bg-green-100 text-green-700",
-  paused: "bg-amber-100 text-amber-700",
+const adTypes: AdType[] = [
+  { id: "open", name: "Open Listing", price: "₹22", unit: "/day", icon: Megaphone, description: "Basic visibility in open listings" },
+  { id: "search", name: "Search Listing", price: "₹35", unit: "/day", icon: Search, description: "Appear in buyer search results" },
+  { id: "featured", name: "Featured Product", price: "₹55", unit: "/day", icon: Star, description: "Top placement on category pages" },
+  { id: "store", name: "Store Promotion", price: "₹99", unit: "/day", icon: Store, description: "Promote your entire store" },
+  { id: "broadcast", name: "Direct Broadcast", price: "₹15", unit: "/msg", icon: Radio, description: "Send direct messages to buyers" },
+  { id: "wholesaler", name: "Wholesaler Pick", price: "₹59", unit: "", icon: ShoppingBag, description: "Featured for wholesaler buyers" },
+  { id: "brand", name: "Brand Ad", price: "₹69", unit: "", icon: Award, description: "Brand awareness campaign" },
+  { id: "web-banner", name: "Website Banner", price: "₹89", unit: "/day", icon: Globe, description: "Banner ad on Cosora website" },
+  { id: "mobile-banner", name: "Mobile Banner", price: "₹99", unit: "/day", icon: Smartphone, description: "Banner ad on mobile app" },
+  { id: "web-mobile", name: "Web & Mobile Combo", price: "₹129", unit: "", icon: Monitor, description: "Combined web & mobile banners" },
+  { id: "fb-insta", name: "Facebook & Instagram", price: "₹59", unit: "", icon: Facebook, description: "Social media ad placement" },
+  { id: "google", name: "Google Product Ad", price: "₹59", unit: "", icon: BarChart3, description: "Google shopping ad listing" },
+  { id: "social-combo", name: "Social Media Combo", price: "₹99", unit: "", icon: Facebook, description: "All social media platforms" },
+  { id: "trusted", name: "TrustedSeal Badge", price: "₹44", unit: "", icon: Shield, description: "Trust badge on your profile" },
+  { id: "verified", name: "Cosora Verified", price: "₹199", unit: "", icon: BadgeCheck, description: "Verified certificate & badge" },
+];
+
+const vendorProducts = [
+  { id: "p1", name: "Italian Silk Fabric", image: "/placeholder.svg" },
+  { id: "p2", name: "Premium Cotton Blend", image: "/placeholder.svg" },
+  { id: "p3", name: "Organic Linen", image: "/placeholder.svg" },
+  { id: "p4", name: "Merino Wool Fabric", image: "/placeholder.svg" },
+  { id: "p5", name: "Recycled Polyester", image: "/placeholder.svg" },
+  { id: "p6", name: "Bamboo Jersey", image: "/placeholder.svg" },
+];
+
+const durationOptions = ["3 days", "7 days", "14 days", "30 days"];
+const genderOptions = ["All", "Men", "Women"];
+const cityOptions = ["Mumbai", "Delhi", "Bangalore", "Chennai", "Ahmedabad", "Jaipur", "Surat", "Kolkata"];
+const categoryOptions = ["Mens Wear", "Women's Ethnic", "Denim", "Sarees", "Kids Wear", "Bridal"];
+const goalOptions = ["Get more leads", "Increase profile views", "Drive phone calls", "Brand awareness", "Promote new products"];
+
+const statusStyles: Record<string, string> = {
+  active: "bg-green-500/10 text-green-600 border-green-500/20",
+  paused: "bg-amber-500/10 text-amber-600 border-amber-500/20",
   ended: "bg-muted text-muted-foreground",
 };
 
 const Advertisements = () => {
-  const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [selectedAdType, setSelectedAdType] = useState<string>("");
+  const navigate = useNavigate();
+  const [wizardStep, setWizardStep] = useState(0); // 0 = not started
+  const [selectedAdType, setSelectedAdType] = useState("");
+  const [selectedProducts, setSelectedProducts] = useState<Set<string>>(new Set());
+  const [gender, setGender] = useState("All");
+  const [duration, setDuration] = useState("7 days");
+  const [selectedCities, setSelectedCities] = useState<Set<string>>(new Set(["Mumbai"]));
+  const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [selectedGoal, setSelectedGoal] = useState("");
 
-  const totalLeads = advertisements.reduce((acc, ad) => acc + ad.leads, 0);
-  const totalCalls = advertisements.reduce((acc, ad) => acc + ad.calls, 0);
-  const totalViews = advertisements.reduce((acc, ad) => acc + ad.views, 0);
-  const avgCostPerLead = advertisements.reduce((acc, ad) => acc + ad.costPerLead, 0) / advertisements.length;
+  const toggleSet = (set: Set<string>, value: string, setter: (s: Set<string>) => void) => {
+    const next = new Set(set);
+    if (next.has(value)) next.delete(value); else next.add(value);
+    setter(next);
+  };
 
-  const handleCreateAd = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast.success("Campaign created!", {
-      description: "Your promotion is now live and reaching buyers.",
-    });
-    setIsCreateOpen(false);
+  const toggleProduct = (id: string) => {
+    const next = new Set(selectedProducts);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setSelectedProducts(next);
+  };
+
+  const selectedAd = adTypes.find((a) => a.id === selectedAdType);
+  const priceNum = selectedAd ? parseInt(selectedAd.price.replace("₹", "")) : 0;
+  const daysNum = parseInt(duration) || 7;
+  const totalCost = priceNum * daysNum;
+
+  const handleCreate = () => {
+    toast.success("Ad campaign created!", { description: "Your ad is now live." });
+    setWizardStep(0);
+    setSelectedAdType("");
+    setSelectedProducts(new Set());
   };
 
   return (
     <DashboardLayout>
-      {/* Page header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between lg:mb-8"
-      >
-        <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Boost Your Visibility
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Promote your products to reach more buyers and get quality leads
-          </p>
-        </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button variant="gold" size="sm" className="w-full sm:w-auto">
-              <Megaphone className="mr-2 h-4 w-4" />
-              Create Campaign
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="font-display text-lg sm:text-xl">
-                Boost Your Products
-              </DialogTitle>
-              <p className="text-sm text-muted-foreground">
-                Get more visibility and connect with potential buyers
-              </p>
-            </DialogHeader>
-            <form onSubmit={handleCreateAd} className="mt-4 space-y-5 sm:space-y-6">
-              {/* Ad Type Selection */}
-              <div className="space-y-3">
-                <Label>Choose Promotion Type</Label>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {Object.entries(adTypeInfo).map(([key, info]) => (
-                    <div
-                      key={key}
-                      onClick={() => setSelectedAdType(key)}
-                      className={cn(
-                        "cursor-pointer rounded-xl border-2 p-3 transition-all hover:border-accent sm:p-4",
-                        selectedAdType === key 
-                          ? "border-accent bg-accent/5" 
-                          : "border-border"
-                      )}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className={cn("rounded-lg p-2", info.color)}>
-                          <info.icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-foreground">{info.label}</p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">{info.description}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+      <div className="space-y-4 pb-20">
+        {/* Header */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="font-display text-xl font-bold text-foreground">Advertise</h1>
+          <p className="text-sm text-muted-foreground">Boost Your Visibility</p>
+        </motion.div>
 
-              <div className="space-y-2">
-                <Label htmlFor="campaign-name">Campaign Name</Label>
-                <Input
-                  id="campaign-name"
-                  placeholder="e.g., Summer Collection Promotion"
-                />
-              </div>
-
-              {/* Select Products to Promote */}
-              <div className="space-y-3">
-                <Label>Select Products to Promote</Label>
-                <div className="space-y-2 rounded-lg border border-border p-3">
-                  {["Italian Silk Fabric", "Premium Cotton Blend", "Organic Linen", "Merino Wool Fabric"].map((product) => (
-                    <div key={product} className="flex items-center space-x-3">
-                      <Checkbox id={product} />
-                      <label 
-                        htmlFor={product}
-                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                      >
-                        {product}
-                      </label>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Target Audience */}
-              <div className="space-y-2">
-                <Label>Target Buyer Type</Label>
-                <Select>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Who should see your products?" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Buyers</SelectItem>
-                    <SelectItem value="retailers">Retailers</SelectItem>
-                    <SelectItem value="wholesalers">Wholesalers</SelectItem>
-                    <SelectItem value="brands">Fashion Brands</SelectItem>
-                    <SelectItem value="exporters">Exporters</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="ad-budget">Daily Budget</Label>
-                  <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                      ₹
-                    </span>
-                    <Input id="ad-budget" className="pl-7" placeholder="500" />
-                  </div>
-                  <p className="text-xs text-muted-foreground">Recommended: ₹300-₹1000/day</p>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="duration">Duration</Label>
-                  <Select>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select duration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="7">7 Days</SelectItem>
-                      <SelectItem value="14">14 Days</SelectItem>
-                      <SelectItem value="30">30 Days</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Estimated Results */}
-              <div className="rounded-xl bg-secondary/50 p-4">
-                <p className="mb-3 text-sm font-medium text-foreground">Estimated Results</p>
-                <div className="grid grid-cols-3 gap-3 text-center">
-                  <div>
-                    <p className="font-display text-lg font-semibold text-accent">2K-5K</p>
-                    <p className="text-xs text-muted-foreground">Views</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-lg font-semibold text-accent">50-120</p>
-                    <p className="text-xs text-muted-foreground">Leads</p>
-                  </div>
-                  <div>
-                    <p className="font-display text-lg font-semibold text-accent">20-50</p>
-                    <p className="text-xs text-muted-foreground">Calls</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:gap-3 sm:pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="order-2 flex-1 sm:order-1"
-                  onClick={() => setIsCreateOpen(false)}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" variant="gold" className="order-1 flex-1 sm:order-2">
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Launch Campaign
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-
-      {/* Key Metrics - Lead Focused */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-4 grid grid-cols-2 gap-2 sm:mb-6 sm:gap-3 lg:mb-8 lg:grid-cols-4 lg:gap-4"
-      >
-        {[
-          { label: "Total Leads", value: totalLeads.toString(), icon: Users, trend: "+12% this week", color: "text-green-600" },
-          { label: "Phone Calls", value: totalCalls.toString(), icon: Phone, trend: "+8 today", color: "text-blue-600" },
-          { label: "Profile Views", value: `${(totalViews / 1000).toFixed(1)}K`, icon: Eye, trend: "+24% this month", color: "text-purple-600" },
-          { label: "Avg. Cost/Lead", value: `₹${avgCostPerLead.toFixed(0)}`, icon: TrendingUp, trend: "Great performance!", color: "text-accent" },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-xl border border-border bg-card p-3 sm:p-4"
-          >
-            <div className="flex items-start justify-between">
-              <div className="rounded-lg bg-secondary p-1.5 sm:p-2">
-                <stat.icon className="h-4 w-4 text-accent sm:h-5 sm:w-5" />
-              </div>
-              <ArrowUpRight className={cn("h-4 w-4", stat.color)} />
+        {/* Live Stats */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="grid grid-cols-3 gap-2"
+        >
+          {liveStats.map((stat) => (
+            <div key={stat.label} className="rounded-xl border border-border bg-card p-3 text-center">
+              <stat.icon className="mx-auto h-4 w-4 text-muted-foreground mb-1" />
+              <p className="text-xl font-bold text-accent">{stat.value}</p>
+              <p className="text-[10px] text-muted-foreground leading-tight">{stat.label}</p>
             </div>
-            <div className="mt-3">
-              <p className="font-display text-xl font-semibold text-card-foreground sm:text-2xl lg:text-3xl">
-                {stat.value}
-              </p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
-              <p className={cn("mt-1 text-[10px] font-medium sm:text-xs", stat.color)}>{stat.trend}</p>
-            </div>
+          ))}
+        </motion.div>
+
+        {/* Your Campaigns */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display text-lg font-semibold text-foreground">Your Campaigns</h2>
+            <Badge className="bg-accent/10 text-accent border-accent/20">
+              {campaigns.filter((c) => c.status === "active").length} Active
+            </Badge>
           </div>
-        ))}
-      </motion.div>
 
-      {/* Active Campaigns */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-semibold text-foreground">Your Campaigns</h2>
-          <span className="text-sm text-muted-foreground">{advertisements.length} campaigns</span>
-        </div>
-
-        <div className="space-y-3 sm:space-y-4">
-          {advertisements.map((ad, index) => {
-            const typeInfo = adTypeInfo[ad.type];
-            return (
+          <div className="space-y-3">
+            {campaigns.map((c, i) => (
               <motion.div
-                key={ad.id}
-                initial={{ opacity: 0, y: 20 }}
+                key={c.id}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-                className="group overflow-hidden rounded-xl border border-border bg-card transition-all duration-300 hover:shadow-elegant"
+                transition={{ delay: 0.15 + i * 0.05 }}
+                className="rounded-xl border border-border bg-card p-4"
               >
-                <div className="p-4 sm:p-5 lg:p-6">
-                  {/* Header */}
-                  <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3">
-                      <div className={cn("rounded-lg p-2", typeInfo.color)}>
-                        <typeInfo.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <div className="mb-1 flex flex-wrap items-center gap-2">
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-0.5 text-[10px] font-medium capitalize sm:text-xs",
-                              statusStyles[ad.status]
-                            )}
-                          >
-                            {ad.status}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {ad.startDate} - {ad.endDate}
-                          </span>
-                        </div>
-                        <h3 className="font-display text-sm font-semibold text-card-foreground sm:text-base lg:text-lg">
-                          {ad.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Targeting: {ad.targetAudience} • {ad.products.length} products
-                        </p>
-                      </div>
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-medium capitalize border", statusStyles[c.status])}>
+                        {c.status}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground">{c.startDate} – {c.endDate}</span>
                     </div>
-
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="h-8 w-8"
-                      >
-                        {ad.status === "active" ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="mr-2 h-4 w-4" /> Edit Campaign
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <TrendingUp className="mr-2 h-4 w-4" /> View Analytics
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="text-destructive">
-                            <Trash2 className="mr-2 h-4 w-4" /> Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                    <p className="font-medium text-sm text-foreground">{c.name}</p>
+                    <p className="text-xs text-muted-foreground">Targeting: {c.targeting}</p>
                   </div>
+                </div>
 
-                  {/* Lead-focused Stats */}
-                  <div className="grid grid-cols-2 gap-3 rounded-lg bg-secondary/30 p-3 sm:grid-cols-5 sm:gap-4 sm:p-4">
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-                        <p className="font-display text-base font-semibold text-card-foreground sm:text-lg">
-                          {ad.views.toLocaleString()}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground sm:text-xs">Views</p>
+                {/* Stats */}
+                <div className="grid grid-cols-5 gap-2 my-3 text-center">
+                  {[
+                    { l: "Views", v: c.views > 999 ? `${(c.views / 1000).toFixed(1)}K` : c.views },
+                    { l: "Leads", v: c.leads },
+                    { l: "Calls", v: c.calls },
+                    { l: "Inquiries", v: c.inquiries },
+                    { l: "₹/Lead", v: `₹${c.costPerLead.toFixed(0)}` },
+                  ].map((s) => (
+                    <div key={s.l}>
+                      <p className="text-sm font-semibold text-foreground">{s.v}</p>
+                      <p className="text-[10px] text-muted-foreground">{s.l}</p>
                     </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-green-600" />
-                        <p className="font-display text-base font-semibold text-green-600 sm:text-lg">
-                          {ad.leads}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground sm:text-xs">Leads</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Phone className="h-3.5 w-3.5 text-blue-600" />
-                        <p className="font-display text-base font-semibold text-blue-600 sm:text-lg">
-                          {ad.calls}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground sm:text-xs">Calls</p>
-                    </div>
-                    <div className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <MessageSquare className="h-3.5 w-3.5 text-purple-600" />
-                        <p className="font-display text-base font-semibold text-purple-600 sm:text-lg">
-                          {ad.inquiries}
-                        </p>
-                      </div>
-                      <p className="text-[10px] text-muted-foreground sm:text-xs">Inquiries</p>
-                    </div>
-                    <div className="col-span-2 text-center sm:col-span-1">
-                      <p className="font-display text-base font-semibold text-accent sm:text-lg">
-                        ₹{ad.costPerLead.toFixed(0)}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground sm:text-xs">Cost/Lead</p>
-                    </div>
-                  </div>
+                  ))}
+                </div>
 
-                  {/* Budget Progress */}
-                  <div className="mt-4 flex items-center gap-3">
-                    <div className="flex-1">
-                      <div className="mb-1 flex justify-between text-xs">
-                        <span className="text-muted-foreground">Budget Used</span>
-                        <span className="font-medium text-card-foreground">₹{ad.spent} / ₹{ad.budget}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-secondary">
-                        <div
-                          className="h-full rounded-full bg-accent transition-all"
-                          style={{ width: `${(ad.spent / ad.budget) * 100}%` }}
-                        />
-                      </div>
-                    </div>
+                {/* Budget */}
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>Budget used</span>
+                    <span>₹{c.budgetUsed} / ₹{c.budgetTotal}</span>
                   </div>
+                  <Progress value={(c.budgetUsed / c.budgetTotal) * 100} className="h-2" />
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 mt-3">
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    {c.status === "active" ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                    <Copy className="h-4 w-4" />
+                  </Button>
                 </div>
               </motion.div>
-            );
-          })}
-        </div>
-      </motion.div>
-
-      {/* Empty State / CTA */}
-      {advertisements.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card/50 py-16 text-center"
-        >
-          <div className="mb-4 rounded-full bg-secondary p-4">
-            <Megaphone className="h-8 w-8 text-accent" />
+            ))}
           </div>
-          <h3 className="font-display text-lg font-semibold text-foreground">
-            Get More Buyers to Call You
-          </h3>
-          <p className="mt-2 max-w-sm text-sm text-muted-foreground">
-            Boost your products to appear at the top of search results and get quality leads from verified buyers.
-          </p>
-          <Button variant="gold" className="mt-6" onClick={() => setIsCreateOpen(true)}>
-            <Sparkles className="mr-2 h-4 w-4" />
-            Create Your First Campaign
-          </Button>
         </motion.div>
-      )}
+
+        {/* Create Your Ad — 3-Step Wizard */}
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display text-lg font-semibold text-foreground">Create Your Ad</h2>
+            <span className="rounded-full bg-accent/10 text-accent text-[10px] font-semibold px-2 py-0.5">PAY PER AD</span>
+          </div>
+
+          {/* Step indicators */}
+          <div className="flex gap-2 mb-4">
+            {["Ad Type", "Products", "Target"].map((label, i) => (
+              <button
+                key={label}
+                onClick={() => { if (i + 1 <= wizardStep) setWizardStep(i + 1); }}
+                className={cn(
+                  "flex-1 rounded-full py-1.5 text-xs font-medium transition-colors",
+                  wizardStep === i + 1 ? "bg-accent text-accent-foreground" :
+                  wizardStep > i + 1 ? "bg-accent/20 text-accent" :
+                  "bg-muted text-muted-foreground"
+                )}
+              >
+                {i + 1}. {label}
+              </button>
+            ))}
+          </div>
+
+          {/* Step 1: Ad Type */}
+          {(wizardStep === 0 || wizardStep === 1) && (
+            <div className="space-y-2">
+              {wizardStep === 0 && (
+                <Button className="w-full bg-accent text-accent-foreground" onClick={() => setWizardStep(1)}>
+                  <Megaphone className="mr-2 h-4 w-4" /> Start Creating Your Ad
+                </Button>
+              )}
+              {wizardStep === 1 && (
+                <>
+                  <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+                    {adTypes.map((ad) => (
+                      <button
+                        key={ad.id}
+                        onClick={() => setSelectedAdType(ad.id)}
+                        className={cn(
+                          "rounded-xl border p-3 text-left transition-all hover:border-accent",
+                          selectedAdType === ad.id ? "border-2 border-accent bg-accent/5" : "border-border bg-card"
+                        )}
+                      >
+                        <ad.icon className="h-5 w-5 text-accent mb-1" />
+                        <p className="text-xs font-medium text-foreground leading-tight">{ad.name}</p>
+                        <p className="text-accent font-bold text-sm">{ad.price}<span className="text-[10px] font-normal text-muted-foreground">{ad.unit}</span></p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{ad.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                  <Button
+                    className="w-full bg-accent text-accent-foreground mt-3"
+                    disabled={!selectedAdType}
+                    onClick={() => setWizardStep(2)}
+                  >
+                    Next: Select Products <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Products */}
+          {wizardStep === 2 && (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-2">
+                {vendorProducts.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => toggleProduct(p.id)}
+                    className={cn(
+                      "relative rounded-xl border overflow-hidden transition-all",
+                      selectedProducts.has(p.id) ? "border-2 border-accent" : "border-border"
+                    )}
+                  >
+                    <div className="aspect-square bg-muted flex items-center justify-center">
+                      <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    </div>
+                    {selectedProducts.has(p.id) && (
+                      <div className="absolute top-1 right-1 bg-accent text-accent-foreground rounded-full w-5 h-5 flex items-center justify-center">
+                        <Check className="h-3 w-3" />
+                      </div>
+                    )}
+                    <p className="p-1.5 text-[10px] text-foreground text-center truncate">{p.name}</p>
+                  </button>
+                ))}
+              </div>
+              <Button variant="outline" className="w-full text-xs">+ Add More Products</Button>
+              <Button
+                className="w-full bg-accent text-accent-foreground"
+                disabled={selectedProducts.size === 0}
+                onClick={() => setWizardStep(3)}
+              >
+                Next: Target Audience <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Step 3: Target Audience */}
+          {wizardStep === 3 && (
+            <div className="space-y-4">
+              {/* Gender */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Gender</p>
+                <div className="flex gap-2">
+                  {genderOptions.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setGender(g)}
+                      className={cn(
+                        "rounded-full px-4 py-1.5 text-xs font-medium transition-colors",
+                        gender === g ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+                      )}
+                    >{g}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Duration</p>
+                <div className="flex gap-2">
+                  {durationOptions.map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDuration(d)}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-xs font-medium transition-colors",
+                        duration === d ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground"
+                      )}
+                    >{d}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Cities */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">City / Area</p>
+                <div className="flex flex-wrap gap-2">
+                  {cityOptions.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => toggleSet(selectedCities, c, setSelectedCities)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs transition-colors",
+                        selectedCities.has(c)
+                          ? "bg-accent/10 text-accent border border-accent/30"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Category</p>
+                <div className="flex flex-wrap gap-2">
+                  {categoryOptions.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => toggleSet(selectedCategories, c, setSelectedCategories)}
+                      className={cn(
+                        "rounded-full px-3 py-1 text-xs transition-colors",
+                        selectedCategories.has(c)
+                          ? "bg-accent/10 text-accent border border-accent/30"
+                          : "bg-muted text-muted-foreground"
+                      )}
+                    >{c}</button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Goal */}
+              <div>
+                <p className="text-xs font-medium text-muted-foreground mb-2">Goal</p>
+                <div className="space-y-2">
+                  {goalOptions.map((g) => (
+                    <button
+                      key={g}
+                      onClick={() => setSelectedGoal(g)}
+                      className={cn(
+                        "w-full text-left rounded-xl border px-3 py-2.5 text-sm transition-colors",
+                        selectedGoal === g ? "border-accent bg-accent/5 text-accent" : "border-border text-foreground"
+                      )}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={cn(
+                          "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                          selectedGoal === g ? "border-accent" : "border-muted-foreground/40"
+                        )}>
+                          {selectedGoal === g && <div className="w-2 h-2 rounded-full bg-accent" />}
+                        </div>
+                        {g}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Estimated Cost (sticky-ish) */}
+              <div className="rounded-xl border border-accent/20 bg-accent/5 p-4 space-y-2">
+                <div className="text-center">
+                  <p className="text-lg font-bold text-foreground">
+                    {selectedAd?.price}{selectedAd?.unit ? selectedAd.unit : ""} × {daysNum} days = <span className="text-accent">₹{totalCost}</span> total
+                  </p>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    No minimum spend • Start from ₹22/day • Go live instantly
+                  </p>
+                </div>
+                <Button className="w-full bg-accent text-accent-foreground h-11" onClick={handleCreate}>
+                  Create Your Ad
+                </Button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+
+        {/* Competitor Ads Link */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="rounded-xl border border-border bg-card p-4"
+        >
+          <h3 className="font-semibold text-foreground text-sm">Competitor's Advertisements</h3>
+          <button
+            onClick={() => navigate("/competitor-ads")}
+            className="mt-1 flex items-center gap-1 text-xs text-accent hover:underline"
+          >
+            See what your competitors are doing <ChevronRight className="h-3 w-3" />
+          </button>
+        </motion.div>
+      </div>
     </DashboardLayout>
   );
 };
