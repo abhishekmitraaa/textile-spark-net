@@ -38,7 +38,7 @@ import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
-import MyStore from "./pages/MyStore";
+
 import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
 import ReportFraud from "./pages/ReportFraud";
@@ -71,6 +71,7 @@ const App = () => (
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/my-store" element={<Profile />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
@@ -89,7 +90,7 @@ const App = () => (
             <Route path="/auth/welcome" element={<Welcome />} />
             <Route path="/seller" element={<VendorLanding />} />
             <Route path="/onboarding" element={<Onboarding />} />
-            <Route path="/my-store" element={<MyStore />} />
+            
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
