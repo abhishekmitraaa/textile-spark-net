@@ -71,6 +71,7 @@ const App = () => (
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/my-store" element={<Profile />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
