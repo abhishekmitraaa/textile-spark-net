@@ -38,7 +38,7 @@ import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
-import MyStore from "./pages/MyStore";
+
 import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
 import ReportFraud from "./pages/ReportFraud";
