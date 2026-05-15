@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import CategorySelector from "@/components/upload/CategorySelector";
+import { CategorySelector } from "@/components/upload/CategorySelector";
 import { toast } from "sonner";
 
 const TOTAL_STEPS = 8;
