@@ -1,1291 +1,550 @@
-import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import {
+  ArrowLeft, ArrowRight, MessageCircle, MapPin, Upload as UploadIcon,
+  CheckCircle2, Circle, Building2, FileText, Package, FileSignature,
+  Rocket, X, Crop, RotateCw, Eraser, Info,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { CategorySelector } from "@/components/upload/CategorySelector";
-import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
-import {
-  Clock,
-  MessageCircle,
-  Globe,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  Check,
-  MapPin,
-  Upload,
-  X,
-  CheckCircle2,
-  Shield,
-  Loader2,
-  Camera,
-  Plus,
-  Pencil,
-  RotateCw,
-  Crop,
-  Sliders,
-  Trash2,
-} from "lucide-react";
-
-const stepSlide = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.35 } },
-  exit: { opacity: 0, y: -16, transition: { duration: 0.2 } },
-};
-
-const checklistSteps = [
-  { name: "Business Details", desc: "Name, contact, website" },
-  { name: "Business Address", desc: "Operational & registered address" },
-  { name: "Owner Details", desc: "Owner name, PAN, email" },
-  { name: "Business Images", desc: "Logo, banner, factory photos" },
-  { name: "Documents", desc: "GST, PAN, Aadhaar verification" },
-  { name: "Products & Contract", desc: "Categories, first listing, T&C" },
-];
-
-/* ── Step Components ── */
-
-const StepOverview = () => (
-  <div>
-    <h2 className="font-display text-2xl font-bold text-foreground mb-2">
-      Let's set up your Cosora business
-    </h2>
-    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-8">
-      <Clock className="h-4 w-4" />
-      Estimated time: 10 minutes
-    </div>
-
-    <div className="relative">
-      {checklistSteps.map((s, i) => (
-        <div key={i} className="flex gap-4 relative">
-          {i < checklistSteps.length - 1 && (
-            <div className="absolute left-4 top-8 bottom-0 border-l-2 border-dashed border-border" />
-          )}
-          <div className="relative z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 bg-muted text-muted-foreground">
-            {i + 1}
-          </div>
-          <div className="pb-6">
-            <p className="font-medium text-foreground text-sm">{s.name}</p>
-            <p className="text-xs text-muted-foreground">{s.desc}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-
-    <Link to="#" className="text-accent text-sm inline-block mt-2">
-      Edit Details
-    </Link>
-  </div>
-);
-
-const StepBusinessDetails = () => {
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpTimer, setOtpTimer] = useState(57);
-  const [sameAsMobile, setSameAsMobile] = useState(true);
-  const [hasWebsite, setHasWebsite] = useState(false);
-  const [whatsappUpdates, setWhatsappUpdates] = useState(true);
-
-  const handleSendOtp = () => {
-    setOtpSent(true);
-    setOtpTimer(57);
-    const interval = setInterval(() => {
-      setOtpTimer((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-  };
-
-  return (
-    <div className="space-y-5">
-      <h2 className="font-display text-xl font-semibold text-foreground">
-        Tell us about your business
-      </h2>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Business Name <span className="text-accent">*</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Kumar Textiles Pvt Ltd" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Mobile Number <span className="text-accent">*</span>
-        </Label>
-        <div className="flex gap-2">
-          <Input className="h-11 flex-1" placeholder="+91 9876543210" />
-          <Button
-            variant="outline"
-            className="h-11 text-accent border-accent hover:bg-accent/5 whitespace-nowrap text-sm"
-            onClick={handleSendOtp}
-          >
-            Verify OTP
-          </Button>
-        </div>
-        {otpSent && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            className="space-y-2 pt-2"
-          >
-            <div className="flex gap-2">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Input
-                  key={i}
-                  className="h-11 w-11 text-center text-lg font-semibold"
-                  maxLength={1}
-                  inputMode="numeric"
-                />
-              ))}
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                We'll auto-detect OTP from SMS
-              </p>
-              {otpTimer > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Resend in {otpTimer}s
-                </p>
-              ) : (
-                <button className="text-xs text-accent font-medium">
-                  Resend
-                </button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Checkbox
-          id="whatsapp"
-          checked={whatsappUpdates}
-          onCheckedChange={(v) => setWhatsappUpdates(!!v)}
-        />
-        <Label htmlFor="whatsapp" className="text-sm text-foreground cursor-pointer">
-          Receive business updates and leads on WhatsApp
-        </Label>
-      </div>
-
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="sameContact"
-            checked={sameAsMobile}
-            onCheckedChange={(v) => setSameAsMobile(!!v)}
-          />
-          <Label htmlFor="sameContact" className="text-sm text-foreground cursor-pointer">
-            Primary contact same as mobile number above
-          </Label>
-        </div>
-        {!sameAsMobile && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-          >
-            <Input className="h-11" placeholder="Primary contact number" />
-          </motion.div>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label className="text-sm">Do you have a website?</Label>
-        <div className="inline-flex rounded-full bg-muted p-1">
-          <button
-            onClick={() => setHasWebsite(true)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              hasWebsite
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            Yes
-          </button>
-          <button
-            onClick={() => setHasWebsite(false)}
-            className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-              !hasWebsite
-                ? "bg-accent text-accent-foreground"
-                : "text-muted-foreground"
-            }`}
-          >
-            No
-          </button>
-        </div>
-        {hasWebsite && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-          >
-            <div className="relative">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input className="h-11 pl-9" placeholder="https://yourwebsite.com" />
-            </div>
-          </motion.div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-/* ── Step 3: Business Address ── */
-const StepBusinessAddress = () => (
-  <div className="space-y-5">
-    <h2 className="font-display text-xl font-semibold text-foreground">
-      Where is your business located?
-    </h2>
-
-    {/* Map placeholder */}
-    <div className="rounded-xl bg-muted h-48 relative flex items-center justify-center">
-      <MapPin className="h-10 w-10 text-muted-foreground" />
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-        <Button className="bg-accent text-accent-foreground rounded-full px-4 py-2 text-sm hover:bg-accent/90">
-          Mark your business location
-        </Button>
-      </div>
-    </div>
-
-    {/* Address fields */}
-    <div className="space-y-3">
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Shop/Building No. <span className="text-muted-foreground">(optional)</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Shop 12, Block A" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Floor/Tower <span className="text-muted-foreground">(optional)</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. 2nd Floor, Tower B" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Area / Sector / Locality <span className="text-accent">*</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Sector 18, Noida" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          City <span className="text-accent">*</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Mumbai" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Landmark <span className="text-muted-foreground">(optional)</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Near City Mall" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Pincode <span className="text-accent">*</span>
-        </Label>
-        <Input
-          className="h-11"
-          placeholder="e.g. 400001"
-          inputMode="numeric"
-          maxLength={6}
-        />
-      </div>
-    </div>
-
-    <p className="text-xs text-muted-foreground italic">
-      Please ensure this address matches your business license
-    </p>
-  </div>
-);
-
-/* ── Step 4: Owner Details ── */
-const StepOwnerDetails = ({ showSuccess }: { showSuccess: boolean }) => {
-  if (showSuccess) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          <CheckCircle2 className="w-12 h-12 text-green-600" />
-        </motion.div>
-        <p className="text-green-600 font-medium">Business information saved ✓</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      <h2 className="font-display text-xl font-semibold text-foreground">
-        Who owns this business?
-      </h2>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Full Name <span className="text-accent">*</span>
-        </Label>
-        <Input className="h-11" placeholder="e.g. Rajesh Kumar" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Email Address <span className="text-accent">*</span>
-        </Label>
-        <Input className="h-11" type="email" placeholder="e.g. rajesh@business.com" />
-      </div>
-
-      <div className="space-y-1.5">
-        <Label className="text-sm">
-          Registered Country <span className="text-accent">*</span>
-        </Label>
-        <Select defaultValue="india">
-          <SelectTrigger className="h-11">
-            <SelectValue placeholder="Select country" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="india">India</SelectItem>
-            <SelectItem value="bangladesh">Bangladesh</SelectItem>
-            <SelectItem value="nepal">Nepal</SelectItem>
-            <SelectItem value="sri-lanka">Sri Lanka</SelectItem>
-            <SelectItem value="pakistan">Pakistan</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
-  );
-};
-
-/* ── Step 5: Business Images ── */
-const StepBusinessImages = () => {
-  const [images, setImages] = useState<string[]>([]);
-  const fileRef = useRef<HTMLInputElement>(null);
-
-  const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const newUrls = Array.from(files).map((f) => URL.createObjectURL(f));
-    setImages((prev) => [...prev, ...newUrls]);
-  };
-
-  const removeImage = (idx: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="font-display text-xl font-semibold text-foreground">
-          Show us your business
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Upload at least one entrance image of your factory or store
-        </p>
-      </div>
-
-      {/* Upload zone */}
-      <div
-        onClick={() => fileRef.current?.click()}
-        className="rounded-xl border-2 border-dashed border-border bg-muted/30 p-8 text-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all"
-      >
-        <Upload className="w-10 h-10 text-muted-foreground mx-auto mb-2" />
-        <p className="text-sm font-medium text-foreground">
-          Click to upload or drag & drop
-        </p>
-        <p className="text-xs text-muted-foreground">PNG, JPG up to 10MB</p>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleFiles}
-        />
-      </div>
-
-      {/* Image preview grid */}
-      {images.length > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          {images.map((src, i) => (
-            <div key={i} className="relative aspect-square">
-              <img
-                src={src}
-                alt={`Upload ${i + 1}`}
-                className="rounded-lg aspect-square object-cover w-full h-full"
-              />
-              <button
-                onClick={() => removeImage(i)}
-                className="absolute top-1 right-1 bg-foreground/70 text-background rounded-full p-0.5"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Guidelines dialog */}
-      <Dialog>
-        <DialogTrigger asChild>
-          <button className="text-accent text-sm font-medium">
-            View Guidelines
-          </button>
-        </DialogTrigger>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Photo Guidelines</DialogTitle>
-          </DialogHeader>
-          <ul className="space-y-3 mt-2">
-            {[
-              "Clear entrance image required",
-              "HD photos only",
-              "No people or faces",
-              "No blurry or cropped photos",
-              "Photo must show business exterior",
-            ].map((rule, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm text-foreground">
-                <Check className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                {rule}
-              </li>
-            ))}
-          </ul>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
-};
-
-/* ── Placeholder Steps 8 ── */
-const PlaceholderStep = ({ title }: { title: string }) => (
-  <div>
-    <h2 className="font-display text-xl font-semibold text-foreground mb-4">
-      {title}
-    </h2>
-    <p className="text-sm text-muted-foreground">This step is coming soon.</p>
-  </div>
-);
-
-/* ── Step 6: Business Documents ── */
-const StepDocuments = ({ showSuccess }: { showSuccess: boolean }) => {
-  const [panVerifying, setPanVerifying] = useState(false);
-  const [panVerified, setPanVerified] = useState<boolean | null>(null);
-  const [hasGstin, setHasGstin] = useState(false);
-  const [aadhaar, setAadhaar] = useState("");
-
-  const handleVerifyPan = () => {
-    setPanVerifying(true);
-    setTimeout(() => {
-      setPanVerifying(false);
-      setPanVerified(true);
-    }, 1500);
-  };
-
-  const handleAadhaarChange = (val: string) => {
-    const digits = val.replace(/\D/g, "").slice(0, 12);
-    if (digits.length <= 4) {
-      setAadhaar(digits);
-    } else if (digits.length <= 8) {
-      setAadhaar("XXXX " + digits.slice(4));
-    } else {
-      setAadhaar("XXXX XXXX " + digits.slice(8));
-    }
-  };
-
-  if (showSuccess) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 300, damping: 20 }}
-        >
-          <CheckCircle2 className="w-12 h-12 text-green-600" />
-        </motion.div>
-        <p className="text-green-600 font-medium">Business documents added ✓</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-5">
-      <h2 className="font-display text-xl font-semibold text-foreground">
-        Verify your business
-      </h2>
-
-      <div className="flex items-start gap-2 bg-green-500/5 rounded-lg p-2">
-        <Shield className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-muted-foreground">
-          Your documents are encrypted and stored securely
-        </p>
-      </div>
-
-      <div className="space-y-4">
-        {/* PAN Number */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">
-            PAN Number <span className="text-accent">*</span>
-          </Label>
-          <div className="flex gap-2">
-            <Input className="h-11 flex-1 uppercase" placeholder="ABCDE1234F" maxLength={10} />
-            {panVerified === true ? (
-              <span className="inline-flex items-center gap-1 bg-green-500/10 text-green-600 rounded-full px-2 py-0.5 text-xs self-center">
-                <CheckCircle2 className="h-3 w-3" /> Verified
-              </span>
-            ) : (
-              <Button
-                variant="outline"
-                className="h-11 text-accent border-accent hover:bg-accent/5 whitespace-nowrap text-sm"
-                onClick={handleVerifyPan}
-                disabled={panVerifying}
-              >
-                {panVerifying ? <Loader2 className="h-4 w-4 animate-spin" /> : "Verify"}
-              </Button>
-            )}
-          </div>
-          {panVerified === false && (
-            <p className="text-destructive text-xs">Verification failed: Name mismatch</p>
-          )}
-          {/* PAN upload */}
-          <div className="rounded-lg border-2 border-dashed border-border h-20 p-3 flex items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all">
-            <Upload className="h-4 w-4 text-muted-foreground" />
-            <div>
-              <p className="text-xs font-medium text-foreground">Upload PAN Card scan</p>
-              <p className="text-[10px] text-muted-foreground">PDF or Image</p>
-            </div>
-          </div>
-        </div>
-
-        {/* CIN Number */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">
-            CIN Number <span className="text-accent">*</span>
-          </Label>
-          <Input className="h-11" placeholder="e.g. U12345MH2020PTC123456" />
-        </div>
-
-        {/* Aadhaar Number */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">
-            Aadhaar Number <span className="text-accent">*</span>
-          </Label>
-          <Input
-            className="h-11"
-            placeholder="XXXX XXXX 1234"
-            value={aadhaar}
-            onChange={(e) => handleAadhaarChange(e.target.value)}
-          />
-        </div>
-
-        {/* GSTIN */}
-        <div className="space-y-2">
-          <Label className="text-sm">
-            GSTIN <span className="text-muted-foreground">(optional)</span>
-          </Label>
-          <div className="inline-flex rounded-full bg-muted p-1">
-            <button
-              onClick={() => setHasGstin(true)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                hasGstin ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-              }`}
-            >
-              Yes
-            </button>
-            <button
-              onClick={() => setHasGstin(false)}
-              className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                !hasGstin ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-              }`}
-            >
-              No
-            </button>
-          </div>
-          {hasGstin && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              className="space-y-2"
-            >
-              <Input className="h-11" placeholder="e.g. 22AAAAA0000A1Z5" />
-              <div className="rounded-lg border-2 border-dashed border-border h-20 p-3 flex items-center justify-center gap-2 cursor-pointer hover:border-accent hover:bg-accent/5 transition-all">
-                <Upload className="h-4 w-4 text-muted-foreground" />
-                <div>
-                  <p className="text-xs font-medium text-foreground">Upload GST Certificate</p>
-                  <p className="text-[10px] text-muted-foreground">PDF or Image</p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-/* ── Step 7: Add First Product ── */
-const StepFirstProduct = () => {
-  const [productImages, setProductImages] = useState<string[]>([]);
-  const [editSheetOpen, setEditSheetOpen] = useState(false);
-  const [editingIdx, setEditingIdx] = useState<number | null>(null);
-  const [specsOpen, setSpecsOpen] = useState(false);
-  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [customAvailable, setCustomAvailable] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
-  const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
-  const productFileRef = useRef<HTMLInputElement>(null);
-
-  const sizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "Free Size", "Plus Size"];
-
-  const handleProductFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    const urls = Array.from(files).map((f) => URL.createObjectURL(f));
-    setProductImages((prev) => [...prev, ...urls].slice(0, 6));
-  };
-
-  const removeProductImage = (idx: number) => {
-    setProductImages((prev) => prev.filter((_, i) => i !== idx));
-  };
-
-  const toggleSize = (size: string) => {
-    setSelectedSizes((prev) =>
-      prev.includes(size) ? prev.filter((s) => s !== size) : [...prev, size]
-    );
-  };
-
-  return (
-    <div className="space-y-5">
-      <h2 className="font-display text-xl font-semibold text-foreground">
-        Add your first product
-      </h2>
-
-      <div className="flex items-start gap-2 bg-amber-500/5 rounded-lg p-2">
-        <Clock className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
-        <p className="text-xs text-muted-foreground">
-          Your products are reviewed by our team (24-48 hrs)
-        </p>
-      </div>
-
-      {/* Product image slots - horizontal scroll */}
-      <div>
-        <Label className="text-sm mb-2 block">Product Images</Label>
-        <div className="flex gap-2 overflow-x-auto pb-2">
-          {Array.from({ length: 6 }).map((_, i) => {
-            const img = productImages[i];
-            return (
-              <div
-                key={i}
-                className="w-20 h-20 rounded-xl border-2 border-dashed border-border flex-shrink-0 flex flex-col items-center justify-center cursor-pointer hover:border-accent hover:bg-accent/5 transition-all relative overflow-hidden"
-                onClick={() => {
-                  if (!img) productFileRef.current?.click();
-                }}
-              >
-                {img ? (
-                  <>
-                    <img src={img} alt={`Product ${i + 1}`} className="w-full h-full object-cover" />
-                    <div className="absolute inset-0 bg-foreground/0 hover:bg-foreground/30 transition-all flex items-center justify-center opacity-0 hover:opacity-100">
-                      <div className="flex gap-1">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeProductImage(i);
-                          }}
-                          className="bg-background rounded-full p-1"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingIdx(i);
-                            setEditSheetOpen(true);
-                          }}
-                          className="bg-background rounded-full p-1"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                    {i === 0 && (
-                      <span className="absolute bottom-0 left-0 right-0 bg-accent text-accent-foreground text-[9px] text-center py-0.5 font-medium">
-                        Cover
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    {i === 0 ? (
-                      <>
-                        <Camera className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-[9px] text-muted-foreground mt-0.5">Cover</span>
-                      </>
-                    ) : (
-                      <Plus className="h-5 w-5 text-muted-foreground" />
-                    )}
-                  </>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <input
-          ref={productFileRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleProductFiles}
-        />
-      </div>
-
-      {/* Edit image sheet */}
-      <Sheet open={editSheetOpen} onOpenChange={setEditSheetOpen}>
-        <SheetContent side="bottom" className="rounded-t-2xl">
-          <SheetHeader>
-            <SheetTitle>Edit Image</SheetTitle>
-          </SheetHeader>
-          <div className="grid grid-cols-2 gap-3 py-4">
-            {[
-              { icon: Trash2, label: "Remove Background" },
-              { icon: Sliders, label: "Adjust" },
-              { icon: Crop, label: "Crop" },
-              { icon: RotateCw, label: "Rotate" },
-            ].map(({ icon: Icon, label }) => (
-              <Button key={label} variant="outline" className="h-12 gap-2 text-sm">
-                <Icon className="h-4 w-4" /> {label}
-              </Button>
-            ))}
-          </div>
-        </SheetContent>
-      </Sheet>
-
-      {/* Form fields */}
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label className="text-sm">
-            Product Name <span className="text-accent">*</span>
-          </Label>
-          <Input className="h-11" placeholder="e.g. Premium Cotton Blend T-Shirt" />
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1.5">
-            <Label className="text-sm">
-              Price <span className="text-accent">*</span>
-            </Label>
-            <Input className="h-11" placeholder="₹ 0.00" inputMode="numeric" />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-sm">Unit</Label>
-            <Select defaultValue="pieces">
-              <SelectTrigger className="h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {["pieces", "kg", "meters", "sets", "pairs", "dozen"].map((u) => (
-                  <SelectItem key={u} value={u}>
-                    {u.charAt(0).toUpperCase() + u.slice(1)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-sm">
-            MOQ (Minimum Order Quantity) <span className="text-accent">*</span>
-          </Label>
-          <Input className="h-11" placeholder="e.g. 50" inputMode="numeric" />
-        </div>
-
-        {/* Category */}
-        <div className="space-y-1.5">
-          <Label className="text-sm">Category</Label>
-          <CategorySelector
-            selectedCategory={selectedCategory}
-            onSelectCategory={(id) => {
-              setSelectedCategory(id);
-              setSelectedSubCategory(null);
-              setSelectedSubType(null);
-            }}
-          />
-        </div>
-
-        {/* Sub-category */}
-        {selectedCategory && (
-          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-1.5">
-            <Label className="text-sm">Sub-category</Label>
-            <SubCategorySelector
-              categoryId={selectedCategory}
-              selectedSubCategory={selectedSubCategory}
-              onSelectSubCategory={setSelectedSubCategory}
-              selectedSubType={selectedSubType}
-              onSelectSubType={setSelectedSubType}
-            />
-          </motion.div>
-        )}
-      </div>
-
-      {/* Specifications collapsible */}
-      <Collapsible open={specsOpen} onOpenChange={setSpecsOpen}>
-        <CollapsibleTrigger asChild>
-          <button className="flex items-center gap-2 text-sm font-medium text-foreground w-full py-2">
-            <ChevronDown className={`h-4 w-4 transition-transform ${specsOpen ? "rotate-180" : ""}`} />
-            Add Specifications
-          </button>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          <div className="space-y-3 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Fabric</Label>
-              <Select>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Select fabric" /></SelectTrigger>
-                <SelectContent>
-                  {["Cotton", "Polyester", "Poly Cotton", "Lycra", "Linen", "Silk", "Blend", "Other"].map((f) => (
-                    <SelectItem key={f} value={f.toLowerCase().replace(" ", "-")}>{f}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm">GSM</Label>
-              <Select>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Select GSM" /></SelectTrigger>
-                <SelectContent>
-                  {["140", "160", "180", "200", "220", "240", "260+"].map((g) => (
-                    <SelectItem key={g} value={g}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm">Available Sizes</Label>
-              <div className="flex flex-wrap gap-2">
-                {sizes.map((size) => (
-                  <button
-                    key={size}
-                    onClick={() => toggleSize(size)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      selectedSizes.includes(size)
-                        ? "bg-accent text-accent-foreground border-accent"
-                        : "bg-muted text-muted-foreground border-border hover:border-accent/50"
-                    }`}
-                  >
-                    {size}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm">Available Colors</Label>
-              <Input className="h-11" placeholder="e.g. 15+ colors available" />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-sm">Gender</Label>
-              <Select>
-                <SelectTrigger className="h-11"><SelectValue placeholder="Select gender" /></SelectTrigger>
-                <SelectContent>
-                  {["Men", "Women", "Unisex", "Boys", "Girls", "Kids/Baby"].map((g) => (
-                    <SelectItem key={g} value={g.toLowerCase().replace("/", "-")}>{g}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm">Customization Available</Label>
-              <div className="inline-flex rounded-full bg-muted p-1">
-                <button
-                  onClick={() => setCustomAvailable(true)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    customAvailable ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  Yes
-                </button>
-                <button
-                  onClick={() => setCustomAvailable(false)}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                    !customAvailable ? "bg-accent text-accent-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  No
-                </button>
-              </div>
-            </div>
-          </div>
-        </CollapsibleContent>
-      </Collapsible>
-    </div>
-  );
-};
-
-/* ── Step 8: Partner Contract ── */
-const StepContract = ({
-  agreed,
-  setAgreed,
-  submitting,
-  onSubmit,
-}: {
-  agreed: boolean;
-  setAgreed: (v: boolean) => void;
-  submitting: boolean;
-  onSubmit: () => void;
-}) => {
-  const [signatureName, setSignatureName] = useState("Rajesh Kumar");
-  const [editingSignature, setEditingSignature] = useState(false);
-
-  return (
-    <div className="space-y-5">
-      <h2 className="font-display text-xl font-semibold text-foreground">
-        Almost there! Sign your partner agreement
-      </h2>
-
-      {/* Contract text */}
-      <div className="rounded-xl border border-border bg-muted/30 p-4 max-h-56 overflow-y-auto text-sm text-muted-foreground leading-relaxed relative">
-        <p className="mb-3">
-          <strong className="text-foreground">Cosora Supplier Agreement</strong>
-        </p>
-        <p className="mb-3">
-          This Supplier Agreement ("Agreement") is entered into between Cosora Technologies Pvt. Ltd.
-          ("Cosora") and the undersigned Supplier ("You" or "Supplier"). By signing below, you agree
-          to list and sell your products/services through the Cosora marketplace platform in accordance
-          with the terms set forth herein.
-        </p>
-        <p className="mb-3">
-          You represent and warrant that all information provided during registration is true, accurate,
-          and complete. You agree to maintain the quality standards required by Cosora, respond to buyer
-          inquiries within 24 hours, and fulfill orders within the committed timeline. Cosora reserves
-          the right to delist products or suspend accounts that violate community guidelines or receive
-          repeated negative feedback.
-        </p>
-        <p>
-          Commission and payment terms are as outlined in your selected subscription plan. Cosora shall
-          process payments within 7 business days of order completion and buyer confirmation. This
-          agreement is governed by the laws of India and any disputes shall be subject to the jurisdiction
-          of courts in Mumbai, Maharashtra.
-        </p>
-        <div className="sticky bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-background to-transparent pointer-events-none" />
-      </div>
-
-      {/* E-Signature */}
-      <div className="rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 p-6 text-center space-y-3">
-        <p className="text-xs text-muted-foreground uppercase tracking-wider">
-          Your Signature
-        </p>
-        <p className="font-display text-3xl italic text-accent">{signatureName}</p>
-        {editingSignature ? (
-          <Input
-            className="h-10 max-w-xs mx-auto text-center"
-            value={signatureName}
-            onChange={(e) => setSignatureName(e.target.value)}
-            onBlur={() => setEditingSignature(false)}
-            autoFocus
-          />
-        ) : (
-          <button
-            onClick={() => setEditingSignature(true)}
-            className="text-accent text-sm underline"
-          >
-            Change Signature
-          </button>
-        )}
-        <p className="text-xs text-muted-foreground">
-          This signature will be legally binding
-        </p>
-      </div>
-
-      {/* Agreement checkbox */}
-      <div className="flex items-start gap-2">
-        <Checkbox
-          id="agree"
-          checked={agreed}
-          onCheckedChange={(v) => setAgreed(!!v)}
-          className="mt-0.5"
-        />
-        <Label htmlFor="agree" className="text-sm text-foreground cursor-pointer leading-relaxed">
-          I agree to comply with Cosora's Supplier Agreement and confirm all submitted information
-          is accurate
-        </Label>
-      </div>
-
-      {/* Submit button */}
-      <Button
-        className="w-full h-12 bg-accent text-accent-foreground hover:bg-accent/90 text-base gap-2"
-        disabled={!agreed || submitting}
-        onClick={onSubmit}
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="h-5 w-5 animate-spin" /> Submitting...
-          </>
-        ) : (
-          "Submit Application"
-        )}
-      </Button>
-    </div>
-  );
-};
-
-/* ── Welcome / Success Screen ── */
-const WelcomeScreen = () => {
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import CategorySelector from "@/components/upload/CategorySelector";
+import { toast } from "sonner";
+
+const TOTAL_STEPS = 8;
+
+const FABRICS = ["Cotton", "Linen", "Silk", "Polyester", "Wool", "Denim", "Rayon", "Blend"];
+const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
+const COLORS = ["Black", "White", "Red", "Blue", "Green", "Yellow", "Pink", "Beige", "Navy", "Grey"];
+const UNITS = ["pieces", "kg", "meters", "sets", "pairs"];
+
+export default function Onboarding() {
   const navigate = useNavigate();
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Step 2
+  const [businessName, setBusinessName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpVerified, setOtpVerified] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(true);
+  const [sameContact, setSameContact] = useState(true);
+  const [hasWebsite, setHasWebsite] = useState(false);
+  const [websiteUrl, setWebsiteUrl] = useState("");
+
+  // Step 3
+  const [building, setBuilding] = useState("");
+  const [floor, setFloor] = useState("");
+  const [area, setArea] = useState("");
+  const [city, setCity] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [pincode, setPincode] = useState("");
+
+  // Step 4
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [country, setCountry] = useState("IN");
+  const [step4Success, setStep4Success] = useState(false);
+
+  // Step 5
+  const [businessImages, setBusinessImages] = useState<string[]>([]);
+
+  // Step 6
+  const [pan, setPan] = useState("");
+  const [panStatus, setPanStatus] = useState<"idle" | "verifying" | "success" | "fail">("idle");
+  const [cin, setCin] = useState("");
+  const [aadhaar, setAadhaar] = useState("");
+  const [hasGstin, setHasGstin] = useState(false);
+  const [gstin, setGstin] = useState("");
+  const [step6Success, setStep6Success] = useState(false);
+
+  // Step 7
+  const [productImages, setProductImages] = useState<string[]>([]);
+  const [productName, setProductName] = useState("");
+  const [price, setPrice] = useState("");
+  const [unit, setUnit] = useState("pieces");
+  const [moq, setMoq] = useState("");
+  const [category, setCategory] = useState<string | null>(null);
+  const [fabric, setFabric] = useState("");
+  const [gsm, setGsm] = useState("");
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [step7Success, setStep7Success] = useState(false);
+
+  // Step 8
+  const [signature, setSignature] = useState("");
+  const [editingSig, setEditingSig] = useState(false);
+  const [agreed, setAgreed] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate("/seller-home"), 4000);
-    return () => clearTimeout(timer);
-  }, [navigate]);
+    if (ownerName && !signature) setSignature(ownerName);
+  }, [ownerName, signature]);
 
-  return (
-    <div className="min-h-screen bg-accent flex flex-col items-center justify-center px-4 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="space-y-6"
-      >
-        <p className="font-display text-4xl italic text-accent-foreground">Cosora</p>
+  useEffect(() => {
+    if (showWelcome) {
+      const t = setTimeout(() => navigate("/seller-home"), 3500);
+      return () => clearTimeout(t);
+    }
+  }, [showWelcome, navigate]);
 
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
-        >
-          <CheckCircle2 className="w-20 h-20 text-accent-foreground mx-auto" />
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="space-y-2"
-        >
-          <h1 className="font-display text-3xl font-bold text-accent-foreground">
-            The Good Times Start Now
-          </h1>
-          <p className="text-accent-foreground/80 text-lg">Welcome to Cosora</p>
-          <p className="text-accent-foreground/70 text-sm">
-            Your profile is 20% complete. Let's grow your business!
-          </p>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.9 }}
-        >
-          <Button
-            onClick={() => navigate("/seller-home")}
-            className="bg-accent-foreground text-accent font-semibold h-12 px-8 rounded-full hover:bg-accent-foreground/90"
-          >
-            Go to Dashboard
-          </Button>
-        </motion.div>
-      </motion.div>
-    </div>
-  );
-};
-
-/* ── Main Page ── */
-const stepTitles = [
-  "Overview",
-  "Business Details",
-  "Business Address",
-  "Owner Details",
-  "Business Images",
-  "Documents",
-  "Products",
-  "Contract",
-];
-
-const Onboarding = () => {
-  const [currentStep, setCurrentStep] = useState(1);
-  const [step4Success, setStep4Success] = useState(false);
-  const [step6Success, setStep6Success] = useState(false);
-  const [agreed, setAgreed] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [completed, setCompleted] = useState(false);
-
-  const progress = (currentStep / 8) * 100;
-  const showingSuccess = step4Success || step6Success;
-
-  const handleSubmit = () => {
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setCompleted(true);
-    }, 1500);
+  const sendOtp = () => {
+    if (!mobile || mobile.length < 10) return toast.error("Enter valid mobile");
+    setOtpSent(true);
+    toast.success("OTP sent");
+  };
+  const verifyOtp = () => {
+    if (otp.length === 6) { setOtpVerified(true); toast.success("Mobile verified"); }
   };
 
-  const handleContinue = () => {
-    if (currentStep === 4) {
-      setStep4Success(true);
-      setTimeout(() => {
-        setStep4Success(false);
-        setCurrentStep(5);
-      }, 1000);
-      return;
-    }
-    if (currentStep === 6) {
-      setStep6Success(true);
-      setTimeout(() => {
-        setStep6Success(false);
-        setCurrentStep(7);
-      }, 1000);
-      return;
-    }
-    if (currentStep === 8) {
-      handleSubmit();
-      return;
-    }
-    setCurrentStep((s) => Math.min(8, s + 1));
+  const verifyPan = () => {
+    if (!pan || pan.length < 10) return setPanStatus("fail");
+    setPanStatus("verifying");
+    setTimeout(() => setPanStatus(/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan.toUpperCase()) ? "success" : "fail"), 1200);
   };
 
-  if (completed) {
-    return <WelcomeScreen />;
+  const onPickImages = (e: React.ChangeEvent<HTMLInputElement>, setter: (urls: string[]) => void, current: string[], max: number) => {
+    const files = Array.from(e.target.files || []);
+    const urls = files.slice(0, max - current.length).map((f) => URL.createObjectURL(f));
+    setter([...current, ...urls]);
+  };
+
+  const toggleChip = (val: string, list: string[], setter: (l: string[]) => void) => {
+    setter(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
+  };
+
+  const goNext = () => {
+    if (currentStep === 4 && !step4Success) { setStep4Success(true); return; }
+    if (currentStep === 6 && !step6Success) { setStep6Success(true); return; }
+    if (currentStep === 7 && !step7Success) { setStep7Success(true); return; }
+    if (currentStep < TOTAL_STEPS) {
+      setCurrentStep((s) => s + 1);
+      setStep4Success(false); setStep6Success(false); setStep7Success(false);
+    }
+  };
+  const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
+
+  const submitContract = () => {
+    if (!agreed) return toast.error("Please accept the agreement");
+    setShowWelcome(true);
+  };
+
+  const checklist = [
+    { label: "Business Info", icon: Building2, done: currentStep > 4 },
+    { label: "Documents", icon: FileText, done: currentStep > 6 },
+    { label: "Products", icon: Package, done: currentStep > 7 },
+    { label: "Contract", icon: FileSignature, done: currentStep > 8 },
+    { label: "Go Live", icon: Rocket, done: false },
+  ];
+
+  if (showWelcome) {
+    return (
+      <div className="fixed inset-0 bg-accent text-accent-foreground flex flex-col items-center justify-center overflow-hidden z-50">
+        {Array.from({ length: 30 }).map((_, i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2 h-2 rounded-sm"
+            style={{
+              backgroundColor: ["#fff", "#ffd700", "#ff6b6b", "#4ade80"][i % 4],
+              left: `${Math.random() * 100}%`,
+            }}
+            initial={{ y: -20, opacity: 1 }}
+            animate={{ y: "100vh", rotate: 360, opacity: 0 }}
+            transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() }}
+          />
+        ))}
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center px-6 z-10">
+          <div className="font-display text-5xl font-bold mb-4">Cosora</div>
+          <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
+          <p className="text-xl">Welcome to Cosora 🎉</p>
+        </motion.div>
+      </div>
+    );
   }
 
-  const renderStep = () => {
-    switch (currentStep) {
-      case 1:
-        return <StepOverview />;
-      case 2:
-        return <StepBusinessDetails />;
-      case 3:
-        return <StepBusinessAddress />;
-      case 4:
-        return <StepOwnerDetails showSuccess={step4Success} />;
-      case 5:
-        return <StepBusinessImages />;
-      case 6:
-        return <StepDocuments showSuccess={step6Success} />;
-      case 7:
-        return <StepFirstProduct />;
-      case 8:
-        return (
-          <StepContract
-            agreed={agreed}
-            setAgreed={setAgreed}
-            submitting={submitting}
-            onSubmit={handleSubmit}
-          />
-        );
-      default:
-        return <PlaceholderStep title={stepTitles[currentStep - 1]} />;
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Sticky Top Bar */}
-      <header className="sticky top-0 z-50 bg-background border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Link to="/seller">
-            <span className="font-display text-accent text-2xl italic font-bold">
-              Cosora
-            </span>
-          </Link>
-          <span className="text-sm text-muted-foreground font-medium">
-            Step {currentStep} of 8
-          </span>
-          <a
-            href="https://wa.me/919876543210"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 bg-green-500 text-white rounded-full text-xs px-3 py-1 font-medium"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-            Need help?
-          </a>
+    <div className="min-h-screen bg-background pb-32">
+      {/* Progress */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b p-4">
+        <div className="max-w-2xl mx-auto">
+          <div className="flex items-center justify-between mb-2">
+            <button onClick={goPrev} disabled={currentStep === 1} className="text-sm text-muted-foreground disabled:opacity-30 flex items-center gap-1">
+              <ArrowLeft className="w-4 h-4" /> Back
+            </button>
+            <span className="text-sm font-medium">Step {currentStep} of {TOTAL_STEPS}</span>
+          </div>
+          <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2 [&>div]:bg-accent" />
         </div>
-        <Progress value={progress} className="h-1 rounded-none [&>div]:bg-accent" />
-      </header>
+      </div>
 
-      {/* Step Content */}
-      <main className="flex-1 max-w-lg mx-auto w-full px-4 py-8">
+      <div className="max-w-2xl mx-auto p-4">
         <AnimatePresence mode="wait">
           <motion.div
-            key={showingSuccess ? `success-${currentStep}` : currentStep}
-            variants={stepSlide}
-            initial="initial"
-            animate="animate"
-            exit="exit"
+            key={currentStep + "-" + (step4Success ? "s4" : step6Success ? "s6" : step7Success ? "s7" : "main")}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.25 }}
           >
-            {renderStep()}
+            {/* STEP 1 */}
+            {currentStep === 1 && (
+              <div className="space-y-6">
+                <div>
+                  <h1 className="font-display text-2xl font-bold mb-1">Welcome! Let's set up your business</h1>
+                  <p className="text-muted-foreground text-sm">Complete these steps to start selling on Cosora</p>
+                </div>
+                <div className="space-y-3">
+                  {checklist.map((item, i) => {
+                    const Icon = item.icon;
+                    return (
+                      <div key={i} className={cn("flex items-center gap-3 p-4 rounded-xl border bg-card", item.done && "border-accent/30 bg-accent/5")}>
+                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", item.done ? "bg-accent text-accent-foreground" : "bg-muted text-muted-foreground")}>
+                          {item.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                        </div>
+                        <div className="flex-1">
+                          <p className={cn("font-medium", item.done ? "text-accent" : "text-foreground")}>{item.label}</p>
+                        </div>
+                        {item.done && <Badge variant="secondary" className="bg-accent/10 text-accent">Done</Badge>}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between">
+                  <button className="text-sm text-accent underline">Edit Details</button>
+                  <Button onClick={goNext} className="bg-accent text-accent-foreground hover:bg-accent/90">Continue</Button>
+                </div>
+              </div>
+            )}
+
+            {/* STEP 2 */}
+            {currentStep === 2 && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Business Details</h2>
+                <div className="space-y-2">
+                  <Label>Business Name</Label>
+                  <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Enter business name" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Mobile Number</Label>
+                  <div className="flex gap-2">
+                    <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91 XXXXXXXXXX" disabled={otpVerified} />
+                    {!otpVerified && <Button type="button" variant="outline" onClick={sendOtp}>{otpSent ? "Resend" : "Verify"}</Button>}
+                    {otpVerified && <Badge className="bg-accent/10 text-accent self-center">Verified ✓</Badge>}
+                  </div>
+                  {otpSent && !otpVerified && (
+                    <div className="flex items-center gap-2 pt-2">
+                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
+                        <InputOTPGroup>
+                          {[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}
+                        </InputOTPGroup>
+                      </InputOTP>
+                      <Button size="sm" onClick={verifyOtp}>Confirm</Button>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
+                  <Label htmlFor="wa" className="cursor-pointer">Get business updates on WhatsApp</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox id="same" checked={sameContact} onCheckedChange={(v) => setSameContact(!!v)} />
+                  <Label htmlFor="same" className="cursor-pointer">Primary contact same as above</Label>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label>Do you have a website?</Label>
+                    <Switch checked={hasWebsite} onCheckedChange={setHasWebsite} />
+                  </div>
+                  {hasWebsite && <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" />}
+                </div>
+                <Button onClick={goNext} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Continue</Button>
+              </div>
+            )}
+
+            {/* STEP 3 */}
+            {currentStep === 3 && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Business Address</h2>
+                <div className="relative rounded-xl bg-muted h-40 flex items-center justify-center overflow-hidden">
+                  <MapPin className="w-10 h-10 text-muted-foreground" />
+                  <Button size="sm" className="absolute bottom-3 bg-accent text-accent-foreground hover:bg-accent/90">Mark your business location</Button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2"><Label>Building no. (optional)</Label><Input value={building} onChange={(e) => setBuilding(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Floor/Tower (optional)</Label><Input value={floor} onChange={(e) => setFloor(e.target.value)} /></div>
+                  <div className="space-y-2 col-span-2"><Label>Area / Locality *</Label><Input value={area} onChange={(e) => setArea(e.target.value)} required /></div>
+                  <div className="space-y-2"><Label>City *</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
+                  <div className="space-y-2"><Label>Pincode *</Label><Input value={pincode} onChange={(e) => setPincode(e.target.value)} /></div>
+                  <div className="space-y-2 col-span-2"><Label>Landmark (optional)</Label><Input value={landmark} onChange={(e) => setLandmark(e.target.value)} /></div>
+                </div>
+                <p className="text-xs text-muted-foreground italic">Please ensure this address matches your license</p>
+                <Button onClick={goNext} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Continue</Button>
+              </div>
+            )}
+
+            {/* STEP 4 */}
+            {currentStep === 4 && !step4Success && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Owner Details</h2>
+                <div className="space-y-2"><Label>Full Name</Label><Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Email Address</Label><Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} /></div>
+                <div className="space-y-2">
+                  <Label>Registered Country</Label>
+                  <Select value={country} onValueChange={setCountry}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IN">India</SelectItem>
+                      <SelectItem value="US">United States</SelectItem>
+                      <SelectItem value="UK">United Kingdom</SelectItem>
+                      <SelectItem value="AE">United Arab Emirates</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button onClick={goNext} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Submit</Button>
+              </div>
+            )}
+            {currentStep === 4 && step4Success && (
+              <SuccessScreen text="Business information added" onContinue={() => { setStep4Success(false); setCurrentStep(5); }} />
+            )}
+
+            {/* STEP 5 */}
+            {currentStep === 5 && (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="font-display text-2xl font-bold">Business Images</h2>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button variant="ghost" size="sm"><Info className="w-4 h-4 mr-1" />Guidelines</Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                      <DialogHeader><DialogTitle>Image Guidelines</DialogTitle></DialogHeader>
+                      <ul className="space-y-2 text-sm text-muted-foreground list-disc pl-5">
+                        <li>Show a clear entrance of your business</li>
+                        <li>Upload HD images only</li>
+                        <li>No humans in the frame</li>
+                        <li>No blurry or low-light images</li>
+                      </ul>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+                <p className="text-sm text-muted-foreground">Upload at least one entrance image of your business</p>
+                <label className="block rounded-xl border-2 border-dashed border-border bg-muted/30 p-8 text-center cursor-pointer hover:bg-muted/50">
+                  <UploadIcon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">Click to upload or drag &amp; drop</p>
+                  <p className="text-xs text-muted-foreground mt-1">PNG, JPG up to 10MB</p>
+                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickImages(e, setBusinessImages, businessImages, 6)} />
+                </label>
+                {businessImages.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {businessImages.map((src, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border">
+                        <img src={src} alt="" className="w-full h-full object-cover" />
+                        <button onClick={() => setBusinessImages(businessImages.filter((_, j) => j !== i))} className="absolute top-1 right-1 bg-background/90 rounded-full p-1">
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Button onClick={goNext} disabled={businessImages.length === 0} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Continue</Button>
+              </div>
+            )}
+
+            {/* STEP 6 */}
+            {currentStep === 6 && !step6Success && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Business Documents</h2>
+                <div className="space-y-2">
+                  <Label>PAN Number</Label>
+                  <div className="flex gap-2">
+                    <Input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} />
+                    <Button type="button" variant="outline" onClick={verifyPan} disabled={panStatus === "verifying"}>
+                      {panStatus === "verifying" ? "Verifying..." : "Verify"}
+                    </Button>
+                  </div>
+                  {panStatus === "success" && <p className="text-sm text-accent">Verified ✓</p>}
+                  {panStatus === "fail" && <p className="text-sm text-destructive">Verification failed: invalid PAN format</p>}
+                </div>
+                <div className="space-y-2"><Label>CIN Number</Label><Input value={cin} onChange={(e) => setCin(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Aadhaar Number</Label><Input value={aadhaar} onChange={(e) => setAadhaar(e.target.value)} placeholder="XXXX XXXX XXXX" /></div>
+                <div className="flex items-center justify-between">
+                  <Label>Do you have GSTIN?</Label>
+                  <Switch checked={hasGstin} onCheckedChange={setHasGstin} />
+                </div>
+                {hasGstin && <Input value={gstin} onChange={(e) => setGstin(e.target.value)} placeholder="GSTIN Number" />}
+                <div className="space-y-2">
+                  <Label>Upload PAN card scan</Label>
+                  <Input type="file" accept="image/*,application/pdf" />
+                </div>
+                {hasGstin && (
+                  <div className="space-y-2">
+                    <Label>Upload GST certificate</Label>
+                    <Input type="file" accept="image/*,application/pdf" />
+                  </div>
+                )}
+                <Button onClick={goNext} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Submit</Button>
+              </div>
+            )}
+            {currentStep === 6 && step6Success && (
+              <SuccessScreen text="Business documents added" onContinue={() => { setStep6Success(false); setCurrentStep(7); }} />
+            )}
+
+            {/* STEP 7 */}
+            {currentStep === 7 && !step7Success && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Add your first product</h2>
+                <div className="space-y-2">
+                  <Label>Product Images (up to 6)</Label>
+                  <label className="block rounded-xl border-2 border-dashed border-border bg-muted/30 p-6 text-center cursor-pointer hover:bg-muted/50">
+                    <UploadIcon className="w-6 h-6 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm">Click to upload</p>
+                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickImages(e, setProductImages, productImages, 6)} />
+                  </label>
+                  {productImages.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {productImages.map((src, i) => (
+                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border group">
+                          <img src={src} alt="" className="w-full h-full object-cover" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
+                            <button className="p-1.5 bg-background rounded-full" title="Remove BG"><Eraser className="w-3 h-3" /></button>
+                            <button className="p-1.5 bg-background rounded-full" title="Crop"><Crop className="w-3 h-3" /></button>
+                            <button className="p-1.5 bg-background rounded-full" title="Rotate"><RotateCw className="w-3 h-3" /></button>
+                            <button onClick={() => setProductImages(productImages.filter((_, j) => j !== i))} className="p-1.5 bg-background rounded-full"><X className="w-3 h-3" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="space-y-2"><Label>Product / Service Name</Label><Input value={productName} onChange={(e) => setProductName(e.target.value)} /></div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-2 col-span-2"><Label>Price</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+                  <div className="space-y-2">
+                    <Label>Unit</Label>
+                    <Select value={unit} onValueChange={setUnit}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>{UNITS.map((u) => <SelectItem key={u} value={u}>{u}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2"><Label>MOQ (Minimum Order Qty)</Label><Input type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <CategorySelector selectedCategory={category} onSelectCategory={setCategory} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label>Fabric</Label>
+                    <Select value={fabric} onValueChange={setFabric}>
+                      <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                      <SelectContent>{FABRICS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>GSM</Label><Input value={gsm} onChange={(e) => setGsm(e.target.value)} /></div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Sizes</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {SIZES.map((s) => (
+                      <button key={s} onClick={() => toggleChip(s, selectedSizes, setSelectedSizes)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedSizes.includes(s) ? "bg-accent text-accent-foreground border-accent" : "bg-card hover:bg-accent/10")}>{s}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Colors</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {COLORS.map((c) => (
+                      <button key={c} onClick={() => toggleChip(c, selectedColors, setSelectedColors)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedColors.includes(c) ? "bg-accent text-accent-foreground border-accent" : "bg-card hover:bg-accent/10")}>{c}</button>
+                    ))}
+                  </div>
+                </div>
+                <Button onClick={goNext} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Submit</Button>
+              </div>
+            )}
+            {currentStep === 7 && step7Success && (
+              <SuccessScreen text="Product details uploaded" onContinue={() => { setStep7Success(false); setCurrentStep(8); }} />
+            )}
+
+            {/* STEP 8 */}
+            {currentStep === 8 && (
+              <div className="space-y-5">
+                <h2 className="font-display text-2xl font-bold">Partner Contract</h2>
+                <div className="rounded-xl border bg-card p-6 text-center">
+                  <p className="text-xs uppercase text-muted-foreground mb-2">E-Signature</p>
+                  {!editingSig ? (
+                    <p className="font-display italic text-3xl text-accent">{signature || "Your signature"}</p>
+                  ) : (
+                    <Input value={signature} onChange={(e) => setSignature(e.target.value)} className="text-center font-display italic text-2xl" autoFocus onBlur={() => setEditingSig(false)} />
+                  )}
+                  <button onClick={() => setEditingSig(true)} className="text-xs text-accent underline mt-2">Change Signature</button>
+                </div>
+                <div className="rounded-xl border bg-muted/30 p-4 max-h-56 overflow-y-auto text-xs text-muted-foreground space-y-2">
+                  <p className="font-semibold text-foreground">Cosora Supplier Agreement</p>
+                  <p>By signing below, you agree to all terms of the Cosora Supplier Agreement, including product authenticity, fair trade, on-time fulfillment, accurate listings, and Cosora's commission and payment terms.</p>
+                  <p>You represent that all submitted information is accurate and that you have the legal right to sell the listed products.</p>
+                  <p>Cosora reserves the right to review, suspend, or terminate seller accounts that violate these terms. Disputes shall be resolved per the governing law specified in the full agreement.</p>
+                  <p>Continued use of the platform constitutes acceptance of any updated terms communicated via email or in-app notice.</p>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Checkbox id="agree" checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} />
+                  <Label htmlFor="agree" className="cursor-pointer text-sm">I agree to comply with Cosora's Supplier Agreement</Label>
+                </div>
+                <Button onClick={submitContract} className="w-full bg-accent text-accent-foreground hover:bg-accent/90">Submit</Button>
+              </div>
+            )}
           </motion.div>
         </AnimatePresence>
-      </main>
 
-      {/* Bottom Navigation — hidden on step 8 (has own submit), during success, or while submitting */}
-      {!showingSuccess && currentStep !== 8 && (
-        <div className="sticky bottom-0 bg-background border-t border-border px-4 py-3">
-          <div className="max-w-lg mx-auto flex gap-3">
-            {currentStep > 1 && (
-              <Button
-                variant="ghost"
-                className="gap-1 text-muted-foreground"
-                onClick={() => setCurrentStep((s) => Math.max(1, s - 1))}
-              >
-                <ChevronLeft className="h-4 w-4" /> Previous
-              </Button>
-            )}
-            {currentStep === 7 && (
-              <Button variant="ghost" className="gap-1 text-muted-foreground">
-                Save as Draft
-              </Button>
-            )}
-            <Button
-              className="flex-1 h-11 bg-accent text-accent-foreground hover:bg-accent/90 gap-1"
-              onClick={handleContinue}
-            >
-              Continue
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+        {/* Nav */}
+        {currentStep > 1 && currentStep < TOTAL_STEPS && !step4Success && !step6Success && !step7Success && (
+          <div className="flex items-center justify-between mt-8">
+            <Button variant="outline" onClick={goPrev}><ArrowLeft className="w-4 h-4 mr-1" /> Previous</Button>
+            <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
+
+      {/* WhatsApp FAB */}
+      <a
+        href="https://wa.me/919999999999"
+        target="_blank"
+        rel="noreferrer"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-[#25D366] text-white flex items-center justify-center shadow-lg hover:scale-110 transition-transform z-50"
+        aria-label="WhatsApp support"
+      >
+        <MessageCircle className="w-6 h-6" />
+      </a>
     </div>
   );
-};
+}
 
-export default Onboarding;
+function SuccessScreen({ text, onContinue }: { text: string; onContinue: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onContinue, 1600);
+    return () => clearTimeout(t);
+  }, [onContinue]);
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center">
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+        className="w-20 h-20 rounded-full bg-accent/15 flex items-center justify-center mb-4"
+      >
+        <CheckCircle2 className="w-12 h-12 text-accent" />
+      </motion.div>
+      <h3 className="font-display text-2xl font-bold mb-1">{text} ✓</h3>
+      <p className="text-sm text-muted-foreground">Continuing...</p>
+    </div>
+  );
+}
