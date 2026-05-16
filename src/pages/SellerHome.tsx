@@ -3,13 +3,15 @@ import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   ArrowLeftRight,
+  ArrowRight,
   Bell,
   Eye,
   MessageSquare,
-  TrendingUp,
+  Store,
   Package,
   Users,
   FileText,
+  TrendingUp,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { BusinessProfileScore } from "@/components/dashboard/BusinessProfileScore";
@@ -37,243 +39,168 @@ const sellerActivity = [
   { vendor: "Rahul Gupta", action: "Sample requested", product: "Linen Blend", type: "other", time: "3h ago" },
 ];
 
-const slides = [
-  {
-    bg: "bg-gradient-to-r from-accent to-accent/80",
-    title: "Get Prime Placement Above Competitors",
-    titleClass: "text-accent-foreground",
-    cta: "Advertise Now →",
-    btnClass: "bg-accent-foreground text-accent hover:bg-accent-foreground/90",
-    href: "/advertisements",
-  },
-  {
-    bg: "bg-gradient-to-r from-foreground to-foreground/80",
-    title: "Upload Products & Get More Leads",
-    titleClass: "text-background",
-    cta: "Add Products →",
-    btnClass: "bg-background text-foreground hover:bg-background/90",
-    href: "/upload",
-  },
-];
-
-const initials = (name: string) =>
-  name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
-
 const SellerHome = () => {
   const navigate = useNavigate();
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setCurrentSlide((p) => (p + 1) % slides.length);
-    }, 3500);
-    return () => clearInterval(id);
+    const t = setInterval(() => setCurrentSlide((s) => (s === 0 ? 1 : 0)), 3500);
+    return () => clearInterval(t);
   }, []);
 
   return (
     <DashboardLayout>
-      {/* Switch to Buyer Banner */}
-      <div className="flex items-center justify-between bg-accent/10 border-b border-accent/20 px-4 py-2 -mx-4 -mt-4 mb-4 lg:-mx-6 lg:-mt-6 lg:mb-6">
-        <div className="flex items-center">
-          <ArrowLeftRight className="h-4 w-4 text-accent" />
-          <span className="text-sm text-accent font-medium ml-2">Switch To Buyer Account</span>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-7 text-xs border-accent/40 text-accent hover:bg-accent/10 rounded-full px-3"
-          onClick={() => navigate("/browse")}
-        >
-          Switch
-        </Button>
-      </div>
-
-      <div className="space-y-5 pb-20 lg:pb-0">
-        {/* Page Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Welcome back! Here's an overview of your business.
-          </p>
-        </motion.div>
-
-        {/* Promo Carousel */}
-        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
-          <div className="relative overflow-hidden rounded-xl h-28">
-            {slides.map((s, index) => (
-              <div
-                key={index}
-                className={`absolute inset-0 ${s.bg} p-4 flex flex-col justify-between transition-all duration-500`}
-                style={{
-                  transform: `translateX(${currentSlide === index ? 0 : 100}%)`,
-                  opacity: currentSlide === index ? 1 : 0,
-                }}
-              >
-                <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full border-2 border-white/10" />
-                <div className="absolute -right-2 bottom-0 w-20 h-20 rounded-full border border-white/10" />
-                <p className={`text-base font-semibold ${s.titleClass} relative`}>{s.title}</p>
-                <Link to={s.href} className="relative">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className={`h-7 text-xs rounded-full w-fit ${s.btnClass}`}
-                  >
-                    {s.cta}
-                  </Button>
-                </Link>
-              </div>
-            ))}
-            <div className="absolute bottom-2 right-3 flex gap-1 z-10">
-              {slides.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setCurrentSlide(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    currentSlide === i ? "bg-white w-3" : "bg-white/40 w-1.5"
-                  }`}
-                  aria-label={`Slide ${i + 1}`}
-                />
-              ))}
-            </div>
+      <>
+        <div className="flex items-center justify-between bg-accent/10 border-b border-accent/20 px-4 py-2 -mx-4 -mt-4 mb-4 lg:-mx-6 lg:-mt-6 lg:mb-6">
+          <div className="flex items-center">
+            <ArrowLeftRight className="h-4 w-4 text-accent" />
+            <span className="text-sm text-accent font-medium ml-2">Switch To Buyer Account</span>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs border-accent/40 text-accent hover:bg-accent/10 rounded-full px-3"
+            onClick={() => navigate("/browse")}
+          >
+            Switch
+          </Button>
+        </div>
+
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-4">
+          <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Welcome back! Here's an overview of your business.</p>
         </motion.div>
 
-        {/* Business Profile Score */}
+        <div className="relative overflow-hidden rounded-xl h-28 mb-4">
+          <div
+            className={`absolute inset-0 p-4 flex flex-col justify-between transition-all duration-500 bg-gradient-to-r from-accent to-accent/80 ${currentSlide === 0 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"}`}
+          >
+            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full border-2 border-white/10" />
+            <div className="absolute -right-2 bottom-0 w-20 h-20 rounded-full border border-white/10" />
+            <p className="text-base font-semibold text-accent-foreground">Get Prime Placement Above Competitors</p>
+            <Link to="/advertisements">
+              <Button size="sm" className="bg-accent-foreground text-accent hover:bg-accent-foreground/90 rounded-full h-7 text-xs w-fit px-4">
+                Advertise Now →
+              </Button>
+            </Link>
+          </div>
+
+          <div
+            className={`absolute inset-0 p-4 flex flex-col justify-between transition-all duration-500 bg-gradient-to-r from-foreground to-foreground/80 ${currentSlide === 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"}`}
+          >
+            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full border-2 border-background/10" />
+            <div className="absolute -right-2 bottom-0 w-20 h-20 rounded-full border border-background/10" />
+            <p className="text-base font-semibold text-background">Upload Products & Get More Leads</p>
+            <Link to="/upload">
+              <Button size="sm" className="bg-background text-foreground hover:bg-background/90 rounded-full h-7 text-xs w-fit px-4">
+                Add Products →
+              </Button>
+            </Link>
+          </div>
+
+          <div className="absolute bottom-2 right-3 flex gap-1">
+            {[0, 1].map((i) => (
+              <div
+                key={i}
+                className={`h-1.5 rounded-full transition-all ${currentSlide === i ? "w-3 bg-white" : "w-1.5 bg-white/40"}`}
+              />
+            ))}
+          </div>
+        </div>
+
         <BusinessProfileScore score={45} />
 
-        {/* Quick Actions */}
         <SellerQuickActionsGrid />
 
-        {/* Stats Row + RFQ Alerts */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4 mb-6">
-          {sellerStats.map((s, i) => (
-            <StatsCard key={s.title} {...s} delay={0.1 + i * 0.05} />
-          ))}
-          <div className="col-span-2 lg:col-span-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 p-3 flex items-center justify-between">
+        <div className="mb-6 space-y-3">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
+            {sellerStats.map((stat, index) => (
+              <StatsCard key={stat.title} {...stat} delay={index * 0.1} />
+            ))}
+          </div>
+          <div className="rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 p-3 flex items-center justify-between">
             <div className="flex items-center">
               <Bell className="h-5 w-5 text-accent mr-2" />
-              <span className="text-sm font-medium text-foreground">
-                Get notified when buyers post matching RFQs
-              </span>
+              <span className="text-sm font-medium text-foreground">Get notified when buyers post matching RFQs</span>
             </div>
             <Link to="/leads">
-              <Button
-                size="sm"
-                className="h-8 text-xs bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-4"
-              >
+              <Button size="sm" className="h-8 text-xs bg-accent text-accent-foreground hover:bg-accent/90 rounded-full px-4 flex-shrink-0">
                 Set Alerts
               </Button>
             </Link>
           </div>
         </div>
 
-        {/* Three Column Grid */}
         <div className="grid gap-4 lg:grid-cols-3">
-          {/* Top Products */}
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-            className="lg:col-span-1"
-          >
-            <Card>
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.3 }} className="lg:col-span-1">
+            <Card className="h-full border-border/50">
               <CardContent className="p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h2 className="text-base font-semibold font-display">Top Products</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-base font-semibold text-foreground">Top Products</h3>
                   <Link to="/products">
-                    <Button variant="ghost" size="sm" className="text-xs text-accent h-auto p-0">
-                      View All →
+                    <Button variant="ghost" size="sm" className="gap-1 text-xs text-accent">
+                      View All <ArrowRight className="h-3 w-3" />
                     </Button>
                   </Link>
                 </div>
-                {recentProducts.slice(0, 3).map((p, i) => (
-                  <div
-                    key={p.name}
-                    className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-                  >
-                    <span className="text-2xl font-bold text-muted-foreground/20 w-6">{i + 1}</span>
-                    <img src={p.image} alt={p.name} className="w-12 h-12 rounded-lg object-cover" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{p.name}</p>
-                      <p className="text-xs text-muted-foreground">{p.price}</p>
+                <div className="space-y-0">
+                  {recentProducts.slice(0, 3).map((product, index) => (
+                    <div key={product.name} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
+                      <span className="text-2xl font-bold text-muted-foreground/20 w-6 text-center flex-shrink-0">{index + 1}</span>
+                      <img src={product.image} alt={product.name} className="w-12 h-12 rounded-lg object-cover flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{product.name}</p>
+                        <p className="text-xs text-muted-foreground">{product.price}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-0.5 flex-shrink-0">
+                        <div className="flex items-center gap-1">
+                          <Eye className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">{product.views}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageSquare className="h-3 w-3 text-accent" />
+                          <span className="text-xs text-accent">{product.inquiries}</span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Eye className="h-3 w-3" />
-                        {p.views}
-                      </span>
-                      <span className="flex items-center gap-1 text-xs text-accent">
-                        <MessageSquare className="h-3 w-3" />
-                        {p.inquiries}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </CardContent>
             </Card>
           </motion.div>
 
-          {/* Right column */}
-          <div className="lg:col-span-2 space-y-4">
-            {/* Recent Leads */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.35 }}
-            >
+          <div className="space-y-4 lg:col-span-2">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.35 }}>
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="font-semibold font-display text-base">Recent Leads</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-base font-semibold text-foreground">Recent Leads</h3>
                     <Link to="/leads">
-                      <Button variant="ghost" size="sm" className="text-xs text-accent h-auto p-0">
-                        View All →
+                      <Button variant="ghost" size="sm" className="text-xs gap-1 text-accent">
+                        View All <ArrowRight className="h-3 w-3" />
                       </Button>
                     </Link>
                   </div>
-
-                  <div className="flex gap-2 my-3">
+                  <div className="flex gap-2 mb-3">
                     <Link to="/upload">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        Add Product
-                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs">Add Product</Button>
                     </Link>
                     <Link to="/quotes">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        Browse Quotes
-                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs">Quotes</Button>
                     </Link>
                     <Link to="/chat">
-                      <Button variant="outline" size="sm" className="h-8 text-xs">
-                        Messages
-                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 text-xs">Messages</Button>
                     </Link>
                   </div>
-
                   <div className="space-y-1">
-                    {sellerActivity.map((item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors cursor-pointer"
-                      >
-                        <div
-                          className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                            item.type === "quote"
-                              ? "bg-green-500"
-                              : item.type === "inquiry"
-                              ? "bg-accent"
-                              : "bg-blue-500"
-                          }`}
-                        />
+                    {sellerActivity.map((item, index) => (
+                      <div key={index} className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/40 transition-colors">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${item.type === "quote" ? "bg-green-500" : item.type === "inquiry" ? "bg-accent" : "bg-blue-500"}`} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium">{item.action}</p>
-                          <p className="text-xs text-muted-foreground truncate">
-                            {item.vendor} • {item.product}
-                          </p>
+                          <p className="text-sm font-medium text-foreground">{item.action}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.vendor} • {item.product}</p>
                         </div>
-                        <span className="text-xs text-muted-foreground flex-shrink-0 ml-auto">
-                          {item.time}
-                        </span>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{item.time}</span>
                       </div>
                     ))}
                   </div>
@@ -281,45 +208,37 @@ const SellerHome = () => {
               </Card>
             </motion.div>
 
-            {/* Recent Messages */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}>
               <Card>
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h2 className="font-semibold font-display text-base">Recent Messages</h2>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-display text-base font-semibold text-foreground">Recent Messages</h3>
                     <Link to="/chat">
-                      <Button variant="ghost" size="sm" className="text-xs text-accent h-auto p-0">
-                        View All →
+                      <Button variant="ghost" size="sm" className="text-xs gap-1 text-accent">
+                        View All <ArrowRight className="h-3 w-3" />
                       </Button>
                     </Link>
                   </div>
-                  {sellerActivity.map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center gap-3 py-2 border-b border-border last:border-0"
-                    >
-                      <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold flex-shrink-0">
-                        {initials(item.vendor)}
+                  <div className="space-y-0">
+                    {sellerActivity.map((item, index) => (
+                      <div key={index} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
+                        <div className="w-9 h-9 rounded-full bg-accent/10 flex items-center justify-center text-accent text-xs font-bold flex-shrink-0">
+                          {item.vendor.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground">{item.vendor}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.action}</p>
+                        </div>
+                        <span className="text-xs text-muted-foreground flex-shrink-0">{item.time}</span>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium">{item.vendor}</p>
-                        <p className="text-xs text-muted-foreground truncate">{item.action}</p>
-                      </div>
-                      <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {item.time}
-                      </span>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
           </div>
         </div>
-      </div>
+      </>
     </DashboardLayout>
   );
 };

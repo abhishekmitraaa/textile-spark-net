@@ -1,146 +1,128 @@
-import { useState, useRef } from "react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
 import { motion } from "framer-motion";
-import { Flag, Upload, X, AlertTriangle } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { toast } from "@/hooks/use-toast";
+import { Link } from "react-router-dom";
+import { toast } from "sonner";
+import { Flag, AlertTriangle, Upload, CheckCircle2 } from "lucide-react";
 
-const fadeIn = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: "easeOut" as const },
+const initialFields = {
+  name: "",
+  email: "",
+  phone: "",
+  fraudPhone: "",
+  city: "",
+  message: "",
 };
 
+type Fields = typeof initialFields;
+
 const ReportFraud = () => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [preview, setPreview] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    mobile: "",
-    fraudPhone: "",
-    city: "",
-    message: "",
-  });
+  const [fields, setFields] = useState<Fields>(initialFields);
+  const [hasFile, setHasFile] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const update = (k: keyof Fields, v: string) => setFields((f) => ({ ...f, [k]: v }));
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreview(reader.result as string);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    toast({ title: "Report Submitted", description: "Our team will review your report carefully." });
-  };
+  const formFields: Array<{ label: string; key: keyof Fields; type: string; placeholder: string }> = [
+    { label: "Your Name", key: "name", type: "text", placeholder: "Your full name" },
+    { label: "Your Email", key: "email", type: "email", placeholder: "your@email.com" },
+    { label: "Your Mobile Number", key: "phone", type: "tel", placeholder: "+91 XXXXX XXXXX" },
+    { label: "Suspected Phone Number", key: "fraudPhone", type: "tel", placeholder: "Number you want to report" },
+    { label: "City", key: "city", type: "text", placeholder: "Your city" },
+  ];
 
   return (
     <DashboardLayout>
-      <div className="max-w-lg mx-auto pb-24">
-        <motion.div {...fadeIn} className="bg-destructive text-destructive-foreground rounded-xl p-4 mb-6 text-center">
-          <Flag className="w-8 h-8 mx-auto mb-2" />
-          <h1 className="font-display text-xl font-bold">Report a Potential Fraud</h1>
-          <Link to="/help" className="text-destructive-foreground/70 text-sm mt-1 inline-block hover:underline">
-            ← Back to Help
-          </Link>
+      <div className="space-y-4 pb-6 max-w-lg mx-auto">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-5 text-center">
+            <Flag className="h-8 w-8 text-destructive mx-auto mb-2" />
+            <h1 className="font-display text-xl font-bold text-destructive">Report a Potential Fraud</h1>
+            <Link to="/help">
+              <p className="text-xs text-destructive/70 mt-1 hover:underline cursor-pointer inline-block">← Back to Help</p>
+            </Link>
+          </div>
         </motion.div>
 
-        <motion.form
-          {...fadeIn}
-          transition={{ ...fadeIn.transition, delay: 0.05 }}
-          onSubmit={handleSubmit}
-          className="rounded-xl border bg-card p-4 space-y-4"
-        >
-          {[
-            { label: "Your Name", name: "name", type: "text", placeholder: "" },
-            { label: "Your Email", name: "email", type: "email", placeholder: "" },
-            { label: "Your Mobile Number", name: "mobile", type: "tel", placeholder: "" },
-            { label: "Phone number of potential fraud target", name: "fraudPhone", type: "tel", placeholder: "Number you suspect is fraudulent" },
-            { label: "City", name: "city", type: "text", placeholder: "" },
-          ].map((field) => (
-            <div key={field.name} className="space-y-1.5">
-              <Label className="text-sm">{field.label}*</Label>
-              <Input
-                name={field.name}
-                type={field.type}
-                placeholder={field.placeholder}
-                value={form[field.name as keyof typeof form]}
-                onChange={handleChange}
-                required
-                className="h-11"
-              />
-            </div>
-          ))}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+          <Card>
+            <CardContent className="p-4 space-y-4">
+              {formFields.map((field) => (
+                <div key={field.key} className="space-y-1.5">
+                  <Label className="text-sm font-medium">{field.label}</Label>
+                  <Input
+                    type={field.type}
+                    placeholder={field.placeholder}
+                    value={fields[field.key]}
+                    onChange={(e) => update(field.key, e.target.value)}
+                    className="h-11"
+                  />
+                </div>
+              ))}
 
-          <div className="space-y-1.5">
-            <Label className="text-sm">Message*</Label>
-            <Textarea
-              name="message"
-              rows={4}
-              placeholder="Describe the fraud in detail..."
-              value={form.message}
-              onChange={handleChange}
-              required
-            />
-          </div>
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Message *</Label>
+                <Textarea
+                  placeholder="Describe the fraud in detail — what happened, amounts involved, dates, and any other relevant information."
+                  rows={5}
+                  value={fields.message}
+                  onChange={(e) => update("message", e.target.value)}
+                  className="resize-none"
+                />
+              </div>
 
-          {/* Attach Evidence */}
-          <div className="space-y-2">
-            <Label className="text-sm">Attach Evidence</Label>
-            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
-            {!preview ? (
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="w-full h-20 border-2 border-dashed border-border rounded-xl flex flex-col items-center justify-center gap-1 text-muted-foreground hover:border-accent/40 transition-colors"
+              <div
+                className="rounded-xl border-2 border-dashed border-border p-5 text-center cursor-pointer hover:border-accent/40 transition-colors"
+                onClick={() => setHasFile(!hasFile)}
               >
-                <Upload className="w-5 h-5" />
-                <span className="text-xs">Attach Image or Screenshot (optional)</span>
-              </button>
-            ) : (
-              <div className="relative inline-block">
-                <img src={preview} alt="Evidence" className="w-24 h-24 object-cover rounded-xl border" />
-                <button
-                  type="button"
-                  onClick={() => { setPreview(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
-                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full w-5 h-5 flex items-center justify-center"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+                {hasFile ? (
+                  <>
+                    <CheckCircle2 className="h-8 w-8 text-green-600 mx-auto mb-1" />
+                    <p className="text-sm text-green-600 font-medium">File attached</p>
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-8 w-8 text-muted-foreground/40 mx-auto mb-1" />
+                    <p className="text-sm text-muted-foreground">Attach Image or Screenshot</p>
+                    <p className="text-xs text-muted-foreground">(optional) PNG, JPG, PDF up to 10MB</p>
+                  </>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Disclaimer */}
-          <div className="bg-amber-500/5 border border-amber-500/20 rounded-xl p-3 text-sm text-amber-700 space-y-1">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-              <div>
-                <p>Please use this form only for reporting potential frauds.</p>
-                <p>
-                  For order or general queries,{" "}
-                  <Link to="/help" className="underline font-medium">contact us here</Link>.
-                </p>
-                <p>All reports are reviewed carefully by our team.</p>
+              <div className="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3 flex gap-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-amber-700 space-y-1">
+                  <p>Please use this form only for reporting potential fraud.</p>
+                  <p>
+                    For general queries, <Link to="/help" className="underline font-medium">contact Help & Support</Link>
+                  </p>
+                  <p>All reports are reviewed within 48 hours.</p>
+                </div>
               </div>
-            </div>
-          </div>
 
-          <Button type="submit" className="w-full h-11 bg-destructive text-destructive-foreground hover:bg-destructive/90">
-            Submit Report
-          </Button>
-        </motion.form>
+              <Button
+                className="w-full bg-destructive text-destructive-foreground h-11 hover:bg-destructive/90 gap-2"
+                onClick={() => {
+                  if (!fields.name || !fields.phone || !fields.message) {
+                    toast.error("Please fill all required fields");
+                    return;
+                  }
+                  toast.success("Report submitted. Our team will review it within 48 hours.");
+                  setFields({ ...initialFields });
+                  setHasFile(false);
+                }}
+                type="button"
+              >
+                <Flag className="h-4 w-4" />
+                Submit Fraud Report
+              </Button>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

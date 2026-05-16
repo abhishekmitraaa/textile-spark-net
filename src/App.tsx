@@ -18,6 +18,7 @@ import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
 import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
+import MyStore from "./pages/MyStore";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
 import RecentlyViewed from "./pages/RecentlyViewed";
@@ -71,7 +72,7 @@ const App = () => (
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/my-store" element={<Profile />} />
+            <Route path="/my-store" element={<MyStore />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />

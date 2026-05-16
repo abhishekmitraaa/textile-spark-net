@@ -1,124 +1,144 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { AlertTriangle, Lightbulb } from "lucide-react";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { toast } from "@/hooks/use-toast";
-
-const fadeIn = {
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.4, ease: "easeOut" as const },
-};
-
-type FeedbackType = "bug" | "feature" | null;
+import { toast } from "sonner";
+import { AlertTriangle, Lightbulb } from "lucide-react";
 
 const AppFeedback = () => {
-  const [expanded, setExpanded] = useState<FeedbackType>(null);
   const [bugText, setBugText] = useState("");
   const [featureText, setFeatureText] = useState("");
-
-  const handleSubmit = (type: FeedbackType) => {
-    toast({ title: "Feedback Submitted", description: "Thank you for helping us improve Cosora!" });
-    if (type === "bug") setBugText("");
-    else setFeatureText("");
-    setExpanded(null);
-  };
-
-  const cards: { type: FeedbackType; icon: typeof AlertTriangle; label: string; sub: string; iconClass: string; bgClass: string; btnClass: string; text: string; setText: (v: string) => void }[] = [
-    {
-      type: "bug",
-      icon: AlertTriangle,
-      label: "Report a Bug",
-      sub: "Found something broken?",
-      iconClass: "text-destructive",
-      bgClass: "bg-destructive/10",
-      btnClass: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-      text: bugText,
-      setText: setBugText,
-    },
-    {
-      type: "feature",
-      icon: Lightbulb,
-      label: "Suggest a Feature",
-      sub: "Have an idea?",
-      iconClass: "text-accent",
-      bgClass: "bg-accent/10",
-      btnClass: "bg-accent text-accent-foreground hover:bg-accent/90",
-      text: featureText,
-      setText: setFeatureText,
-    },
-  ];
+  const [activeCard, setActiveCard] = useState<"bug" | "feature" | null>(null);
 
   return (
     <DashboardLayout>
-      <div className="max-w-lg mx-auto pb-24">
-        <motion.div {...fadeIn}>
-          <h1 className="font-display text-2xl font-bold text-foreground">App Feedback</h1>
-          <p className="text-muted-foreground text-sm mt-1 mb-6">Help us improve Cosora</p>
+      <div className="space-y-4 pb-6 max-w-lg mx-auto">
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+          <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">App Feedback</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Your feedback helps us build a better Cosora</p>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          {cards.map((card) => (
-            <motion.div
-              key={card.type}
-              {...fadeIn}
-              transition={{ ...fadeIn.transition, delay: card.type === "bug" ? 0.05 : 0.1 }}
-            >
-              <button
-                onClick={() => setExpanded(expanded === card.type ? null : card.type)}
-                className={`w-full rounded-xl border bg-card p-4 text-left transition-all ${
-                  expanded === card.type ? "border-accent ring-1 ring-accent/20" : "hover:border-accent/30"
-                }`}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card className={activeCard === "bug" ? "border-destructive/40" : ""}>
+            <CardContent className="p-4">
+              <div className="w-12 h-12 bg-destructive/10 rounded-xl flex items-center justify-center mb-3">
+                <AlertTriangle className="h-6 w-6 text-destructive" />
+              </div>
+              <p className="text-base font-semibold text-foreground">Report a Bug</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Found something broken or unexpected?</p>
+              <Button
+                variant={activeCard === "bug" ? "destructive" : "outline"}
+                className="mt-3 w-full h-9 text-sm"
+                onClick={() => setActiveCard(activeCard === "bug" ? null : "bug")}
+                type="button"
               >
-                <div className={`${card.bgClass} rounded-xl w-12 h-12 flex items-center justify-center mb-3`}>
-                  <card.icon className={`w-6 h-6 ${card.iconClass}`} />
-                </div>
-                <p className="font-semibold text-foreground text-sm">{card.label}</p>
-                <p className="text-xs text-muted-foreground">{card.sub}</p>
-              </button>
+                {activeCard === "bug" ? "Close ✕" : "Report a Bug"}
+              </Button>
 
               <AnimatePresence>
-                {expanded === card.type && (
+                {activeCard === "bug" ? (
                   <motion.div
+                    key="bug"
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    transition={{ duration: 0.2 }}
                     className="overflow-hidden"
                   >
                     <div className="mt-3 space-y-2">
-                      <div className="relative">
-                        <Textarea
-                          rows={4}
-                          maxLength={500}
-                          placeholder={card.type === "bug" ? "Describe the bug..." : "Describe your idea..."}
-                          value={card.text}
-                          onChange={(e) => card.setText(e.target.value)}
-                        />
-                        <span className="absolute bottom-2 right-3 text-[10px] text-muted-foreground">
-                          {card.text.length}/500
-                        </span>
+                      <Textarea
+                        placeholder="Describe the bug... What happened? What did you expect? Which page were you on?"
+                        rows={4}
+                        value={bugText}
+                        onChange={(e) => setBugText(e.target.value)}
+                        className="resize-none text-sm"
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">{bugText.length}/500</span>
+                        <Button
+                          className="h-9 text-sm bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          disabled={!bugText.trim()}
+                          onClick={() => {
+                            toast.success("Bug reported! Thank you for helping us improve.");
+                            setBugText("");
+                            setActiveCard(null);
+                          }}
+                          type="button"
+                        >
+                          Submit Report
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => handleSubmit(card.type)}
-                        disabled={!card.text.trim()}
-                        className={`w-full h-10 ${card.btnClass} disabled:opacity-40`}
-                      >
-                        Submit
-                      </Button>
                     </div>
                   </motion.div>
-                )}
+                ) : null}
               </AnimatePresence>
-            </motion.div>
-          ))}
-        </div>
+            </CardContent>
+          </Card>
 
-        <motion.p {...fadeIn} transition={{ ...fadeIn.transition, delay: 0.15 }} className="text-xs text-muted-foreground text-center">
-          We read all feedback carefully, but we may not respond to each submission individually.
-        </motion.p>
+          <Card className={activeCard === "feature" ? "border-accent/40" : ""}>
+            <CardContent className="p-4">
+              <div className="w-12 h-12 bg-accent/10 rounded-xl flex items-center justify-center mb-3">
+                <Lightbulb className="h-6 w-6 text-accent" />
+              </div>
+              <p className="text-base font-semibold text-foreground">Suggest a Feature</p>
+              <p className="text-sm text-muted-foreground mt-0.5">Have a great idea for Cosora?</p>
+              <Button
+                variant={activeCard === "feature" ? "default" : "outline"}
+                className="mt-3 w-full h-9 text-sm"
+                onClick={() => setActiveCard(activeCard === "feature" ? null : "feature")}
+                type="button"
+              >
+                {activeCard === "feature" ? "Close ✕" : "Suggest a Feature"}
+              </Button>
+
+              <AnimatePresence>
+                {activeCard === "feature" ? (
+                  <motion.div
+                    key="feature"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="mt-3 space-y-2">
+                      <Textarea
+                        placeholder="Describe your idea... What should Cosora do next?"
+                        rows={4}
+                        value={featureText}
+                        onChange={(e) => setFeatureText(e.target.value)}
+                        className="resize-none text-sm"
+                      />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">{featureText.length}/500</span>
+                        <Button
+                          className="h-9 text-sm bg-accent text-accent-foreground hover:bg-accent/90"
+                          disabled={!featureText.trim()}
+                          onClick={() => {
+                            toast.success("Thanks for the suggestion! We read all feedback carefully.");
+                            setFeatureText("");
+                            setActiveCard(null);
+                          }}
+                          type="button"
+                        >
+                          Submit Suggestion
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+          <p className="text-xs text-muted-foreground text-center">
+            We read all feedback carefully. Due to high volume, we may not respond to each submission individually.
+          </p>
+        </motion.div>
       </div>
     </DashboardLayout>
   );
