@@ -24,6 +24,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
+  const homeHref = role === "buyer" ? "/browse" : "/seller-home";
 
   const handleSwitchToBuyer = () => {
     setRole("buyer");
@@ -46,9 +47,14 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           {/* Mobile logo + vendor info */}
           {isMobile && (
             <div>
-              <span className="font-display text-xl font-bold italic text-accent tracking-tight">
+              <button
+                type="button"
+                onClick={() => navigate(homeHref)}
+                aria-label={`Go to ${role === "buyer" ? "buyer" : "seller"} homepage`}
+                className="inline-flex items-center rounded-md font-logo text-xl font-bold italic uppercase tracking-[-0.08em] text-accent transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
                 Cosora
-              </span>
+              </button>
               {role === "seller" && (
                 <div className="flex items-center gap-1">
                   <span className="text-sm font-medium text-foreground leading-none">Kumar Textiles</span>

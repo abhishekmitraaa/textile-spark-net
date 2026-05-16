@@ -119,6 +119,10 @@
 }
 
 @layer utilities {
+  .font-logo {
+    font-family: "Heading Now 68", "Heading Now 61", "Barlow Condensed", "Arial Narrow", sans-serif;
+  }
+
   .gradient-gold {
     background: var(--gradient-gold);
   }

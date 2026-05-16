@@ -58,12 +58,6 @@ const sellerNavigation = [
   { name: "Subscription", href: "/subscription", icon: Crown },
 ];
 
-const secondaryNav = [
-  { name: "My Profile", href: "/profile", icon: UserCircle },
-  { name: "Settings", href: "/settings", icon: Settings },
-  { name: "Help & Support", href: "/help", icon: HelpCircle },
-];
-
 interface DashboardSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -74,6 +68,19 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
+  const homeHref = role === "buyer" ? "/browse" : "/seller-home";
+  const secondaryNav =
+    role === "buyer"
+      ? [
+          { name: "My Profile", href: "/profile", icon: UserCircle },
+          { name: "Settings", href: "/settings", icon: Settings },
+          { name: "Help & Support", href: "/help", icon: HelpCircle },
+        ]
+      : [
+          { name: "My Store", href: "/my-store", icon: Building2 },
+          { name: "Settings", href: "/settings", icon: Settings },
+          { name: "Help & Support", href: "/help", icon: HelpCircle },
+        ];
 
   const handleSignOut = () => {
     navigate("/");
@@ -114,9 +121,14 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Logo */}
         <div className="flex h-14 items-center justify-between border-b border-sidebar-border px-4 lg:h-16">
           <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-bold italic text-accent lg:text-2xl tracking-tight">
+            <button
+              type="button"
+              onClick={() => navigate(homeHref)}
+              aria-label={`Go to ${role === "buyer" ? "buyer" : "seller"} homepage`}
+              className="inline-flex items-center rounded-md font-logo text-xl font-bold italic uppercase tracking-[-0.08em] text-accent transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:text-2xl"
+            >
               Cosora
-            </span>
+            </button>
           </div>
           {isMobile && (
             <button

@@ -69,7 +69,7 @@ const OtpVerify = () => {
 
         <div className="relative z-10">
           <Link to="/">
-            <span className="font-display text-2xl font-bold italic text-background">Cosora</span>
+            <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-background">Cosora</span>
           </Link>
         </div>
 
@@ -98,7 +98,7 @@ const OtpVerify = () => {
             <ArrowLeft className="h-5 w-5 text-foreground" />
           </button>
           <div className="lg:hidden">
-            <span className="font-display text-xl font-bold italic text-accent">Cosora</span>
+            <span className="font-logo text-xl font-bold italic uppercase tracking-[-0.08em] text-accent">Cosora</span>
           </div>
         </div>
 

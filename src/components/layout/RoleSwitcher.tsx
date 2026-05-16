@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { Building2, Factory } from "lucide-react";
 import { useUserRole, UserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
@@ -8,7 +9,13 @@ interface RoleSwitcherProps {
 }
 
 export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
+  const navigate = useNavigate();
   const { role, setRole } = useUserRole();
+
+  const handleRoleSelect = (nextRole: UserRole) => {
+    setRole(nextRole);
+    navigate(nextRole === "seller" ? "/seller-home" : "/browse");
+  };
 
   const roles: { value: UserRole; label: string; icon: typeof Building2 }[] = [
     { value: "buyer", label: "Buyer", icon: Building2 },
@@ -21,7 +28,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
         {roles.map((r) => (
           <button
             key={r.value}
-            onClick={() => setRole(r.value)}
+            onClick={() => handleRoleSelect(r.value)}
             className={cn(
               "relative flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-medium transition-colors",
               role === r.value
@@ -49,7 +56,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
       {roles.map((r) => (
         <button
           key={r.value}
-          onClick={() => setRole(r.value)}
+          onClick={() => handleRoleSelect(r.value)}
           className={cn(
             "relative flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
             role === r.value

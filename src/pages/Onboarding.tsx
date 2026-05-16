@@ -164,7 +164,7 @@ export default function Onboarding() {
           />
         ))}
         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="text-center px-6 z-10">
-          <div className="font-display text-5xl font-bold mb-4">Cosora</div>
+          <div className="font-logo text-5xl font-bold italic uppercase tracking-[-0.08em] mb-4">Cosora</div>
           <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
           <p className="text-xl">Welcome to Cosora 🎉</p>
         </motion.div>

@@ -70,7 +70,7 @@ const Login = () => {
 
         <div className="relative z-10">
           <Link to="/">
-            <span className="font-display text-2xl font-bold italic text-background">Cosora</span>
+            <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-background">Cosora</span>
           </Link>
         </div>
 
@@ -94,7 +94,7 @@ const Login = () => {
         <div className="flex items-center justify-between mb-8">
           <div className="lg:hidden">
             <Link to="/">
-              <span className="font-display text-2xl font-bold italic text-foreground">Cosora</span>
+              <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-foreground">Cosora</span>
             </Link>
           </div>
           <div className="lg:block hidden" />

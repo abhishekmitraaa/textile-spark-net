@@ -62,7 +62,7 @@ const VendorLanding = () => {
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border">
         <div className="flex items-center justify-between px-4 py-3 max-w-6xl mx-auto">
           <Link to="/">
-            <span className="font-display text-accent text-2xl italic font-bold">Cosora</span>
+            <span className="font-logo text-accent text-2xl font-bold italic uppercase tracking-[-0.08em]">Cosora</span>
           </Link>
           <div className="flex items-center gap-3">
             <Link to="#" className="text-sm text-muted-foreground hidden sm:inline">

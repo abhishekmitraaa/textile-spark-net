@@ -31,7 +31,7 @@ const SubRole = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <h1 className="font-display text-accent text-2xl italic text-center mb-8">Cosora</h1>
+        <h1 className="font-logo text-accent text-2xl font-bold italic uppercase tracking-[-0.08em] text-center mb-8">Cosora</h1>
 
         <h2 className="font-display text-2xl font-bold text-foreground text-center mb-2">
           What best describes you?

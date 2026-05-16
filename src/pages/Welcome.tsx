@@ -18,7 +18,7 @@ const Welcome = () => {
         transition={{ duration: 0.6 }}
         className="text-center"
       >
-        <h1 className="font-display text-accent-foreground text-4xl italic mb-4">Cosora</h1>
+        <h1 className="font-logo text-accent-foreground text-4xl font-bold italic uppercase tracking-[-0.08em] mb-4">Cosora</h1>
         <p className="text-accent-foreground/80 text-lg font-medium">
           Business Made Easy & Enjoyable
         </p>

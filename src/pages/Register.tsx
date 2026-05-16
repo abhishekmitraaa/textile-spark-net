@@ -72,7 +72,7 @@ const Register = () => {
         <div className="relative z-10">
           <Link to="/" className="inline-block">
             <span className="font-display text-2xl font-bold italic text-background">
-              Cosora
+              <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-background">Cosora</span>
             </span>
           </Link>
         </div>
@@ -122,7 +122,7 @@ const Register = () => {
         <div className="lg:hidden mb-8">
           <Link to="/">
             <span className="font-display text-2xl font-bold italic text-foreground">
-              Cosora
+              <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-foreground">Cosora</span>
             </span>
           </Link>
         </div>

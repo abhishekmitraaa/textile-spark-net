@@ -36,7 +36,7 @@ const RoleSelection = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md text-center"
       >
-        <h1 className="font-display text-accent text-2xl italic mb-8">Cosora</h1>
+        <h1 className="font-logo text-accent text-2xl font-bold italic uppercase tracking-[-0.08em] mb-8">Cosora</h1>
 
         <h2 className="font-display text-2xl font-bold text-foreground mb-2">I am a..</h2>
         <p className="text-muted-foreground text-sm mb-8">Select your role and get started</p>
