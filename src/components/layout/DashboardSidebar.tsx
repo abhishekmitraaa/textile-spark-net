@@ -33,15 +33,15 @@ import { RoleSwitcher } from "./RoleSwitcher";
 
 // Buyer navigation (Clothing Brands)
 const buyerNavigation = [
-  { name: "New Arrivals", href: "/browse", icon: ShoppingBag },
-  { name: "For You", href: "/for-you", icon: Sparkles },
-  { name: "Service Vendors", href: "/service-vendors", icon: Wrench },
+  { name: "New Arrivals", href: "/home/new-arrivals", icon: ShoppingBag },
+  { name: "For You", href: "/home/for-you", icon: Sparkles },
+  { name: "Service Vendors", href: "/services", icon: Wrench },
   { name: "Freelancers", href: "/freelancers", icon: Briefcase },
-  { name: "Post Requirement", href: "/post-requirement", icon: FileText },
+  { name: "Post Requirement", href: "/requirement/post-requirement", icon: FileText },
   { name: "Recently Viewed", href: "/recently-viewed", icon: History },
   { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
-  { name: "My Quotes", href: "/quotes", icon: ClipboardList },
-  { name: "Messages", href: "/chat", icon: MessageCircle },
+  { name: "My Quotes", href: "/requirement/my-quotes", icon: ClipboardList },
+  { name: "Messages", href: "/chats", icon: MessageCircle },
 ];
 
 // Seller navigation (Manufacturers)
@@ -68,7 +68,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
-  const homeHref = role === "buyer" ? "/browse" : "/seller-home";
+  const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
   const secondaryNav =
     role === "buyer"
       ? [

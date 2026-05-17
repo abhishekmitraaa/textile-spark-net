@@ -14,7 +14,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
 
   const handleRoleSelect = (nextRole: UserRole) => {
     setRole(nextRole);
-    navigate(nextRole === "seller" ? "/seller-home" : "/browse");
+    navigate(nextRole === "seller" ? "/seller-home" : "/home/new-arrivals");
   };
 
   const roles: { value: UserRole; label: string; icon: typeof Building2 }[] = [

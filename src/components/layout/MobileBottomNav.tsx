@@ -22,16 +22,16 @@ export const MobileBottomNav = () => {
 
   // Buyer: Home, For You, Requirement (center), Chats, My Profile
   const buyerNavItems = [
-    { name: "Home", href: "/", icon: Home },
-    { name: "For You", href: "/for-you", icon: Sparkles },
-    { name: "Requirement", href: "/post-requirement", icon: Plus, isCenter: true },
-    { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },
+    { name: "Home", href: "/home/new-arrivals", icon: Home },
+    { name: "For You", href: "/home/for-you", icon: Sparkles },
+    { name: "Requirement", href: "/requirement", icon: Plus, isCenter: true },
+    { name: "Chats", href: "/chats", icon: MessageCircle, badge: unreadMessages },
     { name: "My Profile", href: "/profile", icon: UserCircle },
   ];
 
   // Seller: Home, Products, Upload (center), Chats, My Profile
   const sellerNavItems = [
-    { name: "Home", href: "/", icon: Home },
+    { name: "Home", href: "/seller-home", icon: Home },
     { name: "Products", href: "/products", icon: Package },
     { name: "Upload", href: "/upload", icon: Upload, isCenter: true },
     { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },

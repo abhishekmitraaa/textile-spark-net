@@ -24,11 +24,11 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
-  const homeHref = role === "buyer" ? "/browse" : "/seller-home";
+  const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
 
   const handleSwitchToBuyer = () => {
     setRole("buyer");
-    navigate("/browse");
+    navigate("/home/new-arrivals");
   };
 
   return (
@@ -75,7 +75,10 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             <Input
               type="search"
               placeholder={role === "buyer" ? "Search for items or brands..." : "Search products, leads..."}
-              className="w-48 pl-10 md:w-64"
+              readOnly
+              onClick={() => navigate("/search")}
+              aria-label={role === "buyer" ? "Search for items or brands" : "Search products or leads"}
+              className="w-48 cursor-pointer pl-10 md:w-64"
             />
           </div>
         </div>
