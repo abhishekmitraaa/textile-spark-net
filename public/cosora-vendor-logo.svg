@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="170" viewBox="0 0 540 170" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Cosora For Sellers</title>
+  <desc id="desc">Cosora vendor logo with For Sellers label</desc>
+  <rect width="540" height="170" fill="white"/>
+  <g opacity="0.18">
+    <circle cx="24" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="96" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="168" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="240" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="312" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="384" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="456" cy="24" r="6" fill="#D0D4DC"/>
+    <circle cx="24" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="96" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="168" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="240" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="312" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="384" cy="84" r="6" fill="#D0D4DC"/>
+    <circle cx="456" cy="84" r="6" fill="#D0D4DC"/>
+  </g>
+  <text x="270" y="78" text-anchor="middle" fill="#CC0000" font-family="Arial Narrow, Barlow Condensed, sans-serif" font-size="94" font-style="italic" font-weight="900" letter-spacing="-6">COSORA</text>
+  <g>
+    <line x1="34" y1="118" x2="168" y2="118" stroke="#111111" stroke-width="4" stroke-linecap="round"/>
+    <line x1="372" y1="118" x2="506" y2="118" stroke="#111111" stroke-width="4" stroke-linecap="round"/>
+    <text x="270" y="128" text-anchor="middle" fill="#7c7c7c" font-family="DM Sans, Arial, sans-serif" font-size="38" font-weight="400">For Sellers</text>
+  </g>
+</svg>

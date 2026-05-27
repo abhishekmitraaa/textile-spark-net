@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown } from "lucide-react";
+import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown, Video, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -38,6 +38,8 @@ const Upload = () => {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
+  const [videoFiles, setVideoFiles] = useState<string[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<string[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, string | string[]>>({});
   const [productName, setProductName] = useState("");
@@ -92,6 +94,20 @@ const Upload = () => {
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleMediaPick = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setter: React.Dispatch<React.SetStateAction<string[]>>,
+    current: string[],
+    max: number,
+  ) => {
+    const files = Array.from(e.target.files || []);
+    const fileNames = files.slice(0, max - current.length).map((file) => file.name);
+    if (fileNames.length > 0) {
+      setter((prev) => [...prev, ...fileNames].slice(0, max));
+    }
+    e.target.value = "";
   };
 
   const handleFieldChange = (fieldId: string, value: string | string[]) => {
@@ -303,6 +319,7 @@ const Upload = () => {
                       id="description"
                       value={productDescription}
                       onChange={(e) => setProductDescription(e.target.value)}
+                      maxLength={1000}
                       placeholder={
                         category?.type === "service"
                           ? "Describe your service, capabilities, and what sets you apart..."
@@ -310,6 +327,10 @@ const Upload = () => {
                       }
                       className="min-h-[100px]"
                     />
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <span>Use buyer-friendly language and highlight differentiators.</span>
+                      <span>{productDescription.length}/1000</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -404,17 +425,41 @@ const Upload = () => {
                   Drag and drop images here
                 </p>
                 <p className="mb-3 text-xs text-muted-foreground lg:mb-4">
-                  PNG, JPG up to 10MB (max 6)
+                  PNG, JPG, MP4, PDF up to 10MB (max 6 images, 3 videos, 3 PDFs)
                 </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addPlaceholderImage}
-                >
-                  <Image className="mr-2 h-4 w-4" />
-                  Browse
-                </Button>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addPlaceholderImage}
+                  >
+                    <Image className="mr-2 h-4 w-4" />
+                    Browse Images
+                  </Button>
+                  <label className="inline-flex cursor-pointer items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleMediaPick(e, setVideoFiles, videoFiles, 3)}
+                    />
+                    <Video className="mr-2 h-4 w-4" />
+                    Add Video
+                  </label>
+                  <label className="inline-flex cursor-pointer items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handleMediaPick(e, setPdfFiles, pdfFiles, 3)}
+                    />
+                    <FileText className="mr-2 h-4 w-4" />
+                    Add PDF
+                  </label>
+                </div>
               </div>
 
               {images.length > 0 && (
@@ -445,6 +490,37 @@ const Upload = () => {
                       </button>
                     </motion.div>
                   ))}
+                </div>
+              )}
+
+              {(videoFiles.length > 0 || pdfFiles.length > 0) && (
+                <div className="mt-4 space-y-3">
+                  {videoFiles.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Videos</p>
+                      <div className="flex flex-wrap gap-2">
+                        {videoFiles.map((fileName, index) => (
+                          <span key={`${fileName}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
+                            <Video className="mr-1 h-3 w-3 text-accent" />
+                            {fileName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {pdfFiles.length > 0 && (
+                    <div>
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">PDFs</p>
+                      <div className="flex flex-wrap gap-2">
+                        {pdfFiles.map((fileName, index) => (
+                          <span key={`${fileName}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
+                            <FileText className="mr-1 h-3 w-3 text-accent" />
+                            {fileName}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </motion.div>

@@ -46,6 +46,8 @@ import CompetitorAds from "./pages/CompetitorAds";
 import ReportFraud from "./pages/ReportFraud";
 import AppFeedback from "./pages/AppFeedback";
 import About from "./pages/About";
+import VendorBlogs from "./pages/VendorBlogs";
+import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
 
 const queryClient = new QueryClient();
@@ -393,6 +395,8 @@ const App = () => (
             <Route path="/report-fraud" element={<ReportFraud />} />
             <Route path="/app-feedback" element={<AppFeedback />} />
             <Route path="/about" element={<About />} />
+            <Route path="/seller/blogs" element={<VendorBlogs />} />
+            <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />
             {buyerShellRoutes.map((route) => (
               <Route
                 key={route.path}

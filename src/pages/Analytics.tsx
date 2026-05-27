@@ -9,9 +9,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye, MessageSquare, Target, Package, ArrowUpRight, ArrowDownRight,
   Activity, BarChart3, Sparkles,
+  Star,
 } from "lucide-react";
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
 
@@ -37,6 +38,16 @@ const sourceData = [
   { name: "Recommendations", value: 20 }, { name: "External Links", value: 10 },
 ];
 
+const categoryData = [
+  { name: "Cotton Fabrics", value: 35 },
+  { name: "Silk", value: 25 },
+  { name: "Linen", value: 20 },
+  { name: "Wool", value: 12 },
+  { name: "Other", value: 8 },
+];
+
+const categoryColors = ["#E11D48", "#2563EB", "#F97316", "#A855F7", "#14B8A6"];
+
 const inquiryData = [
   { name: "Jan", inquiries: 45, conversions: 12 },
   { name: "Feb", inquiries: 68, conversions: 18 },
@@ -59,7 +70,7 @@ const stats = [
   { title: "Total Views", value: "12.4K", change: "+18.2%", positive: true, icon: Eye },
   { title: "Inquiries", value: "156", change: "+24.5%", positive: true, icon: MessageSquare },
   { title: "Conversion Rate", value: "3.2%", change: "+0.4%", positive: true, icon: Target },
-  { title: "Active Products", value: "48", change: "-2", positive: false, icon: Package },
+  { title: "Active Products", value: "48", change: "5 inactive", positive: false, icon: Package },
 ];
 
 const timeFilters = ["7 days", "30 days", "90 days", "1 year"];
@@ -70,7 +81,7 @@ const Analytics = () => {
   const [sortBy, setSortBy] = useState<"views" | "inquiries">("views");
 
   const sorted = [...topProducts].sort((a, b) => b[sortBy] - a[sortBy]);
-
+        className="mt-3 bg-accent text-accent-foreground text-xs"
   return (
     <DashboardLayout>
       <div className="space-y-4 pb-24">
@@ -186,6 +197,39 @@ const Analytics = () => {
               </CardContent>
             </Card>
             <Card className="rounded-xl">
+              <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-base">Views by Category</CardTitle></CardHeader>
+              <CardContent className="px-2 pb-4">
+                <div className="h-[220px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={categoryData}
+                        dataKey="value"
+                        nameKey="name"
+                        innerRadius={58}
+                        outerRadius={86}
+                        paddingAngle={4}
+                      >
+                        {categoryData.map((entry, index) => (
+                          <Cell key={entry.name} fill={categoryColors[index % categoryColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip contentStyle={{ backgroundColor: "hsl(0,0%,100%)", border: "1px solid hsl(220,12%,87%)", borderRadius: "8px" }} formatter={(value: number, name: string, payload: { payload?: { name?: string } }) => [`${value}%`, payload?.payload?.name ?? name]} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2 px-2 text-xs text-muted-foreground sm:grid-cols-3">
+                  {categoryData.map((item, index) => (
+                    <div key={item.name} className="flex items-center gap-2 rounded-lg bg-muted/30 px-2 py-1.5">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: categoryColors[index % categoryColors.length] }} />
+                      <span className="min-w-0 flex-1 truncate">{item.name}</span>
+                      <span className="font-medium text-foreground">{item.value}%</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="rounded-xl">
               <CardHeader className="pb-2 pt-4 px-4"><CardTitle className="text-base">Traffic Sources</CardTitle></CardHeader>
               <CardContent className="px-2 pb-4">
                 <div className="h-[200px]">
@@ -284,6 +328,38 @@ const Analytics = () => {
                   </Button>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+          <Card className="rounded-xl border-accent/20 bg-gradient-to-br from-accent/5 via-card to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ratings Snapshot</p>
+                  <p className="mt-1 text-3xl font-bold text-foreground">4.2 / 5</p>
+                  <p className="mt-1 text-sm text-muted-foreground">24 reviews • 312 helpful votes</p>
+                </div>
+                <div className="rounded-lg bg-accent/10 p-2">
+                  <Star className="h-5 w-5 fill-accent text-accent" />
+                </div>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Top rated listing", value: "Premium Cotton Blend" },
+                  { label: "Response rate", value: "93%" },
+                  { label: "Review trend", value: "+8% this month" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-xl border border-border bg-background/70 p-3">
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
+                    <p className="mt-1 text-sm font-semibold text-foreground">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="mt-4 border-border" onClick={() => navigate("/reviews") }>
+                View Reviews
+              </Button>
             </CardContent>
           </Card>
         </motion.div>

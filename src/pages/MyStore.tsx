@@ -32,11 +32,18 @@ const completionItems = [
 
 const categoryItems = ["Fabrics", "Knitwear", "Denim", "Trims", "Packaging", "Printing", "Embroidery", "Dyeing", "Finishing", "Export", "Wholesale", "Retail"];
 
+const paymentHistory = [
+  { id: "INV-2026-015", title: "Silver Plan Renewal", date: "15 Jan 2026", amount: "₹2,499", status: "Paid" },
+  { id: "ADS-2026-003", title: "Store Promotion", date: "02 Jan 2026", amount: "₹99", status: "Paid" },
+  { id: "INV-2025-012", title: "Silver Plan Renewal", date: "15 Dec 2025", amount: "₹2,499", status: "Paid" },
+];
+
 const MyStore = () => {
   const [completionOpen, setCompletionOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [logoutOpen, setLogoutOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
+  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false);
   const [lang, setLang] = useState("English");
   const [selectedCategories, setSelectedCategories] = useState<string[]>(["Knitwear"]);
   const navigate = useNavigate();
@@ -88,12 +95,13 @@ const MyStore = () => {
         <motion.div {...sectionVariant(0.1)}>
           <Card>
             <CardContent className="p-4">
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
                 {[
                   { icon: Megaphone, label: "Advertise", href: "/advertisements", color: "text-purple-600", bg: "bg-purple-100" },
-                  { icon: Building2, label: "My Profile", href: "/my-store", color: "text-blue-600", bg: "bg-blue-100" },
+                  { icon: Building2, label: "My Profile", href: "/profile", color: "text-blue-600", bg: "bg-blue-100" },
                   { icon: Package, label: "Products", href: "/products", color: "text-emerald-600", bg: "bg-emerald-100" },
                   { icon: HelpCircle, label: "Help", href: "/help", color: "text-indigo-600", bg: "bg-indigo-100" },
+                  { icon: MessageSquare, label: "Customer Chats", href: "/chat", color: "text-rose-600", bg: "bg-rose-100" },
                 ].map((item) => {
                   const Icon = item.icon;
 
@@ -167,10 +175,54 @@ const MyStore = () => {
               </div>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
             </Link>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
+            <button type="button" onClick={() => setPaymentHistoryOpen(true)} className="flex w-full justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer text-left">
               <span className="text-sm font-medium text-foreground">Payment History</span>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+          </Card>
+        </motion.div>
+
+        <motion.div {...sectionVariant(0.275)}>
+          <Card className="overflow-hidden">
+            <div className="px-4 pt-4 pb-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transactions & Support</span>
             </div>
+            <button type="button" onClick={() => setPaymentHistoryOpen(true)} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-accent/10 p-2 text-accent">
+                  <ArrowLeftRight className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">My Transactions / Bookings</p>
+                  <p className="text-xs text-muted-foreground">View recent invoices and charges</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button type="button" onClick={() => navigate("/help")} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-indigo-100 p-2 text-indigo-600">
+                  <HelpCircle className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Help Center</p>
+                  <p className="text-xs text-muted-foreground">Get answers or raise a support ticket</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
+            <button type="button" onClick={() => { navigate("/help"); toast.info("Opening support chat", { description: "A Cosora agent will help you shortly." }); }} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-rose-100 p-2 text-rose-600">
+                  <MessageSquare className="h-4 w-4" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-foreground">Chat with Us</p>
+                  <p className="text-xs text-muted-foreground">Open the vendor support chat</p>
+                </div>
+              </div>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            </button>
           </Card>
         </motion.div>
 
@@ -485,6 +537,39 @@ const MyStore = () => {
             </Button>
           </SheetContent>
         </Sheet>
+
+        <Dialog open={paymentHistoryOpen} onOpenChange={setPaymentHistoryOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Payment History</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3 pt-2">
+              {paymentHistory.map((entry) => (
+                <div key={entry.id} className="rounded-2xl border border-border bg-muted/20 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{entry.title}</p>
+                      <p className="text-xs text-muted-foreground">{entry.id}</p>
+                    </div>
+                    <Badge className="bg-green-500/10 text-green-600 border border-green-500/20 text-[10px] rounded-full px-2">{entry.status}</Badge>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{entry.date}</span>
+                    <span className="font-semibold text-foreground">{entry.amount}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-4 flex gap-2">
+              <Button variant="outline" className="flex-1" onClick={() => navigate("/subscription")}>
+                Open Subscription
+              </Button>
+              <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => { toast.success("Receipt download started"); setPaymentHistoryOpen(false); }}>
+                Download Receipt
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </DashboardLayout>
   );

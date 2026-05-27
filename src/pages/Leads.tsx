@@ -58,6 +58,7 @@ const mockLeads: Lead[] = [
     calls: 12,
     chats: 5,
     buys: "Mens Wear",
+    designFile: "cotton-men-tshirt-spec.pdf",
   },
   {
     id: "2",

@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { useVendorQuoteSummary, vendorQuoteSummaryFixture } from "@/hooks/useVendorData";
 import {
   Search,
   Filter,
@@ -62,9 +63,12 @@ const sellerSentQuotes = [
     quotedPrice: "$2.50/meter",
     totalValue: "$12,500",
     leadTime: "15-20 days",
-    status: "pending",
+    status: "negotiating",
     sentDate: "2024-01-12",
     expiryDate: "2024-01-27",
+    competingQuotes: 3,
+    lowestCompetingPrice: "$2.25/meter",
+    buyerResponsePreview: "Buyer viewed the quote and asked for a sharper price on bulk volume.",
     specifications: {
       material: "100% Organic Cotton",
       weight: "120 GSM",
@@ -87,6 +91,9 @@ const sellerSentQuotes = [
     status: "accepted",
     sentDate: "2024-01-08",
     expiryDate: "2024-01-23",
+    competingQuotes: 2,
+    lowestCompetingPrice: "$7.95/meter",
+    buyerResponsePreview: "Accepted after internal review and stakeholder sign-off.",
     specifications: {
       material: "100% Mulberry Silk",
       weight: "90 GSM",
@@ -109,6 +116,10 @@ const sellerSentQuotes = [
     status: "rejected",
     sentDate: "2024-01-05",
     expiryDate: "2024-01-20",
+    competingQuotes: 4,
+    lowestCompetingPrice: "$3.90/meter",
+    buyerResponsePreview: "Buyer selected a lower-cost supplier for the same spec.",
+    rejectionReason: "Price was slightly above the buyer's target range.",
     specifications: {
       material: "100% Cotton",
       weight: "475 GSM",
@@ -131,6 +142,9 @@ const sellerSentQuotes = [
     status: "pending",
     sentDate: "2024-01-14",
     expiryDate: "2024-01-29",
+    competingQuotes: 1,
+    lowestCompetingPrice: "$5.40/meter",
+    buyerResponsePreview: "Awaiting response from buyer procurement team.",
     specifications: {
       material: "55% Hemp, 45% Cotton",
       weight: "180 GSM",
@@ -153,6 +167,9 @@ const sellerSentQuotes = [
     status: "expired",
     sentDate: "2023-12-20",
     expiryDate: "2024-01-05",
+    competingQuotes: 5,
+    lowestCompetingPrice: "$3.60/meter",
+    buyerResponsePreview: "Quote expired before the buyer completed shortlist review.",
     specifications: {
       material: "100% Viscose",
       weight: "130 GSM",
@@ -204,6 +221,7 @@ const incomingRFQs = [
 
 const statusConfig = {
   pending: { label: "Awaiting Response", color: "bg-amber-500/10 text-amber-600 border-amber-500/20", icon: Clock },
+  negotiating: { label: "Negotiating", color: "bg-blue-500/10 text-blue-600 border-blue-500/20", icon: MessageCircle },
   accepted: { label: "Accepted", color: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20", icon: CheckCircle2 },
   rejected: { label: "Declined", color: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
   expired: { label: "Expired", color: "bg-muted text-muted-foreground border-muted", icon: AlertCircle },
@@ -217,6 +235,7 @@ const SellerQuotesView = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isRespondOpen, setIsRespondOpen] = useState(false);
   const [selectedRFQ, setSelectedRFQ] = useState<typeof incomingRFQs[0] | null>(null);
+  const { data: quoteSummary } = useVendorQuoteSummary();
 
   // Respond to RFQ form state
   const [responsePrice, setResponsePrice] = useState("");
@@ -232,10 +251,7 @@ const SellerQuotesView = () => {
   });
 
   const stats = {
-    totalSent: sellerSentQuotes.length,
-    pending: sellerSentQuotes.filter((q) => q.status === "pending").length,
-    accepted: sellerSentQuotes.filter((q) => q.status === "accepted").length,
-    totalValue: "$85,500",
+    ...(quoteSummary ?? vendorQuoteSummaryFixture),
   };
 
   const handleRespondToRFQ = () => {
@@ -244,6 +260,25 @@ const SellerQuotesView = () => {
     setResponsePrice("");
     setResponseLeadTime("");
     setResponseNotes("");
+  };
+
+  const handleQuoteStatusAction = (quote: typeof sellerSentQuotes[0]) => {
+    if (quote.status === "accepted") {
+      toast.success(`Viewing order details for ${quote.buyerName}`);
+      return;
+    }
+
+    if (quote.status === "rejected") {
+      toast.info(`Drafting a revised quote for ${quote.buyerName}`);
+      return;
+    }
+
+    if (quote.status === "expired") {
+      toast.info(`Republishing ${quote.productName} with a refreshed quote`);
+      return;
+    }
+
+    toast.success(`Sending follow-up to ${quote.buyerName}`);
   };
 
   return (
@@ -269,12 +304,15 @@ const SellerQuotesView = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4"
+        className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3"
       >
         {[
           { label: "Total Sent", value: stats.totalSent, icon: Send, color: "text-accent" },
+          { label: "In Negotiation", value: stats.negotiating, icon: MessageCircle, color: "text-blue-500" },
           { label: "Awaiting Response", value: stats.pending, icon: Clock, color: "text-amber-500" },
           { label: "Accepted", value: stats.accepted, icon: CheckCircle2, color: "text-emerald-500" },
+          { label: "Acceptance Rate", value: stats.acceptanceRate, icon: TrendingUp, color: "text-primary" },
+          { label: "Avg Response Time", value: stats.avgResponseTime, icon: BarChart3, color: "text-accent" },
           { label: "Total Value", value: stats.totalValue, icon: TrendingUp, color: "text-primary" },
         ].map((stat) => (
           <Card key={stat.label} className="border-border/50 bg-card">
@@ -332,6 +370,7 @@ const SellerQuotesView = () => {
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="pending">Awaiting Response</SelectItem>
+                  <SelectItem value="negotiating">Negotiating</SelectItem>
                   <SelectItem value="accepted">Accepted</SelectItem>
                   <SelectItem value="rejected">Declined</SelectItem>
                   <SelectItem value="expired">Expired</SelectItem>
@@ -418,6 +457,19 @@ const SellerQuotesView = () => {
                               </div>
                             </div>
 
+                            <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-medium text-muted-foreground">Buyer response</span>
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                  {quote.competingQuotes} competing quotes
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-foreground leading-relaxed">{quote.buyerResponsePreview}</p>
+                              <p className="text-xs text-muted-foreground">
+                                Lowest competing price: {quote.lowestCompetingPrice}
+                              </p>
+                            </div>
+
                             {/* Specs */}
                             <div className="hidden sm:flex flex-wrap gap-1.5">
                               {Object.entries(quote.specifications).map(([key, value]) => (
@@ -461,12 +513,21 @@ const SellerQuotesView = () => {
                             <Eye size={12} />
                             Details
                           </Button>
-                          {quote.status === "pending" && (
-                            <Button variant="outline" size="sm" className="gap-1.5 h-8 text-xs">
-                              <FileText size={12} />
-                              Edit
-                            </Button>
-                          )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 h-8 text-xs"
+                                onClick={() => handleQuoteStatusAction(quote)}
+                              >
+                                <Reply size={12} />
+                                {quote.status === "accepted"
+                                  ? "View Order"
+                                  : quote.status === "rejected"
+                                  ? "Revise Quote"
+                                  : quote.status === "expired"
+                                  ? "Republish"
+                                  : "Follow Up"}
+                              </Button>
                           <div className="flex-1" />
                           <div className="hidden sm:flex gap-1">
                             <Button variant="ghost" size="icon" className="h-7 w-7">
@@ -619,6 +680,14 @@ const SellerQuotesView = () => {
                   <p className="text-xs text-muted-foreground">Lead Time</p>
                   <p className="font-medium">{selectedQuote.leadTime}</p>
                 </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Competition</p>
+                  <p className="font-medium">{selectedQuote.competingQuotes} quotes</p>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <p className="text-xs text-muted-foreground">Lowest Competing</p>
+                  <p className="font-medium">{selectedQuote.lowestCompetingPrice}</p>
+                </div>
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground mb-2">Specifications</p>
@@ -630,6 +699,18 @@ const SellerQuotesView = () => {
                   ))}
                 </div>
               </div>
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium text-foreground">Buyer response</p>
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 capitalize">
+                    {selectedQuote.status}
+                  </Badge>
+                </div>
+                <p className="text-sm text-muted-foreground leading-relaxed">{selectedQuote.buyerResponsePreview}</p>
+                {selectedQuote.rejectionReason ? (
+                  <p className="text-xs text-destructive">Reason: {selectedQuote.rejectionReason}</p>
+                ) : null}
+              </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
                   <p className="text-muted-foreground">Sent Date</p>
@@ -640,6 +721,43 @@ const SellerQuotesView = () => {
                   <p className="font-medium">{selectedQuote.expiryDate}</p>
                 </div>
               </div>
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  selectedQuote.status === "accepted"
+                    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-700"
+                    : selectedQuote.status === "negotiating"
+                    ? "border-blue-500/20 bg-blue-500/10 text-blue-700"
+                    : selectedQuote.status === "rejected"
+                    ? "border-destructive/20 bg-destructive/10 text-destructive"
+                    : "border-border bg-muted/20 text-muted-foreground"
+                }`}
+              >
+                {selectedQuote.status === "accepted" && "Buyer accepted the quote. Move to order handoff and fulfillment."}
+                {selectedQuote.status === "negotiating" && "Buyer is comparing options. Follow up fast to protect the deal."}
+                {selectedQuote.status === "rejected" && "This quote lost on price or fit. A revised quote can be sent from this view."}
+                {selectedQuote.status === "pending" && "Waiting for buyer response. Use the follow-up CTA to stay top of mind."}
+                {selectedQuote.status === "expired" && "Quote expired. Duplicate it if you want to resend a refreshed offer."}
+              </div>
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button variant="outline" onClick={() => handleChat(selectedQuote)}>
+                  <MessageCircle size={14} className="mr-1.5" />
+                  Message Buyer
+                </Button>
+                <Button variant="outline" onClick={() => handleCall(selectedQuote)}>
+                  <Phone size={14} className="mr-1.5" />
+                  Call Buyer
+                </Button>
+                <Button variant="gold" className="gap-2" onClick={() => handleQuoteStatusAction(selectedQuote)}>
+                  <Reply size={14} />
+                  {selectedQuote.status === "accepted"
+                    ? "View Order"
+                    : selectedQuote.status === "rejected"
+                    ? "Revise Quote"
+                    : selectedQuote.status === "expired"
+                    ? "Republish"
+                    : "Follow Up"}
+                </Button>
+              </DialogFooter>
             </div>
           )}
         </DialogContent>

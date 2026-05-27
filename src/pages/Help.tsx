@@ -12,11 +12,20 @@ import {
   HelpCircle,
   ChevronRight,
   ExternalLink,
-  Headphones
+  Headphones,
+  Clock,
+  Camera,
+  Image as ImageIcon,
+  Paperclip,
+  Mic,
+  Send,
+  Instagram,
+  Trash2,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   Accordion,
@@ -111,36 +120,52 @@ const contactOptions = [
     title: "Live Chat",
     description: "Chat with our support team",
     action: "Start Chat",
-    available: "Available 24/7",
+    available: "10:00 AM - 7:00 PM IST",
     color: "bg-primary/10 text-primary"
   },
   {
     icon: Phone,
-    title: "Phone Support",
-    description: "+1 (800) 123-4567",
-    action: "Call Now",
-    available: "Mon-Fri, 9AM-6PM",
-    color: "bg-accent/10 text-accent"
+    title: "Request Callback",
+    description: "Leave your number and support will call you back",
+    action: "Request",
+    available: "Mon-Fri only",
+    color: "bg-amber-500/10 text-amber-600"
   },
   {
     icon: Mail,
     title: "Email Support",
-    description: "support@textilemarket.com",
-    action: "Send Email",
+    description: "hello@cosora.in",
+    action: "Copy Email",
     available: "Response within 24hrs",
     color: "bg-secondary/50 text-foreground"
+  },
+  {
+    icon: Instagram,
+    title: "Follow Us",
+    description: "Instagram updates, product drops, and support news",
+    action: "Open Instagram",
+    available: "Always on",
+    color: "bg-pink-500/10 text-pink-600"
   }
 ];
 
 const quickGuides = [
-  { title: "How to Post Your First RFQ", icon: FileText },
-  { title: "Understanding Vendor Ratings", icon: User },
-  { title: "Negotiation Best Practices", icon: MessageCircle },
-  { title: "Payment & Escrow Guide", icon: CreditCard }
+  { title: "How to Complete Verification", icon: FileText },
+  { title: "Request a Callback", icon: Phone },
+  { title: "Audio, PDF & Image Support", icon: MessageCircle },
+  { title: "Payment & Subscription Guide", icon: CreditCard }
 ];
 
 const Help = () => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [chatStarted, setChatStarted] = useState(false);
+  const [supportMessage, setSupportMessage] = useState("");
+
+  const supportAgent = {
+    name: "Ayesha Khan",
+    role: "Cosora Support Executive",
+    shift: "Mon-Fri, 10:00 AM - 7:00 PM IST",
+  };
 
   const filteredCategories = faqCategories.map(category => ({
     ...category,
@@ -153,18 +178,46 @@ const Help = () => {
 
   const handleContactAction = (title: string) => {
     if (title === "Live Chat") {
+      setChatStarted(true);
       toast.success("Starting live chat...", {
         description: "A support agent will be with you shortly."
       });
-    } else if (title === "Phone Support") {
-      toast.info("Phone number copied!", {
-        description: "+1 (800) 123-4567"
+    } else if (title === "Request Callback") {
+      toast.success("Callback requested!", {
+        description: "Our support team will call you during working hours."
       });
     } else if (title === "Email Support") {
       toast.info("Email copied!", {
-        description: "support@textilemarket.com"
+        description: "hello@cosora.in"
       });
+    } else if (title === "Follow Us") {
+      toast.info("Opening Instagram...", {
+        description: "@cosora.in"
+      });
+      window.open("https://instagram.com/cosora", "_blank", "noopener,noreferrer");
     }
+  };
+
+  const handleSupportSubmit = () => {
+    if (!chatStarted) {
+      setChatStarted(true);
+      toast.success("Live chat opened", {
+        description: "You can now send your support message."
+      });
+      return;
+    }
+
+    if (!supportMessage.trim()) {
+      toast.error("Type a message to continue", {
+        description: "You can also attach a photo, file, or audio note."
+      });
+      return;
+    }
+
+    toast.success("Message sent to support", {
+      description: "Our team will respond in the chat thread."
+    });
+    setSupportMessage("");
   };
 
   return (
@@ -180,10 +233,14 @@ const Help = () => {
             <Headphones className="w-8 h-8 text-primary" />
           </div>
           <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            Help & Support
+            Welcome to Cosora's Customer Service — What can we help you with?
           </h1>
           <p className="text-muted-foreground max-w-md mx-auto">
-            Find answers to common questions or get in touch with our support team
+            Find answers to common questions, request a callback, or open a chat with our support team.
+          </p>
+          <p className="mt-2 flex items-center justify-center gap-1 text-sm text-muted-foreground">
+            <Clock className="h-4 w-4" />
+            10:00 AM - 7:00 PM IST · Closed on weekends and holidays
           </p>
         </motion.div>
 
@@ -238,6 +295,159 @@ const Help = () => {
               </CardContent>
             </Card>
           ))}
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+          className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]"
+        >
+          <Card className="border-border overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-3 text-xl">
+                <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                  <Headphones className="h-5 w-5" />
+                </div>
+                Live Support Console
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-border bg-muted/30 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Support Agent</p>
+                  <p className="mt-2 text-lg font-semibold text-foreground">{supportAgent.name}</p>
+                  <p className="text-sm text-muted-foreground">{supportAgent.role}</p>
+                  <p className="mt-3 text-xs text-muted-foreground">{supportAgent.shift}</p>
+                </div>
+                <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Chat status</p>
+                  <p className="mt-2 text-sm font-medium text-foreground">
+                    {chatStarted ? "Conversation active" : "This conversation has been closed"}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">We'll be monitoring the messages while the chat is open.</p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-3 h-9 border-border bg-background"
+                    onClick={() => {
+                      setChatStarted(true);
+                      toast.success("Chat reopened", {
+                        description: "You can now send a support message."
+                      });
+                    }}
+                  >
+                    Start a chat
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-dashed border-border bg-background p-4">
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { icon: Camera, label: "Camera" },
+                    { icon: ImageIcon, label: "Gallery" },
+                    { icon: Paperclip, label: "Files" },
+                    { icon: Mic, label: "Audio" },
+                  ].map((item) => {
+                    const Icon = item.icon;
+
+                    return (
+                      <button
+                        key={item.label}
+                        type="button"
+                        className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+                        onClick={() => toast.info(`${item.label} attachment ready`, { description: "This will attach to your support message." })}
+                      >
+                        <Icon className="h-3.5 w-3.5" />
+                        {item.label}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <Textarea
+                  value={supportMessage}
+                  onChange={(event) => setSupportMessage(event.target.value)}
+                  placeholder="Type your support message..."
+                  className="mt-3 min-h-28 border-border bg-background"
+                />
+
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <p className="text-xs text-muted-foreground">
+                    Audio messages, camera uploads, gallery images, and PDFs can be shared here.
+                  </p>
+                  <Button className="bg-primary hover:bg-primary/90" onClick={handleSupportSubmit}>
+                    <Send className="mr-2 h-4 w-4" />
+                    {chatStarted ? "Send Message" : "Start a chat"}
+                  </Button>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-destructive/15 bg-destructive/5 p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Need to close your account?</p>
+                    <p className="mt-1 text-sm text-muted-foreground">If you want to delete your account, we will route the request to support.</p>
+                  </div>
+                  <Button type="button" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => toast.error("Delete account request started") }>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete my account
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border overflow-hidden">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Support shortcuts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                onClick={() => handleContactAction("Request Callback")}
+              >
+                <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600">
+                  <Phone className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">Request a callback</p>
+                  <p className="text-xs text-muted-foreground">Leave your number for a support call</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                onClick={() => handleContactAction("Email Support")}
+              >
+                <div className="rounded-xl bg-secondary/70 p-2 text-foreground">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">Email support</p>
+                  <p className="text-xs text-muted-foreground">hello@cosora.in</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                onClick={() => handleContactAction("Follow Us")}
+              >
+                <div className="rounded-xl bg-pink-500/10 p-2 text-pink-600">
+                  <Instagram className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-foreground">Follow us on Instagram</p>
+                  <p className="text-xs text-muted-foreground">News, drops, and platform updates</p>
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </CardContent>
+          </Card>
         </motion.div>
 
         {/* FAQ Section */}

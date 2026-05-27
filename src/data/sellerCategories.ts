@@ -28,11 +28,24 @@ export interface SellerCategory {
   commonFields?: FormField[];
 }
 
+// Size options for different garment types
+const standardSizes = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "Plus Size", "Free Size"];
+const pantWaistSizes = ["28", "30", "32", "34", "36", "38", "40", "42", "44", "46"];
+const pantLengths = ["28", "30", "32", "34", "36", "38", "40"];
+const kidsSizes = ["0-3M", "3-6M", "6-12M", "1-2Y", "2-3Y", "3-4Y", "4-5Y", "5-6Y", "6-7Y", "7-8Y", "8-10Y", "10-12Y", "12-14Y"];
+const originCountries = ["India", "China", "Vietnam", "Bangladesh", "Turkey", "Pakistan", "Indonesia", "Sri Lanka"];
+const fashionGenderOptions = ["Men", "Women", "Unisex", "Boys", "Girls", "Kids", "Baby"];
+const fashionOccasionOptions = ["Casual", "Formal", "Sports", "Party", "Beach", "Festive", "Gym Wear", "Work"];
+const fashionCertificationOptions = ["GOTS", "OEKO-TEX", "ISO 9001", "WRAP", "SEDEX", "BCI"];
+
 // Common fields for all product-based sellers
 export const productCommonFields: FormField[] = [
   { id: "moq", label: "Minimum Order Quantity", type: "number", placeholder: "e.g., 100", required: true },
   { id: "leadTime", label: "Lead Time", type: "select", options: ["1-7 days", "7-15 days", "15-30 days", "30+ days"], required: true },
   { id: "location", label: "Location / Origin", type: "text", placeholder: "e.g., Mumbai, India", required: true },
+  { id: "originCountry", label: "Country of Origin", type: "select", options: originCountries, required: true },
+  { id: "customizationAvailable", label: "Customization Available?", type: "checkbox" },
+  { id: "productCertifications", label: "Certifications", type: "multiselect", options: fashionCertificationOptions, fullWidth: true },
 ];
 
 // Common fields for service-based sellers
@@ -50,12 +63,6 @@ export const freelancerCommonFields: FormField[] = [
   { id: "workMode", label: "Work Mode", type: "select", options: ["Remote", "On-site", "Hybrid"] },
   { id: "hourlyRate", label: "Hourly Rate (₹)", type: "number", placeholder: "e.g., 500" },
 ];
-
-// Size options for different garment types
-const standardSizes = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "Free Size"];
-const pantWaistSizes = ["28", "30", "32", "34", "36", "38", "40", "42", "44", "46"];
-const pantLengths = ["28", "30", "32", "34", "36", "38", "40"];
-const kidsSizes = ["0-3M", "3-6M", "6-12M", "1-2Y", "2-3Y", "3-4Y", "4-5Y", "5-6Y", "6-7Y", "7-8Y", "8-10Y", "10-12Y", "12-14Y"];
 
 export const sellerCategories: SellerCategory[] = [
   {
@@ -423,7 +430,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "sleeveType", label: "Sleeve Type", type: "select", options: ["Half Sleeve", "Full Sleeve", "Sleeveless", "3/4 Sleeve", "Raglan"], required: true },
         { id: "fit", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Muscle Fit"], required: true },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Beach", "Festive"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Printed", "Tie-Dye", "Color Block", "Graphic"] },
         { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Do Not Bleach", "Tumble Dry Low"], fullWidth: true },
         { id: "colors", label: "Available Colors", type: "text", placeholder: "e.g., 15+ colors available" },
@@ -436,7 +443,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "cuffType", label: "Cuff Type", type: "select", options: ["Button Cuff", "French Cuff", "Convertible"] },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: ["38", "39", "40", "41", "42", "43", "44", "46", "48"], required: true, fullWidth: true },
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Checked", "Printed", "Dobby", "Self Textured"] },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Formal", "Semi-formal", "Casual", "Party", "Wedding"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Formal", "Semi-formal", "Casual", "Party", "Wedding", "Gym Wear"], fullWidth: true },
         { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Iron Medium"], fullWidth: true },
       ]},
       { id: "mens-pants", name: "Men's Pants/Trousers", fields: [
@@ -468,7 +475,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "sleeveType", label: "Sleeve Type", type: "select", options: ["Sleeveless", "Cap Sleeve", "Short", "3/4th", "Full", "Bell Sleeve", "Puff"], required: true },
         { id: "fit", label: "Fit Type", type: "select", options: ["Regular", "Fitted", "Relaxed", "Boxy", "A-line"] },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Party", "Festive", "Beach", "Work"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Party", "Festive", "Beach", "Work", "Gym Wear"], fullWidth: true },
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Printed", "Striped", "Floral", "Embroidered", "Lace"] },
       ]},
       { id: "womens-dresses", name: "Women's Dresses", fields: [
@@ -478,14 +485,14 @@ export const sellerCategories: SellerCategory[] = [
         { id: "sleeveType", label: "Sleeve Type", type: "select", options: ["Sleeveless", "Cap", "Short", "3/4th", "Full", "Bell", "Cold Shoulder"], required: true },
         { id: "length", label: "Length", type: "select", options: ["Mini (Above Knee)", "Midi (Below Knee)", "Maxi (Floor Length)", "Tea Length"], required: true },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Party", "Wedding", "Cocktail", "Beach", "Formal", "Festive"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Party", "Wedding", "Cocktail", "Beach", "Formal", "Festive", "Gym Wear"], fullWidth: true },
         { id: "closure", label: "Closure", type: "select", options: ["Zip", "Button", "Tie", "Pullover", "Hook"] },
       ]},
       { id: "womens-ethnic", name: "Women's Ethnic Wear", fields: [
         { id: "category", label: "Category", type: "select", options: ["Kurta", "Kurti", "Saree", "Lehenga", "Salwar Suit", "Anarkali", "Palazzo Set"], required: true },
         { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Silk", "Chanderi", "Georgette", "Chiffon", "Rayon", "Brocade", "Velvet"], required: true },
         { id: "work", label: "Work/Embellishment", type: "multiselect", options: ["Embroidered", "Printed", "Zari", "Sequin", "Mirror Work", "Block Print", "Bandhani", "Chikankari"], fullWidth: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Festive", "Wedding", "Party", "Office"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Festive", "Wedding", "Party", "Office", "Gym Wear"], fullWidth: true },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
         { id: "length", label: "Length", type: "select", options: ["Short", "Knee Length", "Calf Length", "Ankle Length", "Floor Length"] },
         { id: "setContains", label: "Set Contains", type: "multiselect", options: ["Kurta", "Bottom", "Dupatta"] },
@@ -496,7 +503,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "garmentType", label: "Garment Type", type: "select", options: ["T-Shirt", "Shirt", "Dress", "Shorts", "Pants", "Set", "Romper", "Onesie"], required: true },
         { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Organic Cotton", "Poly-Cotton", "Fleece", "Denim"], required: true },
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: kidsSizes, required: true, fullWidth: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Party", "Festive", "School", "Sports"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Party", "Festive", "School", "Sports", "Gym Wear"], fullWidth: true },
         { id: "features", label: "Features", type: "multiselect", options: ["Easy Wash", "Skin Safe", "Durable", "Stretchable", "Anti-fade"], fullWidth: true },
       ]},
       { id: "footwear", name: "Footwear", fields: [
@@ -505,7 +512,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "upperMaterial", label: "Upper Material", type: "select", options: ["Leather", "Synthetic", "Canvas", "Mesh", "Suede", "PU"], required: true },
         { id: "soleMaterial", label: "Sole Material", type: "select", options: ["Rubber", "PU", "TPR", "EVA", "Leather", "Phylon"] },
         { id: "sizes", label: "UK Sizes Available", type: "text", placeholder: "e.g., UK 6-11", required: true },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Outdoor"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Outdoor", "Gym Wear"], fullWidth: true },
         { id: "colors", label: "Colors Available", type: "text", placeholder: "e.g., Black, Brown, White, Navy" },
       ]},
       { id: "home-textiles", name: "Home Textiles", fields: [
@@ -523,12 +530,13 @@ export const sellerCategories: SellerCategory[] = [
         { id: "fabric", label: "Fabric", type: "text", placeholder: "e.g., 100% Cotton Jersey", required: true },
         { id: "sizes", label: "Size Range", type: "text", placeholder: "e.g., XS-5XL", required: true },
         { id: "colors", label: "Colors Available", type: "text", placeholder: "e.g., 10+ colors" },
-        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Work", "Outdoor"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
       ]},
     ],
     commonFields: [
       { id: "apparelPattern", label: "Pattern", type: "select", options: ["Solid", "Striped", "Checked", "Printed", "Floral", "Geometric", "Abstract", "Polka Dot", "Camo", "Color Block", "Tie-Dye", "Graphic", "Embroidered", "Self Textured"] },
       { id: "apparelFitType", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Tailored", "Boxy", "A-Line", "Bodycon", "Straight", "Muscle Fit"] },
+      { id: "apparelGender", label: "Gender", type: "multiselect", options: fashionGenderOptions, fullWidth: true },
       { id: "apparelSizes", label: "Sizes", type: "size-selector", options: standardSizes, fullWidth: true },
       { id: "apparelNeckCollar", label: "Neck / Collar Type", type: "select", options: ["Round Neck", "V-Neck", "Crew Neck", "Polo Collar", "Mandarin", "Henley", "Spread Collar", "Button Down", "Boat Neck", "Square Neck", "Sweetheart", "Off-Shoulder", "Halter", "High Neck", "Keyhole", "Cowl Neck", "Shirt Collar", "Stand Collar", "Hood", "N/A"] },
       { id: "apparelSleeveLength", label: "Sleeve / Length Type", type: "select", options: ["Sleeveless", "Cap Sleeve", "Half Sleeve", "3/4 Sleeve", "Full Sleeve", "Bell Sleeve", "Puff Sleeve", "Raglan", "Cold Shoulder", "Rolled Up", "Mini", "Midi", "Maxi", "Knee Length", "Ankle Length", "Floor Length", "N/A"] },

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
   Phone,
@@ -182,16 +182,80 @@ const mockConversations = [
   },
 ];
 
+interface LeadContext {
+  buyerName: string;
+  company: string;
+  location: string;
+  product: string;
+  quantity: number;
+  designFile?: string;
+}
+
+const buildLeadConversation = (lead: LeadContext) => {
+  const initials = lead.buyerName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  return {
+    id: `lead-${lead.company.toLowerCase().replace(/\s+/g, "-")}`,
+    contactName: lead.buyerName,
+    contactAvatar: initials,
+    contactImage: null,
+    lastMessage: `Lead opened for ${lead.product}`,
+    timestamp: "Now",
+    unread: 0,
+    online: false,
+    rfqId: `lead-${lead.company.toLowerCase().replace(/\s+/g, "-")}`,
+    rfqProduct: lead.product,
+    verified: false,
+    rating: 4.5,
+    location: lead.location,
+    messages: [
+      {
+        id: "lead-1",
+        sender: "user",
+        text: `Hi ${lead.buyerName}, thanks for reaching out about ${lead.product}.`,
+        time: "Now",
+        status: "read",
+      },
+      {
+        id: "lead-2",
+        sender: "vendor",
+        text: `I can help with your requirement for ${lead.quantity} units.`,
+        time: "Now",
+        status: "sent",
+      },
+    ],
+  };
+};
+
 const Chat = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { role } = useUserRole();
   const [activeTab, setActiveTab] = useState("chats");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedConversation, setSelectedConversation] = useState<typeof mockConversations[0] | null>(null);
+  const [leadContext, setLeadContext] = useState<LeadContext | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [messages, setMessages] = useState<typeof mockConversations[0]["messages"]>([]);
 
+  useEffect(() => {
+    const leadData = (location.state as { leadData?: LeadContext } | null)?.leadData;
+
+    if (leadData && !leadContext) {
+      const leadConversation = buildLeadConversation(leadData);
+      setLeadContext(leadData);
+      setSelectedConversation(leadConversation as typeof mockConversations[0]);
+      setMessages(leadConversation.messages);
+    }
+  }, [leadContext, location.state]);
+
   const handleSelectConversation = (conv: typeof mockConversations[0]) => {
+    setLeadContext(null);
     setSelectedConversation(conv);
     setMessages(conv.messages);
   };
@@ -217,6 +281,26 @@ const Chat = () => {
 
   const handleViewRFQ = (rfqId: string) => {
     navigate("/quotes");
+  };
+
+  const handleAttachmentAction = (mode: "file" | "camera" | "audio") => {
+    if (mode === "file") {
+      toast.info("Attachment options", {
+        description: "Camera, gallery, files, and audio attachments are available in the next slice.",
+      });
+      return;
+    }
+
+    if (mode === "camera") {
+      toast.info("Camera ready", {
+        description: "Capture a photo or short video for this conversation.",
+      });
+      return;
+    }
+
+    toast.info("Audio message", {
+      description: "Press and hold the microphone to record a voice note.",
+    });
   };
 
   const getCallIcon = (type: string, missed: boolean) => {
@@ -538,6 +622,38 @@ const Chat = () => {
                 <ChevronRight className="h-4 w-4 text-accent" />
               </div>
 
+              {leadContext && (
+                <div className="mx-4 mt-3 rounded-2xl border border-dashed border-accent/30 bg-accent/5 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-accent">Lead Context</p>
+                      <p className="text-sm font-semibold text-foreground">{leadContext.buyerName} · {leadContext.company}</p>
+                    </div>
+                    {leadContext.designFile ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-2"
+                        onClick={() => toast.success(`Opening ${leadContext.designFile}`)}
+                      >
+                        <FileText className="h-4 w-4" />
+                        View Design
+                      </Button>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                    <div className="rounded-xl bg-card p-3 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Buyer Location</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">{leadContext.location}</p>
+                    </div>
+                    <div className="rounded-xl bg-card p-3 shadow-sm">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Requirement</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">{leadContext.product} · Qty {leadContext.quantity}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Messages */}
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-4">
@@ -583,6 +699,7 @@ const Chat = () => {
                       size="sm"
                       variant="ghost"
                       className="h-9 w-9 p-0 rounded-full hover:bg-muted"
+                      onClick={() => handleAttachmentAction("file")}
                     >
                       <Paperclip className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -590,6 +707,7 @@ const Chat = () => {
                       size="sm"
                       variant="ghost"
                       className="h-9 w-9 p-0 rounded-full hover:bg-muted hidden sm:flex"
+                      onClick={() => handleAttachmentAction("camera")}
                     >
                       <Camera className="h-4 w-4 text-muted-foreground" />
                     </Button>
@@ -623,6 +741,7 @@ const Chat = () => {
                       size="sm"
                       variant="ghost"
                       className="h-10 w-10 p-0 rounded-full hover:bg-accent/10"
+                      onClick={() => handleAttachmentAction("audio")}
                     >
                       <Mic className="h-4 w-4 text-accent" />
                     </Button>

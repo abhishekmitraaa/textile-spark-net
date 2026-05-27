@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { Instagram, Facebook, Twitter, Linkedin } from "lucide-react";
 
 const About = () => {
@@ -61,6 +62,9 @@ const About = () => {
                   </div>
                 </div>
               ))}
+              <Button asChild variant="ghost" size="sm" className="h-8 px-2 text-accent hover:bg-accent/10">
+                <Link to="/seller/blogs">View all blogs</Link>
+              </Button>
             </div>
           </CardContent></Card>
         </motion.div>

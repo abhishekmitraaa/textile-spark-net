@@ -1302,7 +1302,7 @@ const Quotes = () => {
 
                   {/* Actions */}
                   <div className="flex gap-3 border-t border-border pt-4">
-                    <Button variant="gold" className="flex-1 gap-2" onClick={() => setIsAcceptDialogOpen(true)}>
+                          <Button variant="gold" className="flex-1 gap-2" onClick={() => setIsAcceptDialogOpen(true)}>
                       <CheckCircle2 size={18} />
                       Accept Quote
                     </Button>
