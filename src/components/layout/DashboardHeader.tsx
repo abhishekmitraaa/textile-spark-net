@@ -1,4 +1,4 @@
-import { Bell, BellRing, Search, Menu, Sparkles, ArrowLeftRight } from "lucide-react";
+import { Bell, BellRing, Search, Menu, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { RoleSwitcher } from "./RoleSwitcher";
@@ -20,16 +20,11 @@ const buyerTabs = [
 ];
 
 export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
-  const { role, setRole } = useUserRole();
+  const { role } = useUserRole();
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
-
-  const handleSwitchToBuyer = () => {
-    setRole("buyer");
-    navigate("/home/new-arrivals");
-  };
 
   return (
     <header className="sticky top-0 z-30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
@@ -51,9 +46,14 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
                 type="button"
                 onClick={() => navigate(homeHref)}
                 aria-label={`Go to ${role === "buyer" ? "buyer" : "seller"} homepage`}
-                className="inline-flex items-center rounded-md font-logo text-xl font-bold italic uppercase tracking-[-0.08em] text-accent transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="inline-flex items-center rounded-md transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               >
-                Cosora
+                <img
+                  src="/cosoravendorlogo.png"
+                  alt="Cosora For Sellers"
+                  className="block h-8 w-auto object-contain sm:h-9"
+                  draggable={false}
+                />
               </button>
               {role === "seller" && (
                 <div className="flex items-center gap-1">
@@ -110,7 +110,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           {/* Seller CTA */}
           {role === "seller" && (
             <Link to="/upload">
-              <Button variant="gold" size="sm" className="hidden sm:inline-flex">
+              <Button variant="gold" size="sm" className="hidden sm:inline-flex bg-[#256fef] text-white hover:bg-[#256fef]/90 shadow-none">
                 New Product
               </Button>
             </Link>
@@ -130,22 +130,6 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           </button>
         </div>
       </div>
-
-      {/* Switch to Buyer banner - seller only */}
-      {role === "seller" && (
-        <div className="bg-accent/10 border-b border-accent/20 py-2 px-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <ArrowLeftRight className="text-accent w-4 h-4" />
-            <span className="text-sm text-accent font-medium">Switch To Buyer Account</span>
-          </div>
-          <button
-            onClick={handleSwitchToBuyer}
-            className="bg-accent text-accent-foreground text-xs px-3 py-1 rounded-full font-medium"
-          >
-            Switch
-          </button>
-        </div>
-      )}
 
       {/* Buyer mobile horizontal tabs */}
       {role === "buyer" && isMobile && (

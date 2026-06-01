@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft, ArrowRight, MessageCircle, MapPin, Upload as UploadIcon,
-  CheckCircle2, Circle, Building2, FileText, Package, FileSignature,
-  Rocket, X, Crop, RotateCw, Eraser, Info, Mail, AlertCircle, BarChart3,
+  ArrowLeft, ArrowRight, ChevronRight, Menu, MessageCircle, MapPin, Upload as UploadIcon,
+  Check, CheckCircle2, Building2, FileText, Package, FileSignature,
+  X, Crop, RotateCw, Eraser, Info, Mail, AlertCircle, BarChart3, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,10 +15,10 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { useVendorOnboardingSummary, vendorOnboardingSummaryFixture } from "@/hooks/useVendorData";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 
 const TOTAL_STEPS = 8;
@@ -28,6 +28,13 @@ const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
 const COLORS = ["Black", "White", "Red", "Blue", "Green", "Yellow", "Pink", "Beige", "Navy", "Grey"];
 const UNITS = ["pieces", "kg", "meters", "sets", "pairs"];
 
+const onboardingMenuLinks = [
+  { label: "Cosora FAQ", href: "/help" },
+  { label: "About Us", href: "/about" },
+  { label: "Terms and conditions", href: "/auth/terms" },
+  { label: "Report Fraud", href: "/report-fraud" },
+];
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
@@ -35,11 +42,16 @@ export default function Onboarding() {
   // Step 2
   const [businessName, setBusinessName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [otpVerified, setOtpVerified] = useState(false);
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
+  const [otpCountdown, setOtpCountdown] = useState(27);
+  const [otpAutoFilled, setOtpAutoFilled] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [countryCode, setCountryCode] = useState("+91");
   const [whatsappOptIn, setWhatsappOptIn] = useState(true);
   const [sameContact, setSameContact] = useState(true);
+  const [primaryContact, setPrimaryContact] = useState("");
   const [hasWebsite, setHasWebsite] = useState(false);
   const [websiteUrl, setWebsiteUrl] = useState("");
 
@@ -47,9 +59,9 @@ export default function Onboarding() {
   const [building, setBuilding] = useState("");
   const [floor, setFloor] = useState("");
   const [area, setArea] = useState("");
-  const [city, setCity] = useState("");
+  const [city, setCity] = useState("Delhi NCR");
   const [landmark, setLandmark] = useState("");
-  const [pincode, setPincode] = useState("");
+  const [addressConfirmed, setAddressConfirmed] = useState(false);
 
   // Step 4
   const [ownerName, setOwnerName] = useState("");
@@ -59,14 +71,22 @@ export default function Onboarding() {
 
   // Step 5
   const [businessImages, setBusinessImages] = useState<string[]>([]);
+  const [businessImagePickerOpen, setBusinessImagePickerOpen] = useState(false);
+  const [businessImageGuidelinesOpen, setBusinessImageGuidelinesOpen] = useState(false);
+  const [businessImageUploads, setBusinessImageUploads] = useState<string[]>([]);
 
   // Step 6
   const [pan, setPan] = useState("");
   const [panStatus, setPanStatus] = useState<"idle" | "verifying" | "success" | "fail">("idle");
+  const [panNameStatus, setPanNameStatus] = useState<"idle" | "verifying" | "success" | "fail">("idle");
   const [cin, setCin] = useState("");
   const [aadhaar, setAadhaar] = useState("");
   const [hasGstin, setHasGstin] = useState(false);
   const [gstin, setGstin] = useState("");
+  const [panFullName, setPanFullName] = useState("Fearce Textiles Pvt Ltd");
+  const [panAddress, setPanAddress] = useState("");
+  const [panDocumentUploads, setPanDocumentUploads] = useState<string[]>([]);
+  const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
   const [step6Success, setStep6Success] = useState(false);
 
   // Step 7
@@ -91,6 +111,8 @@ export default function Onboarding() {
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: onboardingSummary } = useVendorOnboardingSummary();
   const summary = onboardingSummary ?? vendorOnboardingSummaryFixture;
+  const businessImageInputRef = useRef<HTMLInputElement | null>(null);
+  const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (ownerName && !signature) setSignature(ownerName);
@@ -103,19 +125,61 @@ export default function Onboarding() {
     }
   }, [showWelcome, navigate]);
 
-  const sendOtp = () => {
+  useEffect(() => {
+    if (!otpModalOpen) return;
+    const interval = setInterval(() => {
+      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [otpModalOpen]);
+
+  useEffect(() => {
+    if (!otpModalOpen || otpAutoFilled) return;
+    const autoTimer = setTimeout(() => {
+      setOtp("482931");
+      setOtpAutoFilled(true);
+    }, 900);
+    return () => clearTimeout(autoTimer);
+  }, [otpModalOpen, otpAutoFilled]);
+
+  useEffect(() => {
+    if (sameContact) setPrimaryContact(mobile);
+  }, [sameContact, mobile]);
+
+  const startOtpFlow = () => {
     if (!mobile || mobile.length < 10) return toast.error("Enter valid mobile");
-    setOtpSent(true);
+    setOtp("");
+    setOtpAutoFilled(false);
+    setOtpCountdown(27);
+    setOtpModalOpen(true);
+    setIsVerifying(true);
     toast.success("OTP sent");
   };
-  const verifyOtp = () => {
-    if (otp.length === 6) { setOtpVerified(true); toast.success("Mobile verified"); }
+  const confirmOtp = () => {
+    if (otp.length !== 6) return;
+    setOtpVerified(true);
+    setOtpModalOpen(false);
+    setIsVerifying(false);
+    toast.success("Mobile verified");
+  };
+
+  const resendOtp = () => {
+    setOtp("");
+    setOtpAutoFilled(false);
+    setOtpCountdown(27);
+    toast.success("OTP resent");
   };
 
   const verifyPan = () => {
     if (!pan || pan.length < 10) return setPanStatus("fail");
     setPanStatus("verifying");
     setTimeout(() => setPanStatus(/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan.toUpperCase()) ? "success" : "fail"), 1200);
+  };
+
+  const verifyPanName = () => {
+    if (!panFullName.trim()) return setPanNameStatus("fail");
+    setPanNameStatus("verifying");
+    setTimeout(() => setPanNameStatus(panFullName.toLowerCase().includes("fearce") ? "fail" : "success"), 1200);
   };
 
   const onPickImages = (e: React.ChangeEvent<HTMLInputElement>, setter: (urls: string[]) => void, current: string[], max: number) => {
@@ -144,17 +208,58 @@ export default function Onboarding() {
     setShowWelcome(true);
   };
 
-  const checklist = [
-    { label: "Business Info", icon: Building2, done: currentStep > 4 },
-    { label: "Documents", icon: FileText, done: currentStep > 6 },
-    { label: "Products", icon: Package, done: currentStep > 7 },
-    { label: "Contract", icon: FileSignature, done: currentStep > 8 },
-    { label: "Go Live", icon: Rocket, done: false },
+  const businessInfoComplete = currentStep > 4;
+  const overviewSteps = [
+    {
+      label: "Business information",
+      helper: "Edit details >",
+      icon: Building2,
+      state: "done",
+    },
+    {
+      label: "Business documents",
+      helper: "Continue >",
+      icon: FileText,
+      state: businessInfoComplete ? "active" : "locked",
+    },
+    {
+      label: "Products details",
+      helper: "Category, Products.",
+      icon: Package,
+      state: currentStep > 6 ? "locked" : "locked",
+    },
+    {
+      label: "Partner contract",
+      helper: "",
+      icon: FileSignature,
+      state: "locked",
+    },
   ];
+
+  const maskedMobile = mobile
+    ? mobile.replace(/(\d{2})\d+(\d{2})/, "$1******$2")
+    : "XXXXXXXXXX";
+  const canContinueStep2 =
+    businessName.trim().length > 0 &&
+    mobile.trim().length >= 10 &&
+    otpVerified &&
+    (!hasWebsite || websiteUrl.trim().length > 0) &&
+    (sameContact || primaryContact.trim().length >= 10);
+  const canAddAddress = area.trim().length > 0;
+  const canSaveOwner =
+    ownerName.trim().length > 0 &&
+    ownerEmail.trim().length > 0 &&
+    country.trim().length > 0;
+  const canUploadBusinessImages = businessImageUploads.length > 0;
+  const canSubmitPanDocuments =
+    pan.trim().length > 0 &&
+    panFullName.trim().length > 0 &&
+    panAddress.trim().length > 0 &&
+    panDocumentUploads.length > 0;
 
   if (showWelcome) {
     return (
-      <div className="fixed inset-0 bg-[#256fef] text-white flex items-center justify-center overflow-hidden z-50">
+      <div className="vendor-shell fixed inset-0 bg-[#256fef] text-white flex items-center justify-center overflow-hidden z-50">
         {Array.from({ length: 30 }).map((_, i) => (
           <motion.div
             key={i}
@@ -171,7 +276,12 @@ export default function Onboarding() {
         <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative z-10 w-full max-w-4xl px-4 sm:px-6">
           <div className="rounded-[2rem] border border-[#d0d4dc] bg-white p-6 shadow-2xl backdrop-blur-md sm:p-8">
             <div className="text-center">
-              <div className="font-logo text-5xl font-bold italic uppercase tracking-[-0.08em] mb-4">Cosora</div>
+              <img
+                src="/cosoravendorlogo.png"
+                alt="Cosora For Sellers"
+                className="mx-auto mb-4 h-14 w-auto object-contain sm:h-16"
+                draggable={false}
+              />
               <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
               <p className="text-lg md:text-xl">Welcome to Cosora 🎉</p>
               <p className="mt-2 text-sm text-white/80">Your seller profile is live and we are surfacing the next actions that will improve your reach.</p>
@@ -278,20 +388,109 @@ export default function Onboarding() {
     );
   }
 
+  if (currentStep === 4 && step4Success) {
+    return (
+      <BusinessInfoSuccessScreen
+        text="Business information added"
+        onContinue={() => {
+          setStep4Success(false);
+          setCurrentStep(5);
+        }}
+      />
+    );
+  }
+
+  const isBusinessInfoStep = currentStep >= 2 && currentStep <= 4;
+
   return (
-    <div className="min-h-screen bg-background pb-32">
-      {/* Progress */}
-      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b p-4">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center justify-between mb-2">
-            <button onClick={goPrev} disabled={currentStep === 1} className="text-sm text-[#363636] disabled:opacity-30 flex items-center gap-1">
-              <ArrowLeft className="w-4 h-4" /> Back
+    <div className="vendor-shell min-h-screen bg-background pb-32">
+      {isBusinessInfoStep ? (
+        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]">
+          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+            <button
+              type="button"
+              onClick={goPrev}
+              className="flex h-8 w-8 items-center justify-center rounded-full text-[#363636]"
+              aria-label="Back"
+            >
+              <ArrowLeft className="h-4 w-4" />
             </button>
-            <span className="text-sm font-medium text-[#363636]">Step {currentStep} of {TOTAL_STEPS}</span>
+            <Link to="/help" className="text-sm font-medium text-[#256fef]">
+              Help?
+            </Link>
           </div>
-          <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2 [&>div]:bg-[#256fef]" />
+          <BusinessInfoStepper currentStep={currentStep} />
+        </header>
+      ) : (
+        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+            <Link to="/" className="block">
+              <img
+                src="/cosoravendorlogo.png"
+                alt="Cosora For Sellers"
+                className="block h-9 w-auto object-contain sm:h-10"
+                draggable={false}
+              />
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                >
+                  Login
+                </Button>
+              </Link>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                  <SheetHeader>
+                    <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                      Cosora Menu
+                    </SheetTitle>
+                  </SheetHeader>
+                  <nav className="mt-4 space-y-2">
+                    {onboardingMenuLinks.map((item) => (
+                      <Link
+                        key={item.label}
+                        to={item.href}
+                        className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                      >
+                        {item.label}
+                        <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                      </Link>
+                    ))}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </header>
+      )}
+
+      {/* Progress */}
+      {currentStep > 4 && (
+        <div className="sticky top-16 z-40 border-b bg-background/95 p-4 backdrop-blur">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-2">
+              <button onClick={goPrev} disabled={currentStep === 1} className="text-sm text-[#363636] disabled:opacity-30 flex items-center gap-1">
+                <ArrowLeft className="w-4 h-4" /> Back
+              </button>
+              <span className="text-sm font-medium text-[#363636]">Step {currentStep} of {TOTAL_STEPS}</span>
+            </div>
+            <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2 [&>div]:bg-[#256fef]" />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="max-w-2xl mx-auto p-4">
         <AnimatePresence mode="wait">
@@ -305,115 +504,356 @@ export default function Onboarding() {
             {/* STEP 1 */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                <div>
-                  <h1 className="font-display text-2xl font-bold mb-1">Welcome! Let's set up your business</h1>
-                  <p className="text-sm text-[#363636]">Complete these steps to start selling on Cosora</p>
+                <div className="rounded-2xl bg-[#363636] p-5 text-white">
+                  <h1 className="font-display text-2xl font-bold">Get started, it takes only 10 minutes</h1>
+                  <p className="mt-2 text-sm text-[#ef4d62]">0% commission, get sales across globe.</p>
                 </div>
-                <img
-                  src="/vendorhelp.png"
-                  alt="Get started, it takes only 10 minutes"
-                  className="w-full rounded-xl shadow-sm"
-                />
+
                 <div className="space-y-3">
-                  {checklist.map((item, i) => {
+                  {overviewSteps.map((item) => {
                     const Icon = item.icon;
-                    const isDocs = item.label === "Documents" || item.label.toLowerCase().includes("document");
+                    const isLocked = item.state === "locked";
+                    const iconStyle = isLocked
+                      ? "bg-[#f5f5f5] text-[#d0d4dc] border-[#d0d4dc]"
+                      : "bg-[#256fef]/10 text-[#256fef] border-[#256fef]/30";
+                    const labelStyle = isLocked ? "text-[#d0d4dc]" : "text-[#363636]";
+                    const helperStyle = isLocked ? "text-[#d0d4dc]" : "text-[#256fef]";
+
                     return (
-                      <div key={i} className={cn("flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm", item.done && "border-[#256fef]/30 bg-[#256fef]/5")}>
-                        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", item.done ? "bg-[#256fef] text-white" : "bg-[#f5f5f5] text-[#363636]")}>
-                          {item.done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                      <div key={item.label} className="flex items-center gap-3 rounded-xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
+                        <div className={cn("h-10 w-10 rounded-full border flex items-center justify-center", iconStyle)}>
+                          <Icon className="h-5 w-5" />
                         </div>
                         <div className="flex-1">
-                          <p className={cn("font-medium", item.done ? "text-[#256fef]" : isDocs ? "text-[#d0d4dc]" : "text-[#363636]")}>{item.label}</p>
+                          <p className={cn("text-sm font-semibold", labelStyle)}>{item.label}</p>
+                          {item.helper && <p className={cn("text-xs", helperStyle)}>{item.helper}</p>}
                         </div>
-                        {item.done && <Badge className="bg-[#256fef]/10 text-[#256fef]">Done</Badge>}
                       </div>
                     );
                   })}
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-xl border border-[#d0d4dc] bg-white p-4 text-left text-sm font-medium text-[#363636] shadow-sm"
+                      >
+                        Documents required for registration
+                        <ChevronRight className="h-4 w-4 text-[#363636]/70" />
+                      </button>
+                    </DialogTrigger>
+                    <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                      <DialogHeader>
+                        <DialogTitle className="text-sm font-semibold text-[#363636]">
+                          Please be ready with the following for a smooth registration
+                        </DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4 space-y-3 text-sm text-[#363636]">
+                        {[
+                          "PAN card",
+                          "CIN details",
+                          "Aadhaar card",
+                          "GST number, if applicable",
+                          "Primary information",
+                        ].map((item) => (
+                          <div key={item} className="flex items-center gap-2">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#14ae5c]">
+                              <Check className="h-3 w-3 text-white" />
+                            </span>
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <Button className="mt-5 w-full rounded-full bg-[#256fef] text-white">Okay</Button>
+                    </DialogContent>
+                  </Dialog>
                 </div>
-                <div className="flex items-center justify-between">
-                  <button className="text-sm text-[#256fef] underline">Edit Details</button>
-                  <Button onClick={goNext} className="bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Continue</Button>
-                </div>
+
+                <Button onClick={goNext} className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0]">
+                  Edit details
+                </Button>
               </div>
             )}
 
             {/* STEP 2 */}
             {currentStep === 2 && (
-              <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Business Details</h2>
+              <div className="space-y-6">
+                <h2 className="font-display text-2xl font-bold text-[#363636]">Business Details</h2>
+
                 <div className="space-y-2">
-                  <p className="text-sm text-[#363636]">Complete these steps to start selling on Cosora</p>
-                  <Input value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Enter business name" />
+                  <Label className="text-sm font-medium text-[#363636]">Business name*</Label>
+                  <p className="text-xs text-[#363636]/70">Customers will see this name on Cosora</p>
+                  <Input
+                    value={businessName}
+                    onChange={(e) => setBusinessName(e.target.value)}
+                    placeholder="Business name"
+                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  />
                 </div>
+
                 <div className="space-y-2">
-                  <Label>Mobile Number</Label>
-                  <div className="flex gap-2">
-                    <Input value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91 XXXXXXXXXX" disabled={otpVerified} />
-                    {!otpVerified && <Button type="button" variant="outline" onClick={sendOtp}>{otpSent ? "Resend" : "Verify"}</Button>}
-                    {otpVerified && <Badge className="bg-[#14ae5c]/10 text-[#14ae5c] self-center">Verified ✓</Badge>}
+                  <Label className="text-sm font-medium text-[#363636]">Mobile Number*</Label>
+                  <div className="flex items-center gap-2">
+                    <Select value={countryCode} onValueChange={setCountryCode}>
+                      <SelectTrigger className="h-11 w-24 rounded-xl border-[#d0d4dc] text-xs">
+                        <SelectValue placeholder="+91" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="+91">🇮🇳 +91</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      value={mobile}
+                      onChange={(e) => setMobile(e.target.value)}
+                      placeholder="Phone number"
+                      className="h-11 flex-1 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      inputMode="numeric"
+                      maxLength={10}
+                      disabled={otpVerified}
+                    />
+                    {!otpVerified && (
+                      <Button
+                        type="button"
+                        className="h-11 rounded-full bg-[#256fef] px-4 text-white"
+                        onClick={startOtpFlow}
+                        disabled={isVerifying}
+                      >
+                        {isVerifying ? "Verifying..." : "Verify"}
+                      </Button>
+                    )}
+                    {otpVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[#14ae5c] px-3 py-1 text-xs font-medium text-white">
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        Verified
+                      </span>
+                    )}
                   </div>
-                  {otpSent && !otpVerified && (
-                    <div className="flex items-center gap-2 pt-2">
-                      <InputOTP maxLength={6} value={otp} onChange={setOtp}>
-                        <InputOTPGroup>
-                          {[0,1,2,3,4,5].map((i) => <InputOTPSlot key={i} index={i} />)}
-                        </InputOTPGroup>
-                      </InputOTP>
-                      <Button size="sm" onClick={verifyOtp}>Confirm</Button>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
+                    <Label htmlFor="wa" className="cursor-pointer text-sm text-[#363636]">Get business updates via WhatsApp</Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Business's primary contact number*</Label>
+                  <p className="text-xs text-[#363636]/70">Customers, support team may call you on this number</p>
+                  <Input
+                    value={primaryContact}
+                    onChange={(e) => setPrimaryContact(e.target.value)}
+                    placeholder="Primary contact number"
+                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    inputMode="numeric"
+                    maxLength={10}
+                    disabled={sameContact}
+                  />
+                  <div className="flex items-center gap-2">
+                    <Checkbox id="same" checked={sameContact} onCheckedChange={(v) => setSameContact(!!v)} />
+                    <Label htmlFor="same" className="cursor-pointer text-sm text-[#363636]">Same as owner mobile number</Label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Website</Label>
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setHasWebsite(true)}
+                      className={cn(
+                        "rounded-full border px-4 py-1.5 text-sm",
+                        hasWebsite ? "border-[#256fef] text-[#256fef]" : "border-[#d0d4dc] text-[#363636]",
+                      )}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setHasWebsite(false)}
+                      className={cn(
+                        "rounded-full border px-4 py-1.5 text-sm",
+                        !hasWebsite ? "border-[#256fef] text-[#256fef]" : "border-[#d0d4dc] text-[#363636]",
+                      )}
+                    >
+                      None
+                    </button>
+                  </div>
+                  {hasWebsite && (
+                    <Input
+                      value={websiteUrl}
+                      onChange={(e) => setWebsiteUrl(e.target.value)}
+                      placeholder="https://yourwebsite.com"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
                   )}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
-                  <Label htmlFor="wa" className="cursor-pointer">Get business updates on WhatsApp</Label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Checkbox id="same" checked={sameContact} onCheckedChange={(v) => setSameContact(!!v)} />
-                  <Label htmlFor="same" className="cursor-pointer">Primary contact same as above</Label>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label>Do you have a website?</Label>
-                    <Switch checked={hasWebsite} onCheckedChange={setHasWebsite} />
-                  </div>
-                  {hasWebsite && <Input value={websiteUrl} onChange={(e) => setWebsiteUrl(e.target.value)} placeholder="https://yourwebsite.com" />}
-                </div>
-                <Button onClick={goNext} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Continue</Button>
+
+                <Button
+                  onClick={goNext}
+                  disabled={!canContinueStep2}
+                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </Button>
               </div>
             )}
 
             {/* STEP 3 */}
             {currentStep === 3 && (
-              <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Business Address</h2>
-                <div className="relative rounded-xl bg-[#f5f5f5] h-40 flex items-center justify-center overflow-hidden">
-                  <MapPin className="w-10 h-10 text-[#363636]" />
-                  <Button size="sm" className="absolute bottom-3 bg-[#256fef] text-white rounded-full px-3 py-1 hover:bg-[#1f5fe0]">Mark your business location</Button>
+              <div className="space-y-6">
+                <h2 className="font-display text-2xl font-bold text-[#363636]">Business Address</h2>
+
+                <div className="space-y-3">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#363636]/60" />
+                    <Input
+                      placeholder="Search for area, street name"
+                      className="h-11 rounded-xl border-[#d0d4dc] pl-9 focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+
+                  <div className="relative overflow-hidden rounded-2xl border border-[#d0d4dc]">
+                    <iframe
+                      title="Business location"
+                      className="h-56 w-full"
+                      src="https://maps.google.com/maps?q=Delhi%20NCR&t=&z=13&ie=UTF8&iwloc=&output=embed"
+                      loading="lazy"
+                    />
+                    <div className="pointer-events-none absolute inset-0">
+                      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+                        <div className="mb-2 rounded-full bg-white px-3 py-1 text-[10px] font-medium text-[#363636] shadow">
+                          This is your business location
+                          <span className="ml-1 text-[#363636]/70">Move pin to add to exact location</span>
+                        </div>
+                        <div className="flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-[#256fef]/15 flex items-center justify-center">
+                            <MapPin className="h-6 w-6 text-[#256fef]" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-[#363636] shadow"
+                    >
+                      <MapPin className="h-4 w-4 text-[#256fef]" />
+                      Use current location
+                    </button>
+                  </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2"><Label>Building no. (optional)</Label><Input value={building} onChange={(e) => setBuilding(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Floor/Tower (optional)</Label><Input value={floor} onChange={(e) => setFloor(e.target.value)} /></div>
-                  <div className="space-y-2 col-span-2"><Label>Area / Locality *</Label><Input value={area} onChange={(e) => setArea(e.target.value)} required /></div>
-                  <div className="space-y-2"><Label>City *</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>
-                  <div className="space-y-2"><Label>Pincode *</Label><Input value={pincode} onChange={(e) => setPincode(e.target.value)} /></div>
-                  <div className="space-y-2 col-span-2"><Label>Landmark (optional)</Label><Input value={landmark} onChange={(e) => setLandmark(e.target.value)} /></div>
+
+                <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-[#363636]">Complete business address</h3>
+                    <button type="button" className="text-[#363636]/70">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-[#363636]">Shop no. / building no. (optional)</Label>
+                    <Input
+                      value={building}
+                      onChange={(e) => setBuilding(e.target.value)}
+                      placeholder="Shop no. / building no. (optional)"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-[#363636]">Floor / tower (optional)</Label>
+                    <Input
+                      value={floor}
+                      onChange={(e) => setFloor(e.target.value)}
+                      placeholder="Floor / tower (optional)"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-[#363636]">Area / Sector / Locality*</Label>
+                    <Input
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      placeholder="Area / Sector / Locality*"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-[#363636]">City</Label>
+                    <Input
+                      value={city}
+                      onChange={(e) => setCity(e.target.value)}
+                      placeholder="City"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium text-[#363636]">Add any nearby landmark (optional)</Label>
+                    <Input
+                      value={landmark}
+                      onChange={(e) => setLandmark(e.target.value)}
+                      placeholder="Add any nearby landmark (optional)"
+                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  </div>
+                  <p className="text-xs text-[#ef4d62]">
+                    Please ensure that this address is the same as mentioned on your licence
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      if (!canAddAddress) return;
+                      setAddressConfirmed(true);
+                      toast.success("Business address added");
+                    }}
+                    disabled={!canAddAddress}
+                    className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Add business address
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={goNext}
+                    disabled={!addressConfirmed}
+                    className="w-full rounded-full border border-[#256fef] text-[#256fef] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Save business address
+                  </Button>
                 </div>
-                <p className="text-xs text-[#363636] italic">Please ensure this address matches your license</p>
-                <Button onClick={goNext} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Continue</Button>
               </div>
             )}
 
             {/* STEP 4 */}
             {currentStep === 4 && !step4Success && (
-              <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Owner Details</h2>
-                <div className="space-y-2"><Label>Full Name</Label><Input value={ownerName} onChange={(e) => setOwnerName(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Email Address</Label><Input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} /></div>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="font-display text-2xl font-bold text-[#363636]">Owner details</h2>
+                  <p className="mt-1 text-xs text-[#363636]/70">
+                    Cosora will use these details for all business communications and updates
+                  </p>
+                </div>
                 <div className="space-y-2">
-                  <Label>Registered Country</Label>
+                  <Label className="text-sm font-medium text-[#363636]">Full name*</Label>
+                  <Input
+                    value={ownerName}
+                    onChange={(e) => setOwnerName(e.target.value)}
+                    placeholder="Full name"
+                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Email address*</Label>
+                  <Input
+                    type="email"
+                    value={ownerEmail}
+                    onChange={(e) => setOwnerEmail(e.target.value)}
+                    placeholder="name@company.com"
+                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Registered country*</Label>
                   <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl border-[#d0d4dc]">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="IN">India</SelectItem>
                       <SelectItem value="US">United States</SelectItem>
@@ -422,93 +862,376 @@ export default function Onboarding() {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={goNext} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Submit</Button>
+                <Button
+                  onClick={goNext}
+                  disabled={!canSaveOwner}
+                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Save
+                </Button>
               </div>
-            )}
-            {currentStep === 4 && step4Success && (
-              <SuccessScreen text="Business information added" onContinue={() => { setStep4Success(false); setCurrentStep(5); }} />
             )}
 
             {/* STEP 5 */}
             {currentStep === 5 && (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-display text-2xl font-bold">Business Images</h2>
-                  <Dialog>
-                    <DialogTrigger asChild>
-                      <Button variant="ghost" size="sm"><Info className="w-4 h-4 mr-1" />Guidelines</Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader><DialogTitle>Image Guidelines</DialogTitle></DialogHeader>
-                      <ul className="space-y-2 text-sm text-[#363636] list-disc pl-5">
-                        <li>Show a clear entrance of your business</li>
-                        <li>Upload HD images only</li>
-                        <li>No humans in the frame</li>
-                        <li>No blurry or low-light images</li>
-                      </ul>
-                    </DialogContent>
-                  </Dialog>
+              <div className="space-y-6">
+                <div className="flex items-start gap-3">
+                  <button type="button" onClick={goPrev} className="mt-1 text-[#363636]" aria-label="Back">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div className="text-center flex-1">
+                    <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
+                    <p className="text-xs text-[#363636]/70">For Sellers</p>
+                  </div>
+                  <div className="w-4" />
                 </div>
-                <p className="text-sm text-[#363636]">Upload at least one entrance image of your business</p>
-                <label className="block rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] p-8 text-center cursor-pointer hover:bg-[#eef0f3]">
-                  <UploadIcon className="w-8 h-8 mx-auto text-[#363636] mb-2" />
-                  <p className="text-sm font-medium">Click to upload or drag &amp; drop</p>
-                  <p className="text-xs text-[#363636] mt-1">PNG, JPG up to 10MB</p>
-                  <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickImages(e, setBusinessImages, businessImages, 6)} />
-                </label>
-                {businessImages.length > 0 && (
+
+                <div className="space-y-2">
+                  <h2 className="text-lg font-semibold text-[#363636]">Add business images</h2>
+                  <p className="text-sm font-normal text-[#363636]">
+                    Upload at least one entrance image of your business along with interior images, for your Cosora page.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  className="w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                  onClick={() => setBusinessImagePickerOpen(true)}
+                >
+                  <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
+                  <p className="mt-3 font-semibold text-[#256fef]">Add business images</p>
+                  <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or jpg formats up to 5MB</p>
+                </button>
+
+                <Dialog open={businessImagePickerOpen} onOpenChange={setBusinessImagePickerOpen}>
+                  <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                    <DialogHeader>
+                      <DialogTitle className="text-base font-semibold text-[#363636]">Select images</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-[#363636]"
+                        onClick={() => businessImageInputRef.current?.click()}
+                      >
+                        <UploadIcon className="h-6 w-6 text-[#256fef]" />
+                        <span className="mt-2 text-sm font-medium">Camera</span>
+                      </button>
+                      <button
+                        type="button"
+                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-[#363636]"
+                        onClick={() => businessImageInputRef.current?.click()}
+                      >
+                        <UploadIcon className="h-6 w-6 text-[#256fef]" />
+                        <span className="mt-2 text-sm font-medium">Browse</span>
+                      </button>
+                    </div>
+                    <div className="mt-4 grid grid-cols-3 gap-2">
+                      {Array.from({ length: 9 }).map((_, index) => (
+                        <button key={index} type="button" className="aspect-square rounded-xl bg-[#eef0f3] border border-[#d0d4dc] relative overflow-hidden">
+                          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent" />
+                        </button>
+                      ))}
+                    </div>
+                    <Button className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold" onClick={() => setBusinessImagePickerOpen(false)}>
+                      Done
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog open={businessImageGuidelinesOpen} onOpenChange={setBusinessImageGuidelinesOpen}>
+                  <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                    <DialogHeader>
+                      <DialogTitle className="text-base font-semibold text-[#363636]">Image upload guidelines</DialogTitle>
+                    </DialogHeader>
+                    <div className="mt-4 space-y-3">
+                      {[
+                        {
+                          text: "A clear entrance image of your business is required, showing only your business.",
+                          type: "check",
+                        },
+                        {
+                          text: "The entrance image should not show a closed shutter; otherwise, it will be rejected.",
+                          type: "cross",
+                        },
+                        {
+                          text: "Submit clear HD photos of your business interiors. Ensure they are authentic and not stock images.",
+                          type: "check",
+                        },
+                        {
+                          text: "Blurry, clipped, low-quality photos, or those with human elements will be rejected.",
+                          type: "cross",
+                        },
+                      ].map((item) => (
+                        <div key={item.text} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-[#d0d4dc] p-2">
+                          <div className="relative h-20 overflow-hidden rounded-lg bg-gradient-to-br from-[#dbeafe] to-[#f5f5f5]">
+                            <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", item.type === "check" ? "bg-[#14ae5c]" : "bg-[#ef4d62]") }>
+                              {item.type === "check" ? <Check className="h-3.5 w-3.5 text-white" /> : <X className="h-3.5 w-3.5 text-white" />}
+                            </div>
+                          </div>
+                          <p className="text-sm text-[#363636]">{item.text}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                      onClick={() => {
+                        setBusinessImageGuidelinesOpen(false);
+                        setBusinessImagePickerOpen(true);
+                      }}
+                    >
+                      Upload now
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+
+                <button
+                  type="button"
+                  className="text-sm text-[#256fef] underline"
+                  onClick={() => setBusinessImageGuidelinesOpen(true)}
+                >
+                  Guidelines to upload business images
+                </button>
+
+                {businessImageUploads.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
-                    {businessImages.map((src, i) => (
-                      <div key={i} className="relative aspect-square rounded-lg overflow-hidden border">
-                        <img src={src} alt="" className="w-full h-full object-cover" />
-                        <button onClick={() => setBusinessImages(businessImages.filter((_, j) => j !== i))} className="absolute top-1 right-1 bg-background/90 rounded-full p-1">
-                          <X className="w-3 h-3" />
+                    {businessImageUploads.map((src, i) => (
+                      <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
+                        <img src={src} alt="Business upload" className="h-full w-full object-cover" />
+                        <button
+                          type="button"
+                          className="absolute right-1 top-1 rounded-full bg-white p-1 shadow"
+                          onClick={() => setBusinessImageUploads((items) => items.filter((_, index) => index !== i))}
+                        >
+                          <X className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
-                <Button onClick={goNext} disabled={businessImages.length === 0} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Continue</Button>
+
+                <Button
+                  onClick={() => setCurrentStep(6)}
+                  disabled={!canUploadBusinessImages}
+                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </Button>
+
+                <input
+                  ref={businessImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const urls = files.map((file) => URL.createObjectURL(file));
+                    setBusinessImageUploads((current) => [...current, ...urls]);
+                    if (files.length > 0) {
+                      setBusinessImageGuidelinesOpen(false);
+                      setBusinessImagePickerOpen(false);
+                    }
+                  }}
+                />
               </div>
             )}
 
             {/* STEP 6 */}
             {currentStep === 6 && !step6Success && (
-              <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Business Documents</h2>
-                <div className="space-y-2">
-                  <Label>PAN Number</Label>
-                  <div className="flex gap-2">
-                    <Input value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} />
-                    <Button type="button" variant="outline" onClick={verifyPan} disabled={panStatus === "verifying"}>
-                      {panStatus === "verifying" ? "Verifying..." : "Verify"}
-                    </Button>
-                  </div>
-                  {panStatus === "success" && <p className="text-sm text-[#14ae5c]">Verified ✓</p>}
-                  {panStatus === "fail" && <p className="text-sm text-destructive">Verification failed: invalid PAN format</p>}
-                </div>
-                <div className="space-y-2"><Label>CIN Number</Label><Input value={cin} onChange={(e) => setCin(e.target.value)} /></div>
-                <div className="space-y-2"><Label>Aadhaar Number</Label><Input value={aadhaar} onChange={(e) => setAadhaar(e.target.value)} placeholder="XXXX XXXX XXXX" /></div>
+              <div className="space-y-6 pb-14">
                 <div className="flex items-center justify-between">
-                  <Label>Do you have GSTIN?</Label>
-                  <Switch checked={hasGstin} onCheckedChange={setHasGstin} />
+                  <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-full text-[#363636]" aria-label="Back">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <h2 className="text-base font-semibold text-[#363636]">Business documents</h2>
+                  <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-[#363636]">1 of 4</span>
                 </div>
-                {hasGstin && <Input value={gstin} onChange={(e) => setGstin(e.target.value)} placeholder="GSTIN Number" />}
+
+                <div>
+                  <h3 className="text-lg font-semibold text-[#363636]">PAN details</h3>
+                </div>
+
                 <div className="space-y-2">
-                  <Label>Upload PAN card scan</Label>
-                  <Input type="file" accept="image/*,application/pdf" />
-                </div>
-                {hasGstin && (
-                  <div className="space-y-2">
-                    <Label>Upload GST certificate</Label>
-                    <Input type="file" accept="image/*,application/pdf" />
+                  <Label className="text-sm font-medium text-[#363636]">PAN number*</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={pan}
+                      onChange={(e) => setPan(e.target.value.toUpperCase())}
+                      placeholder=""
+                      maxLength={10}
+                      className={cn(
+                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
+                        panStatus === "success" && "border-[#14ae5c]",
+                        panStatus === "fail" && "border-red-500",
+                      )}
+                      disabled={panStatus === "verifying"}
+                    />
+                    {panStatus === "verifying" ? (
+                      <span className="text-sm text-[#363636]/70">Verifying...</span>
+                    ) : panStatus === "success" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#14ae5c]">
+                        <Check className="h-4 w-4" /> Verified
+                      </span>
+                    ) : panStatus === "fail" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
+                        <AlertCircle className="h-4 w-4" /> Verification failed
+                      </span>
+                    ) : (
+                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={verifyPan}>
+                        Verify
+                      </Button>
+                    )}
                   </div>
-                )}
-                <Button onClick={goNext} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Submit</Button>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Full name as per PAN*</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={panFullName}
+                      onChange={(e) => setPanFullName(e.target.value)}
+                      className={cn(
+                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
+                        panNameStatus === "fail" && "border-red-500",
+                        panNameStatus === "success" && "border-[#14ae5c]",
+                      )}
+                    />
+                    {panNameStatus === "verifying" ? (
+                      <span className="text-sm text-[#363636]/70">Verifying...</span>
+                    ) : panNameStatus === "fail" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
+                        <AlertCircle className="h-4 w-4" /> Verification failed
+                      </span>
+                    ) : panNameStatus === "success" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#14ae5c]">
+                        <Check className="h-4 w-4" /> Verified
+                      </span>
+                    ) : (
+                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={verifyPanName}>
+                        Verify
+                      </Button>
+                    )}
+                  </div>
+                  {panNameStatus === "fail" && (
+                    <p className="text-xs text-[#ef4d62]">We couldn't verify your PAN name. Please enter it exactly as shown on your PAN card.</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-[#363636]">Full address of your registered business*</Label>
+                  <Input
+                    value={panAddress}
+                    onChange={(e) => setPanAddress(e.target.value)}
+                    className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  />
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-[#d0d4dc] p-4">
+                  <button
+                    type="button"
+                    className="block w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                    onClick={() => panDocumentInputRef.current?.click()}
+                  >
+                    <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
+                    <p className="mt-3 font-semibold text-[#256fef]">Upload your PAN</p>
+                    <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf formats up to 5MB</p>
+                  </button>
+                  <button type="button" className="text-sm text-[#256fef] underline" onClick={() => setPanGuidelinesOpen(true)}>
+                    Guidelines to upload PAN
+                  </button>
+                  {panDocumentUploads.length > 0 && (
+                    <div className="grid grid-cols-3 gap-2">
+                      {panDocumentUploads.map((src, i) => (
+                        <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
+                          <img src={src} alt="PAN upload" className="h-full w-full object-cover" />
+                          <button type="button" className="absolute right-1 top-1 rounded-full bg-white p-1 shadow" onClick={() => setPanDocumentUploads((items) => items.filter((_, index) => index !== i))}>
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <Dialog open={panGuidelinesOpen} onOpenChange={setPanGuidelinesOpen}>
+                    <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                      <DialogHeader>
+                        <DialogTitle className="text-base font-semibold text-[#363636]">Image upload guidelines</DialogTitle>
+                      </DialogHeader>
+                      <div className="mt-4 space-y-3">
+                        {[
+                          "Click a clear image. Make sure all details are visible.",
+                          "Image should not be blurry",
+                          "Image should not be zoomed in or cropped",
+                        ].map((item, index) => (
+                          <div key={item} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-[#d0d4dc] p-2">
+                            <div className="relative h-20 overflow-hidden rounded-lg bg-gradient-to-br from-[#dbeafe] to-[#f5f5f5]">
+                              <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", index === 0 ? "bg-[#14ae5c]" : "bg-[#ef4d62]") }>
+                                {index === 0 ? <Check className="h-3.5 w-3.5 text-white" /> : <X className="h-3.5 w-3.5 text-white" />}
+                              </div>
+                            </div>
+                            <p className="text-sm text-[#363636]">{item}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <Button
+                        className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                        onClick={() => {
+                          setPanGuidelinesOpen(false);
+                          panDocumentInputRef.current?.click();
+                        }}
+                      >
+                        Upload now
+                      </Button>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-[#363636]">GST details (if applicable)</h4>
+                  <p className="text-xs text-[#363636]/70">This should be linked to the PAN provided earlier for tax calculations</p>
+                  <div className="flex items-center gap-4">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-[#363636]">
+                      <input type="radio" name="gst" checked={hasGstin} onChange={() => setHasGstin(true)} /> Yes
+                    </Label>
+                    <Label className="flex items-center gap-2 text-sm font-medium text-[#363636]">
+                      <input type="radio" name="gst" checked={!hasGstin} onChange={() => setHasGstin(false)} /> No
+                    </Label>
+                  </div>
+                  {hasGstin && (
+                    <Input
+                      value={gstin}
+                      onChange={(e) => setGstin(e.target.value)}
+                      placeholder="GSTIN"
+                      className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    />
+                  )}
+                </div>
+
+                <Button
+                  onClick={() => setStep6Success(true)}
+                  disabled={!canSubmitPanDocuments}
+                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </Button>
+
+                <p className="text-xs text-[#d0d4dc]">Vendor ID: 21935326</p>
+
+                <input
+                  ref={panDocumentInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    const urls = files.map((file) => URL.createObjectURL(file));
+                    setPanDocumentUploads((current) => [...current, ...urls]);
+                  }}
+                />
               </div>
             )}
             {currentStep === 6 && step6Success && (
-              <SuccessScreen text="Business documents added" onContinue={() => { setStep6Success(false); setCurrentStep(7); }} />
+              <BusinessInfoSuccessScreen text="Business documents added" onContinue={() => { setStep6Success(false); setCurrentStep(7); }} />
             )}
 
             {/* STEP 7 */}
@@ -617,8 +1340,54 @@ export default function Onboarding() {
           </motion.div>
         </AnimatePresence>
 
+        <Dialog
+          open={otpModalOpen}
+          onOpenChange={(open) => {
+            setOtpModalOpen(open);
+            if (!open) setIsVerifying(false);
+          }}
+        >
+          <DialogContent className="max-w-sm rounded-2xl border border-[#d0d4dc] bg-white p-5">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-semibold text-[#363636]">Enter verification code</DialogTitle>
+            </DialogHeader>
+            <p className="text-xs text-[#363636]/70">
+              6 digit OTP has been sent to {countryCode} {maskedMobile}
+            </p>
+            <div className="mt-4 flex justify-center">
+              <InputOTP maxLength={6} value={otp} onChange={setOtp} containerClassName="justify-center">
+                <InputOTPGroup className="gap-2">
+                  {[0, 1, 2, 3, 4, 5].map((i) => (
+                    <InputOTPSlot
+                      key={i}
+                      index={i}
+                      className="h-12 w-12 rounded-xl border border-[#d0d4dc] text-base ring-[#256fef]"
+                    />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+            <div className="mt-3 text-xs text-[#363636]/70">
+              {otpCountdown > 0 ? (
+                <span>Resend OTP (in {otpCountdown} seconds)</span>
+              ) : (
+                <button type="button" className="text-[#256fef]" onClick={resendOtp}>
+                  Resend OTP
+                </button>
+              )}
+            </div>
+            <Button
+              onClick={confirmOtp}
+              disabled={otp.length !== 6}
+              className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Verify
+            </Button>
+          </DialogContent>
+        </Dialog>
+
         {/* Nav */}
-        {currentStep > 1 && currentStep < TOTAL_STEPS && !step4Success && !step6Success && !step7Success && (
+        {currentStep > 4 && currentStep < TOTAL_STEPS && !step6Success && !step7Success && (
           <div className="flex items-center justify-between mt-8">
             <Button variant="outline" onClick={goPrev}><ArrowLeft className="w-4 h-4 mr-1" /> Previous</Button>
             <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>
@@ -626,17 +1395,83 @@ export default function Onboarding() {
         )}
       </div>
 
-      {/* WhatsApp FAB */}
-      {currentStep === 1 && (
-        <div className="fixed left-4 right-4 bottom-6 z-40 flex items-center gap-3">
-          <button onClick={() => navigate('/my-store')} className="flex-1 rounded-full bg-[#256fef] text-white py-3 font-semibold shadow-lg">Edit details</button>
-          <button onClick={() => window.open('https://wa.me/919999999999', '_blank') } className="rounded-full bg-[#111827] text-white px-3 py-2 flex items-center gap-1 shadow-lg">
-            <MessageCircle className="w-4 h-4" />
-            <span className="text-xs font-medium">Help</span>
-          </button>
-        </div>
+      {!showWelcome && (
+        <button
+          type="button"
+          onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+          aria-label="WhatsApp help"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </button>
       )}
-      {/* Green WhatsApp FAB removed as requested */}
+    </div>
+  );
+}
+
+function BusinessInfoStepper({ currentStep }: { currentStep: number }) {
+  const steps = [
+    "Business Details",
+    "Business Address",
+    "Supplier Details",
+  ];
+  const activeIndex = Math.min(Math.max(currentStep - 2, 0), steps.length - 1);
+
+  return (
+    <div className="mx-auto max-w-2xl px-6 pb-4">
+      <div className="flex items-start justify-between">
+        {steps.map((label, index) => {
+          const isDone = index < activeIndex;
+          const isActive = index === activeIndex;
+          return (
+            <div key={label} className="flex flex-1 flex-col items-center text-center gap-2">
+              {isDone ? (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#14ae5c]">
+                  <Check className="h-4 w-4 text-white" />
+                </div>
+              ) : isActive ? (
+                <div className="h-8 w-8 rounded-full bg-[#256fef]" />
+              ) : (
+                <div className="h-8 w-8 rounded-full border border-[#d0d4dc]" />
+              )}
+              <span
+                className={cn(
+                  "text-[11px] font-medium",
+                  isActive ? "text-[#256fef]" : isDone ? "text-[#14ae5c]" : "text-[#d0d4dc]",
+                )}
+              >
+                {label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function BusinessInfoSuccessScreen({ text, onContinue }: { text: string; onContinue: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onContinue, 1800);
+    return () => clearTimeout(t);
+  }, [onContinue]);
+
+  return (
+    <div
+      className="vendor-shell fixed inset-0 z-50 flex items-center justify-center bg-[#f0fdf4]"
+      onClick={onContinue}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onContinue();
+      }}
+    >
+      <div className="flex flex-col items-center px-6 text-center">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#14ae5c]">
+          <Check className="h-12 w-12 text-white" />
+        </div>
+        <p className="mt-4 text-xl font-semibold text-[#363636]">{text}</p>
+      </div>
     </div>
   );
 }

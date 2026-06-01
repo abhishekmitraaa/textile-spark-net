@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  ArrowLeftRight,
   ArrowRight,
   Bell,
   Star,
@@ -52,30 +51,13 @@ const SellerHome = () => {
   return (
     <DashboardLayout>
       <div className="space-y-4 lg:space-y-6">
-
-        {/* 1. SWITCH TO BUYER BANNER */}
-        <div className="flex items-center justify-between bg-accent/10 border-b border-accent/20 px-4 py-2 -mx-4 -mt-4 mb-2 lg:-mx-6 lg:-mt-6">
-          <div className="flex items-center gap-2">
-            <ArrowLeftRight className="h-4 w-4 text-accent" />
-            <span className="text-sm text-accent font-medium">Switch To Buyer Account</span>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-7 text-xs border-accent/40 text-accent hover:bg-accent/10 rounded-full px-3"
-            onClick={() => navigate("/browse")}
-          >
-            Switch
-          </Button>
-        </div>
-
-        {/* 2. PAGE HEADER */}
+        {/* 1. PAGE HEADER */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Welcome back! Here's an overview of your business.</p>
         </motion.div>
 
-        {/* 3. PROMO BANNER CAROUSEL */}
+        {/* 2. PROMO BANNER CAROUSEL */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -120,17 +102,17 @@ const SellerHome = () => {
           </div>
         </motion.div>
 
-        {/* 4. BUSINESS PROFILE SCORE */}
+        {/* 3. BUSINESS PROFILE SCORE */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <BusinessProfileScore score={45} />
         </motion.div>
 
-        {/* 5. QUICK ACTIONS GRID */}
+        {/* 4. QUICK ACTIONS GRID */}
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <SellerQuickActionsGrid />
         </motion.div>
 
-        {/* 6. STATS ROW + RFQ ALERT */}
+        {/* 5. STATS ROW + RFQ ALERT */}
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {sellerStats.map((stat, index) => (
@@ -151,7 +133,7 @@ const SellerHome = () => {
           </div>
         </motion.div>
 
-        {/* 7. BOTTOM GRID — Top Products + Recent Leads + Messages */}
+        {/* 6. BOTTOM GRID — Top Products + Recent Leads + Messages */}
         <div className="grid gap-4 lg:grid-cols-3">
 
           {/* Top Performing Products */}

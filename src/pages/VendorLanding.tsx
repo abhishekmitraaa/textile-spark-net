@@ -157,7 +157,7 @@ const menuLinks = [
 
 const VendorLanding = () => {
   return (
-    <div className="min-h-screen bg-[#ffffff] text-[#363636]">
+    <div className="vendor-shell min-h-screen bg-[#ffffff] text-[#363636]">
       <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
           <Link to="/" className="block">

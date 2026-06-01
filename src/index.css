@@ -116,6 +116,10 @@
   h1, h2, h3, h4, h5, h6 {
     font-family: "Playfair Display", Georgia, serif;
   }
+
+  .vendor-shell {
+    font-family: "Open Sans", Roboto, "DM Sans", system-ui, sans-serif;
+  }
 }
 
 @layer utilities {

@@ -125,9 +125,14 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
               type="button"
               onClick={() => navigate(homeHref)}
               aria-label={`Go to ${role === "buyer" ? "buyer" : "seller"} homepage`}
-              className="inline-flex items-center rounded-md font-logo text-xl font-bold italic uppercase tracking-[-0.08em] text-accent transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 lg:text-2xl"
+              className="inline-flex items-center rounded-md transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             >
-              Cosora
+              <img
+                src="/cosoravendorlogo.png"
+                alt="Cosora For Sellers"
+                className="block h-8 w-auto object-contain lg:h-9"
+                draggable={false}
+              />
             </button>
           </div>
           {isMobile && (

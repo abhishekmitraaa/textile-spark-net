@@ -22,6 +22,9 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
     { value: "seller", label: "Seller", icon: Factory },
   ];
 
+  const getActiveBackground = (roleValue: UserRole) =>
+    roleValue === "seller" ? "bg-[#256fef]" : "bg-accent";
+
   if (variant === "mobile") {
     return (
       <div className="flex items-center gap-1 rounded-lg bg-sidebar-accent/50 p-1">
@@ -39,7 +42,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
             {role === r.value && (
               <motion.div
                 layoutId="role-switcher-mobile"
-                className="absolute inset-0 rounded-md bg-accent"
+                className={cn("absolute inset-0 rounded-md", getActiveBackground(r.value))}
                 transition={{ type: "spring", duration: 0.3, bounce: 0.2 }}
               />
             )}
@@ -67,7 +70,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
           {role === r.value && (
             <motion.div
               layoutId="role-switcher-desktop"
-              className="absolute inset-0 rounded-md bg-accent shadow-gold"
+              className={cn("absolute inset-0 rounded-md shadow-gold", getActiveBackground(r.value))}
               transition={{ type: "spring", duration: 0.3, bounce: 0.2 }}
             />
           )}
