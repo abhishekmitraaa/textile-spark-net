@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, ChevronRight, Menu, MessageCircle, MapPin, Upload as UploadIcon,
   Check, CheckCircle2, Building2, FileText, Package, FileSignature,
-  X, Crop, RotateCw, Eraser, Info, Mail, AlertCircle, BarChart3, Search,
+  X, Crop, RotateCw, Eraser, Info, Mail, AlertCircle, BarChart3, Search, PenLine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,8 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { useVendorOnboardingSummary, vendorOnboardingSummaryFixture } from "@/hooks/useVendorData";
@@ -103,27 +105,37 @@ export default function Onboarding() {
   const [step7Success, setStep7Success] = useState(false);
 
   // Step 8
+  const [contractStage, setContractStage] = useState<"overview" | "contract">("overview");
+  const [contractName, setContractName] = useState("Anandita");
+  const [manualSignatureDataUrl, setManualSignatureDataUrl] = useState<string | null>(null);
+  const [signatureDrawerOpen, setSignatureDrawerOpen] = useState(false);
+  const [agreementModalOpen, setAgreementModalOpen] = useState(false);
   const [signature, setSignature] = useState("");
   const [editingSig, setEditingSig] = useState(false);
-  const [agreed, setAgreed] = useState(false);
   const [locationMode, setLocationMode] = useState<"automatic" | "manual" | null>(null);
   const [manualLocation, setManualLocation] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
   const { data: onboardingSummary } = useVendorOnboardingSummary();
   const summary = onboardingSummary ?? vendorOnboardingSummaryFixture;
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const signatureStrokeRef = useRef<{ x: number; y: number }[][]>([]);
+  const signatureIsDrawingRef = useRef(false);
+  const keepManualSignatureRef = useRef(false);
 
   useEffect(() => {
-    if (ownerName && !signature) setSignature(ownerName);
-  }, [ownerName, signature]);
-
-  useEffect(() => {
-    if (showWelcome) {
-      const t = setTimeout(() => navigate("/seller-home"), 5000);
-      return () => clearTimeout(t);
+    if (ownerName.trim()) {
+      setContractName(ownerName);
     }
-  }, [showWelcome, navigate]);
+  }, [ownerName]);
+
+  useEffect(() => {
+    if (!signatureDrawerOpen) return;
+    const frame = window.requestAnimationFrame(syncSignatureCanvasSize);
+    return () => window.cancelAnimationFrame(frame);
+  }, [signatureDrawerOpen]);
 
   useEffect(() => {
     if (!otpModalOpen) return;
@@ -204,7 +216,7 @@ export default function Onboarding() {
   const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
 
   const submitContract = () => {
-    if (!agreed) return toast.error("Please accept the agreement");
+    if (!agreed || !contractName.trim()) return toast.error("Complete the name and agreement to continue");
     setShowWelcome(true);
   };
 
@@ -220,21 +232,101 @@ export default function Onboarding() {
       label: "Business documents",
       helper: "Continue >",
       icon: FileText,
-      state: businessInfoComplete ? "active" : "locked",
+      state: businessInfoComplete ? "done" : "locked",
     },
     {
       label: "Products details",
       helper: "Category, Products.",
       icon: Package,
-      state: currentStep > 6 ? "locked" : "locked",
+      state: currentStep > 6 ? "done" : "locked",
     },
     {
       label: "Partner contract",
       helper: "",
       icon: FileSignature,
-      state: "locked",
+      state: currentStep >= 8 ? "active" : "locked",
     },
   ];
+  const canSubmitContract = contractName.trim().length > 0 && agreed;
+
+  const contractDisplayName = contractName.trim() || "Anandita";
+  const syncSignatureCanvasSize = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const scale = window.devicePixelRatio || 1;
+    canvas.width = Math.max(rect.width * scale, 1);
+    canvas.height = Math.max(rect.height * scale, 1);
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.setTransform(scale, 0, 0, scale, 0, 0);
+    context.clearRect(0, 0, rect.width, rect.height);
+    context.strokeStyle = "#256fef";
+    context.lineWidth = 2.8;
+    context.lineJoin = "round";
+    context.lineCap = "round";
+    signatureStrokeRef.current.forEach((stroke) => {
+      if (stroke.length < 2) return;
+      context.beginPath();
+      context.moveTo(stroke[0].x, stroke[0].y);
+      stroke.slice(1).forEach((point) => context.lineTo(point.x, point.y));
+      context.stroke();
+    });
+  };
+  const getCanvasPoint = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    };
+  };
+  const startDrawingSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    const point = getCanvasPoint(event);
+    if (!point) return;
+    signatureIsDrawingRef.current = true;
+    signatureStrokeRef.current.push([point]);
+    const canvas = signatureCanvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    canvas.setPointerCapture(event.pointerId);
+    syncSignatureCanvasSize();
+  };
+  const drawSignatureStroke = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!signatureIsDrawingRef.current) return;
+    const point = getCanvasPoint(event);
+    if (!point) return;
+    const stroke = signatureStrokeRef.current[signatureStrokeRef.current.length - 1];
+    stroke.push(point);
+    syncSignatureCanvasSize();
+  };
+  const endDrawingSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
+    if (!signatureIsDrawingRef.current) return;
+    signatureIsDrawingRef.current = false;
+    const canvas = signatureCanvasRef.current;
+    if (canvas?.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId);
+    }
+  };
+  const clearSignatureCanvas = () => {
+    signatureStrokeRef.current = [];
+    const canvas = signatureCanvasRef.current;
+    const context = canvas?.getContext("2d");
+    if (!canvas || !context) return;
+    const rect = canvas.getBoundingClientRect();
+    context.clearRect(0, 0, rect.width, rect.height);
+  };
+  const saveManualSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas || signatureStrokeRef.current.length === 0) {
+      toast.error("Draw your signature before saving");
+      return;
+    }
+    keepManualSignatureRef.current = true;
+    setManualSignatureDataUrl(canvas.toDataURL("image/png"));
+    setSignatureDrawerOpen(false);
+  };
 
   const maskedMobile = mobile
     ? mobile.replace(/(\d{2})\d+(\d{2})/, "$1******$2")
@@ -256,6 +348,431 @@ export default function Onboarding() {
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
     panDocumentUploads.length > 0;
+
+  if (showWelcome) {
+    return (
+      <div
+        className="vendor-shell fixed inset-0 z-50 flex items-center justify-center bg-[#f0fdf4] px-6 text-center"
+        role="button"
+        tabIndex={0}
+        onClick={() => navigate("/seller-home")}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") navigate("/seller-home");
+        }}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.25 }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#14ae5c] shadow-lg shadow-[#14ae5c]/25">
+            <Check className="h-12 w-12 text-white" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-xl font-semibold text-[#363636]">The Good Times Start Now.</p>
+            <p className="text-xl font-semibold text-[#363636]">Welcome to Cosora</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
+  if (currentStep === 8) {
+    if (contractStage === "overview") {
+      return (
+        <div className="vendor-shell min-h-screen bg-[#ffffff] pb-24">
+          <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+            <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+              <Link to="/" className="block">
+                <img
+                  src="/cosoravendorlogo.png"
+                  alt="Cosora For Sellers"
+                  className="block h-9 w-auto object-contain sm:h-10"
+                  draggable={false}
+                />
+              </Link>
+              <div className="flex items-center gap-2">
+                <Link to="/login">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                  >
+                    Login
+                  </Button>
+                </Link>
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                      aria-label="Open menu"
+                    >
+                      <Menu className="h-5 w-5" />
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                    <SheetHeader>
+                      <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                        Cosora Menu
+                      </SheetTitle>
+                    </SheetHeader>
+                    <nav className="mt-4 space-y-2">
+                      {onboardingMenuLinks.map((item) => (
+                        <Link
+                          key={item.label}
+                          to={item.href}
+                          className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                        >
+                          {item.label}
+                          <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                        </Link>
+                      ))}
+                    </nav>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </div>
+          </header>
+
+          <div className="mx-auto max-w-2xl px-4 pt-5">
+            <div className="rounded-[1.75rem] bg-[#f5f5f5] p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#256fef]">Registration Set 4</p>
+              <h1 className="mt-2 text-2xl font-bold text-[#363636]">Partner contract checkpoint</h1>
+              <p className="mt-2 text-sm text-[#363636]">
+                All prior steps are complete. Review the final contract details before signing the supplier agreement.
+              </p>
+
+              <div className="mt-5 space-y-3">
+                {overviewSteps.map((item, index) => {
+                  const Icon = item.icon;
+                  const isActive = index === 3;
+                  return (
+                    <div
+                      key={item.label}
+                      className={cn(
+                        "flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-all",
+                        isActive ? "border-[#256fef] ring-1 ring-[#256fef]/20" : "border-[#d0d4dc]",
+                      )}
+                    >
+                      <div className={cn(
+                        "flex h-11 w-11 items-center justify-center rounded-full border",
+                        isActive ? "border-[#256fef] bg-[#256fef]/10 text-[#256fef]" : "border-[#256fef] bg-[#256fef]/10 text-[#256fef]",
+                      )}>
+                        <Icon className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-semibold text-[#363636]">{item.label}</p>
+                        <p className={cn("text-xs", isActive ? "text-[#256fef]" : "text-[#14ae5c]")}>
+                          {isActive ? "Unlocked and ready" : "Completed"}
+                        </p>
+                      </div>
+                      <Check className="h-5 w-5 text-[#14ae5c]" />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="mt-5 rounded-2xl border border-[#d0d4dc] bg-white p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-[#363636]">
+                  <FileSignature className="h-4 w-4 text-[#256fef]" />
+                  Edit the final contract details
+                </div>
+                <p className="mt-2 text-sm text-[#6b7280]">
+                  The partner contract is now unlocked. Tap the button below to enter the e-signature screen.
+                </p>
+                <Button
+                  type="button"
+                  className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                  onClick={() => setContractStage("contract")}
+                >
+                  Edit details
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+            className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+            aria-label="WhatsApp help"
+          >
+            <MessageCircle className="h-5 w-5" />
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <div className="vendor-shell min-h-screen bg-[#ffffff] pb-28">
+        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+          <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
+            <Link to="/" className="block">
+              <img
+                src="/cosoravendorlogo.png"
+                alt="Cosora For Sellers"
+                className="block h-9 w-auto object-contain sm:h-10"
+                draggable={false}
+              />
+            </Link>
+            <div className="flex items-center gap-2">
+              <Link to="/login">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                >
+                  Login
+                </Button>
+              </Link>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <button
+                    type="button"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                    aria-label="Open menu"
+                  >
+                    <Menu className="h-5 w-5" />
+                  </button>
+                </SheetTrigger>
+                <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                  <SheetHeader>
+                    <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                      Cosora Menu
+                    </SheetTitle>
+                  </SheetHeader>
+                  <nav className="mt-4 space-y-2">
+                    {onboardingMenuLinks.map((item) => (
+                      <Link
+                        key={item.label}
+                        to={item.href}
+                        className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                      >
+                        {item.label}
+                        <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                      </Link>
+                    ))}
+                  </nav>
+                </SheetContent>
+              </Sheet>
+            </div>
+          </div>
+        </header>
+
+        <div className="mx-auto max-w-2xl px-4 pt-5">
+          <div className="rounded-[1.75rem] border border-[#d0d4dc] bg-white p-4 shadow-sm">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#256fef]">Partner Contract</p>
+                <h1 className="mt-1 text-2xl font-bold text-[#363636]">E-Signature</h1>
+                <p className="mt-2 text-sm text-[#6b7280]">Your signature is auto-generated from your name and can be changed manually.</p>
+              </div>
+              <div className="rounded-full bg-[#f0fdf4] px-3 py-1 text-xs font-medium text-[#14ae5c]">Final step</div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="contract-name" className="text-sm font-medium text-[#363636]">
+                  Your Full Name
+                </Label>
+                <Input
+                  id="contract-name"
+                  value={contractName}
+                  onChange={(e) => setContractName(e.target.value)}
+                  className="h-12 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  placeholder="Enter your full name"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-sm font-medium text-[#363636]">Generated E-Signature</Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[#6b7280] transition-colors hover:bg-[#f5f5f5] hover:text-[#256fef]"
+                          aria-label="What is an e-signature?"
+                        >
+                          <Info className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[220px] text-xs">
+                        This signature is used on invoices and credit notes and is generated from the name above.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-[#d0d4dc] bg-[#f8fafc] p-4">
+                  {manualSignatureDataUrl ? (
+                    <img
+                      src={manualSignatureDataUrl}
+                      alt="Manual signature"
+                      className="h-16 w-full object-contain object-left"
+                    />
+                  ) : (
+                    <div className="flex min-h-16 items-center">
+                      <span
+                        className="text-4xl font-semibold text-[#363636]"
+                        style={{ fontFamily: "'Dancing Script', cursive" }}
+                      >
+                        {contractDisplayName}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-sm text-[#363636]">Want to change the signature?</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      signatureStrokeRef.current = [];
+                      setSignatureDrawerOpen(true);
+                    }}
+                    className="inline-flex items-center gap-1 text-sm font-medium text-[#256fef] underline underline-offset-2"
+                  >
+                    Change
+                    <PenLine className="h-4 w-4" />
+                  </button>
+                </div>
+                <p className="text-xs leading-5 text-[#6b7280]">
+                  By clicking "submit" my e-signature is recorded for issuing invoices/credit notes to my customers
+                </p>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-2xl border border-[#d0d4dc] bg-white p-4">
+                <Checkbox
+                  id="supplier-agreement"
+                  checked={agreed}
+                  onCheckedChange={(value) => setAgreed(!!value)}
+                  className="mt-1 border-[#d0d4dc] data-[state=checked]:border-[#256fef] data-[state=checked]:bg-[#256fef]"
+                />
+                <Label htmlFor="supplier-agreement" className="cursor-pointer text-sm leading-6 text-[#363636]">
+                  I agree to comply with Cosora's{" "}
+                  <button
+                    type="button"
+                    onClick={() => setAgreementModalOpen(true)}
+                    className="text-[#256fef] underline underline-offset-2"
+                  >
+                    Supplier Agreement
+                  </button>
+                </Label>
+              </div>
+
+              <Button
+                type="button"
+                onClick={submitContract}
+                disabled={!canSubmitContract}
+                className="h-12 w-full rounded-full bg-[#256fef] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Submit
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+          aria-label="WhatsApp help"
+        >
+          <MessageCircle className="h-5 w-5" />
+        </button>
+
+        <Drawer
+          open={signatureDrawerOpen}
+          onOpenChange={(open) => {
+            setSignatureDrawerOpen(open);
+            if (open) {
+              keepManualSignatureRef.current = false;
+              setTimeout(syncSignatureCanvasSize, 0);
+              return;
+            }
+            if (!keepManualSignatureRef.current) {
+              setManualSignatureDataUrl(null);
+            }
+            keepManualSignatureRef.current = false;
+          }}
+        >
+          <DrawerContent className="border-[#d0d4dc] bg-white">
+            <DrawerHeader className="space-y-2 px-4 pt-4 text-left">
+              <DrawerTitle className="text-base font-semibold text-[#363636]">Draw your signature</DrawerTitle>
+              <p className="text-sm text-[#6b7280]">Use your finger or mouse to draw a signature that matches your legal name.</p>
+            </DrawerHeader>
+            <div className="px-4 pb-4">
+              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-3">
+                <canvas
+                  ref={signatureCanvasRef}
+                  width={320}
+                  height={220}
+                  className="h-56 w-full touch-none rounded-xl bg-white"
+                  onPointerDown={startDrawingSignature}
+                  onPointerMove={drawSignatureStroke}
+                  onPointerUp={endDrawingSignature}
+                  onPointerLeave={endDrawingSignature}
+                />
+              </div>
+            </div>
+            <DrawerFooter className="gap-3 px-4 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={clearSignatureCanvas}
+                  className="text-sm font-medium text-[#256fef] underline underline-offset-2"
+                >
+                  Clear
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualSignatureDataUrl(null);
+                    keepManualSignatureRef.current = false;
+                    setSignatureDrawerOpen(false);
+                  }}
+                  className="text-sm font-medium text-[#6b7280]"
+                >
+                  Close
+                </button>
+              </div>
+              <Button
+                type="button"
+                onClick={saveManualSignature}
+                className="h-12 w-full rounded-full bg-[#256fef] font-semibold text-white"
+              >
+                Save Signature
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+
+        <Dialog open={agreementModalOpen} onOpenChange={setAgreementModalOpen}>
+          <DialogContent className="max-h-[80vh] rounded-2xl border border-[#d0d4dc] bg-white p-5">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold text-[#363636]">Cosora Supplier Agreement</DialogTitle>
+            </DialogHeader>
+            <div className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-[#363636]">
+              <p>
+                By signing below, you agree to all terms of the Cosora Supplier Agreement, including product authenticity, fair trade, on-time fulfillment, accurate listings, and Cosora's commission and payment terms.
+              </p>
+              <p>
+                You represent that all submitted information is accurate and that you have the legal right to sell the listed products.
+              </p>
+              <p>
+                Cosora reserves the right to review, suspend, or terminate seller accounts that violate these terms. Disputes shall be resolved per the governing law specified in the full agreement.
+              </p>
+              <p>
+                Continued use of the platform constitutes acceptance of any updated terms communicated via email or in-app notice.
+              </p>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   if (showWelcome) {
     return (
@@ -1307,7 +1824,16 @@ export default function Onboarding() {
               </div>
             )}
             {currentStep === 7 && step7Success && (
-              <SuccessScreen text="Product details uploaded" onContinue={() => { setStep7Success(false); setCurrentStep(8); }} />
+              <SuccessScreen
+                text="Product details uploaded"
+                onContinue={() => {
+                  setStep7Success(false);
+                  setContractStage("overview");
+                  setManualSignatureDataUrl(null);
+                  setSignatureDrawerOpen(false);
+                  setCurrentStep(8);
+                }}
+              />
             )}
 
             {/* STEP 8 */}
