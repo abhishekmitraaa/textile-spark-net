@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 const Landing = () => {
   return (
-    <div className="min-h-screen bg-foreground flex flex-col overflow-hidden">
+    <div className="landing-page min-h-screen bg-foreground flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-5 lg:px-12">
         <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-background">

@@ -1,0 +1,1 @@
+- 2026-06-03: Initialized project context notes. Added a standing rule that future sessions should start by reading `memory.md` and `changelog.md` only, instead of scanning full chat history. Captured the current app stack and major routed surfaces in memory for quick recovery.

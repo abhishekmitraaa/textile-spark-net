@@ -1021,9 +1021,12 @@ export default function Onboarding() {
             {/* STEP 1 */}
             {currentStep === 1 && (
               <div className="space-y-6">
-                <div className="rounded-2xl bg-[#363636] p-5 text-white">
-                  <h1 className="font-display text-2xl font-bold">Get started, it takes only 10 minutes</h1>
-                  <p className="mt-2 text-sm text-[#ef4d62]">0% commission, get sales across globe.</p>
+                <div className="w-full rounded-2xl overflow-hidden">
+                  <img
+                    src="/vendorhelp.png"
+                    alt="Vendor help"
+                    className="w-full h-auto object-contain"
+                  />
                 </div>
 
                 <div className="space-y-3">
