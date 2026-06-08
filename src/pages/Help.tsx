@@ -1,39 +1,23 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { 
-  Search, 
-  MessageCircle, 
-  Phone, 
-  Mail, 
-  FileText, 
-  ShoppingBag,
-  CreditCard,
-  User,
-  HelpCircle,
-  ChevronRight,
-  ExternalLink,
-  Headphones,
-  Clock,
-  Camera,
-  Image as ImageIcon,
-  Paperclip,
-  Mic,
-  Send,
-  Instagram,
-  Trash2,
+import {
+  Search, MessageCircle, Phone, Mail, FileText,
+  ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
+  ExternalLink, Instagram, X, Paperclip, Send, Camera,
+  Image as ImageIcon, Music, FileText as FilePdf,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { toast } from "sonner";
+
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
 
 const faqCategories = [
   {
@@ -41,530 +25,465 @@ const faqCategories = [
     title: "Getting Started",
     icon: HelpCircle,
     faqs: [
-      {
-        question: "How do I create my first RFQ (Request for Quote)?",
-        answer: "Navigate to 'Post Requirement' from your dashboard or sidebar. You can choose Quick RFQ for simple requests or create a detailed requirement with specifications like category, quantity, fabric type, and more."
-      },
-      {
-        question: "How do I find the right vendors for my needs?",
-        answer: "Use our smart matching system by posting your requirements. We'll connect you with verified vendors who specialize in your product category. You can also browse vendor profiles and view their ratings and reviews."
-      },
-      {
-        question: "What information should I include in my requirement?",
-        answer: "Include product category, quantity, preferred fabric/material, size range, any specific designs or prints, target price range, and delivery timeline. The more details you provide, the better quotes you'll receive."
-      }
-    ]
+      { question: "How do I create my first RFQ (Request for Quote)?", answer: "Navigate to 'Post Requirement' from your dashboard or sidebar. You can choose Quick RFQ for simple requests or create a detailed requirement with specifications like category, quantity, fabric type, and more." },
+      { question: "How do I find the right vendors for my needs?", answer: "Use our smart matching system by posting your requirements. We'll connect you with verified vendors who specialize in your product category. You can also browse vendor profiles and view their ratings and reviews." },
+      { question: "What information should I include in my requirement?", answer: "Include product category, quantity, preferred fabric/material, size range, any specific designs or prints, target price range, and delivery timeline. The more details you provide, the better quotes you'll receive." },
+    ],
   },
   {
     id: "orders-quotes",
     title: "Orders & Quotes",
     icon: ShoppingBag,
     faqs: [
-      {
-        question: "How do I compare quotes from different vendors?",
-        answer: "Go to 'My Quotes' section where you can view all received quotes side by side. Our comparison tool highlights the best price and fastest delivery options to help you make informed decisions."
-      },
-      {
-        question: "Can I negotiate prices with vendors?",
-        answer: "Yes! You can use our integrated chat feature to communicate directly with vendors. Discuss pricing, minimum order quantities, customizations, and delivery terms before finalizing your order."
-      },
-      {
-        question: "How do I track my order status?",
-        answer: "Once you've placed an order, you can track it from your dashboard under 'Active Orders'. You'll receive notifications at each stage - from production to shipping to delivery."
-      }
-    ]
+      { question: "How do I compare quotes from different vendors?", answer: "Go to 'My Quotes' section where you can view all received quotes side by side. Our comparison tool highlights the best price and fastest delivery options to help you make informed decisions." },
+      { question: "Can I negotiate prices with vendors?", answer: "Yes! You can use our integrated chat feature to communicate directly with vendors. Discuss pricing, minimum order quantities, customizations, and delivery terms before finalising your order." },
+      { question: "How do I track my order status?", answer: "Once you've placed an order, you can track it from your dashboard under 'Active Orders'. You'll receive notifications at each stage — from production to shipping to delivery." },
+    ],
   },
   {
     id: "payments",
     title: "Payments & Billing",
     icon: CreditCard,
     faqs: [
-      {
-        question: "What payment methods are accepted?",
-        answer: "We support multiple payment options including bank transfers, credit/debit cards, and escrow payments for larger orders. Payment terms can be negotiated directly with vendors."
-      },
-      {
-        question: "Is my payment secure?",
-        answer: "Yes, all transactions are secured with bank-grade encryption. For added protection, we offer escrow services where payment is released to the vendor only after you confirm receipt of goods."
-      },
-      {
-        question: "Can I get a refund if there's an issue with my order?",
-        answer: "Our buyer protection policy covers quality issues and non-delivery. Contact support within 7 days of delivery with photos/documentation of any issues to initiate a refund or replacement request."
-      }
-    ]
+      { question: "What payment methods are accepted?", answer: "We support multiple payment options including bank transfers, credit/debit cards, and escrow payments for larger orders. Payment terms can be negotiated directly with vendors." },
+      { question: "Is my payment secure?", answer: "Yes, all transactions are secured with bank-grade encryption. For added protection, we offer escrow services where payment is released to the vendor only after you confirm receipt of goods." },
+      { question: "Can I get a refund if there's an issue with my order?", answer: "Our buyer protection policy covers quality issues and non-delivery. Contact support within 7 days of delivery with photos/documentation of any issues to initiate a refund or replacement request." },
+    ],
   },
   {
     id: "account",
     title: "Account Management",
     icon: User,
     faqs: [
-      {
-        question: "How do I update my business profile?",
-        answer: "Go to Profile from the sidebar, then click 'Edit Profile'. You can update your company information, contact details, shipping addresses, and notification preferences."
-      },
-      {
-        question: "Can I have multiple team members on one account?",
-        answer: "Yes, business accounts can add team members with different permission levels. Go to Settings > Team Management to invite colleagues and assign roles."
-      },
-      {
-        question: "How do I change my notification settings?",
-        answer: "Navigate to Profile > Notifications. You can customize which updates you receive via email, SMS, or push notifications - including quote alerts, order updates, and promotional offers."
-      }
-    ]
-  }
-];
-
-const contactOptions = [
-  {
-    icon: MessageCircle,
-    title: "Live Chat",
-    description: "Chat with our support team",
-    action: "Start Chat",
-    available: "10:00 AM - 7:00 PM IST",
-    color: "bg-primary/10 text-primary"
+      { question: "How do I update my business profile?", answer: "Go to Profile from the sidebar, then click 'Edit Profile'. You can update your company information, contact details, shipping addresses, and notification preferences." },
+      { question: "Can I have multiple team members on one account?", answer: "Yes, business accounts can add team members with different permission levels. Go to Settings > Team Management to invite colleagues and assign roles." },
+      { question: "How do I change my notification settings?", answer: "Navigate to Profile > Notifications. You can customise which updates you receive via email, SMS, or push notifications — including quote alerts, order updates, and promotional offers." },
+    ],
   },
-  {
-    icon: Phone,
-    title: "Request Callback",
-    description: "Leave your number and support will call you back",
-    action: "Request",
-    available: "Mon-Fri only",
-    color: "bg-amber-500/10 text-amber-600"
-  },
-  {
-    icon: Mail,
-    title: "Email Support",
-    description: "hello@cosora.in",
-    action: "Copy Email",
-    available: "Response within 24hrs",
-    color: "bg-secondary/50 text-foreground"
-  },
-  {
-    icon: Instagram,
-    title: "Follow Us",
-    description: "Instagram updates, product drops, and support news",
-    action: "Open Instagram",
-    available: "Always on",
-    color: "bg-pink-500/10 text-pink-600"
-  }
 ];
 
 const quickGuides = [
   { title: "How to Complete Verification", icon: FileText },
-  { title: "Request a Callback", icon: Phone },
-  { title: "Audio, PDF & Image Support", icon: MessageCircle },
-  { title: "Payment & Subscription Guide", icon: CreditCard }
+  { title: "Request a Callback",            icon: Phone },
+  { title: "Audio, PDF & Image Support",    icon: MessageCircle },
+  { title: "Payment & Subscription Guide",  icon: CreditCard },
 ];
 
+// ─────────────────────────────────────────────────────────────
+// CHAT MODAL  (ported from ChatModal.jsx)
+// ─────────────────────────────────────────────────────────────
+
+interface ChatMessage {
+  id: number;
+  sender: "support" | "user";
+  text: string;
+  timestamp: Date;
+  senderName?: string;
+  senderRole?: string;
+  fileType?: string;
+  fileName?: string;
+}
+
+function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 1,
+      sender: "support",
+      text: "Hi! We will assist you in connecting with a customer manager. Please let us know the details of your inquiry. Please wait a moment as it may take some time for the manager to respond.",
+      timestamp: new Date(),
+      senderName: "Abdul",
+      senderRole: "Cosora support executive",
+    },
+  ]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
+  const audioRef  = useRef<HTMLInputElement>(null);
+  const pdfRef    = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
+  const sendMessage = () => {
+    if (!message.trim()) return;
+    const next: ChatMessage = { id: messages.length + 1, sender: "user", text: message, timestamp: new Date() };
+    setMessages(p => [...p, next]);
+    setMessage("");
+    setIsTyping(true);
+    setTimeout(() => setIsTyping(false), 2000);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setMessages(p => [...p, { id: p.length + 1, sender: "user", text: `Sent a ${type}: ${file.name}`, timestamp: new Date(), fileType: type, fileName: file.name }]);
+  };
+
+  const fmt = (d: Date) => new Date(d).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+      <div className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl flex flex-col h-[90vh] sm:h-[600px]">
+
+        {/* Header */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={onClose}><ChevronRight className="w-6 h-6 text-gray-700 rotate-180" /></button>
+              <div>
+                <p className="text-sm font-semibold text-gray-900">Abdul</p>
+                <p className="text-xs text-gray-500">Cosora support executive</p>
+              </div>
+            </div>
+            <button onClick={onClose} className="text-sm font-medium text-red-600 hover:text-red-700">
+              End chat
+            </button>
+          </div>
+        </div>
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-4">
+          {messages.map(msg => (
+            <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[75%] px-4 py-3 ${
+                msg.sender === "user"
+                  ? "bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl"
+                  : "bg-white border border-gray-200 rounded-r-2xl rounded-tl-2xl"
+              }`}>
+                {msg.sender === "support" && (
+                  <div className="mb-1">
+                    <p className="text-xs font-semibold text-gray-900">{msg.senderName}</p>
+                    <p className="text-xs text-gray-500">{msg.senderRole}</p>
+                  </div>
+                )}
+                <p className={`text-sm ${msg.sender === "user" ? "text-white" : "text-gray-900"}`}>{msg.text}</p>
+                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-blue-100" : "text-gray-400"}`}>{fmt(msg.timestamp)}</p>
+              </div>
+            </div>
+          ))}
+          {isTyping && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-gray-200 rounded-r-2xl rounded-tl-2xl px-4 py-3">
+                <div className="flex gap-1">
+                  {[0, 150, 300].map(delay => (
+                    <div key={delay} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Support banner */}
+        <div className="bg-amber-50 border-t border-amber-100 px-4 py-2 shrink-0">
+          <p className="text-xs text-amber-800 text-center">Support executive Abdul will be assisting you now</p>
+        </div>
+
+        {/* Input area */}
+        <div className="bg-white border-t border-gray-200 px-4 py-3 shrink-0">
+          {/* Attachment options */}
+          {showAttachMenu && (
+            <div className="mb-3 flex gap-4 pb-3 border-b border-gray-100">
+              {[
+                { label: "Camera",  ref: cameraRef, type: "photo",  accept: "image/*",        capture: "environment" as const },
+                { label: "Gallery", ref: galleryRef, type: "image",  accept: "image/*",        capture: undefined },
+                { label: "Audio",   ref: audioRef,  type: "audio",  accept: "audio/*",        capture: undefined },
+                { label: "PDF",     ref: pdfRef,    type: "PDF",    accept: "application/pdf",capture: undefined },
+              ].map(item => (
+                <button key={item.label} onClick={() => { item.ref.current?.click(); setShowAttachMenu(false); }}
+                  className="flex flex-col items-center gap-1">
+                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center hover:bg-pink-200 transition-colors">
+                    {item.label === "Camera"  && <Camera className="w-5 h-5 text-pink-600" />}
+                    {item.label === "Gallery" && <ImageIcon className="w-5 h-5 text-pink-600" />}
+                    {item.label === "Audio"   && <Music className="w-5 h-5 text-pink-600" />}
+                    {item.label === "PDF"     && <FilePdf className="w-5 h-5 text-pink-600" />}
+                  </div>
+                  <span className="text-xs text-gray-600">{item.label}</span>
+                  <input ref={item.ref} type="file" className="hidden" accept={item.accept}
+                    {...(item.capture ? { capture: item.capture } : {})}
+                    onChange={e => handleFile(e, item.type)} />
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowAttachMenu(p => !p)}
+              className={`p-2 transition-colors ${showAttachMenu ? "text-pink-600 bg-pink-50 rounded-full" : "text-gray-500 hover:text-gray-700"}`}>
+              <Paperclip className="w-5 h-5" />
+            </button>
+            <input type="text" value={message}
+              onChange={e => setMessage(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
+              placeholder="Type your message here..."
+              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            <button onClick={sendMessage} disabled={!message.trim()}
+              className="bg-[#FF4081] text-white p-3 rounded-full hover:bg-pink-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+              <Send className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN COMPONENT
+// ─────────────────────────────────────────────────────────────
+
 const Help = () => {
+  const [chatOpen, setChatOpen]       = useState(false);
+  const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [chatStarted, setChatStarted] = useState(false);
-  const [supportMessage, setSupportMessage] = useState("");
 
-  const supportAgent = {
-    name: "Ayesha Khan",
-    role: "Cosora Support Executive",
-    shift: "Mon-Fri, 10:00 AM - 7:00 PM IST",
-  };
-
-  const filteredCategories = faqCategories.map(category => ({
-    ...category,
-    faqs: category.faqs.filter(
-      faq =>
-        faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  })).filter(category => category.faqs.length > 0);
-
-  const handleContactAction = (title: string) => {
-    if (title === "Live Chat") {
-      setChatStarted(true);
-      toast.success("Starting live chat...", {
-        description: "A support agent will be with you shortly."
-      });
-    } else if (title === "Request Callback") {
-      toast.success("Callback requested!", {
-        description: "Our support team will call you during working hours."
-      });
-    } else if (title === "Email Support") {
-      toast.info("Email copied!", {
-        description: "hello@cosora.in"
-      });
-    } else if (title === "Follow Us") {
-      toast.info("Opening Instagram...", {
-        description: "@cosora.in"
-      });
-      window.open("https://instagram.com/cosora", "_blank", "noopener,noreferrer");
-    }
-  };
-
-  const handleSupportSubmit = () => {
-    if (!chatStarted) {
-      setChatStarted(true);
-      toast.success("Live chat opened", {
-        description: "You can now send your support message."
-      });
-      return;
-    }
-
-    if (!supportMessage.trim()) {
-      toast.error("Type a message to continue", {
-        description: "You can also attach a photo, file, or audio note."
-      });
-      return;
-    }
-
-    toast.success("Message sent to support", {
-      description: "Our team will respond in the chat thread."
-    });
-    setSupportMessage("");
-  };
+  const filteredCategories = faqCategories.map(cat => ({
+    ...cat,
+    faqs: cat.faqs.filter(
+      f => f.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
+           f.answer.toLowerCase().includes(searchQuery.toLowerCase())
+    ),
+  })).filter(cat => cat.faqs.length > 0);
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center py-8"
-        >
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-            <Headphones className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-3xl font-display font-bold text-foreground mb-2">
-            Welcome to Cosora's Customer Service — What can we help you with?
-          </h1>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Find answers to common questions, request a callback, or open a chat with our support team.
-          </p>
-          <p className="mt-2 flex items-center justify-center gap-1 text-sm text-muted-foreground">
-            <Clock className="h-4 w-4" />
-            10:00 AM - 7:00 PM IST · Closed on weekends and holidays
-          </p>
-        </motion.div>
+      <div
+        className="min-h-screen bg-gray-50 -m-4 lg:-m-6"
+        style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
+      >
+        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-12">
 
-        {/* Search Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="max-w-2xl mx-auto"
-        >
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-            <Input
-              placeholder="Search for help articles..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 py-6 text-base bg-card border-border"
-            />
+          {/* ── Welcome ── */}
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-1">
+              Welcome to Cosora's Customer Service
+            </h2>
+            <p className="text-sm text-gray-500">What can we help you with?</p>
           </div>
-        </motion.div>
 
-        {/* Contact Options */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-4"
-        >
-          {contactOptions.map((option, index) => (
-            <Card 
-              key={option.title}
-              className="border-border hover:border-primary/30 transition-colors cursor-pointer"
-              onClick={() => handleContactAction(option.title)}
+          {/* ── Contact Us ── */}
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Contact Us</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              10:00 - 7:00 PM IST (Closed on weekends and holidays)
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={() => setChatOpen(true)}
+                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-2">
+                  <MessageCircle className="w-6 h-6 text-white" />
+                </div>
+                <span className="text-sm font-semibold text-gray-900">Contact Us</span>
+                <span className="text-xs text-gray-500">Chat with us</span>
+              </button>
+
+              <button
+                onClick={() => { window.location.href = "tel:+919147700465"; }}
+                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 border border-gray-300">
+                  <Phone className="w-6 h-6 text-gray-900" />
+                </div>
+                <span className="text-sm font-semibold text-gray-900">Request a Callback</span>
+                <span className="text-xs text-gray-500">a Callback</span>
+              </button>
+            </div>
+          </div>
+
+          {/* ── Follow Us ── */}
+          <div>
+            <h3 className="text-base font-semibold text-gray-900 mb-1">Follow Us</h3>
+            <p className="text-xs text-gray-500 mb-4">
+              Get connected for our latest news & updates!
+            </p>
+            <a
+              href="https://instagram.com/cosora"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
             >
-              <CardContent className="p-5">
-                <div className="flex items-start gap-4">
-                  <div className={`p-3 rounded-xl ${option.color}`}>
-                    <option.icon className="w-5 h-5" />
+              <Instagram className="w-5 h-5 text-white" />
+            </a>
+          </div>
+
+          {/* ── Email ── */}
+          <div className="flex items-center gap-2 text-sm text-gray-700">
+            <Mail className="w-4 h-4 shrink-0" />
+            <span className="font-medium">Email -</span>
+            <a href="mailto:hello@cosora.in" className="text-blue-600 hover:underline">
+              hello@cosora.in
+            </a>
+          </div>
+
+          {/* ── Delete Account ── */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <p className="text-xs text-gray-500 mb-2">Do you want to delete your account?</p>
+            <button
+              onClick={() => toast.error("Delete account request submitted")}
+              className="text-sm font-medium text-red-600 hover:text-red-700"
+            >
+              Delete my account
+            </button>
+          </div>
+
+          {/* ── FAQ — single collapsible dropdown ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+          >
+            <Card className="border-border overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setFaqOpen(p => !p)}
+                className="w-full flex items-center justify-between px-6 py-5 hover:bg-muted/30 transition-colors text-left"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-primary/10">
+                    <HelpCircle className="w-5 h-5 text-primary" />
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground">{option.title}</h3>
-                    <p className="text-sm text-muted-foreground mt-0.5">{option.description}</p>
-                    <div className="flex items-center justify-between mt-3">
-                      <span className="text-xs text-muted-foreground">{option.available}</span>
-                      <Button variant="ghost" size="sm" className="text-primary h-auto p-0">
-                        {option.action}
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
+                  <div>
+                    <p className="text-base font-semibold text-foreground">
+                      Frequently Asked Questions
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {faqOpen
+                        ? "Click to collapse"
+                        : `${faqCategories.reduce((a, c) => a + c.faqs.length, 0)} questions across ${faqCategories.length} topics`}
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight
+                  className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${faqOpen ? "rotate-90" : ""}`}
+                />
+              </button>
+
+              {faqOpen && (
+                <div className="border-t border-border">
+                  {/* Search */}
+                  <div className="px-6 py-4 border-b border-border/50 bg-muted/20">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search FAQs..."
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        className="pl-9 h-9 text-sm bg-background border-border"
+                      />
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </motion.div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.25 }}
-          className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]"
-        >
-          <Card className="border-border overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="flex items-center gap-3 text-xl">
-                <div className="rounded-2xl bg-primary/10 p-3 text-primary">
-                  <Headphones className="h-5 w-5" />
-                </div>
-                Live Support Console
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Support Agent</p>
-                  <p className="mt-2 text-lg font-semibold text-foreground">{supportAgent.name}</p>
-                  <p className="text-sm text-muted-foreground">{supportAgent.role}</p>
-                  <p className="mt-3 text-xs text-muted-foreground">{supportAgent.shift}</p>
-                </div>
-                <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Chat status</p>
-                  <p className="mt-2 text-sm font-medium text-foreground">
-                    {chatStarted ? "Conversation active" : "This conversation has been closed"}
-                  </p>
-                  <p className="mt-1 text-xs text-muted-foreground">We'll be monitoring the messages while the chat is open.</p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="mt-3 h-9 border-border bg-background"
-                    onClick={() => {
-                      setChatStarted(true);
-                      toast.success("Chat reopened", {
-                        description: "You can now send a support message."
-                      });
-                    }}
-                  >
-                    Start a chat
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-dashed border-border bg-background p-4">
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { icon: Camera, label: "Camera" },
-                    { icon: ImageIcon, label: "Gallery" },
-                    { icon: Paperclip, label: "Files" },
-                    { icon: Mic, label: "Audio" },
-                  ].map((item) => {
-                    const Icon = item.icon;
-
-                    return (
-                      <button
-                        key={item.label}
-                        type="button"
-                        className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-                        onClick={() => toast.info(`${item.label} attachment ready`, { description: "This will attach to your support message." })}
-                      >
-                        <Icon className="h-3.5 w-3.5" />
-                        {item.label}
+                  {(searchQuery ? filteredCategories : faqCategories).length === 0 ? (
+                    <div className="py-10 text-center">
+                      <HelpCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-sm text-muted-foreground">No results for "{searchQuery}"</p>
+                      <button onClick={() => setSearchQuery("")} className="text-sm text-primary hover:underline mt-1">
+                        Clear search
                       </button>
-                    );
-                  })}
-                </div>
-
-                <Textarea
-                  value={supportMessage}
-                  onChange={(event) => setSupportMessage(event.target.value)}
-                  placeholder="Type your support message..."
-                  className="mt-3 min-h-28 border-border bg-background"
-                />
-
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <p className="text-xs text-muted-foreground">
-                    Audio messages, camera uploads, gallery images, and PDFs can be shared here.
-                  </p>
-                  <Button className="bg-primary hover:bg-primary/90" onClick={handleSupportSubmit}>
-                    <Send className="mr-2 h-4 w-4" />
-                    {chatStarted ? "Send Message" : "Start a chat"}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-destructive/15 bg-destructive/5 p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-semibold text-foreground">Need to close your account?</p>
-                    <p className="mt-1 text-sm text-muted-foreground">If you want to delete your account, we will route the request to support.</p>
-                  </div>
-                  <Button type="button" variant="ghost" className="text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={() => toast.error("Delete account request started") }>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Delete my account
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-border overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Support shortcuts</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                onClick={() => handleContactAction("Request Callback")}
-              >
-                <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600">
-                  <Phone className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">Request a callback</p>
-                  <p className="text-xs text-muted-foreground">Leave your number for a support call</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                onClick={() => handleContactAction("Email Support")}
-              >
-                <div className="rounded-xl bg-secondary/70 p-2 text-foreground">
-                  <Mail className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">Email support</p>
-                  <p className="text-xs text-muted-foreground">hello@cosora.in</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center gap-3 rounded-2xl border border-border px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                onClick={() => handleContactAction("Follow Us")}
-              >
-                <div className="rounded-xl bg-pink-500/10 p-2 text-pink-600">
-                  <Instagram className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-foreground">Follow us on Instagram</p>
-                  <p className="text-xs text-muted-foreground">News, drops, and platform updates</p>
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </button>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        {/* FAQ Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
-          <h2 className="text-xl font-display font-semibold text-foreground mb-4">
-            Frequently Asked Questions
-          </h2>
-          
-          {(searchQuery ? filteredCategories : faqCategories).length === 0 ? (
-            <Card className="border-border">
-              <CardContent className="py-12 text-center">
-                <HelpCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No results found for "{searchQuery}"</p>
-                <Button 
-                  variant="link" 
-                  onClick={() => setSearchQuery("")}
-                  className="mt-2 text-primary"
-                >
-                  Clear search
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {(searchQuery ? filteredCategories : faqCategories).map((category) => (
-                <Card key={category.id} className="border-border">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="flex items-center gap-3 text-lg">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <category.icon className="w-4 h-4 text-primary" />
+                    </div>
+                  ) : (
+                    (searchQuery ? filteredCategories : faqCategories).map((cat, catIdx) => (
+                      <div key={cat.id} className={catIdx > 0 ? "border-t border-border/50" : ""}>
+                        {/* Category label */}
+                        <div className="flex items-center gap-2.5 px-6 py-3 bg-muted/10">
+                          <div className="p-1.5 rounded-lg bg-primary/10">
+                            <cat.icon className="w-3.5 h-3.5 text-primary" />
+                          </div>
+                          <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                            {cat.title}
+                          </span>
+                        </div>
+                        {/* Q&As */}
+                        <Accordion type="single" collapsible className="w-full">
+                          {cat.faqs.map((faq, i) => (
+                            <AccordionItem
+                              key={i}
+                              value={`${cat.id}-${i}`}
+                              className="border-0 border-b border-border/40 last:border-b-0 px-6"
+                            >
+                              <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-primary py-4 gap-3">
+                                {faq.question}
+                              </AccordionTrigger>
+                              <AccordionContent className="text-sm text-muted-foreground pb-4 leading-relaxed">
+                                {faq.answer}
+                              </AccordionContent>
+                            </AccordionItem>
+                          ))}
+                        </Accordion>
                       </div>
-                      {category.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Accordion type="single" collapsible className="w-full">
-                      {category.faqs.map((faq, index) => (
-                        <AccordionItem 
-                          key={index} 
-                          value={`${category.id}-${index}`}
-                          className="border-border/50"
-                        >
-                          <AccordionTrigger className="text-left text-sm hover:no-underline hover:text-primary">
-                            {faq.question}
-                          </AccordionTrigger>
-                          <AccordionContent className="text-sm text-muted-foreground">
-                            {faq.answer}
-                          </AccordionContent>
-                        </AccordionItem>
-                      ))}
-                    </Accordion>
+                    ))
+                  )}
+                </div>
+              )}
+            </Card>
+          </motion.div>
+
+          {/* ── Quick Guides ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <h2 className="text-xl font-semibold text-foreground mb-4">Quick Guides</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {quickGuides.map(guide => (
+                <Card
+                  key={guide.title}
+                  className="border-border hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group"
+                >
+                  <CardContent className="p-4 flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-primary/10 transition-colors">
+                      <guide.icon className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors" />
+                    </div>
+                    <span className="text-sm font-medium text-foreground flex-1">{guide.title}</span>
+                    <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CardContent>
                 </Card>
               ))}
             </div>
-          )}
-        </motion.div>
+          </motion.div>
 
-        {/* Quick Guides */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <h2 className="text-xl font-display font-semibold text-foreground mb-4">
-            Quick Guides
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {quickGuides.map((guide, index) => (
-              <Card 
-                key={guide.title}
-                className="border-border hover:border-primary/30 hover:shadow-md transition-all cursor-pointer group"
-              >
-                <CardContent className="p-4 flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-secondary/50 group-hover:bg-primary/10 transition-colors">
-                    <guide.icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                  </div>
-                  <span className="text-sm font-medium text-foreground flex-1">{guide.title}</span>
-                  <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </motion.div>
+          {/* ── Still Need Help ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-accent/5 border-primary/20">
+              <CardContent className="py-8 text-center">
+                <h3 className="text-xl font-semibold text-foreground mb-2">Still need help?</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto text-sm">
+                  Our dedicated support team is here to assist you with any questions or concerns.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button className="bg-primary hover:bg-primary/90" onClick={() => setChatOpen(true)}>
+                    <MessageCircle className="w-4 h-4 mr-2" />
+                    Start Live Chat
+                  </Button>
+                  <Button variant="outline" className="border-border" onClick={() => { window.location.href = "mailto:hello@cosora.in"; }}>
+                    <Mail className="w-4 h-4 mr-2" />
+                    Email Support
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-        {/* Still Need Help Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-accent/5 border-primary/20">
-            <CardContent className="py-8 text-center">
-              <h3 className="text-xl font-display font-semibold text-foreground mb-2">
-                Still need help?
-              </h3>
-              <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-                Our dedicated support team is here to assist you with any questions or concerns.
-              </p>
-              <div className="flex flex-wrap justify-center gap-3">
-                <Button className="bg-primary hover:bg-primary/90">
-                  <MessageCircle className="w-4 h-4 mr-2" />
-                  Start Live Chat
-                </Button>
-                <Button variant="outline" className="border-border">
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email Support
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+        </div>
       </div>
+
+      {/* ── Chat Modal ── */}
+      <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </DashboardLayout>
   );
 };

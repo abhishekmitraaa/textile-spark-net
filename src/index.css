@@ -110,10 +110,25 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "DM Sans", system-ui, sans-serif;
+    font-family: "Open Sans", Roboto, system-ui, sans-serif;
   }
 
   h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto", "Open Sans", system-ui, sans-serif;
+  }
+
+  /* Preserve original fonts for Landing page */
+  .landing-page,
+  .landing-page body {
+    font-family: "DM Sans", system-ui, sans-serif;
+  }
+
+  .landing-page h1,
+  .landing-page h2,
+  .landing-page h3,
+  .landing-page h4,
+  .landing-page h5,
+  .landing-page h6 {
     font-family: "Playfair Display", Georgia, serif;
   }
 

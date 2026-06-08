@@ -1,576 +1,372 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { Textarea } from "@/components/ui/textarea";
-import { Link, useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
-  Camera, Star, QrCode, ChevronRight, Building2, Megaphone,
-  Package, HelpCircle, MessageSquare, FileText, Bell,
-  Flag, Share2, LogOut, Info, Link2, Download, CheckCircle2,
-  AlertTriangle, ArrowLeftRight
+  ChevronRight, Star, QrCode, Building2, Megaphone, List,
+  HelpCircle, MessageSquare, FileText, Bell, Share2, LogOut,
+  Info, Link2, Download, CheckCircle2, AlertTriangle,
+  Bookmark, Settings, Pencil, Camera, Plus, X, Copy,
+  Check, Shield, Lightbulb, UserCircle, StarIcon,
+  Facebook, Twitter, Linkedin, Send, Mail,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const sectionVariant = (delay: number) => ({ initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay } });
+// ─────────────────────────────────────────────────────────────
+// SHARE APP MODAL
+// ─────────────────────────────────────────────────────────────
 
-const completionItems = [
-  { done: true, label: "Profile Photo Added" },
-  { done: true, label: "Business Name Added" },
-  { done: false, label: "Add Email Address" },
-  { done: false, label: "Add Website" },
-  { done: false, label: "Upload Catalogue" },
-  { done: false, label: "Get First Review" },
-];
+function ShareAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const [copied, setCopied] = useState(false);
+  const appUrl = "https://cosora.in/app";
+  const shareMsg = `Check out Cosora! Download now and grow your business. ${appUrl}`;
 
-const categoryItems = ["Fabrics", "Knitwear", "Denim", "Trims", "Packaging", "Printing", "Embroidery", "Dyeing", "Finishing", "Export", "Wholesale", "Retail"];
-
-const paymentHistory = [
-  { id: "INV-2026-015", title: "Silver Plan Renewal", date: "15 Jan 2026", amount: "₹2,499", status: "Paid" },
-  { id: "ADS-2026-003", title: "Store Promotion", date: "02 Jan 2026", amount: "₹99", status: "Paid" },
-  { id: "INV-2025-012", title: "Silver Plan Renewal", date: "15 Dec 2025", amount: "₹2,499", status: "Paid" },
-];
-
-const MyStore = () => {
-  const [completionOpen, setCompletionOpen] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
-  const [logoutOpen, setLogoutOpen] = useState(false);
-  const [categoryOpen, setCategoryOpen] = useState(false);
-  const [paymentHistoryOpen, setPaymentHistoryOpen] = useState(false);
-  const [lang, setLang] = useState("English");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(["Knitwear"]);
-  const navigate = useNavigate();
-
-  const toggleCategory = (cat: string) => {
-    setSelectedCategories((prev) => (prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]));
+  const copyLink = () => {
+    navigator.clipboard.writeText(appUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
+  if (!isOpen) return null;
+
   return (
-    <DashboardLayout>
-      <div className="space-y-4 pb-6">
-        <motion.div {...sectionVariant(0.05)}>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-start gap-4">
-                <div className="relative flex-shrink-0">
-                  <div className="w-20 h-20 rounded-full bg-accent/10 flex items-center justify-center text-2xl font-bold text-accent select-none">KT</div>
-                  <button className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-accent text-accent-foreground flex items-center justify-center shadow-md hover:bg-accent/90 transition-colors" type="button">
-                    <Camera className="h-3 w-3" />
-                  </button>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xl font-bold font-display text-foreground truncate">Kumar Textiles Pvt Ltd</p>
-                  <p className="text-sm text-muted-foreground mt-0.5">+91 98765 43210</p>
-                  <div className="flex items-center gap-1 mt-1 flex-wrap">
-                    <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                    <span className="text-sm font-semibold">4.2</span>
-                    <span className="text-muted-foreground mx-1">·</span>
-                    <span className="text-sm text-muted-foreground">24 Reviews</span>
-                    <span className="text-muted-foreground mx-1">·</span>
-                    <span className="text-sm text-muted-foreground">1.2k Followers</span>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
+      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-4 py-4 border-b border-gray-100">
+          <button onClick={onClose} className="text-gray-600 hover:text-gray-900">
+            <ChevronRight className="w-6 h-6 rotate-180" />
+          </button>
+          <h1 className="text-lg font-bold text-gray-900">Share App</h1>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+          {/* App banner */}
+          <div className="bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-6 text-white text-center">
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow">
+              <Share2 className="w-8 h-8 text-blue-600" />
+            </div>
+            <p className="font-bold text-lg">Share Cosora</p>
+            <p className="text-blue-100 text-sm mt-1">
+              Help your friends and family grow their business by sharing the app!
+            </p>
+          </div>
+
+          {/* Quick share */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs font-semibold text-gray-500 mb-3">Quick Share</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: "WhatsApp", bg: "bg-green-50",  color: "text-green-600",  onClick: () => window.open(`https://wa.me/?text=${encodeURIComponent(shareMsg)}`, "_blank") },
+                { label: "SMS",      bg: "bg-blue-50",   color: "text-blue-600",   onClick: () => { window.location.href = `sms:?body=${encodeURIComponent(shareMsg)}`; } },
+                { label: "Email",    bg: "bg-red-50",    color: "text-red-600",    onClick: () => { window.location.href = `mailto:?subject=Check out Cosora&body=${encodeURIComponent(shareMsg)}`; } },
+                { label: "More",     bg: "bg-purple-50", color: "text-purple-600", onClick: async () => { try { if (navigator.share) await navigator.share({ title: "Cosora", text: shareMsg, url: appUrl }); } catch {} } },
+              ].map(opt => (
+                <button key={opt.label} onClick={opt.onClick}
+                  className="flex flex-col items-center gap-2 p-3 rounded-xl hover:bg-gray-50 transition-colors">
+                  <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", opt.bg)}>
+                    <Share2 className={cn("w-5 h-5", opt.color)} />
                   </div>
-                </div>
-              </div>
-              <div className="mt-4">
-                <div className="flex justify-between items-center mb-1">
-                  <span className="text-sm font-medium">Profile Score</span>
-                  <span className="text-sm font-bold text-accent">45%</span>
-                </div>
-                <Progress value={45} className="h-2" />
-                <p className="text-xs text-muted-foreground mt-1.5 hover:underline cursor-pointer underline-offset-2" onClick={() => setCompletionOpen(true)}>
-                  Complete your profile to get verified and attract more buyers →
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.1)}>
-          <Card>
-            <CardContent className="p-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {[
-                  { icon: Megaphone, label: "Advertise", href: "/advertisements", color: "text-purple-600", bg: "bg-purple-100" },
-                  { icon: Building2, label: "My Profile", href: "/profile", color: "text-blue-600", bg: "bg-blue-100" },
-                  { icon: Package, label: "Products", href: "/products", color: "text-emerald-600", bg: "bg-emerald-100" },
-                  { icon: HelpCircle, label: "Help", href: "/help", color: "text-indigo-600", bg: "bg-indigo-100" },
-                  { icon: MessageSquare, label: "Customer Chats", href: "/chat", color: "text-rose-600", bg: "bg-rose-100" },
-                ].map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <Link key={item.label} to={item.href} className="flex flex-col items-center gap-1.5 p-2 rounded-xl hover:bg-muted/50 transition-colors">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${item.bg}`}>
-                        <Icon className={`h-5 w-5 ${item.color}`} />
-                      </div>
-                      <span className="text-xs font-medium text-muted-foreground text-center leading-tight">{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.15)}>
-          <Link to="/advertisements" className="block">
-            <div className="rounded-xl bg-gradient-to-r from-accent to-accent/80 p-4 flex items-center justify-between overflow-hidden relative">
-              <div className="absolute -right-6 -top-6 w-24 h-24 rounded-full border-2 border-white/10 pointer-events-none" />
-              <div className="absolute right-10 bottom-0 w-14 h-14 rounded-full border border-white/10 pointer-events-none" />
-              <div>
-                <p className="text-sm font-semibold text-accent-foreground">Boost Your Business Visibility</p>
-                <p className="text-xs text-accent-foreground/70 mt-0.5">Reach more buyers today</p>
-              </div>
-              <div className="bg-accent-foreground text-accent text-xs rounded-full px-3 h-7 flex items-center font-medium flex-shrink-0 ml-4 hover:bg-accent-foreground/90 transition-colors">Advertise Now</div>
-            </div>
-          </Link>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.2)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Business</span>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer" onClick={() => setCategoryOpen(true)}>
-              <span className="text-sm font-medium text-foreground">Add New Business Category</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <Link to="/leads" className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
-              <span className="text-sm font-medium text-foreground">Shortlisted Leads</span>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-accent text-accent-foreground text-[10px] h-5 px-1.5 rounded-full">8</Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </Link>
-            <Link to="/quotes" className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
-              <span className="text-sm font-medium text-foreground">Quotation Page</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-            <Link to="/chat" className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
-              <span className="text-sm font-medium text-foreground">Customer Chats</span>
-              <div className="flex items-center gap-2">
-                <Badge className="bg-accent text-accent-foreground text-[10px] h-5 px-1.5 rounded-full">3</Badge>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </Link>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.25)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Subscription</span>
-            </div>
-            <Link to="/subscription" className="flex justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-foreground">Silver Plan</span>
-                <Badge className="bg-green-500/10 text-green-600 border border-green-500/20 text-[10px] rounded-full px-2">Active</Badge>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </Link>
-            <button type="button" onClick={() => setPaymentHistoryOpen(true)} className="flex w-full justify-between items-center px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer text-left">
-              <span className="text-sm font-medium text-foreground">Payment History</span>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.275)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transactions & Support</span>
-            </div>
-            <button type="button" onClick={() => setPaymentHistoryOpen(true)} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-accent/10 p-2 text-accent">
-                  <ArrowLeftRight className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">My Transactions / Bookings</p>
-                  <p className="text-xs text-muted-foreground">View recent invoices and charges</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button type="button" onClick={() => navigate("/help")} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-indigo-100 p-2 text-indigo-600">
-                  <HelpCircle className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Help Center</p>
-                  <p className="text-xs text-muted-foreground">Get answers or raise a support ticket</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-            <button type="button" onClick={() => { navigate("/help"); toast.info("Opening support chat", { description: "A Cosora agent will help you shortly." }); }} className="flex w-full items-center justify-between gap-3 border-t border-border px-4 py-3 text-left transition-colors hover:bg-muted/30">
-              <div className="flex items-center gap-3">
-                <div className="rounded-lg bg-rose-100 p-2 text-rose-600">
-                  <MessageSquare className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">Chat with Us</p>
-                  <p className="text-xs text-muted-foreground">Open the vendor support chat</p>
-                </div>
-              </div>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </button>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.3)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Reviews</span>
-            </div>
-            <div className="flex items-center justify-between px-4 py-3 border-t border-border">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold font-display text-foreground">4.2</span>
-                <div>
-                  <div className="flex gap-0.5">
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <Star className="h-3.5 w-3.5 text-muted-foreground" />
-                  </div>
-                  <span className="text-xs text-muted-foreground">24 reviews</span>
-                </div>
-              </div>
-              <Button variant="outline" size="sm" className="h-8 gap-1.5 text-xs" onClick={() => setQrOpen(true)}>
-                <QrCode className="h-3.5 w-3.5" />
-                Share QR
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.35)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">App Settings</span>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Language</span>
-              <div className="flex gap-0.5 bg-muted p-0.5 rounded-full">
-                {[
-                  "English",
-                  "Hindi",
-                ].map((item) => (
-                  <button key={item} className={`text-xs px-3 py-1 rounded-full transition-all ${lang === item ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground"}`} onClick={() => setLang(item)} type="button">
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Lead Notification Tone</span>
-              <Select defaultValue="default">
-                <SelectTrigger className="w-32 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Default Tone</SelectItem>
-                  <SelectItem value="1">Tone 1</SelectItem>
-                  <SelectItem value="2">Tone 2</SelectItem>
-                  <SelectItem value="3">Tone 3</SelectItem>
-                  <SelectItem value="4">Tone 4</SelectItem>
-                  <SelectItem value="5">Tone 5</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <div>
-                <p className="text-sm font-medium">Notifications</p>
-                <p className="text-xs text-muted-foreground">Get all app alerts</p>
-              </div>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-xs text-muted-foreground">Not receiving notifications?</span>
-              <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => toast.info("Test notification sent! 🔔")}>
-                Test Now
-              </Button>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Default Currency</span>
-              <Select defaultValue="inr">
-                <SelectTrigger className="w-28 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inr">INR ₹</SelectItem>
-                  <SelectItem value="usd">USD $</SelectItem>
-                  <SelectItem value="eur">EUR €</SelectItem>
-                  <SelectItem value="gbp">GBP £</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Timezone</span>
-              <Select defaultValue="ist">
-                <SelectTrigger className="w-36 h-8 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ist">IST (India)</SelectItem>
-                  <SelectItem value="est">EST</SelectItem>
-                  <SelectItem value="pst">PST</SelectItem>
-                  <SelectItem value="gmt">GMT</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.4)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Other</span>
-            </div>
-            {[
-              { icon: Flag, label: "Report Fraud", href: "/report-fraud", color: "text-destructive" },
-              { icon: MessageSquare, label: "App Feedback", href: "/app-feedback", color: "text-foreground" },
-              { icon: Share2, label: "Share App", href: null, color: "text-accent" },
-              { icon: FileText, label: "Privacy Policy", href: null, color: "text-foreground" },
-              { icon: FileText, label: "Terms & Conditions", href: null, color: "text-foreground" },
-              { icon: Info, label: "About Us", href: "/about", color: "text-foreground" },
-            ].map((item) => {
-              const Icon = item.icon;
-
-              if (item.href) {
-                return (
-                  <Link key={item.label} to={item.href} className="flex items-center gap-3 px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
-                    <Icon className={`h-4 w-4 ${item.color} flex-shrink-0`} />
-                    <span className={`text-sm font-medium ${item.color}`}>{item.label}</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
-                  </Link>
-                );
-              }
-
-              if (item.label === "Share App") {
-                return (
-                  <div
-                    key={item.label}
-                    className="flex items-center gap-3 px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer"
-                    onClick={async () => {
-                      try {
-                        if (navigator.share) {
-                          await navigator.share({ title: "Cosora", url: "https://cosora.in" });
-                        } else {
-                          throw new Error("Share unavailable");
-                        }
-                      } catch {
-                        toast.success("Link copied!");
-                      }
-                    }}
-                  >
-                    <Icon className={`h-4 w-4 ${item.color} flex-shrink-0`} />
-                    <span className={`text-sm font-medium ${item.color}`}>{item.label}</span>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
-                  </div>
-                );
-              }
-
-              return (
-                <div key={item.label} className="flex items-center gap-3 px-4 py-3 border-t border-border hover:bg-muted/30 transition-colors cursor-pointer">
-                  <Icon className={`h-4 w-4 ${item.color} flex-shrink-0`} />
-                  <span className={`text-sm font-medium ${item.color}`}>{item.label}</span>
-                  <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
-                </div>
-              );
-            })}
-            <div className="flex items-center gap-3 px-4 py-3 border-t border-border hover:bg-destructive/5 transition-colors cursor-pointer" onClick={() => setLogoutOpen(true)}>
-              <LogOut className="h-4 w-4 text-destructive" />
-              <span className="text-sm font-medium text-destructive">Log Out</span>
-            </div>
-          </Card>
-        </motion.div>
-
-        <motion.div {...sectionVariant(0.45)}>
-          <Card className="overflow-hidden">
-            <div className="px-4 pt-4 pb-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notifications</span>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">New Quote Received</span>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">New Messages</span>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">RFQ Updates</span>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Newsletter & Tips</span>
-              <Switch />
-            </div>
-            <div className="px-4 pt-3 pb-1">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Push Notifications</span>
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Quote Notifications</span>
-              <Switch defaultChecked />
-            </div>
-            <div className="flex justify-between items-center px-4 py-3 border-t border-border">
-              <span className="text-sm font-medium">Message Alerts</span>
-              <Switch defaultChecked />
-            </div>
-            <div className="px-4 pb-4 pt-2">
-              <Button className="w-full bg-accent text-accent-foreground h-11 hover:bg-accent/90 font-medium" onClick={() => toast.success("Notification settings saved!")}>
-                Save Notification Settings
-              </Button>
-            </div>
-          </Card>
-        </motion.div>
-
-        <Dialog open={completionOpen} onOpenChange={setCompletionOpen}>
-          <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Complete Your Profile</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-0 mt-2">
-              {completionItems.map((item) => (
-                <div key={item.label} className="flex items-center gap-3 py-2.5 border-b border-border last:border-0">
-                  {item.done ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" />
-                  ) : (
-                    <AlertTriangle className="h-5 w-5 text-amber-500 flex-shrink-0" />
-                  )}
-                  <span className="text-sm font-medium flex-1">{item.label}</span>
-                  {!item.done ? <span className="text-xs text-accent font-medium cursor-pointer hover:underline">Add Now</span> : null}
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={qrOpen} onOpenChange={setQrOpen}>
-          <DialogContent className="max-w-xs">
-            <DialogHeader>
-              <DialogTitle>Your Review QR Code</DialogTitle>
-            </DialogHeader>
-            <div className="flex flex-col items-center gap-3 py-3">
-              <div className="w-48 h-48 bg-muted rounded-2xl border-2 border-border flex items-center justify-center">
-                <QrCode className="h-20 w-20 text-foreground" />
-              </div>
-              <div className="text-center">
-                <p className="font-semibold text-foreground">Kumar Textiles Pvt Ltd</p>
-                <p className="text-sm text-muted-foreground">Surat, Gujarat</p>
-              </div>
-            </div>
-            <div className="grid gap-2 mt-1">
-              <Button variant="outline" className="w-full h-10 gap-2" onClick={() => { navigator.clipboard.writeText(window.location.origin + "/my-store"); toast.success("Review link copied!"); }}>
-                <Link2 className="h-4 w-4" />
-                Copy Review Link
-              </Button>
-              <Button variant="outline" className="w-full h-10 gap-2" onClick={() => toast.success("QR code downloaded!")}>
-                <Download className="h-4 w-4" />
-                Download QR Code
-              </Button>
-              <Button className="w-full h-10 gap-2 bg-accent text-accent-foreground hover:bg-accent/90" onClick={async () => {
-                try {
-                  if (navigator.share) {
-                    await navigator.share({ title: "Cosora", url: window.location.origin + "/my-store" });
-                  } else {
-                    throw new Error("Share unavailable");
-                  }
-                } catch {
-                  toast.success("QR code share ready!");
-                }
-              }}>
-                <Share2 className="h-4 w-4" />
-                Share QR Code
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
-          <DialogContent className="max-w-xs">
-            <DialogHeader>
-              <DialogTitle>Log Out</DialogTitle>
-            </DialogHeader>
-            <p className="text-sm text-muted-foreground text-center py-2">Are you sure you want to log out of your Cosora account?</p>
-            <div className="flex gap-2 mt-2">
-              <Button variant="outline" className="flex-1" onClick={() => setLogoutOpen(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1 bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { setLogoutOpen(false); navigate("/"); }}>
-                Log Out
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <Sheet open={categoryOpen} onOpenChange={setCategoryOpen}>
-          <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh]">
-            <SheetHeader>
-              <SheetTitle>Add Business Category</SheetTitle>
-            </SheetHeader>
-            <p className="text-sm text-muted-foreground mb-4">Select all categories that apply to your business</p>
-            <div className="grid grid-cols-3 gap-2">
-              {categoryItems.map((cat) => (
-                <button
-                  key={cat}
-                  className={`p-3 rounded-xl border text-xs font-medium transition-all ${selectedCategories.includes(cat) ? "border-accent bg-accent/10 text-accent" : "border-border text-muted-foreground hover:border-accent/50"}`}
-                  onClick={() => toggleCategory(cat)}
-                  type="button"
-                >
-                  {cat}
+                  <span className="text-xs font-medium text-gray-700">{opt.label}</span>
                 </button>
               ))}
             </div>
-            <Button className="w-full mt-4 bg-accent text-accent-foreground h-11 hover:bg-accent/90" onClick={() => { toast.success("Categories updated!"); setCategoryOpen(false); }}>
-              Save Categories
-            </Button>
-          </SheetContent>
-        </Sheet>
+          </div>
 
-        <Dialog open={paymentHistoryOpen} onOpenChange={setPaymentHistoryOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Payment History</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 pt-2">
-              {paymentHistory.map((entry) => (
-                <div key={entry.id} className="rounded-2xl border border-border bg-muted/20 p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{entry.title}</p>
-                      <p className="text-xs text-muted-foreground">{entry.id}</p>
-                    </div>
-                    <Badge className="bg-green-500/10 text-green-600 border border-green-500/20 text-[10px] rounded-full px-2">{entry.status}</Badge>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">{entry.date}</span>
-                    <span className="font-semibold text-foreground">{entry.amount}</span>
-                  </div>
-                </div>
+          {/* Social media */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs font-semibold text-gray-500 mb-3">Share on Social Media</p>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Facebook", color: "text-blue-600",  onClick: () => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appUrl)}`, "_blank") },
+                { label: "Twitter",  color: "text-sky-500",   onClick: () => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMsg)}`, "_blank") },
+                { label: "LinkedIn", color: "text-blue-700",  onClick: () => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(appUrl)}`, "_blank") },
+                { label: "Telegram", color: "text-blue-500",  onClick: () => window.open(`https://t.me/share/url?url=${encodeURIComponent(appUrl)}`, "_blank") },
+              ].map(opt => (
+                <button key={opt.label} onClick={opt.onClick}
+                  className="flex items-center gap-2.5 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                  <Share2 className={cn("w-5 h-5", opt.color)} />
+                  <span className="text-sm font-medium text-gray-700">{opt.label}</span>
+                </button>
               ))}
             </div>
-            <div className="mt-4 flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => navigate("/subscription")}>
-                Open Subscription
-              </Button>
-              <Button className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90" onClick={() => { toast.success("Receipt download started"); setPaymentHistoryOpen(false); }}>
-                Download Receipt
-              </Button>
+          </div>
+
+          {/* App link */}
+          <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <p className="text-xs font-semibold text-gray-500 mb-3">App Link</p>
+            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+              <span className="flex-1 text-sm text-gray-600 truncate">{appUrl}</span>
+              <button onClick={copyLink}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors shrink-0">
+                {copied ? <><Check className="w-3.5 h-3.5" />Copied!</> : <><Copy className="w-3.5 h-3.5" />Copy Link</>}
+              </button>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MENU ROW — reusable row matching source repo style
+// ─────────────────────────────────────────────────────────────
+
+function MenuRow({
+  icon: Icon, label, badge, badgeVariant = "red", onClick,
+}: {
+  icon: React.ElementType;
+  label: string;
+  badge?: string;
+  badgeVariant?: "red" | "new";
+  onClick?: () => void;
+}) {
+  return (
+    <button onClick={onClick}
+      className="w-full flex items-center justify-between px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left">
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5 text-gray-600" />
+        <span className="text-sm text-gray-900">{label}</span>
+        {badge && (
+          <span className={cn(
+            "text-xs font-bold px-2 py-0.5 rounded",
+            badgeVariant === "new" ? "bg-red-500 text-white" : "bg-red-500 text-white"
+          )}>
+            {badge}
+          </span>
+        )}
+      </div>
+      <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+    </button>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
+
+const MyStore = () => {
+  const navigate = useNavigate();
+  const [lang, setLang] = useState("en");
+  const [shareOpen, setShareOpen]           = useState(false);
+  const [logoutOpen, setLogoutOpen]         = useState(false);
+  const [qrOpen, setQrOpen]                 = useState(false);
+
+  return (
+    <DashboardLayout>
+      <div className="min-h-screen bg-gray-50">
+
+        {/* ── Header Section ── */}
+        <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="max-w-4xl mx-auto">
+            {/* Title row */}
+            <div className="flex items-start justify-between mb-4">
+              <h1 className="text-lg font-bold text-gray-900 px-3 py-1">MY STORE</h1>
+              <div className="w-6" />
+            </div>
+
+            {/* Profile row */}
+            <div className="flex items-start gap-3 mb-3">
+              <div className="w-14 h-14 bg-gray-300 rounded-full overflow-hidden shrink-0">
+                <img
+                  src="https://picsum.photos/seed/business/200/200"
+                  alt="Business"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base font-semibold text-gray-900 px-2">business name</span>
+                  <button className="text-gray-600 hover:text-gray-900">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-sm text-gray-600 mb-2">9010608951</p>
+                <div className="flex items-center gap-4 text-xs text-gray-500">
+                  <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 bg-[#ebe6ff] px-2 py-1 rounded-full">
+                      <span>0.0</span>
+                      <Star className="w-3 h-3 text-[#3925b3] fill-[#3925b3]" />
+                    </div>
+                    <span>Ratings</span>
+                  </div>
+                  <p><span className="font-semibold text-gray-900">0</span>&nbsp;Followers</p>
+                </div>
+              </div>
+            </div>
+
+            {/* 2×2 top action buttons */}
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              {[
+                { icon: Building2,  label: "My Business",  onClick: () => navigate("/my-store/business") },
+                { icon: UserCircle, label: "MY PROFILE",   onClick: () => navigate("/business-profile") },
+                { icon: List,       label: "My Listings",  onClick: () => navigate("/products") },
+                { icon: HelpCircle, label: "Help",         onClick: () => navigate("/help") },
+              ].map(item => (
+                <button key={item.label} onClick={item.onClick}
+                  className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                  <item.icon className="w-5 h-5 text-gray-700" />
+                  <span className="text-sm font-medium text-gray-900">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Main Content — Two Columns ── */}
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+            {/* ═══════════════════════════
+                LEFT COLUMN
+            ═══════════════════════════ */}
+            <div className="space-y-4">
+
+              {/* Advertise & Grow */}
+              <button onClick={() => navigate("/advertisements")}
+                className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <span className="text-sm font-medium text-gray-900">Advertise & Grow your Business</span>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+
+              {/* Add New Business */}
+              <button className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Plus className="w-5 h-5 text-gray-700" />
+                  <span className="text-sm font-medium text-gray-900">Add New Business</span>
+                  <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">Free</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+
+              {/* App and User Setting card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">App and User Setting</h3>
+
+                {/* Language buttons */}
+                <div className="overflow-x-auto mb-4 -mx-2 px-2">
+                  <div className="flex gap-2 min-w-max">
+                    {[{ code: "en", label: "English" }, { code: "hi", label: "हिंदी" }].map(l => (
+                      <button key={l.code} onClick={() => setLang(l.code)}
+                        className={cn(
+                          "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
+                          lang === l.code
+                            ? "border-2 border-blue-500 text-blue-600 bg-blue-50"
+                            : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                        )}>
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Menu items */}
+                <div className="space-y-1">
+                  <MenuRow icon={Bookmark}      label="Shortlisted leads"    onClick={() => navigate("/leads")} />
+                  <MenuRow icon={MessageSquare} label="Reviews"               onClick={() => navigate("/reviews")} />
+                  <MenuRow icon={Settings}      label="Settings"              onClick={() => {}} />
+                  <MenuRow icon={Bell}          label="Lead Notification"     badge="New" badgeVariant="new" onClick={() => {}} />
+                </div>
+              </div>
+            </div>
+
+            {/* ═══════════════════════════
+                RIGHT COLUMN
+            ═══════════════════════════ */}
+            <div className="space-y-4">
+
+              {/* Rate Us */}
+              <button onClick={() => navigate("/reviews")}
+                className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Star className="w-5 h-5 fill-gray-600 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Rate Us</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+
+              {/* App Feedback */}
+              <button onClick={() => navigate("/app-feedback")}
+                className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <MessageSquare className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">App Feedback</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+
+              {/* Share App */}
+              <button onClick={() => setShareOpen(true)}
+                className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                <div className="flex items-center gap-3">
+                  <Share2 className="w-5 h-5 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-900">Share App</span>
+                </div>
+                <ChevronRight className="w-5 h-5 text-gray-400" />
+              </button>
+
+              {/* Notification banner */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-700">Are you not receiving notifications?</span>
+                <button
+                  onClick={() => toast.info("Test notification sent! 🔔")}
+                  className="text-blue-600 text-sm font-semibold hover:text-blue-700 shrink-0 ml-2">
+                  Test Now
+                </button>
+              </div>
+
+              {/* More Information card */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">More information</h3>
+                <div className="space-y-1">
+                  <MenuRow icon={Shield}       label="Privacy Policy"  onClick={() => {}} />
+                  <MenuRow icon={FileText}     label="Terms of Use"    onClick={() => {}} />
+                  <MenuRow icon={Lightbulb}    label="What's New"      onClick={() => {}} />
+                  <MenuRow icon={Info}         label="About Us"        onClick={() => navigate("/about")} />
+                  <button onClick={() => setLogoutOpen(true)}
+                    className="w-full flex items-center justify-between px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left">
+                    <div className="flex items-center gap-3">
+                      <LogOut className="w-5 h-5 text-gray-600" />
+                      <span className="text-sm text-gray-900">Logout</span>
+                    </div>
+                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      {/* ── Share App Modal ── */}
+      <ShareAppModal isOpen={shareOpen} onClose={() => setShareOpen(false)} />
+
+      {/* ── Logout Confirm ── */}
+      <Dialog open={logoutOpen} onOpenChange={setLogoutOpen}>
+        <DialogContent className="max-w-xs">
+          <DialogHeader><DialogTitle>Log Out</DialogTitle></DialogHeader>
+          <p className="text-sm text-gray-500 text-center py-2">
+            Are you sure you want to log out of your Cosora account?
+          </p>
+          <div className="flex gap-2 mt-1">
+            <button onClick={() => setLogoutOpen(false)}
+              className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+              Cancel
+            </button>
+            <button onClick={() => { setLogoutOpen(false); navigate("/"); }}
+              className="flex-1 py-2.5 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors">
+              Log Out
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
     </DashboardLayout>
   );
 };

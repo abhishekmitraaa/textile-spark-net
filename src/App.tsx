@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import BusinessProfileScorePage from "./pages/BusinessProfileScorePage";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -19,6 +20,8 @@ import Subscription from "./pages/Subscription";
 import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import MyStore from "./pages/MyStore";
+import BusinessProfile from "./pages/BusinessProfile";
+import BusinessProfileEmployees from "./pages/BusinessProfileEmployees";
 import Chat from "./pages/Chat";
 import PostRequirement from "./pages/PostRequirement";
 import RecentlyViewed from "./pages/RecentlyViewed";
@@ -40,15 +43,21 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import NewArrivals from "./pages/NewArrivals";
+import AddSocialLinks from "./pages/AddSocialLinks";
+
 
 import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
+import MyBusiness from "./pages/MyBusiness";
+import BusinessTools from "./pages/BusinessTools";
+import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
 import AppFeedback from "./pages/AppFeedback";
 import About from "./pages/About";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
+import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
 
 const queryClient = new QueryClient();
 
@@ -377,6 +386,8 @@ const App = () => (
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/my-store" element={<MyStore />} />
+            <Route path="/business-profile" element={<BusinessProfile />} />
+            <Route path="/business-profile/employees" element={<BusinessProfileEmployees />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
@@ -392,6 +403,9 @@ const App = () => (
             
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />
+            <Route path="/my-store/business" element={<MyBusiness />} />
+            <Route path="/my-store/business/tools" element={<BusinessTools />} />
+            <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
             <Route path="/app-feedback" element={<AppFeedback />} />
             <Route path="/about" element={<About />} />
@@ -411,6 +425,9 @@ const App = () => (
                 }
               />
             ))}
+            <Route path="/add-social-links" element={<AddSocialLinks />} />
+            <Route path="/advertisement-slideshow" element={<AdvertisementSlideshow />} />
+            <Route path="/business-profile-score" element={<BusinessProfileScorePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

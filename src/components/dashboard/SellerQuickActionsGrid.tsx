@@ -28,8 +28,8 @@ interface QuickActionItem {
 }
 
 const primaryActions: QuickActionItem[] = [
-  { name: "Business Profile", icon: Building2, href: "/my-store", color: "text-blue-600", bgColor: "bg-blue-100" },
-  { name: "Advertise", icon: Megaphone, href: "/advertisements", color: "text-purple-600", bgColor: "bg-purple-100" },
+  { name: "Business Profile", icon: Building2, href: "/business-profile", color: "text-[#256fef]", bgColor: "bg-[#f0f4ff]" },
+  { name: "Advertise", icon: Megaphone, href: "/advertisement-slideshow", color: "text-purple-600", bgColor: "bg-purple-100" },
   { name: "Add Products", icon: Package, href: "/upload", color: "text-emerald-600", bgColor: "bg-emerald-100" },
   { name: "Reviews", icon: Star, href: "/reviews", color: "text-amber-600", bgColor: "bg-amber-100" },
 ];
@@ -37,7 +37,7 @@ const primaryActions: QuickActionItem[] = [
 const secondaryActions: QuickActionItem[] = [
   { name: "My Quotes", icon: FileText, href: "/quotes", color: "text-rose-600", bgColor: "bg-rose-100" },
   { name: "Add Website", icon: Globe, href: "/my-store", color: "text-cyan-600", bgColor: "bg-cyan-100" },
-  { name: "Add Social Links", icon: Share2, href: "/my-store", color: "text-orange-600", bgColor: "bg-orange-100" },
+  { name: "Add Social Links", icon: Share2, href: "/add-social-links", color: "text-orange-600", bgColor: "bg-orange-100" },
   { name: "Upload Catalogue", icon: Upload, href: "/upload", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
 ];
 

@@ -46,7 +46,10 @@ export const MobileBottomNav = () => {
       
       <div className="relative flex items-end justify-around px-1 pb-safe" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
         {navItems.map((item) => {
-          const isActive = location.pathname === item.href;
+          const isActive =
+            item.href === "/my-store"
+              ? location.pathname === "/my-store" || location.pathname.startsWith("/business-profile")
+              : location.pathname === item.href;
           const Icon = item.icon;
 
           if (item.isCenter) {

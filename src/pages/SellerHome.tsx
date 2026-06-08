@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import homeBanner1 from "@/assets/vendorhome/homebanner1.jpg";
+import homeBanner from "@/assets/vendorhome/homebanner2.png";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -62,44 +64,76 @@ const SellerHome = () => {
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="relative h-28 rounded-xl overflow-hidden"
+          className="relative h-48 rounded-xl overflow-hidden"
         >
           {/* Slide 1 */}
           <div
-            className="absolute inset-0 bg-gradient-to-r from-accent to-accent/80 p-4 flex flex-col justify-between transition-all duration-500"
-            style={{ opacity: currentSlide === 0 ? 1 : 0, transform: `translateX(${currentSlide === 0 ? 0 : 100}%)` }}
+            className="absolute inset-0 transition-all duration-500"
+            style={{
+              opacity: currentSlide === 0 ? 1 : 0,
+              transform: `translateX(${currentSlide === 0 ? 0 : 100}%)`,
+            }}
           >
-            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full border-2 border-white/10" />
-            <div className="absolute -right-2 bottom-0 w-20 h-20 rounded-full border border-white/10" />
-            <p className="text-base font-semibold text-accent-foreground relative z-10">Get Prime Placement Above Competitors</p>
-            <Link to="/advertisements">
-              <Button size="sm" className="h-7 text-xs rounded-full bg-accent-foreground text-accent hover:bg-accent-foreground/90 w-fit relative z-10">
-                Advertise Now →
-              </Button>
-            </Link>
+            <img
+              src={homeBanner}
+              alt="Advertise on Cosora"
+              style={{
+                position: "absolute",
+                inset: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center 30%",
+                transform: "scale(0.85)",
+                transformOrigin: "center",
+              }}
+            />
+            <div className="absolute inset-0 bg-black/30" />
+            <div className="absolute inset-0 p-4 flex flex-col justify-between">
+              <p className="text-base font-semibold text-white relative z-10">
+                Get Prime Placement Above Competitors
+              </p>
+              <Link to="/advertisement-slideshow">
+                <Button size="sm" className="h-7 text-xs rounded-full bg-white text-accent hover:bg-white/90 w-fit relative z-10">
+                  Advertise Now →
+                </Button>
+              </Link>
+            </div>
           </div>
           {/* Slide 2 */}
           <div
-            className="absolute inset-0 bg-gradient-to-r from-foreground to-foreground/80 p-4 flex flex-col justify-between transition-all duration-500"
-            style={{ opacity: currentSlide === 1 ? 1 : 0, transform: `translateX(${currentSlide === 1 ? 0 : -100}%)` }}
-          >
-            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full border-2 border-background/5" />
-            <p className="text-base font-semibold text-background relative z-10">Upload Products & Get More Leads</p>
+          className="absolute inset-0 transition-all duration-500"
+          style={{
+            opacity: currentSlide === 1 ? 1 : 0,
+            transform: `translateX(${currentSlide === 1 ? 0 : -100}%)`,
+          }}
+        >
+          <img
+            src={homeBanner1}
+            alt="Upload Products"
+            style={{
+              position: "absolute",
+              inset: 0,
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              objectPosition: "center 30%",
+              transform: "scale(0.85)",
+              transformOrigin: "center",
+            }}
+          />
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="absolute inset-0 p-4 flex flex-col justify-between">
+            <p className="text-base font-semibold text-white relative z-10">
+              Upload Products & Get More Leads
+            </p>
             <Link to="/upload">
-              <Button size="sm" className="h-7 text-xs rounded-full bg-background text-foreground hover:bg-background/90 w-fit relative z-10">
+              <Button size="sm" className="h-7 text-xs rounded-full bg-white text-accent hover:bg-white/90 w-fit relative z-10">
                 Add Products →
               </Button>
             </Link>
           </div>
-          {/* Dot indicators */}
-          <div className="absolute bottom-2 right-3 flex gap-1 z-20">
-            {[0, 1].map(i => (
-              <div
-                key={i}
-                className={`h-1.5 rounded-full transition-all duration-300 ${currentSlide === i ? "bg-white w-3" : "bg-white/40 w-1.5"}`}
-              />
-            ))}
-          </div>
+        </div>
         </motion.div>
 
         {/* 3. BUSINESS PROFILE SCORE */}
