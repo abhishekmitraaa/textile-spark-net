@@ -48,11 +48,8 @@ import AddSocialLinks from "./pages/AddSocialLinks";
 
 import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
-<<<<<<< HEAD
 import MyBusiness from "./pages/MyBusiness";
 import BusinessTools from "./pages/BusinessTools";
-=======
->>>>>>> 4bf3085dea2f41ab188bf5930c95e7f3a9e5c977
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
 import AppFeedback from "./pages/AppFeedback";
@@ -406,11 +403,8 @@ const App = () => (
             
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />
-<<<<<<< HEAD
             <Route path="/my-store/business" element={<MyBusiness />} />
             <Route path="/my-store/business/tools" element={<BusinessTools />} />
-=======
->>>>>>> 4bf3085dea2f41ab188bf5930c95e7f3a9e5c977
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
             <Route path="/app-feedback" element={<AppFeedback />} />

@@ -2,9 +2,20 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Session Initialization
+
+**At the start of every session, read these files in order:**
+1. This file (CLAUDE.md) — architecture and constraints
+2. `changelog.md` — what was built, changed, or fixed
+3. `memory/MEMORY.md` — index of project-specific memories
+
+These are the sole source of truth for project context. Do not rely on chat history.
+
 ## Project Overview
 
-**Cosora** is a textile marketplace platform built with Lovable.dev. It's a multi-role application enabling buyers to browse, search, and request quotes, and sellers/vendors to manage listings, orders, and business profiles.
+**Cosora** is a B2B sourcing marketplace for India's fashion and textile industry. It connects **Vendors** (manufacturers, mills, suppliers, freelancers), **Buyers** (brands, retailers, designers, sourcing managers), and **Admin** (Cosora ops team). It digitizes India's fragmented fashion supply chain, enabling vendors to list products and run ads, while buyers post requirements (RFQs) and receive quotes from multiple suppliers.
+
+The app is built with Lovable.dev and operates as a single unified web app where users toggle between Vendor and Buyer roles.
 
 **Tech Stack**: Vite + React 18 + TypeScript + shadcn-ui + Tailwind CSS + React Router v6 + React Query + Playwright E2E
 
@@ -18,6 +29,18 @@ npm run build:dev    # Development build
 npm run lint         # Run ESLint
 npm run test:e2e     # Run Playwright E2E tests (requires npm run playwright:install first)
 ```
+
+## Three-Sided Platform Architecture
+
+Cosora is fundamentally a **three-sided marketplace**:
+
+1. **Vendor Side** (Blue #256fef): Manufacturers, mills, suppliers, service providers, freelancers list products/services, receive leads, run ads, manage quotes, track analytics and Total Order Value (strongest retention metric).
+
+2. **Buyer Side** (Red #EF4D62): Brands, retailers, designers, sourcing managers discover products, post RFQs (Quick or detailed), receive quotes from multiple vendors, compare, negotiate via in-app chat.
+
+3. **Admin Side** (Not yet built): Cosora ops team verifies vendors, moderates listings, handles fraud, manages content. No UI designed or built yet.
+
+**Key mechanic**: Same user can toggle between Vendor and Buyer roles via a single unified app. Role toggle appears only on Vendor Dashboard Home and Buyer Homepage.
 
 ## Project Architecture
 
@@ -77,12 +100,38 @@ The `buyerShellRoutes` array at the top of App.tsx defines all buyer feature pag
 
 TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vite.config.ts).
 
+## Critical Business Constraints
+
+These must always be true:
+
+- **Chat Monitoring Disclosure** – The legal disclosure "We'll be monitoring the messages" (or similar) is **legally required** in all chat flows. Never remove or hide it.
+- **Currency & Timezone** – Default to **INR** and **IST** for all Indian users.
+- **Product Moderation** – All product listings go through admin moderation before going live (24–48 hours).
+- **Role Toggle Placement** – The "Switch to Buyer/Seller" toggle appears **only** on Vendor Dashboard Home and Buyer Homepage.
+- **Image Import Syntax** – All images must use ES module imports: `import img from "@/assets/image.png"` (never file path strings).
+- **DashboardLayout** – Every page must wrap in `DashboardLayout` to preserve consistent navigation and headers.
+
+## Domain Terms
+
+Key business concepts used throughout the app:
+
+| Term | Meaning |
+|---|---|
+| **RFQ** | Request for Quotation — a buyer's sourcing requirement post |
+| **Quick RFQ** | Simplified RFQ (image + quantity), designed for <30 seconds |
+| **Lead** | A buyer inquiry arriving in vendor dashboard |
+| **MOQ** | Minimum Order Quantity |
+| **GSM** | Fabric weight (grams per square metre) |
+| **TradeSEAL** | Cosora's paid vendor verification badge |
+| **Profile Score** | Vendor's profile completeness % — higher = better visibility |
+| **Total Order Value** | Cumulative orders won through Cosora — strongest vendor retention metric |
+
 ## Known Issues & Notes
 
-- **Merge Conflict in App.tsx**: Lines 51–55 and 409–413 contain unresolved git conflicts between MyBusiness/BusinessTools imports. Resolve by keeping or removing these routes as needed.
 - **Relaxed TypeScript Config**: `noImplicitAny` and `noUnusedLocals` are disabled; enforce stricter checks before production if needed.
 - **Lovable Integration**: The project uses Lovable's `componentTagger` plugin in dev mode for component metadata.
 - **Port**: Dev server runs on `localhost:8080` (non-standard, configured in vite.config.ts).
+- **Current Phase**: Porting and correcting Vendor and Buyer UIs (from Next.js source to Vite/TSX). Admin panel not yet designed or built.
 
 ## Testing
 
@@ -92,3 +141,16 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Deployment
 
 This project is deployed via Lovable. Push changes to the git repo and they sync automatically. Custom domains can be configured in Lovable project settings.
+
+## Documentation & Knowledge Management
+
+This project uses automatic documentation hooks configured in `.github/copilot-instructions.md`. Documentation updates happen automatically after each chat without prompting:
+
+- **CLAUDE.md** is updated with architectural decisions, technical findings, and constraint changes
+- **changelog.md** is updated with what was built, changed, or fixed (including commit hashes and file ranges)
+- **memory/** directory stores project-specific knowledge:
+  - `memory/MEMORY.md` — index of all memory files
+  - `memory/cosora_platform.md` — business context, three-sided platform mechanics, domain terms
+  - `memory/cosora_constraints.md` — critical business and legal constraints (chat disclosure, currency, moderation, etc.)
+
+These three files (CLAUDE.md, changelog.md, memory/) are the sole source of truth for project context and state across sessions. Future sessions start by reading them — do not scan chat history.
