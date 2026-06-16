@@ -1,13 +1,13 @@
 import { motion } from "framer-motion";
-import { Eye, Edit, Trash2, MoreVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Bookmark, BookmarkCheck, MapPin, Phone, Star, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 
 interface ProductCardProps {
   id: string;
@@ -19,13 +19,16 @@ interface ProductCardProps {
   views: number;
   inquiries: number;
   delay?: number;
+  // optional extras — will show fallbacks if not provided
+  moq?: string;
+  sold?: string;
+  location?: string;
+  fabric?: string;
+  gsm?: string;
+  fitType?: string;
+  rating?: string;
+  reviews?: string;
 }
-
-const statusStyles = {
-  active: "bg-green-100 text-green-700",
-  draft: "bg-muted text-muted-foreground",
-  pending: "bg-amber-100 text-amber-700",
-};
 
 export const ProductCard = ({
   name,
@@ -36,78 +39,116 @@ export const ProductCard = ({
   views,
   inquiries,
   delay = 0,
+  moq = "2",
+  sold = "800+",
+  location = "Bangalore",
+  fabric = "Cotton",
+  gsm = "200",
+  fitType = "Regular",
+  rating = "4.1",
+  reviews = "5.6k",
 }: ProductCardProps) => {
+  const [bookmarked, setBookmarked] = useState(false);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all duration-300 hover:shadow-elegant"
+      transition={{ duration: 0.35, delay }}
+      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
     >
-      <div className="relative aspect-[4/5] overflow-hidden bg-muted">
+      {/* ── Image ── */}
+      <div className="relative aspect-[3/4] bg-gray-100">
         <img
           src={image}
           alt={name}
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          className="h-full w-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/20 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-        
-        {/* Quick actions overlay - hidden on mobile */}
-        <div className="absolute inset-x-0 bottom-0 hidden items-center justify-center gap-2 p-4 opacity-0 transition-all duration-300 group-hover:opacity-100 sm:flex">
-          <Button size="sm" variant="secondary" className="backdrop-blur">
-            <Eye className="h-4 w-4" />
-          </Button>
-          <Button size="sm" variant="secondary" className="backdrop-blur">
-            <Edit className="h-4 w-4" />
-          </Button>
+
+        {/* Bookmark — top right */}
+        <button
+          onClick={() => setBookmarked(p => !p)}
+          className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+        >
+          {bookmarked
+            ? <BookmarkCheck className="w-3.5 h-3.5 text-[#256fef] fill-blue-100" />
+            : <Bookmark className="w-3.5 h-3.5 text-gray-500" />}
+        </button>
+
+        {/* 3-dot menu — top left */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="absolute top-2 left-2 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors">
+              <MoreVertical className="w-3.5 h-3.5 text-gray-600" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem>
+              <Edit className="mr-2 h-4 w-4" /> Edit Product
+            </DropdownMenuItem>
+            <DropdownMenuItem className="text-destructive">
+              <Trash2 className="mr-2 h-4 w-4" /> Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Rating badge — bottom left */}
+        <div className="absolute bottom-2 left-2 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 py-0.5 shadow-sm">
+          <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
+          <span className="text-[9px] font-bold text-gray-800">{rating}</span>
+          <span className="text-[9px] text-gray-400">| {reviews}</span>
+        </div>
+
+        {/* Status badge — bottom right */}
+        <div className={cn(
+          "absolute bottom-2 right-2 text-[9px] font-bold px-2 py-0.5 rounded-full capitalize",
+          status === "active"  ? "bg-green-100 text-green-700" :
+          status === "pending" ? "bg-amber-100 text-amber-700" :
+                                 "bg-gray-100 text-gray-500"
+        )}>
+          {status}
         </div>
       </div>
 
-      <div className="p-3 sm:p-4">
-        <div className="mb-2 flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <h3 className="truncate font-medium text-card-foreground">{name}</h3>
-            <p className="text-sm text-muted-foreground">{category}</p>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="shrink-0 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
-                <MoreVertical size={16} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Eye className="mr-2 h-4 w-4" /> View Details
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Edit className="mr-2 h-4 w-4" /> Edit Product
-              </DropdownMenuItem>
-              <DropdownMenuItem className="text-destructive">
-                <Trash2 className="mr-2 h-4 w-4" /> Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* ── Info ── */}
+      <div className="p-2 flex flex-col">
+        {/* Badge row — fixed height so all cards align even without badge */}
+        <div className="h-5 mb-1">
+          {status === "active" && (
+            <span className="inline-block rounded-full bg-blue-50 px-2 py-0.5 text-[9px] font-semibold text-blue-600">
+              Latest Products
+            </span>
+          )}
         </div>
 
-        <div className="mb-3 flex items-center justify-between">
-          <span className="font-display text-base font-semibold text-card-foreground sm:text-lg">
-            {price}
-          </span>
-          <span className={cn(
-            "rounded-full px-2 py-0.5 text-xs font-medium capitalize",
-            statusStyles[status]
-          )}>
-            {status}
-          </span>
+        {/* Price | MOQ | Sold */}
+        <p className="text-xs font-bold text-[#ef4d62] leading-snug">
+          {price} | MOQ: {moq} | {sold} sold
+        </p>
+
+        {/* Name | Manufacturer */}
+        <p className="text-[10px] text-gray-600 mt-1">
+          Product name | <span className="font-bold">Manufacturer</span>
+        </p>
+
+        {/* Location */}
+        <div className="flex items-center gap-0.5 mt-1">
+          <MapPin className="w-2.5 h-2.5 text-gray-500 shrink-0" />
+          <span className="text-[10px] font-bold text-gray-700">{location}</span>
         </div>
 
-        <div className="flex items-center gap-3 border-t border-border pt-3 text-xs text-muted-foreground sm:gap-4 sm:text-sm">
-          <span className="flex items-center gap-1">
-            <Eye size={14} />
-            {views}
-          </span>
-          <span>{inquiries} inquiries</span>
-        </div>
+        {/* Fabric | GSM */}
+        <p className="text-[10px] text-gray-500 mt-1">
+          Fabric: {fabric} | GSM: {gsm}
+        </p>
+
+        {/* Fit Type */}
+        <p className="text-[10px] text-gray-500 mt-0.5">Fit Type: {fitType}</p>
+
+        {/* Call Now — always at bottom */}
+        <button className="mt-2 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs font-bold py-2 rounded-lg transition-colors">
+          <Phone className="w-3 h-3" /> Call Now
+        </button>
       </div>
     </motion.div>
   );

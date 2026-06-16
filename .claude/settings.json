@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "manual",
+        "hooks": [
+          {
+            "type": "agent",
+            "prompt": "You are about to compact the context. Before that happens, review this entire session and update the project documentation:\n\n1. **Update CLAUDE.md** with:\n   - New architectural decisions made\n   - Technical findings and API quirks discovered\n   - Changes to constraints, routing, or patterns\n   - Any state changes or new critical information\n\n2. **Update changelog.md** with:\n   - What was built, changed, or fixed\n   - File paths affected (e.g., src/pages/Index.tsx:1-150)\n   - Commit-relevant details\n   - Any breaking changes or migration notes\n\n3. **Update memory/ files** with:\n   - New project-specific knowledge that will be useful in future sessions\n   - User preferences and feedback\n   - Business context or team decisions\n\nOnly add information if it's new or substantially changed. Do not create empty entries. Be precise and concise. After updating all documentation, report what was changed and allow compaction to proceed.",
+            "statusMessage": "Updating documentation before compaction...",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "pwsh -NoProfile -Command \"$claudemd = if (Test-Path 'CLAUDE.md') { Get-Content 'CLAUDE.md' -Raw } else { 'CLAUDE.md not found' }; $changelog = if (Test-Path 'changelog.md') { Get-Content 'changelog.md' -Raw } else { 'changelog.md not found' }; $memory = if (Test-Path 'memory/MEMORY.md') { Get-Content 'memory/MEMORY.md' -Raw } else { 'memory/MEMORY.md not found' }; $ctx = @'\\n### PROJECT CONTEXT (CLAUDE.md)\\n$claudemd\\n\\n### CHANGELOG\\n$changelog\\n\\n### MEMORY INDEX (memory/MEMORY.md)\\n$memory\\n'@; $json = @{hookSpecificOutput=@{hookEventName='UserPromptSubmit'; additionalContext=$ctx}} | ConvertTo-Json -Depth 10 -Compress; $json\"",
+            "statusMessage": "Loading project memory & context..."
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo '{\"systemMessage\": \"📝 Reminder: Before concluding, ensure you have updated: (1) CLAUDE.md with architectural decisions, technical findings, API quirks, and state changes; (2) changelog.md with what was built, changed, or fixed; (3) memory/ files with new project-specific knowledge. Document findings immediately upon discovery to optimize velocity for future sessions.\"}'",
+            "statusMessage": "Checking documentation updates..."
+          }
+        ]
+      }
+    ]
+  }
+}

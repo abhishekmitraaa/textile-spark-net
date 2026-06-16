@@ -73,12 +73,12 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
     role === "buyer"
       ? [
           { name: "My Profile", href: "/profile", icon: UserCircle },
-          { name: "Settings", href: "/settings", icon: Settings },
+          { name: "Settings", href: "/profile", icon: Settings },
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ]
       : [
           { name: "My Store", href: "/my-store", icon: Building2 },
-          { name: "Settings", href: "/settings", icon: Settings },
+          { name: "Settings", href: "/my-store", icon: Settings },
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ];
 

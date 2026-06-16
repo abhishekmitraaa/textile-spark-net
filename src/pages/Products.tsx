@@ -1,207 +1,373 @@
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ProductCard } from "@/components/dashboard/ProductCard";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Link } from "react-router-dom";
-import { Plus, Search, Filter, Grid3X3, List } from "lucide-react";
-import { motion } from "framer-motion";
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import {
+  Plus, Search, Filter, Share2, MoreVertical,
+  Eye, MessageSquare, Edit2, Trash2, Copy,
+  ChevronDown, Camera,
+} from "lucide-react";
 
-const allProducts = [
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
+
+interface Product {
+  id: string;
+  name: string;
+  price: string;
+  unit: string;
+  image: string;
+  status: "active" | "draft" | "pending";
+  views: number;
+  inquiries: number;
+  profileScore: number;
+  productCode: string;
+}
+
+const PRODUCTS: Product[] = [
   {
     id: "1",
-    name: "Premium Cotton Blend Fabric",
-    category: "Textiles",
-    price: "$24.99/yard",
-    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=500&fit=crop",
-    status: "active" as const,
+    name: "Ghyk",
+    price: "200",
+    unit: "Kg",
+    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop",
+    status: "active",
     views: 342,
     inquiries: 12,
+    profileScore: 40,
+    productCode: "CSR-001",
   },
   {
     id: "2",
-    name: "Italian Silk Collection",
-    category: "Premium Fabrics",
-    price: "$89.99/yard",
-    image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=500&fit=crop",
-    status: "active" as const,
-    views: 567,
-    inquiries: 28,
+    name: "240 GSM FRENCH TERRY OVERSIZED T-shirt",
+    price: "289",
+    unit: "Piece",
+    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=200&h=200&fit=crop",
+    status: "active",
+    views: 342,
+    inquiries: 12,
+    profileScore: 40,
+    productCode: "CSR-002",
   },
   {
     id: "3",
-    name: "Sustainable Linen Blend",
-    category: "Eco-Friendly",
-    price: "$34.99/yard",
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=500&fit=crop",
-    status: "pending" as const,
-    views: 189,
-    inquiries: 8,
+    name: "240 GSM FRENCH TERRY OVERSIZED T-shirt",
+    price: "289",
+    unit: "Piece",
+    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop",
+    status: "draft",
+    views: 342,
+    inquiries: 12,
+    profileScore: 40,
+    productCode: "CSR-003",
   },
   {
     id: "4",
-    name: "Designer Wool Tweed",
-    category: "Winter Collection",
-    price: "$56.99/yard",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
-    status: "draft" as const,
-    views: 0,
-    inquiries: 0,
-  },
-  {
-    id: "5",
-    name: "Organic Hemp Fabric",
-    category: "Eco-Friendly",
-    price: "$42.99/yard",
-    image: "https://images.unsplash.com/photo-1606722590583-6951b5ea92ad?w=400&h=500&fit=crop",
-    status: "active" as const,
-    views: 234,
-    inquiries: 15,
-  },
-  {
-    id: "6",
-    name: "Velvet Luxury Collection",
-    category: "Premium Fabrics",
-    price: "$78.99/yard",
-    image: "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?w=400&h=500&fit=crop",
-    status: "active" as const,
-    views: 456,
-    inquiries: 22,
+    name: "WHITE 240 GSM FRENCH TERRY OVERSIZED T-shirt",
+    price: "289",
+    unit: "Piece",
+    image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=200&h=200&fit=crop",
+    status: "active",
+    views: 189,
+    inquiries: 8,
+    profileScore: 55,
+    productCode: "CSR-004",
   },
 ];
 
+// ─────────────────────────────────────────────────────────────
+// PRODUCT ROW CARD — matches screenshot exactly
+// ─────────────────────────────────────────────────────────────
+
+function ProductRow({ product, onDelete, onDuplicate }: {
+  product: Product;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+}) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const statusStyle = {
+    active:  "bg-green-100 text-green-700",
+    draft:   "bg-gray-100 text-gray-500",
+    pending: "bg-amber-100 text-amber-700",
+  }[product.status];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white border border-gray-200 rounded-xl overflow-hidden"
+    >
+      {/* Main row — clicking anywhere goes to edit */}
+      <button
+        onClick={() => navigate("/upload")}
+        className="w-full flex items-start gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
+      >
+        {/* Thumbnail */}
+        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0 relative">
+          <img
+            src={product.image}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+          {/* Camera icon overlay */}
+          <div className="absolute inset-0 bg-black/0 hover:bg-black/20 transition-colors flex items-end justify-start p-1">
+            <Camera className="w-3 h-3 text-white opacity-0 hover:opacity-100" />
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 leading-snug line-clamp-2">
+            {product.name}
+          </p>
+          <div className="flex items-center gap-1 mt-1">
+            <span className="text-sm font-bold text-gray-900">₹ {product.price}</span>
+            <span className="text-xs text-gray-400">/ {product.unit}</span>
+          </div>
+          {/* Views + inquiries */}
+          <div className="flex items-center gap-3 mt-1.5">
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <Eye className="w-3.5 h-3.5" />
+              <span>{product.views}</span>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-gray-500">
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>{product.inquiries} inquiries</span>
+            </div>
+          </div>
+          {/* Profile score + Status */}
+          <div className="flex items-center gap-2 mt-1.5">
+            <div className="flex items-center gap-1">
+              <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#256fef] rounded-full"
+                  style={{ width: `${product.profileScore}%` }}
+                />
+              </div>
+              <span className="text-[10px] text-gray-400">{product.profileScore}% Score</span>
+            </div>
+            {product.status === "draft" && (
+              <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", statusStyle)}>
+                Draft
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right controls */}
+        <div
+          className="flex flex-col items-end gap-2 shrink-0"
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Share + 3-dot */}
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => { navigator.clipboard.writeText(window.location.origin + "/product/" + product.id); toast.success("Link copied!"); }}
+              className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <Share2 className="w-4 h-4 text-gray-500" />
+            </button>
+            <div className="relative">
+              <button
+                onClick={() => setMenuOpen(p => !p)}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <MoreVertical className="w-4 h-4 text-gray-500" />
+              </button>
+              <AnimatePresence>
+                {menuOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                      transition={{ duration: 0.1 }}
+                      className="absolute right-0 top-8 z-20 bg-white border border-gray-100 rounded-xl shadow-xl py-1 w-36"
+                    >
+                      <button
+                        onClick={() => { onDuplicate(product.id); setMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Copy className="w-4 h-4" /> Duplicate
+                      </button>
+                      <button
+                        onClick={() => { onDelete(product.id); setMenuOpen(false); }}
+                        className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-500 hover:bg-red-50"
+                      >
+                        <Trash2 className="w-4 h-4" /> Delete
+                      </button>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+
+          {/* Product code */}
+          <span className="text-[9px] text-gray-300 font-mono">{product.productCode}</span>
+
+          {/* Edit button */}
+          <button
+            onClick={() => navigate("/upload")}
+            className="flex items-center gap-1 px-2.5 py-1 border border-[#256fef] text-[#256fef] rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
+          >
+            <Edit2 className="w-3 h-3" /> Edit
+          </button>
+        </div>
+      </button>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
+
 const Products = () => {
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const navigate = useNavigate();
+  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const filtered = products.filter(p => {
+    const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "all" || p.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const handleDelete = (id: string) => {
+    setProducts(p => p.filter(pr => pr.id !== id));
+    toast.success("Product deleted");
+  };
+
+  const handleDuplicate = (id: string) => {
+    const original = products.find(p => p.id === id);
+    if (!original) return;
+    const copy: Product = {
+      ...original,
+      id: Date.now().toString(),
+      name: original.name + " (Copy)",
+      status: "draft",
+      productCode: "CSR-" + Date.now().toString().slice(-3),
+    };
+    setProducts(p => [copy, ...p]);
+    toast.success("Product duplicated");
+  };
 
   return (
     <DashboardLayout>
-      {/* Page header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between lg:mb-8"
-      >
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-            Products
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Manage your product catalog
+      <div className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
+        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3 pb-24">
+
+          {/* ── Header ── */}
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Products</h1>
+            <p className="text-xs text-gray-400">Manage your product catalog</p>
+          </div>
+
+          {/* ── Upload New Product button ── */}
+          <Link to="/upload">
+            <button className="w-full flex items-center justify-center gap-2 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
+              <Plus className="w-4 h-4" /> Upload New Product
+            </button>
+          </Link>
+
+          {/* ── Search + Filter ── */}
+          <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
+            <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
+              <Search className="w-4 h-4 text-gray-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="flex-1 text-sm text-gray-700 bg-transparent focus:outline-none placeholder-gray-400"
+              />
+              {search && (
+                <button onClick={() => setSearch("")} className="text-gray-400 hover:text-gray-600">
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              {/* Category */}
+              <div className="relative flex-1">
+                <select
+                  value={categoryFilter}
+                  onChange={e => setCategoryFilter(e.target.value)}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none pr-7"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="apparel">Apparel</option>
+                  <option value="fabrics">Fabrics</option>
+                  <option value="accessories">Accessories</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              </div>
+              {/* Status */}
+              <div className="relative flex-1">
+                <select
+                  value={statusFilter}
+                  onChange={e => setStatusFilter(e.target.value)}
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none pr-7"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Published</option>
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending Review</option>
+                </select>
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+          </div>
+
+          {/* ── Product count ── */}
+          <p className="text-xs text-gray-500 px-1">
+            {filtered.length} product{filtered.length !== 1 ? "s" : ""}
           </p>
+
+          {/* ── Product list ── */}
+          {filtered.length === 0 ? (
+            <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
+              <p className="text-gray-400 text-sm">No products found</p>
+              <Link to="/upload">
+                <button className="mt-3 text-[#256fef] text-sm font-semibold hover:underline">
+                  + Upload your first product
+                </button>
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              {filtered.map(p => (
+                <ProductRow
+                  key={p.id}
+                  product={p}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
+                />
+              ))}
+            </div>
+          )}
+
         </div>
-        <Link to="/upload">
-          <Button variant="gold" size="sm" className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
-        </Link>
-      </motion.div>
 
-      {/* Filters and search */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-4 space-y-3 rounded-xl border border-border bg-card p-3 sm:mb-6 sm:p-4"
-      >
-        {/* Search row */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Search products..." className="pl-10" />
-          </div>
-          <Button variant="outline" size="icon" className="shrink-0">
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Filter row */}
-        <div className="flex items-center gap-2">
-          <Select defaultValue="all">
-            <SelectTrigger className="flex-1 sm:w-[140px] sm:flex-none">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Categories</SelectItem>
-              <SelectItem value="textiles">Textiles</SelectItem>
-              <SelectItem value="premium">Premium</SelectItem>
-              <SelectItem value="eco">Eco-Friendly</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select defaultValue="all">
-            <SelectTrigger className="flex-1 sm:w-[120px] sm:flex-none">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="active">Active</SelectItem>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
-            </SelectContent>
-          </Select>
-
-          {/* View toggle - hidden on mobile */}
-          <div className="ml-auto hidden gap-1 rounded-lg border border-border p-1 sm:flex">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={cn(
-                "rounded-md p-2 transition-colors",
-                viewMode === "grid"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <Grid3X3 className="h-4 w-4" />
+        {/* ── Floating Upload button ── */}
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 lg:bottom-6">
+          <Link to="/upload">
+            <button className="flex items-center gap-2 px-6 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-full shadow-lg shadow-[#ef4d62]/30 transition-all hover:scale-105 active:scale-95">
+              <Plus className="w-4 h-4" /> Upload New Product
             </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "rounded-md p-2 transition-colors",
-                viewMode === "list"
-                  ? "bg-secondary text-foreground"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <List className="h-4 w-4" />
-            </button>
-          </div>
+          </Link>
         </div>
-      </motion.div>
-
-      {/* Products grid */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
-        {allProducts.map((product, index) => (
-          <ProductCard key={product.id} {...product} delay={0.2 + index * 0.05} />
-        ))}
       </div>
-
-      {/* Pagination */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="mt-6 flex flex-col items-center justify-between gap-3 sm:flex-row"
-      >
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Showing 1-6 of 48 products
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm">
-            Next
-          </Button>
-        </div>
-      </motion.div>
     </DashboardLayout>
   );
 };
