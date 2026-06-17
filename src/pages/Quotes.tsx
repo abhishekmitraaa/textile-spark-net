@@ -1,7 +1,27 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -185,8 +205,7 @@ const SUBMITTED_QUOTES: SubmittedQuote[] = [
 function RFQCard({ rfq, onClick }: { rfq: RFQ; onClick: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={listItem}
       className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
     >
       {/* Image */}
@@ -298,12 +317,14 @@ function RFQCard({ rfq, onClick }: { rfq: RFQ; onClick: () => void }) {
           <p className="text-[10px] text-gray-400">
             Posted {rfq.postedAgo} · Closes {rfq.closesDate}
           </p>
-          <button
+          <motion.button
             onClick={onClick}
+            whileTap={TAP}
+            transition={TAP_T}
             className="bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors flex items-center gap-1"
           >
             View & Quote <ChevronRight className="w-3.5 h-3.5" />
-          </button>
+          </motion.button>
         </div>
       </div>
     </motion.div>
@@ -762,22 +783,22 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
       </div>
 
       {/* Stats 2x2 */}
-      <div className="grid grid-cols-2 gap-3">
+      <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
         {[
           { label: "Total Quotes",    value: stats.total,       icon: FileText,      color: "text-orange-400" },
           { label: "Accepted",        value: stats.accepted,    icon: CheckCircle2,  color: "text-green-500"  },
           { label: "In Negotiation",  value: stats.negotiating, icon: MessageSquare, color: "text-blue-500"   },
           { label: "Pending",         value: stats.pending,     icon: Clock,         color: "text-orange-400" },
         ].map(s => (
-          <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
+          <motion.div key={s.label} variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-gray-400">{s.label}</span>
               <s.icon className={cn("w-4 h-4", s.color)} />
             </div>
             <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* Performance card */}
       <div className="bg-orange-50 border border-orange-100 rounded-2xl p-4">
@@ -849,13 +870,13 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
       </div>
 
       {/* Quote cards */}
-      <div className="space-y-3">
+      <motion.div variants={listContainer} className="space-y-3">
         {sorted.map(q => {
           const cfg = statusConfig[q.status];
           const respBg = buyerResponseBg[q.status];
           return (
             <motion.div key={q.id}
-              initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+              variants={listItem}
               className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
 
               {/* Image (only if present — screenshot 6) */}
@@ -978,7 +999,7 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
             </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -989,6 +1010,7 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
 
 const Quotes = () => {
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   const [activeTab, setActiveTab]     = useState<"requests" | "submitted">("requests");
   const [selectedRFQ, setSelectedRFQ] = useState<RFQ | null>(null);
   const [search, setSearch]           = useState("");
@@ -1018,23 +1040,25 @@ const Quotes = () => {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-12">
+        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-12">
 
           {/* ── Header ── */}
-          <div className="flex items-start justify-between">
+          <motion.div variants={section} className="flex items-start justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900">Quotation Requests</h1>
               <p className="text-xs text-gray-400">Browse and quote on buyer requirements</p>
             </div>
-            <button className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <motion.button whileTap={TAP} transition={TAP_T} className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
               <Bell className="w-5 h-5 text-gray-600" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-[#ef4d62] rounded-full" />
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* ── Tab switcher ── */}
-          <div className="flex gap-2">
-            <button
+          <motion.div variants={section} className="flex gap-2">
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => setActiveTab("requests")}
               className={cn(
                 "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all",
@@ -1044,8 +1068,10 @@ const Quotes = () => {
               )}
             >
               Quotation Requests
-            </button>
-            <button
+            </motion.button>
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => setActiveTab("submitted")}
               className={cn(
                 "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
@@ -1061,34 +1087,36 @@ const Quotes = () => {
               )}>
                 {SUBMITTED_QUOTES.length}
               </span>
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {activeTab === "submitted" ? (
-            <SubmittedQuotesView onSwitchToRequests={() => setActiveTab("requests")} />
+            <motion.div variants={section}>
+              <SubmittedQuotesView onSwitchToRequests={() => setActiveTab("requests")} />
+            </motion.div>
           ) : (
             <>
               {/* ── Stats 2×2 ── */}
-              <div className="grid grid-cols-2 gap-3">
+              <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
                 {[
                   { label: "Open RFQs",      value: "234", sub: "+12 today",        icon: FileText,    color: "text-blue-500"   },
                   { label: "Closing Soon",   value: "28",  sub: "< 3 days",         icon: Clock,       color: "text-orange-500" },
                   { label: "Chats Pending",  value: "6",   sub: "+8% this week",    icon: MessageSquare,color: "text-purple-500" },
                   { label: "Your Quotes",    value: "15",  sub: "Share more quotes", icon: Star,        color: "text-[#ef4d62]"  },
                 ].map(s => (
-                  <div key={s.label} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
+                  <motion.div key={s.label} variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs text-gray-500">{s.label}</span>
                       <s.icon className={cn("w-4 h-4", s.color)} />
                     </div>
                     <p className="text-2xl font-bold text-gray-900">{s.value}</p>
                     <p className="text-[10px] text-gray-400 mt-0.5">{s.sub}</p>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
 
               {/* ── RFQ alert ── */}
-              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
+              <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
                 <div className="flex items-start gap-3">
                   <Bell className="w-5 h-5 text-[#ef4d62] mt-0.5 shrink-0" />
                   <div>
@@ -1096,19 +1124,26 @@ const Quotes = () => {
                     <p className="text-xs text-gray-400">Set up alerts for your product categories</p>
                   </div>
                 </div>
-                <button onClick={() => navigate("/leads")} className="shrink-0 ml-3 px-4 py-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] text-xs font-bold hover:bg-[#ef4d62]/5 transition-colors">
+                <motion.button
+                  whileTap={TAP}
+                  transition={TAP_T}
+                  onClick={() => navigate("/leads")}
+                  className="shrink-0 ml-3 px-4 py-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] text-xs font-bold hover:bg-[#ef4d62]/5 transition-colors"
+                >
                   Set Alerts
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
 
               {/* ── Search + filter ── */}
-              <div className="space-y-2">
+              <motion.div variants={section} className="space-y-2">
                 <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 shadow-sm">
                   <Search className="w-4 h-4 text-gray-400 shrink-0" />
                   <input type="text" placeholder="Search RFQs by product..." value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="flex-1 text-sm text-gray-700 bg-transparent focus:outline-none placeholder-gray-400" />
-                  <button
+                  <motion.button
+                    whileTap={TAP}
+                    transition={TAP_T}
                     onClick={() => setFilterOpen(p => !p)}
                     className={cn(
                       "p-1.5 rounded-lg transition-colors",
@@ -1116,10 +1151,15 @@ const Quotes = () => {
                     )}
                   >
                     <Filter className="w-4 h-4" />
-                  </button>
-                  <button onClick={() => setSearch("")} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400">
+                  </motion.button>
+                  <motion.button
+                    whileTap={TAP}
+                    transition={TAP_T}
+                    onClick={() => setSearch("")}
+                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400"
+                  >
                     <RefreshCw className="w-4 h-4" />
-                  </button>
+                  </motion.button>
                 </div>
 
                 {/* Filter dropdowns — only visible when filter icon clicked */}
@@ -1130,23 +1170,23 @@ const Quotes = () => {
                   status={status} setStatus={setStatus}
                   minQty={minQty} setMinQty={setMinQty}
                 />
-              </div>
+              </motion.div>
 
               {/* ── RFQ cards ── */}
-              <div className="space-y-4">
-                {filtered.length === 0 ? (
-                  <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
-                    <p className="text-gray-400 text-sm">No RFQs match your search</p>
-                  </div>
-                ) : (
-                  filtered.map(rfq => (
+              {filtered.length === 0 ? (
+                <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
+                  <p className="text-gray-400 text-sm">No RFQs match your search</p>
+                </motion.div>
+              ) : (
+                <motion.div variants={listContainer} className="space-y-4">
+                  {filtered.map(rfq => (
                     <RFQCard key={rfq.id} rfq={rfq} onClick={() => setSelectedRFQ(rfq)} />
-                  ))
-                )}
-              </div>
+                  ))}
+                </motion.div>
+              )}
             </>
           )}
-        </div>
+        </motion.div>
       </div>
     </DashboardLayout>
   );

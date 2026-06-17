@@ -1,5 +1,25 @@
 import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
@@ -240,9 +260,9 @@ function HeroSection() {
 // ── StatsGrid ──
 function StatsGrid() {
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
       {STATS.map((s, i) => (
-        <div key={i} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow">
+        <motion.div key={i} variants={listItem} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className={cn("p-2 rounded-lg", s.bg)}>
@@ -258,9 +278,9 @@ function StatsGrid() {
           <div className={cn("text-xs font-medium", s.trend === "up" ? "text-green-600" : "text-red-600")}>
             {s.subtext}
           </div>
-        </div>
+        </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 
@@ -888,9 +908,9 @@ function CTASection() {
 function AdvertiseCards() {
   return (
     <div className="rounded-xl mt-12 mb-12">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <motion.div variants={listContainer} className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {ADVERTISE_CARDS.map((ad, i) => (
-          <div key={i}
+          <motion.div key={i} variants={listItem}
             className="bg-white rounded-xl p-4 text-left flex gap-4 shadow-sm hover:shadow-2xl transition-all duration-500 group overflow-hidden border border-gray-100">
             <div className="h-full w-[120px] flex items-center justify-center">
               <div className="w-full h-24 bg-gray-100 rounded-xl flex items-center justify-center group-hover:scale-90 transition-transform duration-700">
@@ -912,14 +932,14 @@ function AdvertiseCards() {
                   <span className="text-2xl font-black text-gray-900 tracking-tighter">₹{ad.current}</span>
                   <span className="text-gray-500 text-sm font-bold">/day</span>
                 </div>
-                <button className="mt-2 bg-gray-950 hover:bg-[#f74d61] text-white px-4 py-2 rounded-xl flex items-center gap-2 font-black text-[12px] transition-all active:scale-95 shadow-lg">
-                  Buy Now <ChevronRight className="w-4 h-4" />
-                </button>
+                <motion.button whileTap={TAP} transition={TAP_T} className="mt-2 bg-gray-950 hover:bg-[#f74d61] text-white px-4 py-2 rounded-xl flex items-center gap-2 font-black text-[12px] transition-all shadow-lg">
+                  Buy Now <motion.span whileHover={{ x: 3 }} transition={{ ease: E, duration: 0.2 }}><ChevronRight className="w-4 h-4" /></motion.span>
+                </motion.button>
               </div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -929,6 +949,7 @@ function AdvertiseCards() {
 // ─────────────────────────────────────────────────────────────
 
 const Advertisements = () => {
+  const reduced = useReducedMotion();
   const [showIntro, setShowIntro] = useState(false);
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
   const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
@@ -953,22 +974,22 @@ const Advertisements = () => {
     <>
       {showIntro && <IntroStories onComplete={handleIntroComplete} />}
       <DashboardLayout>
-        <div className="pb-20">
+        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="pb-20">
           <AdvHeader />
           <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <motion.div variants={section}>
               <HeroSection />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
+            <motion.div variants={section}>
               <StatsGrid />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+            <motion.div variants={section}>
               <CompetitorAdsLink />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
+            <motion.div variants={section}>
               <PricingHeader />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+            <motion.div variants={section}>
               <AdCreationSteps
                 selectedAdTypes={selectedAdTypes} setSelectedAdTypes={setSelectedAdTypes}
                 selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts}
@@ -980,33 +1001,33 @@ const Advertisements = () => {
                 showMoreAdTypes={showMoreAdTypes} setShowMoreAdTypes={setShowMoreAdTypes}
               />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
+            <motion.div variants={section}>
               <CostSummary
                 selectedAdTypes={selectedAdTypes}
                 selectedProducts={selectedProducts}
                 selectedDuration={selectedDuration}
               />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+            <motion.div variants={section}>
               <SuccessStoriesCarousel />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+            <motion.div variants={section}>
               <FAQSection />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+            <motion.div variants={section}>
               <WhyCosoraSection />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+            <motion.div variants={section}>
               <ManufacturersSection />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+            <motion.div variants={section}>
               <CTASection />
             </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+            <motion.div variants={section}>
               <AdvertiseCards />
             </motion.div>
           </div>
-        </div>
+        </motion.div>
       </DashboardLayout>
     </>
   );

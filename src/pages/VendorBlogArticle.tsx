@@ -1,5 +1,5 @@
 import { Link, Navigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Link2, Share2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,26 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { vendorBlogs, getVendorBlogById } from "@/data/vendorBlogs";
 
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
+
 const VendorBlogArticle = () => {
+  const reduced = useReducedMotion();
   const { blogId } = useParams();
   const blog = blogId ? getVendorBlogById(blogId) : undefined;
 
@@ -19,15 +38,17 @@ const VendorBlogArticle = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-8">
-        <Button asChild variant="ghost" size="sm" className="w-fit gap-2 px-2 text-muted-foreground hover:text-foreground">
-          <Link to="/seller/blogs">
-            <ArrowLeft className="h-4 w-4" />
-            Back to Blogs
-          </Link>
-        </Button>
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-6 pb-8">
+        <motion.div variants={section}>
+          <Button asChild variant="ghost" size="sm" className="w-fit gap-2 px-2 text-muted-foreground hover:text-foreground">
+            <Link to="/seller/blogs">
+              <ArrowLeft className="h-4 w-4" />
+              Back to Blogs
+            </Link>
+          </Button>
+        </motion.div>
 
-        <motion.article initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+        <motion.article variants={section} className="space-y-6">
           <Card className="overflow-hidden border-border/70">
             <div className="aspect-[16/9] overflow-hidden bg-muted">
               <img src={blog.image} alt={blog.title} className="h-full w-full object-cover" />
@@ -70,21 +91,25 @@ const VendorBlogArticle = () => {
             </CardContent>
           </Card>
 
-          <Card className="border-border/70">
-            <CardContent className="space-y-4 p-5 lg:p-6">
-              {blog.body.map((paragraph) => (
-                <p key={paragraph} className="text-sm leading-relaxed text-muted-foreground lg:text-base">
-                  {paragraph}
-                </p>
-              ))}
-            </CardContent>
-          </Card>
+          <motion.div variants={section}>
+            <Card className="border-border/70">
+              <CardContent className="space-y-4 p-5 lg:p-6">
+                <motion.div variants={listContainer} className="space-y-4">
+                  {blog.body.map((paragraph) => (
+                    <motion.p key={paragraph} variants={listItem} className="text-sm leading-relaxed text-muted-foreground lg:text-base">
+                      {paragraph}
+                    </motion.p>
+                  ))}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
 
-          <div className="space-y-3">
+          <motion.div variants={section} className="space-y-3">
             <h2 className="font-display text-lg font-semibold text-foreground">More for you to read</h2>
-            <div className="grid gap-4 md:grid-cols-2">
+            <motion.div variants={listContainer} className="grid gap-4 md:grid-cols-2">
               {relatedBlogs.map((item) => (
-                <Card key={item.id} className="overflow-hidden border-border/70">
+                <motion.div key={item.id} variants={listItem}><Card className="overflow-hidden border-border/70">
                   <div className="aspect-[16/9] overflow-hidden bg-muted">
                     <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
                   </div>
@@ -98,12 +123,12 @@ const VendorBlogArticle = () => {
                       <Link to={`/seller/blogs/${item.id}`}>Read article</Link>
                     </Button>
                   </CardContent>
-                </Card>
+                </Card></motion.div>
               ))}
-            </div>
-          </div>
+            </motion.div>
+          </motion.div>
         </motion.article>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };

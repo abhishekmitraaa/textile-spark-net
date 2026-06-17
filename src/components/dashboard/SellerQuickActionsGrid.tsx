@@ -38,14 +38,14 @@ const secondaryActions: QuickActionItem[] = [
   { name: "My Quotes", icon: FileText, href: "/quotes", color: "text-rose-600", bgColor: "bg-rose-100" },
   { name: "Add Website", icon: Globe, href: "/my-store", color: "text-cyan-600", bgColor: "bg-cyan-100" },
   { name: "Add Social Links", icon: Share2, href: "/add-social-links", color: "text-orange-600", bgColor: "bg-orange-100" },
-  { name: "Upload Catalogue", icon: Upload, href: "/upload", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
+  { name: "Upload Catalogue", icon: Upload, href: "/upload-catalogue", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
 ];
 
 const tertiaryActions: QuickActionItem[] = [
   { name: "Help/Connect", icon: HelpCircle, href: "/help", color: "text-indigo-600", bgColor: "bg-indigo-100" },
   { name: "Photo Studio", icon: Camera, href: "/cosora-studio", color: "text-pink-600", bgColor: "bg-pink-100" },
   { name: "Add Email", icon: Mail, href: "/my-store", color: "text-teal-600", bgColor: "bg-teal-100" },
-  { name: "Add Video", icon: Video, href: "/upload", color: "text-red-600", bgColor: "bg-red-100" },
+  { name: "Video Closeup", icon: Video, href: "/upload-video", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
 const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: number }) => {
@@ -116,7 +116,7 @@ export const SellerQuickActionsGrid = () => {
         transition={{ delay: 0.6 }}
       >
         <Link
-          to="/upload"
+          to="/upload-catalogue"
           className="flex items-center justify-between rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 p-4 transition-all hover:border-accent hover:bg-accent/10"
         >
           <div className="flex items-center gap-3">
@@ -125,7 +125,7 @@ export const SellerQuickActionsGrid = () => {
             </div>
             <div>
               <h4 className="text-sm font-semibold text-foreground">Upload Catalogue</h4>
-              <p className="text-xs text-muted-foreground">Add your product catalogue in bulk</p>
+              <p className="text-xs text-muted-foreground">Share your full product range as a PDF</p>
             </div>
           </div>
           <BookOpen className="h-5 w-5 text-accent" />

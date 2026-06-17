@@ -1,11 +1,31 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Star, QrCode, Share2, Link2, Download, X, ChevronDown } from "lucide-react";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 const mockReviews = [
   {
@@ -74,6 +94,7 @@ type ReviewItem = {
 };
 
 const Reviews = () => {
+  const reduced = useReducedMotion();
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
   const [qrOpen, setQrOpen] = useState(false);
@@ -102,10 +123,10 @@ const Reviews = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-5 pb-8">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-5 pb-8">
 
         {/* ── Get Ratings Section ── */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div variants={section}>
           <h2 className="text-base font-bold text-[#256fef] mb-3">Get Ratings</h2>
 
           <div className="space-y-1 mb-3">
@@ -147,7 +168,7 @@ const Reviews = () => {
         </motion.div>
 
         {/* ── Rate My Business / QR Section ── */}
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+        <motion.div variants={section}>
           <h2 className="text-base font-bold text-gray-900 mb-3">Rate My Business</h2>
 
           <div className="flex items-center gap-3">
@@ -157,26 +178,30 @@ const Reviews = () => {
             </div>
 
             {/* Share button */}
-            <Button
-              className="flex-1 h-11 bg-[#256fef] hover:bg-[#1a5fd4] text-white font-semibold rounded-lg gap-2"
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
+              className="flex-1 h-11 bg-[#256fef] hover:bg-[#1a5fd4] text-white font-semibold rounded-lg gap-2 flex items-center justify-center"
               onClick={() => setQrOpen(true)}
             >
               <Share2 className="h-4 w-4" />
               Share QR Code
-            </Button>
+            </motion.button>
 
             {/* Chevron toggle */}
-            <button
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => setQrOpen(true)}
               className="w-9 h-9 flex items-center justify-center text-gray-500 hover:text-gray-700 transition-colors"
             >
               <ChevronDown className="h-5 w-5" />
-            </button>
+            </motion.button>
           </div>
         </motion.div>
 
         {/* ── Respond To Reviews ── */}
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
+        <motion.div variants={section}>
           <h2 className="text-base font-bold text-[#256fef] mb-3">Respond To Reviews</h2>
 
           {reviews.length === 0 ? (
@@ -198,13 +223,11 @@ const Reviews = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {reviews.map((review, index) => (
+            <motion.div variants={listContainer} className="space-y-3">
+              {reviews.map((review) => (
                 <motion.div
                   key={review.id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 + index * 0.05 }}
+                  variants={listItem}
                 >
                   <Card className="overflow-hidden border border-gray-200">
                     <CardContent className="p-4">
@@ -316,10 +339,10 @@ const Reviews = () => {
                   </Card>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           )}
         </motion.div>
-      </div>
+      </motion.div>
 
       {/* ── QR Modal Overlay ── */}
       <AnimatePresence>

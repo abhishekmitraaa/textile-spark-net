@@ -1,6 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -156,13 +177,19 @@ const MyStore = () => {
   const [shareOpen, setShareOpen]           = useState(false);
   const [logoutOpen, setLogoutOpen]         = useState(false);
   const [qrOpen, setQrOpen]                 = useState(false);
+  const reduced = useReducedMotion();
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gray-50">
+      <motion.div
+        className="min-h-screen bg-gray-50"
+        variants={reduced ? {} : page}
+        initial="hidden"
+        animate="show"
+      >
 
         {/* ── Header Section ── */}
-        <div className="bg-white border-b border-gray-200 px-4 py-4">
+        <motion.div variants={section} className="bg-white border-b border-gray-200 px-4 py-4">
           <div className="max-w-4xl mx-auto">
             {/* Title row */}
             <div className="flex items-start justify-between mb-4">
@@ -201,22 +228,22 @@ const MyStore = () => {
             </div>
 
             {/* 2×2 top action buttons */}
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 mb-4">
               {[
                 { icon: Building2,  label: "My Business",  onClick: () => navigate("/my-store/business") },
                 { icon: UserCircle, label: "MY PROFILE",   onClick: () => navigate("/business-profile") },
                 { icon: List,       label: "My Listings",  onClick: () => navigate("/products") },
                 { icon: HelpCircle, label: "Help",         onClick: () => navigate("/help") },
               ].map(item => (
-                <button key={item.label} onClick={item.onClick}
+                <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={item.label} onClick={item.onClick}
                   className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
                   <item.icon className="w-5 h-5 text-gray-700" />
                   <span className="text-sm font-medium text-gray-900">{item.label}</span>
-                </button>
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Main Content — Two Columns ── */}
         <div className="max-w-7xl mx-auto px-4 py-6">
@@ -225,24 +252,24 @@ const MyStore = () => {
             {/* ═══════════════════════════
                 LEFT COLUMN
             ═══════════════════════════ */}
-            <div className="space-y-4">
+            <motion.div variants={section} className="space-y-4">
 
               {/* Advertise & Grow */}
-              <button onClick={() => navigate("/advertisements")}
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/advertisements")}
                 className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <span className="text-sm font-medium text-gray-900">Advertise & Grow your Business</span>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </motion.button>
 
               {/* Add New Business */}
-              <button className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+              <motion.button whileTap={TAP} transition={TAP_T} className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <Plus className="w-5 h-5 text-gray-700" />
                   <span className="text-sm font-medium text-gray-900">Add New Business</span>
                   <span className="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded">Free</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </motion.button>
 
               {/* App and User Setting card */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -273,51 +300,51 @@ const MyStore = () => {
                   <MenuRow icon={Bell}          label="Lead Notification"     badge="New" badgeVariant="new" onClick={() => {}} />
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* ═══════════════════════════
                 RIGHT COLUMN
             ═══════════════════════════ */}
-            <div className="space-y-4">
+            <motion.div variants={section} className="space-y-4">
 
               {/* Rate Us */}
-              <button onClick={() => navigate("/reviews")}
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/reviews")}
                 className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <Star className="w-5 h-5 fill-gray-600 text-gray-600" />
                   <span className="text-sm font-medium text-gray-900">Rate Us</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </motion.button>
 
               {/* App Feedback */}
-              <button onClick={() => navigate("/app-feedback")}
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/app-feedback")}
                 className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="w-5 h-5 text-gray-600" />
                   <span className="text-sm font-medium text-gray-900">App Feedback</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </motion.button>
 
               {/* Share App */}
-              <button onClick={() => setShareOpen(true)}
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setShareOpen(true)}
                 className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <Share2 className="w-5 h-5 text-gray-600" />
                   <span className="text-sm font-medium text-gray-900">Share App</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
-              </button>
+              </motion.button>
 
               {/* Notification banner */}
               <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between">
                 <span className="text-sm text-gray-700">Are you not receiving notifications?</span>
-                <button
+                <motion.button whileTap={TAP} transition={TAP_T}
                   onClick={() => toast.info("Test notification sent! 🔔")}
                   className="text-blue-600 text-sm font-semibold hover:text-blue-700 shrink-0 ml-2">
                   Test Now
-                </button>
+                </motion.button>
               </div>
 
               {/* More Information card */}
@@ -328,21 +355,21 @@ const MyStore = () => {
                   <MenuRow icon={FileText}     label="Terms of Use"    onClick={() => {}} />
                   <MenuRow icon={Lightbulb}    label="What's New"      onClick={() => {}} />
                   <MenuRow icon={Info}         label="About Us"        onClick={() => navigate("/about")} />
-                  <button onClick={() => setLogoutOpen(true)}
+                  <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setLogoutOpen(true)}
                     className="w-full flex items-center justify-between px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left">
                     <div className="flex items-center gap-3">
                       <LogOut className="w-5 h-5 text-gray-600" />
                       <span className="text-sm text-gray-900">Logout</span>
                     </div>
                     <ChevronRight className="w-5 h-5 text-gray-400" />
-                  </button>
+                  </motion.button>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Share App Modal ── */}
       <ShareAppModal isOpen={shareOpen} onClose={() => setShareOpen(false)} />

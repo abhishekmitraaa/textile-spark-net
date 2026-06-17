@@ -72,7 +72,7 @@ The app supports distinct user roles (buyer, seller, vendor, freelancer, photogr
 All routes are defined in `App.tsx` using React Router v6. Routes include:
 
 - **Auth Flow**: `/login`, `/auth/otp-verify`, `/auth/role-selection`, `/auth/sub-role`, `/auth/account-info`, `/auth/terms`, `/auth/welcome`
-- **Seller Flow**: `/seller-home`, `/dashboard`, `/products`, `/uploads`, `/leads`, `/advertisements`, `/quotes`
+- **Seller Flow**: `/seller-home`, `/dashboard`, `/products`, `/uploads`, `/leads`, `/advertisements`, `/quotes`, `/upload-catalogue`, `/upload-video`
 - **Buyer Flow**: `/browse`, `/home/new-arrivals`, `/home/for-you`, `/search`, `/product/:id`, `/chats`, `/saved`, `/requirement/*` (RFQ & quotes), `/profile/*`
 - **Vendor/Freelancer**: `/services`, `/freelancers`, `/vendor/:id`
 - **Fallback**: `*` maps to NotFound
@@ -132,6 +132,15 @@ Key business concepts used throughout the app:
 - **Lovable Integration**: The project uses Lovable's `componentTagger` plugin in dev mode for component metadata.
 - **Port**: Dev server runs on `localhost:8080` (non-standard, configured in vite.config.ts).
 - **Current Phase**: Porting and correcting Vendor and Buyer UIs (from Next.js source to Vite/TSX). Admin panel not yet designed or built.
+- **Bundle Size Warning**: JS bundle is ~1.9MB (522KB gzip). Not an error but worth code-splitting before scaling.
+- **Video Closeup Terminology**: Product videos shown in the buyer feed are called **"Video Closeups"** — never "Reels". This is a deliberate brand/product naming decision.
+- **No Settings Page**: There is no standalone `/settings` route. Sidebar "Settings" links to `/my-store` (seller) and `/profile` (buyer).
+- **No Orders Page**: There is no `/orders` route. "Track Orders" maps to `/requirement/my-quotes`; "View Order Details" maps to `/chat`.
+
+## Skills Installed
+
+- **`design-taste-frontend`** — General frontend design taste skill for polished UI
+- **`emil-design-eng`** (`emilkowalski/skill`) — Emil Kowalski's philosophy on UI polish, micro-interactions, animation decisions, and invisible details. Invoke with `/emil-design-eng`.
 
 ## Testing
 
@@ -140,7 +149,13 @@ Key business concepts used throughout the app:
 
 ## Deployment
 
-This project is deployed via Lovable. Push changes to the git repo and they sync automatically. Custom domains can be configured in Lovable project settings.
+**Primary**: Deployed on **Vercel** at `https://textile-spark-net.vercel.app`
+- Project: `abhishekmitraaas-projects/textile-spark-net`
+- Team: `abhishekmitraaas-projects` (team_m86fYQNTuPr5kMKkb6qWi32B)
+- To redeploy: `vercel --yes` from project root (requires Vercel CLI login)
+- GitHub auto-deploy: not yet connected — push to GitHub does NOT auto-deploy; manual `vercel --yes` required
+
+**Secondary**: Also synced via Lovable.dev. Push changes to the git repo and they sync automatically. Custom domains can be configured in Lovable project settings.
 
 ## Documentation & Knowledge Management
 

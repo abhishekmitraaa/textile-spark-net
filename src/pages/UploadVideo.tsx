@@ -1,0 +1,720 @@
+import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  ChevronLeft, Video, Upload, X, CheckCircle2, Clock,
+  Play, Heart, MessageCircle, Share2, Bookmark,
+  AlertCircle, Sparkles, Tag, Image, Eye,
+  Trash2, TrendingUp, ChevronDown, ChevronRight,
+  Volume2, ShoppingBag,
+} from "lucide-react";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
+
+// ─────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────
+
+interface UploadedVideoCloseup {
+  id: string;
+  caption: string;
+  productName: string;
+  thumbnail: string;
+  duration: string;
+  uploadedAt: string;
+  status: "live" | "under_review" | "rejected";
+  views: number;
+  likes: number;
+  shares: number;
+}
+
+// ─────────────────────────────────────────────────────────────
+// MOCK DATA
+// ─────────────────────────────────────────────────────────────
+
+const MOCK_PRODUCTS = [
+  { id: "p1", name: "240 GSM French Terry Oversized T-shirt", code: "CSR-002" },
+  { id: "p2", name: "Men's Denim Jacket — Classic Wash",       code: "CSR-005" },
+  { id: "p3", name: "Women's Cotton Oversized Tee",            code: "CSR-007" },
+  { id: "p4", name: "Organic Linen Shirt — Premium",           code: "CSR-011" },
+];
+
+const EXISTING_CLOSEUPS: UploadedVideoCloseup[] = [
+  {
+    id: "v1",
+    caption: "Our new French Terry oversized tees — soft, structured, and bulk-ready 🔥",
+    productName: "240 GSM French Terry Oversized T-shirt",
+    thumbnail: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400&h=700&fit=crop",
+    duration: "0:28",
+    uploadedAt: "Dec 10, 2025",
+    status: "live",
+    views: 4_821,
+    likes: 312,
+    shares: 47,
+  },
+  {
+    id: "v2",
+    caption: "Denim that moves. Lightweight, structured, export-grade quality.",
+    productName: "Men's Denim Jacket — Classic Wash",
+    thumbnail: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=400&h=700&fit=crop",
+    duration: "0:42",
+    uploadedAt: "Dec 5, 2025",
+    status: "under_review",
+    views: 0,
+    likes: 0,
+    shares: 0,
+  },
+];
+
+const statusConfig = {
+  live:         { label: "Live",         bg: "bg-green-50",  text: "text-green-600",  border: "border-green-200",  icon: CheckCircle2 },
+  under_review: { label: "Under Review", bg: "bg-orange-50", text: "text-orange-600", border: "border-orange-200", icon: Clock        },
+  rejected:     { label: "Rejected",     bg: "bg-red-50",    text: "text-red-500",    border: "border-red-200",    icon: AlertCircle  },
+};
+
+// ─────────────────────────────────────────────────────────────
+// PHONE MOCKUP — buyer-side video closeup preview
+// ─────────────────────────────────────────────────────────────
+
+function VideoCloseupPhoneMockup({
+  caption,
+  productName,
+  thumbnail,
+  hasVideo,
+}: {
+  caption: string;
+  productName: string;
+  thumbnail: string | null;
+  hasVideo: boolean;
+}) {
+  const displayCaption = caption || "Your caption will appear here…";
+  const displayProduct = productName || "Tag a product";
+  const bgImage = thumbnail || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=700&fit=crop";
+
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+        Preview in Buyer Feed
+      </p>
+
+      {/* Phone frame */}
+      <div className="relative w-[180px] h-[320px] rounded-[28px] border-[6px] border-gray-800 bg-black shadow-2xl overflow-hidden">
+        {/* Notch */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-16 h-3 bg-gray-800 rounded-b-xl z-20" />
+
+        {/* Video / thumbnail background */}
+        <div className="absolute inset-0">
+          <img src={bgImage} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10" />
+        </div>
+
+        {/* Play icon (when no real video) */}
+        {!hasVideo && (
+          <div className="absolute inset-0 flex items-center justify-center z-10">
+            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+            </div>
+          </div>
+        )}
+
+        {/* Top bar */}
+        <div className="absolute top-4 left-0 right-0 flex items-center justify-between px-3 z-10">
+          <span className="text-[7px] font-bold text-white bg-[#256fef] px-1.5 py-0.5 rounded-full tracking-wide">
+            CLOSEUP
+          </span>
+          <Volume2 className="w-3 h-3 text-white" />
+        </div>
+
+        {/* Right action buttons */}
+        <div className="absolute right-2 bottom-20 flex flex-col items-center gap-3 z-10">
+          {[
+            { Icon: Heart,         label: "312"  },
+            { Icon: MessageCircle, label: "48"   },
+            { Icon: Share2,        label: "Share" },
+            { Icon: Bookmark,      label: ""     },
+          ].map(({ Icon, label }) => (
+            <div key={label} className="flex flex-col items-center gap-0.5">
+              <div className="w-7 h-7 rounded-full bg-black/30 backdrop-blur-sm flex items-center justify-center">
+                <Icon className="w-3.5 h-3.5 text-white" />
+              </div>
+              {label && <span className="text-[8px] text-white font-semibold">{label}</span>}
+            </div>
+          ))}
+        </div>
+
+        {/* Bottom info */}
+        <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 z-10">
+          {/* Vendor row */}
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <div className="w-5 h-5 rounded-full bg-accent border border-white flex items-center justify-center">
+              <span className="text-[6px] font-bold text-white">TM</span>
+            </div>
+            <span className="text-[9px] font-bold text-white">Textile Mfr.</span>
+            <span className="text-[8px] text-white/60 ml-auto">{hasVideo ? "Now" : "2h ago"}</span>
+          </div>
+
+          {/* Caption */}
+          <p className="text-[8px] text-white leading-tight line-clamp-2 mb-2">
+            {displayCaption}
+          </p>
+
+          {/* Product tag chip */}
+          <div className="flex items-center gap-1 bg-white/15 backdrop-blur-sm rounded-full px-2 py-1">
+            <ShoppingBag className="w-2.5 h-2.5 text-white" />
+            <span className="text-[8px] text-white font-medium truncate max-w-[100px]">
+              {displayProduct}
+            </span>
+            <ChevronRight className="w-2.5 h-2.5 text-white shrink-0" />
+          </div>
+        </div>
+      </div>
+
+      <p className="text-[10px] text-gray-400 text-center max-w-[180px]">
+        Buyers browse video closeups like this — your product is one tap away
+      </p>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// VIDEO CLOSEUP CARD — existing closeups list
+// ─────────────────────────────────────────────────────────────
+
+function VideoCloseupCard({
+  closeup,
+  onDelete,
+}: {
+  closeup: UploadedVideoCloseup;
+  onDelete: (id: string) => void;
+}) {
+  const status = statusConfig[closeup.status];
+  const StatusIcon = status.icon;
+
+  return (
+    <motion.div
+      variants={listItem}
+      className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"
+    >
+      <div className="flex gap-3 p-4">
+        {/* Thumbnail */}
+        <div className="relative w-16 h-24 rounded-xl overflow-hidden shrink-0 bg-gray-100">
+          <img src={closeup.thumbnail} alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+            <Play className="w-4 h-4 text-white fill-white" />
+          </div>
+          <span className="absolute bottom-1 right-1 text-[9px] text-white font-bold bg-black/60 rounded px-1">
+            {closeup.duration}
+          </span>
+        </div>
+
+        {/* Details */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <span className={cn(
+              "inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+              status.bg, status.text, status.border
+            )}>
+              <StatusIcon className="w-2.5 h-2.5" />
+              {status.label}
+            </span>
+            <button
+              onClick={() => onDelete(closeup.id)}
+              className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors shrink-0"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <p className="text-xs font-semibold text-gray-900 mt-1.5 line-clamp-2 leading-snug">
+            {closeup.caption}
+          </p>
+          <p className="text-[10px] text-accent mt-0.5 flex items-center gap-1 truncate">
+            <Tag className="w-2.5 h-2.5" /> {closeup.productName}
+          </p>
+          <p className="text-[10px] text-gray-400 mt-1">{closeup.uploadedAt}</p>
+
+          {closeup.status === "live" && (
+            <div className="flex items-center gap-3 mt-2">
+              <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                <Eye className="w-3 h-3" /> {closeup.views.toLocaleString()}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                <Heart className="w-3 h-3" /> {closeup.likes}
+              </span>
+              <span className="flex items-center gap-1 text-[10px] text-gray-500">
+                <Share2 className="w-3 h-3" /> {closeup.shares}
+              </span>
+            </div>
+          )}
+
+          {closeup.status === "under_review" && (
+            <p className="text-[10px] text-orange-500 mt-1.5 flex items-center gap-1">
+              <Clock className="w-2.5 h-2.5" /> Under review · 24–48 hrs
+            </p>
+          )}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
+
+const UploadVideo = () => {
+  const navigate = useNavigate();
+  const reduced = useReducedMotion();
+
+  const [dragActive, setDragActive]           = useState(false);
+  const [selectedFile, setSelectedFile]       = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [thumbnailUrl, setThumbnailUrl]       = useState<string | null>(null);
+  const [caption, setCaption]                 = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<string>("");
+  const [productOpen, setProductOpen]         = useState(false);
+  const [isSubmitting, setIsSubmitting]       = useState(false);
+  const [closeups, setCloseups]               = useState<UploadedVideoCloseup[]>(EXISTING_CLOSEUPS);
+
+  const fileInputRef  = useRef<HTMLInputElement>(null);
+  const thumbInputRef = useRef<HTMLInputElement>(null);
+
+  const selectedProductObj = MOCK_PRODUCTS.find((p) => p.id === selectedProduct);
+
+  // ── File handlers ──
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(e.type === "dragenter" || e.type === "dragover");
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleFileSelect = (file: File) => {
+    const allowed = ["video/mp4", "video/quicktime", "video/webm"];
+    if (!allowed.includes(file.type)) {
+      toast.error("Please upload an MP4, MOV, or WebM file");
+      return;
+    }
+    if (file.size > 200 * 1024 * 1024) {
+      toast.error("Video must be under 200 MB");
+      return;
+    }
+    setSelectedFile(file);
+    setVideoPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleFileSelect(file);
+  };
+
+  const handleThumbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) setThumbnailUrl(URL.createObjectURL(file));
+  };
+
+  const removeFile = () => {
+    if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
+    setSelectedFile(null);
+    setVideoPreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const formatBytes = (bytes: number) =>
+    bytes < 1024 * 1024
+      ? `${(bytes / 1024).toFixed(0)} KB`
+      : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+  // ── Submit ──
+  const handleSubmit = () => {
+    if (!selectedFile) { toast.error("Please select a video to upload"); return; }
+    if (!caption.trim()) { toast.error("Add a caption for your video closeup"); return; }
+    if (!selectedProduct) { toast.error("Tag a product so buyers can shop directly"); return; }
+
+    setIsSubmitting(true);
+    setTimeout(() => {
+      const newCloseup: UploadedVideoCloseup = {
+        id: `v${Date.now()}`,
+        caption: caption.trim(),
+        productName: selectedProductObj?.name ?? "",
+        thumbnail: thumbnailUrl ?? "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=700&fit=crop",
+        duration: "0:30",
+        uploadedAt: "Just now",
+        status: "under_review",
+        views: 0,
+        likes: 0,
+        shares: 0,
+      };
+      setCloseups((prev) => [newCloseup, ...prev]);
+      setIsSubmitting(false);
+      removeFile();
+      setCaption("");
+      setSelectedProduct("");
+      setThumbnailUrl(null);
+      toast.success("Video closeup uploaded!", {
+        description: "It'll appear in the buyer feed after review (24–48 hours).",
+      });
+    }, 2000);
+  };
+
+  const handleDelete = (id: string) => {
+    setCloseups((prev) => prev.filter((v) => v.id !== id));
+    toast.success("Video closeup removed");
+  };
+
+  return (
+    <DashboardLayout>
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-4xl mx-auto pb-12 space-y-5">
+
+        {/* ── Header ── */}
+        <motion.div variants={section} className="flex items-center gap-3">
+          <motion.button
+            whileTap={TAP}
+            transition={TAP_T}
+            onClick={() => navigate(-1)}
+            className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </motion.button>
+          <div>
+            <h1 className="text-lg font-bold text-gray-900 leading-none">Upload Video Closeup</h1>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Short product videos that appear in the buyer browsing feed
+            </p>
+          </div>
+        </motion.div>
+
+        {/* ── Reach stat banner ── */}
+        <motion.div variants={section} className="bg-gradient-to-r from-accent to-[#1a55cc] rounded-2xl p-4 text-white flex items-center gap-4">
+          <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center shrink-0">
+            <Sparkles className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-bold">Video Closeups get 5× more reach</p>
+            <p className="text-xs text-white/75 mt-0.5">
+              Buyers discover products through short videos before enquiring. Tag a product and let the video closeup drive the lead.
+            </p>
+          </div>
+          <div className="hidden sm:flex flex-col items-center shrink-0">
+            <TrendingUp className="w-5 h-5 text-white/80" />
+            <span className="text-[10px] text-white/60 mt-0.5">More leads</span>
+          </div>
+        </motion.div>
+
+        {/* ── Tips row ── */}
+        <motion.div variants={section} className="grid grid-cols-3 gap-2">
+          {[
+            { label: "Duration", value: "15–60 sec", hint: "Sweet spot for engagement" },
+            { label: "Ratio",    value: "9 : 16",    hint: "Portrait for full-screen"  },
+            { label: "Max Size", value: "200 MB",    hint: "MP4, MOV, or WebM"         },
+          ].map((tip) => (
+            <div key={tip.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
+              <p className="text-xs font-bold text-gray-900">{tip.value}</p>
+              <p className="text-[10px] text-accent font-semibold mt-0.5">{tip.label}</p>
+              <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">{tip.hint}</p>
+            </div>
+          ))}
+        </motion.div>
+
+        {/* ── Two-column layout: form + phone preview ── */}
+        <div className="flex flex-col lg:flex-row gap-5 items-start">
+
+          {/* LEFT — Upload form */}
+          <motion.div variants={section} className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">
+            <h2 className="text-sm font-bold text-gray-900">Upload Video</h2>
+
+            {/* Drop zone / video preview */}
+            {!selectedFile ? (
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[200px]",
+                  dragActive
+                    ? "border-accent bg-accent/5"
+                    : "border-gray-200 hover:border-accent/50 hover:bg-gray-50"
+                )}
+              >
+                <div className={cn(
+                  "w-16 h-16 rounded-2xl flex items-center justify-center transition-colors",
+                  dragActive ? "bg-accent/10" : "bg-gray-100"
+                )}>
+                  <Video className={cn("w-8 h-8 transition-colors", dragActive ? "text-accent" : "text-gray-400")} />
+                </div>
+                <div className="text-center px-4">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {dragActive ? "Drop your video here" : "Drag & drop your video"}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    or <span className="text-accent font-semibold">browse files</span>
+                  </p>
+                </div>
+                <p className="text-[10px] text-gray-400">MP4 · MOV · WebM · Max 200 MB</p>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="video/mp4,video/quicktime,video/webm"
+                  className="hidden"
+                  onChange={handleInputChange}
+                />
+              </div>
+            ) : (
+              <div className="relative rounded-2xl overflow-hidden bg-black aspect-video">
+                <video
+                  src={videoPreviewUrl ?? undefined}
+                  controls
+                  className="w-full h-full object-contain"
+                />
+                <button
+                  onClick={removeFile}
+                  className="absolute top-2 right-2 w-7 h-7 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center transition-colors"
+                >
+                  <X className="w-4 h-4 text-white" />
+                </button>
+                <div className="absolute bottom-2 left-2 bg-black/60 rounded-lg px-2 py-1">
+                  <p className="text-[10px] text-white font-semibold">
+                    {selectedFile.name} · {formatBytes(selectedFile.size)}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Caption */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-semibold text-gray-700">
+                  Caption <span className="text-red-400">*</span>
+                </label>
+                <span className={cn("text-[10px]", caption.length > 150 ? "text-red-400" : "text-gray-400")}>
+                  {caption.length}/150
+                </span>
+              </div>
+              <textarea
+                rows={3}
+                maxLength={150}
+                placeholder="Describe your product video closeup — what it's made of, MOQ, why buyers love it…"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent/50 resize-none transition-all"
+              />
+            </div>
+
+            {/* Tag a product */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Tag a Product <span className="text-red-400">*</span>
+              </label>
+              <div className="relative">
+                <button
+                  onClick={() => setProductOpen((p) => !p)}
+                  className={cn(
+                    "w-full flex items-center justify-between px-3 py-2.5 border rounded-xl text-sm transition-all",
+                    selectedProduct
+                      ? "border-accent/50 bg-accent/5 text-gray-900"
+                      : "border-gray-200 text-gray-400 hover:border-gray-300"
+                  )}
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Tag className={cn("w-3.5 h-3.5 shrink-0", selectedProduct ? "text-accent" : "text-gray-400")} />
+                    <span className="truncate">{selectedProductObj?.name ?? "Select a product"}</span>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
+                </button>
+
+                <AnimatePresence>
+                  {productOpen && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setProductOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="absolute left-0 right-0 top-12 z-20 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
+                      >
+                        {MOCK_PRODUCTS.map((p) => (
+                          <button
+                            key={p.id}
+                            onClick={() => { setSelectedProduct(p.id); setProductOpen(false); }}
+                            className={cn(
+                              "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0",
+                              selectedProduct === p.id && "bg-accent/5"
+                            )}
+                          >
+                            <div className="w-6 h-6 rounded-lg bg-accent/10 flex items-center justify-center mt-0.5 shrink-0">
+                              <ShoppingBag className="w-3 h-3 text-accent" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-gray-900 leading-snug">{p.name}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{p.code}</p>
+                            </div>
+                            {selectedProduct === p.id && (
+                              <CheckCircle2 className="w-4 h-4 text-accent ml-auto shrink-0 mt-0.5" />
+                            )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Buyers can tap your tagged product directly from the video closeup
+              </p>
+            </div>
+
+            {/* Cover thumbnail */}
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                Cover Thumbnail{" "}
+                <span className="text-gray-400 font-normal">(optional — auto-generated if blank)</span>
+              </label>
+              <div
+                onClick={() => thumbInputRef.current?.click()}
+                className="flex items-center gap-3 border border-dashed border-gray-200 rounded-xl p-3 cursor-pointer hover:border-accent/50 hover:bg-gray-50 transition-all"
+              >
+                {thumbnailUrl ? (
+                  <>
+                    <img src={thumbnailUrl} alt="Thumbnail" className="w-12 h-16 rounded-lg object-cover shrink-0" />
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-900">Custom thumbnail set</p>
+                      <p className="text-[10px] text-gray-400">Click to change</p>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setThumbnailUrl(null); }}
+                      className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center shrink-0">
+                      <Image className="w-5 h-5 text-gray-400" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">Upload thumbnail</p>
+                      <p className="text-[10px] text-gray-400">JPG or PNG · 9:16 ratio preferred</p>
+                    </div>
+                  </>
+                )}
+              </div>
+              <input
+                ref={thumbInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="hidden"
+                onChange={handleThumbChange}
+              />
+            </div>
+
+            {/* Moderation notice */}
+            <div className="flex items-start gap-2 bg-orange-50 border border-orange-100 rounded-xl px-3 py-2.5">
+              <Clock className="w-3.5 h-3.5 text-orange-500 mt-0.5 shrink-0" />
+              <p className="text-xs text-orange-700 leading-relaxed">
+                All video closeups are reviewed before going live in the buyer feed.
+                This takes <span className="font-semibold">24–48 hours</span>.
+              </p>
+            </div>
+
+            {/* Submit */}
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+              className={cn(
+                "w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 shadow-sm",
+                isSubmitting
+                  ? "bg-accent/60 cursor-not-allowed"
+                  : "bg-accent hover:bg-accent/90 active:scale-[0.99]"
+              )}
+            >
+              {isSubmitting ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
+                    className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full"
+                  />
+                  Uploading…
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4" /> Publish Video Closeup
+                </>
+              )}
+            </button>
+          </motion.div>
+
+          {/* RIGHT — Phone mockup preview */}
+          <motion.div variants={section} className="lg:sticky lg:top-6 self-start">
+            <VideoCloseupPhoneMockup
+              caption={caption}
+              productName={selectedProductObj?.name ?? ""}
+              thumbnail={thumbnailUrl}
+              hasVideo={!!selectedFile}
+            />
+          </motion.div>
+        </div>
+
+        {/* ── Published video closeups ── */}
+        {closeups.length > 0 && (
+          <motion.div variants={section} className="space-y-3">
+            <h2 className="text-sm font-bold text-gray-900 px-1">
+              Your Video Closeups ({closeups.length})
+            </h2>
+            <motion.div variants={listContainer} className="space-y-3">
+              {closeups.map((closeup) => (
+                <VideoCloseupCard key={closeup.id} closeup={closeup} onDelete={handleDelete} />
+              ))}
+            </motion.div>
+          </motion.div>
+        )}
+
+        {/* ── Empty state ── */}
+        {closeups.length === 0 && (
+          <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 py-12 flex flex-col items-center gap-3 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center">
+              <Video className="w-7 h-7 text-gray-300" />
+            </div>
+            <p className="text-sm font-semibold text-gray-400">No video closeups yet</p>
+            <p className="text-xs text-gray-400 max-w-xs">
+              Upload your first product video and let buyers discover you through video closeups in the feed.
+            </p>
+          </motion.div>
+        )}
+      </motion.div>
+    </DashboardLayout>
+  );
+};
+
+export default UploadVideo;

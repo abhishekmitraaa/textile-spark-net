@@ -1,7 +1,28 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import {
   Sheet,
   SheetContent,
@@ -655,7 +676,7 @@ function LeadsInsights({ totalLeads, urgentCount }: { totalLeads: number; urgent
   return (
     <div className="space-y-4 mb-6">
       {urgentCount > 0 && (
-        <div className="bg-gradient-to-br from-red-50 to-orange-50/50 rounded-3xl p-4 md:p-6 border border-red-100 shadow-sm relative overflow-hidden">
+        <motion.div variants={section} className="bg-gradient-to-br from-red-50 to-orange-50/50 rounded-3xl p-4 md:p-6 border border-red-100 shadow-sm relative overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
             <div className="flex items-start gap-3 md:gap-4">
               <div className="w-12 h-12 md:w-14 md:h-14 bg-white/80 rounded-2xl flex items-center justify-center text-red-600 shadow-sm border border-red-100 shrink-0">
@@ -666,23 +687,27 @@ function LeadsInsights({ totalLeads, urgentCount }: { totalLeads: number; urgent
                 <p className="text-sm text-gray-600 mt-0.5">Respond quickly to increase conversion chances</p>
               </div>
             </div>
-            <button className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-10 bg-white border border-red-200 text-red-600 font-bold rounded-2xl hover:bg-red-50 transition-all shadow-sm active:scale-95">
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
+              className="w-full md:w-auto flex items-center justify-center gap-2 px-6 py-3 md:px-10 bg-white border border-red-200 text-red-600 font-bold rounded-2xl hover:bg-red-50 transition-all shadow-sm"
+            >
               <Phone className="w-5 h-5" /> Call Now
-            </button>
+            </motion.button>
           </div>
           <div className="absolute top-0 right-0 -mr-8 -mt-8 w-64 h-64 bg-red-200/20 rounded-full blur-3xl" />
           <div className="absolute bottom-0 left-0 -ml-8 -mb-8 w-48 h-48 bg-orange-100/20 rounded-full blur-3xl" />
-        </div>
+        </motion.div>
       )}
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+      <motion.div variants={listContainer} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {[
           { label: "Total Leads", value: String(totalLeads), badge: "+12", badgeColor: "text-emerald-600 bg-emerald-50", Icon: Users, iconBg: "bg-orange-50 text-orange-600" },
           { label: "Conversion Rate", value: "32%", badge: "+5%", badgeColor: "text-emerald-600 bg-emerald-50", Icon: TrendingUp, iconBg: "bg-emerald-50 text-emerald-600" },
           { label: "Pending Response", value: "2", badge: "Awaiting action", badgeColor: "text-gray-400 bg-gray-50 uppercase tracking-wider text-[11px]", Icon: Clock, iconBg: "bg-amber-50 text-amber-600" },
           { label: "Converted", value: "1", badge: "This month", badgeColor: "text-emerald-600 bg-emerald-50", Icon: UserCheck, iconBg: "bg-blue-50 text-blue-600" },
         ].map(({ label, value, badge, badgeColor, Icon, iconBg }) => (
-          <div key={label} className="bg-white p-4 md:p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between min-h-[130px] md:min-h-[150px] hover:border-blue-100 transition-colors">
+          <motion.div key={label} variants={listItem} className="bg-white p-4 md:p-5 rounded-3xl border border-gray-100 shadow-sm flex flex-col justify-between min-h-[130px] md:min-h-[150px] hover:border-blue-100 transition-colors">
             <div className="flex justify-between items-start">
               <span className="text-[13px] md:text-sm font-semibold text-gray-500">{label}</span>
               <div className={`p-2 md:p-3 rounded-xl md:rounded-2xl shadow-sm ${iconBg}`}><Icon className="w-5 h-5 md:w-6 md:h-6" /></div>
@@ -691,9 +716,9 @@ function LeadsInsights({ totalLeads, urgentCount }: { totalLeads: number; urgent
               <div className="text-2xl md:text-3xl font-bold text-gray-900">{value}</div>
               <div className={`text-[11px] md:text-[13px] font-semibold mt-1 w-fit px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</div>
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
@@ -771,7 +796,7 @@ function LeadCard({ lead }: { lead: Lead }) {
   };
 
   return (
-    <div className="border rounded-xl border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden bg-white">
+    <motion.div variants={listItem} className="border rounded-xl border-gray-200 hover:border-blue-300 shadow-sm hover:shadow-lg transition-all duration-300 overflow-hidden bg-white">
       <div className="p-3 md:p-4">
         {/* Badges */}
         {(lead.isNew || lead.isUrgent) && (
@@ -914,7 +939,7 @@ function LeadCard({ lead }: { lead: Lead }) {
       )}
 
       <HideLeadModal isOpen={showHideModal} onClose={() => setShowHideModal(false)} lead={lead} />
-    </div>
+    </motion.div>
   );
 }
 
@@ -1006,6 +1031,7 @@ function EmptyState({ message }: { message: string }) {
 // ─── Main Page ─────────────────────────────────────────────────────────────────
 
 const Leads = () => {
+  const reduced = useReducedMotion();
   const [activeTab, setActiveTab] = useState("Most Relevant");
   const [isFilterOpen, setIsFilterOpen] = useState(true);
   const [showCompletionScore, setShowCompletionScore] = useState(false);
@@ -1128,65 +1154,85 @@ const Leads = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
         {/* Mobile */}
         <div className="lg:hidden">
-          <div className="sticky -top-2 z-20 bg-white shadow-sm">
+          <motion.div variants={section} className="sticky -top-2 z-20 bg-white shadow-sm">
             <div className="px-4 py-3 border-b border-gray-200 flex items-center gap-2">
               <div className="flex-1">
                 <SearchBar value={searchQuery} onChange={setSearchQuery} />
               </div>
-              <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`p-2 rounded-lg border border-gray-200 transition-all ${isFilterOpen ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-white text-gray-500"}`}>
+              <motion.button
+                whileTap={TAP}
+                transition={TAP_T}
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`p-2 rounded-lg border border-gray-200 transition-all ${isFilterOpen ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-white text-gray-500"}`}
+              >
                 <ChevronDown className={`w-5 h-5 transition-transform duration-300 ${isFilterOpen ? "rotate-180" : ""}`} />
-              </button>
+              </motion.button>
             </div>
             <div className={`overflow-hidden transition-all duration-200 ${isFilterOpen ? "max-h-[500px]" : "max-h-0"}`}>
               <div className="p-4 border-b border-gray-50 bg-white">{filterBar}</div>
             </div>
-          </div>
-          <div className="p-4 space-y-4">
+          </motion.div>
+          <motion.div variants={section} className="p-4 space-y-4">
             <LeadsInsights totalLeads={filteredLeads.length} urgentCount={urgentCount} />
             {filteredLeads.length === 0
               ? <EmptyState message="No leads match your filters" />
-              : filteredLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)
+              : (
+                <motion.div variants={listContainer} className="space-y-4">
+                  {filteredLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
+                </motion.div>
+              )
             }
-          </div>
+          </motion.div>
         </div>
 
         {/* Desktop */}
         <div className="hidden lg:block max-w-7xl mx-auto px-6 py-8">
-          <div className="sticky -top-2 z-20 mb-6">
+          <motion.div variants={section} className="sticky -top-2 z-20 mb-6">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
               <div className="p-4 flex items-center gap-4 border-b border-gray-100">
                 <div className="flex-1">
                   <SearchBar value={searchQuery} onChange={setSearchQuery} />
                 </div>
-                <button onClick={() => setIsFilterOpen(!isFilterOpen)} className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isFilterOpen ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}>
+                <motion.button
+                  whileTap={TAP}
+                  transition={TAP_T}
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${isFilterOpen ? "bg-blue-50 text-blue-600 border-blue-200" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"}`}
+                >
                   <span className="text-sm font-semibold">Filters</span>
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isFilterOpen ? "rotate-180" : ""}`} />
-                </button>
+                </motion.button>
               </div>
               <div className={`overflow-hidden transition-all duration-200 ${isFilterOpen ? "max-h-[300px] p-6 pt-0" : "max-h-0"}`}>
                 <div className="pt-6 space-y-6">{filterBar}</div>
               </div>
             </div>
-          </div>
+          </motion.div>
           <LeadsInsights totalLeads={filteredLeads.length} urgentCount={urgentCount} />
           {filteredLeads.length === 0
             ? <EmptyState message="No leads match your filters" />
             : (
               <>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <motion.div variants={listContainer} className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                   {filteredLeads.map((lead) => <LeadCard key={lead.id} lead={lead} />)}
-                </div>
-                <div className="mt-8 text-center">
-                  <button className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm">Load More Leads</button>
-                </div>
+                </motion.div>
+                <motion.div variants={section} className="mt-8 text-center">
+                  <motion.button
+                    whileTap={TAP}
+                    transition={TAP_T}
+                    className="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors shadow-sm"
+                  >
+                    Load More Leads
+                  </motion.button>
+                </motion.div>
               </>
             )
           }
         </div>
-      </div>
+      </motion.div>
 
       {/* Add Business Categories Modal */}
       <AddBusinessCategoriesModal

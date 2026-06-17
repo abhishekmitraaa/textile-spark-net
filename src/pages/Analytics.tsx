@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -75,23 +75,46 @@ const stats = [
 
 const timeFilters = ["7 days", "30 days", "90 days", "1 year"];
 
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
+
 const Analytics = () => {
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   const [activeTime, setActiveTime] = useState("7 days");
   const [sortBy, setSortBy] = useState<"views" | "inquiries">("views");
 
   const sorted = [...topProducts].sort((a, b) => b[sortBy] - a[sortBy]);
-        className="mt-3 bg-accent text-accent-foreground text-xs"
+
   return (
     <DashboardLayout>
-      <div className="space-y-4 pb-24">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-4 pb-24">
         {/* Header */}
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
+        <motion.div variants={section}>
           <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
           <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
             {timeFilters.map((f) => (
-              <button
+              <motion.button
                 key={f}
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={() => setActiveTime(f)}
                 className={`rounded-full px-3 py-1 text-sm whitespace-nowrap transition-colors ${
                   activeTime === f
@@ -100,17 +123,17 @@ const Analytics = () => {
                 }`}
               >
                 {f}
-              </button>
+              </motion.button>
             ))}
           </div>
         </motion.div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 gap-3">
-          {stats.map((s, i) => {
+        <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
+          {stats.map((s) => {
             const Icon = s.icon;
             return (
-              <motion.div key={s.title} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+              <motion.div key={s.title} variants={listItem}>
                 <Card className="rounded-xl bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20">
                   <CardContent className="p-3">
                     <div className="flex items-start justify-between">
@@ -131,10 +154,10 @@ const Analytics = () => {
               </motion.div>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* Performance Trends */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+        <motion.div variants={section}>
           <Card className="rounded-xl">
             <CardHeader className="pb-2 pt-4 px-4">
               <div className="flex items-center justify-between">
@@ -274,8 +297,8 @@ const Analytics = () => {
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Top Performing Products</CardTitle>
                   <div className="flex gap-1">
-                    <button onClick={() => setSortBy("views")} className={`text-xs px-2 py-0.5 rounded-full ${sortBy === "views" ? "bg-accent/10 text-accent" : "text-muted-foreground"}`}>Views</button>
-                    <button onClick={() => setSortBy("inquiries")} className={`text-xs px-2 py-0.5 rounded-full ${sortBy === "inquiries" ? "bg-accent/10 text-accent" : "text-muted-foreground"}`}>Inquiries</button>
+                    <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setSortBy("views")} className={`text-xs px-2 py-0.5 rounded-full ${sortBy === "views" ? "bg-accent/10 text-accent" : "text-muted-foreground"}`}>Views</motion.button>
+                    <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setSortBy("inquiries")} className={`text-xs px-2 py-0.5 rounded-full ${sortBy === "inquiries" ? "bg-accent/10 text-accent" : "text-muted-foreground"}`}>Inquiries</motion.button>
                   </div>
                 </div>
               </CardHeader>
@@ -308,7 +331,7 @@ const Analytics = () => {
         </Tabs>
 
         {/* AI Insight */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <motion.div variants={section}>
           <Card className="rounded-xl bg-accent/5 border-accent/20">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
@@ -332,7 +355,7 @@ const Analytics = () => {
           </Card>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+        <motion.div variants={section}>
           <Card className="rounded-xl border-accent/20 bg-gradient-to-br from-accent/5 via-card to-transparent">
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4">
@@ -363,7 +386,7 @@ const Analytics = () => {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };

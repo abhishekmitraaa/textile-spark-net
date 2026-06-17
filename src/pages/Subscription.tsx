@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,26 @@ import {
   Globe,
   Award,
 } from "lucide-react";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 type PlanId = "basic" | "silver" | "gold";
 
@@ -178,6 +198,7 @@ const benefits = [
 ];
 
 export default function Subscription() {
+  const reduced = useReducedMotion();
   const [showAllFeatures, setShowAllFeatures] = useState(false);
   const [isYearly, setIsYearly] = useState(false);
 
@@ -224,13 +245,10 @@ export default function Subscription() {
 
   return (
     <DashboardLayout>
-      <div className="space-y-8 lg:space-y-10">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-8 lg:space-y-10">
         {/* Header with Toggle */}
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <motion.div
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-          >
+        <motion.div variants={section} className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div>
             <Badge variant="outline" className="mb-3 border-accent/30 bg-accent/10 text-accent">
               <Sparkles className="mr-1 h-3 w-3" />
               Upgrade & Save
@@ -241,14 +259,10 @@ export default function Subscription() {
             <p className="mt-2 max-w-xl text-muted-foreground">
               Unlock premium features and accelerate your business growth with our flexible subscription plans
             </p>
-          </motion.div>
+          </div>
 
           {/* Billing Toggle */}
-          <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm"
-          >
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 shadow-sm">
             <span className={`text-sm font-medium ${!isYearly ? "text-foreground" : "text-muted-foreground"}`}>
               Monthly
             </span>
@@ -262,15 +276,11 @@ export default function Subscription() {
                 Save {savingsPercentage}%
               </Badge>
             )}
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
 
         {/* Current Plan Usage Card - Enhanced */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
+        <motion.div variants={section}>
           <Card className="overflow-hidden border-accent/20">
             <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/10" />
             <CardHeader className="relative pb-4">
@@ -335,23 +345,16 @@ export default function Subscription() {
         </motion.div>
 
         {/* Plan Cards - New Design */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="grid gap-6 lg:grid-cols-3"
-        >
-          {plans.map((plan, index) => {
+        <motion.div variants={listContainer} className="grid gap-6 lg:grid-cols-3">
+          {plans.map((plan) => {
             const Icon = plan.icon;
             const price = isYearly ? plan.yearlyPrice : plan.price;
             const isCurrentPlan = currentPlan.id === plan.id;
-            
+
             return (
               <motion.div
                 key={plan.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
+                variants={listItem}
                 className="relative"
               >
                 {plan.popular && (
@@ -420,7 +423,7 @@ export default function Subscription() {
                       ) : (
                         <>
                           {plan.popular ? "Upgrade Now" : "Get Started"}
-                          <ArrowRight className="ml-2 h-4 w-4" />
+                          <motion.span whileHover={{ x: 3 }} transition={{ ease: E, duration: 0.2 }} className="inline-flex"><ArrowRight className="ml-2 h-4 w-4" /></motion.span>
                         </>
                       )}
                     </Button>
@@ -432,11 +435,7 @@ export default function Subscription() {
         </motion.div>
 
         {/* Feature Comparison Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-        >
+        <motion.div variants={section}>
           <Card className="overflow-hidden">
             <CardHeader className="border-b border-border bg-gradient-to-r from-secondary/50 to-transparent">
               <CardTitle className="flex items-center gap-2">
@@ -510,11 +509,7 @@ export default function Subscription() {
         </motion.div>
 
         {/* Why Upgrade Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.35 }}
-        >
+        <motion.div variants={section}>
           <Card className="overflow-hidden border-accent/20 bg-gradient-to-br from-accent/5 via-card to-accent/10">
             <CardHeader className="text-center">
               <Badge variant="outline" className="mx-auto mb-2 w-fit border-accent/30 bg-accent/10 text-accent">
@@ -527,13 +522,11 @@ export default function Subscription() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                {benefits.map((benefit, index) => (
+              <motion.div variants={listContainer} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                {benefits.map((benefit) => (
                   <motion.div
                     key={benefit.title}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
+                    variants={listItem}
                     className="group rounded-xl border border-border bg-card p-5 text-center transition-all hover:border-accent/30 hover:shadow-md"
                   >
                     <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10 text-accent transition-colors group-hover:bg-accent group-hover:text-accent-foreground">
@@ -543,17 +536,13 @@ export default function Subscription() {
                     <p className="mt-1 text-sm text-muted-foreground">{benefit.description}</p>
                   </motion.div>
                 ))}
-              </div>
+              </motion.div>
             </CardContent>
           </Card>
         </motion.div>
 
         {/* Upgrade CTA Banner */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
+        <motion.div variants={section}>
           <Card className="overflow-hidden border-accent">
             <div className="relative bg-gradient-to-r from-accent via-accent/90 to-accent/80 p-6 sm:p-8">
               <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48cGF0aCBkPSJNMzYgMzRoLTJ2LTRoMnY0em0wLTZoLTJ2LTRoMnY0em0tNiA2aC0ydi00aDJ2NHptMC02aC0ydi00aDJ2NHoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30" />
@@ -590,22 +579,16 @@ export default function Subscription() {
         </motion.div>
 
         {/* Testimonials */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.45 }}
-        >
+        <motion.div variants={section}>
           <div className="mb-6 text-center">
             <h2 className="font-display text-2xl font-bold text-foreground">What Our Customers Say</h2>
             <p className="mt-1 text-muted-foreground">Join thousands of satisfied manufacturers</p>
           </div>
-          <div className="grid gap-4 md:grid-cols-3">
-            {testimonials.map((testimonial, index) => (
+          <motion.div variants={listContainer} className="grid gap-4 md:grid-cols-3">
+            {testimonials.map((testimonial) => (
               <motion.div
                 key={testimonial.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5 + index * 0.1 }}
+                variants={listItem}
               >
                 <Card className="h-full">
                   <CardContent className="p-6">
@@ -628,15 +611,11 @@ export default function Subscription() {
                 </Card>
               </motion.div>
             ))}
-          </div>
+          </motion.div>
         </motion.div>
 
         {/* FAQ Section */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55 }}
-        >
+        <motion.div variants={section}>
           <Card>
             <CardHeader>
               <div className="flex items-center gap-2">
@@ -663,11 +642,7 @@ export default function Subscription() {
         </motion.div>
 
         {/* Billing History */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-        >
+        <motion.div variants={section}>
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -727,7 +702,7 @@ export default function Subscription() {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 }

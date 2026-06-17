@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
 
 import ad1 from "@/assets/advertisments/advertisment1.png";
 import ad2 from "@/assets/advertisments/advertisment2.png";
@@ -11,6 +21,7 @@ const slides = [ad1, ad2, ad3, ad4, ad5];
 const SLIDE_DURATION = 2000;
 
 const AdvertisementSlideshow = () => {
+  const reduced = useReducedMotion();
   const navigate = useNavigate();
   const [current, setCurrent] = useState(0);
   const [exiting, setExiting] = useState(false);
@@ -62,7 +73,10 @@ const AdvertisementSlideshow = () => {
       />
 
       {/* Centered image container */}
-      <div
+      <motion.div
+        variants={reduced ? {} : section}
+        initial="hidden"
+        animate="show"
         style={{
           position: "fixed",
           inset: 0,
@@ -153,8 +167,10 @@ const AdvertisementSlideshow = () => {
         </div>
 
         {/* Skip button */}
-        <button
+        <motion.button
           onClick={handleSkip}
+          whileTap={TAP}
+          transition={TAP_T}
           style={{
             position: "absolute",
             top: "28px",
@@ -174,8 +190,8 @@ const AdvertisementSlideshow = () => {
           }}
         >
           Skip →
-        </button>
-      </div>
+        </motion.button>
+      </motion.div>
     </>
   );
 };

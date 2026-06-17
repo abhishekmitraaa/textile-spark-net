@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   Search, MessageCircle, Phone, Mail, FileText,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
@@ -14,6 +14,26 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { toast } from "sonner";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -241,6 +261,7 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 // ─────────────────────────────────────────────────────────────
 
 const Help = () => {
+  const reduced = useReducedMotion();
   const [chatOpen, setChatOpen]       = useState(false);
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -259,24 +280,27 @@ const Help = () => {
         className="min-h-screen bg-gray-50 -m-4 lg:-m-6"
         style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
       >
-        <div className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-12">
+        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-12">
 
           {/* ── Welcome ── */}
-          <div>
+          <motion.div variants={section}>
             <h2 className="text-xl font-bold text-gray-900 mb-1">
               Welcome to Cosora's Customer Service
             </h2>
             <p className="text-sm text-gray-500">What can we help you with?</p>
-          </div>
+          </motion.div>
 
           {/* ── Contact Us ── */}
-          <div>
+          <motion.div variants={section}>
             <h3 className="text-base font-semibold text-gray-900 mb-1">Contact Us</h3>
             <p className="text-xs text-gray-500 mb-4">
               10:00 - 7:00 PM IST (Closed on weekends and holidays)
             </p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
+            <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
+              <motion.button
+                variants={listItem}
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={() => setChatOpen(true)}
                 className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
               >
@@ -285,9 +309,12 @@ const Help = () => {
                 </div>
                 <span className="text-sm font-semibold text-gray-900">Contact Us</span>
                 <span className="text-xs text-gray-500">Chat with us</span>
-              </button>
+              </motion.button>
 
-              <button
+              <motion.button
+                variants={listItem}
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={() => { window.location.href = "tel:+919147700465"; }}
                 className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
               >
@@ -296,12 +323,12 @@ const Help = () => {
                 </div>
                 <span className="text-sm font-semibold text-gray-900">Request a Callback</span>
                 <span className="text-xs text-gray-500">a Callback</span>
-              </button>
-            </div>
-          </div>
+              </motion.button>
+            </motion.div>
+          </motion.div>
 
           {/* ── Follow Us ── */}
-          <div>
+          <motion.div variants={section}>
             <h3 className="text-base font-semibold text-gray-900 mb-1">Follow Us</h3>
             <p className="text-xs text-gray-500 mb-4">
               Get connected for our latest news & updates!
@@ -314,34 +341,32 @@ const Help = () => {
             >
               <Instagram className="w-5 h-5 text-white" />
             </a>
-          </div>
+          </motion.div>
 
           {/* ── Email ── */}
-          <div className="flex items-center gap-2 text-sm text-gray-700">
+          <motion.div variants={section} className="flex items-center gap-2 text-sm text-gray-700">
             <Mail className="w-4 h-4 shrink-0" />
             <span className="font-medium">Email -</span>
             <a href="mailto:hello@cosora.in" className="text-blue-600 hover:underline">
               hello@cosora.in
             </a>
-          </div>
+          </motion.div>
 
           {/* ── Delete Account ── */}
-          <div className="bg-white rounded-lg border border-gray-200 p-4">
+          <motion.div variants={section} className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-xs text-gray-500 mb-2">Do you want to delete your account?</p>
-            <button
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => toast.error("Delete account request submitted")}
               className="text-sm font-medium text-red-600 hover:text-red-700"
             >
               Delete my account
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
 
           {/* ── FAQ — single collapsible dropdown ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
+          <motion.div variants={section}>
             <Card className="border-border overflow-hidden">
               <button
                 type="button"
@@ -429,16 +454,15 @@ const Help = () => {
           </motion.div>
 
           {/* ── Quick Guides ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-          >
+          <motion.div variants={section}>
             <h2 className="text-xl font-semibold text-foreground mb-4">Quick Guides</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <motion.div variants={listContainer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {quickGuides.map(guide => (
-                <Card
+                <motion.div
                   key={guide.title}
+                  variants={listItem}
+                >
+                <Card
                   className="border-border hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group"
                 >
                   <CardContent className="p-4 flex items-center gap-3">
@@ -449,16 +473,13 @@ const Help = () => {
                     <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                   </CardContent>
                 </Card>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* ── Still Need Help ── */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-          >
+          <motion.div variants={section}>
             <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-accent/5 border-primary/20">
               <CardContent className="py-8 text-center">
                 <h3 className="text-xl font-semibold text-foreground mb-2">Still need help?</h3>
@@ -479,7 +500,7 @@ const Help = () => {
             </Card>
           </motion.div>
 
-        </div>
+        </motion.div>
       </div>
 
       {/* ── Chat Modal ── */}

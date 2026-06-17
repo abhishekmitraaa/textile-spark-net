@@ -1,9 +1,30 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ChevronLeft, ChevronRight, Tag, MessageSquare, Star, HelpCircle, X, Plus, StarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 // ─── Get Reviews Modal ─────────────────────────────────────────────────────────
 
@@ -142,6 +163,7 @@ const BusinessTools = () => {
   const navigate = useNavigate();
   const [getReviewsOpen, setGetReviewsOpen] = useState(false);
   const [showReviews, setShowReviews] = useState(false);
+  const reduced = useReducedMotion();
 
   const tools = [
     { icon: Tag,          title: "Add Offers",           badge: null,          iconBg: "bg-amber-50",  iconColor: "text-amber-600",  action: () => toast.info("Add Offers — coming soon") },
@@ -152,22 +174,27 @@ const BusinessTools = () => {
 
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto pb-8 space-y-4">
+      <motion.div
+        className="max-w-2xl mx-auto pb-8 space-y-4"
+        variants={reduced ? {} : page}
+        initial="hidden"
+        animate="show"
+      >
         {/* Header */}
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
+        <motion.div variants={section} className="flex items-center gap-3">
+          <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
             <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
+          </motion.button>
           <div>
             <h1 className="text-base font-bold text-gray-900 leading-none">Business Tools</h1>
             <p className="text-xs text-gray-400 mt-0.5">Manage reviews, offers, and more</p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Tools list */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <motion.div variants={listContainer} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {tools.map((tool, i) => (
-            <button key={i} onClick={tool.action}
+            <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={i} onClick={tool.action}
               className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors text-left">
               <div className="flex items-center gap-3 flex-1">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", tool.iconBg)}>
@@ -183,18 +210,18 @@ const BusinessTools = () => {
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Inline review reply section */}
         {showReviews && (
-          <div>
+          <motion.div variants={section}>
             <h2 className="text-sm font-bold text-gray-900 mb-3">Reply to Reviews</h2>
             <ReplyToReviews />
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       <GetReviewsModal isOpen={getReviewsOpen} onClose={() => setGetReviewsOpen(false)} />
     </DashboardLayout>

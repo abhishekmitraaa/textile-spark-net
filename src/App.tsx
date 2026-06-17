@@ -58,6 +58,8 @@ import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
+import UploadCatalogue from "./pages/UploadCatalogue";
+import UploadVideo from "./pages/UploadVideo";
 
 const queryClient = new QueryClient();
 
@@ -427,6 +429,8 @@ const App = () => (
             ))}
             <Route path="/add-social-links" element={<AddSocialLinks />} />
             <Route path="/advertisement-slideshow" element={<AdvertisementSlideshow />} />
+            <Route path="/upload-catalogue" element={<UploadCatalogue />} />
+            <Route path="/upload-video" element={<UploadVideo />} />
             <Route path="/business-profile-score" element={<BusinessProfileScorePage />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

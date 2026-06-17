@@ -25,8 +25,28 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useUserRole } from "@/contexts/UserRoleContext";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 const buyerStats = [
   {
@@ -165,242 +185,227 @@ const sellerActivity = [
 
 const Index = () => {
   const { role } = useUserRole();
+  const reduced = useReducedMotion();
   const stats = role === "buyer" ? buyerStats : sellerStats;
   const quickActions = role === "buyer" ? buyerQuickActions : sellerQuickActions;
   const activity = role === "buyer" ? buyerActivity : sellerActivity;
 
   return (
     <DashboardLayout>
-      {/* Page header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6 lg:mb-8"
-      >
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          Dashboard
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground sm:text-base">
-          {role === "buyer" 
-            ? "Welcome back! Manage your quotes and orders."
-            : "Welcome back! Here's an overview of your business."}
-        </p>
-      </motion.div>
-
-      {/* Seller-specific promo and profile section */}
-      {role === "seller" && (
-        <div className="mb-6 space-y-4 lg:mb-8">
-          <PromoBanner />
-          <BusinessProfileScore score={45} />
-        </div>
-      )}
-
-      {/* Seller Quick Actions Grid */}
-      {role === "seller" && (
-        <div className="mb-6 lg:mb-8">
-          <SellerQuickActionsGrid />
-        </div>
-      )}
-
-      {/* Stats grid */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:mb-8 lg:grid-cols-4 lg:gap-6">
-        {stats.map((stat, index) => (
-          <StatsCard key={stat.title} {...stat} delay={index * 0.1} />
-        ))}
-      </div>
-
-      {/* Buyer Quick Actions */}
-      {role === "buyer" && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="mb-6 rounded-xl border border-border bg-card p-4 lg:mb-8 lg:p-6"
-        >
-          <h3 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
-            Quick Actions
-          </h3>
-          <div className="flex flex-wrap gap-2 sm:gap-3">
-            {quickActions.map((action) => (
-              <Link key={action.name} to={action.href}>
-                <Button 
-                  variant={action.variant} 
-                  size="sm" 
-                  className="text-xs sm:text-sm gap-2"
-                >
-                  <action.icon className="h-4 w-4" />
-                  {action.name}
-                </Button>
-              </Link>
-            ))}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Two column layout for Activity and Products */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Recent Activity */}
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.4 }}
-          className="lg:col-span-1"
-        >
-          <Card className="h-full border-border/50">
-            <CardContent className="p-4 lg:p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-display text-base font-semibold text-foreground lg:text-lg">
-                  Recent Activity
-                </h3>
-                <Badge variant="secondary" className="text-xs">
-                  {activity.length} new
-                </Badge>
-              </div>
-              <div className="space-y-4">
-                {activity.map((item, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${
-                      item.type === "quote" ? "bg-accent/10 text-accent" :
-                      item.type === "order" ? "bg-emerald-500/10 text-emerald-600" :
-                      item.type === "message" ? "bg-blue-500/10 text-blue-600" :
-                      item.type === "inquiry" ? "bg-purple-500/10 text-purple-600" :
-                      "bg-muted text-muted-foreground"
-                    }`}>
-                      {item.type === "quote" ? <FileText className="h-4 w-4" /> :
-                       item.type === "order" ? <Truck className="h-4 w-4" /> :
-                       item.type === "message" ? <MessageCircle className="h-4 w-4" /> :
-                       item.type === "inquiry" ? <MessageSquare className="h-4 w-4" /> :
-                       <Eye className="h-4 w-4" />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground">{item.action}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        {item.vendor} • {item.product}
-                      </p>
-                    </div>
-                    <span className="text-xs text-muted-foreground flex-shrink-0">
-                      {item.time}
-                    </span>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show">
+        {/* Page header */}
+        <motion.div variants={section} className="mb-6 lg:mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+            Dashboard
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground sm:text-base">
+            {role === "buyer"
+              ? "Welcome back! Manage your quotes and orders."
+              : "Welcome back! Here's an overview of your business."}
+          </p>
         </motion.div>
 
-        {/* Recent products section - only for seller */}
+        {/* Seller-specific promo and profile section */}
         {role === "seller" && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2"
-          >
-            <div className="mb-4 flex items-center justify-between lg:mb-6">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
-                  Recent Products
-                </h2>
-                <p className="text-xs text-muted-foreground sm:text-sm">
-                  Your latest product listings
-                </p>
-              </div>
-              <Link to="/products">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm">
-                  View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-4 lg:gap-4">
-              {recentProducts.slice(0, 4).map((product, index) => (
-                <ProductCard key={product.id} {...product} delay={0.5 + index * 0.1} />
-              ))}
-            </div>
+          <motion.div variants={section} className="mb-6 space-y-4 lg:mb-8">
+            <PromoBanner />
+            <BusinessProfileScore score={45} />
           </motion.div>
         )}
 
-        {/* For buyer - show featured vendors */}
+        {/* Seller Quick Actions Grid */}
+        {role === "seller" && (
+          <motion.div variants={section} className="mb-6 lg:mb-8">
+            <SellerQuickActionsGrid />
+          </motion.div>
+        )}
+
+        {/* Stats grid */}
+        <motion.div variants={section} className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:mb-8 lg:grid-cols-4 lg:gap-6">
+          {stats.map((stat) => (
+            <StatsCard key={stat.title} {...stat} delay={0} />
+          ))}
+        </motion.div>
+
+        {/* Buyer Quick Actions */}
         {role === "buyer" && (
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2"
+            variants={section}
+            className="mb-6 rounded-xl border border-border bg-card p-4 lg:mb-8 lg:p-6"
           >
-            <div className="mb-4 flex items-center justify-between lg:mb-6">
-              <div>
-                <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
-                  Recommended Vendors
-                </h2>
-                <p className="text-xs text-muted-foreground sm:text-sm">
-                  Top-rated manufacturers for your needs
-                </p>
-              </div>
-              <Link to="/products">
-                <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm">
-                  View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                </Button>
-              </Link>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 lg:gap-4">
-              {[
-                { name: "Premium Textile Mills", rating: 4.8, location: "Mumbai, India", specialty: "Organic Cotton", verified: true },
-                { name: "Silk Weavers Co.", rating: 4.9, location: "Bangalore, India", specialty: "Mulberry Silk", verified: true },
-                { name: "Linen House", rating: 4.7, location: "Delhi, India", specialty: "European Linen", verified: true },
-                { name: "Eco Fabrics Inc", rating: 4.6, location: "Chennai, India", specialty: "Recycled Materials", verified: false },
-              ].map((vendor, index) => (
-                <motion.div
-                  key={vendor.name}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.5 + index * 0.1 }}
-                >
-                  <Card className="border-border/50 hover:border-accent/30 transition-colors cursor-pointer">
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/40 text-foreground font-bold">
-                          {vendor.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-semibold text-sm text-foreground truncate">
-                              {vendor.name}
-                            </h4>
-                            {vendor.verified && (
-                              <Badge variant="outline" className="h-4 px-1 text-[10px] border-accent/50 text-accent">
-                                ✓
-                              </Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                            <div className="flex items-center gap-1">
-                              <Star className="h-3 w-3 text-accent fill-accent" />
-                              {vendor.rating}
-                            </div>
-                            <span>•</span>
-                            <span className="truncate">{vendor.location}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-[10px]">
-                            {vendor.specialty}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+            <h3 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
+              Quick Actions
+            </h3>
+            <div className="flex flex-wrap gap-2 sm:gap-3">
+              {quickActions.map((action) => (
+                <Link key={action.name} to={action.href}>
+                  <motion.button
+                    whileTap={TAP}
+                    transition={TAP_T}
+                    className="inline-flex items-center gap-2 text-xs sm:text-sm"
+                  >
+                    <Button
+                      variant={action.variant}
+                      size="sm"
+                      className="text-xs sm:text-sm gap-2 pointer-events-none"
+                    >
+                      <action.icon className="h-4 w-4" />
+                      {action.name}
+                    </Button>
+                  </motion.button>
+                </Link>
               ))}
             </div>
           </motion.div>
         )}
-      </div>
+
+        {/* Two column layout for Activity and Products */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Recent Activity */}
+          <motion.div variants={section} className="lg:col-span-1">
+            <Card className="h-full border-border/50">
+              <CardContent className="p-4 lg:p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-display text-base font-semibold text-foreground lg:text-lg">
+                    Recent Activity
+                  </h3>
+                  <Badge variant="secondary" className="text-xs">
+                    {activity.length} new
+                  </Badge>
+                </div>
+                <motion.div variants={listContainer} className="space-y-4">
+                  {activity.map((item, index) => (
+                    <motion.div
+                      key={index}
+                      variants={listItem}
+                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${
+                        item.type === "quote" ? "bg-accent/10 text-accent" :
+                        item.type === "order" ? "bg-emerald-500/10 text-emerald-600" :
+                        item.type === "message" ? "bg-blue-500/10 text-blue-600" :
+                        item.type === "inquiry" ? "bg-purple-500/10 text-purple-600" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {item.type === "quote" ? <FileText className="h-4 w-4" /> :
+                         item.type === "order" ? <Truck className="h-4 w-4" /> :
+                         item.type === "message" ? <MessageCircle className="h-4 w-4" /> :
+                         item.type === "inquiry" ? <MessageSquare className="h-4 w-4" /> :
+                         <Eye className="h-4 w-4" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-foreground">{item.action}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {item.vendor} • {item.product}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground flex-shrink-0">
+                        {item.time}
+                      </span>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Recent products section - only for seller */}
+          {role === "seller" && (
+            <motion.div variants={section} className="lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between lg:mb-6">
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
+                    Recent Products
+                  </h2>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    Your latest product listings
+                  </p>
+                </div>
+                <Link to="/products">
+                  <motion.button whileTap={TAP} transition={TAP_T} className="inline-flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
+                    <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm pointer-events-none">
+                      View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </motion.button>
+                </Link>
+              </div>
+
+              <motion.div variants={section} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-4 lg:gap-4">
+                {recentProducts.slice(0, 4).map((product) => (
+                  <ProductCard key={product.id} {...product} delay={0} />
+                ))}
+              </motion.div>
+            </motion.div>
+          )}
+
+          {/* For buyer - show featured vendors */}
+          {role === "buyer" && (
+            <motion.div variants={section} className="lg:col-span-2">
+              <div className="mb-4 flex items-center justify-between lg:mb-6">
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
+                    Recommended Vendors
+                  </h2>
+                  <p className="text-xs text-muted-foreground sm:text-sm">
+                    Top-rated manufacturers for your needs
+                  </p>
+                </div>
+                <Link to="/products">
+                  <motion.button whileTap={TAP} transition={TAP_T} className="inline-flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
+                    <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm pointer-events-none">
+                      View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
+                    </Button>
+                  </motion.button>
+                </Link>
+              </div>
+
+              <motion.div variants={listContainer} className="grid gap-3 sm:grid-cols-2 lg:gap-4">
+                {[
+                  { name: "Premium Textile Mills", rating: 4.8, location: "Mumbai, India", specialty: "Organic Cotton", verified: true },
+                  { name: "Silk Weavers Co.", rating: 4.9, location: "Bangalore, India", specialty: "Mulberry Silk", verified: true },
+                  { name: "Linen House", rating: 4.7, location: "Delhi, India", specialty: "European Linen", verified: true },
+                  { name: "Eco Fabrics Inc", rating: 4.6, location: "Chennai, India", specialty: "Recycled Materials", verified: false },
+                ].map((vendor) => (
+                  <motion.div key={vendor.name} variants={listItem}>
+                    <Card className="border-border/50 hover:border-accent/30 transition-colors cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/40 text-foreground font-bold">
+                            {vendor.name.split(' ').map(w => w[0]).join('').slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h4 className="font-semibold text-sm text-foreground truncate">
+                                {vendor.name}
+                              </h4>
+                              {vendor.verified && (
+                                <Badge variant="outline" className="h-4 px-1 text-[10px] border-accent/50 text-accent">
+                                  ✓
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 text-accent fill-accent" />
+                                {vendor.rating}
+                              </div>
+                              <span>•</span>
+                              <span className="truncate">{vendor.location}</span>
+                            </div>
+                            <Badge variant="secondary" className="text-[10px]">
+                              {vendor.specialty}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          )}
+        </div>
+      </motion.div>
     </DashboardLayout>
   );
 };

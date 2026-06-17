@@ -1,7 +1,28 @@
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ChevronLeft, ChevronRight, Megaphone, Users, User, ClipboardList, Wrench, CreditCard, Info, Headphones } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 const menuItems = [
   { icon: Megaphone,     title: "Advertise",        subtitle: "Boost visibility with targeted ads",        route: "/advertisements",       badge: null,             iconBg: "bg-blue-50",   iconColor: "text-blue-600"   },
@@ -19,24 +40,30 @@ const badgeStyle = (text: string) =>
 
 const MyBusiness = () => {
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   return (
     <DashboardLayout>
-      <div className="max-w-2xl mx-auto pb-8">
+      <motion.div
+        className="max-w-2xl mx-auto pb-8"
+        variants={reduced ? {} : page}
+        initial="hidden"
+        animate="show"
+      >
         {/* Header */}
-        <div className="flex items-center gap-3 mb-4">
-          <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
+        <motion.div variants={section} className="flex items-center gap-3 mb-4">
+          <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate(-1)} className="p-1.5 hover:bg-gray-100 rounded-full transition-colors -ml-1">
             <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
+          </motion.button>
           <div>
             <h1 className="text-base font-bold text-gray-900 leading-none">My Business</h1>
             <p className="text-xs text-gray-400 mt-0.5">Manage your business operations</p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Mobile list */}
-        <div className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <motion.div variants={listContainer} className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           {menuItems.map((item, i) => (
-            <button key={i} onClick={() => navigate(item.route)}
+            <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={i} onClick={() => navigate(item.route)}
               className="w-full flex items-center justify-between px-4 py-4 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors text-left">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shrink-0", item.iconBg)}>
@@ -55,14 +82,14 @@ const MyBusiness = () => {
                 </div>
               </div>
               <ChevronRight className="w-4 h-4 text-gray-400 shrink-0 ml-2" />
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
         {/* Desktop grid */}
-        <div className="hidden lg:grid grid-cols-2 gap-4">
+        <motion.div variants={listContainer} className="hidden lg:grid grid-cols-2 gap-4">
           {menuItems.map((item, i) => (
-            <button key={i} onClick={() => navigate(item.route)}
+            <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={i} onClick={() => navigate(item.route)}
               className="group bg-white rounded-2xl border border-gray-100 shadow-sm p-5 text-left hover:shadow-md hover:-translate-y-0.5 transition-all duration-200">
               <div className="flex items-start gap-4">
                 <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform", item.iconBg)}>
@@ -84,10 +111,10 @@ const MyBusiness = () => {
                   </div>
                 </div>
               </div>
-            </button>
+            </motion.button>
           ))}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </DashboardLayout>
   );
 };

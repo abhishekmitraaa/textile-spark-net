@@ -1,6 +1,27 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import cosoraStudioHero from "@/assets/cosora-studio-hero.jpg";
 import brandChuu from "@/assets/brands/chuu-fashion.png";
 import brandCherry from "@/assets/brands/cherrykoko.png";
@@ -273,14 +294,21 @@ const BusinessProfile = () => {
     { label: "PAN",                    value: "ABCPR1234D" },
   ], [employeeCount]);
 
+  const reduced = useReducedMotion();
+
   return (
     <DashboardLayout>
-      <div className="space-y-3 pb-24 max-w-2xl mx-auto lg:max-w-3xl">
+      <motion.div
+        className="space-y-3 pb-24 max-w-2xl mx-auto lg:max-w-3xl"
+        variants={reduced ? {} : page}
+        initial="hidden"
+        animate="show"
+      >
 
         {/* ══════════════════════════════════════════════════════
             HERO BANNER — full background image, all info on top
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl overflow-hidden relative">
+        <motion.section variants={section} className="rounded-2xl overflow-hidden relative">
           {/* Background image */}
           <div className="relative h-52 sm:h-60 lg:h-64">
             <img
@@ -366,32 +394,32 @@ const BusinessProfile = () => {
               ))}
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             ABOUT US
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold text-gray-900">About Us</h2>
-            <button className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors">
+            <motion.button whileTap={TAP} transition={TAP_T} className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors">
               Edit profile <Pencil className="h-3 w-3" />
-            </button>
+            </motion.button>
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">
             Caramel Fashion is a Surat-based manufacturer focused on high-volume knitwear, denim essentials, and in-house printing services for private labels across India and the GCC.
           </p>
-        </section>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             CONTACT DETAILS
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">Contact Details</h2>
-            <button className="flex items-center gap-1 text-xs font-semibold text-blue-600">
+            <motion.button whileTap={TAP} transition={TAP_T} className="flex items-center gap-1 text-xs font-semibold text-blue-600">
               Edit profile <Pencil className="h-3 w-3" />
-            </button>
+            </motion.button>
           </div>
           <div className="space-y-0 divide-y divide-gray-100">
             {[
@@ -430,17 +458,17 @@ const BusinessProfile = () => {
             {/* Social Media */}
             <div className="flex items-center justify-between pt-3">
               <span className="text-sm font-semibold text-gray-800">Social Media</span>
-              <button onClick={() => navigate("/add-social-links")} className="text-xs font-semibold text-blue-600 underline">
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/add-social-links")} className="text-xs font-semibold text-blue-600 underline">
                 Add your social links
-              </button>
+              </motion.button>
             </div>
           </div>
-        </section>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             REVIEWS AND RATINGS
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-base font-bold text-gray-900 mb-4">Reviews and Ratings</h2>
 
           {/* Score row */}
@@ -460,30 +488,30 @@ const BusinessProfile = () => {
           </div>
 
           {/* Bars */}
-          <div className="space-y-2.5">
+          <motion.div variants={listContainer} className="space-y-2.5">
             {ratingBreakdown.map(row => (
-              <div key={row.stars} className="flex items-center gap-3">
+              <motion.div variants={listItem} key={row.stars} className="flex items-center gap-3">
                 <span className="w-10 text-xs text-gray-500 shrink-0 text-right">{row.stars} Star</span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div className="h-full rounded-full" style={{ width: `${row.percent}%`, backgroundColor: row.color }} />
                 </div>
                 <span className="w-8 text-right text-xs text-gray-500 shrink-0">{row.percent}%</span>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             DETAILED INFORMATION (collapsible)
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-          <button
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+          <motion.button whileTap={TAP} transition={TAP_T}
             className="flex w-full items-center justify-between px-4 py-3.5 text-left"
             onClick={() => setDetailsOpen(p => !p)}
           >
             <h2 className="text-sm font-bold text-gray-900">Detailed information</h2>
             <ChevronDown className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${detailsOpen ? "rotate-180" : ""}`} />
-          </button>
+          </motion.button>
 
           {detailsOpen && (
             <div className="border-t border-gray-100 px-4 py-4 space-y-5">
@@ -580,29 +608,29 @@ const BusinessProfile = () => {
               </div>
             </div>
           )}
-        </section>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             OFFICE PICTURES (grid)
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Office Pictures</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
             <div className="aspect-square rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50">
               <Plus className="h-7 w-7 text-blue-500" />
             </div>
             {officePhotos.slice(0, 5).map(photo => (
-              <div key={photo.label} className="aspect-square overflow-hidden rounded-xl">
+              <motion.div variants={listItem} key={photo.label} className="aspect-square overflow-hidden rounded-xl">
                 <img src={photo.src} alt={photo.label} className="h-full w-full object-cover" loading="lazy" />
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             BRAND'S CATEGORIES (horizontal scroll)
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand's Categories</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {brandCategories.map(cat => (
@@ -619,23 +647,23 @@ const BusinessProfile = () => {
               <span key={i} className={`h-1.5 rounded-full transition-all ${i === 0 ? "w-4 bg-blue-500" : "w-1.5 bg-gray-300"}`} />
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             BRAND'S RECOMMENDATIONS (draggable grid)
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">Brand's Recommendations</h2>
-            <button onClick={() => setEditMode(p => !p)}
+            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setEditMode(p => !p)}
               className="rounded-full border border-blue-500 px-3 py-1 text-xs font-semibold text-blue-600 hover:bg-blue-50">
               {editMode ? "Done" : "Edit"}
-            </button>
+            </motion.button>
           </div>
           {editMode && <p className="text-xs text-gray-400 mb-3">Drag to rearrange your products</p>}
-          <div className="grid grid-cols-3 gap-2">
+          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
             {recommendItems.map((product, idx) => (
-              <div
+              <motion.div variants={listItem}
                 key={product.name}
                 draggable={editMode}
                 onDragStart={() => setDragIndex(idx)}
@@ -668,22 +696,22 @@ const BusinessProfile = () => {
                   <p className="text-[10px] font-bold text-[#ef4d62]">{product.price} | MOQ: {product.moq} | {product.sold} sold</p>
                   <p className="text-[9px] text-gray-500 truncate">Product name | <span className="font-bold">SOHO</span></p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             BRAND PRODUCT VIDEOS
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand Product Videos</h2>
-          <div className="grid grid-cols-3 gap-2">
+          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
             <div className="aspect-[3/4] rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50">
               <Plus className="h-7 w-7 text-blue-500" />
             </div>
             {videoProducts.slice(0, 5).map((video, index) => (
-              <button key={video.name} onClick={() => setActiveVideo(index)}
+              <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={video.name} onClick={() => setActiveVideo(index)}
                 className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gray-100">
                 <img src={video.thumbnail} alt={video.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                 <div className="absolute inset-0 bg-black/25" />
@@ -698,24 +726,24 @@ const BusinessProfile = () => {
                   <p className="text-[9px] text-white/85">{video.price}</p>
                   <p className="text-[9px] text-white/70 truncate">{video.category} • {video.sub}</p>
                 </div>
-              </button>
+              </motion.button>
             ))}
-          </div>
-        </section>
+          </motion.div>
+        </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             ALL PRODUCTS
         ══════════════════════════════════════════════════════ */}
-        <section className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">Caramel Fashion</h2>
-            <button onClick={() => setBookmarkedPage(p => !p)}
+            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setBookmarkedPage(p => !p)}
               className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200">
               {bookmarkedPage
                 ? <BookmarkCheck className="h-4 w-4 text-blue-600 fill-blue-100" />
                 : <Bookmark className="h-4 w-4 text-gray-500" />}
-            </button>
+            </motion.button>
           </div>
 
           {/* Search */}
@@ -856,9 +884,9 @@ const BusinessProfile = () => {
             <div className="py-10 text-center text-sm text-gray-400">No products found</div>
           )}
           <div className="mt-5 text-center text-xs text-gray-400">Loading more products...</div>
-        </section>
+        </motion.section>
 
-      </div>
+      </motion.div>
 
       {/* ── Video Modal ── */}
       {selectedVideo && (

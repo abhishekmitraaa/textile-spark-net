@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Search, ArrowRight, BookOpen } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,28 @@ import { Input } from "@/components/ui/input";
 import { vendorBlogCategories, vendorBlogs } from "@/data/vendorBlogs";
 import { useVendorBlogFeed } from "@/hooks/useVendorData";
 
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
+
 const VendorBlogs = () => {
+  const reduced = useReducedMotion();
   const [activeCategory, setActiveCategory] = useState<(typeof vendorBlogCategories)[number]>("All Categories");
   const [searchQuery, setSearchQuery] = useState("");
   const { data: blogFeed } = useVendorBlogFeed();
@@ -27,8 +48,8 @@ const VendorBlogs = () => {
 
   return (
     <DashboardLayout>
-      <div className="space-y-6 pb-8">
-        <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-6 pb-8">
+        <motion.div variants={section} className="space-y-2">
           <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
             <BookOpen className="h-3.5 w-3.5 text-accent" />
             Vendor stories, product marketing, and growth tips
@@ -51,27 +72,26 @@ const VendorBlogs = () => {
           </div>
           <div className="flex flex-wrap gap-2">
             {vendorBlogCategories.map((category) => (
-              <Button
-                key={category}
-                type="button"
-                variant={activeCategory === category ? "default" : "outline"}
-                size="sm"
-                className={activeCategory === category ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category}
-              </Button>
+              <motion.div key={category} whileTap={TAP} transition={TAP_T}>
+                <Button
+                  type="button"
+                  variant={activeCategory === category ? "default" : "outline"}
+                  size="sm"
+                  className={activeCategory === category ? "bg-accent text-accent-foreground hover:bg-accent/90" : ""}
+                  onClick={() => setActiveCategory(category)}
+                >
+                  {category}
+                </Button>
+              </motion.div>
             ))}
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {filteredBlogs.map((blog, index) => (
+        <motion.div variants={listContainer} className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filteredBlogs.map((blog) => (
             <motion.article
               key={blog.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+              variants={listItem}
             >
               <Card className="group h-full overflow-hidden border-border/70 transition-shadow hover:shadow-lg">
                 <div className="aspect-[16/10] overflow-hidden bg-muted">
@@ -101,7 +121,7 @@ const VendorBlogs = () => {
                     <Button asChild variant="ghost" size="sm" className="h-8 gap-1 px-2 text-accent hover:bg-accent/10">
                       <Link to={`/seller/blogs/${blog.id}`}>
                         Read more
-                        <ArrowRight className="h-3.5 w-3.5" />
+                        <motion.span whileHover={{ x: 3 }} transition={{ ease: E, duration: 0.2 }} className="inline-flex"><ArrowRight className="h-3.5 w-3.5" /></motion.span>
                       </Link>
                     </Button>
                   </div>
@@ -109,16 +129,18 @@ const VendorBlogs = () => {
               </Card>
             </motion.article>
           ))}
-        </div>
+        </motion.div>
 
         {filteredBlogs.length === 0 && (
-          <Card className="border-border/70">
-            <CardContent className="py-12 text-center">
-              <p className="text-sm text-muted-foreground">No blog articles matched your search.</p>
-            </CardContent>
-          </Card>
+          <motion.div variants={section}>
+            <Card className="border-border/70">
+              <CardContent className="py-12 text-center">
+                <p className="text-sm text-muted-foreground">No blog articles matched your search.</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };

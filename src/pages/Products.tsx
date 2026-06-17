@@ -1,7 +1,27 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -98,8 +118,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
+      variants={listItem}
       className="bg-white border border-gray-200 rounded-xl overflow-hidden"
     >
       {/* Main row — clicking anywhere goes to edit */}
@@ -231,6 +250,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 
 const Products = () => {
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
   const [products, setProducts] = useState<Product[]>(PRODUCTS);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -264,23 +284,29 @@ const Products = () => {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
-        <div className="max-w-2xl mx-auto px-4 py-4 space-y-3 pb-24">
+        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-4 space-y-3 pb-24">
 
           {/* ── Header ── */}
-          <div>
+          <motion.div variants={section}>
             <h1 className="text-xl font-bold text-gray-900">Products</h1>
             <p className="text-xs text-gray-400">Manage your product catalog</p>
-          </div>
+          </motion.div>
 
           {/* ── Upload New Product button ── */}
-          <Link to="/upload">
-            <button className="w-full flex items-center justify-center gap-2 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm">
-              <Plus className="w-4 h-4" /> Upload New Product
-            </button>
-          </Link>
+          <motion.div variants={section}>
+            <Link to="/upload">
+              <motion.button
+                whileTap={TAP}
+                transition={TAP_T}
+                className="w-full flex items-center justify-center gap-2 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+              >
+                <Plus className="w-4 h-4" /> Upload New Product
+              </motion.button>
+            </Link>
+          </motion.div>
 
           {/* ── Search + Filter ── */}
-          <div className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
+          <motion.div variants={section} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
             <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
@@ -327,25 +353,29 @@ const Products = () => {
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>
             </div>
-          </div>
+          </motion.div>
 
           {/* ── Product count ── */}
-          <p className="text-xs text-gray-500 px-1">
+          <motion.p variants={section} className="text-xs text-gray-500 px-1">
             {filtered.length} product{filtered.length !== 1 ? "s" : ""}
-          </p>
+          </motion.p>
 
           {/* ── Product list ── */}
           {filtered.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 py-16 text-center">
+            <motion.div variants={section} className="bg-white rounded-xl border border-gray-200 py-16 text-center">
               <p className="text-gray-400 text-sm">No products found</p>
               <Link to="/upload">
-                <button className="mt-3 text-[#256fef] text-sm font-semibold hover:underline">
+                <motion.button
+                  whileTap={TAP}
+                  transition={TAP_T}
+                  className="mt-3 text-[#256fef] text-sm font-semibold hover:underline"
+                >
                   + Upload your first product
-                </button>
+                </motion.button>
               </Link>
-            </div>
+            </motion.div>
           ) : (
-            <div className="space-y-2.5">
+            <motion.div variants={listContainer} className="space-y-2.5">
               {filtered.map(p => (
                 <ProductRow
                   key={p.id}
@@ -354,17 +384,21 @@ const Products = () => {
                   onDuplicate={handleDuplicate}
                 />
               ))}
-            </div>
+            </motion.div>
           )}
 
-        </div>
+        </motion.div>
 
         {/* ── Floating Upload button ── */}
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 lg:bottom-6">
           <Link to="/upload">
-            <button className="flex items-center gap-2 px-6 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-full shadow-lg shadow-[#ef4d62]/30 transition-all hover:scale-105 active:scale-95">
+            <motion.button
+              whileTap={TAP}
+              transition={TAP_T}
+              className="flex items-center gap-2 px-6 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-full shadow-lg shadow-[#ef4d62]/30 transition-all hover:scale-105"
+            >
               <Plus className="w-4 h-4" /> Upload New Product
-            </button>
+            </motion.button>
           </Link>
         </div>
       </div>

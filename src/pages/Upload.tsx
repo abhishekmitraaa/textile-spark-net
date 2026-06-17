@@ -11,7 +11,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { Upload as UploadIcon, X, Image, Check, ArrowLeft, ArrowRight, ChevronLeft, ChevronDown, Video, FileText } from "lucide-react";
 import { Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -33,6 +53,7 @@ const steps: { id: Step; label: string }[] = [
 ];
 
 const Upload = () => {
+  const reduced = useReducedMotion();
   const [currentStep, setCurrentStep] = useState<Step>("category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
@@ -167,10 +188,10 @@ const Upload = () => {
 
   return (
     <DashboardLayout>
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show">
       {/* Page header */}
       <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
+        variants={section}
         className="mb-4 lg:mb-6"
       >
         <Link
@@ -189,7 +210,7 @@ const Upload = () => {
       </motion.div>
 
       {/* Progress bar */}
-      <div className="mb-6">
+      <motion.div variants={section} className="mb-6">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs font-medium text-muted-foreground">
             Step {currentStepIndex + 1} of {steps.length}
@@ -201,9 +222,11 @@ const Upload = () => {
         <Progress value={progress} className="h-2" />
         <div className="mt-2 hidden justify-between sm:flex">
           {steps.map((step, index) => (
-            <button
+            <motion.button
               key={step.id}
               type="button"
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => {
                 if (index <= currentStepIndex || (index === currentStepIndex + 1 && canProceed())) {
                   setCurrentStep(step.id);
@@ -217,12 +240,12 @@ const Upload = () => {
               )}
             >
               {step.label}
-            </button>
+            </motion.button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
-      <form onSubmit={handleSubmit}>
+      <motion.form variants={section} onSubmit={handleSubmit}>
         <AnimatePresence mode="wait">
           {/* Step 1: Category Selection */}
           {currentStep === "category" && (
@@ -652,44 +675,49 @@ const Upload = () => {
         </AnimatePresence>
 
         {/* Navigation buttons */}
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <Button
+        <motion.div variants={section} className="mt-6 flex items-center justify-between gap-4">
+          <motion.button
             type="button"
-            variant="outline"
+            whileTap={TAP}
+            transition={TAP_T}
             onClick={goToPreviousStep}
             disabled={currentStepIndex === 0}
-            className="gap-2"
+            className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/5 disabled:opacity-50"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
-          </Button>
+          </motion.button>
 
           <div className="flex gap-2">
             {currentStep === "pricing" ? (
               <>
-                <Button type="button" variant="outline" size="lg">
+                <motion.button type="button" whileTap={TAP} transition={TAP_T} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
                   Save as Draft
-                </Button>
-                <Button type="submit" variant="gold" size="lg" className="gap-2">
+                </motion.button>
+                <motion.button type="submit" whileTap={TAP} transition={TAP_T} className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600">
                   <Check className="h-4 w-4" />
                   Publish
-                </Button>
+                </motion.button>
               </>
             ) : (
-              <Button
+              <motion.button
                 type="button"
-                variant="gold"
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={goToNextStep}
                 disabled={!canProceed()}
-                className="gap-2"
+                className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-50"
               >
                 Continue
-                <ArrowRight className="h-4 w-4" />
-              </Button>
+                <motion.span whileHover={{ x: 3 }} transition={{ ease: E, duration: 0.2 }}>
+                  <ArrowRight className="h-4 w-4" />
+                </motion.span>
+              </motion.button>
             )}
           </div>
-        </div>
-      </form>
+        </motion.div>
+      </motion.form>
+      </motion.div>
     </DashboardLayout>
   );
 };

@@ -1,6 +1,26 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import {
@@ -215,9 +235,7 @@ function CampaignCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07, duration: 0.28 }}
+      variants={listItem}
       className="bg-white rounded-2xl border border-gray-100 shadow-sm flex flex-col"
     >
       {/* dotted pattern strip at top */}
@@ -341,7 +359,7 @@ function CampaignCard({
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${budgetPct}%` }}
-              transition={{ duration: 0.9, ease: "easeOut", delay: index * 0.07 + 0.25 }}
+              transition={{ duration: 0.9, ease: "easeOut", delay: 0.25 }}
               className={cn("h-full rounded-full", barColor)}
             />
           </div>
@@ -358,6 +376,7 @@ function CampaignCard({
 const TABS: FilterTab[] = ["All", "Active", "Paused", "Ended"];
 
 export default function OldAdvertisements() {
+  const reduced = useReducedMotion();
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<Campaign[]>(INITIAL_CAMPAIGNS);
   const [activeTab, setActiveTab] = useState<FilterTab>("All");
@@ -384,24 +403,18 @@ export default function OldAdvertisements() {
 
   return (
     <DashboardLayout>
-      {/*
-        DashboardLayout gives us:
-          - lg:pl-64  (sidebar offset on desktop)
-          - p-4 lg:p-6  (padding on <main>)
-          - pb-20 lg:pb-0  (bottom nav clearance on mobile)
-        So we don't need our own sticky header — we use the existing DashboardHeader.
-        We just build the content area here.
-      */}
-      <div className="space-y-5">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-5">
 
         {/* ── Page title row ── */}
-        <div className="flex items-center gap-3">
-          <button
+        <motion.div variants={section} className="flex items-center gap-3">
+          <motion.button
             onClick={() => navigate(-1)}
+            whileTap={TAP}
+            transition={TAP_T}
             className="p-1.5 rounded-full hover:bg-gray-100 transition-colors shrink-0 -ml-1"
           >
             <ChevronLeft className="w-5 h-5 text-gray-600" />
-          </button>
+          </motion.button>
           <div>
             <h1 className="text-lg font-bold text-gray-900 leading-none">
               Old Advertisements
@@ -410,10 +423,10 @@ export default function OldAdvertisements() {
               {campaigns.length} campaign{campaigns.length !== 1 ? "s" : ""}
             </p>
           </div>
-        </div>
+        </motion.div>
 
         {/* ── Summary chips — clickable to filter ── */}
-        <div className="flex gap-2 flex-wrap">
+        <motion.div variants={section} className="flex gap-2 flex-wrap">
           {(["Active", "Paused", "Ended"] as const).map(s => {
             const chipStyle: Record<typeof s, string> = {
               Active: "bg-green-50 text-green-700 border-green-200 hover:bg-green-100",
@@ -421,8 +434,10 @@ export default function OldAdvertisements() {
               Ended:  "bg-gray-50   text-gray-500   border-gray-200   hover:bg-gray-100",
             };
             return (
-              <button
+              <motion.button
                 key={s}
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={() => setActiveTab(activeTab === s ? "All" : s)}
                 className={cn(
                   "px-3 py-1 rounded-xl border text-xs font-semibold transition-all",
@@ -431,16 +446,18 @@ export default function OldAdvertisements() {
                 )}
               >
                 {counts[s]} {s}
-              </button>
+              </motion.button>
             );
           })}
-        </div>
+        </motion.div>
 
         {/* ── Filter tabs ── */}
-        <div className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:-mx-6 lg:px-6">
+        <motion.div variants={section} className="flex border-b border-gray-100 overflow-x-auto scrollbar-hide -mx-4 px-4 lg:-mx-6 lg:px-6">
           {TABS.map(tab => (
-            <button
+            <motion.button
               key={tab}
+              whileTap={TAP}
+              transition={TAP_T}
               onClick={() => setActiveTab(tab)}
               className={cn(
                 "flex items-center gap-1.5 px-4 py-2.5 text-xs font-semibold",
@@ -461,16 +478,11 @@ export default function OldAdvertisements() {
                   {counts[tab]}
                 </span>
               )}
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
 
-        {/* ── Campaign cards ──
-            Breakpoints:
-            - mobile  (<640px):  1 column, full width
-            - tablet  (640-1023px): 2 columns
-            - desktop (≥1024px): 3 columns (sidebar takes 256px, main is wide)
-        ── */}
+        {/* ── Campaign cards ── */}
         <AnimatePresence mode="wait">
           {filtered.length === 0 ? (
             <motion.div
@@ -484,20 +496,22 @@ export default function OldAdvertisements() {
               <p className="text-sm font-medium">
                 No {activeTab === "All" ? "" : activeTab.toLowerCase() + " "}campaigns
               </p>
-              <button
+              <motion.button
+                whileTap={TAP}
+                transition={TAP_T}
                 onClick={() => setActiveTab("All")}
                 className="mt-3 text-xs text-[#f75f71] font-semibold hover:underline"
               >
                 Show all
-              </button>
+              </motion.button>
             </motion.div>
           ) : (
             <motion.div
               key={activeTab}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              variants={listContainer}
+              initial="hidden"
+              animate="show"
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.18 }}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
             >
               {filtered.map((c, i) => (
@@ -514,9 +528,9 @@ export default function OldAdvertisements() {
 
         {/* ── Create new CTA ── */}
         <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.35 }}
+          variants={section}
+          whileTap={TAP}
+          transition={TAP_T}
           onClick={() => navigate("/advertisements")}
           className={cn(
             "w-full py-4 rounded-2xl text-sm font-bold transition-colors",
@@ -527,7 +541,7 @@ export default function OldAdvertisements() {
           + Create New Ad Campaign
         </motion.button>
 
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 }

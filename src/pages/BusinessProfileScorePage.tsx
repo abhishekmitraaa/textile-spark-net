@@ -1,7 +1,27 @@
 import { useNavigate, Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+
+const page = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } },
+};
+const section = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
+};
+const listContainer = {
+  show: { transition: { staggerChildren: 0.055 } },
+};
+const listItem = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
+};
 
 const score = 20;
 
@@ -22,26 +42,34 @@ const scoreItems = [
 
 const BusinessProfileScorePage = () => {
   const navigate = useNavigate();
+  const reduced = useReducedMotion();
 
   return (
     <DashboardLayout>
-      <div className="max-w-lg mx-auto space-y-4 pb-8">
+      <motion.div
+        className="max-w-lg mx-auto space-y-4 pb-8"
+        variants={reduced ? {} : page}
+        initial="hidden"
+        animate="show"
+      >
 
         {/* Header */}
-        <div className="flex items-center gap-3 py-1">
-          <button
+        <motion.div variants={section} className="flex items-center gap-3 py-1">
+          <motion.button
+            whileTap={TAP}
+            transition={TAP_T}
             onClick={() => navigate(-1)}
             className="p-1.5 rounded-full hover:bg-muted transition-colors"
           >
             <ArrowLeft className="h-5 w-5 text-foreground" />
-          </button>
+          </motion.button>
           <h1 className="text-base font-semibold font-display text-foreground">
             Business Profile Score
           </h1>
-        </div>
+        </motion.div>
 
         {/* Score bar */}
-        <div className="space-y-1.5">
+        <motion.div variants={section} className="space-y-1.5">
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-red-500">Poor</span>
             <span className="text-sm font-bold text-foreground">{score}%</span>
@@ -57,17 +85,12 @@ const BusinessProfileScorePage = () => {
           <p className="text-xs text-muted-foreground">
             Complete the options below to increase your profile score and reach out to more customers.
           </p>
-        </div>
+        </motion.div>
 
         {/* 2-column grid */}
-        <div className="grid grid-cols-2 gap-3">
+        <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
           {scoreItems.map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.04 + i * 0.03 }}
-            >
+            <motion.div variants={listItem} key={i}>
               <Link to={item.href}>
                 <div className="relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 bg-muted/60 hover:bg-muted transition-colors min-h-[110px] text-center">
                   {/* Badge */}
@@ -98,12 +121,7 @@ const BusinessProfileScorePage = () => {
           ))}
 
           {/* Add Number of Employees — full width */}
-          <motion.div
-            className="col-span-2"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-          >
+          <motion.div variants={listItem} className="col-span-2">
             <Link to="/my-store">
               <div className="relative rounded-2xl p-4 flex flex-col items-center justify-center gap-3 bg-muted/60 hover:bg-muted transition-colors min-h-[110px] text-center">
                 <Users className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
@@ -111,9 +129,9 @@ const BusinessProfileScorePage = () => {
               </div>
             </Link>
           </motion.div>
-        </div>
+        </motion.div>
 
-      </div>
+      </motion.div>
     </DashboardLayout>
   );
 };
