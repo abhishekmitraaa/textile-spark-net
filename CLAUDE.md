@@ -126,6 +126,29 @@ Key business concepts used throughout the app:
 | **Profile Score** | Vendor's profile completeness % — higher = better visibility |
 | **Total Order Value** | Cumulative orders won through Cosora — strongest vendor retention metric |
 
+## Animation System
+
+All vendor-side pages use a consistent **Framer Motion** animation system. The standard constants are defined at the top of each page file:
+
+```tsx
+import { motion, useReducedMotion } from "framer-motion";
+
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number]; // strong ease-out
+const TAP = { scale: 0.97 };
+const TAP_T = { duration: 0.13, ease: E };
+const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } } };
+const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } } };
+const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
+const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
+```
+
+Rules:
+- `const reduced = useReducedMotion()` in every component; pass `variants={reduced ? {} : page}` to disable for accessibility
+- `whileTap={{ scale: 0.97 }}` on every interactive button
+- `whileHover={{ x: 3 }}` on ArrowRight directional icons
+- Never use `transition: all` — always use explicit property transitions
+- Page wraps in `<motion.div variants={page} initial="hidden" animate="show">`; sections use `variants={section}`; list items use `variants={listItem}` inside a `listContainer` parent
+
 ## Known Issues & Notes
 
 - **Relaxed TypeScript Config**: `noImplicitAny` and `noUnusedLocals` are disabled; enforce stricter checks before production if needed.

@@ -1,3 +1,19 @@
+- 2026-06-17: **Second Vercel deploy** — pushed all animation changes live. Preview URL: `https://textile-spark-469oy8ne3-abhishekmitraaas-projects.vercel.app`. Build: 3048 modules, cached deps. Deployed as preview (`target: null`); production alias `textile-spark-net.vercel.app` points to first deploy. Run `vercel deploy --prod` to promote to production.
+
+- 2026-06-17: **Full vendor side animation pass** — Applied consistent Framer Motion animation system across all 26 vendor-side pages. Animation constants used everywhere:
+  ```tsx
+  const E = [0.23, 1, 0.32, 1];   // strong ease-out cubic-bezier
+  const page = { hidden: {}, show: { transition: { staggerChildren: 0.07, delayChildren: 0.04 } } };
+  const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } } };
+  const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
+  const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
+  ```
+  Rules: `useReducedMotion()` in every page, `whileTap={{ scale: 0.97 }}` on every button, `whileHover={{ x: 3 }}` on ArrowRight icons, no `transition: all`. Pages animated: `Index.tsx`, `Products.tsx`, `Leads.tsx`, `Quotes.tsx`, `Upload.tsx`, `Advertisements.tsx`, `AdvertisementSlideshow.tsx`, `OldAdvertisements.tsx`, `CompetitorAds.tsx`, `BusinessProfile.tsx`, `BusinessProfileEmployees.tsx`, `MyStore.tsx`, `MyBusiness.tsx`, `BusinessTools.tsx`, `BusinessProfileScorePage.tsx`, `Analytics.tsx`, `Reviews.tsx`, `Subscription.tsx`, `UploadCatalogue.tsx`, `UploadVideo.tsx`, `Help.tsx`, `ReportFraud.tsx`, `AppFeedback.tsx`, `VendorBlogs.tsx`, `VendorBlogArticle.tsx`.
+
+- 2026-06-17: **`src/pages/AddSocialLinks.tsx` redesign** — Full redesign using `design-taste-frontend` skill. Was 480 lines of inline `style={}` objects. Changes: added missing `DashboardLayout` wrapper (CLAUDE.md constraint), removed fixed `maxWidth: 390px` → `max-w-xl mx-auto`, removed Google Fonts `@import`, converted all inline styles to Tailwind, each social platform gets its own card (`bg-white rounded-2xl border border-gray-100 shadow-sm`), added `description` field to `SocialPlatform` interface, `PlatformCard` component with `useReducedMotion()` internally, completion `CheckCircle2` springs in when any URL filled, field add/remove animates with height 0→auto + opacity, save button morphs between "Save Social Links" and "Saved ✓" via `AnimatePresence mode="wait"`, header shows live progress (`X of N platforms connected`).
+
+- 2026-06-17: **`src/pages/SellerHome.tsx` animation rewrite** — Applied Emil Kowalski philosophy via `emil-design-eng` skill. Page wrapper uses `variants={page}` stagger, all 11 sections use `variants={section}`, stat cards / lead cards / messages use `listContainer`/`listItem` stagger, carousel `transition-all` replaced with explicit cubic-bezier opacity+transform, `whileTap` on every button, `whileHover={{ x: 3 }}` on ArrowRight, competitor card gets `whileHover={{ scale: 1.012 }}`, `useReducedMotion()` disables all animation for accessibility.
+
 - 2026-06-17: **Vercel deployment** — deployed project live at `https://textile-spark-net.vercel.app` (alias) and `https://textile-spark-fh7ess7qq-abhishekmitraaas-projects.vercel.app`. Build: 3048 modules, 9.76s, ~1.9MB JS bundle. Vercel project `abhishekmitraaas-projects/textile-spark-net`. GitHub auto-deploy not yet connected; manual `vercel --yes` required to redeploy. Installed Vercel CLI globally via `npm install -g vercel`.
 
 - 2026-06-17: **Installed `emil-design-eng` skill** (`emilkowalski/skill`) — encodes Emil Kowalski's philosophy on UI polish, micro-interactions, animation decisions. Invoke with `/emil-design-eng`. Installed to `.agents/skills/emil-design-eng`.
