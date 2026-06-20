@@ -1,328 +1,490 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import BuyerHomeTabs from "@/components/buyer/BuyerHomeTabs";
-import BuyerProductCard, { type BuyerProductCardData } from "@/components/buyer/BuyerProductCard";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Link, useNavigate } from "react-router-dom";
+import BuyerShell from "@/components/buyer/BuyerShell";
+import QuickRfqModal from "@/components/buyer/QuickRfqModal";
+import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
+import { Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star, Zap, FileText, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNewArrivals } from "@/lib/api";
-import { Clock, Grid3X3, LayoutGrid, List, Search, Sparkles } from "lucide-react";
 
-const heroSlides = [
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
+
+const HERO_SLIDES = [
   {
-    title: "New Everyday Fashion",
-    subtitle: "Discover fresh product drops from verified manufacturers every day.",
-    image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=1200&h=700&fit=crop",
-    accent: "from-rose-500 to-rose-600",
-  },
-  {
-    title: "Styled for Scale",
-    subtitle: "Fast-moving categories, lower MOQs, and better sourcing visibility.",
-    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1200&h=700&fit=crop",
-    accent: "from-slate-800 to-slate-950",
-  },
-  {
-    title: "Trusted by Growing Brands",
-    subtitle: "Find product lines that are ready for your next order cycle.",
-    image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=1200&h=700&fit=crop",
-    accent: "from-zinc-900 to-black",
+    title: "NEW EVERYDAY FASHION",
+    subtitle: "Discover New Fashion Everyday",
+    slides: [
+      { tag: "sponsored", price: "₹459", image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=520&fit=crop" },
+      { tag: null,        price: "₹459", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=520&fit=crop" },
+      { tag: null,        price: "₹499", image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=520&fit=crop" },
+    ],
   },
 ];
 
-const categories = [
-  "Women's Apparel",
-  "Men's Apparel",
-  "Men's Jeans",
-  "Men's Shirt",
-  "Accessories",
-  "Women's Trousers",
-  "Women's T-shirts",
-  "Women's Shoes",
+const CATEGORIES = [
+  { name: "Women's Apparel",  image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
+  { name: "Men's Apparel",    image: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
+  { name: "Men's Jeans",      image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=200&h=200&fit=crop" },
+  { name: "Men's Shirt",      image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop" },
+  { name: "Accessories",      image: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
+  { name: "Women's Trousers", image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=200&h=200&fit=crop" },
+  { name: "Women's T-shirts", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=200&h=200&fit=crop" },
+  { name: "Women's Shoes",    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop" },
 ];
 
-// fetch products via react-query
-  
+interface Product {
+  id: string;
+  vendorId: string;
+  name: string;
+  manufacturer: string;
+  location: string;
+  price: string;
+  moq: string;
+  soldCount: string;
+  enquiries: string;
+  rating: number;
+  fabric: string;
+  gsm: string;
+  fitType: string;
+  image: string;
+  secondaryImage: string;
+}
 
-const brandPicks = [
-  { name: "Raymond", category: "Men's Wear", price: "₹899+", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=500&fit=crop" },
-  { name: "Arvind", category: "Casuals", price: "₹699+", image: "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?w=400&h=500&fit=crop" },
-  { name: "Welspun", category: "Home & Textiles", price: "₹299+", image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=500&fit=crop" },
+const BASE_PRODUCTS: Product[] = [
+  { id: "p1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=500&h=650&fit=crop" },
+  { id: "p2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.8k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=650&fit=crop" },
+  { id: "p3", vendorId: "v3", name: "Ribbed Tank Top - Orange", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-3a96ab6b2c5f?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-1c9c4f0c6c5e?w=500&h=650&fit=crop" },
+  { id: "p4", vendorId: "v4", name: "Graphic Print Tee", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.6k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&h=650&fit=crop" },
 ];
 
-// buildBatch will be based on fetched products below
+const VIDEO_CLOSE_UPS: VideoCloseUp[] = [
+  { id: "vid1", vendorId: "v5", category: "Jeans", brandName: "Nam Pyunghwa / FORCE", brandLine: "Straight Fit Denim", price: "$6.78",  moq: "2", rating: 3.8, reviews: "1.6k", thumbnail: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&h=650&fit=crop" },
+  { id: "vid2", vendorId: "v6", category: "T-shirts/Tops", brandName: "Nam Pyunghwa / FORCE", brandLine: "Oversized Graphic Tee", price: "$16.37", moq: "2", rating: 3.8, reviews: "1.6k", thumbnail: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop" },
+  { id: "vid3", vendorId: "v7", category: "Jeans", brandName: "Tiruppur Mills", brandLine: "Slim Fit Stretch Jeans", price: "$26.71", moq: "2", rating: 4.2, reviews: "2.1k", thumbnail: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&h=650&fit=crop" },
+];
+
+const LOOKING_FOR_THESE = [
+  { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
+  { id: "lft2", name: "Quilted Crossbody",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=520&fit=crop" },
+  { id: "lft3", name: "Polka Dot Sundress",  price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=520&fit=crop" },
+];
+
+const BRAND_PICKS = [
+  { name: "THEOT / J mering...",        category: "Shirts",            price: "$27.53", image: "https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=300&h=380&fit=crop" },
+  { name: "Queen's Square /...",        category: "Knitwear/Sweaters", price: "$20.09", image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=300&h=380&fit=crop" },
+  { name: "THEOT / high tou...",        category: "Blouses",           price: "$17.11", image: "https://images.unsplash.com/photo-1551803091-e20673f15770?w=300&h=380&fit=crop" },
+];
+
+const PREMIUM_BRANDS = [
+  { name: "Long Dresses",  moq: "MOQ:2", price: "$10.41", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=380&fit=crop" },
+  { name: "Cotton Pants",  moq: "MOQ:2", price: "$14.88", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=380&fit=crop" },
+  { name: "Knit Sets",     moq: "MOQ:2", price: "$12.30", image: "https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=300&h=380&fit=crop" },
+  { name: "Denim Shirts",  moq: "MOQ:2", price: "$18.20", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=380&fit=crop" },
+];
+
+const HOME_TABS = [
+  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
+  { label: "TRENDS",       href: "/home/trends" },
+  { label: "SALE",         href: "/home/sale" },
+  { label: "FOR YOU",      href: "/home/for-you" },
+  { label: "FOLLOWINGS",   href: "/home/followings" },
+];
+
+// ─────────────────────────────────────────────────────────────
+// PRODUCT CARD — standard card format used across all listing pages
+// ─────────────────────────────────────────────────────────────
+
+function ProductCard({ product }: { product: Product }) {
+  const navigate = useNavigate();
+  const [saved, setSaved] = useState(false);
+  const [hovered, setHovered] = useState(false);
+
+  return (
+    <div
+      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <Link to={`/product/${product.id}`} className="relative aspect-[4/5] block bg-gray-100">
+        <img
+          src={product.image}
+          alt={product.name}
+          className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")}
+        />
+        <img
+          src={product.secondaryImage}
+          alt=""
+          className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")}
+        />
+        <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
+
+        <button
+          onClick={e => { e.preventDefault(); setSaved(p => !p); }}
+          className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+        >
+          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#256fef] fill-blue-100" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+        </button>
+
+        <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
+          <Star className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-yellow-400 fill-yellow-400" />
+          <span className="text-[9px] lg:text-xs font-bold text-gray-800">{product.rating}</span>
+          <span className="text-[9px] lg:text-xs text-gray-400">| {product.enquiries}</span>
+        </div>
+      </Link>
+
+      <div className="p-2 lg:p-3.5">
+        <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
+          {product.price} | MOQ: {product.moq} | {product.soldCount}
+        </p>
+        <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
+          Product name | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
+        </p>
+        <div className="flex items-center gap-0.5 mt-1 lg:mt-1.5">
+          <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
+          <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
+        </div>
+        <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
+        <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+
+        <button
+          onClick={() => navigate(`/chats/${product.vendorId}`)}
+          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+        >
+          <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// SUBMIT REQUIREMENT BOX — appears after every 5 product rows
+// ─────────────────────────────────────────────────────────────
+
+function SubmitRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
+  return (
+    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
+      <div className="px-4 py-3.5 border-b border-gray-100">
+        <h3 className="text-base font-bold text-gray-900">Looking for products?</h3>
+      </div>
+      <div className="p-4">
+        <Link to="/requirement/post-requirement">
+          <button className="w-full py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors mb-3">
+            Submit Requirement
+          </button>
+        </Link>
+
+        <button onClick={onQuickRfq} className="w-full flex items-center justify-between py-2.5 border-b border-gray-100 text-left">
+          <div className="flex items-center gap-2.5">
+            <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62] shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
+              <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </button>
+
+        <Link to="/requirement/post-requirement" className="flex items-center justify-between py-2.5 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <ClipboardList className="w-4 h-4 text-blue-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Create New Requirement</p>
+              <p className="text-xs text-gray-400">Detailed specifications for precise quotes</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </Link>
+
+        <Link to="/requirement/my-quotes" className="flex items-center justify-between py-2.5">
+          <div className="flex items-center gap-2.5">
+            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+            <p className="text-sm font-semibold text-gray-900">My Previous Quotes</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
 
 const NewArrivals = () => {
+  const navigate = useNavigate();
   const [activeSlide, setActiveSlide] = useState(0);
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
-  const [batchCount, setBatchCount] = useState(2);
+  const [batchCount, setBatchCount] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [quickRfqOpen, setQuickRfqOpen] = useState(false);
+  const [videoViewerOpen, setVideoViewerOpen] = useState(false);
+  const [videoStartIndex, setVideoStartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setActiveSlide((current) => (current + 1) % heroSlides.length);
-    }, 4500);
+  const slides = HERO_SLIDES[0].slides;
 
-    return () => window.clearInterval(timer);
-  }, []);
+  useEffect(() => {
+    const id = window.setInterval(() => setActiveSlide(s => (s + 1) % slides.length), 3500);
+    return () => window.clearInterval(id);
+  }, [slides.length]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const [entry] = entries;
-        if (entry.isIntersecting && !isLoadingMore) {
-          setIsLoadingMore(true);
-          window.setTimeout(() => {
-            setBatchCount((current) => current + 1);
-            setIsLoadingMore(false);
-          }, 250);
-        }
-      },
-      { rootMargin: "240px" }
-    );
-
+    if (!target) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting && !isLoadingMore) {
+        setIsLoadingMore(true);
+        setTimeout(() => { setBatchCount(c => c + 1); setIsLoadingMore(false); }, 300);
+      }
+    }, { rootMargin: "200px" });
     observer.observe(target);
     return () => observer.disconnect();
   }, [isLoadingMore]);
 
-  const [baseProducts, setBaseProducts] = useState<BuyerProductCardData[]>([]);
-
-  useEffect(() => {
-    let mounted = true;
-    getNewArrivals().then((items) => {
-      if (mounted) setBaseProducts(items);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  const buildBatch = (batchIndex: number) =>
-    baseProducts.map((product) => ({
-      ...product,
-      id: `${product.id}-${batchIndex}`,
-      vendorId: `${product.vendorId}-${batchIndex}`,
-    }));
-
   const products = useMemo(
-    () => Array.from({ length: batchCount }, (_, batchIndex) => buildBatch(batchIndex)).flat(),
-    [batchCount, baseProducts]
+    () => Array.from({ length: batchCount }, (_, b) =>
+      BASE_PRODUCTS.map(p => ({ ...p, id: `${p.id}-${b}`, vendorId: `${p.vendorId}-${b}` }))
+    ).flat(),
+    [batchCount]
   );
 
+  // Split products into rows-of-5 chunks to insert SubmitRequirementBox
+  const rowsPerChunk = 5;
+  const chunks: Product[][] = [];
+  for (let i = 0; i < products.length; i += rowsPerChunk * 2) {
+    chunks.push(products.slice(i, i + rowsPerChunk * 2));
+  }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <BuyerHomeTabs />
-
-        <motion.section
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="overflow-hidden rounded-3xl border border-border bg-card shadow-sm"
-        >
-          <div className={cn("grid gap-0 lg:grid-cols-[1.25fr_0.9fr]", `bg-gradient-to-br ${heroSlides[activeSlide].accent}`)}>
-            <div className="relative min-h-[320px] overflow-hidden p-6 text-background sm:p-8 lg:p-10">
-              <div className="absolute inset-0 opacity-30">
-                <img src={heroSlides[activeSlide].image} alt={heroSlides[activeSlide].title} className="h-full w-full object-cover" />
-              </div>
-              <div className="absolute inset-0 bg-black/35" />
-              <div className="relative z-10 flex h-full flex-col justify-between gap-6">
-                <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-background/80">
-                  <Sparkles className="h-4 w-4" />
-                  New Everyday Fashion
-                </div>
-                <div className="max-w-xl">
-                  <Badge className="mb-4 bg-background/15 text-background hover:bg-background/15">
-                    slide {activeSlide + 1} of {heroSlides.length}
-                  </Badge>
-                  <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
-                    {heroSlides[activeSlide].title}
-                  </h1>
-                  <p className="mt-3 max-w-lg text-sm leading-6 text-background/80 sm:text-base">
-                    {heroSlides[activeSlide].subtitle}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-3">
-                  <Button asChild className="bg-background text-foreground hover:bg-background/90">
-                    <Link to="/search">
-                      <Search className="mr-2 h-4 w-4" />
-                      Search products
-                    </Link>
-                  </Button>
-                  <Button asChild variant="outline" className="border-background/30 bg-transparent text-background hover:bg-background/10 hover:text-background">
-                    <Link to="/requirement">Submit requirement</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-col justify-between gap-4 bg-card p-6 sm:p-8">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                  What&apos;s on your mind?
-                </p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {categories.map((category) => (
-                    <Link
-                      key={category}
-                      to={`/search/results?category=${encodeURIComponent(category)}`}
-                      className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-accent hover:text-accent"
-                    >
-                      {category}
-                    </Link>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl bg-muted/40 p-4">
-                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-                  <Clock className="h-4 w-4 text-accent" />
-                  Looking for products?
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Post your requirement and get quotes from perfect manufacturers.
-                </p>
-                <div className="mt-4 flex flex-col gap-2">
-                  <Button asChild className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-                    <Link to="/requirement/quick-rfq">Quick RFQ</Link>
-                  </Button>
-                  <Button asChild variant="outline" className="w-full">
-                    <Link to="/requirement/post-requirement">Create New Requirement</Link>
-                  </Button>
-                  <Button asChild variant="ghost" className="w-full justify-start px-0 text-muted-foreground hover:bg-transparent hover:text-foreground">
-                    <Link to="/requirement/my-quotes">My Previous Quotes</Link>
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 border-t border-border px-4 py-3">
-            {heroSlides.map((slide, index) => (
-              <button
-                key={slide.title}
-                type="button"
-                onClick={() => setActiveSlide(index)}
-                className={cn(
-                  "h-2.5 rounded-full transition-all",
-                  index === activeSlide ? "w-8 bg-accent" : "w-2.5 bg-muted-foreground/30"
-                )}
-                aria-label={`Show slide ${index + 1}`}
-              />
-            ))}
-          </div>
-        </motion.section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Today&apos;s New In</h2>
-              <p className="text-xs text-muted-foreground">New products added by sellers every day</p>
-            </div>
-            <div className="flex items-center gap-1 rounded-xl border border-border p-1">
-              <button
-                type="button"
-                onClick={() => setViewMode("2-col")}
-                className={cn(
-                  "rounded-lg p-2 transition-colors",
-                  viewMode === "2-col" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-                aria-label="Two column view"
-              >
-                <Grid3X3 className="h-4 w-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode("3-col")}
-                className={cn(
-                  "rounded-lg p-2 transition-colors",
-                  viewMode === "3-col" ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted"
-                )}
-                aria-label="Three column view"
-              >
-                <List className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className={cn("grid gap-3 sm:gap-4", viewMode === "2-col" ? "grid-cols-2 lg:grid-cols-3" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3")}>
-            {products.map((product) => (
-              <BuyerProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          <div ref={loadMoreRef} className="py-8 text-center text-sm text-muted-foreground">
-            {isLoadingMore ? "Loading more products..." : "Scroll for more products"}
-          </div>
-        </section>
-
-        <section className="rounded-3xl border border-border bg-card p-5 sm:p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
-                <LayoutGrid className="h-3.5 w-3.5" />
-                Post your requirement
-              </div>
-              <h3 className="mt-3 text-xl font-semibold text-foreground">Looking for products?</h3>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Submit a requirement now and connect with verified manufacturers who can quote exactly what you need.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90">
-                <Link to="/requirement/quick-rfq">Quick RFQ</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/requirement/post-requirement">Create New Requirement</Link>
-              </Button>
-              <Button asChild variant="ghost">
-                <Link to="/requirement/my-quotes">My Previous Quotes</Link>
-              </Button>
-            </div>
-          </div>
-        </section>
-
-        <section>
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-foreground">Brand Picks</h2>
-              <p className="text-xs text-muted-foreground">Sponsored and brand-specific product highlights</p>
-            </div>
-            <Link to="/search/results" className="text-sm font-medium text-accent hover:underline">
-              View all
+    <BuyerShell>
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
+        {/* ── Home tabs ── */}
+        <div className="flex gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
+          {HOME_TABS.map(tab => (
+            <Link
+              key={tab.href}
+              to={tab.href}
+              className={cn(
+                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
+                tab.href === "/home/new-arrivals"
+                  ? "text-[#ef4d62] border-[#ef4d62]"
+                  : "text-gray-400 border-transparent hover:text-gray-600"
+              )}
+            >
+              {tab.href === "/home/new-arrivals" && "✦ "}{tab.label}
             </Link>
+          ))}
+        </div>
+      </div>
+
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 space-y-5 lg:space-y-10 pb-4">
+
+        {/* ── Hero banner — auto slideshow ── */}
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          <div className="px-4 lg:px-6 pt-3 lg:pt-5 pb-2 lg:pb-3 text-center">
+            <h1 className="text-base lg:text-2xl font-bold text-gray-900">NEW EVERYDAY FASHION</h1>
+            <p className="text-xs lg:text-sm text-gray-400">Discover New Fashion Everyday</p>
+          </div>
+          <div className="grid grid-cols-3 gap-0.5 lg:gap-1.5 px-0.5 lg:px-1.5">
+            {slides.map((slide, i) => (
+              <div key={i} className="relative aspect-[3/4] lg:aspect-[4/3] bg-gray-100">
+                <img src={slide.image} alt="" className="w-full h-full object-cover" />
+                {slide.tag && (
+                  <span className="absolute top-1.5 lg:top-3 left-1.5 lg:left-3 text-[8px] lg:text-xs bg-black/50 text-white px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded">{slide.tag}</span>
+                )}
+                <button className="absolute top-1.5 lg:top-3 right-1.5 lg:right-3 w-5 lg:w-8 h-5 lg:h-8 bg-white/80 rounded-full flex items-center justify-center">
+                  <Bookmark className="w-2.5 lg:w-4 h-2.5 lg:h-4 text-gray-600" />
+                </button>
+                <span className="absolute bottom-1.5 lg:bottom-3 left-1.5 lg:left-3 text-[10px] lg:text-base font-bold text-white drop-shadow">{slide.price}</span>
+              </div>
+            ))}
+          </div>
+          {/* Slide indicator */}
+          <div className="flex items-center justify-end gap-1 px-3 lg:px-5 py-1.5 lg:py-2.5">
+            <span className="text-[10px] lg:text-xs text-gray-300 font-mono">{String((activeSlide % slides.length) + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
+          </div>
+        </div>
+
+        {/* ── What's on your mind — categories slider ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2 lg:mb-3 px-1">
+            <h2 className="text-sm lg:text-lg font-bold text-gray-900">WHAT'S ON YOUR MIND</h2>
+          </div>
+          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 lg:gap-5">
+            {CATEGORIES.map(cat => (
+              <Link
+                key={cat.name}
+                to={`/search/results?category=${encodeURIComponent(cat.name)}`}
+                className="text-center"
+              >
+                <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-1 lg:mb-2">
+                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                </div>
+                <span className="text-[10px] lg:text-xs text-gray-600 font-medium leading-tight">{cat.name}</span>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Today's New In + first 2 rows + Submit Requirement Box + more rows ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
+            <div>
+              <h2 className="text-base lg:text-xl font-bold text-gray-900">Today's New In</h2>
+            </div>
+            <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
+              <button
+                onClick={() => setViewMode("2-col")}
+                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "2-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}
+              >
+                <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode("3-col")}
+                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "3-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}
+              >
+                <Grid3X3 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
+              </button>
+            </div>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-2">
-            {brandPicks.map((brand) => (
-              <Link
-                key={brand.name}
-                to="/search/results"
-                className="min-w-[220px] overflow-hidden rounded-2xl border border-border bg-card shadow-sm"
+          {chunks.map((chunk, chunkIdx) => (
+            <div key={chunkIdx}>
+              <div className={cn(
+                "grid gap-3 lg:gap-5",
+                viewMode === "2-col" ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6"
+              )}>
+                {chunk.map(product => <ProductCard key={product.id} product={product} />)}
+              </div>
+              {/* Submit Requirement box after every chunk (≈5 rows) */}
+              <div className="mt-4 lg:mt-6 mb-1 lg:max-w-md">
+                <SubmitRequirementBox onQuickRfq={() => setQuickRfqOpen(true)} />
+              </div>
+            </div>
+          ))}
+
+          <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
+            {isLoadingMore ? "Loading more products..." : "Scroll for more"}
+          </div>
+        </div>
+
+        {/* ── Personalized recommendations ── */}
+        <div>
+          <p className="text-sm lg:text-base mb-2 lg:mb-4 px-1">
+            <Link to="/profile" className="text-blue-600 font-semibold hover:underline">andymitra07</Link>
+            <span className="text-gray-900 font-bold">, we recommend</span>
+            <span className="float-right text-[10px] lg:text-xs text-gray-300 font-semibold">AD</span>
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
+            {BASE_PRODUCTS.map(p => <ProductCard key={"rec-" + p.id} product={{ ...p, id: "rec-" + p.id }} />)}
+          </div>
+        </div>
+
+        {/* ── Video Close-Ups — Reels style ── */}
+        <div>
+          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-2 lg:mb-4 px-1">Video Close-Ups</h2>
+          <div className="flex gap-2.5 lg:gap-4 overflow-x-auto pb-1 scrollbar-hide px-1">
+            {VIDEO_CLOSE_UPS.map((v, i) => (
+              <button
+                key={v.id}
+                onClick={() => { setVideoStartIndex(i); setVideoViewerOpen(true); }}
+                className="relative shrink-0 w-28 lg:w-44 aspect-[3/4] rounded-xl overflow-hidden bg-gray-100"
               >
-                <div className="relative aspect-[3/4]">
-                  <img src={brand.image} alt={brand.name} className="h-full w-full object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4 text-background">
-                    <p className="text-xs uppercase tracking-[0.18em] text-background/70">Sponsored</p>
-                    <h3 className="mt-1 text-lg font-semibold">{brand.name}</h3>
-                    <p className="text-sm text-background/80">{brand.category}</p>
-                    <p className="mt-2 text-sm font-semibold">{brand.price}</p>
+                <img src={v.thumbnail} alt={v.brandLine} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
+                  <div className="w-8 lg:w-12 h-8 lg:h-12 bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm">
+                    <Play className="w-3.5 lg:w-5 h-3.5 lg:h-5 text-white fill-white" />
                   </div>
+                </div>
+                <div className="absolute bottom-1.5 lg:bottom-3 left-1.5 lg:left-3 right-1.5 lg:right-3">
+                  <p className="text-[9px] lg:text-xs font-bold text-white truncate drop-shadow">{v.category}</p>
+                  <p className="text-[9px] lg:text-xs text-white/90 drop-shadow">{v.price}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Looking for these? */}
+          <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
+            {LOOKING_FOR_THESE.map(item => (
+              <Link key={item.id} to={`/product/${item.id}`} className="rounded-lg overflow-hidden border border-gray-100">
+                <div className="relative aspect-square bg-gray-100">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
+                    <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
+                    <span className="text-[7px] lg:text-[10px] font-bold">3.9</span>
+                  </div>
+                </div>
+                <div className="p-1.5 lg:p-2.5">
+                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{item.price} | MOQ: {item.moq}</p>
+                  <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
+                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">Product name | <span className="font-bold">Manufacturer</span></p>
+                  <button className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+                    <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+                  </button>
                 </div>
               </Link>
             ))}
           </div>
-        </section>
+        </div>
+
+        {/* ── Brand Picks — sponsored ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
+            <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
+            <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
+          </div>
+          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2">sponsored</p>
+          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide">
+            {BRAND_PICKS.map((b, i) => (
+              <Link key={i} to="/search/results" className="shrink-0 w-32 lg:w-48">
+                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
+                  <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+                </div>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{b.name}</p>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.category}</p>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.price}</p>
+                <button className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+                  <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+                </button>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Recommended Premium Brands ── */}
+        <div>
+          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-1 lg:mb-2 px-1">Recommended Premium Brands</h2>
+          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2 lg:mb-4">AD</p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
+            {PREMIUM_BRANDS.map((b, i) => (
+              <Link key={i} to="/vendor/premium-1" className="relative rounded-xl overflow-hidden aspect-square">
+                <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                <div className="absolute bottom-2 lg:bottom-4 left-2 lg:left-4">
+                  <p className="text-xs lg:text-base font-bold text-white">{b.name}</p>
+                  <p className="text-[10px] lg:text-xs text-white/80">{b.moq}</p>
+                  <p className="text-xs lg:text-base font-bold text-white">{b.price}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
       </div>
-    </DashboardLayout>
+
+      <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
+      <VideoCloseUpsViewer
+        videos={VIDEO_CLOSE_UPS}
+        initialIndex={videoStartIndex}
+        isOpen={videoViewerOpen}
+        onClose={() => setVideoViewerOpen(false)}
+      />
+    </BuyerShell>
   );
 };
 

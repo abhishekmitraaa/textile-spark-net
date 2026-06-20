@@ -91,7 +91,7 @@ const Landing = () => {
                 Sign in
               </Button>
             </Link>
-            <Link to="/register">
+            <Link to="/auth/login">
               <Button
                 className="rounded-full bg-[#C8102E] px-5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#a60d24] active:scale-[0.98]"
               >
@@ -144,7 +144,7 @@ const Landing = () => {
               transition={{ duration: 0.6, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
               className="mt-8 flex flex-col gap-3 sm:flex-row"
             >
-              <Link to="/register" className="sm:w-auto">
+              <Link to="/auth/login" className="sm:w-auto">
                 <Button
                   size="lg"
                   className="w-full gap-2 rounded-full bg-[#C8102E] px-7 text-base font-semibold text-white shadow-sm transition-all hover:bg-[#a60d24] active:scale-[0.98] sm:w-auto"
@@ -245,7 +245,7 @@ const Landing = () => {
                     </li>
                   ))}
                 </ul>
-                <Link to="/register" className="mt-8">
+                <Link to="/auth/login" className="mt-8">
                   <Button className="w-full gap-2 rounded-full bg-zinc-900 text-sm font-semibold text-white transition-all hover:bg-zinc-800 active:scale-[0.98] sm:w-auto">
                     Join as a buyer <ArrowRight className="h-4 w-4" strokeWidth={2} />
                   </Button>
@@ -489,7 +489,7 @@ const Landing = () => {
                 supply chain on Cosora.
               </p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Link to="/register">
+                <Link to="/auth/login">
                   <Button
                     size="lg"
                     className="gap-2 rounded-full bg-white px-8 text-base font-semibold text-[#C8102E] shadow-sm transition-all hover:bg-white/90 active:scale-[0.98]"

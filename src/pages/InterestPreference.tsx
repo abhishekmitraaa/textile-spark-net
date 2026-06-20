@@ -1,28 +1,27 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const categories = [
-  { name: "Fabrics", img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop" },
-  { name: "Women's Clothing", img: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
-  { name: "Men's Clothing", img: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
-  { name: "Cosmetics", img: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
-  { name: "Unisex Clothing", img: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200&h=200&fit=crop" },
-  { name: "Kidswear", img: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=200&h=200&fit=crop" },
-  { name: "Accessories", img: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
-  { name: "Labels & Tags", img: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop" },
-  { name: "IT & Software", img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop" },
-  { name: "Raw Materials", img: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=200&h=200&fit=crop" },
-  { name: "Packaging", img: "https://images.unsplash.com/photo-1607166452427-7e4477c2cc4e?w=200&h=200&fit=crop" },
-  { name: "Trims & Accessories", img: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop&q=80" },
-  { name: "Fashion Designer", img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop&q=80" },
-  { name: "Marketing PR", img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=200&fit=crop" },
-  { name: "Freelance", img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200&h=200&fit=crop" },
-  { name: "Exporter", img: "https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=200&h=200&fit=crop" },
-  { name: "Photography", img: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
+  { name: "Fabrics",            img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop" },
+  { name: "Women's Clothing",   img: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
+  { name: "Men's Clothing",     img: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
+  { name: "Cosmetics",          img: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
+  { name: "Unisex Clothing",    img: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200&h=200&fit=crop" },
+  { name: "Kidswear",           img: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=200&h=200&fit=crop" },
+  { name: "Accessories",        img: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
+  { name: "Labels & Tags",      img: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop" },
+  { name: "IT & Software",      img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop" },
+  { name: "Raw Materials",      img: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=200&h=200&fit=crop" },
+  { name: "Packaging",          img: "https://images.unsplash.com/photo-1607166452427-7e4477c2cc4e?w=200&h=200&fit=crop" },
+  { name: "Trims & Accessories",img: "https://images.unsplash.com/photo-1558618666-7e4477c2cc4e?w=200&h=200&fit=crop&q=80" },
+  { name: "Fashion Designer",   img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop&q=80" },
+  { name: "Marketing PR",       img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=200&fit=crop" },
+  { name: "Freelance",          img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200&h=200&fit=crop" },
+  { name: "Exporter",           img: "https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=200&h=200&fit=crop" },
+  { name: "Photography",        img: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
 ];
 
 const InterestPreference = () => {
@@ -32,55 +31,53 @@ const InterestPreference = () => {
   const [otherText, setOtherText] = useState("");
 
   const toggle = (name: string) => {
-    setSelected((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
+    setSelected(prev => prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]);
   };
 
+  const isValid = selected.length > 0 || (showOther && otherText.trim().length > 0);
+
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-white flex flex-col px-5 py-6">
+      {/* Back arrow */}
+      <button onClick={() => navigate("/auth/account-info")} className="mb-2 -ml-1 p-1.5 self-start">
+        <ArrowLeft className="w-5 h-5 text-gray-700" />
+      </button>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-lg"
+        transition={{ duration: 0.4 }}
+        className="flex-1 flex flex-col max-w-lg mx-auto w-full"
       >
-        <h1 className="font-logo text-accent text-2xl font-bold italic uppercase tracking-[-0.08em] text-center mb-6">Cosora</h1>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Interest Preference</h2>
 
-        <h2 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-          What are you interested in sourcing?
-        </h2>
-        <p className="text-muted-foreground text-sm text-center mb-8">
-          Select categories to personalise your feed. You can change this later.
-        </p>
+        <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 mb-4">
+          <p className="text-xs text-gray-500 leading-relaxed">
+            Select your preferred brands or product information. We will recommend brands and products based on your selections.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-3 md:grid-cols-4 gap-3 mb-4">
-          {categories.map((cat) => {
+        <p className="text-sm font-bold text-gray-800 mb-3">Your Interest</p>
+
+        <div className="grid grid-cols-4 gap-x-3 gap-y-4 mb-2">
+          {categories.map(cat => {
             const isSelected = selected.includes(cat.name);
             return (
-              <button
-                key={cat.name}
-                onClick={() => toggle(cat.name)}
-                className="relative text-center group"
-              >
-                <div
-                  className={`aspect-square rounded-xl overflow-hidden mb-1.5 transition-all ${
-                    isSelected ? "ring-2 ring-accent" : "ring-0"
-                  }`}
-                >
-                  <img
-                    src={cat.img}
-                    alt={cat.name}
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                  />
+              <button key={cat.name} onClick={() => toggle(cat.name)} className="text-center">
+                <div className={cn(
+                  "relative aspect-square rounded-full overflow-hidden mb-1.5 ring-2 transition-all",
+                  isSelected ? "ring-[#a4172c]" : "ring-transparent"
+                )}>
+                  <img src={cat.img} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
                   {isSelected && (
-                    <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-accent flex items-center justify-center">
-                      <Check className="w-3 h-3 text-accent-foreground" />
+                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                      <div className="w-6 h-6 rounded-full bg-[#a4172c] flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
+                      </div>
                     </div>
                   )}
                 </div>
-                <span className="text-xs text-foreground font-medium leading-tight line-clamp-2">
+                <span className="text-[10px] text-gray-600 font-medium leading-tight line-clamp-2">
                   {cat.name}
                 </span>
               </button>
@@ -88,32 +85,40 @@ const InterestPreference = () => {
           })}
 
           {/* Others tile */}
-          <button
-            onClick={() => setShowOther(!showOther)}
-            className={`relative text-center ${showOther ? "ring-2 ring-accent rounded-xl" : ""}`}
-          >
-            <div className="aspect-square rounded-xl bg-muted/50 flex items-center justify-center mb-1.5">
-              <span className="text-2xl text-muted-foreground">+</span>
+          <button onClick={() => setShowOther(p => !p)} className="text-center">
+            <div className={cn(
+              "aspect-square rounded-full bg-gray-50 flex items-center justify-center mb-1.5 ring-2 transition-all",
+              showOther ? "ring-[#a4172c]" : "ring-transparent"
+            )}>
+              <span className="text-xl text-gray-400">+</span>
             </div>
-            <span className="text-xs text-foreground font-medium">Others</span>
+            <span className="text-[10px] text-gray-600 font-medium">Others</span>
           </button>
         </div>
 
         {showOther && (
-          <Input
-            className="h-11 mb-6"
+          <input
+            type="text"
             placeholder="Type your category..."
             value={otherText}
-            onChange={(e) => setOtherText(e.target.value)}
+            onChange={e => setOtherText(e.target.value)}
+            autoFocus
+            className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors mb-2"
           />
         )}
 
-        <Button
+        <button
           onClick={() => navigate("/auth/terms")}
-          className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 mt-4"
+          disabled={!isValid}
+          className={cn(
+            "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-6",
+            isValid
+              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          )}
         >
-          Save & Continue
-        </Button>
+          Save
+        </button>
       </motion.div>
     </div>
   );

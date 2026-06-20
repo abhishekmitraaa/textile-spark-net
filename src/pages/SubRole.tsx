@@ -1,8 +1,8 @@
+import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Check } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const subRoles = [
   "Brand Owner / Founder",
@@ -18,53 +18,65 @@ const SubRole = () => {
   const [selected, setSelected] = useState<string[]>([]);
 
   const toggle = (role: string) => {
-    setSelected((prev) =>
-      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
-    );
+    setSelected(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role]);
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen bg-white flex flex-col px-6 py-6">
+      {/* Back arrow */}
+      <button onClick={() => navigate("/auth/role-selection")} className="mb-4 -ml-1 p-1.5">
+        <ArrowLeft className="w-5 h-5 text-gray-700" />
+      </button>
+
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.4 }}
+        className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
-        <h1 className="font-logo text-accent text-2xl font-bold italic uppercase tracking-[-0.08em] text-center mb-8">Cosora</h1>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">What best describes you?</h2>
+        <p className="text-sm text-gray-400 mb-6">Select your primary role</p>
 
-        <h2 className="font-display text-2xl font-bold text-foreground text-center mb-2">
-          What best describes you?
-        </h2>
-        <p className="text-muted-foreground text-sm text-center mb-8">Select all that apply</p>
-
-        <div className="grid grid-cols-1 gap-3 mb-8">
-          {subRoles.map((role) => {
+        <div className="space-y-1 mb-8">
+          {subRoles.map(role => {
             const isSelected = selected.includes(role);
             return (
               <button
                 key={role}
                 onClick={() => toggle(role)}
-                className={`flex items-center justify-between rounded-xl border-2 px-4 py-3.5 text-left transition-all ${
-                  isSelected
-                    ? "border-accent bg-accent/5"
-                    : "border-border hover:border-accent/40"
-                }`}
+                className="w-full flex items-center gap-3 py-3.5 text-left border-b border-gray-100 last:border-0"
               >
-                <span className="text-sm font-medium text-foreground">{role}</span>
-                {isSelected && <Check className="w-5 h-5 text-accent flex-shrink-0" />}
+                <span className={cn(
+                  "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
+                  isSelected ? "border-[#a4172c]" : "border-gray-300"
+                )}>
+                  {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-[#a4172c]" />}
+                </span>
+                <span className="text-sm text-gray-800">{role}</span>
               </button>
             );
           })}
         </div>
 
-        <Button
+        <button
           onClick={() => navigate("/auth/account-info")}
           disabled={selected.length === 0}
-          className="w-full h-11 bg-accent text-accent-foreground hover:bg-accent/90 disabled:opacity-40"
+          className={cn(
+            "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",
+            selected.length > 0
+              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              : "bg-gray-200 text-gray-400 cursor-not-allowed"
+          )}
         >
           Continue
-        </Button>
+        </button>
+
+        <p className="text-sm text-gray-500 text-center mt-5">
+          Already have an account?{" "}
+          <Link to="/auth/login" className="text-[#a4172c] font-semibold hover:underline">
+            Login
+          </Link>
+        </p>
       </motion.div>
     </div>
   );

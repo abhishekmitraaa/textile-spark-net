@@ -6,21 +6,24 @@ const Welcome = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const timer = setTimeout(() => navigate("/browse", { replace: true }), 2000);
+    const timer = setTimeout(() => navigate("/home/new-arrivals", { replace: true }), 2000);
     return () => clearTimeout(timer);
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-accent flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-[#a4172c] to-[#7e1120] flex flex-col items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.6 }}
         className="text-center"
       >
-        <h1 className="font-logo text-accent-foreground text-4xl font-bold italic uppercase tracking-[-0.08em] mb-4">Cosora</h1>
-        <p className="text-accent-foreground/80 text-lg font-medium">
-          Business Made Easy & Enjoyable
+        <p className="text-white/70 text-sm font-medium mb-2">Welcome to</p>
+        <h1 className="font-logo text-white text-5xl font-extrabold italic uppercase tracking-tight mb-3">
+          COSORA
+        </h1>
+        <p className="text-white/80 text-sm font-medium">
+          Business Made Easy &amp; Enjoyable
         </p>
       </motion.div>
     </div>
