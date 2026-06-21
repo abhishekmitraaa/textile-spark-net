@@ -43,6 +43,7 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import NewArrivals from "./pages/NewArrivals";
+import Search from "./pages/Search";
 import AddSocialLinks from "./pages/AddSocialLinks";
 
 
@@ -106,13 +107,6 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     description: "First-time preference setup flow before the personalized feed.",
     relatedHref: "/home/for-you",
     relatedLabel: "Open For You",
-  },
-  {
-    path: "/search",
-    title: "Search",
-    description: "Discovery entry point before typing begins, including photo search and recent keywords.",
-    relatedHref: "/home/new-arrivals",
-    relatedLabel: "Open New Arrivals",
   },
   {
     path: "/search/results",
@@ -367,6 +361,7 @@ const App = () => (
             <Route path="/auth/welcome" element={<Welcome />} />
             <Route path="/browse" element={<BrowseProducts />} />
             <Route path="/home/new-arrivals" element={<NewArrivals />} />
+            <Route path="/search" element={<Search />} />
             <Route path="/home/for-you" element={<ForYou />} />
             <Route path="/services" element={<ServiceVendors />} />
             <Route path="/freelancers" element={<Freelancers />} />

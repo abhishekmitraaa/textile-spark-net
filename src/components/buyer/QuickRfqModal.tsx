@@ -66,6 +66,34 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
 
             {/* Body */}
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+              {/* Product/Service Name */}
+              <div>
+                <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
+                  Product / Service Name <span className="text-[#ef4d62]">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Cotton T-Shirt, Leather Wallet"
+                  value={productName}
+                  onChange={e => setProductName(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
+                />
+              </div>
+
+              {/* Quantity */}
+              <div>
+                <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
+                  Quantity <span className="text-[#ef4d62]">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., 500 pieces, 1000 units"
+                  value={quantity}
+                  onChange={e => setQuantity(e.target.value)}
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
+                />
+              </div>
+
               {/* Reference Images */}
               <div>
                 <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
@@ -110,34 +138,6 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                 <input
                   ref={fileRef} type="file" accept="image/png,image/jpeg" multiple hidden
                   onChange={e => handleFiles(e.target.files)}
-                />
-              </div>
-
-              {/* Product Name */}
-              <div>
-                <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                  Product Name <span className="text-[#ef4d62]">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., Cotton T-Shirt, Leather Wallet"
-                  value={productName}
-                  onChange={e => setProductName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
-                />
-              </div>
-
-              {/* Quantity */}
-              <div>
-                <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                  Quantity <span className="text-[#ef4d62]">*</span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g., 500 pieces, 1000 units"
-                  value={quantity}
-                  onChange={e => setQuantity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
                 />
               </div>
 

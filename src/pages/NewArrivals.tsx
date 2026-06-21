@@ -1,26 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import { Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star, Zap, FileText, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
+import trustedSeal from "@/assets/Trustedseal.png";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────
-
-const HERO_SLIDES = [
-  {
-    title: "NEW EVERYDAY FASHION",
-    subtitle: "Discover New Fashion Everyday",
-    slides: [
-      { tag: "sponsored", price: "₹459", image: "https://images.unsplash.com/photo-1496747611176-843222e1e57c?w=400&h=520&fit=crop" },
-      { tag: null,        price: "₹459", image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=400&h=520&fit=crop" },
-      { tag: null,        price: "₹499", image: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=520&fit=crop" },
-    ],
-  },
-];
 
 const CATEGORIES = [
   { name: "Women's Apparel",  image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
@@ -31,6 +21,10 @@ const CATEGORIES = [
   { name: "Women's Trousers", image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=200&h=200&fit=crop" },
   { name: "Women's T-shirts", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=200&h=200&fit=crop" },
   { name: "Women's Shoes",    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop" },
+  { name: "Kidswear",         image: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=200&h=200&fit=crop" },
+  { name: "Ethnic Wear",      image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=200&h=200&fit=crop" },
+  { name: "Activewear",       image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop" },
+  { name: "Winter Wear",      image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=200&h=200&fit=crop" },
 ];
 
 interface Product {
@@ -49,12 +43,13 @@ interface Product {
   fitType: string;
   image: string;
   secondaryImage: string;
+  verified?: boolean;
 }
 
 const BASE_PRODUCTS: Product[] = [
-  { id: "p1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=500&h=650&fit=crop" },
+  { id: "p1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=500&h=650&fit=crop", verified: true },
   { id: "p2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.8k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=650&fit=crop" },
-  { id: "p3", vendorId: "v3", name: "Ribbed Tank Top - Orange", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-3a96ab6b2c5f?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-1c9c4f0c6c5e?w=500&h=650&fit=crop" },
+  { id: "p3", vendorId: "v3", name: "Ribbed Tank Top - Orange", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-3a96ab6b2c5f?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-1c9c4f0c6c5e?w=500&h=650&fit=crop", verified: true },
   { id: "p4", vendorId: "v4", name: "Graphic Print Tee", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.6k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&h=650&fit=crop" },
 ];
 
@@ -119,6 +114,14 @@ function ProductCard({ product }: { product: Product }) {
         />
         <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 lg:px-2 py-0.5 rounded">COSORA</div>
 
+        {product.verified && (
+          <img
+            src={trustedSeal}
+            alt="TrustedSEAL verified vendor"
+            className="absolute top-2 lg:top-3 left-2 lg:left-3 h-4 lg:h-5 w-auto rounded shadow-sm"
+          />
+        )}
+
         <button
           onClick={e => { e.preventDefault(); setSaved(p => !p); }}
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
@@ -167,6 +170,7 @@ function SubmitRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
       <div className="px-4 py-3.5 border-b border-gray-100">
         <h3 className="text-base font-bold text-gray-900">Looking for products?</h3>
+        <p className="text-xs text-gray-500 mt-0.5">Get quotes from verified manufacturers</p>
       </div>
       <div className="p-4">
         <Link to="/requirement/post-requirement">
@@ -179,7 +183,10 @@ function SubmitRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
           <div className="flex items-center gap-2.5">
             <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62] shrink-0" />
             <div>
-              <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#ef4d62]/10 text-[#ef4d62] px-1.5 py-0.5 rounded">Fast</span>
+              </div>
               <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
             </div>
           </div>
@@ -215,7 +222,6 @@ function SubmitRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
 
 const NewArrivals = () => {
   const navigate = useNavigate();
-  const [activeSlide, setActiveSlide] = useState(0);
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
   const [batchCount, setBatchCount] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -223,13 +229,6 @@ const NewArrivals = () => {
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-
-  const slides = HERO_SLIDES[0].slides;
-
-  useEffect(() => {
-    const id = window.setInterval(() => setActiveSlide(s => (s + 1) % slides.length), 3500);
-    return () => window.clearInterval(id);
-  }, [slides.length]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -251,11 +250,14 @@ const NewArrivals = () => {
     [batchCount]
   );
 
-  // Split products into rows-of-5 chunks to insert SubmitRequirementBox
-  const rowsPerChunk = 5;
+  // 5 rows per chunk, derived from the active column count (toggle-reactive).
+  // Mobile cols are 2 or 3; desktop uses the same chunk size which means the
+  // box appears slightly more often on wide screens. Mobile is primary.
+  const cols = viewMode === "2-col" ? 2 : 3;
+  const productsPerChunk = 5 * cols;
   const chunks: Product[][] = [];
-  for (let i = 0; i < products.length; i += rowsPerChunk * 2) {
-    chunks.push(products.slice(i, i + rowsPerChunk * 2));
+  for (let i = 0; i < products.length; i += productsPerChunk) {
+    chunks.push(products.slice(i, i + productsPerChunk));
   }
 
   return (
@@ -282,50 +284,35 @@ const NewArrivals = () => {
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 space-y-5 lg:space-y-10 pb-4">
 
-        {/* ── Hero banner — auto slideshow ── */}
-        <div className="rounded-xl overflow-hidden border border-gray-100">
-          <div className="px-4 lg:px-6 pt-3 lg:pt-5 pb-2 lg:pb-3 text-center">
-            <h1 className="text-base lg:text-2xl font-bold text-gray-900">NEW EVERYDAY FASHION</h1>
-            <p className="text-xs lg:text-sm text-gray-400">Discover New Fashion Everyday</p>
-          </div>
-          <div className="grid grid-cols-3 gap-0.5 lg:gap-1.5 px-0.5 lg:px-1.5">
-            {slides.map((slide, i) => (
-              <div key={i} className="relative aspect-[3/4] lg:aspect-[4/3] bg-gray-100">
-                <img src={slide.image} alt="" className="w-full h-full object-cover" />
-                {slide.tag && (
-                  <span className="absolute top-1.5 lg:top-3 left-1.5 lg:left-3 text-[8px] lg:text-xs bg-black/50 text-white px-1.5 lg:px-2.5 py-0.5 lg:py-1 rounded">{slide.tag}</span>
-                )}
-                <button className="absolute top-1.5 lg:top-3 right-1.5 lg:right-3 w-5 lg:w-8 h-5 lg:h-8 bg-white/80 rounded-full flex items-center justify-center">
-                  <Bookmark className="w-2.5 lg:w-4 h-2.5 lg:h-4 text-gray-600" />
-                </button>
-                <span className="absolute bottom-1.5 lg:bottom-3 left-1.5 lg:left-3 text-[10px] lg:text-base font-bold text-white drop-shadow">{slide.price}</span>
-              </div>
-            ))}
-          </div>
-          {/* Slide indicator */}
-          <div className="flex items-center justify-end gap-1 px-3 lg:px-5 py-1.5 lg:py-2.5">
-            <span className="text-[10px] lg:text-xs text-gray-300 font-mono">{String((activeSlide % slides.length) + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
-          </div>
-        </div>
+        {/* ── Everyday Fashion Hero — center-emphasis auto-advancing carousel ── */}
+        <EverydayFashionHero />
 
-        {/* ── What's on your mind — categories slider ── */}
+        {/* ── What's on your mind — categories slider (2 rows, scrolls horizontally) ── */}
         <div>
           <div className="flex items-center justify-between mb-2 lg:mb-3 px-1">
-            <h2 className="text-sm lg:text-lg font-bold text-gray-900">WHAT'S ON YOUR MIND</h2>
+            <h2 className="text-sm lg:text-lg font-bold text-gray-900 tracking-tight text-center w-full">WHAT'S ON YOUR MIND</h2>
           </div>
-          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3 lg:gap-5">
+          <div
+            className="grid grid-flow-col grid-rows-2 auto-cols-[22%] lg:auto-cols-[11.5%] gap-3 lg:gap-5 overflow-x-auto overscroll-x-contain scrollbar-hide snap-x snap-mandatory pb-1 -mx-1 px-1"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
             {CATEGORIES.map(cat => (
               <Link
                 key={cat.name}
                 to={`/search/results?category=${encodeURIComponent(cat.name)}`}
-                className="text-center"
+                className="text-center group snap-start"
               >
-                <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-1 lg:mb-2">
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100 mb-1.5 lg:mb-2 p-2 lg:p-3 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
+                  <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" draggable={false} />
                 </div>
-                <span className="text-[10px] lg:text-xs text-gray-600 font-medium leading-tight">{cat.name}</span>
+                <span className="text-[10px] lg:text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>
               </Link>
             ))}
+          </div>
+          <div className="flex items-center justify-center gap-2 mt-3 lg:mt-5 text-[10px] lg:text-xs font-bold text-gray-300 tracking-widest">
+            <span>&lt;</span>
+            <span>SLIDE TO SEE</span>
+            <span>&gt;</span>
           </div>
         </div>
 

@@ -165,4 +165,18 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Hides scrollbar while keeping the element scrollable. Used throughout
+     the buyer and vendor sides (Leads, Freelancers, BusinessProfile,
+     ServiceVendors, OldAdvertisements, NewArrivals, etc.) for horizontal
+     chip rows and sliders. Was referenced as a class name in multiple
+     files but never actually defined anywhere — scrollbars were visibly
+     present wherever it was used. Defining it once here fixes all of them. */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
