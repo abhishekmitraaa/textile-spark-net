@@ -1,7 +1,10 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyCatalogues, createCatalogue, deleteCatalogue } from "@/lib/queries/catalogues";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -45,35 +48,6 @@ interface CatalogueFile {
   downloads: number;
   views: number;
 }
-
-// ─────────────────────────────────────────────────────────────
-// MOCK DATA — existing catalogues
-// ─────────────────────────────────────────────────────────────
-
-const EXISTING_CATALOGUES: CatalogueFile[] = [
-  {
-    id: "c1",
-    name: "Summer Collection 2024",
-    size: "4.2 MB",
-    pages: 32,
-    uploadedAt: "Dec 1, 2025",
-    status: "live",
-    visibility: "all",
-    downloads: 47,
-    views: 312,
-  },
-  {
-    id: "c2",
-    name: "Denim Range Catalogue",
-    size: "2.8 MB",
-    pages: 18,
-    uploadedAt: "Nov 15, 2025",
-    status: "under_review",
-    visibility: "verified",
-    downloads: 0,
-    views: 0,
-  },
-];
 
 // ─────────────────────────────────────────────────────────────
 // STATUS CONFIG
@@ -170,8 +144,7 @@ function CatalogueCard({
 
           <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
             <span>{catalogue.size}</span>
-            <span>·</span>
-            <span>{catalogue.pages} pages</span>
+            {catalogue.pages > 0 && (<><span>·</span><span>{catalogue.pages} pages</span></>)}
             <span>·</span>
             <span>Uploaded {catalogue.uploadedAt}</span>
           </div>
@@ -205,6 +178,9 @@ function CatalogueCard({
 const UploadCatalogue = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: myCatalogues = [] } = useMyCatalogues(user?.id);
 
   // Upload state
   const [dragActive, setDragActive] = useState(false);
@@ -213,7 +189,19 @@ const UploadCatalogue = () => {
   const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"all" | "verified" | "private">("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [catalogues, setCatalogues] = useState<CatalogueFile[]>(EXISTING_CATALOGUES);
+
+  // Vendor's own catalogues (any status) mapped into the card shape.
+  const catalogues: CatalogueFile[] = myCatalogues.map((c) => ({
+    id: c.id,
+    name: c.title,
+    size: "PDF",
+    pages: c.pageCount ?? 0,
+    uploadedAt: c.createdAt,
+    status: c.status === "draft" ? "under_review" : c.status,
+    visibility: "all",
+    downloads: 0,
+    views: 0,
+  }));
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -261,7 +249,8 @@ const UploadCatalogue = () => {
   };
 
   // ── Submit ──
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) { toast.error("Sign in as a vendor to publish"); return; }
     if (!selectedFile) {
       toast.error("Please select a PDF file to upload");
       return;
@@ -271,21 +260,13 @@ const UploadCatalogue = () => {
       return;
     }
     setIsSubmitting(true);
-
-    setTimeout(() => {
-      const newCatalogue: CatalogueFile = {
-        id: `c${Date.now()}`,
-        name: catalogueName.trim(),
-        size: formatBytes(selectedFile.size),
-        pages: Math.floor(Math.random() * 30) + 5,
-        uploadedAt: "Just now",
-        status: "under_review",
-        visibility,
-        downloads: 0,
-        views: 0,
-      };
-      setCatalogues((prev) => [newCatalogue, ...prev]);
-      setIsSubmitting(false);
+    try {
+      await createCatalogue(user.id, {
+        title: catalogueName.trim(),
+        description: description || null,
+        file: selectedFile,
+      });
+      qc.invalidateQueries({ queryKey: ["catalogues"] });
       setSelectedFile(null);
       setCatalogueName("");
       setDescription("");
@@ -293,12 +274,21 @@ const UploadCatalogue = () => {
       toast.success("Catalogue uploaded!", {
         description: "It'll go live after review (24–48 hours).",
       });
-    }, 1800);
+    } catch (err) {
+      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setCatalogues((prev) => prev.filter((c) => c.id !== id));
-    toast.success("Catalogue removed");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteCatalogue(id);
+      qc.invalidateQueries({ queryKey: ["catalogues"] });
+      toast.success("Catalogue removed");
+    } catch (err) {
+      toast.error("Couldn't remove", { description: err instanceof Error ? err.message : String(err) });
+    }
   };
 
   return (

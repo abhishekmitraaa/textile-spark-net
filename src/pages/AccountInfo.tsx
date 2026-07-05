@@ -1,11 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin } from "lucide-react";
+import { MapPin, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import CosoraLogo from "@/components/CosoraLogo";
+import { useAuth } from "@/contexts/AuthContext";
+import { saveAccountInfo } from "@/lib/queries/profile";
 
 const AccountInfo = () => {
   const navigate = useNavigate();
+  const { profile, session, refreshProfile } = useAuth();
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -13,15 +19,66 @@ const AccountInfo = () => {
     businessName: "",
   });
   const [useLocation, setUseLocation] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
+
+  // Prefill name + email from the signed-in (e.g. Google) account, without
+  // clobbering anything the user has already typed.
+  useEffect(() => {
+    const gName = profile?.full_name ?? "";
+    const gEmail = profile?.email ?? session?.user?.email ?? "";
+    if (!gName && !gEmail) return;
+    setForm(prev => ({
+      ...prev,
+      name: prev.name || gName,
+      email: prev.email || gEmail,
+    }));
+  }, [profile, session]);
 
   const isValid = form.name && form.email && form.businessName;
 
   const update = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
+  // Real geolocation → reverse-geocode to a pincode (BigDataCloud, keyless + CORS-friendly).
   const handleUseCurrentLocation = () => {
-    setUseLocation(true);
-    update("pincode", "");
+    if (!("geolocation" in navigator)) {
+      toast.error("Location isn't supported on this device");
+      return;
+    }
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=en`
+          );
+          const data = await res.json();
+          const pin = String(data.postcode ?? "").replace(/\D/g, "").slice(0, 6);
+          const place = data.city || data.locality || data.principalSubdivision || "your area";
+          setForm(prev => ({ ...prev, pincode: pin }));
+          if (pin) {
+            setUseLocation(true);
+            toast.success(`Location set — ${place} (${pin})`);
+          } else {
+            setUseLocation(false); // keep the field editable so they can type it
+            toast.info(`Detected ${place}, but no pincode found — enter it manually`);
+          }
+        } catch {
+          toast.error("Couldn't look up your location details");
+        } finally {
+          setLocLoading(false);
+        }
+      },
+      (err) => {
+        setLocLoading(false);
+        toast.error(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied — allow it or enter a pincode"
+            : "Couldn't get your location"
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   return (
@@ -33,9 +90,7 @@ const AccountInfo = () => {
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
         {/* COSORA wordmark */}
-        <h1 className="font-logo text-3xl font-extrabold italic text-[#a4172c] uppercase tracking-tight mb-6">
-          COSORA
-        </h1>
+        <CosoraLogo height={30} className="mb-6" />
         <div className="h-px bg-gray-200 mb-6" />
 
         <h2 className="text-lg font-bold text-gray-900 mb-3">Account Information</h2>
@@ -79,15 +134,16 @@ const AccountInfo = () => {
               <button
                 type="button"
                 onClick={handleUseCurrentLocation}
+                disabled={locLoading}
                 className={cn(
-                  "flex items-center gap-1.5 px-3.5 py-3 rounded-xl border text-sm font-medium shrink-0 transition-colors",
+                  "flex items-center gap-1.5 px-3.5 py-3 rounded-xl border text-sm font-medium shrink-0 transition-colors disabled:opacity-70",
                   useLocation
                     ? "border-[#a4172c] bg-[#fdf0f1] text-[#a4172c]"
                     : "border-[#a4172c]/40 text-[#a4172c] hover:bg-[#fdf0f1]"
                 )}
               >
-                <MapPin className="w-4 h-4" />
-                Use current location
+                {locLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                {locLoading ? "Locating…" : "Use current location"}
               </button>
               <span className="text-xs text-gray-400 shrink-0">or</span>
               <input
@@ -116,16 +172,32 @@ const AccountInfo = () => {
         </div>
 
         <button
-          onClick={() => navigate("/auth/interest-preference")}
-          disabled={!isValid}
+          onClick={async () => {
+            if (!isValid || saving) return;
+            // Persist to the DB so the Profile page shows the real user.
+            if (session?.user) {
+              setSaving(true);
+              try {
+                await saveAccountInfo(session.user.id, { name: form.name, email: form.email, businessName: form.businessName });
+                await refreshProfile();
+              } catch (e) {
+                setSaving(false);
+                toast.error("Couldn't save your details", { description: e instanceof Error ? e.message : String(e) });
+                return;
+              }
+              setSaving(false);
+            }
+            navigate("/auth/interest-preference");
+          }}
+          disabled={!isValid || saving}
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-auto",
-            isValid
+            isValid && !saving
               ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >
-          NEXT
+          {saving ? "Saving…" : "NEXT"}
         </button>
       </motion.div>
     </div>

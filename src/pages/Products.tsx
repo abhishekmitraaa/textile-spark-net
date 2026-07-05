@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyProducts, deleteProduct, duplicateProduct, type VendorProductRow } from "@/lib/queries/products";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -31,79 +34,12 @@ import {
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
-// DATA
-// ─────────────────────────────────────────────────────────────
-
-interface Product {
-  id: string;
-  name: string;
-  price: string;
-  unit: string;
-  image: string;
-  status: "active" | "draft" | "pending";
-  views: number;
-  inquiries: number;
-  profileScore: number;
-  productCode: string;
-}
-
-const PRODUCTS: Product[] = [
-  {
-    id: "1",
-    name: "Ghyk",
-    price: "200",
-    unit: "Kg",
-    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop",
-    status: "active",
-    views: 342,
-    inquiries: 12,
-    profileScore: 40,
-    productCode: "CSR-001",
-  },
-  {
-    id: "2",
-    name: "240 GSM FRENCH TERRY OVERSIZED T-shirt",
-    price: "289",
-    unit: "Piece",
-    image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=200&h=200&fit=crop",
-    status: "active",
-    views: 342,
-    inquiries: 12,
-    profileScore: 40,
-    productCode: "CSR-002",
-  },
-  {
-    id: "3",
-    name: "240 GSM FRENCH TERRY OVERSIZED T-shirt",
-    price: "289",
-    unit: "Piece",
-    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop",
-    status: "draft",
-    views: 342,
-    inquiries: 12,
-    profileScore: 40,
-    productCode: "CSR-003",
-  },
-  {
-    id: "4",
-    name: "WHITE 240 GSM FRENCH TERRY OVERSIZED T-shirt",
-    price: "289",
-    unit: "Piece",
-    image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=200&h=200&fit=crop",
-    status: "active",
-    views: 189,
-    inquiries: 8,
-    profileScore: 55,
-    productCode: "CSR-004",
-  },
-];
-
-// ─────────────────────────────────────────────────────────────
 // PRODUCT ROW CARD — matches screenshot exactly
+// Data comes from Supabase (the vendor's own products, any status).
 // ─────────────────────────────────────────────────────────────
 
 function ProductRow({ product, onDelete, onDuplicate }: {
-  product: Product;
+  product: VendorProductRow;
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
 }) {
@@ -123,7 +59,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
     >
       {/* Main row — clicking anywhere goes to edit */}
       <button
-        onClick={() => navigate("/upload")}
+        onClick={() => navigate(`/upload?id=${product.id}`)}
         className="w-full flex items-start gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
       >
         {/* Thumbnail */}
@@ -170,9 +106,9 @@ function ProductRow({ product, onDelete, onDuplicate }: {
               </div>
               <span className="text-[10px] text-gray-400">{product.profileScore}% Score</span>
             </div>
-            {product.status === "draft" && (
+            {product.status !== "active" && (
               <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", statusStyle)}>
-                Draft
+                {product.status === "pending" ? "Under review" : "Draft"}
               </span>
             )}
           </div>
@@ -233,7 +169,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 
           {/* Edit button */}
           <button
-            onClick={() => navigate("/upload")}
+            onClick={() => navigate(`/upload?id=${product.id}`)}
             className="flex items-center gap-1 px-2.5 py-1 border border-[#256fef] text-[#256fef] rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
           >
             <Edit2 className="w-3 h-3" /> Edit
@@ -251,7 +187,9 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 const Products = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const [products, setProducts] = useState<Product[]>(PRODUCTS);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const { data: products = [], isLoading } = useMyProducts(user?.id);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -262,23 +200,27 @@ const Products = () => {
     return matchSearch && matchStatus;
   });
 
-  const handleDelete = (id: string) => {
-    setProducts(p => p.filter(pr => pr.id !== id));
-    toast.success("Product deleted");
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["products"] });
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProduct(id);
+      refresh();
+      toast.success("Product deleted");
+    } catch (e) {
+      toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) });
+    }
   };
 
-  const handleDuplicate = (id: string) => {
-    const original = products.find(p => p.id === id);
-    if (!original) return;
-    const copy: Product = {
-      ...original,
-      id: Date.now().toString(),
-      name: original.name + " (Copy)",
-      status: "draft",
-      productCode: "CSR-" + Date.now().toString().slice(-3),
-    };
-    setProducts(p => [copy, ...p]);
-    toast.success("Product duplicated");
+  const handleDuplicate = async (id: string) => {
+    if (!user) return;
+    try {
+      await duplicateProduct(user.id, id);
+      refresh();
+      toast.success("Product duplicated", { description: "Saved as a draft." });
+    } catch (e) {
+      toast.error("Duplicate failed", { description: e instanceof Error ? e.message : String(e) });
+    }
   };
 
   return (
@@ -357,7 +299,9 @@ const Products = () => {
 
           {/* ── Product count ── */}
           <motion.p variants={section} className="text-xs text-gray-500 px-1">
-            {filtered.length} product{filtered.length !== 1 ? "s" : ""}
+            {!user ? "Sign in as a vendor to manage your products"
+              : isLoading ? "Loading your products…"
+              : `${filtered.length} product${filtered.length !== 1 ? "s" : ""}`}
           </motion.p>
 
           {/* ── Product list ── */}

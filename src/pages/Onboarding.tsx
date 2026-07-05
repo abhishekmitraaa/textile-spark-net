@@ -22,6 +22,8 @@ import { CategorySelector } from "@/components/upload/CategorySelector";
 import { useVendorOnboardingSummary, vendorOnboardingSummaryFixture } from "@/hooks/useVendorData";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import { saveVendorOnboarding } from "@/lib/queries/vendorOnboarding";
 
 const TOTAL_STEPS = 8;
 
@@ -39,6 +41,7 @@ const onboardingMenuLinks = [
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
 
   // Step 2
@@ -215,8 +218,45 @@ export default function Onboarding() {
   };
   const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
 
-  const submitContract = () => {
+  const submitContract = async () => {
     if (!agreed || !contractName.trim()) return toast.error("Complete the name and agreement to continue");
+    // Persist the whole registration to the DB (vendor_profiles + KYC docs +
+    // the step-7 product). Non-blocking: the welcome screen shows regardless.
+    if (user) {
+      try {
+        await saveVendorOnboarding(user.id, {
+          businessName: businessName || contractName,
+          phone: mobile ? `${countryCode} ${mobile}` : (primaryContact || undefined),
+          whatsapp: whatsappOptIn && mobile ? `${countryCode} ${mobile}` : undefined,
+          website: hasWebsite ? websiteUrl : undefined,
+          addressLine: [building, floor].filter(Boolean).join(", ") || undefined,
+          area: area || undefined,
+          city: city || undefined,
+          landmark: landmark || undefined,
+          ownerName: ownerName || contractName,
+          ownerEmail: ownerEmail || undefined,
+          country: country === "IN" ? "India" : country || undefined,
+          pan: pan || undefined,
+          gstin: hasGstin ? gstin : undefined,
+          cin: cin || undefined,
+          aadhaar: aadhaar || undefined,
+          product: productName
+            ? {
+                name: productName,
+                price: price || undefined,
+                moq: moq || undefined,
+                fabric: fabric || undefined,
+                gsm: gsm || undefined,
+                category,
+              }
+            : undefined,
+        });
+      } catch (err) {
+        toast.error("Couldn't save some registration details", {
+          description: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
     setShowWelcome(true);
   };
 

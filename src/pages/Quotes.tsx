@@ -2,6 +2,9 @@ import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -730,11 +733,13 @@ function RFQDetailPage({ rfq, onBack }: { rfq: RFQ; onBack: () => void }) {
 
 function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () => void }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: myQuotes = [] } = useMySubmittedQuotes(user?.id);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);
 
-  const filtered = SUBMITTED_QUOTES.filter(q =>
+  const filtered = myQuotes.filter(q =>
     !search || q.rfqTitle.toLowerCase().includes(search.toLowerCase()) || q.buyerName.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -746,10 +751,10 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
   });
 
   const stats = {
-    total: SUBMITTED_QUOTES.length,
-    accepted: SUBMITTED_QUOTES.filter(q => q.status === "accepted").length,
-    negotiating: SUBMITTED_QUOTES.filter(q => q.status === "in_negotiation").length,
-    pending: SUBMITTED_QUOTES.filter(q => q.status === "awaiting").length,
+    total: myQuotes.length,
+    accepted: myQuotes.filter(q => q.status === "accepted").length,
+    negotiating: myQuotes.filter(q => q.status === "in_negotiation").length,
+    pending: myQuotes.filter(q => q.status === "awaiting").length,
   };
 
   const statusConfig = {
@@ -999,6 +1004,16 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
             </motion.div>
           );
         })}
+        {sorted.length === 0 && (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 text-center">
+            <FileText className="w-9 h-9 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-gray-900">No quotes submitted yet</p>
+            <p className="text-xs text-gray-400 mt-1">Respond to open buyer requirements to see your quotes here.</p>
+            <button onClick={onSwitchToRequests} className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#ef4d62] px-4 py-2 text-xs font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
+              Browse open RFQs <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );
@@ -1009,33 +1024,7 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
 // ─────────────────────────────────────────────────────────────
 
 const Quotes = () => {
-  const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const [activeTab, setActiveTab]     = useState<"requests" | "submitted">("requests");
-  const [selectedRFQ, setSelectedRFQ] = useState<RFQ | null>(null);
-  const [search, setSearch]           = useState("");
-  const [filterOpen, setFilterOpen]   = useState(false);
-  const [category, setCategory]       = useState("all");
-  const [location, setLocation]       = useState("all");
-  const [status, setStatus]           = useState("all");
-  const [minQty, setMinQty]           = useState(10);
-
-  const filtered = RFQ_DATA.filter(r => {
-    const matchSearch = !search || r.title.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = status === "all" || r.status === status || (status === "closing_soon" && r.isClosingSoon);
-    return matchSearch && matchStatus;
-  });
-
-  // If detail view is open
-  if (selectedRFQ) {
-    return (
-      <DashboardLayout>
-        <div className="-m-4 lg:-m-6">
-          <RFQDetailPage rfq={selectedRFQ} onBack={() => setSelectedRFQ(null)} />
-        </div>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>
@@ -1043,149 +1032,20 @@ const Quotes = () => {
         <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-12">
 
           {/* ── Header ── */}
-          <motion.div variants={section} className="flex items-start justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">Quotation Requests</h1>
-              <p className="text-xs text-gray-400">Browse and quote on buyer requirements</p>
-            </div>
-            <motion.button whileTap={TAP} transition={TAP_T} className="relative p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <Bell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-[#ef4d62] rounded-full" />
-            </motion.button>
+          <motion.div variants={section}>
+            <h1 className="text-xl font-bold text-gray-900">Quotation Requests</h1>
+            <p className="text-xs text-gray-400">Quote on live buyer requirements and track every quote you've sent.</p>
           </motion.div>
 
-          {/* ── Tab switcher ── */}
-          <motion.div variants={section} className="flex gap-2">
-            <motion.button
-              whileTap={TAP}
-              transition={TAP_T}
-              onClick={() => setActiveTab("requests")}
-              className={cn(
-                "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all",
-                activeTab === "requests"
-                  ? "bg-white border border-gray-200 text-gray-900 shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              )}
-            >
-              Quotation Requests
-            </motion.button>
-            <motion.button
-              whileTap={TAP}
-              transition={TAP_T}
-              onClick={() => setActiveTab("submitted")}
-              className={cn(
-                "flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center justify-center gap-2",
-                activeTab === "submitted"
-                  ? "bg-[#ef4d62] text-white shadow-sm"
-                  : "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50"
-              )}
-            >
-              My Submitted Quotes
-              <span className={cn(
-                "text-[10px] font-bold px-1.5 py-0.5 rounded-full",
-                activeTab === "submitted" ? "bg-white/20 text-white" : "bg-[#ef4d62] text-white"
-              )}>
-                {SUBMITTED_QUOTES.length}
-              </span>
-            </motion.button>
+          {/* ── Live buyer RFQs (real) — quote inline. Renders nothing when there are none. ── */}
+          <motion.div variants={section}>
+            <OpenRfqLeads />
           </motion.div>
 
-          {activeTab === "submitted" ? (
-            <motion.div variants={section}>
-              <SubmittedQuotesView onSwitchToRequests={() => setActiveTab("requests")} />
-            </motion.div>
-          ) : (
-            <>
-              {/* ── Stats 2×2 ── */}
-              <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Open RFQs",      value: "234", sub: "+12 today",        icon: FileText,    color: "text-blue-500"   },
-                  { label: "Closing Soon",   value: "28",  sub: "< 3 days",         icon: Clock,       color: "text-orange-500" },
-                  { label: "Chats Pending",  value: "6",   sub: "+8% this week",    icon: MessageSquare,color: "text-purple-500" },
-                  { label: "Your Quotes",    value: "15",  sub: "Share more quotes", icon: Star,        color: "text-[#ef4d62]"  },
-                ].map(s => (
-                  <motion.div key={s.label} variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-3.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs text-gray-500">{s.label}</span>
-                      <s.icon className={cn("w-4 h-4", s.color)} />
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{s.sub}</p>
-                  </motion.div>
-                ))}
-              </motion.div>
-
-              {/* ── RFQ alert ── */}
-              <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center justify-between">
-                <div className="flex items-start gap-3">
-                  <Bell className="w-5 h-5 text-[#ef4d62] mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">Get notified for matching RFQs</p>
-                    <p className="text-xs text-gray-400">Set up alerts for your product categories</p>
-                  </div>
-                </div>
-                <motion.button
-                  whileTap={TAP}
-                  transition={TAP_T}
-                  onClick={() => navigate("/leads")}
-                  className="shrink-0 ml-3 px-4 py-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] text-xs font-bold hover:bg-[#ef4d62]/5 transition-colors"
-                >
-                  Set Alerts
-                </motion.button>
-              </motion.div>
-
-              {/* ── Search + filter ── */}
-              <motion.div variants={section} className="space-y-2">
-                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 shadow-sm">
-                  <Search className="w-4 h-4 text-gray-400 shrink-0" />
-                  <input type="text" placeholder="Search RFQs by product..." value={search}
-                    onChange={e => setSearch(e.target.value)}
-                    className="flex-1 text-sm text-gray-700 bg-transparent focus:outline-none placeholder-gray-400" />
-                  <motion.button
-                    whileTap={TAP}
-                    transition={TAP_T}
-                    onClick={() => setFilterOpen(p => !p)}
-                    className={cn(
-                      "p-1.5 rounded-lg transition-colors",
-                      filterOpen ? "bg-[#ef4d62] text-white" : "hover:bg-gray-100 text-gray-500"
-                    )}
-                  >
-                    <Filter className="w-4 h-4" />
-                  </motion.button>
-                  <motion.button
-                    whileTap={TAP}
-                    transition={TAP_T}
-                    onClick={() => setSearch("")}
-                    className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors text-gray-400"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </motion.button>
-                </div>
-
-                {/* Filter dropdowns — only visible when filter icon clicked */}
-                <FilterPanel
-                  isOpen={filterOpen} onClose={() => setFilterOpen(false)}
-                  category={category} setCategory={setCategory}
-                  location={location} setLocation={setLocation}
-                  status={status} setStatus={setStatus}
-                  minQty={minQty} setMinQty={setMinQty}
-                />
-              </motion.div>
-
-              {/* ── RFQ cards ── */}
-              {filtered.length === 0 ? (
-                <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 py-16 text-center">
-                  <p className="text-gray-400 text-sm">No RFQs match your search</p>
-                </motion.div>
-              ) : (
-                <motion.div variants={listContainer} className="space-y-4">
-                  {filtered.map(rfq => (
-                    <RFQCard key={rfq.id} rfq={rfq} onClick={() => setSelectedRFQ(rfq)} />
-                  ))}
-                </motion.div>
-              )}
-            </>
-          )}
+          {/* ── Your submitted quotes (real) ── */}
+          <motion.div variants={section}>
+            <SubmittedQuotesView onSwitchToRequests={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+          </motion.div>
         </motion.div>
       </div>
     </DashboardLayout>

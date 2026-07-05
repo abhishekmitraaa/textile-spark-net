@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
+import { useMyProducts } from "@/lib/queries/products";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,13 +98,37 @@ const listItem = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
 };
 
+const fmtNum = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}K` : String(n));
+
 const Analytics = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
+  const { user } = useAuth();
+  const { data: dash } = useVendorDashboard(user?.id);
+  const { data: myProducts = [] } = useMyProducts(user?.id);
   const [activeTime, setActiveTime] = useState("7 days");
   const [sortBy, setSortBy] = useState<"views" | "inquiries">("views");
 
-  const sorted = [...topProducts].sort((a, b) => b[sortBy] - a[sortBy]);
+  // Real KPIs derived from the vendor's own data (were hardcoded).
+  const totalViews = myProducts.reduce((s, p) => s + p.views, 0);
+  const liveCount = myProducts.filter((p) => p.status === "active").length;
+  const inactiveCount = myProducts.length - liveCount;
+  const inquiries = dash?.enquiries ?? myProducts.reduce((s, p) => s + p.inquiries, 0);
+  const convRate = totalViews > 0 ? (inquiries / totalViews) * 100 : 0;
+
+  const stats = [
+    { title: "Total Views", value: fmtNum(totalViews), change: `${liveCount} live product${liveCount === 1 ? "" : "s"}`, positive: true, icon: Eye },
+    { title: "Inquiries", value: fmtNum(inquiries), change: "From interested buyers", positive: true, icon: MessageSquare },
+    { title: "Conversion", value: `${convRate.toFixed(1)}%`, change: "inquiries ÷ views", positive: convRate > 0, icon: Target },
+    { title: "Active Products", value: String(liveCount), change: inactiveCount > 0 ? `${inactiveCount} not live` : "all live", positive: inactiveCount === 0, icon: Package },
+  ];
+
+  // Real top products by views / inquiries.
+  const realTop = myProducts.map((p) => ({ id: p.id, name: p.name, views: p.views, inquiries: p.inquiries }));
+  const sorted = [...realTop]
+    .sort((a, b) => b[sortBy] - a[sortBy])
+    .slice(0, 5)
+    .map((p, i) => ({ ...p, rank: i + 1 }));
 
   return (
     <DashboardLayout>
@@ -109,6 +136,9 @@ const Analytics = () => {
         {/* Header */}
         <motion.div variants={section}>
           <h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Stat cards and Top Products reflect your live data. Trend charts are illustrative until visit-level tracking is enabled.
+          </p>
           <div className="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
             {timeFilters.map((f) => (
               <motion.button
@@ -340,7 +370,11 @@ const Analytics = () => {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm">
-                    Your <span className="font-semibold">Premium Cotton Blend</span> has the highest conversion rate at <span className="font-semibold text-accent">3.8%</span>. Consider running ads to maximize reach.
+                    {sorted.length > 0 ? (
+                      <>Your <span className="font-semibold">{sorted[0].name}</span> is your top listing with <span className="font-semibold text-accent">{sorted[0].views.toLocaleString("en-IN")} views</span> and {sorted[0].inquiries} inquiries. Consider running ads to maximize reach.</>
+                    ) : (
+                      <>Add products and they'll start collecting views and inquiries here. Running an ad boosts reach fast.</>
+                    )}
                   </p>
                   <Button
                     size="sm"

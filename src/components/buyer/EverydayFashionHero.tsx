@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { openSaveModal, useSaved } from "@/lib/savedStore";
 
 // ─────────────────────────────────────────────────────────────
 // EVERYDAY FASHION HERO — center-emphasis auto-advancing carousel
@@ -51,8 +52,21 @@ const SLIDES: HeroSlide[] = [
 ];
 
 const AUTO_ADVANCE_MS = 4200;
-const SIDE_OFFSET_PCT = 42;       // distance of each peek from center (% of container width)
-const PEEK_SCALE = 0.76;
+// Each slide's size is now driven by HEIGHT (h-full of the stage) with
+// aspect-[3/4] determining width, instead of a container-relative width
+// percentage. This guarantees a slide can never grow taller than the
+// stage's own fixed height (h-[300px]/[440px]) regardless of viewport
+// width — the previous width-driven approach let aspect-ratio compute an
+// unconstrained height that, on wide desktop screens, exceeded the stage
+// and bled upward into the heading above it.
+//
+// Framer Motion's `x: "N%"` transform is still relative to the ELEMENT'S
+// OWN width (same as CSS translateX), but since slide width is now a
+// fixed px value derived from stage height (not container width), the
+// same SIDE_OFFSET_PCT works correctly at both breakpoints without
+// needing separate tuning per breakpoint.
+const SIDE_OFFSET_PCT = 96;
+const PEEK_SCALE = 0.74;
 const PEEK_OPACITY = 0.4;
 const SWIPE_OFFSET_PX = 60;       // min absolute drag distance to count as a swipe
 const SWIPE_VELOCITY = 500;       // px/s velocity threshold for a fast flick
@@ -63,17 +77,16 @@ interface SlideProps {
   slide: HeroSlide;
   offset: number;            // shortest-path distance from active index
   saved: boolean;
-  onToggleSave: (id: string) => void;
   reducedMotion: boolean;
 }
 
-function Slide({ slide, offset, saved, onToggleSave, reducedMotion }: SlideProps) {
+function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
   const isActive = offset === 0;
   const isVisible = Math.abs(offset) <= 1;
 
   return (
     <motion.div
-      className="absolute top-1/2 left-1/2 w-[48%] lg:w-[40%]"
+      className="absolute top-1/2 left-1/2 h-full aspect-[3/4]"
       style={{ transformOrigin: "center center" }}
       animate={{
         x: `${-50 + offset * SIDE_OFFSET_PCT}%`,
@@ -92,7 +105,7 @@ function Slide({ slide, offset, saved, onToggleSave, reducedMotion }: SlideProps
     >
       <Link
         to={`/product/${slide.id}`}
-        className="block relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-200 shadow-lg"
+        className="block relative w-full h-full rounded-2xl overflow-hidden bg-gray-200 shadow-lg"
         tabIndex={isActive ? 0 : -1}
       >
         <img
@@ -110,9 +123,20 @@ function Slide({ slide, offset, saved, onToggleSave, reducedMotion }: SlideProps
         )}
 
         <button
-          onClick={e => { e.preventDefault(); onToggleSave(slide.id); }}
+          onClick={e => {
+            e.preventDefault();
+            openSaveModal({
+              id: slide.id,
+              vendorId: slide.vendorId,
+              name: slide.name,
+              category: slide.category,
+              price: slide.price,
+              moq: slide.moq,
+              image: slide.image,
+            });
+          }}
           className="absolute top-3 right-3 w-8 h-8 lg:w-9 lg:h-9 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
-          aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+          aria-label={saved ? "Edit saved folders" : "Add to wishlist"}
           aria-pressed={saved}
           tabIndex={isActive ? 0 : -1}
         >
@@ -139,7 +163,7 @@ export default function EverydayFashionHero() {
   const prefersReducedMotion = useReducedMotion() ?? false;
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const savedState = useSaved();
 
   const total = SLIDES.length;
 
@@ -156,15 +180,6 @@ export default function EverydayFashionHero() {
     // goNext is stable (no deps); ignore lint complaint about leaving it out
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paused, prefersReducedMotion, total]);
-
-  const toggleSave = (id: string) => {
-    setSaved(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
 
   // Compute shortest-path offset for each slide so wrap-around feels smooth.
   const offsetFor = (i: number): number => {
@@ -192,7 +207,7 @@ export default function EverydayFashionHero() {
 
       {/* Stage — drag-x for swipe gesture; offset/velocity threshold on release */}
       <motion.div
-        className="relative h-[300px] lg:h-[440px] touch-pan-y select-none"
+        className="relative h-[300px] lg:h-[440px] overflow-hidden touch-pan-y select-none"
         aria-live="polite"
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
@@ -215,8 +230,7 @@ export default function EverydayFashionHero() {
             key={slide.id}
             slide={slide}
             offset={offsetFor(i)}
-            saved={saved.has(slide.id)}
-            onToggleSave={toggleSave}
+            saved={Boolean(savedState.products[slide.id])}
             reducedMotion={prefersReducedMotion}
           />
         ))}

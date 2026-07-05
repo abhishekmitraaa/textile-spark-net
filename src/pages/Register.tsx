@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, EyeOff, ArrowRight, Building2, ShoppingBag, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import CosoraLogo from "@/components/CosoraLogo";
 
 type Role = "buyer" | "seller";
 
@@ -71,9 +72,7 @@ const Register = () => {
 
         <div className="relative z-10">
           <Link to="/" className="inline-block">
-            <span className="font-display text-2xl font-bold italic text-background">
-              <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-background">Cosora</span>
-            </span>
+            <CosoraLogo height={26} variant="white" />
           </Link>
         </div>
 
@@ -121,9 +120,7 @@ const Register = () => {
         {/* Mobile logo */}
         <div className="lg:hidden mb-8">
           <Link to="/">
-            <span className="font-display text-2xl font-bold italic text-foreground">
-              <span className="font-logo text-2xl font-bold italic uppercase tracking-[-0.08em] text-foreground">Cosora</span>
-            </span>
+            <CosoraLogo height={26} />
           </Link>
         </div>
 

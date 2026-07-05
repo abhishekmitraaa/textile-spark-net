@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Search, MessageCircle, Phone, Mail, FileText,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
   ExternalLink, Instagram, X, Paperclip, Send, Camera,
-  Image as ImageIcon, Music, FileText as FilePdf,
+  ArrowLeft, Image as ImageIcon, Music, FileText as FilePdf,
 } from "lucide-react";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -262,6 +263,7 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 
 const Help = () => {
   const reduced = useReducedMotion();
+  const navigate = useNavigate();
   const [chatOpen, setChatOpen]       = useState(false);
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -275,12 +277,21 @@ const Help = () => {
   })).filter(cat => cat.faqs.length > 0);
 
   return (
-    <DashboardLayout>
-      <div
-        className="min-h-screen bg-gray-50 -m-4 lg:-m-6"
-        style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
-      >
-        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-12">
+    <div
+      className="min-h-screen bg-gray-50"
+      style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
+    >
+      {/* ── Back header (no home tab strip in the profile section) ── */}
+      <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
+        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+          <button onClick={() => navigate("/profile")} aria-label="Back" className="-ml-1 p-1">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <h1 className="text-base font-bold text-gray-900">Help &amp; Support</h1>
+        </div>
+      </div>
+
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-28">
 
           {/* ── Welcome ── */}
           <motion.div variants={section}>
@@ -500,12 +511,13 @@ const Help = () => {
             </Card>
           </motion.div>
 
-        </motion.div>
-      </div>
+      </motion.div>
+
+      <MobileBottomNav />
 
       {/* ── Chat Modal ── */}
       <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
-    </DashboardLayout>
+    </div>
   );
 };
 

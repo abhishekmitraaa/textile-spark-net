@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import CosoraLogo from "@/components/CosoraLogo";
 
 const Terms = () => {
   const navigate = useNavigate();
@@ -16,9 +17,9 @@ const Terms = () => {
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
         {/* COSORA wordmark */}
-        <h1 className="font-logo text-center text-3xl font-extrabold italic text-white uppercase tracking-tight mb-4">
-          COSORA
-        </h1>
+        <div className="flex justify-center mb-4">
+          <CosoraLogo height={30} variant="white" />
+        </div>
 
         {/* T&C white card */}
         <div className="flex-1 bg-white rounded-2xl p-5 overflow-y-auto mb-4">

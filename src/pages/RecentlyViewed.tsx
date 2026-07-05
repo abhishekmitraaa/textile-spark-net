@@ -1,22 +1,13 @@
-import { useState } from "react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
-import { 
-  ArrowLeft, 
-  Heart, 
-  MessageCircle, 
-  Phone, 
-  Star, 
-  Clock, 
-  Trash2,
-  Filter,
-  ChevronRight,
-  BadgeCheck,
-  MapPin
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, useReducedMotion } from "framer-motion";
+import BuyerShell from "@/components/buyer/BuyerShell";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -28,290 +19,264 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  ArrowLeft,
+  Trash2,
+  ArrowUpDown,
+  Filter,
+  Check,
+  Heart,
+  MapPin,
+  Phone,
+  MessageCircle,
+  Star,
+  Clock,
+  BadgeCheck,
+} from "lucide-react";
+import {
+  useRecentlyViewed,
+  removeRecent,
+  clearRecent,
+  relativeTime,
+  type RecentProduct,
+} from "@/lib/recentlyViewedStore";
+import { openSaveModal, useSaved } from "@/lib/savedStore";
+import { useCallVendor } from "@/lib/queries/calls";
+import type { Gender } from "@/lib/listingProducts";
+import { cn } from "@/lib/utils";
 
-// Mock recently viewed products
-const recentlyViewedProducts = [
-  {
-    id: "1",
-    name: "Premium Cotton Polo T-Shirt",
-    vendor: "Tirupur Textiles",
-    vendorVerified: true,
-    location: "Tirupur, Tamil Nadu",
-    price: "₹320",
-    priceUnit: "per piece",
-    moq: "100 pieces",
-    rating: 4.8,
-    reviews: 156,
-    image: "https://images.unsplash.com/photo-1625910513413-5fc4e5e3d7a0?w=400",
-    viewedAt: "2 hours ago",
-    category: "Men's T-shirts",
-  },
-  {
-    id: "2",
-    name: "Women's Casual Kurta Set",
-    vendor: "Delhi Fashion Hub",
-    vendorVerified: true,
-    location: "Delhi NCR",
-    price: "₹850",
-    priceUnit: "per set",
-    moq: "50 sets",
-    rating: 4.6,
-    reviews: 89,
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400",
-    viewedAt: "5 hours ago",
-    category: "Women's Ethnic",
-  },
-  {
-    id: "3",
-    name: "Kids Cotton Shorts",
-    vendor: "Gujarat Garments",
-    vendorVerified: false,
-    location: "Ahmedabad, Gujarat",
-    price: "₹180",
-    priceUnit: "per piece",
-    moq: "200 pieces",
-    rating: 4.3,
-    reviews: 45,
-    image: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400",
-    viewedAt: "Yesterday",
-    category: "Kids Wear",
-  },
-  {
-    id: "4",
-    name: "Denim Jeans - Slim Fit",
-    vendor: "Mumbai Denim Co.",
-    vendorVerified: true,
-    location: "Mumbai, Maharashtra",
-    price: "₹650",
-    priceUnit: "per piece",
-    moq: "75 pieces",
-    rating: 4.7,
-    reviews: 203,
-    image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=400",
-    viewedAt: "Yesterday",
-    category: "Men's Bottoms",
-  },
-  {
-    id: "5",
-    name: "Formal Cotton Shirt",
-    vendor: "Bangalore Apparel",
-    vendorVerified: true,
-    location: "Bangalore, Karnataka",
-    price: "₹420",
-    priceUnit: "per piece",
-    moq: "100 pieces",
-    rating: 4.5,
-    reviews: 78,
-    image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400",
-    viewedAt: "2 days ago",
-    category: "Men's Shirts",
-  },
-  {
-    id: "6",
-    name: "Sports Track Pants",
-    vendor: "Active Wear India",
-    vendorVerified: false,
-    location: "Ludhiana, Punjab",
-    price: "₹380",
-    priceUnit: "per piece",
-    moq: "150 pieces",
-    rating: 4.2,
-    reviews: 34,
-    image: "https://images.unsplash.com/photo-1556906781-9a412961c28c?w=400",
-    viewedAt: "3 days ago",
-    category: "Sportswear",
-  },
+type GenderFilter = "all" | Gender;
+type SortKey = "recent" | "price-asc" | "price-desc" | "rating";
+
+const GENDERS: { key: GenderFilter; label: string }[] = [
+  { key: "all", label: "All" }, { key: "women", label: "Women" }, { key: "men", label: "Men" },
+  { key: "kids", label: "Kids" }, { key: "unisex", label: "Unisex" },
+];
+const SORTS: { key: SortKey; label: string }[] = [
+  { key: "recent", label: "Recently Viewed" }, { key: "price-asc", label: "Price: Low to High" },
+  { key: "price-desc", label: "Price: High to Low" }, { key: "rating", label: "Top Rated" },
 ];
 
-const RecentlyViewed = () => {
-  const [products, setProducts] = useState(recentlyViewedProducts);
-  const [wishlist, setWishlist] = useState<string[]>([]);
-
-  const toggleWishlist = (id: string) => {
-    setWishlist(prev => 
-      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
-    );
-  };
-
-  const removeFromHistory = (id: string) => {
-    setProducts(prev => prev.filter(item => item.id !== id));
-  };
-
-  const clearAllHistory = () => {
-    setProducts([]);
-  };
+// ── Card row (image + heart, details, Chat / CALL NOW / instant-delete) ──
+function RecentRow({ p }: { p: RecentProduct }) {
+  const navigate = useNavigate();
+  const callVendor = useCallVendor();
+  const saved = useSaved();
+  const isSaved = Boolean(saved.products[p.id]);
 
   return (
-    <div className="min-h-screen bg-background pb-20 lg:pb-8">
-      {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <Link to="/" className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary lg:hidden">
-              <ArrowLeft size={20} />
-            </Link>
-            <div>
-              <h1 className="text-lg font-semibold text-foreground">Recently Viewed</h1>
-              <p className="text-xs text-muted-foreground">{products.length} products</p>
-            </div>
+    <motion.div
+      layout
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.96 }}
+      transition={{ duration: 0.2 }}
+      className="rounded-xl border border-gray-200 bg-white p-3"
+    >
+      <div className="flex gap-3">
+        <Link to={`/product/${p.id}`} className="relative w-24 h-28 shrink-0 rounded-lg overflow-hidden bg-gray-100">
+          <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+          <button
+            onClick={(e) => { e.preventDefault(); openSaveModal(p); }}
+            aria-label={isSaved ? "Edit saved folders" : "Save product"}
+            className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white transition-colors"
+          >
+            <Heart className={cn("w-3.5 h-3.5", isSaved ? "fill-[#ef4d62] text-[#ef4d62]" : "text-gray-500")} />
+          </button>
+        </Link>
+
+        <div className="min-w-0 flex-1">
+          <Link to={`/product/${p.id}`}>
+            <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{p.name}</h3>
+          </Link>
+          <p className="inline-flex items-center gap-1 text-xs text-[#ef4d62] font-medium mt-0.5">
+            {p.manufacturer} {p.verified && <BadgeCheck className="w-3 h-3" />}
+          </p>
+          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-500">
+            <MapPin className="w-3 h-3 shrink-0" /> <span className="truncate">{p.location}</span>
           </div>
-          <div className="flex items-center gap-2">
-            {products.length > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                    <Trash2 size={16} className="mr-1" />
-                    <span className="hidden sm:inline">Clear All</span>
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Clear viewing history?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will remove all recently viewed products. This action cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={clearAllHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      Clear All
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+          <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-600">
+            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
+            <span className="font-bold">{p.rating.toFixed(1)}</span>
+            <span className="text-gray-400">({p.reviews} reviews)</span>
+          </div>
+          <div className="flex items-end justify-between gap-2 mt-1">
+            <div>
+              <p className="text-sm font-bold text-gray-900">{p.price}</p>
+              <p className="text-[11px] text-gray-500">{p.moq}</p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
+              <Clock className="w-3 h-3" /> {relativeTime(p.viewedAt)}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {products.length === 0 ? (
+      <div className="flex items-center gap-2 mt-2.5">
+        <button onClick={() => navigate(`/chats/${p.vendorId}`)} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg py-2 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors">
+          <MessageCircle className="w-3.5 h-3.5" /> Chat
+        </button>
+        <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-[#ef4d62] text-white rounded-lg py-2 text-xs font-bold hover:bg-[#ef4d62]/90 transition-colors">
+          <Phone className="w-3.5 h-3.5" /> CALL NOW
+        </button>
+        {/* Deletes instantly — no confirm (per reference note) */}
+        <button
+          onClick={() => removeRecent(p.id)}
+          aria-label="Remove from history"
+          className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#ef4d62] hover:border-[#ef4d62]/40 transition-colors"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </motion.div>
+  );
+}
+
+const RecentlyViewed = () => {
+  const navigate = useNavigate();
+  const reduced = useReducedMotion();
+  const recent = useRecentlyViewed();
+
+  const [gender, setGender] = useState<GenderFilter>("all");
+  const [sort, setSort] = useState<SortKey>("recent");
+  const [verifiedOnly, setVerifiedOnly] = useState(false);
+
+  const products = useMemo(() => {
+    let list = [...recent];
+    if (gender !== "all") list = list.filter((p) => p.gender === gender);
+    if (verifiedOnly) list = list.filter((p) => p.verified);
+    if (sort === "price-asc") list.sort((a, b) => a.priceValue - b.priceValue);
+    else if (sort === "price-desc") list.sort((a, b) => b.priceValue - a.priceValue);
+    else if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
+    else list.sort((a, b) => b.viewedAt - a.viewedAt);
+    return list;
+  }, [recent, gender, sort, verifiedOnly]);
+
+  const genderLabel = GENDERS.find((g) => g.key === gender)?.label ?? "All";
+  const sortLabel = SORTS.find((s) => s.key === sort)?.label ?? "Sort";
+
+  return (
+    <BuyerShell>
+      <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
+        {/* Title row */}
+        <div className="flex items-center gap-2 mb-3">
+          <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg font-bold text-gray-900">Recently Viewed</h1>
+            <p className="text-xs text-gray-500">{recent.length} product{recent.length === 1 ? "" : "s"}</p>
+          </div>
+
+          {recent.length > 0 && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button aria-label="Clear viewing history" className="p-1.5 text-[#ef4d62] hover:bg-[#ef4d62]/10 rounded-lg transition-colors">
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="max-w-xs rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-center">Clear viewing history?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-center">
+                    This will remove all recently viewed products. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+                  <AlertDialogAction
+                    onClick={clearRecent}
+                    className="w-full bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+                  >
+                    Clear All
+                  </AlertDialogAction>
+                  <AlertDialogCancel className="w-full mt-0">Cancel</AlertDialogCancel>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+
+        {/* Gender / Sort / Filter */}
+        {recent.length > 0 && (
+          <div className="grid grid-cols-3 border-y border-gray-200 divide-x divide-gray-200 mb-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
+                {gender === "all" ? "GENDER" : genderLabel}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40">
+                {GENDERS.map((o) => (
+                  <DropdownMenuItem key={o.key} onClick={() => setGender(o.key)} className="gap-2 text-sm">
+                    <Check className={cn("w-4 h-4", gender === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
+                <ArrowUpDown className="w-3.5 h-3.5" /> {sort === "recent" ? "SORT" : sortLabel}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="w-48">
+                {SORTS.map((o) => (
+                  <DropdownMenuItem key={o.key} onClick={() => setSort(o.key)} className="gap-2 text-sm">
+                    <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
+                <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-[#ef4d62]")} /> FILTER
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setVerifiedOnly((v) => !v)} className="gap-2 text-sm">
+                  <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> Verified vendors only
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+
+        {/* Items */}
+        {recent.length === 0 ? (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={reduced ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-16 text-center"
+            className="flex flex-col items-center justify-center py-20 text-center"
           >
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-              <Clock size={32} className="text-muted-foreground" />
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+              <Clock className="w-8 h-8 text-gray-400" />
             </div>
-            <h3 className="mb-2 text-lg font-medium text-foreground">No recently viewed products</h3>
-            <p className="mb-6 max-w-sm text-sm text-muted-foreground">
+            <h3 className="mb-1.5 text-base font-bold text-gray-900">No recently viewed products</h3>
+            <p className="mb-6 max-w-xs text-sm text-gray-500">
               Products you view will appear here so you can easily find them again.
             </p>
-            <Link to="/browse">
-              <Button>
-                Browse Products
-              </Button>
-            </Link>
+            <button
+              onClick={() => navigate("/home/new-arrivals")}
+              className="rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white px-6 py-2.5 text-sm font-bold transition-colors"
+            >
+              Browse Products
+            </button>
           </motion.div>
+        ) : products.length === 0 ? (
+          <div className="py-16 text-center">
+            <Filter className="w-9 h-9 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">No products match these filters.</p>
+            <button
+              onClick={() => { setGender("all"); setVerifiedOnly(false); }}
+              className="mt-3 text-sm font-semibold text-[#ef4d62]"
+            >
+              Clear filters
+            </button>
+          </div>
         ) : (
           <div className="space-y-3">
-            {products.map((product, index) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.05 }}
-                className="group overflow-hidden rounded-xl border border-border bg-card shadow-sm transition-all hover:shadow-md"
-              >
-                <div className="flex gap-3 p-3 sm:gap-4 sm:p-4">
-                  {/* Product Image */}
-                  <Link to={`/product/${product.id}`} className="shrink-0">
-                    <div className="relative h-24 w-24 overflow-hidden rounded-lg bg-muted sm:h-28 sm:w-28">
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      />
-                      {/* Wishlist button */}
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          toggleWishlist(product.id);
-                        }}
-                        className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-background"
-                      >
-                        <Heart
-                          size={14}
-                          className={wishlist.includes(product.id) ? "fill-red-500 text-red-500" : "text-muted-foreground"}
-                        />
-                      </button>
-                    </div>
-                  </Link>
-
-                  {/* Product Details */}
-                  <div className="flex flex-1 flex-col justify-between overflow-hidden">
-                    <div>
-                      <Link to={`/product/${product.id}`}>
-                        <h3 className="line-clamp-2 text-sm font-medium text-card-foreground transition-colors hover:text-primary sm:text-base">
-                          {product.name}
-                        </h3>
-                      </Link>
-                      
-                      {/* Vendor Info */}
-                      <div className="mt-1 flex items-center gap-1.5">
-                        <span className="text-xs text-muted-foreground sm:text-sm">{product.vendor}</span>
-                        {product.vendorVerified && (
-                          <BadgeCheck size={14} className="text-primary" />
-                        )}
-                      </div>
-
-                      {/* Location */}
-                      <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                        <MapPin size={12} />
-                        <span>{product.location}</span>
-                      </div>
-
-                      {/* Rating */}
-                      <div className="mt-1 flex items-center gap-2">
-                        <div className="flex items-center gap-0.5">
-                          <Star size={12} className="fill-amber-400 text-amber-400" />
-                          <span className="text-xs font-medium">{product.rating}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">({product.reviews} reviews)</span>
-                      </div>
-                    </div>
-
-                    {/* Price & MOQ */}
-                    <div className="mt-2 flex items-end justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-semibold text-card-foreground sm:text-base">{product.price}</p>
-                        <p className="text-xs text-muted-foreground">MOQ: {product.moq}</p>
-                      </div>
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock size={12} />
-                        <span>{product.viewedAt}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2 border-t border-border bg-muted/30 px-3 py-2.5 sm:px-4">
-                  <Button variant="outline" size="sm" className="flex-1 gap-1.5">
-                    <MessageCircle size={14} />
-                    <span>Chat</span>
-                  </Button>
-                  <Button size="sm" className="flex-1 gap-1.5">
-                    <Phone size={14} />
-                    <span>Call Now</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                    onClick={() => removeFromHistory(product.id)}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </motion.div>
-            ))}
+            {products.map((p) => <RecentRow key={p.id} p={p} />)}
           </div>
         )}
       </div>
-    </div>
+    </BuyerShell>
   );
 };
 

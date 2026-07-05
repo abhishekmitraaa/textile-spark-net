@@ -1,84 +1,45 @@
-import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion, useReducedMotion } from "framer-motion";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { useEffect, useState } from "react";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import BuyerShell from "@/components/buyer/BuyerShell";
+import ListingProductCard from "@/components/buyer/ListingProductCard";
+import type { ListingProduct } from "@/lib/listingProducts";
+import { openSaveModal, useSaved } from "@/lib/savedStore";
+import { useProductById } from "@/lib/queries/products";
+import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { useCallVendor } from "@/lib/queries/calls";
+import { recordView } from "@/lib/recentlyViewedStore";
+import { toast } from "sonner";
 import {
-  ArrowLeft,
-  Bookmark,
-  Share2,
-  Star,
-  MapPin,
-  Phone,
-  MessageCircle,
-  ChevronLeft,
-  ChevronRight,
-  BadgeCheck,
-  Clock,
-  Download,
-  Globe,
-  ThumbsUp,
-  ThumbsDown,
-  MoreVertical,
-  CheckCircle2,
-  Play,
-  Package,
+  Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
+  ChevronDown, BadgeCheck, Clock, Download, Globe, ThumbsUp, ThumbsDown, MoreVertical,
+  CheckCircle2, Play, Package, Plus, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import trustedSeal from "@/assets/Trustedseal.png";
 
-// === Animation constants (from CLAUDE.md convention) ===
+// === Animation constants ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } } };
-const sect = { hidden: { opacity: 0, y: 14 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.36 } } };
+const sect = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.36 } } };
 
-// === Color swatch map ===
+const CORAL = "#ef4d62";
 const COLOR_HEX: Record<string, string> = {
-  Beige: "#E8D5B7",
-  Navy: "#1B2A4A",
-  Olive: "#6B7A3D",
-  Black: "#1A1A1A",
-  White: "#F5F5F5",
-  Grey: "#9E9E9E",
-  Red: "#C0392B",
-  Green: "#2D6A4F",
-  Blue: "#2471A3",
-  Charcoal: "#36454F",
-  Maroon: "#800000",
-  Mustard: "#D4AC0D",
-  Teal: "#008080",
+  Beige: "#E8D5B7", Navy: "#1B2A4A", Olive: "#6B7A3D", Black: "#1A1A1A", White: "#F5F5F5",
+  Grey: "#9E9E9E", Red: "#C0392B", Green: "#2D6A4F", Blue: "#2471A3",
 };
 
 // === Types ===
-interface MediaItem { type: "image" | "video"; url: string }
+interface MediaItem { type: "image" | "video"; url: string; videoUrl?: string }
 interface Spec { label: string; value: string }
 interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; helpful: number }
-
 interface ProductData {
-  id: string;
-  productCode: string;
-  name: string;
-  price: string;
-  priceUnit: string;
-  moq: string;
-  category: string;
-  subCategory: string;
-  media: MediaItem[];
-  rating: number;
-  soldCount: string;
-  isInAd: boolean;
+  id: string; productCode: string; name: string; price: string; priceUnit: string; moq: string;
+  category: string; subCategory: string; media: MediaItem[]; rating: number; soldCount: string; isInAd: boolean;
   vendor: { id: string; initials: string; name: string; location: string; verified: boolean; rating: number; reviews: number; responseTime: string };
-  availableColors: string[];
-  availableSizes: string[];
-  specifications: Spec[];
-  customizationAvailable: boolean;
-  description: string;
-  manufacturing: { country: string; certifications: string[] };
-  totalReviews: number;
-  ratingBreakdown: Record<number, number>;
-  reviews: Review[];
+  availableColors: string[]; availableSizes: string[]; specifications: Spec[]; customizationAvailable: boolean;
+  description: string; manufacturing: { country: string; certifications: string[] };
+  totalReviews: number; ratingBreakdown: Record<number, number>; reviews: Review[];
   brandPicks: { id: string; vendorName: string; category: string; price: string; rating: number; soldCount: string; image: string }[];
   youMightLike: { id: string; price: string; moq: string; name: string; manufacturer: string; location: string; fabric: string; gsm: string; fitType: string; rating: number; soldCountBadge: string; image: string }[];
 }
@@ -86,41 +47,28 @@ interface ProductData {
 // === Mock data ===
 const PRODUCTS: Record<string, ProductData> = {
   "1": {
-    id: "1",
-    productCode: "TF-MDS-0412",
-    name: "Premium Cotton Chinos",
-    price: "₹499",
-    priceUnit: "Piece",
-    moq: "500 Pieces",
-    category: "Women's",
-    subCategory: "Midi Dresses",
+    id: "1", productCode: "TF-MDS-0412", name: "Premium Cotton Chinos", price: "₹499", priceUnit: "Piece", moq: "500 Pieces",
+    category: "Women's", subCategory: "Midi Dresses",
     media: [
       { type: "image", url: "https://picsum.photos/seed/chino-front-cosora/600/800" },
       { type: "image", url: "https://picsum.photos/seed/chino-side-cosora/600/800" },
+      { type: "video", url: "https://picsum.photos/seed/chino-video-cosora/600/800", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" },
       { type: "image", url: "https://picsum.photos/seed/chino-detail-cosora/600/800" },
-      { type: "video", url: "https://picsum.photos/seed/chino-video-cosora/600/800" },
     ],
-    rating: 4.1,
-    soldCount: "5.6k",
-    isInAd: true,
+    rating: 4.1, soldCount: "5.6k", isInAd: true,
     vendor: { id: "tf-india", initials: "TF", name: "Textile Forge India", location: "Surat, Gujarat", verified: true, rating: 4.8, reviews: 124, responseTime: "Usually responds within 4 hours" },
     availableColors: ["Beige", "Navy", "Olive", "Black"],
     availableSizes: ["28", "30", "32", "34", "36", "38", "40"],
     specifications: [
-      { label: "Waist Type", value: "Mid Rise" },
-      { label: "Length Type", value: "Full Length" },
-      { label: "Fit Type", value: "Slim Fit" },
-      { label: "Fabric", value: "100% Cotton Twill" },
-      { label: "Pattern", value: "Solid" },
-      { label: "GSM", value: "280 GSM" },
-      { label: "Occasion", value: "Casual, Semi-Formal" },
-      { label: "Wash Care", value: "Machine Wash, Do Not Bleach" },
+      { label: "Waist Type", value: "Mid Rise" }, { label: "Length Type", value: "Full Length" },
+      { label: "Fit Type", value: "Slim Fit" }, { label: "Fabric", value: "100% Cotton Twill" },
+      { label: "Pattern", value: "Solid" }, { label: "GSM", value: "280 GSM" },
+      { label: "Occasion", value: "Casual, Semi-Formal" }, { label: "Wash Care", value: "Machine Wash, Do Not Bleach" },
     ],
     customizationAvailable: true,
     description: "Premium quality cotton chinos made with 100% organic cotton. Perfect for casual and semi-formal occasions. Features a comfortable mid-rise waist with a tailored fit that flatters all body types. Bio-washed for extra softness.",
     manufacturing: { country: "India", certifications: ["GOTS", "OEKO-TEX Standard 100"] },
-    totalReviews: 100,
-    ratingBreakdown: { 5: 60, 4: 25, 3: 8, 2: 5, 1: 2 },
+    totalReviews: 100, ratingBreakdown: { 5: 60, 4: 25, 3: 8, 2: 5, 1: 2 },
     reviews: [
       { id: 1, name: "Vaibhav Tripathi", rating: 5, date: "2 months ago", comment: "Nice", sizeBought: "XXL", photos: [], helpful: 0 },
       { id: 2, name: "Anubhav Kumar", rating: 5, date: "2 months ago", comment: "Like it", sizeBought: "XXL", photos: ["https://picsum.photos/seed/rev-ph-1/200/200", "https://picsum.photos/seed/rev-ph-2/200/200", "https://picsum.photos/seed/rev-ph-3/200/200"], helpful: 0 },
@@ -135,79 +83,134 @@ const PRODUCTS: Record<string, ProductData> = {
     youMightLike: [
       { id: "ym1", price: "₹499", moq: "MOQ: 2", name: "Printed Cotton Kurta", manufacturer: "Artisan Weaves Co.", location: "Bangalore", fabric: "Cotton", gsm: "GSM: 200", fitType: "Fit Type: Regular", rating: 4.1, soldCountBadge: "5.6k", image: "https://picsum.photos/seed/might-like-1-cosora/300/400" },
       { id: "ym2", price: "₹499", moq: "MOQ: 2", name: "Relaxed Linen Trouser", manufacturer: "SilkThread Mills", location: "Bangalore", fabric: "Cotton", gsm: "GSM: 200", fitType: "Fit Type: Regular", rating: 3.8, soldCountBadge: "1.6k", image: "https://picsum.photos/seed/might-like-2-cosora/300/400" },
+      { id: "ym3", price: "₹599", moq: "MOQ: 2", name: "Oversized Crew Tee", manufacturer: "Tiruppur Knitworks", location: "Tirupur", fabric: "Cotton", gsm: "GSM: 240", fitType: "Fit Type: Oversized", rating: 4.3, soldCountBadge: "3.2k", image: "https://picsum.photos/seed/might-like-3-cosora/300/400" },
+      { id: "ym4", price: "₹459", moq: "MOQ: 2", name: "Camp Collar Shirt", manufacturer: "Mumbai Linen House", location: "Mumbai", fabric: "Linen", gsm: "GSM: 180", fitType: "Fit Type: Regular", rating: 4.0, soldCountBadge: "1.1k", image: "https://picsum.photos/seed/might-like-4-cosora/300/400" },
     ],
   },
 };
 
-const getDefaultProduct = (id: string): ProductData => {
-  if (PRODUCTS[id]) return PRODUCTS[id];
-  return { ...PRODUCTS["1"], id };
-};
+const getDefaultProduct = (id: string): ProductData => (PRODUCTS[id] ? PRODUCTS[id] : { ...PRODUCTS["1"], id });
 
-// === StarRow ===
-function StarRow({ rating, size = "sm" }: { rating: number; size?: "sm" | "md" }) {
-  const cls = size === "sm" ? "h-3 w-3" : "h-4 w-4";
+// === Tiled COSORA watermark overlay ===
+function Watermark() {
   return (
-    <div className="flex items-center gap-0.5">
-      {[1, 2, 3, 4, 5].map((s) => (
-        <Star key={s} className={cn(cls, s <= Math.round(rating) ? "fill-accent text-accent" : "text-muted-foreground")} />
+    <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-6 overflow-hidden">
+      {[0, 1, 2, 3].map((r) => (
+        <span key={r} className="whitespace-nowrap rotate-[-28deg] text-2xl font-black tracking-[0.35em] text-white/15 select-none">
+          COSORA&nbsp;&nbsp;COSORA&nbsp;&nbsp;COSORA
+        </span>
       ))}
     </div>
   );
 }
 
-// === ReviewCard ===
+// === Media carousel (center-peek, swipeable, video autoplay) ===
+function MediaCarousel({ media, rating, soldCount, isInAd }: { media: MediaItem[]; rating: number; soldCount: string; isInAd: boolean }) {
+  const reduced = useReducedMotion();
+  const [active, setActive] = useState(0);
+  const total = media.length;
+  const goNext = () => setActive((i) => (i + 1) % total);
+  const goPrev = () => setActive((i) => (i - 1 + total) % total);
+  const offsetFor = (i: number) => { let r = i - active; if (r > total / 2) r -= total; if (r < -total / 2) r += total; return r; };
+
+  return (
+    <div className="rounded-2xl bg-gray-100 overflow-hidden">
+      <motion.div
+        className="relative h-[380px] sm:h-[460px] overflow-hidden touch-pan-y select-none"
+        drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.15} dragMomentum={false}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < -60 || info.velocity.x < -500) goNext();
+          else if (info.offset.x > 60 || info.velocity.x > 500) goPrev();
+        }}
+      >
+        {media.map((m, i) => {
+          const off = offsetFor(i);
+          const isActive = off === 0;
+          const visible = Math.abs(off) <= 1;
+          const showVideo = isActive && m.type === "video" && m.videoUrl;
+          return (
+            <motion.div
+              key={i}
+              className="absolute top-1/2 left-1/2 h-full aspect-[3/4]"
+              animate={{ x: `${-50 + off * 72}%`, y: "-50%", scale: isActive ? 1 : 0.82, opacity: visible ? (isActive ? 1 : 0.45) : 0, zIndex: isActive ? 20 : 10 - Math.abs(off) }}
+              transition={reduced ? { duration: 0 } : { duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+            >
+              <div className="relative w-full h-full rounded-2xl overflow-hidden bg-gray-200 shadow-lg">
+                {showVideo ? (
+                  <video src={m.videoUrl} autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <img src={m.url} alt="" className="absolute inset-0 w-full h-full object-cover" draggable={false} />
+                )}
+                {m.type === "video" && !showVideo && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+                      <Play className="h-5 w-5 fill-white text-white" />
+                    </div>
+                  </div>
+                )}
+                <Watermark />
+              </div>
+            </motion.div>
+          );
+        })}
+
+        {isInAd && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-3 left-3 z-30 h-6 w-auto drop-shadow" />}
+
+        <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+          <span className="font-semibold">{rating.toFixed(1)}</span>
+          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+          <span className="text-white/60">|</span>
+          <span>{soldCount}</span>
+        </div>
+      </motion.div>
+
+      <div className="flex items-center justify-center gap-1.5 py-3">
+        {media.map((_, i) => (
+          <button key={i} onClick={() => setActive(i)} aria-label={`Slide ${i + 1}`}
+            className={cn("h-1.5 rounded-full transition-all", i === active ? "w-5 bg-[#ef4d62]" : "w-1.5 bg-gray-300 hover:bg-gray-400")} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// === Star row ===
+function StarRow({ rating }: { rating: number }) {
+  return (
+    <div className="flex items-center justify-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((s) => (
+        <Star key={s} className={cn("h-3.5 w-3.5", s <= Math.round(rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300")} />
+      ))}
+    </div>
+  );
+}
+
+// === Review card ===
 function ReviewCard({ review }: { review: Review }) {
   const [helpfulCount, setHelpfulCount] = useState(review.helpful);
   const [voted, setVoted] = useState<"up" | "down" | null>(null);
-
   return (
-    <div className="border-b border-border/40 pb-4 last:border-0 last:pb-0">
+    <div className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
       <div className="flex items-start justify-between">
-        <span className="text-sm font-medium text-foreground">{review.name}</span>
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <span className="text-sm font-medium text-gray-900">{review.name}</span>
+        <div className="flex items-center gap-1.5 text-xs text-gray-400">
           <span>Helpful?</span>
-          <button
-            onClick={() => { if (voted !== "up") { setHelpfulCount((c) => c + 1); setVoted("up"); } }}
-            className={cn("transition-colors", voted === "up" ? "text-accent" : "hover:text-foreground")}
-          >
-            <ThumbsUp className="h-3.5 w-3.5" />
-          </button>
+          <button onClick={() => { if (voted !== "up") { setHelpfulCount((c) => c + 1); setVoted("up"); } }} className={cn("transition-colors", voted === "up" ? "text-[#ef4d62]" : "hover:text-gray-700")}><ThumbsUp className="h-3.5 w-3.5" /></button>
           <span>{helpfulCount}</span>
-          <button
-            onClick={() => setVoted("down")}
-            className={cn("transition-colors", voted === "down" ? "text-accent" : "hover:text-foreground")}
-          >
-            <ThumbsDown className="h-3.5 w-3.5" />
-          </button>
-          <button className="hover:text-foreground">
-            <MoreVertical className="h-3.5 w-3.5" />
-          </button>
+          <button onClick={() => setVoted("down")} className={cn("transition-colors", voted === "down" ? "text-[#ef4d62]" : "hover:text-gray-700")}><ThumbsDown className="h-3.5 w-3.5" /></button>
+          <button className="hover:text-gray-700"><MoreVertical className="h-3.5 w-3.5" /></button>
         </div>
       </div>
-
       <div className="mt-1.5 flex items-center gap-2">
-        <Badge className="h-5 gap-0.5 bg-accent px-1.5 text-[10px] font-semibold text-white">
-          {review.rating}
-          <Star className="h-2.5 w-2.5 fill-white text-white" />
-        </Badge>
-        <span className="text-xs text-muted-foreground">{review.date}</span>
+        <span className="inline-flex h-5 items-center gap-0.5 rounded bg-gray-900 px-1.5 text-[10px] font-semibold text-white">{review.rating}<Star className="h-2.5 w-2.5 fill-white text-white" /></span>
+        <span className="text-xs text-gray-400">{review.date}</span>
       </div>
-
-      <p className="mt-1.5 text-xs font-semibold text-foreground">
-        Size bought: {review.sizeBought}
-      </p>
-
-      {review.comment && (
-        <p className="mt-1 text-sm text-muted-foreground leading-relaxed">{review.comment}</p>
-      )}
-
+      {review.comment && <p className="mt-1.5 text-sm text-gray-700 leading-relaxed">{review.comment}</p>}
+      {review.sizeBought && <p className="mt-1.5 inline-block rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Size bought: {review.sizeBought}</p>}
       {review.photos.length > 0 && (
         <div className="mt-2.5 flex gap-2">
           {review.photos.map((photo, idx) => (
-            <div key={idx} className="h-16 w-16 overflow-hidden rounded-lg bg-muted">
-              <img src={photo} alt="Review" className="h-full w-full object-cover" />
-            </div>
+            <div key={idx} className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100"><img src={photo} alt="Review" className="h-full w-full object-cover" /></div>
           ))}
         </div>
       )}
@@ -215,580 +218,429 @@ function ReviewCard({ review }: { review: Review }) {
   );
 }
 
-// === Main component ===
+// === Write a Review modal ===
+function WriteReviewModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (rating: number, text: string) => Promise<void> }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (open) { setRating(0); setHover(0); setText(""); setSaving(false); } }, [open]);
+  const submit = async () => {
+    if (rating === 0) { toast.error("Please pick a star rating"); return; }
+    setSaving(true);
+    try {
+      await onSubmit(rating, text);
+      toast.success("Thanks! Your review has been submitted");
+      onClose();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not submit your review");
+      setSaving(false);
+    }
+  };
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <motion.div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5"
+            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-bold text-gray-900">Write a Review</h3>
+              <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+            <div className="flex items-center gap-1.5 mb-4">
+              {[1, 2, 3, 4, 5].map((s) => (
+                <button key={s} onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)} onClick={() => setRating(s)} aria-label={`${s} star`}>
+                  <Star className={cn("w-8 h-8 transition-colors", (hover || rating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
+                </button>
+              ))}
+            </div>
+            <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Share your experience with this product…"
+              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]" />
+            <button onClick={submit} disabled={saving} className="mt-3 w-full rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors">{saving ? "Submitting…" : "Submit Review"}</button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN
+// ─────────────────────────────────────────────────────────────
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const callVendor = useCallVendor();
   const reduced = useReducedMotion();
+  const saved = useSaved();
 
-  const product = getDefaultProduct(id ?? "1");
+  // Real product from Supabase (when the id is a real UUID from the live feed).
+  // We merge it over the mock template so sections we don't persist yet
+  // (reviews, brand picks, "you might also like") still render.
+  const { data: row } = useProductById(id);
+  const base = getDefaultProduct(id ?? "1");
+  const product: ProductData = row
+    ? {
+        ...base,
+        id: row.id,
+        name: row.name,
+        price: `${row.currency}${Math.round(Number(row.priceValue ?? 0))}`,
+        priceUnit: "Piece",
+        moq: row.moq ? `${row.moq} Pieces` : base.moq,
+        category: row.categoryName ?? base.category,
+        subCategory: "",
+        media: row.images.length ? row.images.map((u) => ({ type: "image" as const, url: u })) : base.media,
+        rating: Number(row.ratingAvg) || base.rating,
+        soldCount: row.soldCount >= 1000 ? `${(row.soldCount / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(row.soldCount),
+        isInAd: row.vendor?.isVerified ?? false,
+        vendor: {
+          id: row.vendorId,
+          initials: (row.vendor?.brandName ?? "Vendor").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+          name: row.vendor?.brandName ?? "Vendor",
+          location: row.location ?? row.vendor?.city ?? "India",
+          verified: row.vendor?.isVerified ?? false,
+          rating: Number(row.vendor?.ratingAvg) || base.vendor.rating,
+          reviews: row.vendor?.reviewsCount ?? base.vendor.reviews,
+          responseTime: base.vendor.responseTime,
+        },
+        availableColors: row.colour ? [row.colour] : base.availableColors,
+        specifications: (() => {
+          const real = [
+            row.fabric && { label: "Fabric", value: row.fabric },
+            row.gsm && { label: "GSM", value: row.gsm },
+            row.fitType && { label: "Fit Type", value: row.fitType },
+            row.gender && { label: "Gender", value: row.gender },
+            row.colour && { label: "Colour", value: row.colour },
+          ].filter(Boolean) as Spec[];
+          return real.length ? real : base.specifications;
+        })(),
+        description: row.description ?? base.description,
+      }
+    : base;
+  const isSaved = Boolean(saved.products[product.id]);
 
-  const [currentMedia, setCurrentMedia] = useState(0);
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isFollowing, setIsFollowing] = useState(false);
+  const [tab, setTab] = useState<"details" | "reviews">("details");
   const [selectedColor, setSelectedColor] = useState(product.availableColors[0]);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [specsOpen, setSpecsOpen] = useState(true);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
-  const media = product.media;
+  // Real product reviews (only queried for a real DB product). Falls back to the
+  // mock template so non-DB demo products still render a populated section.
+  const { data: productReviews } = useProductReviews(row?.id);
+  const { submitProductReview } = useReviewMutations();
+  const hasRealReviews = (productReviews?.count ?? 0) > 0;
 
-  const avgRating = parseFloat(
-    (product.reviews.reduce((s, r) => s + r.rating, 0) / (product.reviews.length || 1)).toFixed(1)
-  );
+  const mockAvg = parseFloat((product.reviews.reduce((s, r) => s + r.rating, 0) / (product.reviews.length || 1)).toFixed(1));
+  const avgRating = hasRealReviews ? productReviews!.avg : mockAvg;
+  const reviewsTotal = hasRealReviews ? productReviews!.count : product.totalReviews;
+  const breakdownPct = (star: number) =>
+    hasRealReviews
+      ? productReviews!.breakdown.find((b) => b.stars === star)?.percent ?? 0
+      : Math.round(((product.ratingBreakdown[star] ?? 0) / product.totalReviews) * 100);
+  const reviewCards: Review[] = hasRealReviews
+    ? productReviews!.reviews.map((r, i) => ({
+        id: i,
+        name: r.reviewerName,
+        rating: r.rating,
+        date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+        comment: r.body ?? "",
+        sizeBought: r.sizeBought ?? "",
+        photos: r.photos,
+        helpful: 0,
+      }))
+    : product.reviews;
+
+  const saveProduct = () => openSaveModal({
+    id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
+    location: product.vendor.location, price: product.price, moq: product.moq, rating: product.rating,
+    verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
+  });
+
+  // Record view for Recently Viewed
+  useEffect(() => {
+    recordView({
+      id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
+      location: product.vendor.location, price: product.price, moq: product.moq, rating: product.rating,
+      reviews: product.totalReviews, verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
+  // "You might also like" → shared listing card
+  const likeProducts: ListingProduct[] = product.youMightLike.map((it) => ({
+    id: it.id, vendorId: `v-${it.id}`, name: it.name, manufacturer: it.manufacturer, location: it.location,
+    price: it.price, priceValue: parseInt(it.price.replace(/[^\d]/g, ""), 10) || 499, moq: it.moq, soldCount: "800+ sold",
+    enquiries: it.soldCountBadge, rating: it.rating, fabric: it.fabric, gsm: it.gsm.replace(/^GSM:\s*/, ""),
+    fitType: it.fitType.replace(/^Fit Type:\s*/, ""), image: it.image, secondaryImage: it.image, gender: "unisex",
+  }));
+
+  const card = "rounded-2xl border border-gray-200 bg-white p-4";
 
   return (
-    <DashboardLayout>
-      <motion.div
-        variants={reduced ? {} : page}
-        initial="hidden"
-        animate="show"
-        className="pb-40 lg:pb-24"
-      >
-        {/* ─── Top bar ─── */}
-        <motion.div variants={reduced ? {} : sect} className="mb-4 flex items-center gap-2">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/80 text-foreground transition-colors hover:bg-muted active:scale-95"
-            aria-label="Go back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="relative flex-1">
-            <input
-              type="search"
-              defaultValue="T-shirts"
-              className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-            />
-          </div>
-          <button
-            aria-label="Bookmark product"
-            onClick={() => setIsBookmarked((b) => !b)}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted/80 transition-colors hover:bg-muted active:scale-95"
-          >
-            <Bookmark className={cn("h-5 w-5", isBookmarked ? "fill-accent text-accent" : "text-foreground")} />
-          </button>
+    <BuyerShell>
+      <motion.div className="max-w-2xl mx-auto px-4 pt-3 pb-6 space-y-3" variants={reduced ? {} : page} initial="hidden" animate="show">
+
+        {/* Media */}
+        <motion.div variants={sect}>
+          <MediaCarousel media={product.media} rating={product.rating} soldCount={product.soldCount} isInAd={product.isInAd} />
         </motion.div>
 
-        {/* ─── Desktop 2-col grid ─── */}
-        <div className="lg:grid lg:grid-cols-[44%_56%] lg:gap-8 lg:items-start">
+        {/* Breadcrumb + header */}
+        <motion.div variants={sect}>
+          <p className="text-xs text-gray-400">{product.category} &rsaquo; {product.subCategory}</p>
+          <div className="mt-1 flex items-start justify-between gap-2">
+            <h1 className="flex-1 text-lg font-bold leading-snug text-gray-900 sm:text-xl">{product.name}</h1>
+            <div className="flex shrink-0 items-center gap-0.5">
+              <button onClick={saveProduct} aria-label={isSaved ? "Edit saved folders" : "Save product"} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
+                {isSaved ? <BookmarkCheck className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
+              </button>
+              <button aria-label="Share" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
+                <Share2 className="h-4 w-4 text-gray-500" />
+              </button>
+            </div>
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-1.5">
+            <span className="text-2xl font-extrabold text-[#ef4d62]">{product.price}</span>
+            <span className="text-sm text-gray-500">/ {product.priceUnit}</span>
+          </div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 text-xs text-gray-500"><Package className="h-3.5 w-3.5" /> MOQ {product.moq}</span>
+            <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-400">{product.productCode}</span>
+          </div>
+        </motion.div>
 
-          {/* ── LEFT: media carousel (sticky on desktop) ── */}
-          <motion.div variants={reduced ? {} : sect} className="lg:sticky lg:top-4">
-            {/* Main media frame */}
-            <div className="relative aspect-[4/5] overflow-hidden rounded-2xl bg-muted sm:aspect-[3/4] lg:aspect-[4/5]">
-              <img
-                src={media[currentMedia].url}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
-
-              {/* COSORA watermark */}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <span className="select-none rotate-[-32deg] text-5xl font-black tracking-widest text-white/8 sm:text-6xl">
-                  COSORA
-                </span>
+        {/* Vendor card (clickable → profile) */}
+        <motion.div variants={sect} onClick={() => navigate(`/vendor/${product.vendor.id}`)}
+          className={cn(card, "cursor-pointer transition-shadow hover:shadow-md")}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#ef4d62]/15 text-sm font-bold text-[#ef4d62]">{product.vendor.initials}</div>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-sm font-bold text-gray-900">{product.vendor.name}</span>
+                {product.vendor.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-[#ef4d62]" />}
               </div>
-
-              {/* Video play overlay */}
-              {media[currentMedia].type === "video" && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
-                    <Play className="h-6 w-6 fill-white text-white" />
-                  </div>
-                </div>
-              )}
-
-              {/* TradeSEAL badge */}
-              {product.isInAd && (
-                <Badge className="absolute left-3 top-3 bg-accent text-[10px] font-semibold text-white">
-                  <BadgeCheck className="mr-1 h-3 w-3" />
-                  TradeSEAL
-                </Badge>
-              )}
-
-              {/* Prev / Next arrows */}
-              {media.length > 1 && (
-                <>
-                  <button
-                    onClick={() => setCurrentMedia((m) => (m === 0 ? media.length - 1 : m - 1))}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 shadow-sm backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
-                    aria-label="Previous image"
-                  >
-                    <ChevronLeft className="h-4 w-4 text-foreground" />
-                  </button>
-                  <button
-                    onClick={() => setCurrentMedia((m) => (m === media.length - 1 ? 0 : m + 1))}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 flex h-8 w-8 items-center justify-center rounded-full bg-white/85 shadow-sm backdrop-blur-sm transition-transform hover:scale-105 active:scale-95"
-                    aria-label="Next image"
-                  >
-                    <ChevronRight className="h-4 w-4 text-foreground" />
-                  </button>
-                </>
-              )}
-
-              {/* Rating + sold count pill */}
-              <div className="absolute bottom-3 left-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-                <span className="font-semibold">{product.rating}</span>
-                <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                <span className="text-white/60">|</span>
-                <span>{product.soldCount}</span>
+              <div className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                <span className="font-medium text-gray-800">{product.vendor.rating}</span>
+                <span>({product.vendor.reviews} reviews)</span>
               </div>
+              <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {product.vendor.location}</div>
+            </div>
+            <button onClick={(e) => { e.stopPropagation(); setIsFollowing((f) => !f); }}
+              className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowing ? "border-gray-200 text-gray-600" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5")}>
+              {isFollowing ? "Following" : "+ Follow"}
+            </button>
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500"><Clock className="h-3.5 w-3.5 shrink-0" /> {product.vendor.responseTime}</div>
+          {product.isInAd && (
+            <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700">
+              <CheckCircle2 className="h-3 w-3" /> Trust Seal Verified
+            </div>
+          )}
+        </motion.div>
 
-              {/* Dot indicators */}
-              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5">
-                {media.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentMedia(idx)}
-                    className={cn(
-                      "h-1.5 rounded-full transition-all duration-300",
-                      idx === currentMedia ? "w-5 bg-white" : "w-1.5 bg-white/50 hover:bg-white/75"
-                    )}
-                    aria-label={`View image ${idx + 1}`}
-                  />
+        {/* Tabs */}
+        <motion.div variants={sect} className="flex rounded-xl border border-gray-200 p-1">
+          {(["details", "reviews"] as const).map((t) => (
+            <button key={t} onClick={() => setTab(t)} className="relative flex-1 rounded-lg py-2 text-sm font-semibold capitalize">
+              {tab === t && <motion.span layoutId="pd-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+              <span className={cn("relative z-10", tab === t ? "text-white" : "text-gray-500")}>{t}</span>
+            </button>
+          ))}
+        </motion.div>
+
+        {/* ── DETAILS ── */}
+        {tab === "details" && (
+          <motion.div initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            {/* Colors */}
+            <div className={card}>
+              <h3 className="mb-3 text-sm font-bold text-gray-900">Available Colors</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.availableColors.map((c) => (
+                  <button key={c} onClick={() => setSelectedColor(c)}
+                    className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
+                      selectedColor === c ? "border-[#ef4d62] bg-[#ef4d62]/5 text-[#ef4d62]" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                    <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: COLOR_HEX[c] ?? "#ccc" }} />{c}
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Thumbnail strip */}
-            {media.length > 1 && (
-              <div className="mt-2.5 flex gap-2">
-                {media.map((m, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentMedia(idx)}
-                    className={cn(
-                      "relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border-2 transition-all",
-                      idx === currentMedia
-                        ? "border-accent opacity-100"
-                        : "border-transparent opacity-45 hover:opacity-80"
-                    )}
-                    aria-label={`Thumbnail ${idx + 1}`}
-                  >
-                    <img src={m.url} alt="" className="h-full w-full object-cover" />
-                    {m.type === "video" && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                        <Play className="h-3 w-3 fill-white text-white" />
-                      </div>
-                    )}
-                  </button>
+            {/* Sizes */}
+            <div className={card}>
+              <h3 className="mb-3 text-sm font-bold text-gray-900">Available Sizes</h3>
+              <div className="flex flex-wrap gap-2">
+                {product.availableSizes.map((s) => (
+                  <button key={s} onClick={() => setSelectedSize((cur) => (cur === s ? null : s))}
+                    className={cn("flex h-9 min-w-[38px] items-center justify-center rounded-lg border px-2 text-sm font-medium transition-all active:scale-95",
+                      selectedSize === s ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-800 hover:border-[#ef4d62]/40")}>{s}</button>
                 ))}
               </div>
-            )}
-          </motion.div>
+            </div>
 
-          {/* ── RIGHT: product info ── */}
-          <div className="mt-4 space-y-3 lg:mt-0">
+            {/* Chat + Call Now (inline, per reference) */}
+            <div className="flex items-center gap-2">
+              <button onClick={() => navigate(`/chats/${product.vendor.id}`)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
+                <MessageCircle className="h-4 w-4" /> Chat
+              </button>
+              <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors active:scale-[0.98]">
+                <Phone className="h-4 w-4" /> Call Now
+              </button>
+            </div>
 
-            {/* Breadcrumb */}
-            <motion.p variants={reduced ? {} : sect} className="text-xs text-muted-foreground">
-              {product.category} &rsaquo; {product.subCategory}
-            </motion.p>
-
-            {/* Product header card */}
-            <motion.div variants={reduced ? {} : sect} className="rounded-2xl border border-border/50 bg-card p-4">
-              <div className="flex items-start justify-between gap-2">
-                <h1 className="flex-1 text-lg font-semibold leading-snug text-foreground sm:text-xl">
-                  {product.name}
-                </h1>
-                <div className="flex shrink-0 items-center gap-0.5">
-                  <button
-                    onClick={() => setIsBookmarked((b) => !b)}
-                    aria-label="Bookmark"
-                    className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted active:scale-95"
-                  >
-                    <Bookmark className={cn("h-4 w-4", isBookmarked ? "fill-accent text-accent" : "text-muted-foreground")} />
-                  </button>
-                  <button
-                    aria-label="Share"
-                    className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-muted active:scale-95"
-                  >
-                    <Share2 className="h-4 w-4 text-muted-foreground" />
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-2.5 flex items-baseline gap-1.5">
-                <span className="text-2xl font-bold text-accent">{product.price}</span>
-                <span className="text-sm text-muted-foreground">/ {product.priceUnit}</span>
-              </div>
-
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Package className="h-3.5 w-3.5" />
-                  <span>MOQ {product.moq}</span>
-                </div>
-                <Badge variant="outline" className="text-[10px] font-medium text-muted-foreground">
-                  {product.productCode}
-                </Badge>
-              </div>
-            </motion.div>
-
-            {/* Vendor card */}
-            <motion.div
-              variants={reduced ? {} : sect}
-              className="cursor-pointer rounded-2xl border border-border/50 bg-card p-4 transition-shadow hover:shadow-md"
-              onClick={() => navigate(`/vendor/${product.vendor.id}`)}
-            >
-              <div className="flex items-center gap-3">
-                {/* Initials avatar */}
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent/20 to-accent/35 text-sm font-bold text-foreground">
-                  {product.vendor.initials}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-sm font-semibold text-foreground">{product.vendor.name}</span>
-                    {product.vendor.verified && (
-                      <BadgeCheck className="h-4 w-4 shrink-0 text-accent" />
-                    )}
-                  </div>
-                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                    <div className="flex items-center gap-0.5">
-                      <Star className="h-3 w-3 fill-accent text-accent" />
-                      <span className="font-medium text-foreground">{product.vendor.rating}</span>
-                      <span>({product.vendor.reviews} reviews)</span>
-                    </div>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                    <MapPin className="h-3 w-3" />
-                    <span>{product.vendor.location}</span>
-                  </div>
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 shrink-0 border-accent text-xs text-accent hover:bg-accent/5 active:scale-95"
-                  onClick={(e) => { e.stopPropagation(); setIsFollowing((f) => !f); }}
-                >
-                  {isFollowing ? "Following" : "+ Follow"}
-                </Button>
-              </div>
-
-              <div className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5 shrink-0" />
-                <span>{product.vendor.responseTime}</span>
-              </div>
-
-              {product.isInAd && (
-                <div className="mt-2">
-                  <Badge variant="outline" className="border-green-300 bg-green-50 text-[10px] text-green-700">
-                    <CheckCircle2 className="mr-1 h-3 w-3" />
-                    Trust Seal Verified
-                  </Badge>
-                </div>
-              )}
-            </motion.div>
-
-            {/* Details / Reviews tabs */}
-            <motion.div variants={reduced ? {} : sect}>
-              <Tabs defaultValue="details" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 rounded-xl">
-                  <TabsTrigger value="details" className="rounded-lg text-sm">Details</TabsTrigger>
-                  <TabsTrigger value="reviews" className="rounded-lg text-sm">Reviews</TabsTrigger>
-                </TabsList>
-
-                {/* ─── DETAILS TAB ─── */}
-                <TabsContent value="details" className="mt-3 space-y-3">
-
-                  {/* Available Colors */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Available Colors</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {product.availableColors.map((color) => (
-                        <button
-                          key={color}
-                          onClick={() => setSelectedColor(color)}
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-                            selectedColor === color
-                              ? "border-accent bg-accent/5 text-accent"
-                              : "border-border text-muted-foreground hover:border-accent/50 hover:text-foreground"
-                          )}
-                        >
-                          <span
-                            className="h-3.5 w-3.5 rounded-full border border-black/10 shadow-sm"
-                            style={{ background: COLOR_HEX[color] ?? "#ccc" }}
-                          />
-                          {color}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Available Sizes */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Available Sizes</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {product.availableSizes.map((size) => (
-                        <button
-                          key={size}
-                          onClick={() => setSelectedSize((s) => (s === size ? null : size))}
-                          className={cn(
-                            "flex h-9 min-w-[36px] items-center justify-center rounded-lg border px-2 text-sm font-medium transition-all active:scale-95",
-                            selectedSize === size
-                              ? "border-accent bg-accent text-white"
-                              : "border-border text-foreground hover:border-accent/50"
-                          )}
-                        >
-                          {size}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Product Specifications */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Product Specifications</h3>
-                    <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
-                      {product.specifications.map((spec) => (
-                        <div key={spec.label}>
-                          <p className="text-[11px] text-muted-foreground">{spec.label}</p>
-                          <p className="mt-0.5 text-sm font-medium leading-snug text-foreground">{spec.value}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="mt-4 flex items-center gap-4 border-t border-border/40 pt-3">
-                      <button className="text-xs text-accent underline underline-offset-2 transition-opacity hover:opacity-75">
-                        + Add Fabric
-                      </button>
-                      <button className="flex items-center gap-1 text-xs text-accent underline underline-offset-2 transition-opacity hover:opacity-75">
-                        <Download className="h-3 w-3" />
-                        Download PDF
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Customization Available */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-foreground">Customization Available</p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          Can this product be customized for buyers?
-                        </p>
-                      </div>
-                      <Badge
-                        className={cn(
-                          "px-3 py-1 text-xs font-bold shrink-0",
-                          product.customizationAvailable
-                            ? "bg-green-500 text-white hover:bg-green-500"
-                            : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {product.customizationAvailable ? "YES" : "NO"}
-                      </Badge>
-                    </div>
-                  </div>
-
-                  {/* Product Description */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <div className="mb-2.5 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">Product Description</h3>
-                      <button className="flex items-center gap-1 text-xs text-accent transition-opacity hover:opacity-75">
-                        <Globe className="h-3 w-3" />
-                        Translate
-                      </button>
-                    </div>
-                    <p className="text-sm leading-relaxed text-muted-foreground">
-                      {product.description}
-                    </p>
-                  </div>
-
-                  {/* Manufacturing Details */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">Manufacturing Details</h3>
-                      <button
-                        onClick={() => navigate(`/vendor/${product.vendor.id}`)}
-                        className="text-xs text-accent underline underline-offset-2 transition-opacity hover:opacity-75"
-                      >
-                        View Profile
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <div className="flex items-center gap-1.5 text-sm text-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-green-600" />
-                        <span>Made in {product.manufacturing.country}</span>
-                      </div>
-                      {product.manufacturing.certifications.map((cert) => (
-                        <Badge key={cert} variant="outline" className="border-green-300 bg-green-50 text-[10px] text-green-700">
-                          {cert}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                {/* ─── REVIEWS TAB ─── */}
-                <TabsContent value="reviews" className="mt-3 space-y-3">
-
-                  {/* Rating summary */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <div className="flex items-start gap-5">
-                      <div className="shrink-0 text-center">
-                        <p className="text-4xl font-bold text-foreground">{avgRating}</p>
-                        <StarRow rating={avgRating} size="sm" />
-                        <p className="mt-1 text-xs text-muted-foreground">{product.totalReviews} reviews</p>
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        {[5, 4, 3, 2, 1].map((star) => {
-                          const count = product.ratingBreakdown[star] ?? 0;
-                          const pct = Math.round((count / product.totalReviews) * 100);
-                          return (
-                            <div key={star} className="flex items-center gap-2">
-                              <span className="w-2.5 text-xs text-muted-foreground">{star}</span>
-                              <Star className="h-2.5 w-2.5 fill-accent text-accent" />
-                              <div className="flex-1 overflow-hidden rounded-full bg-muted" style={{ height: 6 }}>
-                                <div
-                                  className="h-full rounded-full bg-accent transition-all duration-500"
-                                  style={{ width: `${pct}%` }}
-                                />
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Reviews list */}
-                  <div className="rounded-2xl border border-border/50 bg-card p-4">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-foreground">Customer Reviews</h3>
-                      <button className="text-xs text-accent underline underline-offset-2 transition-opacity hover:opacity-75">
-                        Write a Review
-                      </button>
-                    </div>
-                    {product.reviews.length > 0 ? (
-                      <div className="space-y-4">
-                        {product.reviews.map((review) => (
-                          <ReviewCard key={review.id} review={review} />
+            {/* Specifications (collapsible) */}
+            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+              <button onClick={() => setSpecsOpen((o) => !o)} className="flex w-full items-center justify-between px-4 py-3.5">
+                <h3 className="text-sm font-bold text-gray-900">Product Specifications</h3>
+                <ChevronDown className={cn("h-4 w-4 text-gray-500 transition-transform", specsOpen && "rotate-180")} />
+              </button>
+              <AnimatePresence initial={false}>
+                {specsOpen && (
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: E }} className="overflow-hidden">
+                    <div className="px-4 pb-4">
+                      <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
+                        {product.specifications.map((s) => (
+                          <div key={s.label}>
+                            <p className="text-[11px] text-gray-400">{s.label}</p>
+                            <p className="mt-0.5 text-sm font-medium leading-snug text-gray-900">{s.value}</p>
+                          </div>
                         ))}
                       </div>
-                    ) : (
-                      <p className="py-6 text-center text-sm text-muted-foreground">No reviews yet</p>
-                    )}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* ─── Brand Picks (full width) ─── */}
-        <motion.div variants={reduced ? {} : sect} className="mt-8">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-semibold text-foreground">Brand Picks</h2>
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <span className="text-[10px] italic text-muted-foreground">sponsored</span>
-          </div>
-          <ScrollArea className="w-full">
-            <div className="flex gap-3 pb-3">
-              {product.brandPicks.map((pick) => (
-                <div
-                  key={pick.id}
-                  className="w-36 shrink-0 cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card transition-shadow hover:shadow-md"
-                  onClick={() => navigate(`/product/${pick.id}`)}
-                >
-                  <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                    <img src={pick.image} alt={pick.category} className="h-full w-full object-cover transition-transform duration-300 hover:scale-105" />
-                    <div className="absolute bottom-2 left-2 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                      <span>{pick.rating}</span>
-                      <Star className="h-2 w-2 fill-yellow-400 text-yellow-400" />
-                      <span className="text-white/60">|</span>
-                      <span>{pick.soldCount}</span>
+                      <div className="mt-4 flex items-center gap-4 border-t border-gray-100 pt-3">
+                        <button className="inline-flex items-center gap-1 text-xs font-semibold text-[#ef4d62] underline underline-offset-2"><Plus className="h-3 w-3" /> Add Fabric</button>
+                        <button className="inline-flex items-center gap-1 text-xs font-semibold text-[#ef4d62] underline underline-offset-2"><Download className="h-3 w-3" /> Download PDF</button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="p-2.5">
-                    <p className="text-[11px] text-muted-foreground line-clamp-1">{pick.vendorName}</p>
-                    <p className="text-[11px] font-medium text-foreground">{pick.category}</p>
-                    <p className="mt-0.5 text-sm font-bold text-foreground">{pick.price}</p>
-                    <Button
-                      size="sm"
-                      className="mt-2 h-7 w-full gap-1 bg-accent text-[11px] font-medium text-white hover:bg-accent/90 active:scale-95"
-                      onClick={(e) => { e.stopPropagation(); navigate(`/chats/vendor-${pick.id}`); }}
-                    >
-                      <Phone className="h-3 w-3" />
-                      Call Now
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </motion.div>
 
-        {/* ─── You might also like (full width) ─── */}
-        <motion.div variants={reduced ? {} : sect} className="mt-6">
-          <h2 className="mb-3 text-sm font-semibold text-foreground">You might also like</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {product.youMightLike.map((item) => (
-              <div
-                key={item.id}
-                className="cursor-pointer overflow-hidden rounded-xl border border-border/50 bg-card transition-shadow hover:shadow-md"
-                onClick={() => navigate(`/product/${item.id}`)}
-              >
-                <div className="relative aspect-[3/4] overflow-hidden bg-muted">
-                  <img src={item.image} alt={item.name} className="h-full w-full object-cover transition-transform duration-300 hover:scale-105" />
-                  <div className="absolute bottom-2 left-2 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                    <span>{item.rating}</span>
-                    <Star className="h-2 w-2 fill-yellow-400 text-yellow-400" />
-                    <span className="text-white/60">|</span>
-                    <span>{item.soldCountBadge}</span>
-                  </div>
+            {/* Customization */}
+            <div className={cn(card, "flex items-center justify-between gap-3")}>
+              <div>
+                <p className="text-sm font-bold text-gray-900">Customization Available</p>
+                <p className="mt-0.5 text-xs text-gray-500">Can this product be customized for buyers?</p>
+              </div>
+              <span className={cn("shrink-0 rounded-md px-3 py-1 text-xs font-bold", product.customizationAvailable ? "bg-green-500 text-white" : "bg-gray-100 text-gray-500")}>
+                {product.customizationAvailable ? "YES" : "NO"}
+              </span>
+            </div>
+
+            {/* Description */}
+            <div className={card}>
+              <div className="mb-2.5 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900">Product Description</h3>
+                <button className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600"><Globe className="h-3 w-3" /> Translate</button>
+              </div>
+              <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
+            </div>
+
+            {/* Manufacturing */}
+            <div className={card}>
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900">Manufacturing Details</h3>
+                <button onClick={() => navigate(`/vendor/${product.vendor.id}`)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:border-gray-300">View Profile</button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-sm text-gray-800"><CheckCircle2 className="h-4 w-4 text-green-600" /> Made in {product.manufacturing.country}</span>
+                {product.manufacturing.certifications.map((c) => (
+                  <span key={c} className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">{c}</span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── REVIEWS ── */}
+        {tab === "reviews" && (
+          <motion.div initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
+            <div className={card}>
+              <div className="flex items-start gap-5">
+                <div className="shrink-0 text-center">
+                  <p className="text-4xl font-extrabold text-gray-900">{avgRating}</p>
+                  <StarRow rating={avgRating} />
+                  <p className="mt-1 text-xs text-gray-400">{reviewsTotal} reviews</p>
                 </div>
-                <div className="p-2.5">
-                  <p className="text-sm font-bold text-foreground">{item.price}</p>
-                  <p className="text-[11px] text-muted-foreground">{item.moq} | 800+ sold</p>
-                  <p className="mt-1 text-[11px] font-semibold text-foreground line-clamp-1">{item.name}</p>
-                  <p className="text-[11px] text-accent line-clamp-1">{item.manufacturer}</p>
-                  <div className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground">
-                    <MapPin className="h-2.5 w-2.5 shrink-0" />
-                    <span>{item.location}</span>
+                <div className="flex-1 space-y-2">
+                  {[5, 4, 3, 2, 1].map((star) => {
+                    const pct = breakdownPct(star);
+                    return (
+                      <div key={star} className="flex items-center gap-2">
+                        <span className="w-2.5 text-xs text-gray-500">{star}</span>
+                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                        <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                          <motion.div className="h-full rounded-full bg-[#ef4d62]" initial={reduced ? false : { width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: E }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className={card}>
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-sm font-bold text-gray-900">Customer Reviews</h3>
+                <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">Write a Review</button>
+              </div>
+              {reviewCards.length > 0 ? (
+                <div className="space-y-4">{reviewCards.map((r) => <ReviewCard key={r.id} review={r} />)}</div>
+              ) : (
+                <p className="py-6 text-center text-sm text-gray-400">No reviews yet. Be the first to review this product.</p>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Brand Picks (sponsored) */}
+        <motion.div variants={sect} className="pt-2">
+          <div className="mb-2 flex items-center justify-between">
+            <h2 className="inline-flex items-center gap-1 text-sm font-bold text-gray-900">Brand Picks <ChevronDown className="h-4 w-4 -rotate-90 text-gray-400" /></h2>
+            <span className="text-[10px] italic text-gray-300">sponsored</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+            {product.brandPicks.map((pick) => (
+              <div key={pick.id} className="w-32 shrink-0 overflow-hidden rounded-xl border border-[#ef4d62]/15 bg-[#ef4d62]/5">
+                <Link to={`/product/${pick.id}`} className="relative block aspect-[3/4] bg-gray-100">
+                  <img src={pick.image} alt={pick.category} className="h-full w-full object-cover" />
+                  <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white">
+                    <span>{pick.rating}</span><Star className="h-2 w-2 fill-yellow-400 text-yellow-400" /><span className="text-white/60">|</span><span>{pick.soldCount}</span>
                   </div>
-                  <p className="mt-0.5 text-[10px] text-muted-foreground">
-                    Fabric: {item.fabric} &bull; {item.gsm} &bull; {item.fitType}
-                  </p>
-                  <Button
-                    size="sm"
-                    className="mt-2 h-7 w-full gap-1 bg-accent text-[11px] font-medium text-white hover:bg-accent/90 active:scale-95"
-                    onClick={(e) => { e.stopPropagation(); navigate(`/chats/vendor-${item.id}`); }}
-                  >
-                    <Phone className="h-3 w-3" />
-                    Call Now
-                  </Button>
+                </Link>
+                <div className="p-1.5">
+                  <p className="text-[10px] text-gray-500 truncate">{pick.vendorName}</p>
+                  <p className="text-[10px] font-medium text-gray-700">{pick.category}</p>
+                  <p className="text-xs font-bold text-gray-900">{pick.price}</p>
+                  <button onClick={() => callVendor(`vendor-${pick.id}`, pick.category)} className="mt-1 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] font-bold py-1.5 rounded"><Phone className="h-2.5 w-2.5" /> Call Now</button>
                 </div>
               </div>
             ))}
           </div>
         </motion.div>
+
+        {/* You might also like */}
+        <motion.div variants={sect} className="pt-2">
+          <h2 className="mb-3 text-sm font-bold text-gray-900">You might also like</h2>
+          <div className="grid grid-cols-2 gap-3">
+            {likeProducts.map((p) => <ListingProductCard key={p.id} product={p} />)}
+          </div>
+        </motion.div>
       </motion.div>
 
-      {/* ─── Sticky bottom CTA bar (sits above MobileBottomNav on mobile, true bottom on desktop) ─── */}
-      <div className="fixed inset-x-0 bottom-[73px] z-40 border-t border-border bg-card/95 p-3 backdrop-blur-sm lg:bottom-0 lg:left-64 lg:z-50">
-        <div className="mx-auto flex max-w-2xl items-center gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 gap-2 border-accent text-accent hover:bg-accent/5 active:scale-[0.98]"
-            onClick={() => navigate(`/chats/${product.vendor.id}`)}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Chat
-          </Button>
-          <Button
-            className="flex-1 gap-2 bg-accent text-white hover:bg-accent/90 active:scale-[0.98]"
-            onClick={() => navigate(`/chats/${product.vendor.id}`)}
-          >
-            <Phone className="h-4 w-4" />
-            Call Now
-          </Button>
-        </div>
-      </div>
-    </DashboardLayout>
+      <WriteReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        onSubmit={(rating, text) => {
+          if (!row?.id) throw new Error("Reviews are available on live products only");
+          return submitProductReview(row.id, rating, text);
+        }}
+      />
+    </BuyerShell>
   );
 };
 

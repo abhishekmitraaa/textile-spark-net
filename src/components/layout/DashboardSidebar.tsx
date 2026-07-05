@@ -29,6 +29,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useT } from "@/lib/i18n";
 import { RoleSwitcher } from "./RoleSwitcher";
 
 // Buyer navigation (Clothing Brands)
@@ -68,6 +69,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
+  const t = useT();
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
   const secondaryNav =
     role === "buyer"
@@ -148,7 +150,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Role Switcher */}
         <div className="border-b border-sidebar-border p-3 lg:p-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-            Switch Mode
+            {t("Switch Mode")}
           </p>
           <RoleSwitcher variant="mobile" />
         </div>
@@ -156,7 +158,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Main navigation */}
         <nav className="flex-1 space-y-1 overflow-y-auto p-3 lg:p-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-            {role === "buyer" ? "Buyer Menu" : "Seller Menu"}
+            {t(role === "buyer" ? "Buyer Menu" : "Seller Menu")}
           </p>
           {navigation.map((item) => {
             const isActive = location.pathname === item.href;
@@ -173,7 +175,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
                 )}
               >
                 <item.icon size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </Link>
             );
           })}
@@ -182,7 +184,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         {/* Secondary navigation */}
         <div className="border-t border-sidebar-border p-3 lg:p-4">
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
-            Support
+            {t("Support")}
           </p>
           {secondaryNav.map((item) => {
             const isActive = location.pathname === item.href;
@@ -199,7 +201,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
                 )}
               >
                 <item.icon size={20} className="shrink-0" />
-                <span>{item.name}</span>
+                <span>{t(item.name)}</span>
               </Link>
             );
           })}

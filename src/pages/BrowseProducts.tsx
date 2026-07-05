@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import { useCallVendor } from "@/lib/queries/calls";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -154,6 +155,7 @@ const categories = ["All", "Men's T-shirts", "Men's Shirts", "Women's Tops", "Wo
 const ProductCard = ({ product, index }: { product: typeof allProducts[0]; index: number }) => {
   const [saved, setSaved] = useState(false);
   const navigate = useNavigate();
+  const callVendor = useCallVendor();
 
   return (
     <motion.div
@@ -230,7 +232,7 @@ const ProductCard = ({ product, index }: { product: typeof allProducts[0]; index
         <Button
           size="sm"
           className="mt-1 w-full bg-accent hover:bg-accent/90 text-accent-foreground h-9 rounded-lg gap-1.5 text-sm font-semibold shadow-sm"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); callVendor(String(product.id), product.name); }}
         >
           <Phone className="h-3.5 w-3.5" />
           Call Now

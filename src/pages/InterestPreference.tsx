@@ -4,24 +4,34 @@ import { motion } from "framer-motion";
 import { ArrowLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const categories = [
-  { name: "Fabrics",            img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop" },
-  { name: "Women's Clothing",   img: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
-  { name: "Men's Clothing",     img: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
-  { name: "Cosmetics",          img: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
-  { name: "Unisex Clothing",    img: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200&h=200&fit=crop" },
-  { name: "Kidswear",           img: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=200&h=200&fit=crop" },
-  { name: "Accessories",        img: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
-  { name: "Labels & Tags",      img: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop" },
-  { name: "IT & Software",      img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop" },
-  { name: "Raw Materials",      img: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=200&h=200&fit=crop" },
-  { name: "Packaging",          img: "https://images.unsplash.com/photo-1607166452427-7e4477c2cc4e?w=200&h=200&fit=crop" },
-  { name: "Trims & Accessories",img: "https://images.unsplash.com/photo-1558618666-7e4477c2cc4e?w=200&h=200&fit=crop&q=80" },
-  { name: "Fashion Designer",   img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop&q=80" },
-  { name: "Marketing PR",       img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=200&fit=crop" },
-  { name: "Freelance",          img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200&h=200&fit=crop" },
-  { name: "Exporter",           img: "https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=200&h=200&fit=crop" },
-  { name: "Photography",        img: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
+// Local preference thumbnails (src/assets/Buyer/Preference/*.png). Loaded via
+// glob so filenames with spaces / "&" / curly apostrophes resolve cleanly.
+const prefFiles = import.meta.glob("../assets/Buyer/Preference/*.png", { eager: true, import: "default" }) as Record<string, string>;
+const localImg = (basename: string) => {
+  const hit = Object.entries(prefFiles).find(([p]) => p.split("/").pop() === basename);
+  return hit?.[1];
+};
+
+// Buyer registration interests. `file` → provided local asset; `img` → Unsplash
+// fallback for the few interests without a provided image.
+const categories: { name: string; file?: string; img?: string }[] = [
+  { name: "Fabrics",             file: "fabrics.png" },
+  { name: "Women's Clothing",    file: "Women’s clothing.png" },
+  { name: "Men's Clothing",      file: "Men’s Clothing.png" },
+  { name: "Unisex Clothing",     file: "Unisex Clothing.png" },
+  { name: "Kidswear",            file: "Kidswear.png" },
+  { name: "Accessories",         file: "Accessories.png" },
+  { name: "Raw Materials",       file: "Raw Materials.png" },
+  { name: "Trims & Accessories", file: "Trims & Accessories.png" },
+  { name: "Labels & Tags",       file: "Labels & Tags.png" },
+  { name: "Packaging",           file: "Packaging.png" },
+  { name: "IT & Software",       file: "IT &  Software.png" },
+  { name: "Freelance",           file: "Freelance.png" },
+  { name: "Exporter",            file: "Exporter.png" },
+  { name: "Cosmetics",           img: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
+  { name: "Fashion Designer",    img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop&q=80" },
+  { name: "Marketing PR",        img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=200&fit=crop" },
+  { name: "Photography",         img: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
 ];
 
 const InterestPreference = () => {
@@ -62,13 +72,14 @@ const InterestPreference = () => {
         <div className="grid grid-cols-4 gap-x-3 gap-y-4 mb-2">
           {categories.map(cat => {
             const isSelected = selected.includes(cat.name);
+            const src = (cat.file && localImg(cat.file)) || cat.img;
             return (
               <button key={cat.name} onClick={() => toggle(cat.name)} className="text-center">
                 <div className={cn(
                   "relative aspect-square rounded-full overflow-hidden mb-1.5 ring-2 transition-all",
                   isSelected ? "ring-[#a4172c]" : "ring-transparent"
                 )}>
-                  <img src={cat.img} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
+                  <img src={src} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
                   {isSelected && (
                     <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
                       <div className="w-6 h-6 rounded-full bg-[#a4172c] flex items-center justify-center">

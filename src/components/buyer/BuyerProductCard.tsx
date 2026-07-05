@@ -1,10 +1,11 @@
-import { useState } from "react";
 import { motion } from "framer-motion";
-import { Heart, MapPin, Phone, Star, BadgeCheck } from "lucide-react";
-import { useNavigate, Link } from "react-router-dom";
+import { Bookmark, BookmarkCheck, MapPin, Phone, Star, BadgeCheck } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { openSaveModal, useSaved } from "@/lib/savedStore";
+import { useCallVendor } from "@/lib/queries/calls";
 
 export interface BuyerProductCardData {
   id: string;
@@ -32,8 +33,9 @@ interface BuyerProductCardProps {
 }
 
 const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
-  const navigate = useNavigate();
-  const [saved, setSaved] = useState(false);
+  const callVendor = useCallVendor();
+  const savedState = useSaved();
+  const saved = Boolean(savedState.products[product.id]);
 
   return (
     <motion.article
@@ -65,12 +67,15 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
           type="button"
           onClick={(event) => {
             event.stopPropagation();
-            setSaved((current) => !current);
+            event.preventDefault();
+            openSaveModal(product);
           }}
           className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-background/85 text-foreground shadow-sm backdrop-blur-sm transition-transform hover:scale-105"
-          aria-label={saved ? "Remove from saved" : "Save product"}
+          aria-label={saved ? "Edit saved folders" : "Save product"}
         >
-          <Heart className={cn("h-4 w-4", saved ? "fill-accent text-accent" : "text-muted-foreground")} />
+          {saved
+            ? <BookmarkCheck className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]/15" />
+            : <Bookmark className="h-4 w-4 text-muted-foreground" />}
         </button>
 
         <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between rounded-xl bg-background/90 px-3 py-2 text-xs backdrop-blur-sm">
@@ -120,7 +125,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
           className="mt-1 w-full gap-2 bg-accent text-accent-foreground hover:bg-accent/90"
           onClick={(event) => {
             event.stopPropagation();
-            navigate(`/chats/${product.vendorId}`);
+            callVendor(product.vendorId, product.name);
           }}
         >
           <Phone className="h-4 w-4" />

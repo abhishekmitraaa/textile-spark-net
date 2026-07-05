@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { useT } from "@/lib/i18n";
 
 const homeTabs = [
   { label: "New Arrivals", href: "/home/new-arrivals" },
@@ -15,6 +16,7 @@ interface BuyerHomeTabsProps {
 
 const BuyerHomeTabs = ({ className }: BuyerHomeTabsProps) => {
   const location = useLocation();
+  const t = useT();
 
   return (
     <div className={cn("-mx-1 mb-4 overflow-x-auto pb-1", className)} role="tablist" aria-label="Buyer home tabs">
@@ -38,7 +40,7 @@ const BuyerHomeTabs = ({ className }: BuyerHomeTabsProps) => {
                   : "border-border bg-background text-muted-foreground hover:border-accent/40 hover:text-foreground"
               )}
             >
-              {tab.label}
+              {t(tab.label)}
             </Link>
           );
         })}

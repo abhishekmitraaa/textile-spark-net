@@ -36,6 +36,7 @@ import {
   Facebook, Twitter, Linkedin, Send, Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang, setLang as setAppLang, type Lang } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // SHARE APP MODAL
@@ -173,7 +174,7 @@ function MenuRow({
 
 const MyStore = () => {
   const navigate = useNavigate();
-  const [lang, setLang] = useState("en");
+  const lang = useLang();
   const [shareOpen, setShareOpen]           = useState(false);
   const [logoutOpen, setLogoutOpen]         = useState(false);
   const [qrOpen, setQrOpen]                 = useState(false);
@@ -278,8 +279,8 @@ const MyStore = () => {
                 {/* Language buttons */}
                 <div className="overflow-x-auto mb-4 -mx-2 px-2">
                   <div className="flex gap-2 min-w-max">
-                    {[{ code: "en", label: "English" }, { code: "hi", label: "हिंदी" }].map(l => (
-                      <button key={l.code} onClick={() => setLang(l.code)}
+                    {[{ code: "en", label: "English" }, { code: "hi", label: "हिंदी" }, { code: "gu", label: "ગુજરાતી" }].map(l => (
+                      <button key={l.code} onClick={() => setAppLang(l.code as Lang)}
                         className={cn(
                           "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
                           lang === l.code

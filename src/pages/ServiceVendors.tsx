@@ -1,380 +1,261 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import BuyerShell from "@/components/buyer/BuyerShell";
 import {
-  Search,
-  Star,
-  MapPin,
-  BadgeCheck,
-  Phone,
-  MessageCircle,
-  Building2,
-  Wrench,
-  Truck,
-  Palette,
-  Camera,
-  Calculator,
-  Monitor,
-  Filter,
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Search, Star, MapPin, MessageCircle, Phone, SlidersHorizontal, ChevronDown, Check,
+  LayoutGrid, List as ListIcon, Building2, Palette, Truck, Monitor, Calculator, Camera, Wrench, Briefcase,
 } from "lucide-react";
+import { SERVICE_VENDORS, SERVICE_CATEGORIES } from "@/lib/serviceVendorsData";
+import { placeCall, demoPhone } from "@/lib/queries/calls";
 import { cn } from "@/lib/utils";
 
-// Service categories
-const serviceCategories = [
-  { id: "all", label: "All Services", icon: Building2 },
-  { id: "printing", label: "Printing & Manufacturing", icon: Palette },
-  { id: "logistics", label: "Logistics & Supply Chain", icon: Truck },
-  { id: "it", label: "IT/Software & SaaS", icon: Monitor },
-  { id: "finance", label: "Finance & Compliance", icon: Calculator },
-  { id: "marketing", label: "Marketing/PR/Photography", icon: Camera },
-  { id: "machinery", label: "Machinery & Equipment", icon: Wrench },
-];
+const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
+const listContainer = { show: { transition: { staggerChildren: 0.05 } } };
+const listItem = { hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.3 } } };
 
-// Sample service vendors data
-const serviceVendors = [
-  {
-    id: "sv1",
-    name: "PrintMasters India",
-    category: "printing",
-    description: "Full-service textile printing including screen, digital, and sublimation printing with 20+ years experience",
-    services: ["Screen Printing", "Digital Printing", "Sublimation", "Embroidery"],
-    rating: 4.9,
-    reviews: 234,
-    location: "Tiruppur, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=300&fit=crop",
-    startingPrice: "₹15/pc",
-    turnaround: "3-5 days",
-  },
-  {
-    id: "sv2",
-    name: "FastTrack Logistics",
-    category: "logistics",
-    description: "End-to-end supply chain solutions for apparel industry with warehousing and last-mile delivery",
-    services: ["Warehousing", "Last-mile Delivery", "Export Services", "Inventory Management"],
-    rating: 4.7,
-    reviews: 189,
-    location: "Mumbai, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=400&h=300&fit=crop",
-    startingPrice: "₹50/order",
-    turnaround: "Same day",
-  },
-  {
-    id: "sv3",
-    name: "TechFashion Solutions",
-    category: "it",
-    description: "ERP, inventory management, and e-commerce solutions tailored for fashion businesses",
-    services: ["ERP Systems", "E-commerce", "Inventory Software", "POS Solutions"],
-    rating: 4.8,
-    reviews: 156,
-    location: "Bangalore, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop",
-    startingPrice: "₹10,000/mo",
-    turnaround: "Custom",
-  },
-  {
-    id: "sv4",
-    name: "FashionSnap Studio",
-    category: "marketing",
-    description: "Professional product photography, lookbooks, and social media content for fashion brands",
-    services: ["Product Photography", "Lookbook Shoots", "Video Content", "Social Media"],
-    rating: 4.9,
-    reviews: 312,
-    location: "Delhi NCR, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=400&h=300&fit=crop",
-    startingPrice: "₹500/product",
-    turnaround: "2-3 days",
-  },
-  {
-    id: "sv5",
-    name: "ComplianceFirst",
-    category: "finance",
-    description: "GST filing, export documentation, and financial compliance services for textile exporters",
-    services: ["GST Filing", "Export Documentation", "Audit Services", "Tax Planning"],
-    rating: 4.6,
-    reviews: 98,
-    location: "Surat, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop",
-    startingPrice: "₹5,000/mo",
-    turnaround: "As needed",
-  },
-  {
-    id: "sv6",
-    name: "TextileMach Pro",
-    category: "machinery",
-    description: "Industrial sewing machines, cutting equipment sales and maintenance services",
-    services: ["Machine Sales", "Maintenance", "Spare Parts", "Training"],
-    rating: 4.7,
-    reviews: 145,
-    location: "Ludhiana, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1565193566173-7a0ee3dbe261?w=400&h=300&fit=crop",
-    startingPrice: "₹25,000",
-    turnaround: "1-2 weeks",
-  },
-  {
-    id: "sv7",
-    name: "DyeCraft Industries",
-    category: "printing",
-    description: "Eco-friendly fabric dyeing and color matching services with sustainable practices",
-    services: ["Fabric Dyeing", "Color Matching", "Finishing", "Eco-friendly Processing"],
-    rating: 4.8,
-    reviews: 201,
-    location: "Tiruppur, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=300&fit=crop",
-    startingPrice: "₹30/meter",
-    turnaround: "5-7 days",
-  },
-  {
-    id: "sv8",
-    name: "Brand360 Agency",
-    category: "marketing",
-    description: "Full-service branding, PR, and digital marketing for emerging fashion brands",
-    services: ["Brand Strategy", "PR Services", "Digital Marketing", "Influencer Management"],
-    rating: 4.5,
-    reviews: 87,
-    location: "Mumbai, India",
-    verified: true,
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=300&fit=crop",
-    startingPrice: "₹50,000/mo",
-    turnaround: "Ongoing",
-  },
+const CAT_ICONS: Record<string, typeof Building2> = {
+  Building2, Palette, Truck, Monitor, Calculator, Camera, Wrench,
+};
+
+const RATINGS = [
+  { key: 0, label: "Any rating" }, { key: 4, label: "4.0+" }, { key: 4.5, label: "4.5+" },
 ];
+const SORTS = [
+  { key: "recommended", label: "Recommended" },
+  { key: "rating", label: "Top Rated" },
+  { key: "reviews", label: "Most Reviewed" },
+  { key: "name", label: "Name A–Z" },
+] as const;
+type SortKey = (typeof SORTS)[number]["key"];
 
 const ServiceVendors = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState("all");
+  const [location, setLocation] = useState("all");
+  const [minRating, setMinRating] = useState(0);
+  const [sort, setSort] = useState<SortKey>("recommended");
+  const [view, setView] = useState<"grid" | "list">("grid");
 
-  const filteredVendors = useMemo(() => {
-    let vendors = serviceVendors;
+  const locations = useMemo(
+    () => ["all", ...Array.from(new Set(SERVICE_VENDORS.map((v) => v.location.split(",")[0].trim())))],
+    [],
+  );
 
-    if (searchQuery) {
-      vendors = vendors.filter(
-        (v) =>
-          v.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          v.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          v.services.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()))
-      );
-    }
-
-    if (selectedCategory !== "all") {
-      vendors = vendors.filter((v) => v.category === selectedCategory);
-    }
-
-    return vendors;
-  }, [searchQuery, selectedCategory]);
-
-  const getCategoryIcon = (categoryId: string) => {
-    const cat = serviceCategories.find((c) => c.id === categoryId);
-    return cat?.icon || Building2;
-  };
+  const results = useMemo(() => {
+    let list = SERVICE_VENDORS.slice();
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((v) =>
+      v.name.toLowerCase().includes(q) || v.serviceType.toLowerCase().includes(q) ||
+      v.description.toLowerCase().includes(q) || v.tags.some((t) => t.toLowerCase().includes(q)));
+    if (category !== "all") list = list.filter((v) => v.categoryId === category);
+    if (location !== "all") list = list.filter((v) => v.location.startsWith(location));
+    if (minRating) list = list.filter((v) => v.rating >= minRating);
+    if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
+    else if (sort === "reviews") list.sort((a, b) => b.reviewsCount - a.reviewsCount);
+    else if (sort === "name") list.sort((a, b) => a.name.localeCompare(b.name));
+    return list;
+  }, [query, category, location, minRating, sort]);
 
   return (
-    <DashboardLayout>
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 sm:mb-6"
-      >
-        <div className="flex items-center gap-2">
-          <Building2 className="h-5 w-5 text-primary" />
-          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-            Service Vendors
-          </h1>
+    <BuyerShell>
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-4 pb-24">
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-xl font-extrabold text-gray-900">Service Vendors</h1>
+          <p className="text-sm text-gray-500">Find trusted manufacturing, printing, and logistics partners for your brand</p>
         </div>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Find printing, logistics, IT, and other business services
-        </p>
-      </motion.div>
 
-      {/* Search & Filter Bar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-4 space-y-3"
-      >
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search services, vendors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+        {/* Search */}
+        <div className="relative mb-3">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input
+            value={query} onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search services..."
+            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
           />
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {serviceCategories.map((cat) => {
-            const Icon = cat.icon;
+        {/* Controls: Filters (sort) · Location · Rating */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide mb-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold focus:outline-none", sort !== "recommended" ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+              <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-48">
+              <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Sort by</p>
+              {SORTS.map((s) => (
+                <DropdownMenuItem key={s.key} onClick={() => setSort(s.key)} className="gap-2 text-sm">
+                  <Check className={cn("w-4 h-4", sort === s.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {s.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <FilterChip icon={MapPin} label={location === "all" ? "Location" : location} active={location !== "all"}
+            items={locations.map((l) => ({ key: l, label: l === "all" ? "All locations" : l }))} value={location} onSelect={(v) => setLocation(String(v))} />
+          <FilterChip icon={Star} label={minRating ? `Rating ${minRating}+` : "Rating 4+"} active={!!minRating}
+            items={RATINGS.map((r) => ({ key: r.key, label: r.label }))} value={minRating} onSelect={(v) => setMinRating(Number(v))} />
+        </div>
+
+        {/* Category pills */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4">
+          {SERVICE_CATEGORIES.map((c) => {
+            const Icon = CAT_ICONS[c.icon] ?? Building2;
+            const active = category === c.id;
             return (
-              <Button
-                key={cat.id}
-                variant={selectedCategory === cat.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={cn(
-                  "shrink-0 gap-1.5",
-                  selectedCategory === cat.id && "shadow-sm"
-                )}
-              >
-                <Icon className="h-3.5 w-3.5" />
-                <span className="text-xs">{cat.label}</span>
-              </Button>
+              <button key={c.id} onClick={() => setCategory(c.id)}
+                className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95",
+                  active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                <Icon className="w-3.5 h-3.5" /> {c.label}
+              </button>
             );
           })}
         </div>
-      </motion.div>
 
-      {/* Results Count */}
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {filteredVendors.length} service vendors found
-        </p>
+        {/* Count + view toggle */}
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm text-gray-500"><span className="font-bold text-gray-900">{results.length}</span> vendor{results.length === 1 ? "" : "s"} found</p>
+          <div className="flex items-center rounded-lg border border-gray-200 p-0.5">
+            <button onClick={() => setView("grid")} aria-label="Grid view" className={cn("p-1.5 rounded-md transition-colors", view === "grid" ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}>
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button onClick={() => setView("list")} aria-label="List view" className={cn("p-1.5 rounded-md transition-colors", view === "list" ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}>
+              <ListIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {results.length === 0 ? (
+          <div className="py-16 text-center">
+            <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-500">No service vendors match your filters.</p>
+            <button onClick={() => { setCategory("all"); setLocation("all"); setMinRating(0); setQuery(""); }} className="mt-3 text-sm font-semibold text-[#ef4d62]">Clear filters</button>
+          </div>
+        ) : view === "grid" ? (
+          <motion.div variants={listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            {results.map((v) => (
+              <motion.div key={v.id} variants={listItem}>
+                <GridCard v={v} onChat={() => navigate(`/chats/${v.id}`)} onCall={() => placeCall(v.name, demoPhone(v.id))} />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3">
+            {results.map((v) => (
+              <motion.div key={v.id} variants={listItem}>
+                <ListCard v={v} onChat={() => navigate(`/chats/${v.id}`)} onCall={() => placeCall(v.name, demoPhone(v.id))} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
       </div>
-
-      {/* Vendor Cards */}
-      <div className="space-y-4">
-        {filteredVendors.map((vendor, index) => {
-          const CategoryIcon = getCategoryIcon(vendor.category);
-          return (
-            <motion.div
-              key={vendor.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-            >
-              <Card className="overflow-hidden border-border bg-card transition-shadow hover:shadow-md">
-                <CardContent className="p-0">
-                  <div className="flex flex-col sm:flex-row">
-                    {/* Image */}
-                    <div className="relative h-48 w-full sm:h-auto sm:w-48 shrink-0">
-                      <img
-                        src={vendor.image}
-                        alt={vendor.name}
-                        className="h-full w-full object-cover"
-                      />
-                      <Badge
-                        variant="secondary"
-                        className="absolute left-2 top-2 gap-1 bg-background/90 backdrop-blur-sm"
-                      >
-                        <CategoryIcon className="h-3 w-3" />
-                        {serviceCategories.find((c) => c.id === vendor.category)?.label}
-                      </Badge>
-                    </div>
-
-                    {/* Content */}
-                    <div className="flex flex-1 flex-col p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-semibold text-foreground">
-                              {vendor.name}
-                            </h3>
-                            {vendor.verified && (
-                              <BadgeCheck className="h-4 w-4 text-primary" />
-                            )}
-                          </div>
-                          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {vendor.location}
-                            </span>
-                            <span className="flex items-center gap-1">
-                              <Star className="h-3 w-3 fill-primary text-primary" />
-                              {vendor.rating} ({vendor.reviews})
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-                        {vendor.description}
-                      </p>
-
-                      {/* Services Tags */}
-                      <div className="mt-3 flex flex-wrap gap-1.5">
-                        {vendor.services.slice(0, 4).map((service) => (
-                          <Badge
-                            key={service}
-                            variant="outline"
-                            className="text-xs font-normal"
-                          >
-                            {service}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      {/* Pricing & Actions */}
-                      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-                        <div className="flex gap-4">
-                          <div>
-                            <p className="text-xs text-muted-foreground">Starting at</p>
-                            <p className="font-semibold text-foreground">
-                              {vendor.startingPrice}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-muted-foreground">Turnaround</p>
-                            <p className="text-sm font-medium text-foreground">
-                              {vendor.turnaround}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="gap-1"
-                          >
-                            <MessageCircle className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Chat</span>
-                          </Button>
-                          <Button size="sm" className="gap-1">
-                            <Phone className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Call Now</span>
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          );
-        })}
-      </div>
-
-      {/* Empty State */}
-      {filteredVendors.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-16 text-center"
-        >
-          <Building2 className="mb-4 h-12 w-12 text-muted-foreground/50" />
-          <h3 className="text-lg font-medium text-foreground">No vendors found</h3>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Try adjusting your search or filter criteria
-          </p>
-        </motion.div>
-      )}
-    </DashboardLayout>
+    </BuyerShell>
   );
 };
+
+type Vendor = (typeof SERVICE_VENDORS)[number];
+
+function TypeBadge({ label }: { label: string }) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-[#ef4d62] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+      <Briefcase className="w-2.5 h-2.5" /> {label}
+    </span>
+  );
+}
+
+function ActionRow({ onChat, onCall }: { onChat: () => void; onCall: () => void }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); onChat(); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-gray-200 py-1.5 text-[11px] font-semibold text-gray-700 hover:border-gray-300">
+        <MessageCircle className="w-3 h-3" /> Chat
+      </button>
+      <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCall(); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#ef4d62] text-white py-1.5 text-[11px] font-bold hover:bg-[#ef4d62]/90">
+        <Phone className="w-3 h-3" /> Call
+      </button>
+    </div>
+  );
+}
+
+function GridCard({ v, onChat, onCall }: { v: Vendor; onChat: () => void; onCall: () => void }) {
+  return (
+    <Link to={`/services/${v.id}`} className="block rounded-2xl border border-gray-200 bg-white overflow-hidden hover:shadow-md hover:border-gray-300 transition-all">
+      <div className="relative aspect-[4/3] bg-gray-100">
+        <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
+        <div className="absolute top-2 left-2"><TypeBadge label={v.serviceType} /></div>
+      </div>
+      <div className="p-3">
+        <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">{v.name}</h3>
+        <div className="mt-1 flex items-center gap-2 text-[11px] text-gray-600">
+          <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> <span className="font-bold">{v.rating}</span></span>
+          <span className="inline-flex items-center gap-0.5 text-gray-400 truncate"><MapPin className="w-2.5 h-2.5 shrink-0" /> {v.location.split(",")[0]}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap gap-1">
+          {v.tags.slice(0, 2).map((t) => (
+            <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-medium text-gray-600 truncate max-w-full">{t}</span>
+          ))}
+        </div>
+        <p className="mt-2 text-[15px] font-extrabold text-gray-900">{v.price}</p>
+        <div className="mt-2.5"><ActionRow onChat={onChat} onCall={onCall} /></div>
+      </div>
+    </Link>
+  );
+}
+
+function ListCard({ v, onChat, onCall }: { v: Vendor; onChat: () => void; onCall: () => void }) {
+  return (
+    <Link to={`/services/${v.id}`} className="flex gap-3 rounded-2xl border border-gray-200 bg-white p-3 hover:shadow-md hover:border-gray-300 transition-all">
+      <div className="relative w-24 h-24 sm:w-28 sm:h-28 shrink-0 rounded-xl overflow-hidden bg-gray-100">
+        <img src={v.image} alt={v.name} className="w-full h-full object-cover" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold text-gray-900 leading-tight truncate">{v.name}</h3>
+            <div className="mt-0.5"><TypeBadge label={v.serviceType} /></div>
+          </div>
+        </div>
+        <div className="mt-1.5 flex items-center gap-2 text-[11px] text-gray-600">
+          <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> <span className="font-bold">{v.rating}</span> <span className="text-gray-400">({v.reviewsCount})</span></span>
+          <span className="inline-flex items-center gap-0.5 text-gray-400 truncate"><MapPin className="w-2.5 h-2.5 shrink-0" /> {v.location}</span>
+        </div>
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {v.tags.slice(0, 3).map((t) => (
+            <span key={t} className="rounded-full bg-gray-100 px-2 py-0.5 text-[9px] font-medium text-gray-600">{t}</span>
+          ))}
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <p className="text-[15px] font-extrabold text-gray-900 whitespace-nowrap">{v.price}</p>
+          <div className="w-32 sm:w-40"><ActionRow onChat={onChat} onCall={onCall} /></div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+// Quick filter chip with dropdown
+function FilterChip({ icon: Icon, label, active, items, value, onSelect }: {
+  icon: typeof MapPin; label: string; active: boolean;
+  items: { key: string | number; label: string }[]; value: string | number; onSelect: (v: string | number) => void;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", active ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+        <Icon className="w-3.5 h-3.5" /> {label} <ChevronDown className="w-3 h-3 text-gray-400" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-44 max-h-64 overflow-y-auto">
+        {items.map((it) => (
+          <DropdownMenuItem key={it.key} onClick={() => onSelect(it.key)} className="gap-2 text-sm">
+            <Check className={cn("w-4 h-4", value === it.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {it.label}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
 
 export default ServiceVendors;

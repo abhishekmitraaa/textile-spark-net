@@ -11,6 +11,11 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { BusinessProfileScore } from "@/components/dashboard/BusinessProfileScore";
 import { SellerQuickActionsGrid } from "@/components/dashboard/SellerQuickActionsGrid";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
+import { useMyProducts } from "@/lib/queries/products";
+import { useOpenRfqs } from "@/lib/queries/rfqs";
+import { useConversations } from "@/lib/queries/chat";
 
 // Strong ease-out: starts fast, gives instant perceived feedback
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -40,8 +45,29 @@ const TAP_T = { duration: 0.13, ease: E };
 
 const SellerHome = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: dash } = useVendorDashboard(user?.id);
+  const { data: myProducts = [] } = useMyProducts(user?.id);
+  const { data: openRfqs = [] } = useOpenRfqs(user?.id);
+  const { data: conversations = [] } = useConversations();
   const [currentSlide, setCurrentSlide] = useState(0);
   const reduced = useReducedMotion();
+
+  // Real dashboard lists (were hardcoded fixtures).
+  const topProducts = [...myProducts]
+    .filter((p) => p.status === "active")
+    .sort((a, b) => b.inquiries - a.inquiries)
+    .slice(0, 3);
+  const recentLeads = openRfqs.slice(0, 3);
+  const recentMessages = conversations.slice(0, 3);
+  const initialsOf = (name: string) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+
+  const analysisStats = [
+    { label: "Live Products", value: String(dash?.productsLive ?? 0),  change: `${dash?.productsUnderReview ?? 0} under review`, up: true,  Icon: Package },
+    { label: "Open Leads",    value: String(dash?.openLeads ?? 0),     change: "Active buyer RFQs",                             up: true,  Icon: Eye },
+    { label: "Inquiries",     value: String(dash?.enquiries ?? 0),     change: "From interested buyers",                        up: true,  Icon: TrendingUp },
+    { label: "Your Quotes",   value: String(dash?.quotesSent ?? 0),    change: `${dash?.quotesAccepted ?? 0} accepted`,         up: true,  Icon: FileText },
+  ];
 
   useEffect(() => {
     const t = setInterval(() => setCurrentSlide((s) => (s === 0 ? 1 : 0)), 3500);
@@ -143,7 +169,7 @@ const SellerHome = () => {
 
         {/* 3. BUSINESS PROFILE SCORE */}
         <motion.div variants={section}>
-          <BusinessProfileScore score={45} />
+          <BusinessProfileScore score={dash?.profileScore ?? 45} />
         </motion.div>
 
         {/* 4. QUICK ACTIONS GRID */}
@@ -163,12 +189,7 @@ const SellerHome = () => {
               initial="hidden"
               animate="show"
             >
-              {[
-                { label: "Total Views",    value: "234",  change: "+18% vs last week", up: true,  Icon: Eye },
-                { label: "Total Products", value: "28",   change: "+3 this month",     up: true,  Icon: Package },
-                { label: "Inquiries",      value: "97",   change: "2% Vs last week",   up: false, Icon: TrendingUp },
-                { label: "Your Quotes",    value: "15",   change: "Share more quotes", up: true,  Icon: FileText },
-              ].map(s => (
+              {analysisStats.map(s => (
                 <motion.div key={s.label} variants={listItem} className="bg-gray-50 rounded-xl p-3">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-500">{s.label}</span>
@@ -224,23 +245,29 @@ const SellerHome = () => {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <h3 className="text-base font-bold text-gray-900 mb-3">Top Performing Products</h3>
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-0">
-              {[
-                { name: "Men's Denim Jacket - Cla...",     inquiries: 42, price: "₹850", views: "2100 views", image: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=80&h=80&fit=crop" },
-                { name: "Women's Cotton Oversiz...",        inquiries: 28, price: "₹195", views: "1240 views", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=80&h=80&fit=crop" },
-                { name: "Organic Linen Shirt - Prem...",   inquiries: 15, price: "₹450", views: "890 views",  image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=80&h=80&fit=crop" },
-              ].map((p, i) => (
-                <motion.div key={i} variants={listItem} className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0">
+              {topProducts.map((p) => (
+                <motion.div
+                  key={p.id}
+                  variants={listItem}
+                  onClick={() => navigate(`/upload?id=${p.id}`)}
+                  className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
+                >
                   <img src={p.image} alt={p.name} className="w-11 h-11 rounded-lg object-cover shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                     <p className="text-xs text-gray-500">{p.inquiries} inquiries</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-gray-900">{p.price}</p>
-                    <p className="text-xs text-gray-400">{p.views}</p>
+                    <p className="text-sm font-bold text-gray-900">₹{p.price}</p>
+                    <p className="text-xs text-gray-400">{p.views.toLocaleString("en-IN")} views</p>
                   </div>
                 </motion.div>
               ))}
+              {topProducts.length === 0 && (
+                <p className="py-6 text-center text-sm text-gray-400">
+                  No live products yet. <Link to="/upload" className="font-semibold text-accent">Add a product</Link> to start getting inquiries.
+                </p>
+              )}
             </motion.div>
             <Link to="/products">
               <motion.button
@@ -306,56 +333,52 @@ const SellerHome = () => {
               </Link>
             </div>
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-3">
-              {[
-                { initials: "R", name: "Rajesh Kumar",    company: "Fashion Hub Pvt Ltd",   location: "Mumbai",    time: "2h ago", product: "Cotton Kurta Set",    qty: "500 pcs",  status: "New",         statusColor: "bg-green-100 text-green-700" },
-                { initials: "P", name: "Priya Sharma",    company: "Style Street Exports",  location: "Delhi",     time: "5h ago", product: "Printed Sarees",      qty: "1000 pcs", status: "Contacted",   statusColor: "bg-blue-100 text-blue-700" },
-                { initials: "M", name: "Mohammed...",     company: "Gulf Traders LLC",      location: "Dubai, UAE",time: "1d ago", product: "Men's Formal Sh...",  qty: "2000 pcs", status: "Negotiating", statusColor: "bg-orange-100 text-orange-700" },
-              ].map((lead, i) => (
-                <motion.div key={i} variants={listItem} className="border border-gray-100 rounded-xl p-3">
+              {recentLeads.map((lead) => (
+                <motion.div
+                  key={lead.id}
+                  variants={listItem}
+                  onClick={() => navigate("/leads")}
+                  className="border border-gray-100 rounded-xl p-3 cursor-pointer hover:border-accent/40 transition-colors"
+                >
                   <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center text-accent text-sm font-bold shrink-0">
-                        {lead.initials}
-                      </div>
-                      <div>
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {lead.image ? (
+                        <img src={lead.image} alt={lead.productName} className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-lg bg-accent/10 flex items-center justify-center text-accent shrink-0">
+                          <Package className="w-4 h-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-900">{lead.name}</p>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${lead.statusColor}`}>
-                            {lead.status}
+                          <p className="text-sm font-semibold text-gray-900 truncate">{lead.productName}</p>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${lead.alreadyQuoted ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                            {lead.alreadyQuoted ? "Quoted" : "New"}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500">{lead.company}</p>
+                        <p className="text-xs text-gray-500 truncate">{lead.title}</p>
                       </div>
                     </div>
                     <ArrowRight className="w-4 h-4 text-gray-300 shrink-0 mt-1" />
                   </div>
-                  <div className="flex items-center gap-3 text-xs text-gray-400 mb-2 pl-10">
-                    <span>📍 {lead.location}</span>
-                    <span>🕐 {lead.time}</span>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 mb-3">
+                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {lead.units.toLocaleString("en-IN")} pcs</span>
+                    {lead.priceMax > 0 && <span className="bg-gray-100 px-2 py-0.5 rounded-full">₹{lead.priceMin}–{lead.priceMax}</span>}
+                    <span className="text-gray-400">🕐 {lead.date}</span>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs text-gray-600 pl-10 mb-3">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {lead.product} · {lead.qty}</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <motion.button
-                      whileTap={TAP}
-                      transition={TAP_T}
-                      onClick={() => navigate("/leads")}
-                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
-                    >
-                      📞 Call
-                    </motion.button>
-                    <motion.button
-                      whileTap={TAP}
-                      transition={TAP_T}
-                      onClick={() => navigate("/chat")}
-                      className="flex items-center justify-center gap-1.5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
-                    >
-                      💬 Message
-                    </motion.button>
-                  </div>
+                  <motion.button
+                    whileTap={TAP}
+                    transition={TAP_T}
+                    onClick={(e) => { e.stopPropagation(); navigate("/leads"); }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
+                  >
+                    {lead.alreadyQuoted ? "View quote" : "Send a quote"}
+                  </motion.button>
                 </motion.div>
               ))}
+              {recentLeads.length === 0 && (
+                <p className="py-6 text-center text-sm text-gray-400">No open buyer requirements right now. Check back soon.</p>
+              )}
             </motion.div>
           </div>
         </motion.div>
@@ -387,32 +410,32 @@ const SellerHome = () => {
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <h3 className="text-base font-bold text-gray-900 mb-3">Recent Messages</h3>
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-0">
-              {[
-                { initials: "FF", name: "Fashion Forward Ltd.", online: true,  msg: "Can you share samples for the cotton t-shirts?", time: "2 hours ago" },
-                { initials: "EE", name: "Elegance Exports",     online: true,  msg: "Thanks for the quote. We'll review and get back", time: "5 hours ago" },
-                { initials: "GC", name: "GreenWear Co.",        online: false, msg: "Can you reduce the price to ₹480/unit?", time: "1 day ago" },
-              ].map((msg, i) => (
+              {recentMessages.map((msg) => (
                 <motion.div
-                  key={i}
+                  key={msg.id}
                   variants={listItem}
-                  onClick={() => navigate("/chat")}
+                  onClick={() => navigate(`/chats/${msg.id}`)}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                 >
                   <div className="relative shrink-0">
-                    <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 text-xs font-bold">
-                      {msg.initials}
-                    </div>
-                    {msg.online && (
-                      <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-white" />
+                    {msg.avatar ? (
+                      <img src={msg.avatar} alt={msg.name} className="w-10 h-10 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 text-xs font-bold">
+                        {initialsOf(msg.name)}
+                      </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900">{msg.name}</p>
-                    <p className="text-xs text-gray-500 truncate">{msg.msg}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{msg.time}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{msg.name}</p>
+                    <p className="text-xs text-gray-500 truncate">{msg.lastMessage}</p>
+                    {msg.timestamp && <p className="text-xs text-gray-400 mt-0.5">{msg.timestamp}</p>}
                   </div>
                 </motion.div>
               ))}
+              {recentMessages.length === 0 && (
+                <p className="py-6 text-center text-sm text-gray-400">No messages yet. Buyer conversations will show up here.</p>
+              )}
             </motion.div>
             <Link to="/chat">
               <motion.button

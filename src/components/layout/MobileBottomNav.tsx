@@ -1,11 +1,12 @@
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
-  Home,
+  LayoutGrid,
   MessageCircle,
   UserCircle,
   Plus,
-  Sparkles,
+  Clapperboard,
   Package,
   Upload,
   FileText,
@@ -13,17 +14,49 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useT } from "@/lib/i18n";
 
-export const MobileBottomNav = () => {
+interface MobileBottomNavProps {
+  /**
+   * When true, the bar slides out of view on scroll-down and slides back
+   * in on scroll-up (used by the Trends feed for its infinite scroll).
+   * Defaults to false so every existing page keeps the bar permanently fixed.
+   */
+  autoHide?: boolean;
+}
+
+export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {}) => {
   const location = useLocation();
   const { role } = useUserRole();
+  const t = useT();
 
   const unreadMessages = 3;
 
-  // Buyer: Home, For You, Requirement (center), Chats, My Profile
+  const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    if (!autoHide) return;
+    let lastY = window.scrollY;
+    const onScroll = () => {
+      const y = window.scrollY;
+      if (y > lastY && y > 80) setHidden(true); // scrolling down past the fold
+      else if (y < lastY) setHidden(false); // scrolling up
+      lastY = y;
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [autoHide]);
+
+  // Buyer: Categories, Video Close-Ups, Requirement (center), Chats, My Profile
+  //
+  // NOTE on "Video Close-Ups": this opens the full-screen reels viewer via
+  // the dedicated /video-closeups route (see src/pages/VideoCloseUpsPage.tsx),
+  // which exists specifically so this nav item works from ANY page, not
+  // just from inside New Arrivals where the viewer used to be page-local
+  // component state.
   const buyerNavItems = [
-    { name: "Home", href: "/home/new-arrivals", icon: Home },
-    { name: "For You", href: "/home/for-you", icon: Sparkles },
+    { name: "Categories", href: "/categories", icon: LayoutGrid },
+    { name: "Video Close-Ups", href: "/video-closeups", icon: Clapperboard },
     { name: "Requirement", href: "/requirement", icon: Plus, isCenter: true },
     { name: "Chats", href: "/chats", icon: MessageCircle, badge: unreadMessages },
     { name: "My Profile", href: "/profile", icon: UserCircle },
@@ -31,7 +64,7 @@ export const MobileBottomNav = () => {
 
   // Seller: Home, Products, Upload (center), Chats, My Profile
   const sellerNavItems = [
-    { name: "Home", href: "/seller-home", icon: Home },
+    { name: "Home", href: "/seller-home", icon: LayoutGrid },
     { name: "Products", href: "/products", icon: Package },
     { name: "Upload", href: "/upload", icon: Upload, isCenter: true },
     { name: "Chats", href: "/chat", icon: MessageCircle, badge: unreadMessages },
@@ -41,7 +74,12 @@ export const MobileBottomNav = () => {
   const navItems = role === "buyer" ? buyerNavItems : sellerNavItems;
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+    <nav
+      className={cn(
+        "fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-transform duration-300 ease-out",
+        hidden && "translate-y-full"
+      )}
+    >
       <div className="absolute inset-0 bg-card/90 backdrop-blur-xl border-t border-border/50" />
       
       <div className="relative flex items-end justify-around px-1 pb-safe" style={{ paddingBottom: "env(safe-area-inset-bottom, 8px)" }}>
@@ -70,7 +108,7 @@ export const MobileBottomNav = () => {
                   <Icon className="h-6 w-6 text-accent-foreground" />
                 </motion.div>
                 <span className="mt-1 text-[10px] font-medium text-accent">
-                  {item.name}
+                  {t(item.name)}
                 </span>
               </Link>
             );
@@ -111,7 +149,7 @@ export const MobileBottomNav = () => {
                   isActive ? "text-accent" : "text-muted-foreground"
                 )}
               >
-                {item.name}
+                {t(item.name)}
               </span>
               {isActive && (
                 <motion.div

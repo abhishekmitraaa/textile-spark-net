@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Star, QrCode, Share2, Link2, Download, X, ChevronDown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -27,52 +29,6 @@ const listItem = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
 };
 
-const mockReviews = [
-  {
-    id: "1",
-    company: "StyleMart Retailers",
-    reviewer: "Rajesh Kumar",
-    rating: 5,
-    time: "2 days ago",
-    text: "Excellent quality fabric and very professional communication. Delivery was on time and packaging was great. Will definitely order again!",
-    project: "Bulk T-shirt Order",
-    helpful: 12,
-    replied: false,
-  },
-  {
-    id: "2",
-    company: "Fashion Forward Exports",
-    reviewer: "Priya Sharma",
-    rating: 4,
-    time: "1 week ago",
-    text: "Good quality products but slight delay in delivery. Overall satisfied with the purchase and vendor communication.",
-    project: "Summer Collection",
-    helpful: 8,
-    replied: true,
-    replyText:
-      "Thank you for your feedback! We apologize for the delay and are working to improve our delivery timelines.",
-  },
-  {
-    id: "3",
-    company: "TrendyWear Wholesale",
-    reviewer: "Amit Patel",
-    rating: 5,
-    time: "2 weeks ago",
-    text: "Best fabric supplier in Surat! Consistently high quality, competitive pricing, and great customer service.",
-    project: "Denim Collection",
-    helpful: 24,
-    replied: false,
-  },
-];
-
-const ratingBreakdown = [
-  [5, 80],
-  [4, 5],
-  [3, 0],
-  [2, 0],
-  [1, 15],
-];
-
 const getRatingLabel = (r: number) => {
   if (r < 3) return { label: "POOR", cls: "text-red-500" };
   if (r < 4) return { label: "DECENT", cls: "text-amber-500" };
@@ -80,29 +36,49 @@ const getRatingLabel = (r: number) => {
   return { label: "PERFECT", cls: "text-green-600" };
 };
 
-type ReviewItem = {
-  id: string;
-  company: string;
-  reviewer: string;
-  rating: number;
-  time: string;
-  text: string;
-  project: string;
-  helpful: number;
-  replied: boolean;
-  replyText?: string;
+// Relative "time ago" for a review timestamp.
+const timeAgo = (iso: string) => {
+  const diff = Date.now() - new Date(iso).getTime();
+  const day = 86_400_000;
+  if (diff < day) return "Today";
+  if (diff < 2 * day) return "Yesterday";
+  if (diff < 7 * day) return `${Math.floor(diff / day)} days ago`;
+  if (diff < 30 * day) return `${Math.floor(diff / (7 * day))} week${Math.floor(diff / (7 * day)) > 1 ? "s" : ""} ago`;
+  return new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 };
 
 const Reviews = () => {
   const reduced = useReducedMotion();
+  const { user } = useAuth();
+  const { data: reviewData } = useVendorReviews(user?.id);
+  const { reply } = useReviewMutations();
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [posting, setPosting] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
-  const [reviews, setReviews] = useState<ReviewItem[]>(mockReviews);
 
-  const rating = 4.5;
+  const reviews = reviewData?.reviews ?? [];
+  const rating = reviewData?.avg ?? 0;
   const ratingLabel = getRatingLabel(rating);
-  const reviewerCount = 20;
+  const reviewerCount = reviewData?.count ?? 0;
+  const ratingBreakdown: [number, number][] = (reviewData?.breakdown ?? [5, 4, 3, 2, 1].map((s) => ({ stars: s, percent: 0 }))).map(
+    (b) => [b.stars, b.percent] as [number, number],
+  );
+
+  const postReply = async (reviewId: string) => {
+    if (!replyText.trim()) return;
+    setPosting(true);
+    try {
+      await reply(reviewId, replyText.trim(), user?.id);
+      toast.success("Reply posted successfully!");
+      setReplyingTo(null);
+      setReplyText("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not post reply");
+    } finally {
+      setPosting(false);
+    }
+  };
 
   const handleCopyLink = async () => {
     await navigator.clipboard.writeText(window.location.origin + "/reviews");
@@ -234,15 +210,16 @@ const Reviews = () => {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex gap-3">
                           <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#256fef] text-sm font-bold flex-shrink-0">
-                            {review.reviewer
+                            {review.reviewerName
                               .split(" ")
                               .map((n) => n[0])
                               .join("")
-                              .slice(0, 2)}
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900 leading-tight">{review.company}</p>
-                            <p className="text-xs text-gray-500">{review.reviewer}</p>
+                            <p className="text-sm font-semibold text-gray-900 leading-tight">{review.reviewerCompany || review.reviewerName}</p>
+                            <p className="text-xs text-gray-500">{review.reviewerName}</p>
                           </div>
                         </div>
                         <div className="flex flex-col items-end gap-1">
@@ -256,32 +233,29 @@ const Reviews = () => {
                               />
                             ))}
                           </div>
-                          <span className="text-xs text-gray-400">{review.time}</span>
+                          <span className="text-xs text-gray-400">{timeAgo(review.createdAt)}</span>
                         </div>
                       </div>
 
-                      <p className="text-sm text-gray-600 leading-relaxed">{review.text}</p>
+                      {review.body && <p className="text-sm text-gray-600 leading-relaxed">{review.body}</p>}
 
-                      {review.replied && review.replyText && (
+                      {review.replyBody && (
                         <div className="mt-3 bg-blue-50 rounded-lg p-3 border-l-2 border-[#256fef]">
                           <p className="text-xs font-semibold text-[#256fef] mb-1">Your Reply</p>
-                          <p className="text-sm text-gray-600">{review.replyText}</p>
+                          <p className="text-sm text-gray-600">{review.replyBody}</p>
                         </div>
                       )}
 
                       <div className="flex gap-2 mt-3 items-center">
                         <button className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                          👍 Helpful ({review.helpful})
-                        </button>
-                        <button className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
                           Report
                         </button>
-                        {!review.replied && (
+                        {!review.replyBody && (
                           <Button
                             variant="outline"
                             size="sm"
                             className="h-7 text-xs ml-auto border-[#256fef] text-[#256fef] hover:bg-blue-50"
-                            onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
+                            onClick={() => { setReplyingTo(replyingTo === review.id ? null : review.id); setReplyText(""); }}
                           >
                             {replyingTo === review.id ? "Cancel" : "Reply"}
                           </Button>
@@ -318,17 +292,10 @@ const Reviews = () => {
                                 <Button
                                   size="sm"
                                   className="h-8 text-xs bg-[#256fef] hover:bg-[#1a5fd4] text-white"
-                                  disabled={!replyText.trim()}
-                                  onClick={() => {
-                                    toast.success("Reply posted successfully!");
-                                    setReviews(reviews.map((r) =>
-                                      r.id === review.id ? { ...r, replied: true, replyText } : r
-                                    ));
-                                    setReplyingTo(null);
-                                    setReplyText("");
-                                  }}
+                                  disabled={!replyText.trim() || posting}
+                                  onClick={() => postReply(review.id)}
                                 >
-                                  Post Reply
+                                  {posting ? "Posting…" : "Post Reply"}
                                 </Button>
                               </div>
                             </div>

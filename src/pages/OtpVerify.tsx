@@ -3,12 +3,36 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
+import CosoraLogo from "@/components/CosoraLogo";
 
 const maskPhone = (phone: string, code: string) => {
   if (phone.length < 4) return `${code}${phone}`;
   const first4 = phone.slice(0, 4);
   return `${code}-${first4}XXXXX`;
 };
+
+// Height of the on-screen keyboard (number pad), via the VisualViewport API.
+// Lets us lift a fixed bottom action bar above the keyboard so it stays
+// visible/tappable while the user is entering the OTP.
+function useKeyboardInset() {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const kb = window.innerHeight - vv.height - vv.offsetTop;
+      setInset(kb > 24 ? kb : 0); // ignore tiny deltas (URL bar, etc.)
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
+  }, []);
+  return inset;
+}
 
 const OtpVerify = () => {
   const navigate = useNavigate();
@@ -47,6 +71,7 @@ const OtpVerify = () => {
     inputsRef.current[0]?.focus();
   };
 
+  const keyboardInset = useKeyboardInset();
   const isComplete = otp.every(d => d !== "");
 
   const handleNext = () => {
@@ -57,11 +82,11 @@ const OtpVerify = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white flex flex-col px-6 py-10">
+    <div className="min-h-screen bg-white flex flex-col px-6 pt-10 pb-28">
       {/* COSORA wordmark */}
-      <h1 className="font-logo text-center text-3xl font-extrabold italic text-[#a4172c] uppercase tracking-tight mb-10">
-        COSORA
-      </h1>
+      <div className="flex justify-center mb-10">
+        <CosoraLogo height={30} />
+      </div>
 
       <motion.div
         initial={{ opacity: 0, y: 16 }}
@@ -108,21 +133,27 @@ const OtpVerify = () => {
         </p>
       </motion.div>
 
-      {/* Bottom nav buttons */}
-      <div className="flex gap-3 mt-8 max-w-sm mx-auto w-full">
-        <button
-          onClick={() => navigate("/auth/login")}
-          className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
-        >
-          Previous
-        </button>
-        <button
-          onClick={handleNext}
-          disabled={!isComplete}
-          className="flex-1 py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors"
-        >
-          Next
-        </button>
+      {/* Bottom nav buttons — pinned, and lifted above the keyboard when it opens */}
+      <div
+        data-testid="otp-action-bar"
+        className="fixed left-0 right-0 bottom-0 z-30 bg-white/95 backdrop-blur border-t border-gray-100 px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] transition-[transform] duration-150 ease-out"
+        style={{ transform: keyboardInset ? `translateY(-${keyboardInset}px)` : undefined }}
+      >
+        <div className="flex gap-3 max-w-sm mx-auto w-full">
+          <button
+            onClick={() => navigate("/auth/login")}
+            className="flex-1 py-3.5 bg-gray-100 text-gray-600 text-sm font-bold rounded-xl hover:bg-gray-200 transition-colors"
+          >
+            Previous
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={!isComplete}
+            className="flex-1 py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors"
+          >
+            Next
+          </button>
+        </div>
       </div>
     </div>
   );

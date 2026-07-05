@@ -1,11 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
-import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
-import { Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star, Zap, FileText, ClipboardList } from "lucide-react";
+import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
+import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
+import { Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { openSaveModal, useSaved } from "@/lib/savedStore";
+import { useLiveProducts } from "@/lib/queries/products";
+import { useVideoCloseUps } from "@/lib/queries/videos";
+import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
+import { useAuth } from "@/contexts/AuthContext";
 import trustedSeal from "@/assets/Trustedseal.png";
 
 // ─────────────────────────────────────────────────────────────
@@ -53,11 +61,13 @@ const BASE_PRODUCTS: Product[] = [
   { id: "p4", vendorId: "v4", name: "Graphic Print Tee", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.6k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&h=650&fit=crop" },
 ];
 
-const VIDEO_CLOSE_UPS: VideoCloseUp[] = [
-  { id: "vid1", vendorId: "v5", category: "Jeans", brandName: "Nam Pyunghwa / FORCE", brandLine: "Straight Fit Denim", price: "$6.78",  moq: "2", rating: 3.8, reviews: "1.6k", thumbnail: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&h=650&fit=crop" },
-  { id: "vid2", vendorId: "v6", category: "T-shirts/Tops", brandName: "Nam Pyunghwa / FORCE", brandLine: "Oversized Graphic Tee", price: "$16.37", moq: "2", rating: 3.8, reviews: "1.6k", thumbnail: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop" },
-  { id: "vid3", vendorId: "v7", category: "Jeans", brandName: "Tiruppur Mills", brandLine: "Slim Fit Stretch Jeans", price: "$26.71", moq: "2", rating: 4.2, reviews: "2.1k", thumbnail: "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=500&h=650&fit=crop" },
-];
+// NOTE: videoUrl values are freely-licensed public sample clips
+// (Google's GCS sample-videos bucket), used here only as stand-ins so
+// playback is genuinely testable. Swap for real vendor-uploaded video
+// URLs once the catalogue has them — the viewer component already
+// falls back to the thumbnail image automatically if videoUrl is
+// absent or fails to load, so removing these is also safe.
+import { VIDEO_CLOSE_UPS, rankVideoCloseUps } from "@/data/videoCloseUps";
 
 const LOOKING_FOR_THESE = [
   { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
@@ -91,8 +101,9 @@ const HOME_TABS = [
 // ─────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
-  const navigate = useNavigate();
-  const [saved, setSaved] = useState(false);
+  const callVendor = useCallVendor();
+  const savedState = useSaved();
+  const saved = Boolean(savedState.products[product.id]);
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -123,10 +134,11 @@ function ProductCard({ product }: { product: Product }) {
         )}
 
         <button
-          onClick={e => { e.preventDefault(); setSaved(p => !p); }}
+          onClick={e => { e.preventDefault(); openSaveModal(product); }}
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+          aria-label={saved ? "Edit saved folders" : "Save product"}
         >
-          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#256fef] fill-blue-100" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
         </button>
 
         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
@@ -151,7 +163,7 @@ function ProductCard({ product }: { product: Product }) {
         <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
 
         <button
-          onClick={() => navigate(`/chats/${product.vendorId}`)}
+          onClick={() => callVendor(product.vendorId, product.name)}
           className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
@@ -162,72 +174,41 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// SUBMIT REQUIREMENT BOX — appears after every 5 product rows
-// ─────────────────────────────────────────────────────────────
-
-function SubmitRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
-  return (
-    <div className="rounded-xl border border-gray-200 overflow-hidden bg-white">
-      <div className="px-4 py-3.5 border-b border-gray-100">
-        <h3 className="text-base font-bold text-gray-900">Looking for products?</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Get quotes from verified manufacturers</p>
-      </div>
-      <div className="p-4">
-        <Link to="/requirement/post-requirement">
-          <button className="w-full py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors mb-3">
-            Submit Requirement
-          </button>
-        </Link>
-
-        <button onClick={onQuickRfq} className="w-full flex items-center justify-between py-2.5 border-b border-gray-100 text-left">
-          <div className="flex items-center gap-2.5">
-            <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62] shrink-0" />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
-                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#ef4d62]/10 text-[#ef4d62] px-1.5 py-0.5 rounded">Fast</span>
-              </div>
-              <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </button>
-
-        <Link to="/requirement/post-requirement" className="flex items-center justify-between py-2.5 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <ClipboardList className="w-4 h-4 text-blue-500 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Create New Requirement</p>
-              <p className="text-xs text-gray-400">Detailed specifications for precise quotes</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </Link>
-
-        <Link to="/requirement/my-quotes" className="flex items-center justify-between py-2.5">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
-            <p className="text-sm font-semibold text-gray-900">My Previous Quotes</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
 const NewArrivals = () => {
-  const navigate = useNavigate();
+  const t = useT();
+  const { profile } = useAuth();
+  const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
+
+  // Real vendor-uploaded reels; fall back to local samples while loading / if empty.
+  const { data: dbVideos } = useVideoCloseUps();
+  const videoCatalogue = dbVideos && dbVideos.length > 0 ? dbVideos : VIDEO_CLOSE_UPS;
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
   const [batchCount, setBatchCount] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
+  const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
+
+  // Categories the buyer has shown interest in THIS session, derived from
+  // which video close-ups they've bookmarked. Recomputed only when the
+  // bookmark set actually changes. See rankVideoCloseUps for what this
+  // feeds into and why it's scoped to session-only signal.
+  const interestedCategories = useMemo(() => {
+    const cats = new Set<string>();
+    for (const video of videoCatalogue) {
+      if (bookmarkedVideoIds.has(video.id)) cats.add(video.category);
+    }
+    return cats;
+  }, [bookmarkedVideoIds, videoCatalogue]);
+
+  const rankedVideoCloseUps = useMemo(
+    () => rankVideoCloseUps(videoCatalogue, interestedCategories),
+    [videoCatalogue, interestedCategories]
+  );
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -243,12 +224,18 @@ const NewArrivals = () => {
     return () => observer.disconnect();
   }, [isLoadingMore]);
 
-  const products = useMemo(
-    () => Array.from({ length: batchCount }, (_, b) =>
+  // "Today's New In" is now the real, shared catalogue: live products a vendor
+  // actually uploaded (status='live'), read from Supabase. While loading — or if
+  // the catalogue is empty — fall back to the local samples so the page never
+  // looks broken. `batchCount` still drives the infinite-scroll sentinel.
+  const { data: liveProducts, isLoading: productsLoading } = useLiveProducts();
+  const products = useMemo(() => {
+    if (liveProducts && liveProducts.length > 0) return liveProducts;
+    if (productsLoading) return [];
+    return Array.from({ length: batchCount }, (_, b) =>
       BASE_PRODUCTS.map(p => ({ ...p, id: `${p.id}-${b}`, vendorId: `${p.vendorId}-${b}` }))
-    ).flat(),
-    [batchCount]
-  );
+    ).flat();
+  }, [liveProducts, productsLoading, batchCount]);
 
   // 5 rows per chunk, derived from the active column count (toggle-reactive).
   // Mobile cols are 2 or 3; desktop uses the same chunk size which means the
@@ -264,7 +251,7 @@ const NewArrivals = () => {
     <BuyerShell>
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
         {/* ── Home tabs ── */}
-        <div className="flex gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
+        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
           {HOME_TABS.map(tab => (
             <Link
               key={tab.href}
@@ -276,7 +263,7 @@ const NewArrivals = () => {
                   : "text-gray-400 border-transparent hover:text-gray-600"
               )}
             >
-              {tab.href === "/home/new-arrivals" && "✦ "}{tab.label}
+              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
             </Link>
           ))}
         </div>
@@ -316,6 +303,83 @@ const NewArrivals = () => {
           </div>
         </div>
 
+        {/* ── Sponsored (vendor ad campaigns) ── */}
+        <SponsoredRail />
+
+        {/* ── Video Close-Ups — Reels style ── */}
+        <div>
+          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-2 lg:mb-4 px-1">Video Close-Ups</h2>
+          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 scrollbar-hide px-1">
+            {rankedVideoCloseUps.map((v, i) => (
+              <button
+                key={v.id}
+                onClick={() => { setVideoStartIndex(i); setVideoViewerOpen(true); }}
+                className="relative shrink-0 w-36 lg:w-56 aspect-[3/4] rounded-md overflow-hidden bg-gray-100"
+              >
+                <img src={v.thumbnail} alt={v.brandLine} className="w-full h-full object-cover" />
+                {/* Bottom gradient only — keeps the image clear, just ensures the text below stays legible */}
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
+                {/* Small play indicator, corner-placed instead of a large centered overlay */}
+                <div className="absolute top-2 lg:top-3 right-2 lg:right-3 w-6 lg:w-8 h-6 lg:h-8 bg-white/85 rounded-full flex items-center justify-center backdrop-blur-sm">
+                  <Play className="w-2.5 lg:w-3.5 h-2.5 lg:h-3.5 text-gray-900 fill-gray-900" />
+                </div>
+                <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 right-2 lg:right-3">
+                  <p className="text-[10px] lg:text-xs font-bold text-white truncate drop-shadow">{v.category}</p>
+                  <p className="text-[10px] lg:text-xs text-white/90 drop-shadow">{v.price}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {/* Looking for these? */}
+          <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
+          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
+            {LOOKING_FOR_THESE.map(item => (
+              <Link key={item.id} to={`/product/${item.id}`} className="rounded-lg overflow-hidden border border-gray-100">
+                <div className="relative aspect-square bg-gray-100">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
+                    <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
+                    <span className="text-[7px] lg:text-[10px] font-bold">3.9</span>
+                  </div>
+                </div>
+                <div className="p-1.5 lg:p-2.5">
+                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{item.price} | MOQ: {item.moq}</p>
+                  <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
+                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">Product name | <span className="font-bold">Manufacturer</span></p>
+                  <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+                    <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+                  </button>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Brand Picks — sponsored ── */}
+        <div>
+          <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
+            <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
+            <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
+          </div>
+          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2">sponsored</p>
+          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide">
+            {BRAND_PICKS.map((b, i) => (
+              <Link key={i} to="/search/results" className="shrink-0 w-32 lg:w-48">
+                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
+                  <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+                </div>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{b.name}</p>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.category}</p>
+                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.price}</p>
+                <button onClick={(e) => { e.preventDefault(); placeCall(b.name, demoPhone(b.name)); }} className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+                  <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+                </button>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* ── Today's New In + first 2 rows + Submit Requirement Box + more rows ── */}
         <div>
           <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
@@ -348,7 +412,7 @@ const NewArrivals = () => {
               </div>
               {/* Submit Requirement box after every chunk (≈5 rows) */}
               <div className="mt-4 lg:mt-6 mb-1 lg:max-w-md">
-                <SubmitRequirementBox onQuickRfq={() => setQuickRfqOpen(true)} />
+                <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
               </div>
             </div>
           ))}
@@ -361,85 +425,12 @@ const NewArrivals = () => {
         {/* ── Personalized recommendations ── */}
         <div>
           <p className="text-sm lg:text-base mb-2 lg:mb-4 px-1">
-            <Link to="/profile" className="text-blue-600 font-semibold hover:underline">andymitra07</Link>
+            <Link to="/profile" className="text-blue-600 font-semibold hover:underline">{firstName}</Link>
             <span className="text-gray-900 font-bold">, we recommend</span>
             <span className="float-right text-[10px] lg:text-xs text-gray-300 font-semibold">AD</span>
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-            {BASE_PRODUCTS.map(p => <ProductCard key={"rec-" + p.id} product={{ ...p, id: "rec-" + p.id }} />)}
-          </div>
-        </div>
-
-        {/* ── Video Close-Ups — Reels style ── */}
-        <div>
-          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-2 lg:mb-4 px-1">Video Close-Ups</h2>
-          <div className="flex gap-2.5 lg:gap-4 overflow-x-auto pb-1 scrollbar-hide px-1">
-            {VIDEO_CLOSE_UPS.map((v, i) => (
-              <button
-                key={v.id}
-                onClick={() => { setVideoStartIndex(i); setVideoViewerOpen(true); }}
-                className="relative shrink-0 w-28 lg:w-44 aspect-[3/4] rounded-xl overflow-hidden bg-gray-100"
-              >
-                <img src={v.thumbnail} alt={v.brandLine} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-black/10 flex items-center justify-center">
-                  <div className="w-8 lg:w-12 h-8 lg:h-12 bg-white/30 rounded-full flex items-center justify-center backdrop-blur-sm">
-                    <Play className="w-3.5 lg:w-5 h-3.5 lg:h-5 text-white fill-white" />
-                  </div>
-                </div>
-                <div className="absolute bottom-1.5 lg:bottom-3 left-1.5 lg:left-3 right-1.5 lg:right-3">
-                  <p className="text-[9px] lg:text-xs font-bold text-white truncate drop-shadow">{v.category}</p>
-                  <p className="text-[9px] lg:text-xs text-white/90 drop-shadow">{v.price}</p>
-                </div>
-              </button>
-            ))}
-          </div>
-
-          {/* Looking for these? */}
-          <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
-            {LOOKING_FOR_THESE.map(item => (
-              <Link key={item.id} to={`/product/${item.id}`} className="rounded-lg overflow-hidden border border-gray-100">
-                <div className="relative aspect-square bg-gray-100">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
-                    <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
-                    <span className="text-[7px] lg:text-[10px] font-bold">3.9</span>
-                  </div>
-                </div>
-                <div className="p-1.5 lg:p-2.5">
-                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{item.price} | MOQ: {item.moq}</p>
-                  <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
-                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">Product name | <span className="font-bold">Manufacturer</span></p>
-                  <button className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
-                    <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
-                  </button>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Brand Picks — sponsored ── */}
-        <div>
-          <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
-            <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
-            <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
-          </div>
-          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2">sponsored</p>
-          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide">
-            {BRAND_PICKS.map((b, i) => (
-              <Link key={i} to="/search/results" className="shrink-0 w-32 lg:w-48">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
-                  <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
-                </div>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{b.name}</p>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.category}</p>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.price}</p>
-                <button className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
-                  <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
-                </button>
-              </Link>
-            ))}
+            {products.slice(0, 4).map(p => <ProductCard key={"rec-" + p.id} product={p} />)}
           </div>
         </div>
 
@@ -466,10 +457,11 @@ const NewArrivals = () => {
 
       <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
       <VideoCloseUpsViewer
-        videos={VIDEO_CLOSE_UPS}
+        videos={rankedVideoCloseUps}
         initialIndex={videoStartIndex}
         isOpen={videoViewerOpen}
         onClose={() => setVideoViewerOpen(false)}
+        onBookmarkChange={setBookmarkedVideoIds}
       />
     </BuyerShell>
   );

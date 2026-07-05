@@ -1,31 +1,50 @@
-import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useT } from "@/lib/i18n";
+import BuyerShell from "@/components/buyer/BuyerShell";
+import QuickRfqModal from "@/components/buyer/QuickRfqModal";
+import ListingProductCard from "@/components/buyer/ListingProductCard";
+import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
+import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
+import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import {
+  usePreferences,
+  toggleCategory,
+  toggleLocation,
+  removeCategory,
+  removeLocation,
+  completeOnboarding,
+  resetFilters,
+} from "@/lib/preferencesStore";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Search,
-  Grid3X3,
-  List,
-  Heart,
-  Star,
-  MapPin,
-  Package,
   SlidersHorizontal,
   X,
   Sparkles,
+  Check,
+  Phone,
+  Zap,
+  ClipboardList,
+  FileText,
+  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// Category options with icons (matching reference)
-const categoryOptions = [
+// ─────────────────────────────────────────────────────────────
+// DATA
+// ─────────────────────────────────────────────────────────────
+
+const CATEGORIES = [
   { id: "tshirts", label: "T-Shirts", icon: "👕" },
   { id: "shirts", label: "Shirts", icon: "👔" },
-  { id: "coords", label: "Co-ords", icon: "👗" },
+  { id: "coords", label: "Co-ords", icon: "🧥" },
   { id: "dresses", label: "Dresses", icon: "👗" },
   { id: "bottomwear", label: "Bottomwear", icon: "👖" },
   { id: "fabrics", label: "Fabrics", icon: "🧵" },
@@ -34,8 +53,7 @@ const categoryOptions = [
   { id: "activewear", label: "Activewear", icon: "🏃" },
 ];
 
-// Location options
-const locationOptions = [
+const LOCATIONS = [
   { id: "tiruppur", label: "Tiruppur" },
   { id: "surat", label: "Surat" },
   { id: "ludhiana", label: "Ludhiana" },
@@ -45,640 +63,601 @@ const locationOptions = [
   { id: "nopreference", label: "No preference" },
 ];
 
-// Sample products data
-const allProducts = [
-  {
-    id: "1",
-    name: "Premium Cotton Polo T-shirt",
-    category: "tshirts",
-    price: "₹299",
-    moq: "100 pcs",
-    image: "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?w=400&h=500&fit=crop",
-    rating: 4.8,
-    reviews: 156,
-    vendor: "Fashion Hub Pvt Ltd",
-    location: "tiruppur",
-    locationLabel: "Tiruppur, India",
-    verified: true,
-  },
-  {
-    id: "2",
-    name: "100% Organic Cotton Fabric",
-    category: "fabrics",
-    price: "₹180/meter",
-    moq: "500 meters",
-    image: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 234,
-    vendor: "Textile Mills India",
-    location: "surat",
-    locationLabel: "Surat, India",
-    verified: true,
-  },
-  {
-    id: "3",
-    name: "Designer Silk Saree",
-    category: "dresses",
-    price: "₹2,499",
-    moq: "50 pcs",
-    image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 312,
-    vendor: "Silk House",
-    location: "mumbai",
-    locationLabel: "Mumbai, India",
-    verified: true,
-  },
-  {
-    id: "4",
-    name: "Men's Casual Chino Pants",
-    category: "bottomwear",
-    price: "₹599",
-    moq: "50 pcs",
-    image: "https://images.unsplash.com/photo-1473966968600-fa801b869a1a?w=400&h=500&fit=crop",
-    rating: 4.5,
-    reviews: 98,
-    vendor: "Urban Style Co",
-    location: "delhi",
-    locationLabel: "Delhi NCR, India",
-    verified: true,
-  },
-  {
-    id: "5",
-    name: "Women's Crop Top",
-    category: "tshirts",
-    price: "₹249",
-    moq: "100 pcs",
-    image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 203,
-    vendor: "Trendy Fashion",
-    location: "bangalore",
-    locationLabel: "Bangalore, India",
-    verified: true,
-  },
-  {
-    id: "6",
-    name: "Kids Cotton T-Shirt Set",
-    category: "kidswear",
-    price: "₹399",
-    moq: "200 pcs",
-    image: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=400&h=500&fit=crop",
-    rating: 4.6,
-    reviews: 89,
-    vendor: "Little Stars Apparel",
-    location: "tiruppur",
-    locationLabel: "Tiruppur, India",
-    verified: true,
-  },
-  {
-    id: "7",
-    name: "Sports Active Wear Set",
-    category: "activewear",
-    price: "₹799",
-    moq: "100 pcs",
-    image: "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=400&h=500&fit=crop",
-    rating: 4.8,
-    reviews: 145,
-    vendor: "FitStyle India",
-    location: "bangalore",
-    locationLabel: "Bangalore, India",
-    verified: true,
-  },
-  {
-    id: "8",
-    name: "Premium Linen Shirt",
-    category: "shirts",
-    price: "₹549",
-    moq: "75 pcs",
-    image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 167,
-    vendor: "Classic Wear",
-    location: "ludhiana",
-    locationLabel: "Ludhiana, India",
-    verified: true,
-  },
+const HOME_TABS = [
+  { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
+  { label: "TRENDS", href: "/home/trends" },
+  { label: "SALE", href: "/home/sale" },
+  { label: "FOR YOU", href: "/home/for-you" },
+  { label: "FOLLOWINGS", href: "/home/followings" },
 ];
 
-type OnboardingStep = "welcome" | "categories" | "locations";
+const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
+const LOCATION_LABEL = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.label]));
 
-const PREFERENCES_KEY = "cosora_buyer_preferences";
+const MANUFACTURERS = ["Artisan Weaves Co.", "SilkThread Mills", "Tiruppur Knitworks", "Loom & Co.", "Verde Textiles"];
+const FILTERABLE_LOCATIONS = LOCATIONS.filter((l) => l.id !== "nopreference");
 
-interface BuyerPreferences {
-  categories: string[];
-  locations: string[];
-  hasCompleted: boolean;
+// Build a deterministic product pool spread across every category + location so
+// preference filtering always has something to show. Used only as a fallback
+// while the real catalogue loads (or if it's empty).
+const PRODUCT_POOL: ListingProduct[] = Array.from({ length: 48 }, (_, i) => {
+  const cat = CATEGORIES[i % CATEGORIES.length];
+  const loc = FILTERABLE_LOCATIONS[i % FILTERABLE_LOCATIONS.length];
+  return makeListingProduct(`foryou-${i}`, {
+    manufacturer: MANUFACTURERS[i % MANUFACTURERS.length],
+    location: `${loc.label}, IND`,
+    category: cat.id,
+    locationId: loc.id,
+    enquiries: i % 2 === 0 ? "5.6k" : "1.6k",
+  });
+});
+
+// Map DB category names / product names → the preference category ids used
+// by the picker, and DB locations → preference location ids, so real products
+// flow through the exact same preference-filter logic.
+const PREF_CAT_KEYWORDS: Record<string, string[]> = {
+  tshirts: ["t-shirt", "tee", "tank", "polo", "tops"],
+  shirts: ["shirt"],
+  coords: ["co-ord", "coord"],
+  dresses: ["dress", "anarkali", "kurta"],
+  bottomwear: ["jean", "trouser", "pant", "jogger", "short"],
+  fabrics: ["fabric"],
+  accessories: ["accessor", "belt", "bag", "sneaker", "footwear"],
+  kidswear: ["kid"],
+  activewear: ["active", "training", "track", "sport", "mesh"],
+};
+const PREF_LOC_KEYWORDS: Record<string, string> = {
+  tiruppur: "tirupur", surat: "surat", ludhiana: "ludhiana",
+  delhi: "delhi", bangalore: "bangalore", mumbai: "mumbai",
+};
+
+function prefCategoryOf(p: ProductCardData): string | undefined {
+  const hay = `${p.categoryName ?? ""} ${p.name}`.toLowerCase();
+  for (const [id, kws] of Object.entries(PREF_CAT_KEYWORDS)) {
+    if (kws.some((k) => hay.includes(k))) return id;
+  }
+  return undefined;
 }
+function prefLocationOf(p: ProductCardData): string | undefined {
+  const loc = p.location.toLowerCase();
+  for (const [id, kw] of Object.entries(PREF_LOC_KEYWORDS)) if (loc.includes(kw)) return id;
+  return undefined;
+}
+function toListing(p: ProductCardData): ListingProduct {
+  return makeListingProduct(p.id, {
+    name: p.name,
+    manufacturer: p.manufacturer,
+    vendorId: p.vendorId,
+    location: p.location,
+    price: p.price,
+    priceValue: p.priceValue,
+    moq: `MOQ: ${p.moq}`,
+    rating: p.rating,
+    soldCount: p.soldCount,
+    enquiries: p.enquiries,
+    fabric: p.fabric,
+    gsm: p.gsm,
+    fitType: p.fitType,
+    image: p.image,
+    secondaryImage: p.secondaryImage,
+    gender: (p.gender.toLowerCase() as Gender),
+    category: prefCategoryOf(p),
+    locationId: prefLocationOf(p),
+  });
+}
+
+// "Related To Recent Views" ad products (name + price overlay style).
+const RECENT_VIEW_ADS = [
+  { id: "rv1", name: "Candy Knit Cardigan", price: "$22.30", image: img("rv-cardigan", 400, 400) },
+  { id: "rv2", name: "Candy Knit Cardigan", price: "$22.30", image: img("rv-cardigan-2", 400, 400) },
+  { id: "rv3", name: "Maxi High-Waist Pin-Tuck", price: "$53.68", image: img("rv-maxi", 400, 400) },
+  { id: "rv4", name: "Macaron Knit Hoodie Zip", price: "$24.40", image: img("rv-hoodie", 400, 400) },
+];
+
+const ROWS_PER_REQUIREMENT_BOX = 5; // insert a requirement box after every 5 rows
+const ROWS_PER_RECENT_VIEW = 7; // insert a recent-views ad after every 7 rows
+const COLS_MOBILE = 2; // reference is mobile-first 2-col; row math uses this
+
+// ─────────────────────────────────────────────────────────────
+// Post Your Requirement box (inserted every 5 rows)
+// ─────────────────────────────────────────────────────────────
+
+function PostRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+      <div className="px-4 py-3.5 border-b border-gray-100">
+        <h3 className="text-base font-bold text-gray-900">Post Your Requirement</h3>
+        <p className="text-xs text-gray-500 mt-0.5">Get quotes from verified manufacturers</p>
+      </div>
+      <div className="p-4">
+        <button onClick={onQuickRfq} className="w-full flex items-center justify-between py-2.5 border-b border-gray-100 text-left">
+          <div className="flex items-center gap-2.5">
+            <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62] shrink-0" />
+            <div>
+              <div className="flex items-center gap-1.5">
+                <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
+                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#ef4d62]/10 text-[#ef4d62] px-1.5 py-0.5 rounded">Fast</span>
+              </div>
+              <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </button>
+
+        <Link to="/requirement/post-requirement" className="flex items-center justify-between py-2.5 border-b border-gray-100">
+          <div className="flex items-center gap-2.5">
+            <ClipboardList className="w-4 h-4 text-blue-500 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Create New Requirement</p>
+              <p className="text-xs text-gray-400">Detailed specifications for precise quotes</p>
+            </div>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </Link>
+
+        <Link to="/requirement/my-quotes" className="flex items-center justify-between py-2.5">
+          <div className="flex items-center gap-2.5">
+            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
+            <p className="text-sm font-semibold text-gray-900">My Previous Quotes</p>
+          </div>
+          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Related To Recent Views ad block (inserted every 7 rows)
+// ─────────────────────────────────────────────────────────────
+
+function RecentViewsAd() {
+  const navigate = useNavigate();
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-3">
+      <div className="flex items-center justify-between mb-2.5">
+        <h3 className="text-sm font-bold text-gray-900">Related To Recent Views</h3>
+        <span className="text-[9px] font-semibold text-gray-300 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2.5">
+        {RECENT_VIEW_ADS.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => navigate(`/product/${p.id}`)}
+            className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 text-left"
+          >
+            <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
+            <div className="absolute bottom-1.5 right-1.5 text-[8px] font-semibold text-white/70 bg-black/30 px-1.5 py-0.5 rounded">COSORA</div>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+              <p className="text-[11px] font-semibold text-white truncate">{p.name}</p>
+              <p className="text-[11px] font-bold text-white">{p.price}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Preference editor (used in onboarding steps AND the filter popup)
+// ─────────────────────────────────────────────────────────────
+
+function CategoryPicker({
+  selected, query, setQuery,
+}: { selected: string[]; query: string; setQuery: (v: string) => void }) {
+  const filtered = CATEGORIES.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()));
+  return (
+    <div>
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search product types"
+          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        {filtered.map((cat) => {
+          const active = selected.includes(cat.id);
+          return (
+            <button
+              key={cat.id}
+              onClick={() => toggleCategory(cat.id)}
+              className={cn(
+                "flex items-center gap-2.5 rounded-xl border-2 p-3 transition-all active:scale-[0.98]",
+                active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40"
+              )}
+            >
+              <span className="text-xl">{cat.icon}</span>
+              <span className="text-sm font-medium text-gray-800 text-left">{cat.label}</span>
+            </button>
+          );
+        })}
+        {filtered.length === 0 && <p className="col-span-2 py-4 text-center text-sm text-gray-400">No types match</p>}
+      </div>
+    </div>
+  );
+}
+
+function LocationPicker({
+  selected, query, setQuery,
+}: { selected: string[]; query: string; setQuery: (v: string) => void }) {
+  const filtered = LOCATIONS.filter((l) => l.label.toLowerCase().includes(query.trim().toLowerCase()));
+  return (
+    <div>
+      <div className="relative mb-3">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search a country or city"
+          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+        />
+      </div>
+      <div className="space-y-2">
+        {filtered.map((loc) => {
+          const active = selected.includes(loc.id);
+          return (
+            <button
+              key={loc.id}
+              onClick={() => toggleLocation(loc.id)}
+              className={cn(
+                "flex w-full items-center justify-between rounded-xl border p-3.5 transition-all active:scale-[0.99]",
+                active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40"
+              )}
+            >
+              <span className="text-sm font-medium text-gray-800">{loc.label}</span>
+              <span className={cn(
+                "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+                active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-300"
+              )}>
+                {active && <Check className="w-3 h-3" strokeWidth={3} />}
+              </span>
+            </button>
+          );
+        })}
+        {filtered.length === 0 && <p className="py-4 text-center text-sm text-gray-400">No locations match</p>}
+      </div>
+    </div>
+  );
+}
+
+function StepDots({ step }: { step: number }) {
+  return (
+    <div className="flex justify-center gap-2">
+      {[0, 1, 2].map((i) => (
+        <span key={i} className={cn("h-2 w-2 rounded-full", i <= step ? "bg-[#ef4d62]" : "bg-gray-200")} />
+      ))}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// MAIN PAGE
+// ─────────────────────────────────────────────────────────────
 
 const ForYou = () => {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
-  
-  // Preference state
-  const [preferences, setPreferences] = useState<BuyerPreferences | null>(null);
-  const [onboardingStep, setOnboardingStep] = useState<OnboardingStep>("welcome");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedLocations, setSelectedLocations] = useState<string[]>([]);
+  const reduced = useReducedMotion();
+  const t = useT();
+  const prefs = usePreferences();
 
-  // Load preferences from localStorage
+  // Onboarding local step state
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [catQuery, setCatQuery] = useState("");
+  const [locQuery, setLocQuery] = useState("");
+
+  // Feed state
+  const [search, setSearch] = useState("");
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterCatQuery, setFilterCatQuery] = useState("");
+  const [filterLocQuery, setFilterLocQuery] = useState("");
+  const [batches, setBatches] = useState(1);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [quickRfqOpen, setQuickRfqOpen] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
+
+  const activeLocations = prefs.locations.filter((l) => l !== "nopreference");
+
+  // Real catalogue mapped into the listing shape; fall back to the seeded pool
+  // only while it loads / if it's empty.
+  const { data: live } = useLiveProducts();
+  const pool = useMemo(() => (live && live.length ? live.map(toListing) : PRODUCT_POOL), [live]);
+
+  // Filtered product list (preferences + search).
+  const filtered = useMemo(() => {
+    let list = pool;
+    if (prefs.categories.length > 0) list = list.filter((p) => p.category && prefs.categories.includes(p.category));
+    if (activeLocations.length > 0) list = list.filter((p) => p.locationId && activeLocations.includes(p.locationId));
+    const q = search.trim().toLowerCase();
+    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || p.manufacturer.toLowerCase().includes(q));
+    return list;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pool, prefs.categories, prefs.locations, search]);
+
+  const visible = filtered.slice(0, batches * 8);
+
+  // Build interleaved feed: product cards + requirement box (every 5 rows) +
+  // recent-views ad (every 7 rows). Blocks span the full grid width.
+  type FeedItem = { kind: "product"; product: ListingProduct } | { kind: "requirement" } | { kind: "recent" };
+  const feedItems = useMemo<FeedItem[]>(() => {
+    const items: FeedItem[] = [];
+    visible.forEach((product, i) => {
+      items.push({ kind: "product", product });
+      const productsDone = i + 1;
+      if (productsDone % (ROWS_PER_REQUIREMENT_BOX * COLS_MOBILE) === 0) items.push({ kind: "requirement" });
+      else if (productsDone % (ROWS_PER_RECENT_VIEW * COLS_MOBILE) === 0) items.push({ kind: "recent" });
+    });
+    return items;
+  }, [visible]);
+
+  // Infinite scroll.
   useEffect(() => {
-    const saved = localStorage.getItem(PREFERENCES_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as BuyerPreferences;
-      setPreferences(parsed);
-      setSelectedCategories(parsed.categories);
-      setSelectedLocations(parsed.locations);
-    }
-  }, []);
-
-  const showOnboarding = !preferences?.hasCompleted;
-
-  // Save preferences
-  const savePreferences = (skip = false) => {
-    const prefs: BuyerPreferences = {
-      categories: skip ? [] : selectedCategories,
-      locations: skip ? [] : selectedLocations,
-      hasCompleted: true,
-    };
-    localStorage.setItem(PREFERENCES_KEY, JSON.stringify(prefs));
-    setPreferences(prefs);
-  };
-
-  // Toggle category selection
-  const toggleCategory = (id: string) => {
-    setSelectedCategories(prev =>
-      prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
+    const target = loadMoreRef.current;
+    if (!target) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !loadingMore && visible.length < filtered.length) {
+          setLoadingMore(true);
+          window.setTimeout(() => { setBatches((b) => b + 1); setLoadingMore(false); }, 300);
+        }
+      },
+      { rootMargin: "200px" }
     );
-  };
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadingMore, visible.length, filtered.length]);
 
-  // Toggle location selection
-  const toggleLocation = (id: string) => {
-    if (id === "nopreference") {
-      setSelectedLocations(["nopreference"]);
-    } else {
-      setSelectedLocations(prev => {
-        const filtered = prev.filter(l => l !== "nopreference");
-        return filtered.includes(id) 
-          ? filtered.filter(l => l !== id) 
-          : [...filtered, id];
-      });
-    }
-  };
+  // Reset paging when filters/search change.
+  useEffect(() => { setBatches(1); }, [prefs.categories, prefs.locations, search]);
 
-  // Remove preference chip
-  const removePreference = (type: "category" | "location", id: string) => {
-    if (type === "category") {
-      const updated = selectedCategories.filter(c => c !== id);
-      setSelectedCategories(updated);
-      setPreferences(prev => prev ? { ...prev, categories: updated } : prev);
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
-        ...preferences,
-        categories: updated,
-      }));
-    } else {
-      const updated = selectedLocations.filter(l => l !== id);
-      setSelectedLocations(updated);
-      setPreferences(prev => prev ? { ...prev, locations: updated } : prev);
-      localStorage.setItem(PREFERENCES_KEY, JSON.stringify({
-        ...preferences,
-        locations: updated,
-      }));
-    }
-  };
-
-  // Filter products based on preferences
-  const filteredProducts = useMemo(() => {
-    let products = allProducts;
-
-    // Search filter
-    if (searchQuery) {
-      products = products.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.vendor.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    // Category preference filter
-    if (selectedCategories.length > 0) {
-      products = products.filter(p => selectedCategories.includes(p.category));
-    }
-
-    // Location preference filter
-    if (selectedLocations.length > 0 && !selectedLocations.includes("nopreference")) {
-      products = products.filter(p => selectedLocations.includes(p.location));
-    }
-
-    return products;
-  }, [searchQuery, selectedCategories, selectedLocations]);
-
-  const handleProductClick = (productId: string) => {
-    navigate(`/product/${productId}`);
-  };
-
-  // Onboarding screens
-  if (showOnboarding) {
+  // ─── ONBOARDING ───
+  if (!prefs.hasCompleted) {
     return (
-      <DashboardLayout>
-        <div className="flex min-h-[70vh] items-center justify-center px-4">
+      <BuyerShell>
+        <div className="max-w-md mx-auto px-5 flex min-h-[70vh] items-center justify-center">
           <AnimatePresence mode="wait">
-            {/* Welcome Screen */}
-            {onboardingStep === "welcome" && (
+            {step === 0 && (
               <motion.div
                 key="welcome"
-                initial={{ opacity: 0, y: 20 }}
+                initial={reduced ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="w-full max-w-md text-center"
+                exit={reduced ? undefined : { opacity: 0, y: -16 }}
+                className="w-full text-center"
               >
-                <div className="mb-6">
-                  <div className="mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-accent/10">
-                    <Sparkles className="h-12 w-12 text-accent" />
-                  </div>
-                  <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-                    Welcome to Cosora 👋
-                  </h1>
-                  <p className="mt-3 text-muted-foreground">
-                    Tell us what you usually source so we can match you with the right manufacturers.
-                  </p>
+                <div className="mx-auto mb-5 w-44 h-44 rounded-full bg-[#ef4d62]/5 flex items-center justify-center overflow-hidden">
+                  <img src={img("foryou-welcome", 360, 360)} alt="Welcome to Cosora" className="w-full h-full object-cover" />
                 </div>
-
-                {/* Step indicators */}
-                <div className="mb-8 flex justify-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                  <div className="h-2 w-2 rounded-full bg-muted" />
-                  <div className="h-2 w-2 rounded-full bg-muted" />
-                </div>
-
-                <Button
-                  onClick={() => setOnboardingStep("categories")}
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                  size="lg"
+                <h1 className="text-2xl font-bold text-gray-900">Welcome to Cosora 👋</h1>
+                <p className="mt-3 text-sm text-gray-500 leading-relaxed">
+                  Tell us what you usually source so we can match you with the right manufacturers.
+                </p>
+                <div className="my-7"><StepDots step={0} /></div>
+                <button
+                  onClick={() => setStep(1)}
+                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Start
-                </Button>
-                <button
-                  onClick={() => savePreferences(true)}
-                  className="mt-3 text-sm text-muted-foreground hover:text-foreground"
-                >
+                </button>
+                <button onClick={() => completeOnboarding(true)} className="mt-3 text-sm text-gray-400 hover:text-gray-600">
                   Skip for now
                 </button>
               </motion.div>
             )}
 
-            {/* Categories Screen */}
-            {onboardingStep === "categories" && (
+            {step === 1 && (
               <motion.div
                 key="categories"
-                initial={{ opacity: 0, y: 20 }}
+                initial={reduced ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="w-full max-w-md"
+                exit={reduced ? undefined : { opacity: 0, y: -16 }}
+                className="w-full"
               >
-                <div className="mb-6 text-center">
-                  <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
-                    What are you looking to source?
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Select all that apply
-                  </p>
+                <div className="text-center mb-5">
+                  <h1 className="text-xl font-bold text-gray-900">What are you looking to source?</h1>
+                  <p className="mt-1.5 text-sm text-gray-500">Select all that apply</p>
                 </div>
-
-                <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                  {categoryOptions.map((cat) => (
-                    <button
-                      key={cat.id}
-                      onClick={() => toggleCategory(cat.id)}
-                      className={cn(
-                        "flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all",
-                        selectedCategories.includes(cat.id)
-                          ? "border-accent bg-accent/5"
-                          : "border-border hover:border-accent/50"
-                      )}
-                    >
-                      <span className="text-2xl">{cat.icon}</span>
-                      <span className="text-xs font-medium text-foreground sm:text-sm">
-                        {cat.label}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Step indicators */}
-                <div className="mb-6 flex justify-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                  <div className="h-2 w-2 rounded-full bg-muted" />
-                </div>
-
-                <Button
-                  onClick={() => setOnboardingStep("locations")}
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                  size="lg"
+                <CategoryPicker selected={prefs.categories} query={catQuery} setQuery={setCatQuery} />
+                <div className="my-6"><StepDots step={1} /></div>
+                <button
+                  onClick={() => setStep(2)}
+                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next
-                </Button>
+                </button>
               </motion.div>
             )}
 
-            {/* Locations Screen */}
-            {onboardingStep === "locations" && (
+            {step === 2 && (
               <motion.div
                 key="locations"
-                initial={{ opacity: 0, y: 20 }}
+                initial={reduced ? false : { opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="w-full max-w-md"
+                exit={reduced ? undefined : { opacity: 0, y: -16 }}
+                className="w-full"
               >
-                <div className="mb-6 text-center">
-                  <h1 className="text-xl font-semibold text-foreground sm:text-2xl">
-                    Where do you prefer to source from?
-                  </h1>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Choose one or more locations
-                  </p>
+                <div className="text-center mb-5">
+                  <h1 className="text-xl font-bold text-gray-900">Where do you prefer to source from?</h1>
+                  <p className="mt-1.5 text-sm text-gray-500">Choose one or more locations</p>
                 </div>
-
-                <div className="mb-6 space-y-2">
-                  {locationOptions.map((loc) => (
-                    <button
-                      key={loc.id}
-                      onClick={() => toggleLocation(loc.id)}
-                      className={cn(
-                        "flex w-full items-center justify-between rounded-xl border-2 p-4 transition-all",
-                        selectedLocations.includes(loc.id)
-                          ? "border-accent bg-accent/5"
-                          : "border-border hover:border-accent/50"
-                      )}
-                    >
-                      <span className="font-medium text-foreground">
-                        {loc.label}
-                      </span>
-                      <div
-                        className={cn(
-                          "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-                          selectedLocations.includes(loc.id)
-                            ? "border-accent bg-accent text-accent-foreground"
-                            : "border-muted-foreground"
-                        )}
-                      >
-                        {selectedLocations.includes(loc.id) && (
-                          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="currentColor">
-                            <path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-
-                {/* Step indicators */}
-                <div className="mb-6 flex justify-center gap-2">
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                  <div className="h-2 w-2 rounded-full bg-accent" />
-                </div>
-
-                <Button
-                  onClick={() => savePreferences(false)}
-                  className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
-                  size="lg"
+                <LocationPicker selected={prefs.locations} query={locQuery} setQuery={setLocQuery} />
+                <div className="my-6"><StepDots step={2} /></div>
+                <button
+                  onClick={() => completeOnboarding(false)}
+                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
-                  Done
-                </Button>
+                  Next
+                </button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
-      </DashboardLayout>
+      </BuyerShell>
     );
   }
 
-  // Main For You feed
+  // ─── FEED ───
   return (
-    <DashboardLayout>
-      {/* Header */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-4 sm:mb-6"
-      >
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-accent" />
-          <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl lg:text-3xl">
-            For You
-          </h1>
+    <BuyerShell>
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
+        {/* Home tabs */}
+        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
+          {HOME_TABS.map((tab) => (
+            <Link
+              key={tab.href}
+              to={tab.href}
+              className={cn(
+                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
+                tab.href === "/home/for-you" ? "text-[#ef4d62] border-[#ef4d62]" : "text-gray-400 border-transparent hover:text-gray-600"
+              )}
+            >
+              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
+            </Link>
+          ))}
         </div>
-        <p className="text-xs text-muted-foreground sm:text-sm">
-          Personalized recommendations based on your preferences
-        </p>
-      </motion.div>
-
-      {/* Editable Preference Chips */}
-      {(selectedCategories.length > 0 || selectedLocations.length > 0) && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-4 flex flex-wrap gap-2"
-        >
-          {selectedCategories.map((catId) => {
-            const cat = categoryOptions.find(c => c.id === catId);
-            return cat ? (
-              <Badge
-                key={catId}
-                variant="secondary"
-                className="flex items-center gap-1 pr-1"
-              >
-                {cat.icon} {cat.label}
-                <button
-                  onClick={() => removePreference("category", catId)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ) : null;
-          })}
-          {selectedLocations.filter(l => l !== "nopreference").map((locId) => {
-            const loc = locationOptions.find(l => l.id === locId);
-            return loc ? (
-              <Badge
-                key={locId}
-                variant="outline"
-                className="flex items-center gap-1 pr-1"
-              >
-                <MapPin className="h-3 w-3" /> {loc.label}
-                <button
-                  onClick={() => removePreference("location", locId)}
-                  className="ml-1 rounded-full p-0.5 hover:bg-muted"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </Badge>
-            ) : null;
-          })}
-        </motion.div>
-      )}
-
-      {/* Search bar */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.1 }}
-        className="mb-4 flex gap-2 sm:mb-6"
-      >
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search products, vendors..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Button variant="outline" size="icon" className="shrink-0">
-          <SlidersHorizontal className="h-4 w-4" />
-        </Button>
-        {/* View toggle - hidden on mobile */}
-        <div className="hidden gap-1 rounded-lg border border-border p-1 sm:flex">
-          <button
-            onClick={() => setViewMode("grid")}
-            className={cn(
-              "rounded-md p-2 transition-colors",
-              viewMode === "grid"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Grid3X3 className="h-4 w-4" />
-          </button>
-          <button
-            onClick={() => setViewMode("list")}
-            className={cn(
-              "rounded-md p-2 transition-colors",
-              viewMode === "list"
-                ? "bg-secondary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <List className="h-4 w-4" />
-          </button>
-        </div>
-      </motion.div>
-
-      {/* Results count */}
-      <p className="mb-4 text-xs text-muted-foreground">
-        {filteredProducts.length} products for you
-      </p>
-
-      {/* Products grid */}
-      <div className={cn(
-        "grid gap-3 sm:gap-4",
-        viewMode === "grid"
-          ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-          : "grid-cols-1"
-      )}>
-        {filteredProducts.map((product, index) => (
-          <motion.div
-            key={product.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            onClick={() => handleProductClick(product.id)}
-          >
-            <Card className="group overflow-hidden border-border/50 transition-all hover:border-accent/30 hover:shadow-lg cursor-pointer">
-              <div className="relative aspect-[4/5] overflow-hidden bg-muted">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-foreground/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                
-                {/* Wishlist button */}
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                  className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-background/80 backdrop-blur transition-colors hover:bg-accent hover:text-accent-foreground"
-                >
-                  <Heart className="h-4 w-4" />
-                </button>
-
-                {/* Verified badge */}
-                {product.verified && (
-                  <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground text-[10px]">
-                    ✓ Verified
-                  </Badge>
-                )}
-              </div>
-
-              <CardContent className="p-3 sm:p-4">
-                <div className="mb-2">
-                  <h3 className="font-medium text-card-foreground line-clamp-2 text-sm sm:text-base">
-                    {product.name}
-                  </h3>
-                </div>
-
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="font-display text-base font-semibold text-card-foreground sm:text-lg">
-                    {product.price}
-                  </span>
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Star className="h-3 w-3 fill-accent text-accent" />
-                    <span>{product.rating}</span>
-                    <span>({product.reviews})</span>
-                  </div>
-                </div>
-
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <div className="flex items-center gap-1">
-                    <Package className="h-3 w-3" />
-                    <span>MOQ: {product.moq}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" />
-                    <span className="truncate">{product.locationLabel}</span>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-border">
-                  <p className="text-xs text-muted-foreground truncate">
-                    by <span className="font-medium text-foreground">{product.vendor}</span>
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
       </div>
 
-      {/* Empty state */}
-      {filteredProducts.length === 0 && (
-        <Card className="border-border/50">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <Sparkles className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">No matches found</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Try adjusting your preferences or search
-            </p>
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setSearchQuery("");
-                setSelectedCategories([]);
-                setSelectedLocations([]);
-                localStorage.removeItem(PREFERENCES_KEY);
-                setPreferences(null);
-              }}
-            >
-              Reset preferences
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-    </DashboardLayout>
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24">
+        {/* Header */}
+        <div className="flex items-center gap-1.5">
+          <Sparkles className="w-5 h-5 text-[#ef4d62]" />
+          <h1 className="text-lg lg:text-2xl font-bold text-gray-900">For You</h1>
+        </div>
+        <p className="text-xs lg:text-sm text-gray-500 mt-0.5">Personalized recommendations based on your preferences</p>
+
+        {/* Active preference chips */}
+        {(prefs.categories.length > 0 || activeLocations.length > 0) && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {prefs.categories.map((id) => (
+              <span key={id} className="inline-flex items-center gap-1 bg-[#ef4d62]/10 text-[#ef4d62] rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
+                {CATEGORY_LABEL[id] ?? id}
+                <button onClick={() => removeCategory(id)} aria-label={`Remove ${CATEGORY_LABEL[id] ?? id}`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+            {activeLocations.map((id) => (
+              <span key={id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
+                {LOCATION_LABEL[id] ?? id}
+                <button onClick={() => removeLocation(id)} aria-label={`Remove ${LOCATION_LABEL[id] ?? id}`}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Search + filter */}
+        <div className="flex gap-2 mt-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products, vendors..."
+              className="w-full rounded-full border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+            />
+          </div>
+          <button
+            onClick={() => setFilterOpen(true)}
+            aria-label="Filter preferences"
+            className="shrink-0 w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:border-[#ef4d62] hover:text-[#ef4d62] transition-colors"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Edit / Reset links */}
+        <div className="flex items-center justify-between mt-3">
+          <button onClick={() => setFilterOpen(true)} className="text-xs font-semibold text-[#ef4d62] hover:underline">
+            Edit Preferences
+          </button>
+          <button onClick={resetFilters} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
+            Reset preferences
+          </button>
+        </div>
+
+        {/* Count */}
+        <p className="text-xs text-gray-500 mt-3">{filtered.length} products for you</p>
+
+        {/* Empty state */}
+        {filtered.length === 0 ? (
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-white">
+            <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
+              <Sparkles className="w-12 h-12 text-gray-300 mb-3" />
+              <h3 className="text-lg font-bold text-gray-900">No matches found</h3>
+              <p className="text-sm text-gray-500 mt-1 mb-4">Try adjusting your preferences or search</p>
+              <button
+                onClick={() => { setSearch(""); resetFilters(); }}
+                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
+              >
+                Reset preferences
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
+              {feedItems.map((item, idx) => {
+                if (item.kind === "requirement") {
+                  return <div key={`req-${idx}`} className="col-span-full lg:max-w-md"><PostRequirementBox onQuickRfq={() => setQuickRfqOpen(true)} /></div>;
+                }
+                if (item.kind === "recent") {
+                  return <div key={`rv-${idx}`} className="col-span-full lg:max-w-md"><RecentViewsAd /></div>;
+                }
+                return <ListingProductCard key={item.product.id} product={item.product} />;
+              })}
+            </div>
+
+            <div ref={loadMoreRef} className="py-6 text-center text-xs text-gray-400">
+              {visible.length < filtered.length ? (loadingMore ? "Loading more products..." : "Scroll for more") : "You're all caught up"}
+            </div>
+          </>
+        )}
+
+        {/* Bottom Submit Requirement bar */}
+        <div className="mt-2">
+          <SubmitRequirementCard />
+        </div>
+      </div>
+
+      {/* Filter popup = the first two onboarding questions */}
+      <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit your preferences</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div>
+              <p className="text-sm font-bold text-gray-900 mb-2">What are you looking to source?</p>
+              <CategoryPicker selected={prefs.categories} query={filterCatQuery} setQuery={setFilterCatQuery} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 mb-2">Where do you prefer to source from?</p>
+              <LocationPicker selected={prefs.locations} query={filterLocQuery} setQuery={setFilterLocQuery} />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => { resetFilters(); }}
+                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
+              >
+                Reset
+              </button>
+              <button
+                onClick={() => setFilterOpen(false)}
+                className="flex-1 py-2.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors"
+              >
+                Show {filtered.length} products
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
+    </BuyerShell>
   );
 };
 

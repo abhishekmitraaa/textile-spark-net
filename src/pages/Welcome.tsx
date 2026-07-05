@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import CosoraLogo from "@/components/CosoraLogo";
 
 const Welcome = () => {
   const navigate = useNavigate();
@@ -19,9 +20,9 @@ const Welcome = () => {
         className="text-center"
       >
         <p className="text-white/70 text-sm font-medium mb-2">Welcome to</p>
-        <h1 className="font-logo text-white text-5xl font-extrabold italic uppercase tracking-tight mb-3">
-          COSORA
-        </h1>
+        <div className="flex justify-center mb-3">
+          <CosoraLogo height={44} variant="white" />
+        </div>
         <p className="text-white/80 text-sm font-medium">
           Business Made Easy &amp; Enjoyable
         </p>

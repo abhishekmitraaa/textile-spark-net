@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -20,8 +20,13 @@ const listItem = {
   hidden: { opacity: 0, y: 10 },
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
 };
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyAds, updateAdStatus, deleteAd, type AdRow } from "@/lib/queries/ads";
+import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
+import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, type AdSpec } from "@/lib/queries/payments";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -337,6 +342,7 @@ function PricingHeader() {
 
 // ── AdCreationSteps ──
 function AdCreationSteps({
+  products,
   selectedAdTypes, setSelectedAdTypes,
   selectedProducts, setSelectedProducts,
   selectedDuration, setSelectedDuration,
@@ -346,8 +352,9 @@ function AdCreationSteps({
   selectedGoals, setSelectedGoals,
   showMoreAdTypes, setShowMoreAdTypes,
 }: {
+  products: VendorProductRow[];
   selectedAdTypes: string[]; setSelectedAdTypes: (v: string[]) => void;
-  selectedProducts: number[]; setSelectedProducts: (v: number[]) => void;
+  selectedProducts: string[]; setSelectedProducts: (v: string[]) => void;
   selectedDuration: string; setSelectedDuration: (v: string) => void;
   selectedGender: string; setSelectedGender: (v: string) => void;
   selectedCities: string[]; setSelectedCities: (v: string[]) => void;
@@ -367,9 +374,9 @@ function AdCreationSteps({
     }
   };
 
-  const toggleProduct = (i: number) => {
+  const toggleProduct = (id: string) => {
     setSelectedProducts(
-      selectedProducts.includes(i) ? selectedProducts.filter(p => p !== i) : [...selectedProducts, i]
+      selectedProducts.includes(id) ? selectedProducts.filter(p => p !== id) : [...selectedProducts, id]
     );
   };
 
@@ -489,34 +496,48 @@ function AdCreationSteps({
           </div>
 
           <div className="pl-0 md:pl-11 space-y-8">
-            {/* Product tiles */}
+            {/* Product tiles — the vendor's real live products */}
             <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
               <h5 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-                <Building2 className="w-4 h-4" /> Pick your best products
+                <Building2 className="w-4 h-4" /> Pick the products to promote
               </h5>
-              <div className="flex flex-wrap gap-4 mb-3">
-                {[1, 2, 3].map(i => (
-                  <button key={i} onClick={() => toggleProduct(i)}
-                    className={cn(
-                      "w-20 h-20 rounded-2xl border-2 transition-all flex items-center justify-center",
-                      selectedProducts.includes(i)
-                        ? "border-[#FF6B6B] bg-[#fff5f5] shadow-inner"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    )}>
-                    <Building2 className={cn("w-8 h-8", selectedProducts.includes(i) ? "text-[#FF6B6B]" : "text-gray-300")} />
-                  </button>
-                ))}
-                <button onClick={() => toggleProduct(4)}
-                  className={cn(
-                    "w-20 h-20 rounded-2xl border-2 border-dashed transition-all flex items-center justify-center",
-                    selectedProducts.includes(4)
-                      ? "border-[#FF6B6B] bg-[#fff5f5] shadow-inner"
-                      : "border-gray-200 bg-white hover:border-gray-300"
-                  )}>
-                  <Plus className={cn("w-8 h-8", selectedProducts.includes(4) ? "text-[#FF6B6B]" : "text-gray-300")} />
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 font-medium">Choose from your uploaded catalogue</p>
+              {products.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-6 text-center">
+                  <p className="text-sm text-gray-500 mb-3">You have no products yet. Upload a product to advertise it.</p>
+                  <Link to="/upload" className="inline-flex items-center gap-1.5 rounded-full bg-[#f75f71] px-4 py-2 text-xs font-bold text-white hover:bg-[#ff2160] transition-colors">
+                    <Plus className="w-4 h-4" /> Add a product
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+                    {products.map(p => {
+                      const on = selectedProducts.includes(p.id);
+                      return (
+                        <button key={p.id} onClick={() => toggleProduct(p.id)}
+                          className={cn(
+                            "group relative rounded-2xl border-2 overflow-hidden transition-all text-left",
+                            on ? "border-[#FF6B6B] shadow-lg shadow-[#FF6B6B]/10" : "border-gray-200 hover:border-gray-300"
+                          )}>
+                          <div className="aspect-square bg-gray-100">
+                            <img src={p.image} alt={p.name} className="h-full w-full object-cover" loading="lazy" />
+                          </div>
+                          {on && (
+                            <span className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#f75f71] text-white shadow">
+                              <Check className="w-3 h-3" strokeWidth={4} />
+                            </span>
+                          )}
+                          <div className="p-1.5">
+                            <p className="text-[11px] font-semibold text-gray-800 truncate">{p.name}</p>
+                            <p className="text-[10px] text-gray-500">₹{p.price}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-gray-500 font-medium">{selectedProducts.length} selected · each promoted product is a separate campaign</p>
+                </>
+              )}
             </div>
 
             {/* Duration */}
@@ -673,24 +694,170 @@ function AdCreationSteps({
   );
 }
 
+// ── Payment modal (mock checkout — activates the ads on "pay") ──
+function PaymentModal({
+  open, onClose, amount, days, productCount, onPaid,
+}: {
+  open: boolean; onClose: () => void; amount: number; days: number; productCount: number;
+  onPaid: () => Promise<void>;
+}) {
+  const [method, setMethod] = useState<"upi" | "card">("upi");
+  const [paying, setPaying] = useState(false);
+
+  const pay = async () => {
+    setPaying(true);
+    try {
+      // Simulated gateway latency; a real integration (Razorpay/Stripe) would
+      // open its checkout here and activate the ad on the webhook.
+      await new Promise((r) => setTimeout(r, 900));
+      await onPaid();
+      onClose();
+    } catch (e) {
+      toast.error("Payment failed", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  return (
+    <AnimatePresence>
+      {open && (
+        <motion.div className="fixed inset-0 z-[95] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
+          <motion.div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5"
+            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-base font-bold text-gray-900">Complete payment</h3>
+              <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" /></button>
+            </div>
+
+            <div className="rounded-2xl bg-[#fff5f5] border border-[#FF6B6B]/20 p-4 mb-4 text-center">
+              <p className="text-xs text-gray-500">Amount payable</p>
+              <p className="text-3xl font-extrabold text-gray-900 mt-0.5">₹{amount.toLocaleString("en-IN")}</p>
+              <p className="text-[11px] text-gray-500 mt-1">{productCount} product{productCount > 1 ? "s" : ""} · {days} days</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              {(["upi", "card"] as const).map((m) => (
+                <button key={m} onClick={() => setMethod(m)}
+                  className={cn("rounded-xl border-2 py-2.5 text-sm font-bold transition-all",
+                    method === m ? "border-[#FF6B6B] bg-[#fff5f5] text-gray-900" : "border-gray-200 text-gray-500 hover:border-gray-300")}>
+                  {m === "upi" ? "UPI" : "Card"}
+                </button>
+              ))}
+            </div>
+
+            {method === "upi" ? (
+              <input inputMode="text" placeholder="yourname@upi"
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm mb-4 focus:outline-none focus:border-[#FF6B6B]" />
+            ) : (
+              <div className="space-y-2 mb-4">
+                <input inputMode="numeric" placeholder="Card number"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:border-[#FF6B6B]" />
+                <div className="grid grid-cols-2 gap-2">
+                  <input placeholder="MM / YY" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:border-[#FF6B6B]" />
+                  <input inputMode="numeric" placeholder="CVV" className="rounded-xl border border-gray-200 px-3 py-2.5 text-sm focus:outline-none focus:border-[#FF6B6B]" />
+                </div>
+              </div>
+            )}
+
+            <button onClick={pay} disabled={paying}
+              className="w-full bg-[#ff2160] text-white py-3.5 rounded-2xl font-bold text-base hover:bg-[#ff2160]/80 transition-all flex items-center justify-center gap-2 disabled:opacity-60">
+              {paying ? "Processing…" : `Pay ₹${amount.toLocaleString("en-IN")}`}
+            </button>
+            <p className="mt-3 text-center text-[11px] text-amber-600">Demo checkout — no real charge. Add Razorpay keys to take live payments.</p>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ── CostSummary ──
 function CostSummary({
-  selectedAdTypes, selectedProducts, selectedDuration
+  products, selectedAdTypes, selectedProducts, selectedDuration, vendorId, onCreated,
 }: {
-  selectedAdTypes: string[]; selectedProducts: number[]; selectedDuration: string;
+  products: VendorProductRow[]; selectedAdTypes: string[]; selectedProducts: string[]; selectedDuration: string;
+  vendorId?: string; onCreated: () => void;
 }) {
+  const [payOpen, setPayOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
   if (!selectedAdTypes.length || !selectedProducts.length || !selectedDuration) return null;
 
-  const total = selectedAdTypes.reduce((sum, id) => {
+  const days = parseInt(selectedDuration) || 1;
+  const perProductPerRun = selectedAdTypes.reduce((sum, id) => {
     const ad = AD_TYPES.find(a => a.id === id);
     if (!ad) return sum;
     const price = parseInt(ad.price.replace("₹", ""));
-    const days = ad.period === "/msg" ? 1 : parseInt(selectedDuration);
-    return sum + price * days * selectedProducts.length;
+    const runDays = ad.period === "/msg" ? 1 : days;
+    return sum + price * runDays;
   }, 0);
+  const total = perProductPerRun * selectedProducts.length;
+  const dailyBudget = Math.max(1, Math.round(perProductPerRun / days));
+  const campaignLabel = selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.name).filter(Boolean).join(", ") || "Ad";
 
-  const handleCreate = () => {
-    toast.success("Ad campaign created!", { description: "Your ad is now live." });
+  const buildSpec = (): AdSpec => ({
+    placementIds: selectedAdTypes,
+    days,
+    campaignLabel,
+    items: selectedProducts.map((pid) => {
+      const prod = products.find(p => p.id === pid);
+      return { productId: pid, title: prod?.name ?? "Product", imageUrl: prod?.image ?? null };
+    }),
+  });
+
+  // Fallback (no Razorpay keys): publish server-side from the spec after the
+  // simulated checkout. Used by the mock PaymentModal. Ads are still created by
+  // the server (the edge function), never inserted directly by the client.
+  const publishDemo = async () => {
+    const res = await publishDemoAds(buildSpec());
+    if (!res.ok) throw new Error(res.error || "Could not publish ads");
+    onCreated();
+    toast.success("Payment successful — your ads are live!", {
+      description: `${res.count ?? selectedProducts.length} campaign${(res.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
+    });
+  };
+
+  // Primary path: real Razorpay checkout. Server creates the order + amount,
+  // Razorpay collects payment, the server verifies the signature and publishes.
+  const startCheckout = async () => {
+    if (!vendorId) { toast.error("Sign in as a vendor to advertise"); return; }
+    const spec = buildSpec();
+    setBusy(true);
+    try {
+      const order = await createRazorpayOrder(spec);
+      if (!order.configured) {
+        // Gateway not wired yet → simulated checkout.
+        setPayOpen(true);
+        return;
+      }
+      const res = await openRazorpayCheckout({
+        keyId: order.keyId!,
+        orderId: order.orderId!,
+        amount: order.amount,
+        name: "Cosora Ads",
+        description: `${selectedProducts.length} campaign${selectedProducts.length > 1 ? "s" : ""} · ${days} days`,
+      });
+      const verified = await verifyRazorpayPayment({
+        orderId: res.razorpay_order_id,
+        paymentId: res.razorpay_payment_id,
+        signature: res.razorpay_signature,
+      });
+      if (verified.ok) {
+        onCreated();
+        toast.success("Payment successful — your ads are live!", {
+          description: `${verified.count ?? selectedProducts.length} campaign${(verified.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
+        });
+      } else {
+        toast.error("Payment could not be verified", { description: "You were not charged. Please try again." });
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message === "dismissed") toast.info("Payment cancelled");
+      else toast.error("Checkout failed", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -698,7 +865,7 @@ function CostSummary({
       <div className="text-center mb-6">
         <div className="flex items-center justify-center gap-2 mb-2">
           <span className="text-gray-600 text-base">Estimated Cost:</span>
-          <span className="text-4xl font-bold text-gray-900">₹{total}</span>
+          <span className="text-4xl font-bold text-gray-900">₹{total.toLocaleString("en-IN")}</span>
           <span className="text-gray-600 text-base">for {selectedDuration} days</span>
         </div>
         <p className="text-sm text-gray-500">
@@ -706,10 +873,9 @@ function CostSummary({
         </p>
       </div>
 
-      <button onClick={handleCreate}
-        className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
-        Create Your Ad
-        <ChevronRight className="w-5 h-5" />
+      <button onClick={startCheckout} disabled={busy}
+        className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
+        {busy ? "Processing…" : <>Pay &amp; Publish · ₹{total.toLocaleString("en-IN")}<ChevronRight className="w-5 h-5" /></>}
       </button>
 
       <div className="grid grid-cols-2 gap-4 mt-6">
@@ -720,6 +886,15 @@ function CostSummary({
           </div>
         ))}
       </div>
+
+      <PaymentModal
+        open={payOpen}
+        onClose={() => setPayOpen(false)}
+        amount={total}
+        days={days}
+        productCount={selectedProducts.length}
+        onPaid={publishDemo}
+      />
     </div>
   );
 }
@@ -944,15 +1119,91 @@ function AdvertiseCards() {
   );
 }
 
+// ── MyCampaigns — the vendor's real, DB-backed ad campaigns ──
+function MyCampaigns({ ads, onToggle, onDelete }: {
+  ads: AdRow[]; onToggle: (id: string, status: "active" | "paused") => void; onDelete: (id: string) => void;
+}) {
+  if (ads.length === 0) return null;
+  const statusStyle: Record<string, string> = {
+    active: "bg-green-100 text-green-700", paused: "bg-orange-100 text-orange-700",
+    draft: "bg-gray-100 text-gray-500", ended: "bg-gray-100 text-gray-400",
+  };
+  const totalImpr = ads.reduce((s, a) => s + a.impressions, 0);
+  const totalClicks = ads.reduce((s, a) => s + a.clicks, 0);
+  const ctr = (clicks: number, impr: number) => (impr > 0 ? ((clicks / impr) * 100).toFixed(1) : "0.0");
+  const activeCount = ads.filter((a) => a.status === "active").length;
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-200">
+      <h3 className="text-sm font-bold text-gray-900 mb-3">Your Campaigns ({ads.length})</h3>
+
+      {/* Analytics summary across all campaigns */}
+      <div className="grid grid-cols-4 gap-2 mb-4">
+        {[
+          { label: "Active", value: String(activeCount) },
+          { label: "Impressions", value: totalImpr.toLocaleString("en-IN") },
+          { label: "Clicks", value: totalClicks.toLocaleString("en-IN") },
+          { label: "CTR", value: `${ctr(totalClicks, totalImpr)}%` },
+        ].map((s) => (
+          <div key={s.label} className="rounded-xl bg-[#fff5f5] border border-[#FF6B6B]/15 p-2.5 text-center">
+            <p className="text-base font-extrabold text-gray-900 leading-none">{s.value}</p>
+            <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-wide">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-2.5">
+        {ads.map((a) => (
+          <div key={a.id} className="flex items-center gap-3 rounded-xl border border-gray-100 p-3">
+            <div className="w-9 h-9 rounded-lg bg-[#fff5f5] flex items-center justify-center shrink-0 overflow-hidden">
+              {a.imageUrl ? <img src={a.imageUrl} alt="" className="h-full w-full object-cover" /> : <Megaphone className="w-4 h-4 text-[#f75f71]" />}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-gray-900 truncate">{a.title}</p>
+              <p className="text-[11px] text-gray-400">
+                {a.dailyBudget != null ? `₹${a.dailyBudget}/day · ` : ""}{a.impressions.toLocaleString("en-IN")} impressions · {a.clicks.toLocaleString("en-IN")} clicks · {ctr(a.clicks, a.impressions)}% CTR
+              </p>
+            </div>
+            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", statusStyle[a.status])}>
+              {a.status}
+            </span>
+            {(a.status === "active" || a.status === "paused") && (
+              <button
+                onClick={() => onToggle(a.id, a.status === "active" ? "paused" : "active")}
+                className="text-[11px] font-semibold text-[#f75f71] hover:underline shrink-0"
+              >
+                {a.status === "active" ? "Pause" : "Resume"}
+              </button>
+            )}
+            <button onClick={() => onDelete(a.id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
 const Advertisements = () => {
   const reduced = useReducedMotion();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: myAds = [] } = useMyAds(user?.id);
+  const { data: myProducts = [] } = useMyProducts(user?.id);
+  const refreshAds = () => qc.invalidateQueries({ queryKey: ["advertisements"] });
+  const toggleAd = async (id: string, status: "active" | "paused") => {
+    try { await updateAdStatus(id, status); refreshAds(); } catch (e) { toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) }); }
+  };
+  const removeAd = async (id: string) => {
+    try { await deleteAd(id); refreshAds(); toast.success("Campaign removed"); } catch (e) { toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) }); }
+  };
   const [showIntro, setShowIntro] = useState(false);
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
-  const [selectedProducts, setSelectedProducts] = useState<number[]>([]);
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState("7");
   const [selectedGender, setSelectedGender] = useState("all");
   const [selectedCities, setSelectedCities] = useState<string[]>(["allIndia"]);
@@ -983,6 +1234,11 @@ const Advertisements = () => {
             <motion.div variants={section}>
               <StatsGrid />
             </motion.div>
+            {myAds.length > 0 && (
+              <motion.div variants={section}>
+                <MyCampaigns ads={myAds} onToggle={toggleAd} onDelete={removeAd} />
+              </motion.div>
+            )}
             <motion.div variants={section}>
               <CompetitorAdsLink />
             </motion.div>
@@ -991,6 +1247,7 @@ const Advertisements = () => {
             </motion.div>
             <motion.div variants={section}>
               <AdCreationSteps
+                products={myProducts}
                 selectedAdTypes={selectedAdTypes} setSelectedAdTypes={setSelectedAdTypes}
                 selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts}
                 selectedDuration={selectedDuration} setSelectedDuration={setSelectedDuration}
@@ -1003,9 +1260,12 @@ const Advertisements = () => {
             </motion.div>
             <motion.div variants={section}>
               <CostSummary
+                products={myProducts}
                 selectedAdTypes={selectedAdTypes}
                 selectedProducts={selectedProducts}
                 selectedDuration={selectedDuration}
+                vendorId={user?.id}
+                onCreated={refreshAds}
               />
             </motion.div>
             <motion.div variants={section}>

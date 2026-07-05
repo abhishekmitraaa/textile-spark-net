@@ -1,7 +1,11 @@
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyProducts } from "@/lib/queries/products";
+import { useMyVideos, createProductVideo, deleteProductVideo } from "@/lib/queries/videos";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -49,43 +53,7 @@ interface UploadedVideoCloseup {
   shares: number;
 }
 
-// ─────────────────────────────────────────────────────────────
-// MOCK DATA
-// ─────────────────────────────────────────────────────────────
-
-const MOCK_PRODUCTS = [
-  { id: "p1", name: "240 GSM French Terry Oversized T-shirt", code: "CSR-002" },
-  { id: "p2", name: "Men's Denim Jacket — Classic Wash",       code: "CSR-005" },
-  { id: "p3", name: "Women's Cotton Oversized Tee",            code: "CSR-007" },
-  { id: "p4", name: "Organic Linen Shirt — Premium",           code: "CSR-011" },
-];
-
-const EXISTING_CLOSEUPS: UploadedVideoCloseup[] = [
-  {
-    id: "v1",
-    caption: "Our new French Terry oversized tees — soft, structured, and bulk-ready 🔥",
-    productName: "240 GSM French Terry Oversized T-shirt",
-    thumbnail: "https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=400&h=700&fit=crop",
-    duration: "0:28",
-    uploadedAt: "Dec 10, 2025",
-    status: "live",
-    views: 4_821,
-    likes: 312,
-    shares: 47,
-  },
-  {
-    id: "v2",
-    caption: "Denim that moves. Lightweight, structured, export-grade quality.",
-    productName: "Men's Denim Jacket — Classic Wash",
-    thumbnail: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=400&h=700&fit=crop",
-    duration: "0:42",
-    uploadedAt: "Dec 5, 2025",
-    status: "under_review",
-    views: 0,
-    likes: 0,
-    shares: 0,
-  },
-];
+const THUMB_PLACEHOLDER = "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=700&fit=crop";
 
 const statusConfig = {
   live:         { label: "Live",         bg: "bg-green-50",  text: "text-green-600",  border: "border-green-200",  icon: CheckCircle2 },
@@ -223,9 +191,11 @@ function VideoCloseupCard({
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
             <Play className="w-4 h-4 text-white fill-white" />
           </div>
-          <span className="absolute bottom-1 right-1 text-[9px] text-white font-bold bg-black/60 rounded px-1">
-            {closeup.duration}
-          </span>
+          {closeup.duration && (
+            <span className="absolute bottom-1 right-1 text-[9px] text-white font-bold bg-black/60 rounded px-1">
+              {closeup.duration}
+            </span>
+          )}
         </div>
 
         {/* Details */}
@@ -286,21 +256,39 @@ function VideoCloseupCard({
 const UploadVideo = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  const { data: myProducts = [] } = useMyProducts(user?.id);
+  const { data: myVideos = [] } = useMyVideos(user?.id);
 
   const [dragActive, setDragActive]           = useState(false);
   const [selectedFile, setSelectedFile]       = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
+  const [thumbnailFile, setThumbnailFile]     = useState<File | null>(null);
   const [thumbnailUrl, setThumbnailUrl]       = useState<string | null>(null);
   const [caption, setCaption]                 = useState("");
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [productOpen, setProductOpen]         = useState(false);
   const [isSubmitting, setIsSubmitting]       = useState(false);
-  const [closeups, setCloseups]               = useState<UploadedVideoCloseup[]>(EXISTING_CLOSEUPS);
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
-  const selectedProductObj = MOCK_PRODUCTS.find((p) => p.id === selectedProduct);
+  const selectedProductObj = myProducts.find((p) => p.id === selectedProduct);
+
+  // Vendor's own closeups (any status) mapped into the card shape.
+  const closeups: UploadedVideoCloseup[] = myVideos.map((v) => ({
+    id: v.id,
+    caption: v.caption,
+    productName: v.productName || v.category,
+    thumbnail: v.thumbnail ?? THUMB_PLACEHOLDER,
+    duration: "",
+    uploadedAt: v.createdAt,
+    status: v.status === "draft" ? "under_review" : v.status,
+    views: v.views,
+    likes: v.likes,
+    shares: 0,
+  }));
 
   // ── File handlers ──
   const handleDrag = (e: React.DragEvent) => {
@@ -338,7 +326,7 @@ const UploadVideo = () => {
 
   const handleThumbChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) setThumbnailUrl(URL.createObjectURL(file));
+    if (file) { setThumbnailFile(file); setThumbnailUrl(URL.createObjectURL(file)); }
   };
 
   const removeFile = () => {
@@ -354,40 +342,44 @@ const UploadVideo = () => {
       : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
   // ── Submit ──
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) { toast.error("Sign in as a vendor to publish"); return; }
     if (!selectedFile) { toast.error("Please select a video to upload"); return; }
     if (!caption.trim()) { toast.error("Add a caption for your video closeup"); return; }
     if (!selectedProduct) { toast.error("Tag a product so buyers can shop directly"); return; }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      const newCloseup: UploadedVideoCloseup = {
-        id: `v${Date.now()}`,
+    try {
+      await createProductVideo(user.id, {
+        file: selectedFile,
+        thumbnail: thumbnailFile,
         caption: caption.trim(),
-        productName: selectedProductObj?.name ?? "",
-        thumbnail: thumbnailUrl ?? "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=700&fit=crop",
-        duration: "0:30",
-        uploadedAt: "Just now",
-        status: "under_review",
-        views: 0,
-        likes: 0,
-        shares: 0,
-      };
-      setCloseups((prev) => [newCloseup, ...prev]);
-      setIsSubmitting(false);
+        productId: selectedProduct,
+      });
+      qc.invalidateQueries({ queryKey: ["product_videos"] });
       removeFile();
       setCaption("");
       setSelectedProduct("");
+      setThumbnailFile(null);
       setThumbnailUrl(null);
       toast.success("Video closeup uploaded!", {
         description: "It'll appear in the buyer feed after review (24–48 hours).",
       });
-    }, 2000);
+    } catch (err) {
+      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setCloseups((prev) => prev.filter((v) => v.id !== id));
-    toast.success("Video closeup removed");
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteProductVideo(id);
+      qc.invalidateQueries({ queryKey: ["product_videos"] });
+      toast.success("Video closeup removed");
+    } catch (err) {
+      toast.error("Couldn't remove", { description: err instanceof Error ? err.message : String(err) });
+    }
   };
 
   return (
@@ -562,7 +554,10 @@ const UploadVideo = () => {
                         exit={{ opacity: 0, y: -4 }}
                         className="absolute left-0 right-0 top-12 z-20 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
                       >
-                        {MOCK_PRODUCTS.map((p) => (
+                        {myProducts.length === 0 && (
+                          <p className="px-4 py-3 text-xs text-gray-400">No products yet — upload a product first, then tag it here.</p>
+                        )}
+                        {myProducts.map((p) => (
                           <button
                             key={p.id}
                             onClick={() => { setSelectedProduct(p.id); setProductOpen(false); }}
@@ -576,7 +571,7 @@ const UploadVideo = () => {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-900 leading-snug">{p.name}</p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">{p.code}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{p.productCode}</p>
                             </div>
                             {selectedProduct === p.id && (
                               <CheckCircle2 className="w-4 h-4 text-accent ml-auto shrink-0 mt-0.5" />
@@ -611,7 +606,7 @@ const UploadVideo = () => {
                       <p className="text-[10px] text-gray-400">Click to change</p>
                     </div>
                     <button
-                      onClick={(e) => { e.stopPropagation(); setThumbnailUrl(null); }}
+                      onClick={(e) => { e.stopPropagation(); setThumbnailFile(null); setThumbnailUrl(null); }}
                       className="p-1 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <X className="w-3.5 h-3.5" />

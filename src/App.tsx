@@ -5,6 +5,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
+import { AuthProvider } from "./contexts/AuthContext";
+import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
+import StoreSync from "./components/StoreSync";
+import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
@@ -23,10 +27,20 @@ import MyStore from "./pages/MyStore";
 import BusinessProfile from "./pages/BusinessProfile";
 import BusinessProfileEmployees from "./pages/BusinessProfileEmployees";
 import Chat from "./pages/Chat";
+import ChatThread from "./pages/ChatThread";
+import Categories from "./pages/Categories";
+import MyReviews from "./pages/MyReviews";
+import SupportChat from "./pages/SupportChat";
 import PostRequirement from "./pages/PostRequirement";
+import MyQuotes from "./pages/MyQuotes";
+import Sale from "./pages/Sale";
+import SearchResults from "./pages/SearchResults";
+import VendorProfile from "./pages/VendorProfile";
 import RecentlyViewed from "./pages/RecentlyViewed";
 import ServiceVendors from "./pages/ServiceVendors";
+import ServiceVendorProfile from "./pages/ServiceVendorProfile";
 import Freelancers from "./pages/Freelancers";
+import FreelancerProfile from "./pages/FreelancerProfile";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import CosoraStudio from "./pages/CosoraStudio";
@@ -43,6 +57,16 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import NewArrivals from "./pages/NewArrivals";
+import VideoCloseUpsPage from "./pages/VideoCloseUpsPage";
+import Trends from "./pages/Trends";
+import Following from "./pages/Following";
+import FollowingViewAll from "./pages/FollowingViewAll";
+import ProfileNotifications from "./pages/ProfileNotifications";
+import ProfileSocialLinks from "./pages/ProfileSocialLinks";
+import ProfileAccountPrefs from "./pages/ProfileAccountPrefs";
+import TermsConditions from "./pages/TermsConditions";
+import SavedCollections from "./pages/SavedCollections";
+import SavedCollectionDetail from "./pages/SavedCollectionDetail";
 import Search from "./pages/Search";
 import AddSocialLinks from "./pages/AddSocialLinks";
 
@@ -58,6 +82,9 @@ import About from "./pages/About";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
+import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
+import CallNumberModal from "./components/buyer/CallNumberModal";
+import AutoTranslate from "./components/i18n/AutoTranslate";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
 import UploadCatalogue from "./pages/UploadCatalogue";
 import UploadVideo from "./pages/UploadVideo";
@@ -74,13 +101,6 @@ type BuyerShellRoute = {
 
 const buyerShellRoutes: BuyerShellRoute[] = [
   {
-    path: "/home/trends",
-    title: "Trends",
-    description: "Trending styles and categories landing page for the buyer home flow.",
-    relatedHref: "/home/new-arrivals",
-    relatedLabel: "Open New Arrivals",
-  },
-  {
     path: "/home/sale",
     title: "Sale",
     description: "Discounted products feed for sale-priced inventory.",
@@ -88,109 +108,11 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     relatedLabel: "Open New Arrivals",
   },
   {
-    path: "/home/followings",
-    title: "Followings",
-    description: "Feed for products and updates from brands the buyer follows.",
-    relatedHref: "/home/new-arrivals",
-    relatedLabel: "Open New Arrivals",
-  },
-  {
-    path: "/home/followings/view-all",
-    title: "View All Followings",
-    description: "Full list of brands the buyer follows.",
-    relatedHref: "/home/followings",
-    relatedLabel: "Open Followings",
-  },
-  {
     path: "/home/for-you/onboarding",
     title: "For You Onboarding",
     description: "First-time preference setup flow before the personalized feed.",
     relatedHref: "/home/for-you",
     relatedLabel: "Open For You",
-  },
-  {
-    path: "/search/results",
-    title: "Search Results",
-    description: "Product and brand results view with tabs, sorting, and filters.",
-    relatedHref: "/search",
-    relatedLabel: "Open Search",
-  },
-  {
-    path: "/search/filters",
-    title: "Advanced Filters",
-    description: "Granular product filtering page for search and listing flows.",
-    relatedHref: "/search/results",
-    relatedLabel: "Back to Results",
-  },
-  {
-    path: "/product/:id/3d-configurator",
-    title: "3D Configurator",
-    description: "Interactive garment customization shell for buyer design previews.",
-    relatedHref: "/product/1",
-    relatedLabel: "Open Product Detail",
-  },
-  {
-    path: "/vendor/:id",
-    title: "Vendor Profile",
-    description: "Buyer-facing vendor or manufacturer profile page.",
-    relatedHref: "/home/new-arrivals",
-    relatedLabel: "Open New Arrivals",
-  },
-  {
-    path: "/vendor/:id/products",
-    title: "Vendor Products",
-    description: "All products from a specific vendor.",
-    relatedHref: "/vendor/1",
-    relatedLabel: "Open Vendor Profile",
-  },
-  {
-    path: "/vendor/:id/reviews",
-    title: "Vendor Reviews",
-    description: "Reviews and ratings for a specific vendor.",
-    relatedHref: "/vendor/1",
-    relatedLabel: "Open Vendor Profile",
-  },
-  {
-    path: "/services/:vendorId",
-    title: "Service Vendor Profile",
-    description: "Full profile page for a service vendor.",
-    relatedHref: "/services",
-    relatedLabel: "Open Services",
-  },
-  {
-    path: "/services/:vendorId/portfolio",
-    title: "Service Portfolio",
-    description: "Portfolio tab for a service vendor profile.",
-    relatedHref: "/services",
-    relatedLabel: "Open Services",
-  },
-  {
-    path: "/services/:vendorId/reviews",
-    title: "Service Reviews",
-    description: "Reviews tab for a service vendor profile.",
-    relatedHref: "/services",
-    relatedLabel: "Open Services",
-  },
-  {
-    path: "/freelancers/:id",
-    title: "Freelancer Profile",
-    description: "Full profile page for an individual freelancer or expert.",
-    relatedHref: "/freelancers",
-    relatedLabel: "Open Freelancers",
-  },
-  {
-    path: "/freelancers/:id/portfolio",
-    title: "Freelancer Portfolio",
-    description: "Portfolio tab for a freelancer profile.",
-    relatedHref: "/freelancers",
-    relatedLabel: "Open Freelancers",
-  },
-  {
-    path: "/freelancers/:id/reviews",
-    title: "Freelancer Reviews",
-    description: "Reviews tab for a freelancer profile.",
-    relatedHref: "/freelancers",
-    relatedLabel: "Open Freelancers",
   },
   {
     path: "/requirement",
@@ -221,65 +143,9 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     relatedLabel: "Open My Quotes",
   },
   {
-    path: "/requirement/my-quotes/:rfqId/quotes-received",
-    title: "Quotes Received",
-    description: "All vendor quotes received for a specific RFQ.",
-    relatedHref: "/requirement/my-quotes",
-    relatedLabel: "Back to My Quotes",
-  },
-  {
-    path: "/requirement/my-quotes/:rfqId/quote-detail/:quoteId",
-    title: "Quote Detail",
-    description: "Detailed view for one vendor quote.",
-    relatedHref: "/requirement/my-quotes",
-    relatedLabel: "Back to My Quotes",
-  },
-  {
-    path: "/requirement/my-quotes/:rfqId/compare",
-    title: "Quote Comparison",
-    description: "Side-by-side comparison shell for up to three quotes.",
-    relatedHref: "/requirement/my-quotes",
-    relatedLabel: "Back to My Quotes",
-  },
-  {
-    path: "/saved",
-    title: "Saved Products",
-    description: "Wishlist collections overview page.",
-    relatedHref: "/recently-viewed",
-    relatedLabel: "Open Recently Viewed",
-  },
-  {
-    path: "/saved/:collectionId",
-    title: "Saved Collection",
-    description: "Individual wishlist collection contents.",
-    relatedHref: "/saved",
-    relatedLabel: "Back to Saved Products",
-  },
-  {
-    path: "/chats/:vendorId",
-    title: "Chat Thread",
-    description: "Individual message thread with a vendor.",
-    relatedHref: "/chats",
-    relatedLabel: "Open Messages Hub",
-  },
-  {
-    path: "/chats/calls",
-    title: "Call History",
-    description: "Complete log of calls made and received through the app.",
-    relatedHref: "/chats",
-    relatedLabel: "Open Messages Hub",
-  },
-  {
     path: "/profile/edit",
     title: "Edit Profile",
     description: "Personal, business, and photo editing flow.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/reviews",
-    title: "My Reviews",
-    description: "All reviews written by the buyer.",
     relatedHref: "/profile",
     relatedLabel: "Open Profile",
   },
@@ -289,41 +155,6 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     description: "Expanded business profile management page.",
     relatedHref: "/profile",
     relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/social-links",
-    title: "Social Links",
-    description: "Social profile connection and management page.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/notifications",
-    title: "Notification Settings",
-    description: "Email and push notification preferences.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/regional-settings",
-    title: "Regional Settings",
-    description: "Currency, timezone, and language preferences.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/data-export",
-    title: "Data Export",
-    description: "Data download and RFQ history export page.",
-    relatedHref: "/profile",
-    relatedLabel: "Open Profile",
-  },
-  {
-    path: "/profile/help/chat",
-    title: "Support Chat",
-    description: "Live customer support chat shell.",
-    relatedHref: "/profile/help",
-    relatedLabel: "Open Help",
   },
   {
     path: "/blogs",
@@ -343,16 +174,19 @@ const buyerShellRoutes: BuyerShellRoute[] = [
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AuthProvider>
     <UserRoleProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <AutoTranslate />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/login" element={<Login />} />
             <Route path="/auth/otp-verify" element={<OtpVerify />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/role-selection" element={<RoleSelection />} />
             <Route path="/auth/sub-role" element={<SubRole />} />
             <Route path="/auth/account-info" element={<AccountInfo />} />
@@ -361,15 +195,28 @@ const App = () => (
             <Route path="/auth/welcome" element={<Welcome />} />
             <Route path="/browse" element={<BrowseProducts />} />
             <Route path="/home/new-arrivals" element={<NewArrivals />} />
+            <Route path="/home/trends" element={<Trends />} />
+            <Route path="/home/sale" element={<Sale />} />
+            <Route path="/home/followings" element={<Following />} />
+            <Route path="/home/followings/view-all" element={<FollowingViewAll />} />
+            <Route path="/video-closeups" element={<VideoCloseUpsPage />} />
             <Route path="/search" element={<Search />} />
+            <Route path="/search/results" element={<SearchResults />} />
             <Route path="/home/for-you" element={<ForYou />} />
             <Route path="/services" element={<ServiceVendors />} />
+            <Route path="/services/:vendorId" element={<ServiceVendorProfile />} />
             <Route path="/freelancers" element={<Freelancers />} />
+            <Route path="/freelancers/:id" element={<FreelancerProfile />} />
             <Route path="/requirement/post-requirement" element={<PostRequirement />} />
-            <Route path="/requirement/my-quotes" element={<Quotes />} />
+            <Route path="/requirement/my-quotes" element={<MyQuotes />} />
+            <Route path="/vendor/:id" element={<VendorProfile />} />
             <Route path="/chats" element={<Chat />} />
+            <Route path="/chats/:vendorId" element={<ChatThread />} />
+            <Route path="/categories" element={<Categories />} />
             <Route path="/profile/interest-preference" element={<InterestPreference />} />
+            <Route path="/profile/reviews" element={<MyReviews />} />
             <Route path="/profile/help" element={<Help />} />
+            <Route path="/profile/help/chat" element={<SupportChat />} />
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/products" element={<Products />} />
@@ -382,6 +229,13 @@ const App = () => (
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/profile/notifications" element={<ProfileNotifications />} />
+            <Route path="/profile/social-links" element={<ProfileSocialLinks />} />
+            <Route path="/profile/regional-settings" element={<ProfileAccountPrefs />} />
+            <Route path="/profile/data-export" element={<ProfileAccountPrefs />} />
+            <Route path="/profile/terms" element={<TermsConditions />} />
+            <Route path="/saved" element={<SavedCollections />} />
+            <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
             <Route path="/business-profile" element={<BusinessProfile />} />
             <Route path="/business-profile/employees" element={<BusinessProfileEmployees />} />
@@ -389,7 +243,6 @@ const App = () => (
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
-            <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
@@ -430,9 +283,18 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          {/* Global wishlist modal: available from every page's product cards */}
+          <SaveToFolderModal />
+          {/* Desktop "call this number" dialog (mobile opens the dialer directly) */}
+          <CallNumberModal />
+          {/* Syncs Saved + Recently-Viewed stores with the DB on auth changes */}
+          <StoreSync />
+          {/* Dev-only: sign in as a seeded buyer/vendor/admin (no-op in prod) */}
+          <DevAccountSwitcher />
         </BrowserRouter>
       </TooltipProvider>
     </UserRoleProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

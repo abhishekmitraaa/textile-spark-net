@@ -89,6 +89,14 @@ The `buyerShellRoutes` array at the top of App.tsx defines all buyer feature pag
 
 - **React Query** (TanStack Query) for server state and caching
 - **QueryClientProvider** wraps the app for global query management
+- **Buyer-side client stores** — Cross-page reactive state uses **module-level stores backed by `useSyncExternalStore` + `localStorage`** (no React context/provider). Each exposes a `useX()` hook plus mutation functions. Current stores: `src/lib/savedStore.ts` (wishlist folders/products + the global Save-to-folder modal state), `followingStore.ts` (followed brands), `preferencesStore.ts` (For You categories/locations), `profileStore.ts` (buyer profile/social/notifications/regional), `recentlyViewedStore.ts` (viewed products). `src/lib/listingProducts.ts` holds the shared `ListingProduct` type + `img()`/`makeListingProduct()` helpers (kept JSX-free for fast-refresh).
+
+### Buyer-Side Layout & Flows
+
+- **BuyerShell** (`src/components/buyer/BuyerShell.tsx`) is the frame for buyer pages — BuyerTopBar + content + `MobileBottomNav` + ToTop. Buyer pages use this, **not** the vendor `DashboardLayout` (rendering DashboardLayout on buyer routes double-stacks the top bar). `MobileBottomNav` accepts an optional `autoHide` prop.
+- **Wishlist flow** — every product card's bookmark calls `openSaveModal(product)` from `savedStore`; a single `<SaveToFolderModal />` is mounted globally in `App.tsx` inside `<BrowserRouter>`. Saved items feed `/saved` (My Saves) and `/saved/:collectionId`.
+- **Create New Requirement** (`src/pages/PostRequirement.tsx`) — hub → category select → **schema-driven per-category form** (a `SCHEMAS` map keyed by category id renders category-relevant fields via a generic renderer) → coral success screen → `/requirement/my-quotes`.
+- **New buyer routes**: `/search`, `/home/trends`, `/home/followings`, `/home/followings/view-all`, `/home/for-you`, `/saved`, `/saved/:collectionId`, `/recently-viewed`, `/profile/notifications`, `/profile/social-links`, `/profile/regional-settings`, `/profile/terms`, `/requirement/post-requirement`.
 
 ### Styling
 
@@ -109,7 +117,7 @@ These must always be true:
 - **Product Moderation** – All product listings go through admin moderation before going live (24–48 hours).
 - **Role Toggle Placement** – The "Switch to Buyer/Seller" toggle appears **only** on Vendor Dashboard Home and Buyer Homepage.
 - **Image Import Syntax** – All images must use ES module imports: `import img from "@/assets/image.png"` (never file path strings).
-- **DashboardLayout** – Every page must wrap in `DashboardLayout` to preserve consistent navigation and headers.
+- **DashboardLayout** – Every **vendor** page must wrap in `DashboardLayout` to preserve consistent navigation and headers. **Buyer** pages use `BuyerShell` instead (see Buyer-Side Layout & Flows) — do not put DashboardLayout on buyer routes.
 
 ## Domain Terms
 

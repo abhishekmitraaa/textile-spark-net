@@ -2,6 +2,8 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyVendorProfile } from "@/lib/queries/vendorStore";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -254,6 +256,12 @@ function AddBusinessCategoriesModal({ isOpen, onClose, categories, onCategoriesC
 
 const BusinessProfile = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: store } = useMyVendorProfile(user?.id);
+  const brand = store?.brandName?.trim() || "CARAMEL";
+  const storeLocation = [store?.city, store?.state].filter(Boolean).join(", ") || "Surat, Gujarat";
+  const storeCountry = store?.country || "India";
+  const vendorTypeLabel = store?.businessType?.trim() || "Manufacturer | Exporter";
   const [detailsOpen, setDetailsOpen]       = useState(true);
   const [editMode, setEditMode]             = useState(false);
   const [gridCols, setGridCols]             = useState<2 | 3>(2);
@@ -285,14 +293,14 @@ const BusinessProfile = () => {
   [productSearch]);
 
   const detailRows = useMemo(() => [
-    { label: "Business Type",          value: "Apparel Manufacturer" },
-    { label: "Company MD",             value: "Mr. R. Sharma" },
+    { label: "Business Type",          value: vendorTypeLabel },
+    { label: "Company MD",             value: store?.ownerName || "Mr. R. Sharma" },
     { label: "Total Employees",        value: employeeCount, clickable: true, onClick: () => setShowEmployeesModal(true) },
     { label: "Year of Establishment",  value: "2014" },
     { label: "Cosora Member Since",    value: "1 Year" },
     { label: "Annual Turnover",        value: "Rs 2 - 5 Cr" },
-    { label: "PAN",                    value: "ABCPR1234D" },
-  ], [employeeCount]);
+    { label: "PAN",                    value: store?.pan || "ABCPR1234D" },
+  ], [employeeCount, vendorTypeLabel, store?.ownerName, store?.pan]);
 
   const reduced = useReducedMotion();
 
@@ -321,8 +329,8 @@ const BusinessProfile = () => {
 
             {/* Large watermark brand name — centered, semi-transparent */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-              <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-[0.3em] text-white/20 uppercase">
-                CARAMEL
+              <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-[0.3em] text-white/20 uppercase truncate max-w-full px-4">
+                {brand}
               </span>
             </div>
 
@@ -341,14 +349,14 @@ const BusinessProfile = () => {
             {/* All text content — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
               {/* Brand name */}
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight">
-                CARAMEL
+              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight uppercase">
+                {brand}
               </h1>
 
               {/* City, Country */}
               <div className="flex items-center gap-1 mt-0.5 mb-2">
                 <MapPin className="h-3 w-3 text-white/80 shrink-0" />
-                <span className="text-xs text-white/80">Surat, Gujarat · India</span>
+                <span className="text-xs text-white/80">{storeLocation} · {storeCountry}</span>
               </div>
 
               {/* Followers + All Items in a row */}
@@ -364,7 +372,7 @@ const BusinessProfile = () => {
               </div>
 
               {/* Vendor type */}
-              <p className="text-xs text-white/80 font-medium">Manufacturer | Exporter</p>
+              <p className="text-xs text-white/80 font-medium">{vendorTypeLabel}</p>
             </div>
           </div>
 

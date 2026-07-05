@@ -1,5 +1,10 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { resolveCategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -44,7 +49,7 @@ import { Progress } from "@/components/ui/progress";
 
 type Step = "category" | "subcategory" | "details" | "images" | "pricing";
 
-const steps: { id: Step; label: string }[] = [
+const ALL_STEPS: { id: Step; label: string }[] = [
   { id: "category", label: "Category" },
   { id: "subcategory", label: "Sub-category" },
   { id: "details", label: "Details" },
@@ -54,7 +59,22 @@ const steps: { id: Step; label: string }[] = [
 
 const Upload = () => {
   const reduced = useReducedMotion();
-  const [currentStep, setCurrentStep] = useState<Step>("category");
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const editId = searchParams.get("id");
+  const isEdit = Boolean(editId);
+  const { data: editing } = useProductForEdit(editId ?? undefined);
+  // In edit mode the category/sub-category steps are skipped (the taxonomy
+  // isn't reverse-mappable); the vendor edits details/images/pricing directly.
+  const steps = isEdit ? ALL_STEPS.filter((s) => s.id !== "category" && s.id !== "subcategory") : ALL_STEPS;
+  const [submitting, setSubmitting] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  // Real File objects for the picked images (parallel to `images` previews),
+  // uploaded to Storage on submit.
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [currentStep, setCurrentStep] = useState<Step>(isEdit ? "details" : "category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
@@ -69,6 +89,23 @@ const Upload = () => {
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("");
   const [status, setStatus] = useState("draft");
+
+  // Prefill the form from the loaded product when editing.
+  useEffect(() => {
+    if (!editing) return;
+    setProductName(editing.name);
+    setProductDescription(editing.description ?? "");
+    setPrice(editing.price_value != null ? String(editing.price_value) : "");
+    setImages(editing.images);
+    setStatus(editing.status === "draft" ? "draft" : "pending");
+    setFormValues((prev) => ({
+      ...prev,
+      fabric: editing.fabric ?? "",
+      gsm: editing.gsm ?? "",
+      fit: editing.fit_type ?? "",
+      gender: editing.gender ?? "",
+    }));
+  }, [editing]);
 
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
@@ -88,33 +125,30 @@ const Upload = () => {
     }
   };
 
+  // Add real image Files (from drop or the file picker), capped at 6, keeping a
+  // preview URL and the File itself in lockstep.
+  const addImageFiles = (files: File[]) => {
+    const imgs = files.filter((f) => f.type.startsWith("image/"));
+    if (imgs.length === 0) return;
+    setImages((prev) => [...prev, ...imgs.map((f) => URL.createObjectURL(f))].slice(0, 6));
+    setImageFiles((prev) => [...prev, ...imgs].slice(0, 6));
+  };
+
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const newImages = Array.from(e.dataTransfer.files).map(
-        () => `https://images.unsplash.com/photo-${Math.random().toString(36).slice(2)}?w=400&h=400&fit=crop`
-      );
-      setImages((prev) => [...prev, ...newImages].slice(0, 6));
-    }
+    if (e.dataTransfer.files?.length) addImageFiles(Array.from(e.dataTransfer.files));
   };
 
-  const addPlaceholderImage = () => {
-    const placeholders = [
-      "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1586495777744-4413f21062fa?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=400&fit=crop",
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=400&fit=crop",
-    ];
-    if (images.length < 6) {
-      setImages((prev) => [...prev, placeholders[prev.length % placeholders.length]]);
-    }
+  const onPickImages = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files?.length) addImageFiles(Array.from(e.target.files));
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
+    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleMediaPick = (
@@ -166,12 +200,125 @@ const Upload = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Upload the picked image Files to the product-images bucket under the
+  // vendor's own folder (<uid>/<productId>/…) and return their public URLs.
+  const uploadImages = async (productId: string): Promise<string[]> => {
+    const urls: string[] = [];
+    for (let i = 0; i < imageFiles.length; i++) {
+      const file = imageFiles[i];
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `${user!.id}/${productId}/${i}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+      if (error) throw error;
+      urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+    }
+    return urls;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const categoryName = category?.name || "Unknown";
-    toast.success(`${category?.type === "service" ? "Service" : "Product"} uploaded successfully!`, {
-      description: `Your ${categoryName} listing is now pending review.`,
-    });
+    if (submitting) return;
+
+    // Only product listings are persisted in this phase; services/freelancers
+    // keep the prior confirmation until their tables exist.
+    if (category?.type !== "product") {
+      toast.success(`${category?.type === "service" ? "Service" : "Profile"} submitted!`, {
+        description: `Your ${category?.name || "listing"} is now pending review.`,
+      });
+      return;
+    }
+    if (!user) {
+      toast.error("Sign in as a vendor to publish", { description: "Use the dev switcher (bottom-left) to sign in as Demo Vendor." });
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      // Respect the 24–48h moderation rule: a submitted listing is
+      // 'under_review' (buyers can't see it yet); an explicit draft stays hidden.
+      const nextStatus = status === "draft" ? "draft" : "under_review";
+      const fabric = (formValues["fabric"] as string) || null;
+      const gsm = (formValues["gsm"] as string) || null;
+      const fitType = (formValues["fit"] as string) || (formValues["fit_type"] as string) || null;
+      const gender = (formValues["gender"] as string) || null;
+
+      if (isEdit && editId) {
+        // Edit: update the row + append any newly-picked images (existing ones stay).
+        await updateProduct(editId, {
+          name: productName,
+          description: productDescription || null,
+          price_value: price ? Number(price) : null,
+          moq: (formValues["moq"] as string) || undefined,
+          fabric, gsm, fit_type: fitType, gender,
+          status: nextStatus,
+        });
+        if (imageFiles.length > 0) {
+          const { count } = await supabase
+            .from("product_images")
+            .select("*", { count: "exact", head: true })
+            .eq("product_id", editId);
+          const start = count ?? 0;
+          const urls = await uploadImages(editId);
+          const { error: imgErr } = await supabase
+            .from("product_images")
+            .insert(urls.map((url, i) => ({ product_id: editId, url, position: start + i })));
+          if (imgErr) throw imgErr;
+        }
+        queryClient.invalidateQueries({ queryKey: ["products"] });
+        toast.success("Product updated", {
+          description: nextStatus === "under_review" ? "Resubmitted for review (24–48h)." : "Saved as draft.",
+        });
+        navigate("/products");
+        return;
+      }
+
+      // Map the granular upload taxonomy to a buyer-facing DB category.
+      const subName = selectedSubCategory
+        ? category?.subCategories.find((s) => s.id === selectedSubCategory)?.name
+        : undefined;
+      const category_id = await resolveCategoryId(subName, category?.name, productName);
+
+      const { data: inserted, error } = await supabase
+        .from("products")
+        .insert({
+          vendor_id: user.id,
+          name: productName,
+          description: productDescription || null,
+          price_value: price ? Number(price) : null,
+          currency: "₹",
+          category_id,
+          moq: (formValues["moq"] as string) || "2",
+          fabric,
+          gsm,
+          fit_type: fitType,
+          gender,
+          status: nextStatus,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      const urls = await uploadImages(inserted.id);
+      if (urls.length > 0) {
+        const { error: imgErr } = await supabase
+          .from("product_images")
+          .insert(urls.map((url, position) => ({ product_id: inserted.id, url, position })));
+        if (imgErr) throw imgErr;
+      }
+
+      // Refresh any cached product lists so the vendor's Products page and the
+      // buyer feed reflect the new row immediately.
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+
+      toast.success("Product submitted for review", {
+        description: "It becomes visible to buyers once approved (24–48h).",
+      });
+      navigate("/products");
+    } catch (err) {
+      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCategorySelect = (categoryId: string) => {
@@ -202,10 +349,10 @@ const Upload = () => {
           Back to Products
         </Link>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-          {category?.type === "service" ? "Add Service" : category?.type === "freelancer" ? "Add Profile" : "Upload Product"}
+          {isEdit ? "Edit Product" : category?.type === "service" ? "Add Service" : category?.type === "freelancer" ? "Add Profile" : "Upload Product"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {category ? `Adding to: ${category.name}` : "Select a category to get started"}
+          {isEdit ? "Update your listing details, images, and pricing" : category ? `Adding to: ${category.name}` : "Select a category to get started"}
         </p>
       </motion.div>
 
@@ -451,11 +598,19 @@ const Upload = () => {
                   PNG, JPG, MP4, PDF up to 10MB (max 6 images, 3 videos, 3 PDFs)
                 </p>
                 <div className="flex flex-wrap items-center justify-center gap-2">
+                  <input
+                    ref={imageInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={onPickImages}
+                  />
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={addPlaceholderImage}
+                    onClick={() => imageInputRef.current?.click()}
                   >
                     <Image className="mr-2 h-4 w-4" />
                     Browse Images
@@ -694,9 +849,9 @@ const Upload = () => {
                 <motion.button type="button" whileTap={TAP} transition={TAP_T} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
                   Save as Draft
                 </motion.button>
-                <motion.button type="submit" whileTap={TAP} transition={TAP_T} className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600">
+                <motion.button type="submit" whileTap={TAP} transition={TAP_T} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-60">
                   <Check className="h-4 w-4" />
-                  Publish
+                  {isEdit ? (submitting ? "Saving…" : "Save Changes") : submitting ? "Publishing…" : "Publish"}
                 </motion.button>
               </>
             ) : (

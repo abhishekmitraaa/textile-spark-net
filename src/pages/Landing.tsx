@@ -15,7 +15,7 @@ import {
   Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import cosoraLogo from "@/assets/landing page/Cosoralogo.png";
+import CosoraLogo from "@/components/CosoraLogo";
 import studioHero from "@/assets/cosora-studio-hero.jpg";
 
 /**
@@ -70,7 +70,8 @@ const Landing = () => {
       <header className="sticky top-0 z-40 border-b border-zinc-200/70 bg-[#FAFAF8]/85 backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 lg:px-10">
           <Link to="/" className="flex items-center">
-            <img src={cosoraLogo} alt="Cosora" className="h-10 w-auto lg:h-12" />
+            <CosoraLogo height={34} className="lg:hidden" />
+            <CosoraLogo height={40} className="hidden lg:inline-block" />
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">
@@ -517,7 +518,7 @@ const Landing = () => {
         <div className="mx-auto max-w-[1400px] px-5 py-14 lg:px-10">
           <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
             <div>
-              <img src={cosoraLogo} alt="Cosora" className="h-10 w-auto" />
+              <CosoraLogo height={36} />
               <p className="mt-4 max-w-[34ch] text-sm text-zinc-500">
                 The B2B sourcing marketplace for India&apos;s fashion and textile
                 industry.
