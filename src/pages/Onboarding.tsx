@@ -23,6 +23,8 @@ import { useVendorOnboardingSummary, vendorOnboardingSummaryFixture } from "@/ho
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import { useProfileFull } from "@/lib/queries/profile";
 import { saveVendorOnboarding } from "@/lib/queries/vendorOnboarding";
 
 const TOTAL_STEPS = 8;
@@ -42,7 +44,15 @@ const onboardingMenuLinks = [
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { setRole, setVendorRegistered } = useUserRole();
   const [currentStep, setCurrentStep] = useState(1);
+
+  // Vendor registration is complete: flag it (so future Buyer→Seller switches
+  // skip onboarding) and flip the active role to seller before leaving.
+  const finishVendorRegistration = () => {
+    setVendorRegistered(true);
+    setRole("seller");
+  };
 
   // Step 2
   const [businessName, setBusinessName] = useState("");
@@ -67,6 +77,7 @@ export default function Onboarding() {
   const [city, setCity] = useState("Delhi NCR");
   const [landmark, setLandmark] = useState("");
   const [addressConfirmed, setAddressConfirmed] = useState(false);
+  const [locLoading, setLocLoading] = useState(false);
 
   // Step 4
   const [ownerName, setOwnerName] = useState("");
@@ -217,6 +228,66 @@ export default function Onboarding() {
     }
   };
   const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
+
+  // Prefill from what the buyer already gave at signup (name, email, business
+  // name, phone verified via OTP, address) so the vendor never re-types it.
+  // Only fills blank fields, so it never clobbers anything typed here.
+  const { data: prefill } = useProfileFull(user?.id);
+  useEffect(() => {
+    if (!prefill) return;
+    if (prefill.businessName) setBusinessName((v) => v || prefill.businessName);
+    if (prefill.fullName) setOwnerName((v) => v || prefill.fullName);
+    if (prefill.email) setOwnerEmail((v) => v || prefill.email);
+    if (prefill.street) setArea((v) => v || prefill.street);
+    const cityGuess = prefill.businessCity || prefill.city;
+    if (cityGuess) setCity((v) => (v && v !== "Delhi NCR" ? v : cityGuess));
+    if (prefill.phone) {
+      const local = prefill.phone.replace(/\D/g, "").slice(-10);
+      if (local.length === 10) {
+        setMobile((v) => v || local);
+        // Phone was already OTP-verified at signup — don't force re-verification.
+        setOtpVerified(true);
+      }
+    }
+  }, [prefill]);
+
+  // Real geolocation → reverse-geocode (BigDataCloud, keyless + CORS-friendly)
+  // to fill the business city/area on the address step.
+  const handleUseCurrentLocation = () => {
+    if (!("geolocation" in navigator)) {
+      toast.error("Location isn't supported on this device");
+      return;
+    }
+    setLocLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=en`
+          );
+          const data = await res.json();
+          const detectedCity = data.city || data.locality || data.principalSubdivision || "";
+          const detectedArea = data.locality || data.city || "";
+          if (detectedCity) setCity(detectedCity);
+          if (detectedArea) setArea((v) => v || detectedArea);
+          toast.success(detectedCity ? `Location set — ${detectedCity}` : "Location detected");
+        } catch {
+          toast.error("Couldn't look up your location details");
+        } finally {
+          setLocLoading(false);
+        }
+      },
+      (err) => {
+        setLocLoading(false);
+        toast.error(
+          err.code === err.PERMISSION_DENIED
+            ? "Location permission denied — allow it or enter your address"
+            : "Couldn't get your location"
+        );
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   const submitContract = async () => {
     if (!agreed || !contractName.trim()) return toast.error("Complete the name and agreement to continue");
@@ -395,9 +466,9 @@ export default function Onboarding() {
         className="vendor-shell fixed inset-0 z-50 flex items-center justify-center bg-[#f0fdf4] px-6 text-center"
         role="button"
         tabIndex={0}
-        onClick={() => navigate("/seller-home")}
+        onClick={() => { finishVendorRegistration(); navigate("/seller-home"); }}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") navigate("/seller-home");
+          if (e.key === "Enter" || e.key === " ") { finishVendorRegistration(); navigate("/seller-home"); }
         }}
       >
         <motion.div
@@ -926,7 +997,7 @@ export default function Onboarding() {
               <Button
                 type="button"
                 className="flex-1 bg-background text-foreground hover:bg-background/90"
-                onClick={() => navigate("/seller-home")}
+                onClick={() => { finishVendorRegistration(); navigate("/seller-home"); }}
               >
                 Continue to Dashboard
               </Button>
@@ -934,7 +1005,7 @@ export default function Onboarding() {
                 type="button"
                 variant="outline"
                 className="flex-1 border border-[#256fef] text-[#256fef] rounded-full"
-                onClick={() => navigate("/my-store")}
+                onClick={() => { finishVendorRegistration(); navigate("/my-store"); }}
               >
                 Finish Profile Details
               </Button>
@@ -1292,10 +1363,12 @@ export default function Onboarding() {
                     </div>
                     <button
                       type="button"
-                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-[#363636] shadow"
+                      onClick={handleUseCurrentLocation}
+                      disabled={locLoading}
+                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-[#363636] shadow disabled:opacity-70"
                     >
                       <MapPin className="h-4 w-4 text-[#256fef]" />
-                      Use current location
+                      {locLoading ? "Locating…" : "Use current location"}
                     </button>
                   </div>
                 </div>

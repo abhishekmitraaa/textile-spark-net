@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
 import { Building2, Factory } from "lucide-react";
 import { useUserRole, UserRole } from "@/contexts/UserRoleContext";
+import { useSwitchRole } from "@/hooks/useSwitchRole";
 import { cn } from "@/lib/utils";
 
 interface RoleSwitcherProps {
@@ -9,12 +9,12 @@ interface RoleSwitcherProps {
 }
 
 export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
-  const navigate = useNavigate();
-  const { role, setRole } = useUserRole();
+  const { role } = useUserRole();
+  const switchRole = useSwitchRole();
 
   const handleRoleSelect = (nextRole: UserRole) => {
-    setRole(nextRole);
-    navigate(nextRole === "seller" ? "/seller-home" : "/home/new-arrivals");
+    if (nextRole === role) return;
+    switchRole(nextRole);
   };
 
   const roles: { value: UserRole; label: string; icon: typeof Building2 }[] = [

@@ -209,7 +209,7 @@ const Index = () => {
         {role === "seller" && (
           <motion.div variants={section} className="mb-6 space-y-4 lg:mb-8">
             <PromoBanner />
-            <BusinessProfileScore score={45} />
+            <BusinessProfileScore />
           </motion.div>
         )}
 

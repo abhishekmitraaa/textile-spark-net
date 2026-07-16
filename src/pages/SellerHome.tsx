@@ -169,7 +169,7 @@ const SellerHome = () => {
 
         {/* 3. BUSINESS PROFILE SCORE */}
         <motion.div variants={section}>
-          <BusinessProfileScore score={dash?.profileScore ?? 45} />
+          <BusinessProfileScore />
         </motion.div>
 
         {/* 4. QUICK ACTIONS GRID */}

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 // ─────────────────────────────────────────────────────────────
 // Real vendor dashboard metrics, derived from the vendor's own rows (RLS lets
@@ -77,4 +78,16 @@ export function useVendorDashboard(vendorId: string | undefined) {
     queryFn: () => fetchVendorDashboard(vendorId as string),
     enabled: Boolean(vendorId),
   });
+}
+
+// Shown when there's no vendor row yet (demo / buyer-only sessions).
+export const DEFAULT_PROFILE_SCORE = 45;
+
+// Single source of truth for the "Business Profile Score" — used by both the
+// dashboard card (BusinessProfileScore) and the /business-profile-score detail
+// page, so the two can never show different numbers.
+export function useProfileScore(): number {
+  const { user } = useAuth();
+  const { data } = useVendorDashboard(user?.id);
+  return data?.profileScore ?? DEFAULT_PROFILE_SCORE;
 }

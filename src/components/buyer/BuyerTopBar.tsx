@@ -3,12 +3,14 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Bookmark, MoreVertical, X, Globe, ChevronRight } from "lucide-react";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useSwitchRole } from "@/hooks/useSwitchRole";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useT } from "@/lib/i18n";
 
 function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
-  const { role, toggleRole } = useUserRole();
+  const { role } = useUserRole();
+  const switchRole = useSwitchRole();
   const t = useT();
 
   const menuItems = [
@@ -46,13 +48,13 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             <div className="px-5 py-3 border-b border-gray-100">
               <div className="flex bg-gray-100 rounded-full p-1">
                 <button
-                  onClick={() => { if (role !== "buyer") toggleRole(); }}
+                  onClick={() => { if (role !== "buyer") { onClose(); switchRole("buyer"); } }}
                   className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-colors ${role === "buyer" ? "bg-white text-[#a4172c] shadow-sm" : "text-gray-500"}`}
                 >
                   {t("Buyer")}
                 </button>
                 <button
-                  onClick={() => { if (role !== "seller") toggleRole(); navigate("/seller-home"); }}
+                  onClick={() => { onClose(); switchRole("seller"); }}
                   className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-colors ${role === "seller" ? "bg-white text-[#256fef] shadow-sm" : "text-gray-500"}`}
                 >
                   {t("Seller")}

@@ -4,6 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyVendorProfile } from "@/lib/queries/vendorStore";
+import { useVendorReviews } from "@/lib/queries/reviews";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -258,7 +259,15 @@ const BusinessProfile = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: store } = useMyVendorProfile(user?.id);
+  const { data: reviewData } = useVendorReviews(user?.id);
   const brand = store?.brandName?.trim() || "CARAMEL";
+  // Real ratings for this vendor (falls back to the store aggregate / demo bars).
+  const hasRealReviews = (reviewData?.count ?? 0) > 0;
+  const reviewAvg = hasRealReviews ? reviewData!.avg : Number(store?.ratingAvg ?? 0) || 4.5;
+  const reviewCount = hasRealReviews ? reviewData!.count : store?.reviewsCount ?? 0;
+  const reviewBars = hasRealReviews
+    ? reviewData!.breakdown.map((b) => ({ stars: b.stars, percent: b.percent, color: "#14ae5c" }))
+    : ratingBreakdown;
   const storeLocation = [store?.city, store?.state].filter(Boolean).join(", ") || "Surat, Gujarat";
   const storeCountry = store?.country || "India";
   const vendorTypeLabel = store?.businessType?.trim() || "Manufacturer | Exporter";
@@ -482,22 +491,22 @@ const BusinessProfile = () => {
           {/* Score row */}
           <div className="flex items-center gap-4 mb-5">
             <div className="text-center">
-              <span className="text-4xl font-extrabold text-gray-900">4.5</span>
+              <span className="text-4xl font-extrabold text-gray-900">{reviewAvg.toFixed(1)}</span>
               <span className="text-base text-gray-400">/5</span>
             </div>
             <div>
               <div className="flex items-center gap-0.5 mb-0.5">
-                {[0,1,2,3].map(i => <Star key={i} className="h-5 w-5 text-yellow-400 fill-yellow-400" />)}
-                {/* half star approximation */}
-                <Star className="h-5 w-5 text-yellow-300 fill-yellow-200" />
+                {[1,2,3,4,5].map(i => (
+                  <Star key={i} className={`h-5 w-5 ${i <= Math.round(reviewAvg) ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200"}`} />
+                ))}
               </div>
-              <p className="text-xs text-gray-400">Reviewed by 20 Users</p>
+              <p className="text-xs text-gray-400">Reviewed by {reviewCount.toLocaleString("en-IN")} {reviewCount === 1 ? "User" : "Users"}</p>
             </div>
           </div>
 
           {/* Bars */}
           <motion.div variants={listContainer} className="space-y-2.5">
-            {ratingBreakdown.map(row => (
+            {reviewBars.map(row => (
               <motion.div variants={listItem} key={row.stars} className="flex items-center gap-3">
                 <span className="w-10 text-xs text-gray-500 shrink-0 text-right">{row.stars} Star</span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">

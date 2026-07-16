@@ -1,13 +1,17 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
+import { useProfileScore } from "@/lib/queries/vendorDashboard";
 
 interface BusinessProfileScoreProps {
+  /** Optional override; defaults to the shared live profile score. */
   score?: number;
 }
 
-export const BusinessProfileScore = ({ score = 45 }: BusinessProfileScoreProps) => {
+export const BusinessProfileScore = ({ score: scoreOverride }: BusinessProfileScoreProps) => {
   const navigate = useNavigate();
+  const liveScore = useProfileScore();
+  const score = scoreOverride ?? liveScore;
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;

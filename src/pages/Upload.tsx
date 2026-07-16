@@ -88,7 +88,6 @@ const Upload = () => {
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("");
-  const [status, setStatus] = useState("draft");
 
   // Prefill the form from the loaded product when editing.
   useEffect(() => {
@@ -97,7 +96,6 @@ const Upload = () => {
     setProductDescription(editing.description ?? "");
     setPrice(editing.price_value != null ? String(editing.price_value) : "");
     setImages(editing.images);
-    setStatus(editing.status === "draft" ? "draft" : "pending");
     setFormValues((prev) => ({
       ...prev,
       fabric: editing.fabric ?? "",
@@ -215,8 +213,10 @@ const Upload = () => {
     return urls;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Driven by the two action buttons: "Save as Draft" → draft (hidden),
+  // "Publish" / "Save Changes" → under_review (queued for moderation).
+  const handleSubmit = async (intent: "draft" | "review", e?: React.FormEvent) => {
+    e?.preventDefault();
     if (submitting) return;
 
     // Only product listings are persisted in this phase; services/freelancers
@@ -231,12 +231,17 @@ const Upload = () => {
       toast.error("Sign in as a vendor to publish", { description: "Use the dev switcher (bottom-left) to sign in as Demo Vendor." });
       return;
     }
+    // Price is required to publish (it's marked *); a draft can be saved without it.
+    if (intent === "review" && !price) {
+      toast.error("Add a price before publishing", { description: "Or use Save as Draft to finish it later." });
+      return;
+    }
 
     setSubmitting(true);
     try {
       // Respect the 24–48h moderation rule: a submitted listing is
       // 'under_review' (buyers can't see it yet); an explicit draft stays hidden.
-      const nextStatus = status === "draft" ? "draft" : "under_review";
+      const nextStatus = intent === "draft" ? "draft" : "under_review";
       const fabric = (formValues["fabric"] as string) || null;
       const gsm = (formValues["gsm"] as string) || null;
       const fitType = (formValues["fit"] as string) || (formValues["fit_type"] as string) || null;
@@ -310,8 +315,10 @@ const Upload = () => {
       // buyer feed reflect the new row immediately.
       queryClient.invalidateQueries({ queryKey: ["products"] });
 
-      toast.success("Product submitted for review", {
-        description: "It becomes visible to buyers once approved (24–48h).",
+      toast.success(nextStatus === "draft" ? "Saved as draft" : "Product submitted for review", {
+        description: nextStatus === "draft"
+          ? "Only you can see it — publish it anytime from Products."
+          : "It becomes visible to buyers once approved (24–48h).",
       });
       navigate("/products");
     } catch (err) {
@@ -392,7 +399,7 @@ const Upload = () => {
         </div>
       </motion.div>
 
-      <motion.form variants={section} onSubmit={handleSubmit}>
+      <motion.form variants={section} onSubmit={(e) => handleSubmit("review", e)}>
         <AnimatePresence mode="wait">
           {/* Step 1: Category Selection */}
           {currentStep === "category" && (
@@ -776,24 +783,6 @@ const Upload = () => {
               </div>
 
               <div className="space-y-4 lg:space-y-6">
-                <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-                  <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
-                    Status
-                  </h2>
-                  <Select value={status} onValueChange={setStatus}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="draft">Draft</SelectItem>
-                      <SelectItem value="pending">Submit for Review</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Drafts won't be visible until approved.
-                  </p>
-                </div>
-
                 {/* Summary */}
                 <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 lg:p-6">
                   <h3 className="mb-3 font-display text-sm font-semibold text-foreground">
@@ -846,8 +835,8 @@ const Upload = () => {
           <div className="flex gap-2">
             {currentStep === "pricing" ? (
               <>
-                <motion.button type="button" whileTap={TAP} transition={TAP_T} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
-                  Save as Draft
+                <motion.button type="button" onClick={() => handleSubmit("draft")} whileTap={TAP} transition={TAP_T} disabled={submitting} className="inline-flex items-center justify-center rounded-md border border-border bg-background px-6 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent/5 disabled:opacity-60">
+                  {submitting ? "Saving…" : "Save as Draft"}
                 </motion.button>
                 <motion.button type="submit" whileTap={TAP} transition={TAP_T} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-60">
                   <Check className="h-4 w-4" />

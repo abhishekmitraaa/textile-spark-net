@@ -2,6 +2,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useProfileScore } from "@/lib/queries/vendorDashboard";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -23,8 +24,6 @@ const listItem = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
 };
 
-const score = 20;
-
 const scoreItems = [
   { label: "Check your contact details", tag: "Missing", href: "/my-store", Icon: ClipboardList },
   { label: "Add about us", tag: "Missing", href: "/my-store", Icon: Building2 },
@@ -43,6 +42,15 @@ const scoreItems = [
 const BusinessProfileScorePage = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
+  const score = useProfileScore();
+
+  // Rating label + colours track the score so the header never contradicts it.
+  const rating =
+    score < 40
+      ? { label: "Poor", text: "text-red-500", bar: "bg-red-500" }
+      : score < 70
+      ? { label: "Average", text: "text-amber-500", bar: "bg-amber-500" }
+      : { label: "Good", text: "text-green-600", bar: "bg-green-500" };
 
   return (
     <DashboardLayout>
@@ -71,12 +79,12 @@ const BusinessProfileScorePage = () => {
         {/* Score bar */}
         <motion.div variants={section} className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold text-red-500">Poor</span>
+            <span className={`text-sm font-semibold ${rating.text}`}>{rating.label}</span>
             <span className="text-sm font-bold text-foreground">{score}%</span>
           </div>
           <div className="w-full h-2 rounded-full bg-muted overflow-hidden">
             <motion.div
-              className="h-full rounded-full bg-red-500"
+              className={`h-full rounded-full ${rating.bar}`}
               initial={{ width: 0 }}
               animate={{ width: `${score}%` }}
               transition={{ duration: 0.8, delay: 0.1 }}
