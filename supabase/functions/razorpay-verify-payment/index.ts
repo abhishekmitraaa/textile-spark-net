@@ -27,7 +27,18 @@ const AD_PRICE: Record<string, number> = {
 const PER_MSG = new Set(["directBroadcast"]);
 
 interface AdItem { productId: string; title: string; imageUrl: string | null }
-interface AdSpec { placementIds: string[]; days: number; items: AdItem[]; campaignLabel?: string }
+interface AdSpec {
+  placementIds: string[]; days: number; items: AdItem[]; campaignLabel?: string;
+  targetCategories?: string[]; targetCities?: string[]; // real targeting (persisted)
+}
+
+// Ad types that grant a time-bound trust seal when purchased.
+const SEAL_SOURCES = new Set(["trustedSeal", "verifiedCertificate"]);
+
+function campaignEndIso(spec: AdSpec): string {
+  const days = Math.max(1, Math.floor(spec.days || 1));
+  return new Date(Date.now() + days * 86_400_000).toISOString();
+}
 
 function adRows(vendorId: string, spec: AdSpec) {
   const days = Math.max(1, Math.floor(spec.days || 1));
@@ -38,8 +49,10 @@ function adRows(vendorId: string, spec: AdSpec) {
   const dailyBudget = Math.max(1, Math.round(perProduct / days));
   const placement = (spec.placementIds || []).join(",");
   const startsAt = new Date().toISOString();
-  const endsAt = new Date(Date.now() + days * 86_400_000).toISOString();
+  const endsAt = campaignEndIso(spec);
   const label = spec.campaignLabel || "Ad";
+  const targetCategories = Array.isArray(spec.targetCategories) && spec.targetCategories.length ? spec.targetCategories : null;
+  const targetCities = Array.isArray(spec.targetCities) && spec.targetCities.length ? spec.targetCities : null;
   return (spec.items || []).map((it) => ({
     vendor_id: vendorId,
     product_id: it.productId,
@@ -50,7 +63,25 @@ function adRows(vendorId: string, spec: AdSpec) {
     status: "active",
     starts_at: startsAt,
     ends_at: endsAt,
+    target_categories: targetCategories,
+    target_cities: targetCities,
   }));
+}
+
+// Grant the time-bound trust seal for any trustedSeal/verifiedCertificate
+// placements in the spec (expires with the campaign). Idempotency isn't critical
+// — a re-grant just extends the max(expires_at), which publishOrder already
+// guards against by only running once per claimed order.
+async function grantSeals(url: string, key: string, vendorId: string, spec: AdSpec): Promise<void> {
+  const exp = campaignEndIso(spec);
+  for (const pid of spec.placementIds || []) {
+    if (!SEAL_SOURCES.has(pid)) continue;
+    await fetch(`${url}/rest/v1/rpc/grant_ad_verification`, {
+      method: "POST",
+      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
+      body: JSON.stringify({ v: vendorId, src: pid, exp }),
+    });
+  }
 }
 
 async function insertAds(url: string, key: string, rows: unknown[]): Promise<boolean> {
@@ -97,6 +128,7 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const order = claimed[0];
   const rows = adRows(order.vendor_id, order.spec as AdSpec);
   const ok = await insertAds(url, key, rows);
+  if (ok) await grantSeals(url, key, order.vendor_id, order.spec as AdSpec);
   return { ok, count: ok ? rows.length : 0 };
 }
 
@@ -124,6 +156,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     if (!body.spec) return json({ ok: false, error: "missing_spec" }, 400);
     const rows = adRows(vendorId, body.spec);
     const ok = await insertAds(url, serviceKey, rows);
+    if (ok) await grantSeals(url, serviceKey, vendorId, body.spec);
     return json({ ok, demo: true, count: ok ? rows.length : 0 });
   }
 

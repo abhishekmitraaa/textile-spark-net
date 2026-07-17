@@ -24,9 +24,11 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, updateAdStatus, deleteAd, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, updateAdStatus, deleteAd, useVendorCategories, type AdRow } from "@/lib/queries/ads";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, type AdSpec } from "@/lib/queries/payments";
+import { useVendorPlan } from "@/lib/queries/subscriptions";
+import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -89,14 +91,16 @@ const AD_TYPES: AdType[] = [
   { id: "verifiedCertificate",  name: "Cosora Verified Certificate", price: "₹199", period: "",     Icon: BadgeCheck,   description: "Official premium trust signal. Verified certificate displayed on your full profile.", image: "https://images.unsplash.com/photo-1523240715639-99a86501111b?q=80&w=800&auto=format&fit=crop" },
 ];
 
-const ADVERTISE_CARDS = [
-  { title: "Open Listing AD",      original: "120", current: "67",  discount: "44% off" },
-  { title: "Category Top AD",      original: "250", current: "149", discount: "40% off" },
-  { title: "Search Banner AD",     original: "500", current: "299", discount: "40% off" },
-  { title: "Home Slider AD",       original: "800", current: "499", discount: "38% off" },
-  { title: "Product Detail AD",    original: "150", current: "89",  discount: "41% off" },
-  { title: "Push Notification AD", original: "300", current: "179", discount: "40% off" },
-];
+// Ad types that grant a time-bound trust seal (mirrors the edge function).
+const SEAL_AD_TYPES = new Set(["trustedSeal", "verifiedCertificate"]);
+// A campaign goal pre-selects the placement types that actually serve it — this
+// is what makes the goal picker do something real (see toggleGoal).
+const GOAL_PLACEMENTS: Record<string, string[]> = {
+  visitProfile: ["storePromotion", "brandAd"],
+  visitWebsite: ["websiteBanner", "googleProduct"],
+  messageYou: ["directBroadcast"],
+  mixOfActions: ["featuredProduct", "searchListing"],
+};
 
 const WHY_FEATURES = [
   { title: "Verified B2B Buyers Only",    desc: "Every buyer is vetted. No resellers, no time-wasters.",                              bg: "bg-pink-50",   color: "text-pink-600"   },
@@ -346,25 +350,32 @@ function AdCreationSteps({
   selectedAdTypes, setSelectedAdTypes,
   selectedProducts, setSelectedProducts,
   selectedDuration, setSelectedDuration,
-  selectedGender, setSelectedGender,
   selectedCities, setSelectedCities,
   selectedCategories, setSelectedCategories,
   selectedGoals, setSelectedGoals,
   showMoreAdTypes, setShowMoreAdTypes,
+  cityLimit, scopeLabel, vendorCats, planGrantsSeal, planName,
 }: {
   products: VendorProductRow[];
   selectedAdTypes: string[]; setSelectedAdTypes: (v: string[]) => void;
   selectedProducts: string[]; setSelectedProducts: (v: string[]) => void;
   selectedDuration: string; setSelectedDuration: (v: string) => void;
-  selectedGender: string; setSelectedGender: (v: string) => void;
   selectedCities: string[]; setSelectedCities: (v: string[]) => void;
   selectedCategories: string[]; setSelectedCategories: (v: string[]) => void;
   selectedGoals: string[]; setSelectedGoals: (v: string[]) => void;
   showMoreAdTypes: boolean; setShowMoreAdTypes: (v: boolean) => void;
+  cityLimit: number; scopeLabel: string;
+  vendorCats: { id: string; name: string }[];
+  planGrantsSeal: boolean; planName: string;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>("openListing");
 
   const toggleAdType = (ad: AdType) => {
+    // Don't let a vendor pay for a trust seal their plan already includes.
+    if (SEAL_AD_TYPES.has(ad.id) && planGrantsSeal && !selectedAdTypes.includes(ad.id)) {
+      toast.info(`Trust seal is already included in your ${planName} plan`, { description: "No need to buy it separately." });
+      return;
+    }
     if (selectedAdTypes.includes(ad.id)) {
       setSelectedAdTypes(selectedAdTypes.filter(id => id !== ad.id));
       if (expandedId === ad.id) setExpandedId(null);
@@ -381,31 +392,46 @@ function AdCreationSteps({
   };
 
   const toggleCity = (v: string) => {
-    setSelectedCities(selectedCities.includes(v) ? selectedCities.filter(c => c !== v) : [...selectedCities, v]);
+    const isOn = selectedCities.includes(v);
+    // Plan ad-location scope: cap how many locations a tier can target
+    // (1 state / 4 states / pan-India = unlimited). Removing is always allowed.
+    if (!isOn && Number.isFinite(cityLimit) && selectedCities.length >= cityLimit) {
+      toast.error(`Your plan targets up to ${cityLimit} location${cityLimit > 1 ? "s" : ""} (${scopeLabel})`, {
+        description: "Upgrade for wider ad reach.",
+      });
+      return;
+    }
+    setSelectedCities(isOn ? selectedCities.filter(c => c !== v) : [...selectedCities, v]);
   };
 
+  // Real DB category ids (no "all" pseudo-value — empty = untargeted = all buyers).
   const toggleCategory = (v: string) => {
-    if (v === "all") { setSelectedCategories(["all"]); return; }
-    const next = selectedCategories.includes(v)
-      ? selectedCategories.filter(c => c !== v)
-      : [...selectedCategories.filter(c => c !== "all"), v];
-    setSelectedCategories(next.length === 0 ? ["all"] : next);
+    setSelectedCategories(
+      selectedCategories.includes(v) ? selectedCategories.filter(c => c !== v) : [...selectedCategories, v]
+    );
   };
 
+  // Goals do something real: toggling a goal on pre-selects the placement types
+  // that best serve it (union with the current selection).
   const toggleGoal = (v: string) => {
-    setSelectedGoals(selectedGoals.includes(v) ? selectedGoals.filter(g => g !== v) : [...selectedGoals, v]);
+    if (selectedGoals.includes(v)) {
+      setSelectedGoals(selectedGoals.filter(g => g !== v));
+      return;
+    }
+    setSelectedGoals([...selectedGoals, v]);
+    const suggested = GOAL_PLACEMENTS[v] ?? [];
+    const toAdd = suggested.filter((id) => !selectedAdTypes.includes(id));
+    if (toAdd.length) {
+      setSelectedAdTypes([...selectedAdTypes, ...toAdd]);
+      toast.success("Ad types suggested for your goal", { description: toAdd.map((id) => AD_TYPES.find((a) => a.id === id)?.name).filter(Boolean).join(", ") });
+    }
   };
 
   const displayed = showMoreAdTypes ? AD_TYPES : AD_TYPES.slice(0, 5);
 
   const DURATIONS = [{ value: "3", label: "3" }, { value: "7", label: "7" }, { value: "14", label: "14" }, { value: "30", label: "30" }];
-  const GENDERS = [{ value: "all", label: "All" }, { value: "men", label: "Men" }, { value: "women", label: "Women" }];
   const CITIES = ["mumbai", "delhi", "allIndia", "south", "chennai", "kolkata", "west", "export", "pune", "ahmedabad"];
   const CITY_LABELS: Record<string, string> = { mumbai: "Mumbai", delhi: "Delhi", allIndia: "All India", south: "South", chennai: "Chennai", kolkata: "Kolkata", west: "West", export: "Export", pune: "Pune", ahmedabad: "Ahmedabad" };
-  const CATS = [
-    { v: "all", l: "All" }, { v: "fabrics", l: "Fabrics" }, { v: "garments", l: "Garments" },
-    { v: "accessories", l: "Accessories" }, { v: "footwear", l: "Footwear" }, { v: "homeTextiles", l: "Home Textiles" },
-  ];
   const GOALS = [
     { value: "visitProfile",  title: "Visit your profile",  desc: "Best for brand awareness and follows"   },
     { value: "visitWebsite",  title: "Visit your website",  desc: "Best for online sales and bookings"     },
@@ -448,10 +474,16 @@ function AdCreationSteps({
                       </div>
                       <span className="text-sm font-bold text-gray-800">{ad.name}</span>
                     </div>
-                    <div className="text-right flex items-center gap-1">
-                      <span className="text-base font-bold text-gray-900">{ad.price}</span>
-                      <span className="text-xs text-gray-500 font-medium">{ad.period}</span>
-                    </div>
+                    {SEAL_AD_TYPES.has(ad.id) && planGrantsSeal ? (
+                      <span className="rounded-full bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 whitespace-nowrap">
+                        Included in {planName}
+                      </span>
+                    ) : (
+                      <div className="text-right flex items-center gap-1">
+                        <span className="text-base font-bold text-gray-900">{ad.price}</span>
+                        <span className="text-xs text-gray-500 font-medium">{ad.period}</span>
+                      </div>
+                    )}
                   </button>
 
                   {expandedId === ad.id && (
@@ -579,34 +611,51 @@ function AdCreationSteps({
           <div className="pl-0 md:pl-11 space-y-6">
             <p className="text-sm text-gray-500 font-medium italic">Automatically finds and updates audiences</p>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Gender */}
+            <div className="grid grid-cols-1 gap-4">
+              {/* Category — REAL: filters which buyers see the ad on category
+                  pages (e.g. product-detail). Empty = shown to everyone. */}
               <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <Zap className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Gender</span>
+                <div className="flex items-center gap-2 mb-2">
+                  <List className="w-4 h-4 text-gray-600" />
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Category</span>
                 </div>
-                <div className="flex gap-2">
-                  {GENDERS.map(g => (
-                    <button key={g.value} onClick={() => setSelectedGender(g.value)}
-                      className={cn(
-                        "flex-1 px-4 py-2.5 rounded-xl text-sm font-bold transition-all",
-                        selectedGender === g.value
-                          ? "bg-[#f75f71] text-white shadow-md"
-                          : "bg-white text-gray-700 border border-gray-100 hover:border-gray-200"
-                      )}>
-                      {g.label}
-                    </button>
-                  ))}
-                </div>
+                <p className="text-[11px] text-gray-400 mb-3">
+                  Show this ad to buyers browsing these categories. Leave empty to show it to everyone.
+                </p>
+                {vendorCats.length === 0 ? (
+                  <p className="text-xs text-gray-400">Add products with a category to target by category.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {vendorCats.map(c => (
+                      <button key={c.id} onClick={() => toggleCategory(c.id)}
+                        className={cn(
+                          "px-4 py-2 rounded-xl text-sm font-bold transition-all",
+                          selectedCategories.includes(c.id)
+                            ? "bg-[#f75f71] text-white shadow-md"
+                            : "bg-white text-gray-600 border border-gray-100 hover:border-gray-200"
+                        )}>
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* City */}
+              {/* City — plan-scope-limited selection, persisted on the ad.
+                  Honest note: geo-based delivery filtering isn't live yet. */}
               <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <Building2 className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">City / Area</span>
+                <div className="flex items-center justify-between gap-2 mb-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-gray-600" />
+                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">City / Area</span>
+                  </div>
+                  <span className="rounded-full bg-[#256fef]/10 text-[#256fef] text-[10px] font-bold px-2 py-0.5">
+                    Plan: {scopeLabel}
+                  </span>
                 </div>
+                <p className="text-[11px] text-gray-400 mb-3">
+                  Recorded on your campaign and limited by your plan's reach. Geo-based delivery is rolling out.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {CITIES.map(c => (
                     <button key={c} onClick={() => toggleCity(c)}
@@ -619,35 +668,6 @@ function AdCreationSteps({
                       {CITY_LABELS[c]}
                     </button>
                   ))}
-                </div>
-                <button className="flex items-center gap-2 bg-gray-200/50 p-2 rounded-xl mt-3">
-                  <Plus className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Add Location</span>
-                </button>
-              </div>
-
-              {/* Category */}
-              <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100 md:col-span-2">
-                <div className="flex items-center gap-2 mb-4">
-                  <List className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Category</span>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {CATS.map(c => (
-                    <button key={c.v} onClick={() => toggleCategory(c.v)}
-                      className={cn(
-                        "px-4 py-2 rounded-xl text-sm font-bold transition-all",
-                        selectedCategories.includes(c.v)
-                          ? "bg-[#f75f71] text-white shadow-md"
-                          : "bg-white text-gray-600 border border-gray-100 hover:border-gray-200"
-                      )}>
-                      {c.l}
-                    </button>
-                  ))}
-                  <button className="flex items-center gap-2 bg-gray-200/50 p-2 rounded-xl">
-                    <Plus className="w-4 h-4 text-gray-600" />
-                    <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Add Category</span>
-                  </button>
                 </div>
               </div>
             </div>
@@ -776,14 +796,29 @@ function PaymentModal({
 
 // ── CostSummary ──
 function CostSummary({
-  products, selectedAdTypes, selectedProducts, selectedDuration, vendorId, onCreated,
+  products, selectedAdTypes, selectedProducts, selectedDuration, selectedCategories, selectedCities, vendorId, onCreated, canAds,
 }: {
   products: VendorProductRow[]; selectedAdTypes: string[]; selectedProducts: string[]; selectedDuration: string;
-  vendorId?: string; onCreated: () => void;
+  selectedCategories: string[]; selectedCities: string[];
+  vendorId?: string; onCreated: () => void; canAds: boolean;
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   if (!selectedAdTypes.length || !selectedProducts.length || !selectedDuration) return null;
+
+  // Free tier can't run ads (ad_location_scope = none) — show an upsell instead
+  // of the checkout so enforcement happens at the point of action.
+  if (!canAds) {
+    return (
+      <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center">
+        <p className="text-base font-bold text-gray-900 mb-1">Advertising is a paid feature</p>
+        <p className="text-sm text-gray-500 mb-4">Your current (Free) plan can't run ad campaigns. Upgrade to a paid plan to promote your products.</p>
+        <Link to="/subscription" className="inline-flex items-center gap-1.5 rounded-2xl bg-[#ff2160] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff2160]/80 transition-colors">
+          View plans <ChevronRight className="w-4 h-4" />
+        </Link>
+      </div>
+    );
+  }
 
   const days = parseInt(selectedDuration) || 1;
   const perProductPerRun = selectedAdTypes.reduce((sum, id) => {
@@ -805,6 +840,9 @@ function CostSummary({
       const prod = products.find(p => p.id === pid);
       return { productId: pid, title: prod?.name ?? "Product", imageUrl: prod?.image ?? null };
     }),
+    // Real targeting persisted on the campaign row (see edge functions).
+    targetCategories: selectedCategories.length ? selectedCategories : undefined,
+    targetCities: selectedCities.length ? selectedCities : undefined,
   });
 
   // Fallback (no Razorpay keys): publish server-side from the spec after the
@@ -1080,36 +1118,35 @@ function CTASection() {
 }
 
 // ── AdvertiseCards ──
+// Featured ad types — generated from the REAL AD_TYPES/AD_PRICE catalog (same
+// prices you actually pay in the builder), not a second invented price list.
+// "Buy Now" jumps to the builder where the ad is selected + paid for.
 function AdvertiseCards() {
+  const featured = AD_TYPES.slice(0, 4);
   return (
     <div className="rounded-xl mt-12 mb-12">
+      <h2 className="text-lg font-bold text-gray-900 mb-4">Popular ad types</h2>
       <motion.div variants={listContainer} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {ADVERTISE_CARDS.map((ad, i) => (
-          <motion.div key={i} variants={listItem}
+        {featured.map((ad) => (
+          <motion.div key={ad.id} variants={listItem}
             className="bg-white rounded-xl p-4 text-left flex gap-4 shadow-sm hover:shadow-2xl transition-all duration-500 group overflow-hidden border border-gray-100">
-            <div className="h-full w-[120px] flex items-center justify-center">
-              <div className="w-full h-24 bg-gray-100 rounded-xl flex items-center justify-center group-hover:scale-90 transition-transform duration-700">
-                <Megaphone className="w-10 h-10 text-gray-300" />
+            <div className="h-full w-[120px] shrink-0 flex items-center justify-center">
+              <div className="w-full h-24 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+                <img src={ad.image} alt={ad.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               </div>
             </div>
-            <div className="mt-2 flex flex-col gap-2 flex-1">
-              <h3 className="text-lg font-black text-gray-900 leading-tight">{ad.title}</h3>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-gray-400 line-through text-sm font-bold italic opacity-70">₹{ad.original}/day</span>
-                <span className="bg-green-500 text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase">{ad.discount}</span>
-                <span className="bg-[#f74d61] text-white text-[10px] px-2 py-0.5 rounded-full font-black uppercase flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> Trending
-                </span>
-              </div>
-              <div className="mt-1">
-                <span className="text-gray-500 text-xs font-bold">Starting at</span>
+            <div className="mt-1 flex flex-col gap-2 flex-1 min-w-0">
+              <h3 className="text-base font-black text-gray-900 leading-tight">{ad.name}</h3>
+              <p className="text-xs text-gray-500 line-clamp-2">{ad.description}</p>
+              <div className="mt-auto">
                 <div className="flex items-baseline gap-1">
-                  <span className="text-2xl font-black text-gray-900 tracking-tighter">₹{ad.current}</span>
-                  <span className="text-gray-500 text-sm font-bold">/day</span>
+                  <span className="text-2xl font-black text-gray-900 tracking-tighter">{ad.price}</span>
+                  <span className="text-gray-500 text-sm font-bold">{ad.period || " one-time"}</span>
                 </div>
-                <motion.button whileTap={TAP} transition={TAP_T} className="mt-2 bg-gray-950 hover:bg-[#f74d61] text-white px-4 py-2 rounded-xl flex items-center gap-2 font-black text-[12px] transition-all shadow-lg">
-                  Buy Now <motion.span whileHover={{ x: 3 }} transition={{ ease: E, duration: 0.2 }}><ChevronRight className="w-4 h-4" /></motion.span>
-                </motion.button>
+                <a href="#adCreationSteps"
+                  className="mt-2 inline-flex bg-gray-950 hover:bg-[#f74d61] text-white px-4 py-2 rounded-xl items-center gap-2 font-black text-[12px] transition-all shadow-lg">
+                  Buy Now <ChevronRight className="w-4 h-4" />
+                </a>
               </div>
             </div>
           </motion.div>
@@ -1194,6 +1231,18 @@ const Advertisements = () => {
   const qc = useQueryClient();
   const { data: myAds = [] } = useMyAds(user?.id);
   const { data: myProducts = [] } = useMyProducts(user?.id);
+  const { data: vplan } = useVendorPlan(user?.id);
+  const { data: vendorCats = [] } = useVendorCategories(user?.id);
+  // Plan ad-location scope drives ad enforcement: Free can't run ads; paid tiers
+  // can target up to 1 / 4 / unlimited locations (pan-India / global).
+  const adScope = (vplan?.limits.ad_location_scope ?? "none") as AdLocationScope;
+  const canAds = canRunAds(adScope);
+  const cityLimit = adStateAllowance(adScope);
+  const scopeLabel = AD_SCOPE_LABEL[adScope];
+  // Whether the vendor's plan already grants the trust seal (so they aren't
+  // charged again for the trustedSeal/verifiedCertificate ad types).
+  const planGrantsSeal = Boolean(vplan?.limits.has_verified_badge);
+  const planName = vplan?.plan.name ?? "your";
   const refreshAds = () => qc.invalidateQueries({ queryKey: ["advertisements"] });
   const toggleAd = async (id: string, status: "active" | "paused") => {
     try { await updateAdStatus(id, status); refreshAds(); } catch (e) { toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) }); }
@@ -1205,9 +1254,10 @@ const Advertisements = () => {
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState("7");
-  const [selectedGender, setSelectedGender] = useState("all");
-  const [selectedCities, setSelectedCities] = useState<string[]>(["allIndia"]);
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(["all"]);
+  // Targeting defaults are empty = untargeted (shown to everyone); the vendor
+  // opts in to category/city targeting.
+  const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showMoreAdTypes, setShowMoreAdTypes] = useState(false);
 
@@ -1251,11 +1301,12 @@ const Advertisements = () => {
                 selectedAdTypes={selectedAdTypes} setSelectedAdTypes={setSelectedAdTypes}
                 selectedProducts={selectedProducts} setSelectedProducts={setSelectedProducts}
                 selectedDuration={selectedDuration} setSelectedDuration={setSelectedDuration}
-                selectedGender={selectedGender} setSelectedGender={setSelectedGender}
                 selectedCities={selectedCities} setSelectedCities={setSelectedCities}
                 selectedCategories={selectedCategories} setSelectedCategories={setSelectedCategories}
                 selectedGoals={selectedGoals} setSelectedGoals={setSelectedGoals}
                 showMoreAdTypes={showMoreAdTypes} setShowMoreAdTypes={setShowMoreAdTypes}
+                cityLimit={cityLimit} scopeLabel={scopeLabel}
+                vendorCats={vendorCats} planGrantsSeal={planGrantsSeal} planName={planName}
               />
             </motion.div>
             <motion.div variants={section}>
@@ -1264,8 +1315,11 @@ const Advertisements = () => {
                 selectedAdTypes={selectedAdTypes}
                 selectedProducts={selectedProducts}
                 selectedDuration={selectedDuration}
+                selectedCategories={selectedCategories}
+                selectedCities={selectedCities}
                 vendorId={user?.id}
                 onCreated={refreshAds}
+                canAds={canAds}
               />
             </motion.div>
             <motion.div variants={section}>

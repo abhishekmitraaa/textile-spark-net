@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyCatalogues, createCatalogue, deleteCatalogue } from "@/lib/queries/catalogues";
+import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -181,6 +182,10 @@ const UploadCatalogue = () => {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: myCatalogues = [] } = useMyCatalogues(user?.id);
+  const { data: vplan } = useVendorPlan(user?.id);
+  // "Automatic catalog upload" is a paid-tier feature (has_auto_catalog); Free is
+  // manual only. Block only once we KNOW the plan (don't block while loading).
+  const autoCatalogBlocked = vplan ? !vplan.limits.has_auto_catalog : false;
 
   // Upload state
   const [dragActive, setDragActive] = useState(false);
@@ -251,6 +256,13 @@ const UploadCatalogue = () => {
   // ── Submit ──
   const handleSubmit = async () => {
     if (!user) { toast.error("Sign in as a vendor to publish"); return; }
+    if (autoCatalogBlocked) {
+      toast.error("Catalogue upload is a paid feature", {
+        description: "Upgrade to Basic or above to publish PDF catalogues to buyers.",
+      });
+      navigate("/subscription");
+      return;
+    }
     if (!selectedFile) {
       toast.error("Please select a PDF file to upload");
       return;
@@ -328,6 +340,20 @@ const UploadCatalogue = () => {
             </p>
           </div>
         </motion.div>
+
+        {/* ── Plan gate (Free = manual catalogues only) ── */}
+        {autoCatalogBlocked && (
+          <motion.button
+            variants={section}
+            onClick={() => navigate("/subscription")}
+            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left"
+          >
+            <span className="text-sm font-semibold text-amber-800">
+              Automatic catalogue upload is a paid feature. On the Free plan you can't publish PDF catalogues — upgrade to Basic or above.
+            </span>
+            <span className="shrink-0 text-sm font-bold text-amber-900">Upgrade →</span>
+          </motion.button>
+        )}
 
         {/* ── Upload section ── */}
         <motion.div variants={section} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 space-y-4">

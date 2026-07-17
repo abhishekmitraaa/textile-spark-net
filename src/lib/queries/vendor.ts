@@ -1,6 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { trustSealFromParts } from "@/lib/plan";
 import { mapProductRow, PRODUCT_CARD_SELECT, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
+
+// Cached map plan_id → has_international, for the "International-ready" indicator.
+let planIntlCache: Map<string, boolean> | null = null;
+async function loadPlanIntl(): Promise<Map<string, boolean>> {
+  if (planIntlCache) return planIntlCache;
+  const { data } = await supabase.from("subscription_plans").select("id, limits");
+  const m = new Map<string, boolean>();
+  for (const p of (data ?? []) as { id: string; limits: { has_international?: boolean } | null }[]) {
+    m.set(p.id, Boolean(p.limits?.has_international));
+  }
+  planIntlCache = m;
+  return m;
+}
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 
 // ─────────────────────────────────────────────────────────────
@@ -17,6 +31,9 @@ export interface VendorProfileData {
   country: string;
   businessType: string | null;
   isVerified: boolean;
+  /** Vendor's plan includes international buyer access (Gold/VIP) and it's
+   *  active. Surfaced to buyers as an "International-ready" indicator. */
+  international: boolean;
   followers: number;
   ratingAvg: number;
   reviewsCount: number;
@@ -49,14 +66,20 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   const { data: v, error } = await supabase
     .from("vendor_profiles")
     .select(
-      "id, brand_name, about, city, state, country, business_type, is_verified, followers_count, rating_avg, reviews_count, logo_url, banner_url, phone, whatsapp, website, owner_name, owner_email, address_line, area, postal_code, landmark, gstin, pan",
+      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, phone, whatsapp, website, owner_name, owner_email, address_line, area, postal_code, landmark, gstin, pan",
     )
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
   if (!v) return null;
 
-  const vendorMini: RawVendor = { brand_name: v.brand_name, is_verified: v.is_verified, city: v.city };
+  // Displayed trust seal = admin verification OR active paid plan OR active
+  // ad-purchased seal (trustedSeal / verifiedCertificate).
+  const displaySeal = trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until);
+  // International-ready = active plan (Gold/VIP) with has_international.
+  const planActive = Boolean(v.plan_expires_at && new Date(v.plan_expires_at).getTime() > Date.now());
+  const international = planActive && Boolean(v.plan_id && (await loadPlanIntl()).get(v.plan_id));
+  const vendorMini: RawVendor = { brand_name: v.brand_name, is_verified: displaySeal, city: v.city };
 
   const { data: prods } = await supabase
     .from("products")
@@ -96,7 +119,8 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     state: v.state,
     country: v.country ?? "India",
     businessType: v.business_type,
-    isVerified: v.is_verified,
+    isVerified: displaySeal,
+    international,
     followers: v.followers_count,
     ratingAvg: Number(v.rating_avg),
     reviewsCount: v.reviews_count,

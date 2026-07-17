@@ -344,7 +344,14 @@ const VendorProfile = () => {
                   <p className="text-lg font-bold text-white leading-tight">{vendor ? vpProducts.length : "3,538"}</p>
                 </div>
               </div>
-              <p className="text-xs text-white/80 font-medium">{vendor?.businessType ?? "Manufacturer"} | Exporter</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-white/80 font-medium">{vendor?.businessType ?? "Manufacturer"}</p>
+                {vendor?.international && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
+                    <Globe className="h-3 w-3" /> International-ready
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 

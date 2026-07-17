@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import type { ListingProduct } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useProductById } from "@/lib/queries/products";
@@ -622,6 +623,15 @@ const ProductDetail = () => {
             ))}
           </div>
         </motion.div>
+
+        {/* Real category-targeted sponsored ads (vendor campaigns targeting this
+            product's category, plus untargeted campaigns). Renders nothing when
+            there are no matching active ads. */}
+        {row?.categoryId && (
+          <motion.div variants={sect} className="pt-2">
+            <SponsoredRail category={row.categoryId} max={10} />
+          </motion.div>
+        )}
 
         {/* You might also like */}
         <motion.div variants={sect} className="pt-2">

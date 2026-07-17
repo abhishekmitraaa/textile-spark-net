@@ -29,6 +29,9 @@ import {
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useVendorPlan } from "@/lib/queries/subscriptions";
+import { tierStyle, isUnlimited } from "@/lib/plan";
 import { useT } from "@/lib/i18n";
 import { RoleSwitcher } from "./RoleSwitcher";
 
@@ -69,6 +72,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
+  const { user, profile } = useAuth();
+  // Seller-side plan chip in the bottom user area (sourced from the same hook
+  // that drives enforcement — not fetched separately).
+  const { data: vplan } = useVendorPlan(role === "seller" ? user?.id : undefined);
   const t = useT();
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
   const secondaryNav =
@@ -207,30 +214,54 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           })}
         </div>
 
-        {/* User section */}
+        {/* User section — name + plan tier (seller) */}
         <div className="border-t border-sidebar-border p-3 lg:p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent lg:h-10 lg:w-10">
-              <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">
-                {role === "buyer" ? "CB" : "TM"}
-              </span>
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="truncate text-sm font-medium text-sidebar-foreground">
-                {role === "buyer" ? "Fashion Brand" : "Textile Manufacturer"}
-              </p>
-              <p className="truncate text-xs text-sidebar-foreground/60">
-                {role === "buyer" ? "Verified Buyer" : "Premium Seller"}
-              </p>
-            </div>
-            <button
-              onClick={handleSignOut}
-              title="Sign Out"
-              className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-accent/20 hover:text-accent"
-            >
-              <LogOut size={18} />
-            </button>
-          </div>
+          {(() => {
+            const displayName = profile?.full_name || (role === "buyer" ? "Fashion Brand" : "Textile Manufacturer");
+            const initials = displayName.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase() || "CS";
+            const planId = vplan?.effective_plan_id;
+            const style = tierStyle(planId);
+            const cap = vplan?.limits.product_cap ?? -1;
+            const used = vplan?.usage.products_used ?? 0;
+            const usageLine = vplan
+              ? isUnlimited(cap) ? `${used} products` : `${used}/${cap} products used`
+              : (role === "buyer" ? "Verified Buyer" : "Seller");
+            return (
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-sidebar-accent lg:h-10 lg:w-10">
+                  <span className="text-xs font-medium text-sidebar-foreground lg:text-sm">
+                    {role === "buyer" ? "CB" : initials}
+                  </span>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-sidebar-foreground">{displayName}</p>
+                    {role === "seller" && vplan && (
+                      <Link
+                        to="/subscription"
+                        className={cn(
+                          "inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-bold",
+                          style.chip,
+                        )}
+                        title={`${vplan.plan.name} plan`}
+                      >
+                        {(planId === "gold" || planId === "vip") && <Crown size={10} className="shrink-0" />}
+                        {vplan.plan.name}
+                      </Link>
+                    )}
+                  </div>
+                  <p className="truncate text-xs text-sidebar-foreground/60">{usageLine}</p>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  title="Sign Out"
+                  className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-accent/20 hover:text-accent"
+                >
+                  <LogOut size={18} />
+                </button>
+              </div>
+            );
+          })()}
         </div>
       </aside>
     </>

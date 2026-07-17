@@ -9,10 +9,13 @@ import { useActiveAds, logAdImpression, logAdClick, type ActiveAd } from "@/lib/
 // mount; a tap logs a click and opens the promoted product. See queries/ads.ts.
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 
-export default function SponsoredRail({ max = 10, className }: { max?: number; className?: string }) {
+// `category` (optional) filters serving to ads targeting that category plus
+// untargeted ads — pass a real category context (e.g. the product page's own
+// category) to make category targeting take effect.
+export default function SponsoredRail({ max = 10, className, category }: { max?: number; className?: string; category?: string | null }) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { data: ads = [] } = useActiveAds(max);
+  const { data: ads = [] } = useActiveAds(max, category);
   const logged = useRef<Set<string>>(new Set());
 
   useEffect(() => {

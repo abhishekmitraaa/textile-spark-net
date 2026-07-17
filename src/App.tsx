@@ -21,6 +21,7 @@ import Upload from "./pages/Upload";
 import Leads from "./pages/Leads";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
+import InvoiceDetail from "./pages/InvoiceDetail";
 import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import MyStore from "./pages/MyStore";
@@ -227,6 +228,7 @@ const App = () => (
             <Route path="/leads" element={<Leads />} />
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/subscription" element={<Subscription />} />
+            <Route path="/subscription/invoice/:id" element={<InvoiceDetail />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/notifications" element={<ProfileNotifications />} />

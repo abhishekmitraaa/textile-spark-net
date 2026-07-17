@@ -118,8 +118,11 @@ interface RawActiveAd {
   image_url: string | null; vendor_id: string | null; vendor_name: string | null;
 }
 
-async function fetchActiveAds(max: number): Promise<ActiveAd[]> {
-  const { data, error } = await supabase.rpc("active_ads", { max_count: max });
+// categoryId (optional) filters serving to ads targeting that category, plus
+// untargeted ads — real category targeting where a buyer category signal exists
+// (e.g. the product-detail page's own category).
+async function fetchActiveAds(max: number, categoryId?: string | null): Promise<ActiveAd[]> {
+  const { data, error } = await supabase.rpc("active_ads", { max_count: max, filter_category: categoryId ?? undefined });
   if (error) throw error;
   return ((data ?? []) as RawActiveAd[]).map((a) => ({
     adId: a.ad_id,
@@ -134,11 +137,64 @@ async function fetchActiveAds(max: number): Promise<ActiveAd[]> {
   }));
 }
 
-export function useActiveAds(max = 12) {
+export function useActiveAds(max = 12, categoryId?: string | null) {
   return useQuery({
-    queryKey: ["advertisements", "active", max],
-    queryFn: () => fetchActiveAds(max),
+    queryKey: ["advertisements", "active", max, categoryId ?? null],
+    queryFn: () => fetchActiveAds(max, categoryId),
     staleTime: 60_000,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Real, anonymized category benchmarks for the Advertise → Competitor page
+// (see ad_category_benchmarks RPC). No named competitors — aggregates only.
+// ─────────────────────────────────────────────────────────────
+export interface CategoryBenchmark {
+  category_id: string; category_name: string; product_count: number;
+  vendor_count: number; avg_price: number; avg_views: number; your_products: number;
+}
+export interface AdBenchmarks {
+  has_data: boolean;
+  categories: CategoryBenchmark[];
+  reviews: { yours: number; peer_avg: number };
+  photos: { yours: number; peer_avg: number };
+  active_ads_in_categories: number;
+  peer_vendor_count: number;
+}
+
+async function fetchAdBenchmarks(vendorId: string): Promise<AdBenchmarks> {
+  const { data, error } = await supabase.rpc("ad_category_benchmarks", { v: vendorId });
+  if (error) throw error;
+  return (data as unknown as AdBenchmarks) ?? { has_data: false, categories: [], reviews: { yours: 0, peer_avg: 0 }, photos: { yours: 0, peer_avg: 0 }, active_ads_in_categories: 0, peer_vendor_count: 0 };
+}
+
+export function useAdBenchmarks(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["ad_benchmarks", vendorId],
+    queryFn: () => fetchAdBenchmarks(vendorId as string),
+    enabled: Boolean(vendorId),
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+// Also expose a vendor's own live categories (id+name) for the ad targeting
+// picker — the real DB categories the vendor sells in.
+export interface AdCategoryOption { id: string; name: string }
+async function fetchVendorCategories(vendorId: string): Promise<AdCategoryOption[]> {
+  const { data: prods } = await supabase
+    .from("products").select("category_id").eq("vendor_id", vendorId).not("category_id", "is", null);
+  const ids = Array.from(new Set(((prods ?? []).map((p) => p.category_id).filter(Boolean)) as string[]));
+  if (!ids.length) return [];
+  const { data: cats } = await supabase.from("categories").select("id, name").in("id", ids);
+  return ((cats ?? []) as AdCategoryOption[]).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+export function useVendorCategories(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["ad_categories", vendorId],
+    queryFn: () => fetchVendorCategories(vendorId as string),
+    enabled: Boolean(vendorId),
+    staleTime: 5 * 60 * 1000,
   });
 }
 

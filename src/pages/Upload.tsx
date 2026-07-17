@@ -5,6 +5,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { resolveCategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
+import { useVendorPlan } from "@/lib/queries/subscriptions";
+import { capReached, isUnlimited } from "@/lib/plan";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,6 +68,13 @@ const Upload = () => {
   const editId = searchParams.get("id");
   const isEdit = Boolean(editId);
   const { data: editing } = useProductForEdit(editId ?? undefined);
+  const { data: vplan } = useVendorPlan(user?.id);
+  // Product-cap gate: how many listing slots the vendor's plan allows vs. used
+  // (under_review + live, computed live by get_vendor_plan). Only blocks NEW
+  // listings — editing an existing product and saving drafts are always allowed.
+  const productCap = vplan?.limits.product_cap ?? -1;
+  const productsUsed = vplan?.usage.products_used ?? 0;
+  const productCapReached = !isEdit && capReached(productsUsed, productCap);
   // In edit mode the category/sub-category steps are skipped (the taxonomy
   // isn't reverse-mappable); the vendor edits details/images/pricing directly.
   const steps = isEdit ? ALL_STEPS.filter((s) => s.id !== "category" && s.id !== "subcategory") : ALL_STEPS;
@@ -236,6 +245,15 @@ const Upload = () => {
       toast.error("Add a price before publishing", { description: "Or use Save as Draft to finish it later." });
       return;
     }
+    // Plan product-cap: block publishing a NEW listing beyond the vendor's cap
+    // (drafts and edits are unaffected — a draft doesn't occupy a listing slot).
+    if (intent === "review" && productCapReached) {
+      toast.error("Product limit reached", {
+        description: `Your plan allows ${productCap} listed products. Upgrade to list more.`,
+      });
+      navigate("/subscription");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -362,6 +380,21 @@ const Upload = () => {
           {isEdit ? "Update your listing details, images, and pricing" : category ? `Adding to: ${category.name}` : "Select a category to get started"}
         </p>
       </motion.div>
+
+      {/* Plan product-cap notice */}
+      {productCapReached && (
+        <motion.div variants={section} className="mb-6">
+          <Link
+            to="/subscription"
+            className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3"
+          >
+            <span className="text-sm font-semibold text-amber-800">
+              You've used all {productCap} product listings on your current plan. You can still save drafts — upgrade to publish more.
+            </span>
+            <span className="shrink-0 text-sm font-bold text-amber-900">Upgrade →</span>
+          </Link>
+        </motion.div>
+      )}
 
       {/* Progress bar */}
       <motion.div variants={section} className="mb-6">

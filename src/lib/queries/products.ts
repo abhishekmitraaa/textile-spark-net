@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { trustSealFromParts } from "@/lib/plan";
 
 // ─────────────────────────────────────────────────────────────
 // Products data access (React Query over Supabase)
@@ -35,6 +36,9 @@ export interface ProductCardData {
   image: string;
   secondaryImage: string;
   verified?: boolean;
+  /** Plan search-boost tier of the owning vendor (0 = Free/none … 4 = VIP),
+   *  used as a real ranking weight in the buyer feed/search. */
+  boost: number;
 }
 
 // Compact counts, e.g. 5600 -> "5.6k".
@@ -44,7 +48,10 @@ function fmtK(n: number): string {
 }
 
 interface RawImage { url: string; position: number }
-export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null }
+// plan_expires_at feeds the displayed trust seal (admin is_verified OR active
+// paid plan); plan_id + a resolved searchBoost feed search ranking. All optional
+// so callers that don't need them can omit them.
+export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null; plan_expires_at?: string | null; ad_verified_until?: string | null; plan_id?: string | null; searchBoost?: number }
 export interface RawProduct {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
@@ -88,8 +95,31 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     categoryName: p.categories?.name ?? null,
     image: imgs[0] ?? PLACEHOLDER,
     secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
-    verified: vendor?.is_verified,
+    verified: trustSealFromParts(vendor?.is_verified, vendor?.plan_expires_at, vendor?.ad_verified_until),
+    boost: vendor?.searchBoost ?? 0,
   };
+}
+
+// ── Search boost (real ranking weight from the vendor's plan) ──
+// A vendor's products rank higher when their active paid plan has a higher
+// search_boost_tier. Cached like the categories catalogue; 0 when no active
+// paid plan. This is a genuine sort input — not simulated ranking.
+let planBoostCache: Map<string, number> | null = null;
+async function loadPlanBoosts(): Promise<Map<string, number>> {
+  if (planBoostCache) return planBoostCache;
+  const { data } = await supabase.from("subscription_plans").select("id, limits");
+  const m = new Map<string, number>();
+  for (const p of (data ?? []) as { id: string; limits: { search_boost_tier?: number } | null }[]) {
+    const t = Number(p.limits?.search_boost_tier ?? 0);
+    m.set(p.id, Number.isFinite(t) ? t : 0);
+  }
+  planBoostCache = m;
+  return m;
+}
+function vendorBoost(boosts: Map<string, number>, planId?: string | null, planExpiresAt?: string | null): number {
+  if (!planId || !planExpiresAt) return 0;
+  if (new Date(planExpiresAt).getTime() <= Date.now()) return 0;
+  return boosts.get(planId) ?? 0;
 }
 
 // products.vendor_id and vendor_profiles.id both FK to profiles.id, so there's
@@ -107,14 +137,22 @@ async function fetchLiveProducts(): Promise<ProductCardData[]> {
   const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
+    const boosts = await loadPlanBoosts();
     const { data: vendors } = await supabase
       .from("vendor_profiles")
-      .select("id, brand_name, is_verified, city")
+      .select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id")
       .in("id", vendorIds);
-    for (const v of vendors ?? []) vendorMap.set(v.id, v as RawVendor);
+    for (const v of vendors ?? []) {
+      const rv = v as RawVendor;
+      rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
+      vendorMap.set((v as { id: string }).id, rv);
+    }
   }
 
-  return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
+  // Higher plan tiers rank first (real weight); created_at desc within a tier.
+  return rows
+    .map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)))
+    .sort((a, b) => b.boost - a.boost);
 }
 
 export function useLiveProducts() {
@@ -133,7 +171,7 @@ export async function fetchProductCardsByIds(ids: string[]): Promise<Record<stri
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
     const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city").in("id", vendorIds);
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id").in("id", vendorIds);
     for (const v of vendors ?? []) vendorMap.set(v.id, v as RawVendor);
   }
   const out: Record<string, ProductCardData> = {};
@@ -149,11 +187,11 @@ export async function fetchProductCardsByIds(ids: string[]): Promise<Record<stri
 // query, so Trends / Sale / For You share one fetch (no extra round-trips).
 // ─────────────────────────────────────────────────────────────
 
-/** Trending = most enquired + best-selling first. */
+/** Trending = higher plan tiers first (real search boost), then most enquired +
+ *  best-selling. */
 export function sortTrending(products: ProductCardData[]): ProductCardData[] {
-  return [...products].sort(
-    (a, b) => b.soldCountNum + parseFloat(b.enquiries) - (a.soldCountNum + parseFloat(a.enquiries)),
-  );
+  const score = (p: ProductCardData) => p.soldCountNum + (parseFloat(p.enquiries) || 0);
+  return [...products].sort((a, b) => (b.boost - a.boost) || (score(b) - score(a)));
 }
 
 /** Sale = anything discounted (compare_at_price above the live price), deepest cut first. */
@@ -182,7 +220,7 @@ export interface CatalogueRow {
   id: string; vendorId: string; name: string; manufacturer: string; location: string;
   priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
-  gender: string; colour: string; image: string; secondaryImage: string; verified: boolean;
+  gender: string; colour: string; image: string; secondaryImage: string; verified: boolean; boost: number;
 }
 
 async function fetchCatalogue(): Promise<CatalogueRow[]> {
@@ -197,12 +235,17 @@ async function fetchCatalogue(): Promise<CatalogueRow[]> {
   const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
+    const boosts = await loadPlanBoosts();
     const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city").in("id", vendorIds);
-    for (const v of vendors ?? []) vendorMap.set(v.id, v as RawVendor);
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id").in("id", vendorIds);
+    for (const v of vendors ?? []) {
+      const rv = v as RawVendor;
+      rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
+      vendorMap.set((v as { id: string }).id, rv);
+    }
   }
 
-  return rows.map((p) => {
+  const mapped = rows.map((p) => {
     const v = vendorMap.get(p.vendor_id);
     const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
     return {
@@ -225,9 +268,12 @@ async function fetchCatalogue(): Promise<CatalogueRow[]> {
       colour: p.colour ?? "",
       image: imgs[0] ?? PLACEHOLDER,
       secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
-      verified: v?.is_verified ?? false,
+      verified: trustSealFromParts(v?.is_verified, v?.plan_expires_at, v?.ad_verified_until),
+      boost: v?.searchBoost ?? 0,
     };
   });
+  // Higher plan tiers rank first in search (real weight).
+  return mapped.sort((a, b) => b.boost - a.boost);
 }
 
 export function useCatalogue() {
@@ -254,6 +300,7 @@ export interface ProductDetail {
   colour: string | null;
   location: string | null;
   categoryName: string | null;
+  categoryId: string | null;
   ratingAvg: number;
   reviewsCount: number;
   soldCount: number;
@@ -263,13 +310,13 @@ export interface ProductDetail {
 
 interface RawDetail extends RawProduct {
   description: string | null; gender: string | null; colour: string | null;
-  reviews_count: number; categories: { name: string } | null;
+  reviews_count: number; category_id: string | null; categories: { name: string } | null;
 }
 
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -279,10 +326,10 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
   let vendor: ProductDetail["vendor"] = null;
   const { data: v } = await supabase
     .from("vendor_profiles")
-    .select("brand_name, is_verified, city, rating_avg, reviews_count")
+    .select("brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until")
     .eq("id", row.vendor_id)
     .maybeSingle();
-  if (v) vendor = { brandName: v.brand_name, isVerified: v.is_verified, city: v.city, ratingAvg: Number(v.rating_avg), reviewsCount: v.reviews_count };
+  if (v) vendor = { brandName: v.brand_name, isVerified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until), city: v.city, ratingAvg: Number(v.rating_avg), reviewsCount: v.reviews_count };
 
   return {
     id: row.id,
@@ -299,6 +346,7 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     colour: row.colour,
     location: row.location,
     categoryName: row.categories?.name ?? null,
+    categoryId: row.category_id ?? null,
     ratingAvg: Number(row.rating_avg),
     reviewsCount: row.reviews_count,
     soldCount: row.sold_count,

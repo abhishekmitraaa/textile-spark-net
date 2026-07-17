@@ -21,6 +21,12 @@ export interface AdSpec {
   days: number;
   items: AdItem[];
   campaignLabel?: string;
+  // Real targeting (persisted on the campaign row by the edge functions).
+  // targetCategories = categories.id[]; filters buyer-side ad serving where a
+  // category context exists (e.g. product page). targetCities = plan-limited
+  // location keys; recorded but not yet used to filter delivery (no buyer geo).
+  targetCategories?: string[];
+  targetCities?: string[];
 }
 
 export interface OrderResult {

@@ -57,6 +57,8 @@ export type Database = {
           product_id: string | null
           starts_at: string | null
           status: string
+          target_categories: Json | null
+          target_cities: Json | null
           title: string
           vendor_id: string
         }
@@ -72,6 +74,8 @@ export type Database = {
           product_id?: string | null
           starts_at?: string | null
           status?: string
+          target_categories?: Json | null
+          target_cities?: Json | null
           title: string
           vendor_id: string
         }
@@ -87,6 +91,8 @@ export type Database = {
           product_id?: string | null
           starts_at?: string | null
           status?: string
+          target_categories?: Json | null
+          target_cities?: Json | null
           title?: string
           vendor_id?: string
         }
@@ -451,6 +457,53 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          body: string | null
+          buyer_id: string
+          created_at: string
+          id: string
+          photos: string[]
+          product_id: string
+          rating: number
+          reviewer_name: string | null
+          size_bought: string | null
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          buyer_id: string
+          created_at?: string
+          id?: string
+          photos?: string[]
+          product_id: string
+          rating: number
+          reviewer_name?: string | null
+          size_bought?: string | null
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          buyer_id?: string
+          created_at?: string
+          id?: string
+          photos?: string[]
+          product_id?: string
+          rating?: number
+          reviewer_name?: string | null
+          size_bought?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_reviews_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_videos: {
         Row: {
           brand_line: string
@@ -516,53 +569,6 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      product_reviews: {
-        Row: {
-          body: string | null
-          buyer_id: string
-          created_at: string
-          id: string
-          photos: string[]
-          product_id: string
-          rating: number
-          reviewer_name: string | null
-          size_bought: string | null
-          updated_at: string
-        }
-        Insert: {
-          body?: string | null
-          buyer_id: string
-          created_at?: string
-          id?: string
-          photos?: string[]
-          product_id: string
-          rating: number
-          reviewer_name?: string | null
-          size_bought?: string | null
-          updated_at?: string
-        }
-        Update: {
-          body?: string | null
-          buyer_id?: string
-          created_at?: string
-          id?: string
-          photos?: string[]
-          product_id?: string
-          rating?: number
-          reviewer_name?: string | null
-          size_bought?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_reviews_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -1036,6 +1042,248 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_invoices: {
+        Row: {
+          amount: number
+          billing_period_end: string | null
+          billing_period_start: string | null
+          created_at: string
+          currency: string
+          gst_amount: number | null
+          gst_number: string | null
+          id: string
+          invoice_number: string | null
+          pdf_url: string | null
+          plan_id: string | null
+          razorpay_order_id: string | null
+          razorpay_payment_id: string | null
+          status: string
+          subscription_id: string | null
+          tds_amount: number | null
+          vendor_id: string
+        }
+        Insert: {
+          amount?: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string
+          currency?: string
+          gst_amount?: number | null
+          gst_number?: string | null
+          id?: string
+          invoice_number?: string | null
+          pdf_url?: string | null
+          plan_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          tds_amount?: number | null
+          vendor_id: string
+        }
+        Update: {
+          amount?: number
+          billing_period_end?: string | null
+          billing_period_start?: string | null
+          created_at?: string
+          currency?: string
+          gst_amount?: number | null
+          gst_number?: string | null
+          id?: string
+          invoice_number?: string | null
+          pdf_url?: string | null
+          plan_id?: string | null
+          razorpay_order_id?: string | null
+          razorpay_payment_id?: string | null
+          status?: string
+          subscription_id?: string | null
+          tds_amount?: number | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_invoices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_subscriptions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_invoices_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_payment_orders: {
+        Row: {
+          amount: number
+          billing_cycle: string
+          created_at: string
+          gst_number: string | null
+          order_id: string
+          paid_at: string | null
+          plan_id: string
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          amount: number
+          billing_cycle?: string
+          created_at?: string
+          gst_number?: string | null
+          order_id: string
+          paid_at?: string | null
+          plan_id: string
+          status?: string
+          vendor_id: string
+        }
+        Update: {
+          amount?: number
+          billing_cycle?: string
+          created_at?: string
+          gst_number?: string | null
+          order_id?: string
+          paid_at?: string | null
+          plan_id?: string
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payment_orders_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payment_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          currency: string
+          display: Json
+          id: string
+          is_invite_only: boolean
+          limits: Json
+          monthly_price: number
+          name: string
+          sort_order: number
+          yearly_price: number
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          display?: Json
+          id: string
+          is_invite_only?: boolean
+          limits?: Json
+          monthly_price?: number
+          name: string
+          sort_order?: number
+          yearly_price?: number
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          display?: Json
+          id?: string
+          is_invite_only?: boolean
+          limits?: Json
+          monthly_price?: number
+          name?: string
+          sort_order?: number
+          yearly_price?: number
+        }
+        Relationships: []
+      }
+      subscription_usage: {
+        Row: {
+          id: string
+          leads_used: number
+          period_end: string
+          period_start: string
+          products_used: number
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          id?: string
+          leads_used?: number
+          period_end: string
+          period_start: string
+          products_used?: number
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          id?: string
+          leads_used?: number
+          period_end?: string
+          period_start?: string
+          products_used?: number
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_usage_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_ad_verifications: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          source: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          source: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          source?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_ad_verifications_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_documents: {
         Row: {
           created_at: string
@@ -1074,6 +1322,7 @@ export type Database = {
       vendor_profiles: {
         Row: {
           about: string | null
+          ad_verified_until: string | null
           address_line: string | null
           area: string | null
           banner_url: string | null
@@ -1094,6 +1343,8 @@ export type Database = {
           owner_name: string | null
           pan: string | null
           phone: string | null
+          plan_expires_at: string | null
+          plan_id: string | null
           postal_code: string | null
           profile_score: number
           rating_avg: number
@@ -1104,6 +1355,7 @@ export type Database = {
         }
         Insert: {
           about?: string | null
+          ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
           banner_url?: string | null
@@ -1124,6 +1376,8 @@ export type Database = {
           owner_name?: string | null
           pan?: string | null
           phone?: string | null
+          plan_expires_at?: string | null
+          plan_id?: string | null
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
@@ -1134,6 +1388,7 @@ export type Database = {
         }
         Update: {
           about?: string | null
+          ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
           banner_url?: string | null
@@ -1154,6 +1409,8 @@ export type Database = {
           owner_name?: string | null
           pan?: string | null
           phone?: string | null
+          plan_expires_at?: string | null
+          plan_id?: string | null
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
@@ -1170,6 +1427,80 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_profiles_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_subscriptions: {
+        Row: {
+          account_manager_id: string | null
+          auto_renew: boolean
+          billing_cycle: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          plan_id: string
+          real_time_alerts_enabled: boolean
+          status: string
+          updated_at: string
+          vendor_id: string
+        }
+        Insert: {
+          account_manager_id?: string | null
+          auto_renew?: boolean
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id: string
+          real_time_alerts_enabled?: boolean
+          status?: string
+          updated_at?: string
+          vendor_id: string
+        }
+        Update: {
+          account_manager_id?: string | null
+          auto_renew?: boolean
+          billing_cycle?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          plan_id?: string
+          real_time_alerts_enabled?: boolean
+          status?: string
+          updated_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_subscriptions_account_manager_id_fkey"
+            columns: ["account_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_subscriptions_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -1177,29 +1508,40 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      approve_vendor_content: { Args: { target: string }; Returns: undefined }
-      is_admin: { Args: Record<string, never>; Returns: boolean }
-      is_conversation_member: { Args: { cid: string }; Returns: boolean }
-      owns_product: { Args: { pid: string }; Returns: boolean }
-      owns_rfq: { Args: { rid: string }; Returns: boolean }
-      reply_to_review: { Args: { reply: string; review_id: string }; Returns: undefined }
       active_ads: {
-        Args: { max_count?: number }
+        Args: { filter_category?: string; max_count?: number }
         Returns: {
           ad_id: string
-          product_id: string
-          title: string
-          placement: string
-          product_name: string
-          price_value: number
           currency: string
           image_url: string
+          placement: string
+          price_value: number
+          product_id: string
+          product_name: string
+          title: string
           vendor_id: string
           vendor_name: string
         }[]
       }
-      ad_impression: { Args: { ad: string }; Returns: undefined }
+      ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string }; Returns: undefined }
+      ad_impression: { Args: { ad: string }; Returns: undefined }
+      approve_vendor_content: { Args: { target: string }; Returns: undefined }
+      expire_subscriptions: { Args: never; Returns: number }
+      get_vendor_plan: { Args: { v?: string }; Returns: Json }
+      grant_ad_verification: {
+        Args: { exp: string; src: string; v: string }
+        Returns: undefined
+      }
+      is_admin: { Args: never; Returns: boolean }
+      is_conversation_member: { Args: { cid: string }; Returns: boolean }
+      next_invoice_number: { Args: never; Returns: string }
+      owns_product: { Args: { pid: string }; Returns: boolean }
+      owns_rfq: { Args: { rid: string }; Returns: boolean }
+      reply_to_review: {
+        Args: { reply: string; review_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       product_status: "draft" | "under_review" | "live" | "rejected"

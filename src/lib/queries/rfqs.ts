@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { trustSealFromParts } from "@/lib/plan";
 import type { Rfq, VendorQuote, QuoteStatus } from "@/lib/quotesData";
 
 // ─────────────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ import type { Rfq, VendorQuote, QuoteStatus } from "@/lib/quotesData";
 interface RawRfq {
   id: string; title: string; product_name: string | null; quantity: number | null;
   budget_min: number | null; budget_max: number | null; image: string | null;
+  category_id: string | null;
   status: "active" | "closed"; created_at: string;
 }
 interface RawQuote {
@@ -21,7 +23,7 @@ interface RawQuote {
   lead_time: string | null; sampling_cost: number | null; sample_timeline: string | null;
   fabric: string | null; comment: string | null; status: QuoteStatus; created_at: string;
 }
-interface RawVendor { id: string; brand_name: string | null; is_verified: boolean; city: string | null; rating_avg: number; reviews_count: number }
+interface RawVendor { id: string; brand_name: string | null; is_verified: boolean; city: string | null; rating_avg: number; reviews_count: number; plan_expires_at: string | null; ad_verified_until: string | null }
 
 function ago(iso: string): string {
   const s = (Date.now() - new Date(iso).getTime()) / 1000;
@@ -40,7 +42,7 @@ function mapQuote(q: RawQuote, v?: RawVendor): VendorQuote {
   const name = v?.brand_name ?? "Vendor";
   return {
     id: q.id, rfqId: q.rfq_id, vendorId: q.vendor_id, vendorName: name, vendorInitials: initials(name),
-    verified: v?.is_verified ?? false, rating: Number(v?.rating_avg ?? 0), ratingCount: fmtK(v?.reviews_count ?? 0),
+    verified: trustSealFromParts(v?.is_verified, v?.plan_expires_at, v?.ad_verified_until), rating: Number(v?.rating_avg ?? 0), ratingCount: fmtK(v?.reviews_count ?? 0),
     location: v?.city ?? "India", responseTime: "—", status: q.status, currency: q.currency,
     pricePerUnit: Number(q.price_per_unit ?? 0), priceINR: Number(q.price_inr ?? q.price_per_unit ?? 0),
     moq: q.moq ?? 0, leadTime: q.lead_time ?? "—", sampling: Number(q.sampling_cost ?? 0),
@@ -78,7 +80,7 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
   const vendorIds = Array.from(new Set(quoteRows.map((q) => q.vendor_id)));
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
-    const { data } = await supabase.from("vendor_profiles").select("id, brand_name, is_verified, city, rating_avg, reviews_count").in("id", vendorIds);
+    const { data } = await supabase.from("vendor_profiles").select("id, brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until").in("id", vendorIds);
     for (const v of (data ?? []) as RawVendor[]) vendorMap.set(v.id, v);
   }
 
@@ -124,6 +126,10 @@ export async function setQuoteStatusDb(id: string, status: QuoteStatus): Promise
 export interface LeadRfq {
   id: string; title: string; productName: string; units: number; priceMin: number; priceMax: number;
   image: string; date: string; alreadyQuoted: boolean;
+  categoryId: string | null;
+  /** True when this RFQ's category matches one of a PAID vendor's product
+   *  categories — surfaced as a priority "premium" lead (see Part 3b). */
+  matched: boolean;
 }
 async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data, error } = await supabase
@@ -134,12 +140,32 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data: myQuotes } = await supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId);
   const quoted = new Set((myQuotes ?? []).map((q) => q.rfq_id));
 
-  return rows.map((r) => ({
+  // Category-matched premium leads (rule-based, no AI): for a PAID vendor
+  // (Basic+, i.e. an active paid plan cached on vendor_profiles), RFQs whose
+  // category_id is one of the vendor's own product categories are flagged and
+  // sorted first. Free-tier vendors keep the plain unfiltered/unprioritised feed.
+  const { data: vp } = await supabase
+    .from("vendor_profiles").select("plan_expires_at").eq("id", vendorId).maybeSingle();
+  const isPaid = Boolean(vp?.plan_expires_at && new Date(vp.plan_expires_at).getTime() > Date.now());
+
+  let vendorCats = new Set<string>();
+  if (isPaid) {
+    const { data: prods } = await supabase
+      .from("products").select("category_id").eq("vendor_id", vendorId).not("category_id", "is", null);
+    vendorCats = new Set(((prods ?? []).map((p) => p.category_id).filter(Boolean)) as string[]);
+  }
+
+  const leads: LeadRfq[] = rows.map((r) => ({
     id: r.id, title: r.title, productName: r.product_name ?? r.title, units: r.quantity ?? 0,
     priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0), image: r.image ?? "",
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
     alreadyQuoted: quoted.has(r.id),
+    categoryId: r.category_id ?? null,
+    matched: isPaid && !!r.category_id && vendorCats.has(r.category_id),
   }));
+
+  // Matched (premium) leads first; within each group keep created_at desc.
+  return leads.sort((a, b) => Number(b.matched) - Number(a.matched));
 }
 export function useOpenRfqs(vendorId: string | undefined) {
   return useQuery({
