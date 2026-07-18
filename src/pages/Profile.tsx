@@ -482,7 +482,7 @@ const Profile = () => {
               <Sparkles className="w-4 h-4 text-[#ef4d62]" />
               <h3 className="text-sm font-bold text-gray-900">Interest &amp; Preferences</h3>
             </div>
-            <button onClick={() => navigate("/home/for-you")} className="text-xs font-semibold text-[#ef4d62] hover:underline">Edit</button>
+            <button onClick={() => navigate("/profile/interest-preference")} className="text-xs font-semibold text-[#ef4d62] hover:underline">Edit</button>
           </div>
           {interestChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">

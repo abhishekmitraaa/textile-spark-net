@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowLeft, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -13,6 +13,10 @@ import { usePreferences, setCategories } from "@/lib/preferencesStore";
 
 const InterestPreference = () => {
   const navigate = useNavigate();
+  // Same screen serves two routes: the registration step (/auth/...) and the
+  // later "edit my interests" flow (/profile/...). Branch navigation so a buyer
+  // editing preferences isn't dropped back into the signup flow.
+  const inProfile = useLocation().pathname.startsWith("/profile");
   const prefs = usePreferences();
   const [selected, setSelected] = useState<string[]>(prefs.categories);
   // Mirror store→local until the buyer starts editing, so a signed-in buyer who
@@ -32,13 +36,14 @@ const InterestPreference = () => {
   const handleSave = () => {
     // Persist to the real account-tied store (DB when signed in, local otherwise).
     setCategories(selected);
-    navigate("/auth/terms");
+    // Registration → continue to terms; profile edit → back to the profile page.
+    navigate(inProfile ? "/profile" : "/auth/terms");
   };
 
   return (
     <div className="min-h-screen bg-white flex flex-col px-5 py-6">
       {/* Back arrow */}
-      <button onClick={() => navigate("/auth/account-info")} className="mb-2 -ml-1 p-1.5 self-start">
+      <button onClick={() => navigate(inProfile ? "/profile" : "/auth/account-info")} className="mb-2 -ml-1 p-1.5 self-start">
         <ArrowLeft className="w-5 h-5 text-gray-700" />
       </button>
 
