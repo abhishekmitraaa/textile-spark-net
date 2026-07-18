@@ -8,6 +8,7 @@ import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import { BUYER_CATEGORIES as CATEGORIES, PREF_CAT_KEYWORDS } from "@/lib/buyerCategories";
 import {
   usePreferences,
   toggleCategory,
@@ -40,18 +41,6 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────
-
-const CATEGORIES = [
-  { id: "tshirts", label: "T-Shirts", icon: "👕" },
-  { id: "shirts", label: "Shirts", icon: "👔" },
-  { id: "coords", label: "Co-ords", icon: "🧥" },
-  { id: "dresses", label: "Dresses", icon: "👗" },
-  { id: "bottomwear", label: "Bottomwear", icon: "👖" },
-  { id: "fabrics", label: "Fabrics", icon: "🧵" },
-  { id: "accessories", label: "Fashion Accessories", icon: "👜" },
-  { id: "kidswear", label: "Kidswear", icon: "🧒" },
-  { id: "activewear", label: "Activewear", icon: "🏃" },
-];
 
 const LOCATIONS = [
   { id: "tiruppur", label: "Tiruppur" },
@@ -92,20 +81,9 @@ const PRODUCT_POOL: ListingProduct[] = Array.from({ length: 48 }, (_, i) => {
   });
 });
 
-// Map DB category names / product names → the preference category ids used
-// by the picker, and DB locations → preference location ids, so real products
-// flow through the exact same preference-filter logic.
-const PREF_CAT_KEYWORDS: Record<string, string[]> = {
-  tshirts: ["t-shirt", "tee", "tank", "polo", "tops"],
-  shirts: ["shirt"],
-  coords: ["co-ord", "coord"],
-  dresses: ["dress", "anarkali", "kurta"],
-  bottomwear: ["jean", "trouser", "pant", "jogger", "short"],
-  fabrics: ["fabric"],
-  accessories: ["accessor", "belt", "bag", "sneaker", "footwear"],
-  kidswear: ["kid"],
-  activewear: ["active", "training", "track", "sport", "mesh"],
-};
+// Map DB locations → preference location ids, so real products flow through the
+// exact same preference-filter logic. (Category keyword mapping now lives in
+// the shared src/lib/buyerCategories.ts as PREF_CAT_KEYWORDS.)
 const PREF_LOC_KEYWORDS: Record<string, string> = {
   tiruppur: "tirupur", surat: "surat", ludhiana: "ludhiana",
   delhi: "delhi", bangalore: "bangalore", mumbai: "mumbai",

@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
+import { PREF_TO_DB_CATEGORY_NAMES } from "@/lib/buyerCategories";
 
 // ─────────────────────────────────────────────────────────────
 // Products data access (React Query over Supabase)
@@ -375,6 +376,111 @@ export async function recordProductView(id: string): Promise<void> {
 export async function recordProductEnquiry(id: string): Promise<void> {
   const { error } = await supabase.rpc("increment_product_enquiry", { p: id });
   if (error) throw error;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Recommendation strips (ProductDetail: "You might also like" / "Brand Picks").
+// Rule-based only — category match + same-vendor, no scoring/personalization —
+// ordered by real engagement: enquiries_count first (a genuine signal now that
+// it's incremented on real buyer contact), views_count as the tiebreak.
+// Only ever returns `live` products (RLS + explicit filter), never the current
+// product, and never pads: a sparse category/vendor simply yields fewer rows.
+// ─────────────────────────────────────────────────────────────
+
+const RELATED_LIMIT = 10;
+
+// Load the vendor public-profile info (brand name, trust seal, plan boost) for a
+// set of vendor ids — shared by the strip queries below.
+async function vendorMapFor(vendorIds: string[]): Promise<Map<string, RawVendor>> {
+  const vendorMap = new Map<string, RawVendor>();
+  if (!vendorIds.length) return vendorMap;
+  const boosts = await loadPlanBoosts();
+  const { data: vendors } = await supabase
+    .from("vendor_profiles")
+    .select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id")
+    .in("id", vendorIds);
+  for (const v of vendors ?? []) {
+    const rv = v as RawVendor;
+    rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
+    vendorMap.set((v as { id: string }).id, rv);
+  }
+  return vendorMap;
+}
+
+/** Turn a buyer's preferred category ids (buyerCategories vocabulary) into the
+ *  real DB category ids they map to. Preferences with no dedicated DB category
+ *  (co-ords / fabrics) contribute nothing. */
+export async function resolvePreferredCategoryIds(prefIds: string[]): Promise<string[]> {
+  const names = new Set<string>();
+  for (const pid of prefIds) for (const n of PREF_TO_DB_CATEGORY_NAMES[pid] ?? []) names.add(n);
+  if (!names.size) return [];
+  const cats = await loadCategories();
+  return cats.filter((c) => names.has(c.name)).map((c) => c.id);
+}
+
+async function fetchProductsByCategoryIds(categoryIds: string[], excludeId: string, limit: number): Promise<ProductCardData[]> {
+  if (!categoryIds.length) return [];
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_CARD_SELECT)
+    .eq("status", "live")
+    .in("category_id", categoryIds)
+    .neq("id", excludeId)
+    .order("enquiries_count", { ascending: false })
+    .order("views_count", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as RawProduct[];
+  const vendorMap = await vendorMapFor(Array.from(new Set(rows.map((r) => r.vendor_id))));
+  return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
+}
+
+async function fetchVendorOtherProducts(vendorId: string, excludeId: string, limit: number): Promise<ProductCardData[]> {
+  const { data, error } = await supabase
+    .from("products")
+    .select(PRODUCT_CARD_SELECT)
+    .eq("status", "live")
+    .eq("vendor_id", vendorId)
+    .neq("id", excludeId)
+    .order("enquiries_count", { ascending: false })
+    .order("views_count", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  const rows = (data ?? []) as unknown as RawProduct[];
+  const vendorMap = await vendorMapFor([vendorId]);
+  return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
+}
+
+/**
+ * "You might also like": products in the buyer's preferred categories (from
+ * `preferred_categories`), ranked by real performance. Falls back to the current
+ * product's own category when the buyer has no usable saved preferences
+ * (skipped onboarding / anonymous), so the strip never comes up empty for lack
+ * of preference data.
+ */
+export function useYouMightLike(
+  currentId: string | undefined,
+  currentCategoryId: string | null | undefined,
+  preferredCategoryIds: string[],
+) {
+  return useQuery({
+    queryKey: ["products", "related", currentId, currentCategoryId, preferredCategoryIds],
+    enabled: Boolean(currentId),
+    queryFn: async () => {
+      const preferred = await resolvePreferredCategoryIds(preferredCategoryIds);
+      const categoryIds = preferred.length ? preferred : currentCategoryId ? [currentCategoryId] : [];
+      return fetchProductsByCategoryIds(categoryIds, currentId as string, RELATED_LIMIT);
+    },
+  });
+}
+
+/** "Brand Picks": other live products from the current product's vendor. */
+export function useVendorOtherProducts(vendorId: string | undefined, excludeId: string | undefined) {
+  return useQuery({
+    queryKey: ["products", "brandpicks", vendorId, excludeId],
+    enabled: Boolean(vendorId && excludeId),
+    queryFn: () => fetchVendorOtherProducts(vendorId as string, excludeId as string, RELATED_LIMIT),
+  });
 }
 
 // ─────────────────────────────────────────────────────────────

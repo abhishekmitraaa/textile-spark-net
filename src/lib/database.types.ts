@@ -130,6 +130,7 @@ export type Database = {
           notifications: Json | null
           pan: string | null
           postal_code: string | null
+          preferred_categories: string[]
           regional: Json | null
           social: Json | null
           state: string | null
@@ -152,6 +153,7 @@ export type Database = {
           notifications?: Json | null
           pan?: string | null
           postal_code?: string | null
+          preferred_categories?: string[]
           regional?: Json | null
           social?: Json | null
           state?: string | null
@@ -174,6 +176,7 @@ export type Database = {
           notifications?: Json | null
           pan?: string | null
           postal_code?: string | null
+          preferred_categories?: string[]
           regional?: Json | null
           social?: Json | null
           state?: string | null

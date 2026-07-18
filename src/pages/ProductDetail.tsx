@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
-import type { ListingProduct } from "@/lib/listingProducts";
+import type { ListingProduct, Gender } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useProductById, recordProductView, recordProductEnquiry } from "@/lib/queries/products";
+import { usePreferences } from "@/lib/preferencesStore";
+import {
+  useProductById, recordProductView, recordProductEnquiry,
+  useYouMightLike, useVendorOtherProducts, type ProductCardData,
+} from "@/lib/queries/products";
 import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { useCallVendor } from "@/lib/queries/calls";
 import { recordView } from "@/lib/recentlyViewedStore";
@@ -23,6 +27,17 @@ import trustedSeal from "@/assets/Trustedseal.png";
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const page = { hidden: {}, show: { transition: { staggerChildren: 0.06, delayChildren: 0.03 } } };
 const sect = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.36 } } };
+
+// Map a real catalogue row into the shared listing-card shape used by the
+// "You might also like" / "Brand Picks" strips.
+function cardToListing(p: ProductCardData): ListingProduct {
+  return {
+    id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location,
+    price: p.price, priceValue: p.priceValue, moq: `MOQ: ${p.moq}`, soldCount: p.soldCount, enquiries: p.enquiries,
+    rating: p.rating, fabric: p.fabric, gsm: p.gsm, fitType: p.fitType, image: p.image, secondaryImage: p.secondaryImage,
+    gender: (p.gender.toLowerCase() as Gender),
+  };
+}
 
 const CORAL = "#ef4d62";
 const COLOR_HEX: Record<string, string> = {
@@ -41,8 +56,6 @@ interface ProductData {
   availableColors: string[]; availableSizes: string[]; specifications: Spec[]; customizationAvailable: boolean;
   description: string; manufacturing: { country: string; certifications: string[] };
   totalReviews: number; ratingBreakdown: Record<number, number>; reviews: Review[];
-  brandPicks: { id: string; vendorName: string; category: string; price: string; rating: number; soldCount: string; image: string }[];
-  youMightLike: { id: string; price: string; moq: string; name: string; manufacturer: string; location: string; fabric: string; gsm: string; fitType: string; rating: number; soldCountBadge: string; image: string }[];
 }
 
 // === Mock data ===
@@ -75,17 +88,6 @@ const PRODUCTS: Record<string, ProductData> = {
       { id: 2, name: "Anubhav Kumar", rating: 5, date: "2 months ago", comment: "Like it", sizeBought: "XXL", photos: ["https://picsum.photos/seed/rev-ph-1/200/200", "https://picsum.photos/seed/rev-ph-2/200/200", "https://picsum.photos/seed/rev-ph-3/200/200"], helpful: 0 },
       { id: 3, name: "Ramakant", rating: 5, date: "a month ago", comment: "Nice", sizeBought: "L", photos: [], helpful: 0 },
       { id: 4, name: "Seema", rating: 4, date: "2 months ago", comment: "Comfortable T-shirt, fits as expected. Collar style gives it a different look", sizeBought: "XXL", photos: [], helpful: 0 },
-    ],
-    brandPicks: [
-      { id: "bp1", vendorName: "THEOT / J merino...", category: "Shirts", price: "$27.53", rating: 3.9, soldCount: "1.4k", image: "https://picsum.photos/seed/brand-pick-shirts/300/400" },
-      { id: "bp2", vendorName: "Queen's Square /...", category: "Knitwear/Sweaters", price: "$20.09", rating: 4.6, soldCount: "800", image: "https://picsum.photos/seed/brand-pick-knitwear/300/400" },
-      { id: "bp3", vendorName: "THEOT / high tou...", category: "Blouses", price: "$17.11", rating: 4.2, soldCount: "650", image: "https://picsum.photos/seed/brand-pick-blouses/300/400" },
-    ],
-    youMightLike: [
-      { id: "ym1", price: "₹499", moq: "MOQ: 2", name: "Printed Cotton Kurta", manufacturer: "Artisan Weaves Co.", location: "Bangalore", fabric: "Cotton", gsm: "GSM: 200", fitType: "Fit Type: Regular", rating: 4.1, soldCountBadge: "5.6k", image: "https://picsum.photos/seed/might-like-1-cosora/300/400" },
-      { id: "ym2", price: "₹499", moq: "MOQ: 2", name: "Relaxed Linen Trouser", manufacturer: "SilkThread Mills", location: "Bangalore", fabric: "Cotton", gsm: "GSM: 200", fitType: "Fit Type: Regular", rating: 3.8, soldCountBadge: "1.6k", image: "https://picsum.photos/seed/might-like-2-cosora/300/400" },
-      { id: "ym3", price: "₹599", moq: "MOQ: 2", name: "Oversized Crew Tee", manufacturer: "Tiruppur Knitworks", location: "Tirupur", fabric: "Cotton", gsm: "GSM: 240", fitType: "Fit Type: Oversized", rating: 4.3, soldCountBadge: "3.2k", image: "https://picsum.photos/seed/might-like-3-cosora/300/400" },
-      { id: "ym4", price: "₹459", moq: "MOQ: 2", name: "Camp Collar Shirt", manufacturer: "Mumbai Linen House", location: "Mumbai", fabric: "Linen", gsm: "GSM: 180", fitType: "Fit Type: Regular", rating: 4.0, soldCountBadge: "1.1k", image: "https://picsum.photos/seed/might-like-4-cosora/300/400" },
     ],
   },
 };
@@ -363,6 +365,16 @@ const ProductDetail = () => {
   const { submitProductReview } = useReviewMutations();
   const hasRealReviews = (productReviews?.count ?? 0) > 0;
 
+  // Real recommendation strips. "You might also like" = the buyer's preferred
+  // categories (fallback: this product's category); "Brand Picks" = the same
+  // vendor's other live products. Both exclude the current product and only
+  // surface live listings; empty results hide the section (Part 3, no padding).
+  const prefs = usePreferences();
+  const { data: relatedRaw } = useYouMightLike(row?.id, row?.categoryId, prefs.categories);
+  const { data: brandPicksRaw } = useVendorOtherProducts(row?.vendorId, row?.id);
+  const likeProducts: ListingProduct[] = (relatedRaw ?? []).map(cardToListing);
+  const brandPickProducts: ListingProduct[] = (brandPicksRaw ?? []).map(cardToListing);
+
   const mockAvg = parseFloat((product.reviews.reduce((s, r) => s + r.rating, 0) / (product.reviews.length || 1)).toFixed(1));
   const avgRating = hasRealReviews ? productReviews!.avg : mockAvg;
   const reviewsTotal = hasRealReviews ? productReviews!.count : product.totalReviews;
@@ -407,14 +419,6 @@ const ProductDetail = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row?.id]);
-
-  // "You might also like" → shared listing card
-  const likeProducts: ListingProduct[] = product.youMightLike.map((it) => ({
-    id: it.id, vendorId: `v-${it.id}`, name: it.name, manufacturer: it.manufacturer, location: it.location,
-    price: it.price, priceValue: parseInt(it.price.replace(/[^\d]/g, ""), 10) || 499, moq: it.moq, soldCount: "800+ sold",
-    enquiries: it.soldCountBadge, rating: it.rating, fabric: it.fabric, gsm: it.gsm.replace(/^GSM:\s*/, ""),
-    fitType: it.fitType.replace(/^Fit Type:\s*/, ""), image: it.image, secondaryImage: it.image, gender: "unisex",
-  }));
 
   const card = "rounded-2xl border border-gray-200 bg-white p-4";
 
@@ -655,31 +659,23 @@ const ProductDetail = () => {
           </motion.div>
         )}
 
-        {/* Brand Picks (sponsored) */}
-        <motion.div variants={sect} className="pt-2">
-          <div className="mb-2 flex items-center justify-between">
-            <h2 className="inline-flex items-center gap-1 text-sm font-bold text-gray-900">Brand Picks <ChevronDown className="h-4 w-4 -rotate-90 text-gray-400" /></h2>
-            <span className="text-[10px] italic text-gray-300">sponsored</span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-            {product.brandPicks.map((pick) => (
-              <div key={pick.id} className="w-32 shrink-0 overflow-hidden rounded-xl border border-[#ef4d62]/15 bg-[#ef4d62]/5">
-                <Link to={`/product/${pick.id}`} className="relative block aspect-[3/4] bg-gray-100">
-                  <img src={pick.image} alt={pick.category} className="h-full w-full object-cover" />
-                  <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 rounded-full bg-black/60 px-1.5 py-0.5 text-[9px] font-medium text-white">
-                    <span>{pick.rating}</span><Star className="h-2 w-2 fill-yellow-400 text-yellow-400" /><span className="text-white/60">|</span><span>{pick.soldCount}</span>
-                  </div>
-                </Link>
-                <div className="p-1.5">
-                  <p className="text-[10px] text-gray-500 truncate">{pick.vendorName}</p>
-                  <p className="text-[10px] font-medium text-gray-700">{pick.category}</p>
-                  <p className="text-xs font-bold text-gray-900">{pick.price}</p>
-                  <button onClick={() => callVendor(`vendor-${pick.id}`, pick.category)} className="mt-1 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] font-bold py-1.5 rounded"><Phone className="h-2.5 w-2.5" /> Call Now</button>
+        {/* Brand Picks — the current vendor's other live products (real; excludes
+            this product). Hidden entirely when the vendor has no others. */}
+        {brandPickProducts.length > 0 && (
+          <motion.div variants={sect} className="pt-2">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="inline-flex items-center gap-1 text-sm font-bold text-gray-900">Brand Picks <ChevronDown className="h-4 w-4 -rotate-90 text-gray-400" /></h2>
+              <span className="text-[10px] text-gray-400">More from {product.vendor.name}</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+              {brandPickProducts.map((p) => (
+                <div key={p.id} className="w-40 shrink-0">
+                  <ListingProductCard product={p} />
                 </div>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         {/* Real category-targeted sponsored ads (vendor campaigns targeting this
             product's category, plus untargeted campaigns). Renders nothing when
@@ -690,13 +686,17 @@ const ProductDetail = () => {
           </motion.div>
         )}
 
-        {/* You might also like */}
-        <motion.div variants={sect} className="pt-2">
-          <h2 className="mb-3 text-sm font-bold text-gray-900">You might also like</h2>
-          <div className="grid grid-cols-2 gap-3">
-            {likeProducts.map((p) => <ListingProductCard key={p.id} product={p} />)}
-          </div>
-        </motion.div>
+        {/* You might also like — the buyer's preferred categories (or this
+            product's category as a fallback), ranked by real engagement. Hidden
+            when there are no other live products to show. */}
+        {likeProducts.length > 0 && (
+          <motion.div variants={sect} className="pt-2">
+            <h2 className="mb-3 text-sm font-bold text-gray-900">You might also like</h2>
+            <div className="grid grid-cols-2 gap-3">
+              {likeProducts.map((p) => <ListingProductCard key={p.id} product={p} />)}
+            </div>
+          </motion.div>
+        )}
       </motion.div>
 
       <WriteReviewModal
