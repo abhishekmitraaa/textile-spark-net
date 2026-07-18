@@ -6,7 +6,7 @@ import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import type { ListingProduct } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useProductById } from "@/lib/queries/products";
+import { useProductById, recordProductView, recordProductEnquiry } from "@/lib/queries/products";
 import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { useCallVendor } from "@/lib/queries/calls";
 import { recordView } from "@/lib/recentlyViewedStore";
@@ -267,6 +267,31 @@ function WriteReviewModal({ open, onClose, onSubmit }: { open: boolean; onClose:
   );
 }
 
+// === Not-found state ===
+// Deliberately identical for a product that never existed and one that exists but
+// is RLS-blocked (rejected / under review / not the viewer's own). The copy leaks
+// nothing about which ids are real — it must never branch on the id or its status.
+function ProductNotFound() {
+  const navigate = useNavigate();
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-20 flex flex-col items-center text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
+        <Package className="h-8 w-8 text-gray-400" />
+      </div>
+      <h1 className="mt-5 text-lg font-bold text-gray-900">Product not found</h1>
+      <p className="mt-1.5 max-w-xs text-sm text-gray-500">
+        This product isn't available. It may have been removed, or the link may be incorrect.
+      </p>
+      <button
+        onClick={() => navigate("/search")}
+        className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90 active:scale-[0.98]"
+      >
+        Browse products
+      </button>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────────────────────
@@ -279,8 +304,11 @@ const ProductDetail = () => {
 
   // Real product from Supabase (when the id is a real UUID from the live feed).
   // We merge it over the mock template so sections we don't persist yet
-  // (reviews, brand picks, "you might also like") still render.
-  const { data: row } = useProductById(id);
+  // (reviews, brand picks, "you might also like") still render. `row` is null for
+  // BOTH a missing id and an RLS-blocked one (non-live / not the viewer's own) —
+  // maybeSingle() returns 0 rows either way, so the not-found state below can't
+  // reveal which product ids actually exist.
+  const { data: row, isPending, isError } = useProductById(id);
   const base = getDefaultProduct(id ?? "1");
   const product: ProductData = row
     ? {
@@ -361,15 +389,24 @@ const ProductDetail = () => {
     verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
   });
 
-  // Record view for Recently Viewed
+  // Record view — only for a real, visible product (never a mock/blocked id).
   useEffect(() => {
+    if (!row) return;
+    // Local Recently-Viewed list.
     recordView({
       id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
       location: product.vendor.location, price: product.price, moq: product.moq, rating: product.rating,
       reviews: product.totalReviews, verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
     });
+    // Real DB views_count — atomic +1, once per browser session per product (a
+    // refresh in the same session doesn't recount; a new session does).
+    const key = `cosora.viewed.${row.id}`;
+    if (!sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, "1");
+      void recordProductView(row.id).catch(() => {});
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [product.id]);
+  }, [row?.id]);
 
   // "You might also like" → shared listing card
   const likeProducts: ListingProduct[] = product.youMightLike.map((it) => ({
@@ -380,6 +417,26 @@ const ProductDetail = () => {
   }));
 
   const card = "rounded-2xl border border-gray-200 bg-white p-4";
+
+  // Still resolving the row: brief spinner (no mock flash).
+  if (isPending) {
+    return (
+      <BuyerShell>
+        <div className="max-w-2xl mx-auto px-4 py-24 flex justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-[#ef4d62]" />
+        </div>
+      </BuyerShell>
+    );
+  }
+  // Genuine not-found — missing id, RLS-blocked (non-live / not yours), or a
+  // malformed id that errored. All render the exact same state (see ProductNotFound).
+  if (isError || !row) {
+    return (
+      <BuyerShell>
+        <ProductNotFound />
+      </BuyerShell>
+    );
+  }
 
   return (
     <BuyerShell>
@@ -485,7 +542,7 @@ const ProductDetail = () => {
 
             {/* Chat + Call Now (inline, per reference) */}
             <div className="flex items-center gap-2">
-              <button onClick={() => navigate(`/chats/${product.vendor.id}`)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
+              <button onClick={() => { if (row) void recordProductEnquiry(row.id).catch(() => {}); navigate(`/chats/${product.vendor.id}`); }} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
                 <MessageCircle className="h-4 w-4" /> Chat
               </button>
               <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors active:scale-[0.98]">

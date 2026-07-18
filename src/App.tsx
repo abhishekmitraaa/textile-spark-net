@@ -3,7 +3,7 @@ import BusinessProfileScorePage from "./pages/BusinessProfileScorePage";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
@@ -14,7 +14,6 @@ import Login from "./pages/Login";
 import Index from "./pages/Index";
 import SellerHome from "./pages/SellerHome";
 import Products from "./pages/Products";
-import BrowseProducts from "./pages/BrowseProducts";
 import ProductDetail from "./pages/ProductDetail";
 import ForYou from "./pages/ForYou";
 import Upload from "./pages/Upload";
@@ -194,7 +193,10 @@ const App = () => (
             <Route path="/auth/interest-preference" element={<InterestPreference />} />
             <Route path="/auth/terms" element={<Terms />} />
             <Route path="/auth/welcome" element={<Welcome />} />
-            <Route path="/browse" element={<BrowseProducts />} />
+            {/* /browse retired — the old page served hardcoded fake products.
+                Kept as a redirect so external/bookmarked links land on the real
+                live-data search feed. Internal entry points now link there directly. */}
+            <Route path="/browse" element={<Navigate to="/search" replace />} />
             <Route path="/home/new-arrivals" element={<NewArrivals />} />
             <Route path="/home/trends" element={<Trends />} />
             <Route path="/home/sale" element={<Sale />} />
@@ -221,7 +223,6 @@ const App = () => (
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/products" element={<Products />} />
-            <Route path="/browse" element={<BrowseProducts />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/for-you" element={<ForYou />} />
             <Route path="/upload" element={<Upload />} />

@@ -41,7 +41,7 @@ const Register = () => {
       setStep(2);
     } else {
       setRole(selectedRole);
-      navigate(selectedRole === "buyer" ? "/browse" : "/seller");
+      navigate(selectedRole === "buyer" ? "/search" : "/seller");
     }
   };
 

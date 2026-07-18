@@ -153,7 +153,7 @@ function ProductCard({ product }: { product: Product }) {
           {product.price} | MOQ: {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
-          Product name | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
+          {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
         </p>
         <div className="flex items-center gap-0.5 mt-1 lg:mt-1.5">
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
@@ -346,7 +346,7 @@ const NewArrivals = () => {
                 <div className="p-1.5 lg:p-2.5">
                   <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{item.price} | MOQ: {item.moq}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
-                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">Product name | <span className="font-bold">Manufacturer</span></p>
+                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">{item.name} | <span className="font-bold">Manufacturer</span></p>
                   <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
                     <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
                   </button>

@@ -1533,6 +1533,8 @@ export type Database = {
         Args: { exp: string; src: string; v: string }
         Returns: undefined
       }
+      increment_product_enquiry: { Args: { p: string }; Returns: undefined }
+      increment_product_view: { Args: { p: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
       next_invoice_number: { Args: never; Returns: string }

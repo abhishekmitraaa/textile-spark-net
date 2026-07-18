@@ -153,7 +153,7 @@ const Landing = () => {
                   Get started <ArrowRight className="h-4 w-4" strokeWidth={2} />
                 </Button>
               </Link>
-              <Link to="/browse" className="sm:w-auto">
+              <Link to="/search" className="sm:w-auto">
                 <Button
                   size="lg"
                   variant="outline"
@@ -528,7 +528,7 @@ const Landing = () => {
             <div>
               <h4 className="text-sm font-semibold text-zinc-900">Platform</h4>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><Link to="/browse" className="text-zinc-500 transition-colors hover:text-zinc-900">Browse products</Link></li>
+                <li><Link to="/search" className="text-zinc-500 transition-colors hover:text-zinc-900">Browse products</Link></li>
                 <li><Link to="/post-requirement" className="text-zinc-500 transition-colors hover:text-zinc-900">Post a requirement</Link></li>
                 <li><Link to="/cosora-studio" className="text-zinc-500 transition-colors hover:text-zinc-900">Cosora Studio</Link></li>
                 <li><Link to="/seller" className="text-zinc-500 transition-colors hover:text-zinc-900">Become a seller</Link></li>

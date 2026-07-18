@@ -132,7 +132,7 @@ function ProductCard({ p, compact }: { p: RProduct; compact: boolean }) {
       </Link>
       <div className={cn("flex flex-col flex-1", compact ? "p-1.5" : "p-2")}>
         <p className={cn("font-bold text-[#ef4d62] leading-snug", compact ? "text-[9px] truncate" : "text-xs")}>₹{p.priceValue} | {p.moq} | {p.sold}</p>
-        <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px]")}>Product name | <Link to={`/vendor/${p.vendorId}`} className="font-bold hover:underline">{p.manufacturer}</Link></p>
+        <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px]")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className="font-bold hover:underline">{p.manufacturer}</Link></p>
         <div className="flex items-center gap-0.5 mt-0.5">
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5")} />
           <span className={cn("font-bold text-gray-700 truncate", compact ? "text-[8px]" : "text-[10px]")}>{p.location}</span>

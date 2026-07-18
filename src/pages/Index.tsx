@@ -156,7 +156,7 @@ const recentProducts = [
 // Quick action buttons for buyer
 const buyerQuickActions = [
   { name: "New RFQ", href: "/quotes", icon: FileText, variant: "gold" as const },
-  { name: "Browse Products", href: "/browse", icon: ShoppingBag, variant: "outline" as const },
+  { name: "Browse Products", href: "/search", icon: ShoppingBag, variant: "outline" as const },
   { name: "View Messages", href: "/chat", icon: MessageCircle, variant: "secondary" as const },
   { name: "Track Orders", href: "/requirement/my-quotes", icon: Truck, variant: "secondary" as const },
 ];

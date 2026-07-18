@@ -12,7 +12,7 @@ interface DashboardHeaderProps {
 }
 
 const buyerTabs = [
-  { name: "New Arrivals", href: "/browse", accent: true },
+  { name: "New Arrivals", href: "/home/new-arrivals", accent: true },
   { name: "Trends", href: "/for-you" },
   { name: "Services", href: "/service-vendors" },
   { name: "Freelancers", href: "/freelancers" },

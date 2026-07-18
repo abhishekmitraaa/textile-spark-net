@@ -363,6 +363,20 @@ export function useProductById(id: string | undefined) {
   });
 }
 
+// ── Real engagement counters ──
+// Atomic +1 via SECURITY DEFINER RPCs (mirrors ad_impression/ad_click): a buyer
+// can't UPDATE a product they don't own, so the DB does it for them. Both RPCs
+// are scoped to status='live' server-side. Callers own the dedup policy (e.g.
+// once-per-session for views).
+export async function recordProductView(id: string): Promise<void> {
+  const { error } = await supabase.rpc("increment_product_view", { p: id });
+  if (error) throw error;
+}
+export async function recordProductEnquiry(id: string): Promise<void> {
+  const { error } = await supabase.rpc("increment_product_enquiry", { p: id });
+  if (error) throw error;
+}
+
 // ─────────────────────────────────────────────────────────────
 // Vendor side — a vendor's OWN products, any status (RLS lets an owner see
 // their draft/under_review/rejected rows that buyers never see).
@@ -439,10 +453,22 @@ export function useMyProducts(vendorId: string | undefined) {
   });
 }
 
+// Guard against a silent zero-row write. A `.delete()`/`.update()` that matches
+// nothing (row gone, or RLS-filtered because it isn't the caller's) returns no
+// error — only an empty result set. Force the affected rows back with `.select()`
+// and assert we actually touched one, matching the `assertWrote()` convention used
+// elsewhere in the project rather than trusting a "no error means it worked" call.
+function assertWrote(rows: { id: string }[] | null, action: string): void {
+  if (!rows || rows.length === 0) {
+    throw new Error(`${action} affected no rows — the product no longer exists or you don't have permission to change it.`);
+  }
+}
+
 // Mutations. RLS guarantees a vendor can only touch their own rows.
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  const { data, error } = await supabase.from("products").delete().eq("id", id).select("id");
   if (error) throw error;
+  assertWrote(data, "Delete");
 }
 
 export async function duplicateProduct(vendorId: string, sourceId: string): Promise<void> {
@@ -558,6 +584,7 @@ export interface ProductPatch {
   status?: "draft" | "under_review";
 }
 export async function updateProduct(id: string, patch: ProductPatch): Promise<void> {
-  const { error } = await supabase.from("products").update(patch).eq("id", id);
+  const { data, error } = await supabase.from("products").update(patch).eq("id", id).select("id");
   if (error) throw error;
+  assertWrote(data, "Update");
 }
