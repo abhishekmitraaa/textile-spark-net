@@ -5,6 +5,8 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
+import { useCallBuyer } from "@/lib/queries/calls";
+import { toast } from "sonner";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -28,38 +30,32 @@ const listItem = {
 import { cn } from "@/lib/utils";
 import {
   Search, Bell, ChevronDown, ChevronRight, Clock, Package,
-  TrendingUp, CheckCircle2, Star, FileText, MessageSquare, X,
+  TrendingUp, CheckCircle2, Star, FileText, MessageSquare, Phone, X,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
-// TYPES
-// ─────────────────────────────────────────────────────────────
-
-interface SubmittedQuote {
-  id: string; quoteCode: string; rfqCode: string; rfqTitle: string; buyerName: string;
-  pricePerUnit: number; moq: string; leadTime: string; submittedDate: string; lastUpdated: string;
-  pcs: string; totalQuotes: number;
-  status: "in_negotiation" | "accepted" | "awaiting" | "not_selected";
-  rankBadge?: string; buyerResponse?: string; buyerResponseDate?: string; image?: string;
-}
-
-const SUBMITTED_QUOTES: SubmittedQuote[] = [
-  { id:"q1", quoteCode:"QT-2024-001", rfqCode:"RFQ-2024-001", rfqTitle:"Women's Cotton Oversized T-Shirt - Acid Wash Finish", buyerName:"Fashion Forward Pvt Ltd", pricePerUnit:185, moq:"5,000 pcs", leadTime:"30 Days", submittedDate:"Dec 5, 2025", lastUpdated:"Dec 6, 2025", pcs:"5,000 pcs", totalQuotes:12, status:"in_negotiation", buyerResponse:"Your quote looks competitive. Can you provide sampling within 5 days instead of 7?", buyerResponseDate:"Dec 6, 2025" },
-  { id:"q2", quoteCode:"QT-2024-002", rfqCode:"RFQ-2024-003", rfqTitle:"Printed Silk Scarves", buyerName:"Silk Route Exports", pricePerUnit:175, moq:"1,000 units", leadTime:"25 Days", submittedDate:"2024-01-08", lastUpdated:"2024-01-11", pcs:"1,000 units", totalQuotes:9, status:"accepted", image:"https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=200&fit=crop", buyerResponse:"Quote accepted! Please proceed with sampling.", buyerResponseDate:"Dec 5, 2025" },
-  { id:"q3", quoteCode:"QT-2024-003", rfqCode:"RFQ-2024-005", rfqTitle:"Men's Polo T-Shirts - Premium Cotton Pique", buyerName:"Urban Threads Co.", pricePerUnit:265, moq:"3,000 pcs", leadTime:"20 Days", submittedDate:"Dec 3, 2025", lastUpdated:"Dec 5, 2025", pcs:"3,000 pcs", totalQuotes:24, status:"accepted", buyerResponse:"Congratulations! Your quote has been accepted. Please proceed with sampling.", buyerResponseDate:"Dec 5, 2025" },
-  { id:"q4", quoteCode:"QT-2024-004", rfqCode:"RFQ-2024-007", rfqTitle:"Kids' Organic Cotton Rompers - Printed", buyerName:"Little Stars Retail", pricePerUnit:158, moq:"2,000 pcs", leadTime:"25 Days", submittedDate:"Dec 6, 2025", lastUpdated:"Dec 6, 2025", pcs:"2,000 pcs", totalQuotes:8, status:"awaiting", rankBadge:"Rank #3 of 8" },
-  { id:"q5", quoteCode:"QT-2024-005", rfqCode:"RFQ-2024-009", rfqTitle:"Women's Chikankari Kurta Set - Pure Cotton", buyerName:"Ethnic Emporium", pricePerUnit:485, moq:"1,500 pcs", leadTime:"35 Days", submittedDate:"Nov 28, 2025", lastUpdated:"Dec 2, 2025", pcs:"1,500 pcs", totalQuotes:15, status:"not_selected", buyerResponse:"Thank you for your quote. We've decided to go with another vendor who offered faster delivery.", buyerResponseDate:"Dec 2, 2025" },
-  { id:"q6", quoteCode:"QT-2024-006", rfqCode:"RFQ-2024-011", rfqTitle:"Denim Jeans - Slim Fit with Stretch", buyerName:"Denim World", pricePerUnit:365, moq:"8,000 pcs", leadTime:"40 Days", submittedDate:"Dec 4, 2025", lastUpdated:"Dec 4, 2025", pcs:"8,000 pcs", totalQuotes:31, status:"awaiting" },
-];
-
-// ─────────────────────────────────────────────────────────────
-// RFQ CARD
+// SUBMITTED QUOTES
+// Rows come from useMySubmittedQuotes (real `quotes` + `rfqs` + buyer
+// profiles); the page holds no local quote types or fixtures any more.
 // ─────────────────────────────────────────────────────────────
 
 function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: myQuotes = [] } = useMySubmittedQuotes(user?.id);
+  const callBuyer = useCallBuyer();
+
+  // Deep-link into the thread with this specific buyer. useChatThread
+  // find-or-creates the canonical conversation for the pair, so this is the
+  // same thread the buyer sees from their side. Guard against the rare row
+  // whose RFQ we could not resolve, rather than routing to /chats/undefined.
+  const openChat = (buyerId: string) => {
+    if (!buyerId) {
+      toast("Buyer unavailable", { description: "This quote has no buyer on file." });
+      return;
+    }
+    navigate(`/chats/${buyerId}`);
+  };
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("recent");
   const [sortOpen, setSortOpen] = useState(false);
@@ -271,12 +267,12 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
                   </div>
                 )}
 
-                {/* Total quotes */}
-                {!q.image && (
-                  <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
-                    <Star className="w-3 h-3" /> {q.totalQuotes} quotes total
-                  </p>
-                )}
+                {/* Competing-quote count. Shown on every card: it used to be
+                    gated on !q.image, which hid a real number on any RFQ that
+                    happened to have a photo. */}
+                <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                  <Star className="w-3 h-3" /> {q.totalQuotes} quotes total
+                </p>
 
                 {/* Buyer Response box */}
                 {q.buyerResponse && (
@@ -296,12 +292,12 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
 
                 {/* Action button(s) */}
                 {q.status === "in_negotiation" && (
-                  <button onClick={() => navigate("/chat")} className="w-full py-3 bg-[#ef4d62] text-white text-sm font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors flex items-center justify-center gap-2">
+                  <button onClick={() => openChat(q.buyerId)} className="w-full py-3 bg-[#ef4d62] text-white text-sm font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors flex items-center justify-center gap-2">
                     <MessageSquare className="w-4 h-4" /> Continue Chat
                   </button>
                 )}
                 {q.status === "accepted" && !q.image && (
-                  <button onClick={() => navigate("/chat")} className="w-full py-3 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
+                  <button onClick={() => openChat(q.buyerId)} className="w-full py-3 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2">
                     <CheckCircle2 className="w-4 h-4" /> View Order Details
                   </button>
                 )}
@@ -310,8 +306,8 @@ function SubmittedQuotesView({ onSwitchToRequests }: { onSwitchToRequests: () =>
                     <button onClick={onSwitchToRequests} className="py-2.5 border border-gray-200 text-gray-700 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors flex items-center justify-center gap-1.5">
                       <Star className="w-3.5 h-3.5" /> View RFQ
                     </button>
-                    <button onClick={() => navigate("/chat")} className="py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> Call Buyer
+                    <button onClick={() => callBuyer(q.buyerId)} className="py-2.5 bg-green-600 text-white text-sm font-bold rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5" /> Call Buyer
                     </button>
                   </div>
                 )}

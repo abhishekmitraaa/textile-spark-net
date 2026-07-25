@@ -81,6 +81,44 @@ export function useCallVendor() {
   );
 }
 
+// The mirror image of useCallVendor, for a vendor ringing the buyer behind an
+// RFQ. Buyers have no vendor_profiles row, so the number comes from `profiles`.
+//
+// Deliberately does NOT log to `calls`: that table's insert policy is
+// `buyer_id = auth.uid()`, and here auth.uid() is the *vendor*, so the write
+// would be rejected by RLS. Logging vendor-initiated calls needs a policy
+// change, which is out of scope for this hook.
+export function useCallBuyer() {
+  const navigate = useNavigate();
+
+  return useCallback(
+    async (buyerId: string) => {
+      if (!buyerId) {
+        toast("Buyer unavailable", { description: "This quote has no buyer on file." });
+        return;
+      }
+
+      // Only fires on click, not per render.
+      const { data: p } = await supabase
+        .from("profiles")
+        .select("phone, full_name")
+        .eq("id", buyerId)
+        .maybeSingle();
+      const phone = p?.phone ?? null;
+
+      if (!phone) {
+        // Same fallback as useCallVendor: keep the button useful.
+        toast("No phone number on file", { description: "Opening chat instead." });
+        navigate(`/chats/${buyerId}`);
+        return;
+      }
+
+      placeCall(p?.full_name ?? "buyer", phone);
+    },
+    [navigate],
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 
 function dayGroup(d: Date): string {
