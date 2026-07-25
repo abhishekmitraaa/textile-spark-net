@@ -87,7 +87,7 @@ export default function InvoiceDetail() {
       <div className="mx-auto max-w-2xl rounded-2xl border border-border bg-card p-8 shadow-sm print:border-0 print:shadow-none">
         <div className="flex items-start justify-between border-b border-border pb-6">
           <div>
-            <h1 className="font-display text-2xl font-bold text-foreground">Cosora</h1>
+            <h1 className="text-2xl font-bold text-foreground">Cosora</h1>
             <p className="text-sm text-muted-foreground">B2B Sourcing Marketplace</p>
           </div>
           <div className="text-right">

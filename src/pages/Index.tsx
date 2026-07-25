@@ -233,7 +233,7 @@ const Index = () => {
             variants={section}
             className="mb-6 rounded-xl border border-border bg-card p-4 lg:mb-8 lg:p-6"
           >
-            <h3 className="mb-3 font-display text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
+            <h3 className="mb-3 text-base font-semibold text-card-foreground lg:mb-4 lg:text-lg">
               Quick Actions
             </h3>
             <div className="flex flex-wrap gap-2 sm:gap-3">
@@ -266,7 +266,7 @@ const Index = () => {
             <Card className="h-full border-border/50">
               <CardContent className="p-4 lg:p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display text-base font-semibold text-foreground lg:text-lg">
+                  <h3 className="text-base font-semibold text-foreground lg:text-lg">
                     Recent Activity
                   </h3>
                   <Badge variant="secondary" className="text-xs">
@@ -314,7 +314,7 @@ const Index = () => {
             <motion.div variants={section} className="lg:col-span-2">
               <div className="mb-4 flex items-center justify-between lg:mb-6">
                 <div>
-                  <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
+                  <h2 className="text-lg font-semibold text-foreground sm:text-xl">
                     Recent Products
                   </h2>
                   <p className="text-xs text-muted-foreground sm:text-sm">
@@ -343,7 +343,7 @@ const Index = () => {
             <motion.div variants={section} className="lg:col-span-2">
               <div className="mb-4 flex items-center justify-between lg:mb-6">
                 <div>
-                  <h2 className="font-display text-lg font-semibold text-foreground sm:text-xl">
+                  <h2 className="text-lg font-semibold text-foreground sm:text-xl">
                     Recommended Vendors
                   </h2>
                   <p className="text-xs text-muted-foreground sm:text-sm">

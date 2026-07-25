@@ -297,7 +297,7 @@ const MyStore = () => {
                 <div className="space-y-1">
                   <MenuRow icon={Bookmark}      label="Shortlisted leads"    onClick={() => navigate("/leads")} />
                   <MenuRow icon={MessageSquare} label="Reviews"               onClick={() => navigate("/reviews")} />
-                  <MenuRow icon={Settings}      label="Settings"              onClick={() => {}} />
+                  <MenuRow icon={Settings}      label="Settings"              onClick={() => navigate("/settings")} />
                   <MenuRow icon={Bell}          label="Lead Notification"     badge="New" badgeVariant="new" onClick={() => {}} />
                 </div>
               </div>

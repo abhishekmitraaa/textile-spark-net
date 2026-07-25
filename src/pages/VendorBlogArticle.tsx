@@ -62,7 +62,7 @@ const VendorBlogArticle = () => {
                 <span className="text-xs text-muted-foreground">{blog.readTime}</span>
               </div>
               <div className="space-y-2">
-                <h1 className="font-display text-2xl font-semibold text-foreground lg:text-4xl">{blog.title}</h1>
+                <h1 className="text-2xl font-semibold text-foreground lg:text-4xl">{blog.title}</h1>
                 <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground lg:text-base">{blog.excerpt}</p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -106,7 +106,7 @@ const VendorBlogArticle = () => {
           </motion.div>
 
           <motion.div variants={section} className="space-y-3">
-            <h2 className="font-display text-lg font-semibold text-foreground">More for you to read</h2>
+            <h2 className="text-lg font-semibold text-foreground">More for you to read</h2>
             <motion.div variants={listContainer} className="grid gap-4 md:grid-cols-2">
               {relatedBlogs.map((item) => (
                 <motion.div key={item.id} variants={listItem}><Card className="overflow-hidden border-border/70">

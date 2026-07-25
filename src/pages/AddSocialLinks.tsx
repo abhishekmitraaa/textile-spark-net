@@ -1,8 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ChevronLeft, Plus, Trash2, CheckCircle2, Check, Info } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyVendorProfile, saveVendorProfile } from "@/lib/queries/vendorStore";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 interface SocialField {
@@ -226,19 +230,38 @@ function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformC
   );
 }
 
+// Every platform gets at least one (empty) input so the card is never blank.
+function buildFieldMap(social: Record<string, string[]> | undefined): Record<string, SocialField[]> {
+  const map: Record<string, SocialField[]> = {};
+  PLATFORMS.forEach((p) => {
+    const stored = (social?.[p.key] ?? []).filter((url) => typeof url === "string" && url.trim());
+    map[p.key] = stored.length
+      ? stored.map((value, i) => ({ id: `${p.key}-${i}`, value }))
+      : [{ id: `${p.key}-0`, value: "" }];
+  });
+  return map;
+}
+
 // ── Main Page ──────────────────────────────────────────────────────────────
 export default function AddSocialLinks() {
-  const [fieldMap, setFieldMap] = useState<Record<string, SocialField[]>>(() => {
-    const init: Record<string, SocialField[]> = {};
-    PLATFORMS.forEach((p) => {
-      init[p.key] = [{ id: `${p.key}-0`, value: "" }];
-    });
-    return init;
-  });
-
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { data: store } = useMyVendorProfile(user?.id);
+  const qc = useQueryClient();
+
+  const [fieldMap, setFieldMap] = useState<Record<string, SocialField[]>>(() => buildFieldMap(undefined));
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
   const reduced = useReducedMotion();
+
+  // Seed once from the profile row. Re-seeding on every `store` change would
+  // wipe whatever the vendor is mid-way through typing when the query refetches.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!store || hydratedRef.current) return;
+    hydratedRef.current = true;
+    setFieldMap(buildFieldMap(store.social));
+  }, [store]);
 
   const handleChange = (platformKey: string, id: string, value: string) => {
     setFieldMap((prev) => ({
@@ -265,9 +288,32 @@ export default function AddSocialLinks() {
     }));
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    if (!user) { toast.error("Sign in to save your social links"); return; }
+    // Collapse the editing shape (id + value per field) down to the stored
+    // shape: platform -> non-empty URLs. Platforms left blank are dropped
+    // entirely rather than persisted as empty arrays.
+    const built: Record<string, string[]> = {};
+    PLATFORMS.forEach((p) => {
+      const urls = (fieldMap[p.key] ?? []).map((f) => f.value.trim()).filter(Boolean);
+      if (urls.length) built[p.key] = urls;
+    });
+
+    setSaving(true);
+    try {
+      await saveVendorProfile(user.id, { social: built });
+      qc.invalidateQueries({ queryKey: ["vendor_profile", "mine", user.id] });
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard", user.id] });
+      setSaved(true);
+      toast.success("Social links saved");
+      setTimeout(() => setSaved(false), 2500);
+    } catch (e) {
+      // Deliberately not setting `saved` here — the button must never claim a
+      // save that did not happen, which was the whole problem with this page.
+      toast.error("Couldn't save social links", { description: e instanceof Error ? e.message : String(e) });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const filledCount = PLATFORMS.filter((p) =>
@@ -333,10 +379,21 @@ export default function AddSocialLinks() {
             whileTap={TAP}
             transition={TAP_T}
             onClick={handleSave}
-            className="w-full py-4 rounded-2xl font-semibold text-sm text-white bg-[#256fef] hover:bg-[#1a5ed4] transition-colors flex items-center justify-center gap-2 overflow-hidden"
+            disabled={saving}
+            className="w-full py-4 rounded-2xl font-semibold text-sm text-white bg-[#256fef] hover:bg-[#1a5ed4] transition-colors flex items-center justify-center gap-2 overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <AnimatePresence mode="wait">
-              {saved ? (
+              {saving ? (
+                <motion.span
+                  key="saving"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ ease: E, duration: 0.18 }}
+                >
+                  Saving...
+                </motion.span>
+              ) : saved ? (
                 <motion.span
                   key="saved"
                   initial={{ opacity: 0, y: 8 }}

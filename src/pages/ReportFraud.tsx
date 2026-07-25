@@ -42,7 +42,7 @@ const ReportFraud = () => {
         <motion.div variants={section}>
           <div className="rounded-xl bg-destructive/10 border border-destructive/20 p-4 text-center">
             <Flag className="h-8 w-8 text-destructive mx-auto mb-2"/>
-            <p className="font-display text-xl font-bold text-destructive">Report a Potential Fraud</p>
+            <p className="text-xl font-bold text-destructive">Report a Potential Fraud</p>
             <Link to="/help"><p className="text-xs text-destructive/70 mt-1 hover:underline cursor-pointer">← Back to Help</p></Link>
           </div>
         </motion.div>

@@ -72,7 +72,7 @@ The app supports distinct user roles (buyer, seller, vendor, freelancer, photogr
 All routes are defined in `App.tsx` using React Router v6. Routes include:
 
 - **Auth Flow**: `/login`, `/auth/otp-verify`, `/auth/role-selection`, `/auth/sub-role`, `/auth/account-info`, `/auth/terms`, `/auth/welcome`
-- **Seller Flow**: `/seller-home`, `/dashboard`, `/products`, `/uploads`, `/leads`, `/advertisements`, `/quotes`, `/upload-catalogue`, `/upload-video`
+- **Seller Flow**: `/seller-home`, `/dashboard`, `/products`, `/uploads`, `/leads`, `/advertisements`, `/quotes`, `/upload-catalogue`, `/upload-video`, `/settings`
 - **Buyer Flow**: `/browse`, `/home/new-arrivals`, `/home/for-you`, `/search`, `/product/:id`, `/chats`, `/saved`, `/requirement/*` (RFQ & quotes), `/profile/*`
 - **Vendor/Freelancer**: `/services`, `/freelancers`, `/vendor/:id`
 - **Fallback**: `*` maps to NotFound
@@ -165,7 +165,7 @@ Rules:
 - **Current Phase**: Porting and correcting Vendor and Buyer UIs (from Next.js source to Vite/TSX). Admin panel not yet designed or built.
 - **Bundle Size Warning**: JS bundle is ~1.9MB (522KB gzip). Not an error but worth code-splitting before scaling.
 - **Video Closeup Terminology**: Product videos shown in the buyer feed are called **"Video Closeups"** — never "Reels". This is a deliberate brand/product naming decision.
-- **No Settings Page**: There is no standalone `/settings` route. Sidebar "Settings" links to `/my-store` (seller) and `/profile` (buyer).
+- **Settings Page (vendor)**: `/settings` is the **vendor** Settings page (`VendorSettings.tsx`) — Business (→`/business-profile`), Notifications (email/push toggles), Language, Security (email/phone + Log Out), Help & Legal. Both seller "Settings" entry points (sidebar secondaryNav + the MyStore App-and-User-Setting menu row) point here. The **buyer** side still has no dedicated Settings page — buyer sidebar "Settings" links to `/profile` (known bug, out of scope until a buyer pass).
 - **No Orders Page**: There is no `/orders` route. "Track Orders" maps to `/requirement/my-quotes`; "View Order Details" maps to `/chat`.
 
 ## Skills Installed

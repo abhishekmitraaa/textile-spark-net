@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactElement, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getOrCreateConversation, CHAT_MONITORING_NOTICE } from "@/lib/chatData";
 import { useChatThread } from "@/lib/queries/chat";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import {
   ArrowLeft, Phone, Star, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
   Plus, X, ShieldCheck, Image as ImageIcon, File as FileIcon, User, Headphones,
@@ -22,6 +24,15 @@ const ChatThread = () => {
   const { user } = useAuth();
   const conv = vendorId ? getOrCreateConversation(vendorId) : null;
   const callVendor = useCallVendor();
+
+  // The thread is shared by both sides. On the seller side it renders inside
+  // DashboardLayout so the vendor sidebar stays reachable, and every "back"
+  // target has to point at the seller's own inbox (/chat), not the buyer's.
+  const { role } = useUserRole();
+  const isSeller = role === "seller";
+  const inboxHref = isSeller ? "/chat" : "/chats";
+  const wrap = (node: ReactElement) =>
+    isSeller ? <DashboardLayout variant="full-screen">{node}</DashboardLayout> : node;
 
   // Real, realtime message thread from Supabase (find-or-create the
   // conversation, load history, live-subscribe). Text is persisted; the
@@ -43,19 +54,19 @@ const ChatThread = () => {
   const initials = useMemo(() => (conv?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [conv?.name]);
 
   if (!conv) {
-    return (
-      <div className="min-h-screen bg-white grid place-items-center px-6 text-center">
+    return wrap(
+      <div className={cn("bg-white grid place-items-center px-6 text-center", isSeller ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">This conversation no longer exists.</p>
-          <button onClick={() => navigate("/chats")} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Messages</button>
+          <button onClick={() => navigate(inboxHref)} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Messages</button>
         </div>
       </div>
     );
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-white grid place-items-center px-6 text-center">
+    return wrap(
+      <div className={cn("bg-white grid place-items-center px-6 text-center", isSeller ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">Sign in to start chatting.</p>
           <p className="mt-1 text-xs text-gray-400">Use the dev switcher (bottom-left) to sign in.</p>
@@ -91,7 +102,8 @@ const ChatThread = () => {
   };
 
   const goProfile = () => navigate(`/vendor/${conv.id}`);
-  const goQuote = () => navigate("/requirement/my-quotes");
+  // Sellers manage quotes they've sent (/quotes); buyers track quotes received.
+  const goQuote = () => navigate(isSeller ? "/quotes" : "/requirement/my-quotes");
   const hasText = draft.trim().length > 0;
 
   const menuItems: { label: string; icon: typeof Eye; danger?: boolean; onClick: () => void }[] = [
@@ -102,17 +114,17 @@ const ChatThread = () => {
     { label: "Archive chat", icon: Archive, onClick: () => { setMenuOpen(false); toast.success("Chat archived"); } },
     { label: "Report", icon: Flag, onClick: () => { setMenuOpen(false); setReportOpen(true); } },
     { label: "Block Vendor", icon: Ban, danger: true, onClick: () => { setMenuOpen(false); blockVendor(); } },
-    { label: "Delete chat", icon: Trash2, danger: true, onClick: () => { setMenuOpen(false); toast.success("Chat deleted"); navigate("/chats"); } },
+    { label: "Delete chat", icon: Trash2, danger: true, onClick: () => { setMenuOpen(false); toast.success("Chat deleted"); navigate(inboxHref); } },
   ];
 
-  const blockVendor = () => { toast.success(`${conv.name} has been blocked`); navigate("/chats"); };
+  const blockVendor = () => { toast.success(`${conv.name} has been blocked`); navigate(inboxHref); };
 
-  return (
-    <div className="flex flex-col h-[100dvh] bg-gray-50">
+  return wrap(
+    <div className={cn("flex flex-col bg-gray-50", isSeller ? "h-full" : "h-[100dvh]")}>
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-gray-100">
         <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
-          <button onClick={() => navigate("/chats")} aria-label="Back" className="p-1 -ml-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+          <button onClick={() => navigate(inboxHref)} aria-label="Back to Messages" className="p-1 -ml-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
           <button onClick={goProfile} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
             <div className="relative shrink-0">
               {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover" /> : <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ef4d62]/20 to-[#ef4d62]/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}

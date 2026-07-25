@@ -1331,16 +1331,19 @@ export type Database = {
           banner_url: string | null
           brand_name: string | null
           business_type: string | null
+          category: string[] | null
           cin: string | null
           city: string | null
           country: string | null
           created_at: string
+          employee_count: string | null
           followers_count: number
           gstin: string | null
           id: string
           is_verified: boolean
           landmark: string | null
           logo_url: string | null
+          office_photos: string[] | null
           onboarding_complete: boolean
           owner_email: string | null
           owner_name: string | null
@@ -1352,9 +1355,13 @@ export type Database = {
           profile_score: number
           rating_avg: number
           reviews_count: number
+          social: Json | null
           state: string | null
+          notifications: Json | null
+          regional: Json | null
           website: string | null
           whatsapp: string | null
+          year_established: number | null
         }
         Insert: {
           about?: string | null
@@ -1364,16 +1371,19 @@ export type Database = {
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          category?: string[] | null
           cin?: string | null
           city?: string | null
           country?: string | null
           created_at?: string
+          employee_count?: string | null
           followers_count?: number
           gstin?: string | null
           id: string
           is_verified?: boolean
           landmark?: string | null
           logo_url?: string | null
+          office_photos?: string[] | null
           onboarding_complete?: boolean
           owner_email?: string | null
           owner_name?: string | null
@@ -1385,9 +1395,13 @@ export type Database = {
           profile_score?: number
           rating_avg?: number
           reviews_count?: number
+          social?: Json | null
           state?: string | null
+          notifications?: Json | null
+          regional?: Json | null
           website?: string | null
           whatsapp?: string | null
+          year_established?: number | null
         }
         Update: {
           about?: string | null
@@ -1397,16 +1411,19 @@ export type Database = {
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          category?: string[] | null
           cin?: string | null
           city?: string | null
           country?: string | null
           created_at?: string
+          employee_count?: string | null
           followers_count?: number
           gstin?: string | null
           id?: string
           is_verified?: boolean
           landmark?: string | null
           logo_url?: string | null
+          office_photos?: string[] | null
           onboarding_complete?: boolean
           owner_email?: string | null
           owner_name?: string | null
@@ -1418,9 +1435,13 @@ export type Database = {
           profile_score?: number
           rating_avg?: number
           reviews_count?: number
+          social?: Json | null
           state?: string | null
+          notifications?: Json | null
+          regional?: Json | null
           website?: string | null
           whatsapp?: string | null
+          year_established?: number | null
         }
         Relationships: [
           {

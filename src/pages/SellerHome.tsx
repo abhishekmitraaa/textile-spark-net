@@ -84,7 +84,7 @@ const SellerHome = () => {
       >
         {/* 1. PAGE HEADER */}
         <motion.div variants={section}>
-          <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">Dashboard</h1>
+          <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Welcome back! Here's an overview of your business.</p>
         </motion.div>
 

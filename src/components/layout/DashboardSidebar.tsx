@@ -87,7 +87,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         ]
       : [
           { name: "My Store", href: "/my-store", icon: Building2 },
-          { name: "Settings", href: "/my-store", icon: Settings },
+          { name: "Settings", href: "/settings", icon: Settings },
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ];
 
@@ -168,7 +168,11 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
             {t(role === "buyer" ? "Buyer Menu" : "Seller Menu")}
           </p>
           {navigation.map((item) => {
-            const isActive = location.pathname === item.href;
+            // "Messages" stays lit inside an open thread (/chats/:id), which is
+            // shared by both sides and so can't match either hub href exactly.
+            const isActive =
+              location.pathname === item.href ||
+              (item.icon === MessageCircle && location.pathname.startsWith("/chats/"));
             return (
               <Link
                 key={item.name}

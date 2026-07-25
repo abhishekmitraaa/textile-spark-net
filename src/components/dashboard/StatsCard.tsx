@@ -29,7 +29,7 @@ export const StatsCard = ({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1 space-y-1 sm:space-y-2">
           <p className="truncate text-xs font-medium text-muted-foreground sm:text-sm">{title}</p>
-          <p className="font-display text-xl font-semibold tracking-tight text-card-foreground sm:text-2xl lg:text-3xl">
+          <p className="text-xl font-semibold tracking-tight text-card-foreground sm:text-2xl lg:text-3xl">
             {value}
           </p>
           {change && (

@@ -87,7 +87,7 @@ const CosoraStudio = () => {
               <Badge className="mb-3 w-fit bg-accent/90 text-accent-foreground border-none text-xs">
                 <Sparkles className="mr-1 h-3 w-3" /> Premium Studio Service
               </Badge>
-              <h1 className="font-display text-3xl font-bold text-white md:text-5xl">
+              <h1 className="text-3xl font-bold text-white md:text-5xl">
                 Cosora Studio
               </h1>
               <p className="mt-2 max-w-lg text-sm text-white/80 md:text-base">
@@ -124,11 +124,11 @@ const CosoraStudio = () => {
               transition={{ delay: i * 0.1 }}
               className="flex items-start gap-4 rounded-xl border border-border bg-card p-4"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 font-display text-lg font-bold text-accent">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-lg font-bold text-accent">
                 {item.step}
               </div>
               <div>
-                <h3 className="font-display text-sm font-semibold text-foreground">{item.title}</h3>
+                <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
                 <p className="mt-0.5 text-xs text-muted-foreground">{item.desc}</p>
               </div>
             </motion.div>
@@ -193,7 +193,7 @@ const CosoraStudio = () => {
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-display text-base font-semibold text-foreground">
+                      <h3 className="text-base font-semibold text-foreground">
                         {photographer.name}
                       </h3>
                       {photographer.verified && (
@@ -279,7 +279,7 @@ const CosoraStudio = () => {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
                 <UserPlus className="h-6 w-6 text-accent" />
               </div>
-              <h3 className="mt-4 font-display text-xl font-bold text-foreground">
+              <h3 className="mt-4 text-xl font-bold text-foreground">
                 Register as a Photographer
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">
@@ -301,7 +301,7 @@ const CosoraStudio = () => {
               <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
                 <MessageCircle className="h-6 w-6 text-accent" />
               </div>
-              <h3 className="mt-4 font-display text-xl font-bold text-foreground">
+              <h3 className="mt-4 text-xl font-bold text-foreground">
                 Contact Us
               </h3>
               <p className="mt-2 text-sm text-muted-foreground">

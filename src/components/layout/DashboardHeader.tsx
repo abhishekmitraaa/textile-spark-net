@@ -1,4 +1,4 @@
-import { Bell, BellRing, Search, Menu, Sparkles } from "lucide-react";
+import { Bell, Search, Menu, Sparkles } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { RoleSwitcher } from "./RoleSwitcher";
@@ -6,6 +6,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
+import { useUnreadCount } from "@/lib/notificationsStore";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -24,6 +25,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
+  const unread = useUnreadCount();
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
 
   return (
@@ -116,17 +118,26 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             </Link>
           )}
 
-          {/* Alert bell for seller */}
-          {role === "seller" && (
-            <button className="relative rounded-lg p-2 text-amber-500 transition-colors hover:bg-secondary">
-              <BellRing size={20} />
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-destructive" />
-            </button>
-          )}
-
-          <button className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+          {/* Notifications bell (single) */}
+          <button
+            onClick={() => role === "seller" && navigate("/notifications")}
+            aria-label={
+              role === "seller"
+                ? `Notifications${unread > 0 ? `, ${unread} unread` : ""}`
+                : "Notifications"
+            }
+            className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+          >
             <Bell size={20} />
-            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />
+            {role === "seller" ? (
+              unread > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
+                  {unread > 9 ? "9+" : unread}
+                </span>
+              )
+            ) : (
+              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />
+            )}
           </button>
         </div>
       </div>

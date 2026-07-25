@@ -10,6 +10,7 @@ import { useVendorCatalogues } from "@/lib/queries/catalogues";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { useFollowing } from "@/lib/queries/follows";
 import { useCallVendor } from "@/lib/queries/calls";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
@@ -24,6 +25,17 @@ import catPrinting from "@/assets/categories/brand/printing.png";
 import catManufacturing from "@/assets/categories/brand/manufacturing.png";
 import catEmbroidery from "@/assets/categories/brand/embroidery.png";
 import catFinishing from "@/assets/categories/brand/finishing.png";
+import officeSewingLine from "@/assets/office/sewing-line.jpg";
+import officeStitching from "@/assets/office/stitching.jpg";
+import officeFabricRolls from "@/assets/office/fabric-rolls.jpg";
+import officeWarehouse from "@/assets/office/warehouse.jpg";
+import officeThreadRack from "@/assets/office/thread-rack.jpg";
+import officeFactoryFloor from "@/assets/office/factory-floor.jpg";
+import cataMenswear from "@/assets/categories/banners/menswear.jpg";
+import cataWomenswear from "@/assets/categories/banners/womenswear.jpg";
+import cataRawMaterials from "@/assets/categories/banners/raw-materials.jpg";
+import { VIDEO_CLOSE_UPS } from "@/data/videoCloseUps";
+import type { MyCatalogueRow } from "@/lib/queries/catalogues";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -47,6 +59,26 @@ const brandCategories = [
   { label: "Manufacturing", src: catManufacturing },
   { label: "Embroidery", src: catEmbroidery },
   { label: "Finishing", src: catFinishing },
+];
+
+// Office / facility photos shown to buyers. There is no office-photo upload
+// pipeline yet (the vendor-side BusinessProfile uses static placeholders too),
+// so this is a read-only demo set representing the manufacturer's premises.
+const officePhotos = [
+  { label: "Production Floor", src: officeSewingLine },
+  { label: "Stitching Unit", src: officeStitching },
+  { label: "Fabric Store", src: officeFabricRolls },
+  { label: "Warehouse", src: officeWarehouse },
+  { label: "Yarn & Threads", src: officeThreadRack },
+  { label: "Factory Floor", src: officeFactoryFloor },
+];
+
+// Catalogue/lookbook demo fallback — shown until the vendor uploads real
+// catalogues (which flow through `useVendorCatalogues` → the `catalogues` table).
+const DEMO_CATALOGUES: MyCatalogueRow[] = [
+  { id: "demo-cat-1", title: "Menswear Catalogue 2026", description: "T-shirts, shirts, bottomwear & co-ords", status: "live", pageCount: 24, fileUrl: null, coverUrl: cataMenswear, createdAt: "" },
+  { id: "demo-cat-2", title: "Womenswear Lookbook", description: "Dresses, ethnic & everyday essentials", status: "live", pageCount: 32, fileUrl: null, coverUrl: cataWomenswear, createdAt: "" },
+  { id: "demo-cat-3", title: "Fabric Swatch Book", description: "Cottons, blends & GSM options", status: "live", pageCount: 18, fileUrl: null, coverUrl: cataRawMaterials, createdAt: "" },
 ];
 
 const capacityOptions = [
@@ -163,6 +195,7 @@ const VendorProfile = () => {
   const { id } = useParams();
   const reduced = useReducedMotion();
   const saved = useSaved();
+  const videosDrag = useDragScroll<HTMLDivElement>();
 
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [gridCols, setGridCols] = useState<2 | 3>(2);
@@ -260,7 +293,11 @@ const VendorProfile = () => {
     [vendor],
   );
   const recommendationsList = useMemo(() => vpProducts.slice(0, 6), [vpProducts]);
-  const vendorVideos = vendor?.videos ?? [];
+  // Videos + catalogues fall back to demo content when the vendor hasn't
+  // uploaded any, so buyers always see these sections (mirrors the vendor-side
+  // BusinessProfile). Real vendor uploads take precedence when present.
+  const vendorVideos = vendor?.videos?.length ? vendor.videos : VIDEO_CLOSE_UPS;
+  const catalogueList = catalogues.length ? catalogues : DEMO_CATALOGUES;
 
   // Scroll-aware sticky header (appears after the hero scrolls away)
   useEffect(() => {
@@ -547,6 +584,26 @@ const VendorProfile = () => {
           </AnimatePresence>
         </motion.section>
 
+        {/* ══ OFFICE PICTURES (grid) ══ */}
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+          <div className="flex items-center gap-2 mb-1">
+            <Factory className="h-4 w-4 text-[#ef4d62]" />
+            <h2 className="text-sm font-bold text-gray-900">Office Pictures</h2>
+          </div>
+          <p className="text-xs text-gray-400 mb-3">A look inside this brand's manufacturing & office premises</p>
+          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+            {officePhotos.map((photo) => (
+              <motion.div variants={listItem} key={photo.label}
+                className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-gray-100">
+                <img src={photo.src} alt={photo.label} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-2 py-1.5">
+                  <p className="text-[10px] font-semibold text-white truncate">{photo.label}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </motion.section>
+
         {/* ══ BRAND'S CATEGORIES (horizontal scroll) ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand's Categories</h2>
@@ -599,12 +656,26 @@ const VendorProfile = () => {
         {vendorVideos.length > 0 && (
           <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
             <h2 className="text-sm font-bold text-gray-900 mb-3">Brand Product Videos</h2>
-            <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
+            {/* Mouse-drag slider. Mirrors the working New Arrivals reel rail:
+                plain <div>/<button> + a non-draggable img. IMPORTANT: no
+                scroll-snap here — `snap-x`/`snap-start` fought the JS
+                `scrollLeft` drag and left the rail dead to the mouse when the
+                press started on a tile (native swipe/trackpad still scrolled,
+                which is why it only looked broken with a mouse). */}
+            <div
+              ref={videosDrag.ref}
+              onMouseDown={videosDrag.onMouseDown}
+              onMouseMove={videosDrag.onMouseMove}
+              onMouseUp={videosDrag.onMouseUp}
+              onMouseLeave={videosDrag.onMouseLeave}
+              onClickCapture={videosDrag.onClickCapture}
+              className={cn("flex gap-3 overflow-x-auto scrollbar-hide pb-1", videosDrag.className)}
+            >
               {vendorVideos.map((video, index) => (
-                <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={video.id}
+                <button key={video.id}
                   onClick={() => { setVideoStartIndex(index); setVideoViewerOpen(true); }}
-                  className="relative aspect-[3/4] w-full overflow-hidden rounded-xl bg-gray-100">
-                  <img src={video.thumbnail} alt={video.brandLine} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
+                  className="relative aspect-[3/4] w-32 lg:w-40 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+                  <img src={video.thumbnail} alt={video.brandLine} draggable={false} className="absolute inset-0 h-full w-full object-cover pointer-events-none" loading="lazy" />
                   <div className="absolute inset-0 bg-black/25" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
@@ -615,14 +686,14 @@ const VendorProfile = () => {
                     <p className="text-[9px] font-bold text-white truncate">{video.brandLine}</p>
                     <p className="text-[9px] text-white/85">{video.price}</p>
                   </div>
-                </motion.button>
+                </button>
               ))}
-            </motion.div>
+            </div>
           </motion.section>
         )}
 
         {/* ══ CATALOGUES / LOOKBOOKS ══ */}
-        {catalogues.length > 0 && (
+        {catalogueList.length > 0 && (
           <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="flex items-center gap-2 mb-1">
               <FileText className="h-4 w-4 text-[#ef4d62]" />
@@ -630,7 +701,7 @@ const VendorProfile = () => {
             </div>
             <p className="text-xs text-gray-400 mb-3">Browse this brand's full product range as PDF catalogues</p>
             <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {catalogues.map((cat) => (
+              {catalogueList.map((cat) => (
                 <motion.a
                   variants={listItem}
                   whileTap={TAP}

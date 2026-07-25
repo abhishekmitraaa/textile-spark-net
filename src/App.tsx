@@ -88,6 +88,8 @@ import AutoTranslate from "./components/i18n/AutoTranslate";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
 import UploadCatalogue from "./pages/UploadCatalogue";
 import UploadVideo from "./pages/UploadVideo";
+import Notifications from "./pages/Notifications";
+import VendorSettings from "./pages/VendorSettings";
 
 const queryClient = new QueryClient();
 
@@ -227,7 +229,10 @@ const App = () => (
             <Route path="/for-you" element={<ForYou />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/leads" element={<Leads />} />
+            <Route path="/notifications" element={<Notifications />} />
             <Route path="/advertisements" element={<Advertisements />} />
+            <Route path="/settings" element={<VendorSettings />} />
+            <Route path="/terms" element={<TermsConditions />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/subscription/invoice/:id" element={<InvoiceDetail />} />
             <Route path="/quotes" element={<Quotes />} />

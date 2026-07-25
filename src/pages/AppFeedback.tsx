@@ -35,7 +35,7 @@ const AppFeedback = () => {
     <DashboardLayout>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-4 max-w-lg mx-auto pb-8">
         <motion.div variants={section}>
-          <h1 className="text-xl font-semibold font-display">App Feedback</h1>
+          <h1 className="text-xl font-semibold">App Feedback</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Your feedback helps us build a better Cosora</p>
         </motion.div>
         <motion.div variants={listContainer} className="grid grid-cols-1 gap-4 sm:grid-cols-2">

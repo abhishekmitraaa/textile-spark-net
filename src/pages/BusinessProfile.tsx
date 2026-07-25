@@ -1,9 +1,11 @@
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyVendorProfile } from "@/lib/queries/vendorStore";
+import { useMyVendorProfile, saveVendorProfile, uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
 import { useVendorReviews } from "@/lib/queries/reviews";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -46,13 +48,10 @@ import {
 
 const DEMO_BANNER = "/vendorregistration1banner.png";
 
-const officePhotos = [
-  { label: "Factory Floor",  src: "/vendorhelp.png" },
-  { label: "Sampling Unit",  src: cosoraStudioHero },
-  { label: "Cutting Zone",   src: "/vendorregistration1banner.png" },
-  { label: "Finishing Area", src: cosoraStudioHero },
-  { label: "Packing Bay",    src: "/vendorhelp.png" },
-];
+// Office photos now come from vendor_profiles.office_photos as plain URLs.
+// The old hardcoded array carried per-photo labels ("Factory Floor", ...);
+// those were decorative fiction with no way for a vendor to set them, so the
+// real feature stores URLs only.
 
 const brandCategories = [
   { label: "T-Shirts",       src: brandChuu },
@@ -212,6 +211,12 @@ function AddBusinessCategoriesModal({ isOpen, onClose, categories, onCategoriesC
   const [showSelect, setShowSelect] = useState(false);
   const [local, setLocal] = useState<string[]>(categories);
   const toggle = (cat: string) => setLocal(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
+  // This component stays mounted while closed, so `local` would otherwise keep
+  // whatever it was seeded with on first render. That used to be harmless
+  // against a hardcoded array; now that `categories` arrives asynchronously
+  // from the profile row, a stale seed would let "Proceed" save an empty list
+  // over the vendor's real categories. Re-seed each time the sheet opens.
+  useEffect(() => { if (isOpen) setLocal(categories); }, [isOpen, categories]);
   if (!isOpen) return null;
   return (
     <>
@@ -251,12 +256,169 @@ function AddBusinessCategoriesModal({ isOpen, onClose, categories, onCategoriesC
   );
 }
 
+// Shared chrome for the edit sheets below: bottom sheet on mobile, centered
+// card on desktop, back-arrow header. Lifted out of AddBusinessCategoriesModal
+// so the new sheets can't drift from the existing one.
+function EditSheet({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
+      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
+          <h3 className="text-base font-bold text-gray-900">{title}</h3>
+        </div>
+        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
+        <div className="px-5 py-4 border-t border-gray-100">{footer}</div>
+      </div>
+    </div>
+  );
+}
+
+const fieldClass =
+  "w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600";
+
+function LabelledInput({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1 block text-xs font-semibold text-gray-700">{label}</span>
+      <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={fieldClass} />
+    </label>
+  );
+}
+
+function EditAboutModal({ isOpen, onClose, initial, onSave }: { isOpen: boolean; onClose: () => void; initial: string; onSave: (about: string) => Promise<void> }) {
+  const [text, setText] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  // Re-seed whenever the sheet is reopened, so a cancelled edit doesn't persist
+  // in local state and reappear next time.
+  useEffect(() => { if (isOpen) setText(initial); }, [isOpen, initial]);
+  if (!isOpen) return null;
+  const submit = async () => {
+    setSaving(true);
+    try { await onSave(text.trim()); onClose(); } finally { setSaving(false); }
+  };
+  return (
+    <EditSheet
+      title="About Us"
+      onClose={onClose}
+      footer={
+        <button onClick={submit} disabled={saving} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+          {saving ? "Saving..." : "Save"}
+        </button>
+      }
+    >
+      <p className="text-sm text-gray-600 mb-3">Tell buyers what your business does, what you manufacture, and who you supply.</p>
+      <textarea
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={6}
+        autoFocus
+        placeholder="e.g. Surat-based manufacturer focused on high-volume knitwear and denim essentials for private labels across India and the GCC."
+        className={`${fieldClass} resize-none leading-relaxed`}
+      />
+    </EditSheet>
+  );
+}
+
+type ContactForm = {
+  ownerName: string; phone: string; ownerEmail: string; website: string;
+  addressLine: string; area: string; city: string; state: string; postalCode: string;
+};
+
+function EditContactModal({ isOpen, onClose, initial, onSave }: { isOpen: boolean; onClose: () => void; initial: ContactForm; onSave: (v: ContactForm) => Promise<void> }) {
+  const [form, setForm] = useState<ContactForm>(initial);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => { if (isOpen) setForm(initial); }, [isOpen, initial]);
+  if (!isOpen) return null;
+  const set = (k: keyof ContactForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
+  const submit = async () => {
+    setSaving(true);
+    try { await onSave(form); onClose(); } finally { setSaving(false); }
+  };
+  return (
+    <EditSheet
+      title="Contact Details"
+      onClose={onClose}
+      footer={
+        <button onClick={submit} disabled={saving} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+          {saving ? "Saving..." : "Save"}
+        </button>
+      }
+    >
+      <div className="space-y-3">
+        <LabelledInput label="Owner name" value={form.ownerName} onChange={set("ownerName")} placeholder="Mr. R. Sharma" />
+        <LabelledInput label="Phone number" value={form.phone} onChange={set("phone")} placeholder="+91 90110 60851" type="tel" />
+        <LabelledInput label="Email address" value={form.ownerEmail} onChange={set("ownerEmail")} placeholder="you@business.in" type="email" />
+        <LabelledInput label="Website" value={form.website} onChange={set("website")} placeholder="https://yourbusiness.in" type="url" />
+        <div className="pt-1">
+          <p className="mb-2 text-xs font-bold uppercase tracking-wide text-gray-500">Address</p>
+          <div className="space-y-3">
+            <LabelledInput label="Address line" value={form.addressLine} onChange={set("addressLine")} placeholder="2nd Floor, Umiya Nagar" />
+            <LabelledInput label="Area" value={form.area} onChange={set("area")} placeholder="Ring Road" />
+            <div className="grid grid-cols-2 gap-3">
+              <LabelledInput label="City" value={form.city} onChange={set("city")} placeholder="Surat" />
+              <LabelledInput label="State" value={form.state} onChange={set("state")} placeholder="Gujarat" />
+            </div>
+            <LabelledInput label="Postal code" value={form.postalCode} onChange={set("postalCode")} placeholder="395002" />
+          </div>
+        </div>
+      </div>
+    </EditSheet>
+  );
+}
+
+// Oldest selectable founding year. Anything earlier is vanishingly rare in this
+// market and a long <select> is worse than an edge case we can handle by hand.
+const EARLIEST_ESTABLISHED_YEAR = 1950;
+
+function YearEstablishedModal({ isOpen, onClose, selected, onSave }: { isOpen: boolean; onClose: () => void; selected: number | null; onSave: (year: number) => Promise<void> }) {
+  const [year, setYear] = useState(selected ? String(selected) : "");
+  const [saving, setSaving] = useState(false);
+  // Built per render rather than at module scope so the list stays correct if
+  // the tab is left open across New Year.
+  const years = useMemo(() => {
+    const now = new Date().getFullYear();
+    return Array.from({ length: now - EARLIEST_ESTABLISHED_YEAR + 1 }, (_, i) => now - i);
+  }, []);
+  useEffect(() => { if (isOpen) setYear(selected ? String(selected) : ""); }, [isOpen, selected]);
+  if (!isOpen) return null;
+  const submit = async () => {
+    if (!year) return;
+    setSaving(true);
+    try { await onSave(Number(year)); onClose(); } finally { setSaving(false); }
+  };
+  return (
+    <EditSheet
+      title="Year of Establishment"
+      onClose={onClose}
+      footer={
+        <button onClick={submit} disabled={saving || !year} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+          {saving ? "Saving..." : "Save"}
+        </button>
+      }
+    >
+      <div className="mb-4 flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-2">
+        <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
+        <p className="text-xs text-blue-700">Buyers use this to judge how established your business is.</p>
+      </div>
+      <label className="block">
+        <span className="mb-1 block text-xs font-semibold text-gray-700">Year your business was established</span>
+        <select value={year} onChange={(e) => setYear(e.target.value)} className={fieldClass} autoFocus>
+          <option value="" disabled>Select a year</option>
+          {years.map((y) => <option key={y} value={y}>{y}</option>)}
+        </select>
+      </label>
+    </EditSheet>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
 const BusinessProfile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { data: store } = useMyVendorProfile(user?.id);
   const { data: reviewData } = useVendorReviews(user?.id);
@@ -278,10 +440,14 @@ const BusinessProfile = () => {
   const [selectedMonth, setSelectedMonth]   = useState("");
   const [selectedYear, setSelectedYear]     = useState("");
   const [selectedCapacity, setSelectedCapacity] = useState<string[]>(["Medium"]);
-  const [businessCategories, setBusinessCategories] = useState<string[]>(["T-Shirts", "Denim", "Printing", "Manufacturing"]);
+  const [businessCategories, setBusinessCategories] = useState<string[]>([]);
   const [showCategoriesModal, setShowCategoriesModal] = useState(false);
   const [showEmployeesModal, setShowEmployeesModal]   = useState(false);
-  const [employeeCount, setEmployeeCount]   = useState("250 - 500");
+  const [showAboutModal, setShowAboutModal]           = useState(false);
+  const [showContactModal, setShowContactModal]       = useState(false);
+  const [showYearModal, setShowYearModal]             = useState(false);
+  const [highlight, setHighlight]                     = useState<string | null>(null);
+  const [employeeCount, setEmployeeCount]   = useState("");
   const [productSearch, setProductSearch]   = useState("");
   const [genderFilter, setGenderFilter]     = useState("");
   const [bookmarkedProducts, setBookmarkedProducts] = useState<Set<number>>(new Set());
@@ -290,6 +456,146 @@ const BusinessProfile = () => {
   const [dragIndex, setDragIndex]           = useState<number | null>(null);
 
   const selectedVideo = activeVideo === null ? null : videoProducts[activeVideo];
+
+  // ── Persistence ───────────────────────────────────────────────
+  // Every editable field on this page funnels through here so the two cache
+  // keys stay in lockstep: "vendor_profile" backs what this page renders,
+  // "vendor_dashboard" backs the profile score, which most of these fields feed.
+  const qc = useQueryClient();
+  const persist = async (patch: Parameters<typeof saveVendorProfile>[1], successMsg: string): Promise<boolean> => {
+    if (!user) { toast.error("Sign in to edit your business profile"); return false; }
+    try {
+      await saveVendorProfile(user.id, patch);
+      qc.invalidateQueries({ queryKey: ["vendor_profile", "mine", user.id] });
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard", user.id] });
+      toast.success(successMsg);
+      return true;
+    } catch (e) {
+      toast.error("Couldn't save", { description: e instanceof Error ? e.message : String(e) });
+      return false;
+    }
+  };
+
+  // Address is stored as five columns but read as one line.
+  const fullAddress = [store?.addressLine, store?.area, store?.city, store?.state, store?.postalCode]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(", ");
+
+  // Categories and employee count are edited through modals that own their own
+  // local state, so this page mirrors the profile row rather than reading it
+  // directly. Hydrate once, the first time the profile lands: re-syncing on
+  // every `store` change would stomp an optimistic edit with the stale
+  // pre-invalidation cache value.
+  const hydratedRef = useRef(false);
+  useEffect(() => {
+    if (!store || hydratedRef.current) return;
+    hydratedRef.current = true;
+    setBusinessCategories(store.category ?? []);
+    setEmployeeCount(store.employeeCount ?? "");
+  }, [store]);
+
+  // Both write straight through: the copy in AddBusinessCategoriesModal warns
+  // about 24-48h moderation, but no moderation queue exists for category edits
+  // anywhere in this codebase, so pretending to stage the value would be worse
+  // than saving it. Optimistic with rollback, matching VendorSettings.
+  const handleCategoriesChange = async (cats: string[]) => {
+    const previous = businessCategories;
+    setBusinessCategories(cats);
+    if (!(await persist({ category: cats }, "Business categories updated"))) setBusinessCategories(previous);
+  };
+
+  const handleEmployeeSelect = async (value: string) => {
+    const previous = employeeCount;
+    setEmployeeCount(value);
+    if (!(await persist({ employeeCount: value }, "Employee count updated"))) setEmployeeCount(previous);
+  };
+
+  // ── Office photos ─────────────────────────────────────────────
+  // Read straight from the profile row (no local mirror): uploads finish by
+  // invalidating the query, so the refetch is the single source of truth.
+  const officePhotos = store?.officePhotos ?? [];
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingPhotos, setUploadingPhotos] = useState(0);
+  // The strip's dot indicator tracks real scroll position rather than being a
+  // fixed row of four dots that always highlighted the first one.
+  const [photoPage, setPhotoPage] = useState(0);
+
+  const handlePhotoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = ""; // let the same file be picked again after a failure
+    if (files.length === 0) return;
+    if (!user) { toast.error("Sign in to add office photos"); return; }
+    setUploadingPhotos(files.length);
+    try {
+      const urls = await Promise.all(files.map((f) => uploadVendorGalleryImage(user.id, f)));
+      await persist(
+        { officePhotos: [...officePhotos, ...urls] },
+        urls.length === 1 ? "Photo added" : `${urls.length} photos added`
+      );
+    } catch (err) {
+      toast.error("Couldn't upload photos", { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setUploadingPhotos(0);
+    }
+  };
+
+  // ── ?focus= deep links ────────────────────────────────────────
+  // The Business Profile Score checklist links straight at the control that
+  // fills each item in. Section targets scroll and flash; modal targets open
+  // the sheet directly.
+  const MODAL_TARGETS: Record<string, () => void> = {
+    "business-category": () => setShowCategoriesModal(true),
+    employees: () => setShowEmployeesModal(true),
+    "year-established": () => setShowYearModal(true),
+  };
+  const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information"];
+
+  const focusHandledRef = useRef(false);
+  useEffect(() => {
+    const target = searchParams.get("focus");
+    if (!target || focusHandledRef.current) return;
+    focusHandledRef.current = true;
+
+    if (MODAL_TARGETS[target]) {
+      MODAL_TARGETS[target]();
+      return;
+    }
+    if (!SECTION_TARGETS.includes(target)) return;
+
+    // "Total Employees" / "Year of Establishment" / "Business Category" live
+    // inside the collapsible, so make sure it is open before scrolling.
+    if (target === "detailed-information") setDetailsOpen(true);
+
+    // Wait a frame so the section has laid out (and expanded) before measuring.
+    const raf = requestAnimationFrame(() => {
+      document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setHighlight(target);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [searchParams]);
+
+  // Drop the highlight ring after it has been seen.
+  useEffect(() => {
+    if (!highlight) return;
+    const t = setTimeout(() => setHighlight(null), 2400);
+    return () => clearTimeout(t);
+  }, [highlight]);
+
+  const contactInitial = useMemo(
+    () => ({
+      ownerName: store?.ownerName ?? "",
+      phone: store?.phone ?? "",
+      ownerEmail: store?.ownerEmail ?? "",
+      website: store?.website ?? "",
+      addressLine: store?.addressLine ?? "",
+      area: store?.area ?? "",
+      city: store?.city ?? "",
+      state: store?.state ?? "",
+      postalCode: store?.postalCode ?? "",
+    }),
+    [store]
+  );
 
   const toggleCapacity = (key: string) =>
     setSelectedCapacity(prev => prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]);
@@ -303,13 +609,15 @@ const BusinessProfile = () => {
 
   const detailRows = useMemo(() => [
     { label: "Business Type",          value: vendorTypeLabel },
-    { label: "Company MD",             value: store?.ownerName || "Mr. R. Sharma" },
-    { label: "Total Employees",        value: employeeCount, clickable: true, onClick: () => setShowEmployeesModal(true) },
-    { label: "Year of Establishment",  value: "2014" },
+    // Same field as the Contact Details "owner name" row, so it has to show the
+    // same empty state rather than a fabricated fallback name.
+    { label: "Company MD",             value: store?.ownerName?.trim() || "Add owner name", clickable: true, onClick: () => setShowContactModal(true) },
+    { label: "Total Employees",        value: employeeCount || "Add employee count", clickable: true, onClick: () => setShowEmployeesModal(true) },
+    { label: "Year of Establishment",  value: store?.yearEstablished ? String(store.yearEstablished) : "Add year", clickable: true, onClick: () => setShowYearModal(true) },
     { label: "Cosora Member Since",    value: "1 Year" },
     { label: "Annual Turnover",        value: "Rs 2 - 5 Cr" },
     { label: "PAN",                    value: store?.pan || "ABCPR1234D" },
-  ], [employeeCount, vendorTypeLabel, store?.ownerName, store?.pan]);
+  ], [employeeCount, vendorTypeLabel, store?.ownerName, store?.pan, store?.yearEstablished]);
 
   const reduced = useReducedMotion();
 
@@ -387,89 +695,131 @@ const BusinessProfile = () => {
 
           {/* Office photo strip — white card below banner */}
           <div className="bg-white px-4 py-3">
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+            <div
+              className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                // 82px = 80px tile + 2.5 gap; keeps the dot in step with the tile scrolled to.
+                setPhotoPage(Math.round(el.scrollLeft / 82));
+              }}
+            >
               {/* Add photo button */}
-              <div className="flex-shrink-0 flex flex-col items-center">
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                disabled={uploadingPhotos > 0}
+                className="flex-shrink-0 flex flex-col items-center disabled:opacity-60"
+              >
                 <div className="h-20 w-20 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50">
                   <Plus className="h-6 w-6 text-blue-500" />
                 </div>
                 <p className="mt-1 text-[10px] text-gray-400">Add Photo</p>
-              </div>
-              {officePhotos.map(photo => (
-                <div key={photo.label} className="flex-shrink-0 text-center">
+              </button>
+
+              {/* Placeholder tiles while the picked files upload */}
+              {Array.from({ length: uploadingPhotos }).map((_, i) => (
+                <div key={`up-${i}`} className="flex-shrink-0 text-center">
+                  <div className="h-20 w-20 animate-pulse rounded-xl bg-gray-200" />
+                  <p className="mt-1 text-[10px] text-gray-400">Uploading</p>
+                </div>
+              ))}
+
+              {officePhotos.map((url, i) => (
+                <div key={url} className="flex-shrink-0 text-center">
                   <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
-                    <img src={photo.src} alt={photo.label} className="h-full w-full object-cover" loading="lazy" />
+                    <img src={url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
                   </div>
-                  <p className="mt-1 text-[10px] text-gray-500 truncate w-20">{photo.label}</p>
                 </div>
               ))}
             </div>
-            {/* Scroll dots */}
-            <div className="flex items-center justify-center gap-1 mt-2">
-              {[0,1,2,3].map(i => (
-                <span key={i} className={`h-1.5 rounded-full transition-all ${i === 0 ? "w-4 bg-blue-500" : "w-1.5 bg-gray-300"}`} />
-              ))}
-            </div>
+            {/* Scroll dots — one per photo, hidden entirely when there's nothing to scroll */}
+            {officePhotos.length > 1 && (
+              <div className="flex items-center justify-center gap-1 mt-2">
+                {officePhotos.map((url, i) => (
+                  <span key={url} className={`h-1.5 rounded-full transition-all ${i === photoPage ? "w-4 bg-blue-500" : "w-1.5 bg-gray-300"}`} />
+                ))}
+              </div>
+            )}
           </div>
         </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             ABOUT US
         ══════════════════════════════════════════════════════ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section id="about-us" variants={section} className={`rounded-2xl border bg-white p-4 transition-colors duration-500 ${highlight === "about-us" ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}>
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-bold text-gray-900">About Us</h2>
-            <motion.button whileTap={TAP} transition={TAP_T} className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors">
+            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setShowAboutModal(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-blue-600 px-3 py-1.5 rounded-full hover:bg-blue-700 transition-colors">
               Edit profile <Pencil className="h-3 w-3" />
             </motion.button>
           </div>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Caramel Fashion is a Surat-based manufacturer focused on high-volume knitwear, denim essentials, and in-house printing services for private labels across India and the GCC.
-          </p>
+          {store?.about?.trim() ? (
+            <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-line">{store.about}</p>
+          ) : (
+            <button onClick={() => setShowAboutModal(true)} className="text-left text-sm text-gray-400 leading-relaxed hover:text-gray-600">
+              Tell buyers what your business does
+            </button>
+          )}
         </motion.section>
 
         {/* ══════════════════════════════════════════════════════
             CONTACT DETAILS
         ══════════════════════════════════════════════════════ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section id="contact-details" variants={section} className={`rounded-2xl border bg-white p-4 transition-colors duration-500 ${highlight === "contact-details" ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">Contact Details</h2>
-            <motion.button whileTap={TAP} transition={TAP_T} className="flex items-center gap-1 text-xs font-semibold text-blue-600">
+            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setShowContactModal(true)} className="flex items-center gap-1 text-xs font-semibold text-blue-600">
               Edit profile <Pencil className="h-3 w-3" />
             </motion.button>
           </div>
           <div className="space-y-0 divide-y divide-gray-100">
             {[
-              { Icon: Users, value: "Mr. R. Sharma", missing: false },
-              { Icon: MapPin, value: "2nd Floor, Umiya Nagar, Surat, Gujarat, India", missing: false },
-              { Icon: Phone, value: "+91 90110 60851", missing: false },
-            ].map(({ Icon, value, missing }, i) => (
+              { Icon: Users, value: store?.ownerName?.trim(), empty: "Add owner name" },
+              { Icon: MapPin, value: fullAddress, empty: "Add address" },
+              { Icon: Phone, value: store?.phone?.trim(), empty: "Add phone number" },
+            ].map(({ Icon, value, empty }, i) => (
               <div key={i} className={`flex items-start gap-3 ${i === 0 ? "pb-3" : "py-3"}`}>
                 <Icon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-                <span className={`text-sm ${missing ? "text-gray-400" : "text-gray-700"}`}>{value}</span>
+                {value ? (
+                  <span className="text-sm text-gray-700">{value}</span>
+                ) : (
+                  <button onClick={() => setShowContactModal(true)} className="text-left text-sm text-gray-400 hover:text-gray-600">{empty}</button>
+                )}
               </div>
             ))}
 
-            {/* Email — missing */}
+            {/* Email */}
             <div className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <Mail className="h-4 w-4 text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-400">Add email ID</span>
+                {store?.ownerEmail?.trim() ? (
+                  <span className="text-sm text-gray-700 break-all">{store.ownerEmail}</span>
+                ) : (
+                  <button onClick={() => setShowContactModal(true)} className="text-sm text-gray-400 hover:text-gray-600">Add email ID</button>
+                )}
               </div>
-              <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
-                <AlertTriangle className="h-3 w-3" /> Missing Info
-              </span>
+              {!store?.ownerEmail?.trim() && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                  <AlertTriangle className="h-3 w-3" /> Missing Info
+                </span>
+              )}
             </div>
 
-            {/* Website — missing */}
+            {/* Website */}
             <div className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <Globe className="h-4 w-4 text-gray-400 shrink-0" />
-                <span className="text-sm text-gray-400">Add Website</span>
+                {store?.website?.trim() ? (
+                  <span className="text-sm text-gray-700 break-all">{store.website}</span>
+                ) : (
+                  <button onClick={() => setShowContactModal(true)} className="text-sm text-gray-400 hover:text-gray-600">Add Website</button>
+                )}
               </div>
-              <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
-                <AlertTriangle className="h-3 w-3" /> Missing Info
-              </span>
+              {!store?.website?.trim() && (
+                <span className="flex shrink-0 items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-500">
+                  <AlertTriangle className="h-3 w-3" /> Missing Info
+                </span>
+              )}
             </div>
 
             {/* Social Media */}
@@ -521,7 +871,7 @@ const BusinessProfile = () => {
         {/* ══════════════════════════════════════════════════════
             DETAILED INFORMATION (collapsible)
         ══════════════════════════════════════════════════════ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+        <motion.section id="detailed-information" variants={section} className={`rounded-2xl border bg-white overflow-hidden transition-colors duration-500 ${highlight === "detailed-information" ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}>
           <motion.button whileTap={TAP} transition={TAP_T}
             className="flex w-full items-center justify-between px-4 py-3.5 text-left"
             onClick={() => setDetailsOpen(p => !p)}
@@ -618,9 +968,15 @@ const BusinessProfile = () => {
                   <button onClick={() => setShowCategoriesModal(true)} className="text-xs font-semibold text-blue-600">Edit</button>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  {businessCategories.map(cat => (
-                    <span key={cat} className="rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-medium text-blue-600">{cat}</span>
-                  ))}
+                  {businessCategories.length === 0 ? (
+                    <button onClick={() => setShowCategoriesModal(true)} className="text-xs text-gray-400 hover:text-gray-600">
+                      Add the categories buyers should find you under
+                    </button>
+                  ) : (
+                    businessCategories.map(cat => (
+                      <span key={cat} className="rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs font-medium text-blue-600">{cat}</span>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -630,18 +986,37 @@ const BusinessProfile = () => {
         {/* ══════════════════════════════════════════════════════
             OFFICE PICTURES (grid)
         ══════════════════════════════════════════════════════ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
-          <h2 className="text-sm font-bold text-gray-900 mb-3">Office Pictures</h2>
+        <motion.section id="office-pictures" variants={section} className={`rounded-2xl border bg-white p-4 transition-colors duration-500 ${highlight === "office-pictures" ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900">Office Pictures</h2>
+            {/* The profile score rewards 5 or more, so show progress toward that. */}
+            {officePhotos.length > 0 && officePhotos.length < 5 && (
+              <span className="text-[10px] font-medium text-gray-400">{officePhotos.length} of 5 added</span>
+            )}
+          </div>
           <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
-            <div className="aspect-square rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50">
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPhotos > 0}
+              className="aspect-square rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 disabled:opacity-60"
+            >
               <Plus className="h-7 w-7 text-blue-500" />
-            </div>
-            {officePhotos.slice(0, 5).map(photo => (
-              <motion.div variants={listItem} key={photo.label} className="aspect-square overflow-hidden rounded-xl">
-                <img src={photo.src} alt={photo.label} className="h-full w-full object-cover" loading="lazy" />
+            </button>
+            {Array.from({ length: uploadingPhotos }).map((_, i) => (
+              <div key={`gup-${i}`} className="aspect-square animate-pulse rounded-xl bg-gray-200" />
+            ))}
+            {officePhotos.slice(0, 5).map((url, i) => (
+              <motion.div variants={listItem} key={url} className="aspect-square overflow-hidden rounded-xl">
+                <img src={url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
               </motion.div>
             ))}
           </motion.div>
+          {officePhotos.length === 0 && uploadingPhotos === 0 && (
+            <p className="mt-3 text-xs text-gray-400">
+              Add photos of your factory, sampling unit and packing area so buyers can see how you operate.
+            </p>
+          )}
         </motion.section>
 
         {/* ══════════════════════════════════════════════════════
@@ -934,14 +1309,45 @@ const BusinessProfile = () => {
         isOpen={showCategoriesModal}
         onClose={() => setShowCategoriesModal(false)}
         categories={businessCategories}
-        onCategoriesChange={setBusinessCategories}
+        onCategoriesChange={handleCategoriesChange}
       />
 
       <NumberOfEmployeesModal
         isOpen={showEmployeesModal}
         onClose={() => setShowEmployeesModal(false)}
         selected={employeeCount}
-        onSelect={setEmployeeCount}
+        onSelect={handleEmployeeSelect}
+      />
+
+      <EditAboutModal
+        isOpen={showAboutModal}
+        onClose={() => setShowAboutModal(false)}
+        initial={store?.about ?? ""}
+        onSave={async (about) => { await persist({ about }, "About Us updated"); }}
+      />
+
+      <EditContactModal
+        isOpen={showContactModal}
+        onClose={() => setShowContactModal(false)}
+        initial={contactInitial}
+        onSave={async (v) => { await persist(v, "Contact details updated"); }}
+      />
+
+      {/* One hidden picker shared by both "+" tiles (strip and grid). */}
+      <input
+        ref={photoInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handlePhotoFiles}
+      />
+
+      <YearEstablishedModal
+        isOpen={showYearModal}
+        onClose={() => setShowYearModal(false)}
+        selected={store?.yearEstablished ?? null}
+        onSave={async (year) => { await persist({ yearEstablished: year }, "Year of establishment updated"); }}
       />
     </DashboardLayout>
   );

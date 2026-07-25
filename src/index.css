@@ -132,8 +132,13 @@
     font-family: "Playfair Display", Georgia, serif;
   }
 
+  /* The vendor side uses the exact same typography as the buyer side:
+     Open Sans for body text, Roboto for headings (see the body / h1–h6
+     rules above). Keep this stack identical to `body` — the vendor UI
+     must not diverge. Playfair Display (`font-display`) was removed from
+     all vendor screens for this reason; do not reintroduce it. */
   .vendor-shell {
-    font-family: "Open Sans", Roboto, "DM Sans", system-ui, sans-serif;
+    font-family: "Open Sans", Roboto, system-ui, sans-serif;
   }
 }
 

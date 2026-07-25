@@ -25,7 +25,7 @@ export const PromoBanner = () => {
               Premium Feature
             </span>
           </div>
-          <h3 className="mb-1 font-display text-lg font-bold text-accent-foreground sm:text-xl">
+          <h3 className="mb-1 text-lg font-bold text-accent-foreground sm:text-xl">
             Get Prime Placement Above Competitors
           </h3>
           <p className="text-sm text-accent-foreground/80">

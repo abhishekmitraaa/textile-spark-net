@@ -17,7 +17,7 @@ import CosoraLogo from "@/components/CosoraLogo";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft, Search as SearchIcon, X, Bookmark, BookmarkCheck, ChevronDown, Check,
-  Filter, ArrowUpDown, Grid2X2, Grid3X3, Star, MapPin, Phone, ChevronRight, Play, Users, MessageCircle, BadgeCheck,
+  Filter, ArrowUpDown, Grid2X2, Grid3X3, Star, MapPin, Phone, ChevronRight, Play, Users, Heart, BadgeCheck,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import {
@@ -277,55 +277,38 @@ function ProductCard({ p, compact }: { p: RProduct; compact: boolean }) {
 // ─────────────────────────────────────────────────────────────
 function BrandCard({ brand, products }: { brand: BrandResult; products: BrandProduct[] }) {
   const navigate = useNavigate();
-  const callVendor = useCallVendor();
   const t = useT();
   const rail = useDragScroll<HTMLDivElement>();
   const follows = useBrandFollows();
   const following = follows.has(brand.id);
 
+  // SINSANG-style store card: an image-forward, minimal surface. Just the store
+  // header (logo · name · location/followers · heart-follow) and a row of product
+  // thumbnails with price. No ratings / MOQ / product names / per-card call+chat —
+  // tapping the store or a product goes to the profile / detail where you act.
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-5 transition-colors hover:border-gray-300">
-      {/* Identity — logo, name, one calm sub-line, follow */}
+    <div className="rounded-2xl border border-gray-100 p-4 lg:p-5 transition-colors hover:border-gray-200">
+      {/* Store header */}
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0" aria-label={brand.name}>
-          <img src={brand.logo} alt="" className="w-12 h-12 lg:w-14 lg:h-14 rounded-full object-cover bg-gray-100" />
-        </button>
-        <button onClick={() => navigate(`/vendor/${brand.id}`)} className="flex-1 min-w-0 text-left">
-          <span className="flex items-center gap-1">
-            <span className="text-sm lg:text-base font-bold text-gray-900 truncate">{brand.name}</span>
-            {brand.verified && <BadgeCheck className="w-4 h-4 text-[#ef4d62] shrink-0" />}
+        <button onClick={() => navigate(`/vendor/${brand.id}`)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
+          <img src={brand.logo} alt="" className="w-11 h-11 lg:w-12 lg:h-12 rounded-full object-cover bg-gray-100 shrink-0" />
+          <span className="min-w-0">
+            <span className="flex items-center gap-1">
+              <span className="text-sm lg:text-[15px] font-semibold text-gray-900 truncate">{brand.name}</span>
+              {brand.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#ef4d62] shrink-0" />}
+            </span>
+            <span className="block text-xs text-gray-400 truncate mt-0.5">{brand.location} · {brand.followers} {t("followers")}</span>
           </span>
-          <span className="block text-xs lg:text-[13px] text-gray-500 truncate mt-0.5">{t(brand.type)} · {brand.location}</span>
         </button>
-        <button
-          onClick={() => toggleBrandFollow(brand.id)}
-          className={cn(
-            "shrink-0 rounded-full border px-4 py-1.5 text-xs lg:text-sm font-bold transition-colors",
-            following ? "border-gray-200 text-gray-500 hover:bg-gray-50" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5"
-          )}
-        >
-          {following ? t("Following") : t("Follow")}
+        <button onClick={() => toggleBrandFollow(brand.id)} aria-label={following ? "Unfollow" : "Follow"} className="shrink-0 -mr-1 p-1.5">
+          <Heart className={cn("w-[22px] h-[22px] transition-colors", following ? "text-[#ef4d62] fill-[#ef4d62]" : "text-gray-300 hover:text-gray-400")} />
         </button>
       </div>
 
-      {/* Quiet stats line + view-all */}
-      <div className="flex items-center gap-2.5 mt-3 text-xs text-gray-500">
-        <span className="inline-flex items-center gap-1">
-          <Star className="w-3.5 h-3.5 text-yellow-400 fill-yellow-400" />
-          <span className="font-bold text-gray-800">{brand.rating.toFixed(1)}</span>
-          <span className="text-gray-400">({brand.reviews})</span>
-        </span>
-        <span className="text-gray-300">·</span>
-        <span>{brand.followers} {t("followers")}</span>
-        <button onClick={() => navigate(`/vendor/${brand.id}`)} className="ml-auto inline-flex items-center gap-0.5 font-semibold text-gray-500 hover:text-gray-900 transition-colors">
-          {t("View all")} <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-
-      {/* Product line related to the search — clean tiles, no nested boxes */}
+      {/* Product thumbnails — image-forward, price only */}
       <div
         ref={rail.ref}
-        className={cn("flex gap-3 mt-3.5 overflow-x-auto scrollbar-hide -mx-1 px-1", rail.className)}
+        className={cn("flex gap-2 lg:gap-2.5 mt-3.5 overflow-x-auto scrollbar-hide -mx-1 px-1", rail.className)}
         onMouseDown={rail.onMouseDown}
         onMouseMove={rail.onMouseMove}
         onMouseUp={rail.onMouseUp}
@@ -333,24 +316,13 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
         onClickCapture={rail.onClickCapture}
       >
         {products.map((p) => (
-          <Link key={p.id} to={`/product/${p.id}`} className="group shrink-0 w-[5.5rem] lg:w-28">
-            <div className="aspect-[4/5] rounded-xl overflow-hidden bg-gray-100">
-              <img src={p.image} alt={p.name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.04]" draggable={false} />
+          <Link key={p.id} to={`/product/${p.id}`} className="group shrink-0 w-[4.75rem] lg:w-24">
+            <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
+              <img src={p.image} alt={p.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" draggable={false} />
             </div>
-            <p className="mt-1.5 text-[11px] lg:text-xs font-semibold text-gray-800 truncate leading-tight">{p.name}</p>
-            <p className="text-[11px] lg:text-xs leading-tight"><span className="font-bold text-[#ef4d62]">{p.price}</span> <span className="text-gray-400">· MOQ {p.moq}</span></p>
+            <p className="mt-1.5 text-[11px] lg:text-xs font-semibold text-gray-700">{p.price}</p>
           </Link>
         ))}
-      </div>
-
-      {/* Actions */}
-      <div className="flex gap-2.5 mt-4">
-        <button onClick={() => callVendor(brand.id, brand.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2.5 rounded-xl transition-colors">
-          <Phone className="w-3.5 h-3.5" /> {t("Call Now")}
-        </button>
-        <button onClick={() => navigate("/chats")} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 text-gray-700 hover:border-gray-300 text-xs lg:text-sm font-bold py-2.5 rounded-xl transition-colors">
-          <MessageCircle className="w-3.5 h-3.5" /> {t("Chat")}
-        </button>
       </div>
     </div>
   );

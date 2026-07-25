@@ -27,7 +27,7 @@ const Leads = () => {
     <DashboardLayout>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-4 pb-8">
         <motion.div variants={section}>
-          <h1 className="text-xl font-semibold font-display text-foreground lg:text-2xl">Leads</h1>
+          <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Leads</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             Live buyer requirements you can quote on. Your quote reaches the buyer's My Quotes instantly.
           </p>

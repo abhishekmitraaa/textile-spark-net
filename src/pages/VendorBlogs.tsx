@@ -54,7 +54,7 @@ const VendorBlogs = () => {
             <BookOpen className="h-3.5 w-3.5 text-accent" />
             Vendor stories, product marketing, and growth tips
           </div>
-          <h1 className="font-display text-2xl font-semibold text-foreground lg:text-3xl">Blogs</h1>
+          <h1 className="text-2xl font-semibold text-foreground lg:text-3xl">Blogs</h1>
           <p className="max-w-2xl text-sm text-muted-foreground">
             Read Cosora company updates and practical community advice for vendors looking to grow their textile and fashion business.
           </p>

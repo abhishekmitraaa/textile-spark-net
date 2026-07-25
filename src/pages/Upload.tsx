@@ -443,7 +443,7 @@ const Upload = () => {
               exit={{ opacity: 0, x: -20 }}
               className="rounded-xl border border-border bg-card p-4 lg:p-6"
             >
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+              <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                 What are you listing?
               </h2>
               <CategorySelector
@@ -462,7 +462,7 @@ const Upload = () => {
               exit={{ opacity: 0, x: -20 }}
               className="rounded-xl border border-border bg-card p-4 lg:p-6"
             >
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+              <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                 Select Sub-category
               </h2>
               <SubCategorySelector
@@ -486,7 +486,7 @@ const Upload = () => {
             >
               {/* Basic info */}
               <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-                <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                   Basic Information
                 </h2>
                 <div className="space-y-4">
@@ -548,7 +548,7 @@ const Upload = () => {
               {/* Dynamic category-specific fields */}
               {dynamicFields.length > 0 && (
                 <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-                  <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                  <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                     {category?.type === "service" ? "Service Details" : category?.type === "freelancer" ? "Profile Details" : "Specifications"}
                   </h2>
                   <DynamicFormFields
@@ -568,7 +568,7 @@ const Upload = () => {
                     className="flex w-full items-center justify-between text-left"
                   >
                     <div>
-                      <h2 className="font-display text-lg font-semibold text-card-foreground">
+                      <h2 className="text-lg font-semibold text-card-foreground">
                         Optional
                       </h2>
                       <p className="text-xs text-muted-foreground">Additional specifications</p>
@@ -613,7 +613,7 @@ const Upload = () => {
               exit={{ opacity: 0, x: -20 }}
               className="rounded-xl border border-border bg-card p-4 lg:p-6"
             >
-              <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+              <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                 {category?.type === "service" ? "Portfolio Images" : category?.type === "freelancer" ? "Profile & Work Samples" : "Product Images"}
               </h2>
               <div
@@ -754,7 +754,7 @@ const Upload = () => {
               className="grid gap-4 lg:grid-cols-2 lg:gap-6"
             >
               <div className="rounded-xl border border-border bg-card p-4 lg:p-6">
-                <h2 className="mb-4 font-display text-lg font-semibold text-card-foreground">
+                <h2 className="mb-4 text-lg font-semibold text-card-foreground">
                   Pricing
                 </h2>
                 <div className="space-y-4">
@@ -818,7 +818,7 @@ const Upload = () => {
               <div className="space-y-4 lg:space-y-6">
                 {/* Summary */}
                 <div className="rounded-xl border border-accent/30 bg-accent/5 p-4 lg:p-6">
-                  <h3 className="mb-3 font-display text-sm font-semibold text-foreground">
+                  <h3 className="mb-3 text-sm font-semibold text-foreground">
                     Listing Summary
                   </h3>
                   <div className="space-y-2 text-sm">

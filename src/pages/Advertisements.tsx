@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -51,13 +51,6 @@ interface AdType {
   description: string;
   image: string;
   Icon: React.ElementType;
-}
-
-interface Story {
-  duration: number;
-  bg: string;
-  title: string;
-  subtitle: string;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -136,97 +129,9 @@ const FAQS = [
   { q: "Can I pause or stop my ad campaign?",     a: "Absolutely. You can pause, resume, or stop your ads at any time. No long-term commitments or cancellation fees." },
 ];
 
-const INTRO_STORIES: Story[] = [
-  { duration: 3000, bg: "from-blue-600 to-blue-800",     title: "Welcome to Cosora",      subtitle: "Discover the power of advertising"          },
-  { duration: 3000, bg: "from-purple-600 to-purple-800", title: "Reach Your Audience",    subtitle: "Connect with customers in your area"        },
-  { duration: 3000, bg: "from-green-500 to-green-700",   title: "Easy Ad Creation",       subtitle: "Create stunning ads in minutes"             },
-  { duration: 3000, bg: "from-teal-500 to-teal-700",     title: "Target Your Market",     subtitle: "Precise audience targeting"                 },
-  { duration: 3000, bg: "from-orange-500 to-orange-700", title: "Get Started Today!",     subtitle: "Start advertising and grow your business"  },
-];
-
 // ─────────────────────────────────────────────────────────────
 // SUB-COMPONENTS
 // ─────────────────────────────────────────────────────────────
-
-// ── IntroStories ──
-function IntroStories({ onComplete }: { onComplete: () => void }) {
-  const [current, setCurrent] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const manualNav = useRef(false);
-
-  useEffect(() => {
-    if (paused) return;
-    setProgress(0);
-    manualNav.current = false;
-    const duration = INTRO_STORIES[current].duration;
-    const startTime = Date.now();
-
-    const tick = () => {
-      if (manualNav.current) return;
-      const pct = Math.min(((Date.now() - startTime) / duration) * 100, 100);
-      setProgress(pct);
-      if (pct >= 100 && !manualNav.current) {
-        if (current < INTRO_STORIES.length - 1) setCurrent(p => p + 1);
-        else onComplete();
-      }
-    };
-
-    intervalRef.current = setInterval(tick, 50);
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-  }, [current, paused, onComplete]);
-
-  const go = (dir: "prev" | "next") => {
-    manualNav.current = true;
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    if (dir === "prev" && current > 0) setCurrent(p => p - 1);
-    else if (dir === "next") { if (current < INTRO_STORIES.length - 1) setCurrent(p => p + 1); else onComplete(); }
-  };
-
-  const handleClick = (e: React.MouseEvent) => {
-    go(e.clientX < window.innerWidth / 2 ? "prev" : "next");
-  };
-
-  const story = INTRO_STORIES[current];
-
-  return (
-    <div className="fixed inset-0 z-[99999] bg-black">
-      {/* Progress bars */}
-      <div className="absolute top-3 left-3 right-3 z-[100000] flex gap-1">
-        {INTRO_STORIES.map((_, i) => (
-          <div key={i} className="flex-1 h-[3px] bg-white/30 rounded-full overflow-hidden">
-            <div className="h-full bg-white transition-all duration-100 ease-linear"
-              style={{ width: i < current ? "100%" : i === current ? `${progress}%` : "0%" }} />
-          </div>
-        ))}
-      </div>
-
-      {/* Close */}
-      <button onClick={onComplete}
-        className="absolute top-3 right-3 z-[100001] bg-black/50 text-white rounded-full p-2 hover:bg-black/70">
-        <X size={24} />
-      </button>
-
-      {/* Content */}
-      <div className="w-full h-full cursor-pointer"
-        onClick={handleClick}
-        onMouseDown={() => setPaused(true)}
-        onMouseUp={() => setPaused(false)}>
-        <div className={cn("w-full h-full bg-gradient-to-br flex flex-col items-center justify-center p-8 text-white", story.bg)}>
-          <h1 className="text-4xl font-bold mb-4 text-center">{story.title}</h1>
-          <p className="text-xl text-center opacity-90">{story.subtitle}</p>
-          {current === INTRO_STORIES.length - 1 && (
-            <button onClick={(e) => { e.stopPropagation(); onComplete(); }}
-              className="mt-8 bg-white text-orange-600 px-8 py-3 rounded-full font-bold text-lg hover:bg-gray-100 transition-colors">
-              Create Your Ad
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Header ──
 function AdvHeader() {
@@ -1250,7 +1155,6 @@ const Advertisements = () => {
   const removeAd = async (id: string) => {
     try { await deleteAd(id); refreshAds(); toast.success("Campaign removed"); } catch (e) { toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) }); }
   };
-  const [showIntro, setShowIntro] = useState(false);
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectedDuration, setSelectedDuration] = useState("7");
@@ -1261,20 +1165,8 @@ const Advertisements = () => {
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showMoreAdTypes, setShowMoreAdTypes] = useState(false);
 
-  useEffect(() => {
-    const seen = localStorage.getItem("hasSeenAdvertiseIntro");
-    if (!seen) setShowIntro(true);
-  }, []);
-
-  const handleIntroComplete = () => {
-    localStorage.setItem("hasSeenAdvertiseIntro", "true");
-    setShowIntro(false);
-  };
-
   return (
-    <>
-      {showIntro && <IntroStories onComplete={handleIntroComplete} />}
-      <DashboardLayout>
+    <DashboardLayout>
         <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="pb-20">
           <AdvHeader />
           <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
@@ -1343,7 +1235,6 @@ const Advertisements = () => {
           </div>
         </motion.div>
       </DashboardLayout>
-    </>
   );
 };
 

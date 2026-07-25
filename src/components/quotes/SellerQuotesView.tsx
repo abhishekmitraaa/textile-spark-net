@@ -290,7 +290,7 @@ const SellerQuotesView = () => {
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
       >
         <div>
-          <h1 className="font-display text-2xl font-bold text-foreground lg:text-3xl">
+          <h1 className="text-2xl font-bold text-foreground lg:text-3xl">
             My Quotations
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -413,7 +413,7 @@ const SellerQuotesView = () => {
                                     {status.label}
                                   </Badge>
                                 </div>
-                                <h3 className="font-display text-base sm:text-lg font-semibold text-foreground leading-tight">
+                                <h3 className="text-base sm:text-lg font-semibold text-foreground leading-tight">
                                   {quote.productName}
                                 </h3>
                               </div>
@@ -572,7 +572,7 @@ const SellerQuotesView = () => {
                             <Badge className="bg-primary/10 text-primary border-primary/20 border">New</Badge>
                           )}
                         </div>
-                        <h3 className="font-display text-lg font-semibold text-foreground">
+                        <h3 className="text-lg font-semibold text-foreground">
                           {rfq.productName}
                         </h3>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -653,7 +653,7 @@ const SellerQuotesView = () => {
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Quote Details</DialogTitle>
+            <DialogTitle className="text-xl">Quote Details</DialogTitle>
           </DialogHeader>
           {selectedQuote && (
             <div className="space-y-4 pt-2">
@@ -767,7 +767,7 @@ const SellerQuotesView = () => {
       <Dialog open={isRespondOpen} onOpenChange={setIsRespondOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display text-xl">Send Quotation</DialogTitle>
+            <DialogTitle className="text-xl">Send Quotation</DialogTitle>
           </DialogHeader>
           {selectedRFQ && (
             <div className="space-y-4 pt-2">

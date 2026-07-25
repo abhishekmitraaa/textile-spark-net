@@ -255,7 +255,7 @@ const PhotographerProfile = () => {
         >
           <div>
             <div className="flex items-center gap-3">
-              <h1 className="font-display text-2xl font-bold text-foreground md:text-3xl">
+              <h1 className="text-2xl font-bold text-foreground md:text-3xl">
                 {photographer.name}
               </h1>
               {photographer.verified && <CheckCircle2 className="h-5 w-5 text-accent" />}
@@ -311,7 +311,7 @@ const PhotographerProfile = () => {
 
         {/* Portfolio Grid */}
         <div>
-          <h2 className="mb-4 font-display text-lg font-semibold text-foreground">Portfolio</h2>
+          <h2 className="mb-4 text-lg font-semibold text-foreground">Portfolio</h2>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
             {photographer.portfolio.map((img, i) => (
               <motion.div
@@ -331,7 +331,7 @@ const PhotographerProfile = () => {
 
         {/* Pricing Packages */}
         <div>
-          <h2 className="mb-4 font-display text-lg font-semibold text-foreground">Packages</h2>
+          <h2 className="mb-4 text-lg font-semibold text-foreground">Packages</h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {photographer.packages.map((pkg, i) => (
               <motion.div
@@ -342,7 +342,7 @@ const PhotographerProfile = () => {
                 className={`rounded-xl border p-5 ${i === 1 ? "border-accent bg-accent/5" : "border-border bg-card"}`}
               >
                 {i === 1 && <Badge className="mb-2 bg-accent text-accent-foreground text-[10px]">Most Popular</Badge>}
-                <h3 className="font-display text-base font-semibold text-foreground">{pkg.name}</h3>
+                <h3 className="text-base font-semibold text-foreground">{pkg.name}</h3>
                 <p className="mt-1 text-2xl font-bold text-foreground">{pkg.price}</p>
                 <p className="mt-2 text-xs text-muted-foreground">{pkg.details}</p>
                 <Button
@@ -360,7 +360,7 @@ const PhotographerProfile = () => {
         {/* Client Brands */}
         {photographer.clientBrands && (
           <div>
-            <h2 className="mb-3 font-display text-lg font-semibold text-foreground">Trusted By</h2>
+            <h2 className="mb-3 text-lg font-semibold text-foreground">Trusted By</h2>
             <div className="flex flex-wrap gap-2">
               {photographer.clientBrands.map((brand) => (
                 <Badge key={brand} variant="outline" className="text-xs">{brand}</Badge>

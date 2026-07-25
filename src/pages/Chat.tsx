@@ -2,12 +2,14 @@ import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { CONVERSATIONS, callGroupsInOrder, type CallRecord } from "@/lib/chatData";
 import { useConversations, type ChatSummary } from "@/lib/queries/chat";
 import { useCalls, useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import {
-  Search, MessageCircle, Phone, FileText, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+  ArrowLeft, Search, MessageCircle, Phone, FileText, PhoneIncoming, PhoneOutgoing, PhoneMissed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +32,11 @@ const Chat = () => {
   const tab: Tab = params.get("tab") === "calls" ? "calls" : "chats";
   const setTab = (t: Tab) => setParams(t === "calls" ? { tab: "calls" } : {}, { replace: true });
   const [query, setQuery] = useState("");
+
+  // Sellers reach this hub from the vendor sidebar/bottom nav, so it renders
+  // inside DashboardLayout — without it the sidebar disappears with no way back.
+  const { role } = useUserRole();
+  const isSeller = role === "seller";
 
   // Real conversations + calls when signed in; seeded lists only as signed-out fallback.
   const { user } = useAuth();
@@ -55,19 +62,35 @@ const Chat = () => {
       .filter((g) => g.calls.length > 0);
   }, [groups, query]);
 
-  const goQuotes = () => navigate("/requirement/my-quotes");
+  // Sellers quote on buyer requirements (/quotes); buyers track their own RFQs.
+  const goQuotes = () => navigate(isSeller ? "/quotes" : "/requirement/my-quotes");
 
-  return (
-    <div className="min-h-screen bg-gray-50">
+  // Back → wherever the user came from; fall back to the seller dashboard on a
+  // deep link / refresh where there's no in-app history to pop.
+  const goBack = () => {
+    const idx = (window.history.state && (window.history.state as { idx?: number }).idx) ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate("/seller-home");
+  };
+
+  const body = (
+    <div className={cn("min-h-screen bg-gray-50", isSeller && "-m-4 lg:-m-6")}>
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
+      <div className={cn("sticky bg-white border-b border-gray-100", isSeller ? "top-14 z-20 lg:top-16" : "top-0 z-30")}>
         <div className="max-w-2xl mx-auto px-4 pt-4">
           <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-xl font-extrabold text-gray-900">Messages</h1>
-              <p className="text-xs text-gray-500">
-                {tab === "chats" ? `${convos.length} Conversations` : `${filteredGroups.reduce((n, g) => n + g.calls.length, 0)} Calls`}
-              </p>
+            <div className="flex items-center gap-2">
+              {isSeller && (
+                <button onClick={goBack} aria-label="Back" className="-ml-1 p-1 rounded-full hover:bg-gray-100">
+                  <ArrowLeft className="w-5 h-5 text-gray-700" />
+                </button>
+              )}
+              <div>
+                <h1 className="text-xl font-extrabold text-gray-900">Messages</h1>
+                <p className="text-xs text-gray-500">
+                  {tab === "chats" ? `${convos.length} Conversations` : `${filteredGroups.reduce((n, g) => n + g.calls.length, 0)} Calls`}
+                </p>
+              </div>
             </div>
             {onlineCount > 0 && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
@@ -103,8 +126,8 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Body */}
-      <div className="max-w-2xl mx-auto px-4 pb-28 pt-2">
+      {/* Body — sellers get bottom-nav clearance from DashboardLayout's own padding */}
+      <div className={cn("max-w-2xl mx-auto px-4 pt-2", isSeller ? "pb-6" : "pb-28")}>
         <AnimatePresence mode="wait">
           {tab === "chats" ? (
             <motion.div key="chats" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} variants={listContainer}>
@@ -143,18 +166,23 @@ const Chat = () => {
         </AnimatePresence>
       </div>
 
-      {/* Post Requirement FAB */}
-      <motion.button
-        whileTap={reduced ? undefined : { scale: 0.95 }}
-        onClick={() => navigate("/requirement/post-requirement")}
-        className="fixed bottom-[84px] left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 rounded-full bg-[#256fef] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#256fef]/30 hover:bg-[#256fef]/90"
-      >
-        <FileText className="w-4 h-4" /> Post Requirement
-      </motion.button>
+      {/* Post Requirement FAB — buyer-only action */}
+      {!isSeller && (
+        <motion.button
+          whileTap={reduced ? undefined : { scale: 0.95 }}
+          onClick={() => navigate("/requirement/post-requirement")}
+          className="fixed bottom-[84px] left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 rounded-full bg-[#256fef] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#256fef]/30 hover:bg-[#256fef]/90"
+        >
+          <FileText className="w-4 h-4" /> Post Requirement
+        </motion.button>
+      )}
 
-      <MobileBottomNav />
+      {/* DashboardLayout already renders the bottom nav for sellers */}
+      {!isSeller && <MobileBottomNav />}
     </div>
   );
+
+  return isSeller ? <DashboardLayout>{body}</DashboardLayout> : body;
 };
 
 function Avatar({ src, name, size = 48, online }: { src: string | null; name: string; size?: number; online?: boolean }) {

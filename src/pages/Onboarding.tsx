@@ -910,7 +910,7 @@ export default function Onboarding() {
                 className="mx-auto mb-4 h-14 w-auto object-contain sm:h-16"
                 draggable={false}
               />
-              <h1 className="font-display text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
+              <h1 className="text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
               <p className="text-lg md:text-xl">Welcome to Cosora 🎉</p>
               <p className="mt-2 text-sm text-white/80">Your seller profile is live and we are surfacing the next actions that will improve your reach.</p>
             </div>
@@ -1209,7 +1209,7 @@ export default function Onboarding() {
             {/* STEP 2 */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <h2 className="font-display text-2xl font-bold text-[#363636]">Business Details</h2>
+                <h2 className="text-2xl font-bold text-[#363636]">Business Details</h2>
 
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-[#363636]">Business name*</Label>
@@ -1330,7 +1330,7 @@ export default function Onboarding() {
             {/* STEP 3 */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <h2 className="font-display text-2xl font-bold text-[#363636]">Business Address</h2>
+                <h2 className="text-2xl font-bold text-[#363636]">Business Address</h2>
 
                 <div className="space-y-3">
                   <div className="relative">
@@ -1457,7 +1457,7 @@ export default function Onboarding() {
             {currentStep === 4 && !step4Success && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="font-display text-2xl font-bold text-[#363636]">Owner details</h2>
+                  <h2 className="text-2xl font-bold text-[#363636]">Owner details</h2>
                   <p className="mt-1 text-xs text-[#363636]/70">
                     Cosora will use these details for all business communications and updates
                   </p>
@@ -1870,7 +1870,7 @@ export default function Onboarding() {
             {/* STEP 7 */}
             {currentStep === 7 && !step7Success && (
               <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Add your first product</h2>
+                <h2 className="text-2xl font-bold">Add your first product</h2>
                 <div className="space-y-2">
                   <Label>Product Images (up to 6)</Label>
                   <label className="block rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] p-6 text-center cursor-pointer hover:bg-[#eef0f3]">
@@ -1955,13 +1955,13 @@ export default function Onboarding() {
             {/* STEP 8 */}
             {currentStep === 8 && (
               <div className="space-y-5">
-                <h2 className="font-display text-2xl font-bold">Partner Contract</h2>
+                <h2 className="text-2xl font-bold">Partner Contract</h2>
                 <div className="rounded-xl border bg-white p-6 text-center shadow-sm">
                   <p className="text-xs uppercase text-[#363636] mb-2">E-Signature</p>
                   {!editingSig ? (
-                    <p className="font-display italic text-3xl text-[#256fef]">{signature || "Your signature"}</p>
+                    <p className="text-3xl text-[#256fef]" style={{ fontFamily: "'Dancing Script', cursive" }}>{signature || "Your signature"}</p>
                   ) : (
-                    <Input value={signature} onChange={(e) => setSignature(e.target.value)} className="text-center font-display italic text-2xl" autoFocus onBlur={() => setEditingSig(false)} />
+                    <Input value={signature} onChange={(e) => setSignature(e.target.value)} className="text-center text-2xl" style={{ fontFamily: "'Dancing Script', cursive" }} autoFocus onBlur={() => setEditingSig(false)} />
                   )}
                   <button onClick={() => setEditingSig(true)} className="text-xs text-[#256fef] underline mt-2">Change Signature</button>
                 </div>
@@ -2133,7 +2133,7 @@ function SuccessScreen({ text, onContinue }: { text: string; onContinue: () => v
       >
         <CheckCircle2 className="w-12 h-12 text-[#14ae5c]" />
       </motion.div>
-      <h3 className="font-display text-2xl font-bold mb-1">{text} ✓</h3>
+      <h3 className="text-2xl font-bold mb-1">{text} ✓</h3>
       <p className="text-sm text-[#363636]">Continuing...</p>
     </div>
   );

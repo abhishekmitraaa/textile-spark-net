@@ -153,7 +153,7 @@ export default function Subscription() {
             <Badge variant="outline" className="mb-3 border-accent/30 bg-accent/10 text-accent">
               <Sparkles className="mr-1 h-3 w-3" /> Upgrade &amp; Save
             </Badge>
-            <h1 className="font-display text-3xl font-bold text-foreground lg:text-4xl">Choose Your Growth Plan</h1>
+            <h1 className="text-3xl font-bold text-foreground lg:text-4xl">Choose Your Growth Plan</h1>
             <p className="mt-2 max-w-xl text-muted-foreground">
               Unlock premium features and accelerate your business growth. Yearly billing = 2 months free.
             </p>
