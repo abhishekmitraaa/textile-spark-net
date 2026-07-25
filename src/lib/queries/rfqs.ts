@@ -14,7 +14,7 @@ import type { Rfq, VendorQuote, QuoteStatus } from "@/lib/quotesData";
 interface RawRfq {
   id: string; title: string; product_name: string | null; quantity: number | null;
   budget_min: number | null; budget_max: number | null; image: string | null;
-  category_id: string | null;
+  category_id: string | null; buyer_id: string;
   status: "active" | "closed"; created_at: string;
 }
 interface RawQuote {
@@ -183,7 +183,9 @@ export interface NewQuote {
 }
 // ── Vendor: my submitted quotes (for the Quotes → "My Quotes" tab) ──
 export interface MySubmittedQuote {
-  id: string; quoteCode: string; rfqCode: string; rfqTitle: string; buyerName: string;
+  id: string; quoteCode: string; rfqCode: string; rfqTitle: string;
+  /** Buyer who posted the RFQ. Used to deep-link chat/call from the quote card. */
+  buyerId: string; buyerName: string;
   pricePerUnit: number; moq: string; leadTime: string; submittedDate: string; lastUpdated: string;
   pcs: string; totalQuotes: number;
   status: "in_negotiation" | "accepted" | "awaiting" | "not_selected";
@@ -208,6 +210,27 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
     const { data } = await supabase.from("rfqs").select("*").in("id", rfqIds);
     for (const r of (data ?? []) as RawRfq[]) rfqMap.set(r.id, r);
   }
+
+  // Real buyer names, batched over the distinct buyers behind those RFQs — same
+  // shape as fetchConversations in chat.ts. One query, not one per row.
+  const buyerIds = Array.from(new Set(Array.from(rfqMap.values()).map((r) => r.buyer_id).filter(Boolean)));
+  const buyerNames = new Map<string, string>();
+  if (buyerIds.length) {
+    const { data } = await supabase.from("profiles").select("id, full_name").in("id", buyerIds);
+    for (const pr of data ?? []) if (pr.full_name) buyerNames.set(pr.id, pr.full_name);
+  }
+
+  // Competing-quote counts: how many vendors have quoted each of these RFQs.
+  // PostgREST has no GROUP BY, so pull just the rfq_id column for the relevant
+  // RFQs and tally client-side — still one round trip, not one per row.
+  const quoteCounts = new Map<string, number>();
+  if (rfqIds.length) {
+    const { data } = await supabase.from("quotes").select("rfq_id").in("rfq_id", rfqIds);
+    for (const row of (data ?? []) as { rfq_id: string }[]) {
+      quoteCounts.set(row.rfq_id, (quoteCounts.get(row.rfq_id) ?? 0) + 1);
+    }
+  }
+
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
   return rows.map((q) => {
     const rfq = rfqMap.get(q.rfq_id);
@@ -216,14 +239,15 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
       quoteCode: `QT-${q.id.slice(0, 8).toUpperCase()}`,
       rfqCode: `RFQ-${q.rfq_id.slice(0, 8).toUpperCase()}`,
       rfqTitle: rfq?.product_name ?? rfq?.title ?? "Requirement",
-      buyerName: "Buyer",
+      buyerId: rfq?.buyer_id ?? "",
+      buyerName: (rfq && buyerNames.get(rfq.buyer_id)) || "Buyer",
       pricePerUnit: Number(q.price_per_unit ?? q.price_inr ?? 0),
       moq: q.moq != null ? `${q.moq} pcs` : "—",
       leadTime: q.lead_time ?? "—",
       submittedDate: fmtDate(q.created_at),
       lastUpdated: fmtDate(q.created_at),
       pcs: rfq?.quantity != null ? `${rfq.quantity} pcs` : "—",
-      totalQuotes: 0,
+      totalQuotes: quoteCounts.get(q.rfq_id) ?? 0,
       status: mapQuoteStatus(q.status),
       image: rfq?.image ?? undefined,
     };
