@@ -119,7 +119,7 @@ function MediaCarousel({ media, rating, soldCount, isInAd }: { media: MediaItem[
   return (
     <div className="rounded-2xl bg-gray-100 overflow-hidden">
       <motion.div
-        className="relative h-[380px] sm:h-[460px] overflow-hidden touch-pan-y select-none"
+        className="relative h-[380px] sm:h-[460px] lg:h-[520px] overflow-hidden touch-pan-y select-none"
         drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.15} dragMomentum={false}
         onDragEnd={(_, info) => {
           if (info.offset.x < -60 || info.velocity.x < -500) goNext();
@@ -444,12 +444,18 @@ const ProductDetail = () => {
 
   return (
     <BuyerShell>
-      <motion.div className="max-w-2xl mx-auto px-4 pt-3 pb-6 space-y-3" variants={reduced ? {} : page} initial="hidden" animate="show">
+      <motion.div className="mx-auto max-w-2xl lg:max-w-6xl px-4 pt-3 pb-6" variants={reduced ? {} : page} initial="hidden" animate="show">
 
-        {/* Media */}
-        <motion.div variants={sect}>
+        {/* Top: media on the left, product info on the right — two columns on desktop */}
+        <motion.div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-start" variants={reduced ? {} : page} initial="hidden" animate="show">
+
+        {/* Media — sticks alongside the info column on desktop */}
+        <motion.div variants={sect} className="lg:sticky lg:top-20">
           <MediaCarousel media={product.media} rating={product.rating} soldCount={product.soldCount} isInAd={product.isInAd} />
         </motion.div>
+
+        {/* Product info column */}
+        <motion.div className="mt-3 space-y-3 lg:mt-0" variants={reduced ? {} : page} initial="hidden" animate="show">
 
         {/* Breadcrumb + header */}
         <motion.div variants={sect}>
@@ -658,6 +664,11 @@ const ProductDetail = () => {
             </div>
           </motion.div>
         )}
+        </motion.div>{/* end product info column */}
+        </motion.div>{/* end two-column top */}
+
+        {/* Recommendations — full width below the two-column top */}
+        <motion.div className="mt-3 space-y-3 lg:mt-8" variants={reduced ? {} : page} initial="hidden" animate="show">
 
         {/* Brand Picks — the current vendor's other live products (real; excludes
             this product). Hidden entirely when the vendor has no others. */}
@@ -692,11 +703,12 @@ const ProductDetail = () => {
         {likeProducts.length > 0 && (
           <motion.div variants={sect} className="pt-2">
             <h2 className="mb-3 text-sm font-bold text-gray-900">You might also like</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
               {likeProducts.map((p) => <ListingProductCard key={p.id} product={p} />)}
             </div>
           </motion.div>
         )}
+        </motion.div>{/* end recommendations */}
       </motion.div>
 
       <WriteReviewModal

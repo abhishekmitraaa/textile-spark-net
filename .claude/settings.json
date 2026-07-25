@@ -2,7 +2,7 @@
   "hooks": {
     "PreCompact": [
       {
-        "matcher": "manual",
+        "matcher": "",
         "hooks": [
           {
             "type": "agent",

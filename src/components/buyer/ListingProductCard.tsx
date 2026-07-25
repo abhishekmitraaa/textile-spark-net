@@ -28,7 +28,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
 
   return (
     <div
-      className={cn("rounded-xl border border-gray-200 overflow-hidden bg-white", className)}
+      className={cn("rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col h-full", className)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -60,7 +60,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
         </div>
       </Link>
 
-      <div className="p-2 lg:p-3.5">
+      <div className="p-2 lg:p-3.5 flex flex-col flex-1">
         <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
           {product.price} | {product.moq} | {product.soldCount}
         </p>
@@ -73,6 +73,9 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
         </div>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+
+        {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
+        <div className="flex-1" />
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}

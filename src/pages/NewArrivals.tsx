@@ -14,25 +14,38 @@ import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import trustedSeal from "@/assets/Trustedseal.png";
+import catWomensApparel from "@/assets/categories/womens-apparel.png";
+import catMensApparel from "@/assets/categories/mens-apparel.png";
+import catMensJeans from "@/assets/categories/mens-jeans.png";
+import catMensShirt from "@/assets/categories/mens-shirt.png";
+import catAccessories from "@/assets/categories/accessories.png";
+import catWomensTrousers from "@/assets/categories/womens-trousers.png";
+import catWomensTshirts from "@/assets/categories/womens-tshirts.png";
+import catWomensShoes from "@/assets/categories/womens-shoes.png";
+import catKidswear from "@/assets/categories/kidswear.png";
+import catEthnicWear from "@/assets/categories/ethnic-wear.png";
+import catActivewear from "@/assets/categories/activewear.png";
+import catWinterWear from "@/assets/categories/winter-wear.png";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { name: "Women's Apparel",  image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
-  { name: "Men's Apparel",    image: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
-  { name: "Men's Jeans",      image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=200&h=200&fit=crop" },
-  { name: "Men's Shirt",      image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop" },
-  { name: "Accessories",      image: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
-  { name: "Women's Trousers", image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=200&h=200&fit=crop" },
-  { name: "Women's T-shirts", image: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=200&h=200&fit=crop" },
-  { name: "Women's Shoes",    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=200&h=200&fit=crop" },
-  { name: "Kidswear",         image: "https://images.unsplash.com/photo-1622290291468-a28f7a7dc6a8?w=200&h=200&fit=crop" },
-  { name: "Ethnic Wear",      image: "https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=200&h=200&fit=crop" },
-  { name: "Activewear",       image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&h=200&fit=crop" },
-  { name: "Winter Wear",      image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=200&h=200&fit=crop" },
+  { name: "Women's Apparel",  image: catWomensApparel },
+  { name: "Men's Apparel",    image: catMensApparel },
+  { name: "Men's Jeans",      image: catMensJeans },
+  { name: "Men's Shirt",      image: catMensShirt },
+  { name: "Accessories",      image: catAccessories },
+  { name: "Women's Trousers", image: catWomensTrousers },
+  { name: "Women's T-shirts", image: catWomensTshirts },
+  { name: "Women's Shoes",    image: catWomensShoes },
+  { name: "Kidswear",         image: catKidswear },
+  { name: "Ethnic Wear",      image: catEthnicWear },
+  { name: "Activewear",       image: catActivewear },
+  { name: "Winter Wear",      image: catWinterWear },
 ];
 
 interface Product {
@@ -69,16 +82,30 @@ const BASE_PRODUCTS: Product[] = [
 // absent or fails to load, so removing these is also safe.
 import { VIDEO_CLOSE_UPS, rankVideoCloseUps } from "@/data/videoCloseUps";
 
+// First 3 are the mobile-visible set (unchanged). The extra 3 only render at
+// the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
+// 6-column grid fills a complete row without adding anything to mobile's
+// existing 3-column/3-item view. Reuses existing images already in this file.
 const LOOKING_FOR_THESE = [
   { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
   { id: "lft2", name: "Quilted Crossbody",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=520&fit=crop" },
   { id: "lft3", name: "Polka Dot Sundress",  price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=520&fit=crop" },
+  { id: "lft4", name: "Graphic Print Tee",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=520&fit=crop" },
+  { id: "lft5", name: "Camp Collar Shirt",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=520&fit=crop" },
+  { id: "lft6", name: "Ribbed Tank Top",     price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&h=520&fit=crop" },
 ];
 
+// Same idea as LOOKING_FOR_THESE — this rail scrolls horizontally, so adding
+// more entries only extends what's reachable by scrolling; the cards visible
+// on mobile without scrolling are unchanged. More entries just mean desktop's
+// wider viewport doesn't run out of rail and look sparse.
 const BRAND_PICKS = [
   { name: "THEOT / J mering...",        category: "Shirts",            price: "$27.53", image: "https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=300&h=380&fit=crop" },
   { name: "Queen's Square /...",        category: "Knitwear/Sweaters", price: "$20.09", image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=300&h=380&fit=crop" },
   { name: "THEOT / high tou...",        category: "Blouses",           price: "$17.11", image: "https://images.unsplash.com/photo-1551803091-e20673f15770?w=300&h=380&fit=crop" },
+  { name: "Aurelia / linen wr...",      category: "Dresses",           price: "$24.10", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=380&fit=crop" },
+  { name: "Northfield / cotto...",      category: "Trousers",          price: "$15.60", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=380&fit=crop" },
+  { name: "Solace / denim sh...",       category: "Shirts",            price: "$21.40", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=380&fit=crop" },
 ];
 
 const PREMIUM_BRANDS = [
@@ -108,7 +135,7 @@ function ProductCard({ product }: { product: Product }) {
 
   return (
     <div
-      className="rounded-xl border border-gray-200 overflow-hidden bg-white"
+      className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col h-full"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -148,7 +175,7 @@ function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
 
-      <div className="p-2 lg:p-3.5">
+      <div className="p-2 lg:p-3.5 flex flex-col flex-1">
         <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
           {product.price} | MOQ: {product.moq} | {product.soldCount}
         </p>
@@ -161,6 +188,9 @@ function ProductCard({ product }: { product: Product }) {
         </div>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
+
+        {/* Spacer absorbs uneven text height so every Call Now aligns at the card's bottom edge */}
+        <div className="flex-1" />
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
@@ -181,6 +211,13 @@ const NewArrivals = () => {
   const t = useT();
   const { profile } = useAuth();
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
+
+  // Mouse click-and-drag scrolling for the horizontal rails below — touch/
+  // trackpad already scroll them natively, this is what makes desktop mouse
+  // users able to slide them at all.
+  const categoriesDrag = useDragScroll<HTMLDivElement>();
+  const videoRailDrag = useDragScroll<HTMLDivElement>();
+  const brandPicksDrag = useDragScroll<HTMLDivElement>();
 
   // Real vendor-uploaded reels; fall back to local samples while loading / if empty.
   const { data: dbVideos } = useVideoCloseUps();
@@ -237,15 +274,54 @@ const NewArrivals = () => {
     ).flat();
   }, [liveProducts, productsLoading, batchCount]);
 
-  // 5 rows per chunk, derived from the active column count (toggle-reactive).
-  // Mobile cols are 2 or 3; desktop uses the same chunk size which means the
-  // box appears slightly more often on wide screens. Mobile is primary.
+  // Grid columns per breakpoint, derived from the active toggle. Desktop shows
+  // twice the mobile column count (see the grid className below).
   const cols = viewMode === "2-col" ? 2 : 3;
-  const productsPerChunk = 5 * cols;
-  const chunks: Product[][] = [];
-  for (let i = 0; i < products.length; i += productsPerChunk) {
-    chunks.push(products.slice(i, i + productsPerChunk));
-  }
+  const desktopCols = cols * 2; // 4 (2-col) or 6 (3-col)
+
+  // Pad the feed so the final desktop row is always complete — otherwise a count
+  // like 6 leaves a half-empty row on wide screens. We top up to the next
+  // multiple of desktopCols by cycling the existing products (unique ids/keys).
+  // desktopCols is a multiple of the mobile column count, so mobile stays full too.
+  const displayProducts = useMemo(() => {
+    if (products.length === 0) return products;
+    const remainder = products.length % desktopCols;
+    if (remainder === 0) return products;
+    const fillers = Array.from({ length: desktopCols - remainder }, (_, i) => {
+      const src = products[i % products.length];
+      return { ...src, id: `${src.id}-fill${i}` };
+    });
+    return [...products, ...fillers];
+  }, [products, desktopCols]);
+
+  // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
+  // mobile but `desktopCols` on desktop, so the insert positions differ per
+  // breakpoint: every (cols*5) products on mobile, every (desktopCols*5) on
+  // desktop. Cards at a multiple of the desktop interval show on both; the
+  // in-between mobile multiples are mobile-only (`lg:hidden`, so they collapse
+  // out of the desktop grid and leave no gap). Net: mobile sees a card every 5
+  // mobile rows, desktop every 5 desktop rows.
+  const mobileInterval = cols * 5;         // 10 (2-col) or 15 (3-col)
+  const desktopInterval = desktopCols * 5; // 20 (2-col) or 30 (3-col)
+  const feedNodes: JSX.Element[] = [];
+  displayProducts.forEach((product, i) => {
+    feedNodes.push(<ProductCard key={product.id} product={product} />);
+    const n = i + 1;
+    if (n >= displayProducts.length) return; // never trail the last loaded product
+    if (n % desktopInterval === 0) {
+      feedNodes.push(
+        <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto my-2 lg:my-4">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    } else if (n % mobileInterval === 0) {
+      feedNodes.push(
+        <div key={`req-m-${i}`} className="col-span-full lg:hidden my-2">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    }
+  });
 
   return (
     <BuyerShell>
@@ -280,21 +356,35 @@ const NewArrivals = () => {
             <h2 className="text-sm lg:text-lg font-bold text-gray-900 tracking-tight text-center w-full">WHAT'S ON YOUR MIND</h2>
           </div>
           <div
-            className="grid grid-flow-col grid-rows-2 auto-cols-[22%] lg:auto-cols-[11.5%] gap-3 lg:gap-5 overflow-x-auto overscroll-x-contain scrollbar-hide snap-x snap-mandatory pb-1 -mx-1 px-1"
+            ref={categoriesDrag.ref}
+            className={cn("overflow-x-auto overscroll-x-contain scrollbar-hide snap-x snap-mandatory pb-1 -mx-1 px-1", categoriesDrag.className)}
             style={{ WebkitOverflowScrolling: "touch" }}
+            onMouseDown={categoriesDrag.onMouseDown}
+            onMouseMove={categoriesDrag.onMouseMove}
+            onMouseUp={categoriesDrag.onMouseUp}
+            onMouseLeave={categoriesDrag.onMouseLeave}
+            onClickCapture={categoriesDrag.onClickCapture}
           >
-            {CATEGORIES.map(cat => (
-              <Link
-                key={cat.name}
-                to={`/search/results?category=${encodeURIComponent(cat.name)}`}
-                className="text-center group snap-start"
-              >
-                <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100 mb-1.5 lg:mb-2 p-2 lg:p-3 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" draggable={false} />
-                </div>
-                <span className="text-[10px] lg:text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>
-              </Link>
-            ))}
+            {/* lg:w-max + lg:mx-auto centers the strip when it fits the row (typical
+                desktop widths); if a future viewport/category count makes it wider
+                than the container, auto margins collapse to 0 and the parent's
+                native overflow-x-auto scrolling takes over unchanged — this avoids
+                the flex `justify-center` + overflow scrolling bug. Mobile (no lg:
+                override) keeps its original percentage-based edge-to-edge layout. */}
+            <div className="grid grid-flow-col grid-rows-2 auto-cols-[22%] lg:auto-cols-[128px] gap-3 lg:gap-5 lg:w-max lg:mx-auto">
+              {CATEGORIES.map(cat => (
+                <Link
+                  key={cat.name}
+                  to={`/search/results?category=${encodeURIComponent(cat.name)}`}
+                  className="text-center group snap-start"
+                >
+                  <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100 mb-1.5 lg:mb-2 p-2 lg:p-3 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
+                    <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" draggable={false} />
+                  </div>
+                  <span className="text-[10px] lg:text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>
+                </Link>
+              ))}
+            </div>
           </div>
           <div className="flex items-center justify-center gap-2 mt-3 lg:mt-5 text-[10px] lg:text-xs font-bold text-gray-300 tracking-widest">
             <span>&lt;</span>
@@ -309,7 +399,15 @@ const NewArrivals = () => {
         {/* ── Video Close-Ups — Reels style ── */}
         <div>
           <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-2 lg:mb-4 px-1">Video Close-Ups</h2>
-          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 scrollbar-hide px-1">
+          <div
+            ref={videoRailDrag.ref}
+            className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 scrollbar-hide px-1", videoRailDrag.className)}
+            onMouseDown={videoRailDrag.onMouseDown}
+            onMouseMove={videoRailDrag.onMouseMove}
+            onMouseUp={videoRailDrag.onMouseUp}
+            onMouseLeave={videoRailDrag.onMouseLeave}
+            onClickCapture={videoRailDrag.onClickCapture}
+          >
             {rankedVideoCloseUps.map((v, i) => (
               <button
                 key={v.id}
@@ -334,8 +432,12 @@ const NewArrivals = () => {
           {/* Looking for these? */}
           <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
           <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
-            {LOOKING_FOR_THESE.map(item => (
-              <Link key={item.id} to={`/product/${item.id}`} className="rounded-lg overflow-hidden border border-gray-100">
+            {LOOKING_FOR_THESE.map((item, i) => (
+              <Link
+                key={item.id}
+                to={`/product/${item.id}`}
+                className={cn("rounded-lg overflow-hidden border border-gray-100", i >= 3 && "hidden lg:block")}
+              >
                 <div className="relative aspect-square bg-gray-100">
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                   <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
@@ -363,7 +465,15 @@ const NewArrivals = () => {
             <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
           </div>
           <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2">sponsored</p>
-          <div className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide">
+          <div
+            ref={brandPicksDrag.ref}
+            className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide", brandPicksDrag.className)}
+            onMouseDown={brandPicksDrag.onMouseDown}
+            onMouseMove={brandPicksDrag.onMouseMove}
+            onMouseUp={brandPicksDrag.onMouseUp}
+            onMouseLeave={brandPicksDrag.onMouseLeave}
+            onClickCapture={brandPicksDrag.onClickCapture}
+          >
             {BRAND_PICKS.map((b, i) => (
               <Link key={i} to="/search/results" className="shrink-0 w-32 lg:w-48">
                 <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
@@ -402,20 +512,14 @@ const NewArrivals = () => {
             </div>
           </div>
 
-          {chunks.map((chunk, chunkIdx) => (
-            <div key={chunkIdx}>
-              <div className={cn(
-                "grid gap-3 lg:gap-5",
-                viewMode === "2-col" ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6"
-              )}>
-                {chunk.map(product => <ProductCard key={product.id} product={product} />)}
-              </div>
-              {/* Submit Requirement box after every chunk (≈5 rows) */}
-              <div className="mt-4 lg:mt-6 mb-1 lg:max-w-md">
-                <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
-              </div>
-            </div>
-          ))}
+          {/* One continuous grid so a mobile-only (`lg:hidden`) Submit Requirement
+              card can collapse out of the desktop grid without leaving a gap. */}
+          <div className={cn(
+            "grid gap-3 lg:gap-5",
+            viewMode === "2-col" ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6"
+          )}>
+            {feedNodes}
+          </div>
 
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
             {isLoadingMore ? "Loading more products..." : "Scroll for more"}

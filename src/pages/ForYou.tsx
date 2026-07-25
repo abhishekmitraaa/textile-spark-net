@@ -31,10 +31,6 @@ import {
   Sparkles,
   Check,
   Phone,
-  Zap,
-  ClipboardList,
-  FileText,
-  ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -132,58 +128,12 @@ const RECENT_VIEW_ADS = [
   { id: "rv4", name: "Macaron Knit Hoodie Zip", price: "$24.40", image: img("rv-hoodie", 400, 400) },
 ];
 
-const ROWS_PER_REQUIREMENT_BOX = 5; // insert a requirement box after every 5 rows
-const ROWS_PER_RECENT_VIEW = 7; // insert a recent-views ad after every 7 rows
-const COLS_MOBILE = 2; // reference is mobile-first 2-col; row math uses this
-
-// ─────────────────────────────────────────────────────────────
-// Post Your Requirement box (inserted every 5 rows)
-// ─────────────────────────────────────────────────────────────
-
-function PostRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
-  return (
-    <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-      <div className="px-4 py-3.5 border-b border-gray-100">
-        <h3 className="text-base font-bold text-gray-900">Post Your Requirement</h3>
-        <p className="text-xs text-gray-500 mt-0.5">Get quotes from verified manufacturers</p>
-      </div>
-      <div className="p-4">
-        <button onClick={onQuickRfq} className="w-full flex items-center justify-between py-2.5 border-b border-gray-100 text-left">
-          <div className="flex items-center gap-2.5">
-            <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62] shrink-0" />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
-                <span className="text-[9px] font-bold uppercase tracking-wider bg-[#ef4d62]/10 text-[#ef4d62] px-1.5 py-0.5 rounded">Fast</span>
-              </div>
-              <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </button>
-
-        <Link to="/requirement/post-requirement" className="flex items-center justify-between py-2.5 border-b border-gray-100">
-          <div className="flex items-center gap-2.5">
-            <ClipboardList className="w-4 h-4 text-blue-500 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Create New Requirement</p>
-              <p className="text-xs text-gray-400">Detailed specifications for precise quotes</p>
-            </div>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </Link>
-
-        <Link to="/requirement/my-quotes" className="flex items-center justify-between py-2.5">
-          <div className="flex items-center gap-2.5">
-            <FileText className="w-4 h-4 text-gray-500 shrink-0" />
-            <p className="text-sm font-semibold text-gray-900">My Previous Quotes</p>
-          </div>
-          <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-        </Link>
-      </div>
-    </div>
-  );
-}
+// Full-width insert blocks land after a product count that's a multiple of BOTH
+// the mobile (2) and desktop (4) grid columns — lcm = 4 — so the product row
+// right before an inserted block is always complete on both breakpoints. (Using
+// a mobile-only multiple like 10/14 left a ragged half-row of 2 on desktop.)
+const PRODUCTS_PER_REQUIREMENT_BOX = 12; // 6 mobile rows / 3 desktop rows
+const PRODUCTS_PER_RECENT_VIEW = 16; // 8 mobile rows / 4 desktop rows
 
 // ─────────────────────────────────────────────────────────────
 // Related To Recent Views ad block (inserted every 7 rows)
@@ -192,23 +142,23 @@ function PostRequirementBox({ onQuickRfq }: { onQuickRfq: () => void }) {
 function RecentViewsAd() {
   const navigate = useNavigate();
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-3">
-      <div className="flex items-center justify-between mb-2.5">
-        <h3 className="text-sm font-bold text-gray-900">Related To Recent Views</h3>
-        <span className="text-[9px] font-semibold text-gray-300 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
+    <div className="rounded-2xl border border-gray-200 bg-white p-3 lg:p-4">
+      <div className="flex items-center justify-between mb-2.5 lg:mb-3">
+        <h3 className="text-sm lg:text-lg font-bold text-gray-900">Related To Recent Views</h3>
+        <span className="text-[9px] lg:text-[10px] font-semibold text-gray-300 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
       </div>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-5">
         {RECENT_VIEW_ADS.map((p) => (
           <button
             key={p.id}
             onClick={() => navigate(`/product/${p.id}`)}
-            className="relative aspect-[4/5] rounded-xl overflow-hidden bg-gray-100 text-left"
+            className="relative aspect-[4/5] rounded-xl lg:rounded-2xl overflow-hidden bg-gray-100 text-left"
           >
             <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
-            <div className="absolute bottom-1.5 right-1.5 text-[8px] font-semibold text-white/70 bg-black/30 px-1.5 py-0.5 rounded">COSORA</div>
-            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2">
-              <p className="text-[11px] font-semibold text-white truncate">{p.name}</p>
-              <p className="text-[11px] font-bold text-white">{p.price}</p>
+            <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 py-0.5 rounded">COSORA</div>
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 lg:p-3">
+              <p className="text-[11px] lg:text-sm font-semibold text-white truncate">{p.name}</p>
+              <p className="text-[11px] lg:text-sm font-bold text-white">{p.price}</p>
             </div>
           </button>
         ))}
@@ -357,16 +307,17 @@ const ForYou = () => {
 
   const visible = filtered.slice(0, batches * 8);
 
-  // Build interleaved feed: product cards + requirement box (every 5 rows) +
-  // recent-views ad (every 7 rows). Blocks span the full grid width.
+  // Build interleaved feed: product cards + requirement box + recent-views ad.
+  // Blocks span the full grid width and land on a multiple of 4 products so no
+  // ragged half-row precedes them on desktop (see the constants above).
   type FeedItem = { kind: "product"; product: ListingProduct } | { kind: "requirement" } | { kind: "recent" };
   const feedItems = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [];
     visible.forEach((product, i) => {
       items.push({ kind: "product", product });
       const productsDone = i + 1;
-      if (productsDone % (ROWS_PER_REQUIREMENT_BOX * COLS_MOBILE) === 0) items.push({ kind: "requirement" });
-      else if (productsDone % (ROWS_PER_RECENT_VIEW * COLS_MOBILE) === 0) items.push({ kind: "recent" });
+      if (productsDone % PRODUCTS_PER_REQUIREMENT_BOX === 0) items.push({ kind: "requirement" });
+      else if (productsDone % PRODUCTS_PER_RECENT_VIEW === 0) items.push({ kind: "recent" });
     });
     return items;
   }, [visible]);
@@ -498,71 +449,63 @@ const ForYou = () => {
       </div>
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24">
-        {/* Header */}
-        <div className="flex items-center gap-1.5">
-          <Sparkles className="w-5 h-5 text-[#ef4d62]" />
-          <h1 className="text-lg lg:text-2xl font-bold text-gray-900">For You</h1>
-        </div>
-        <p className="text-xs lg:text-sm text-gray-500 mt-0.5">Personalized recommendations based on your preferences</p>
-
-        {/* Active preference chips */}
-        {(prefs.categories.length > 0 || activeLocations.length > 0) && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {prefs.categories.map((id) => (
-              <span key={id} className="inline-flex items-center gap-1 bg-[#ef4d62]/10 text-[#ef4d62] rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
-                {CATEGORY_LABEL[id] ?? id}
-                <button onClick={() => removeCategory(id)} aria-label={`Remove ${CATEGORY_LABEL[id] ?? id}`}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
-            {activeLocations.map((id) => (
-              <span key={id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
-                {LOCATION_LABEL[id] ?? id}
-                <button onClick={() => removeLocation(id)} aria-label={`Remove ${LOCATION_LABEL[id] ?? id}`}>
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
+        {/* Header toolbar — on desktop the title sits left and the search +
+            controls group sits right on one row; on mobile they stack, matching
+            the original single-column layout. */}
+        <div className="lg:flex lg:items-start lg:justify-between lg:gap-8">
+          <div className="lg:shrink-0">
+            <div className="flex items-center gap-1.5 lg:gap-2">
+              <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-[#ef4d62]" />
+              <h1 className="text-lg lg:text-3xl font-bold text-gray-900">For You</h1>
+            </div>
+            <p className="text-xs lg:text-sm text-gray-500 mt-0.5 lg:mt-1.5">Personalized recommendations based on your preferences</p>
           </div>
-        )}
 
-        {/* Search + filter */}
-        <div className="flex gap-2 mt-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search products, vendors..."
-              className="w-full rounded-full border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
-            />
+          {/* Preference controls. No in-page search here — the BuyerTopBar
+              already provides the main product search; this page only needs to
+              edit or reset the personalization preferences. */}
+          <div className="mt-3 lg:mt-1 lg:shrink-0 flex items-center gap-3 lg:justify-end">
+            <button
+              onClick={() => setFilterOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3.5 py-2 text-xs font-semibold text-[#ef4d62] hover:border-[#ef4d62] transition-colors"
+            >
+              <SlidersHorizontal className="w-4 h-4" /> Edit Preferences
+            </button>
+            <button onClick={resetFilters} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
+              Reset preferences
+            </button>
           </div>
-          <button
-            onClick={() => setFilterOpen(true)}
-            aria-label="Filter preferences"
-            className="shrink-0 w-11 h-11 rounded-full border border-gray-200 flex items-center justify-center text-gray-600 hover:border-[#ef4d62] hover:text-[#ef4d62] transition-colors"
-          >
-            <SlidersHorizontal className="w-4 h-4" />
-          </button>
         </div>
 
-        {/* Edit / Reset links */}
-        <div className="flex items-center justify-between mt-3">
-          <button onClick={() => setFilterOpen(true)} className="text-xs font-semibold text-[#ef4d62] hover:underline">
-            Edit Preferences
-          </button>
-          <button onClick={resetFilters} className="text-xs font-semibold text-gray-400 hover:text-gray-600">
-            Reset preferences
-          </button>
+        {/* Active preference chips + result count — filter summary directly above
+            the grid (chips left, count right on desktop; stacked on mobile). */}
+        <div className="mt-4 lg:mt-6 flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-4">
+          {(prefs.categories.length > 0 || activeLocations.length > 0) && (
+            <div className="flex flex-wrap gap-2">
+              {prefs.categories.map((id) => (
+                <span key={id} className="inline-flex items-center gap-1 bg-[#ef4d62]/10 text-[#ef4d62] rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
+                  {CATEGORY_LABEL[id] ?? id}
+                  <button onClick={() => removeCategory(id)} aria-label={`Remove ${CATEGORY_LABEL[id] ?? id}`}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {activeLocations.map((id) => (
+                <span key={id} className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
+                  {LOCATION_LABEL[id] ?? id}
+                  <button onClick={() => removeLocation(id)} aria-label={`Remove ${LOCATION_LABEL[id] ?? id}`}>
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-gray-500 lg:ml-auto lg:shrink-0">{filtered.length} products for you</p>
         </div>
-
-        {/* Count */}
-        <p className="text-xs text-gray-500 mt-3">{filtered.length} products for you</p>
 
         {/* Empty state */}
         {filtered.length === 0 ? (
-          <div className="mt-4 rounded-2xl border border-gray-200 bg-white">
+          <div className="mt-4 rounded-2xl border border-gray-200 bg-white lg:max-w-xl lg:mx-auto">
             <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
               <Sparkles className="w-12 h-12 text-gray-300 mb-3" />
               <h3 className="text-lg font-bold text-gray-900">No matches found</h3>
@@ -580,10 +523,10 @@ const ForYou = () => {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
               {feedItems.map((item, idx) => {
                 if (item.kind === "requirement") {
-                  return <div key={`req-${idx}`} className="col-span-full lg:max-w-md"><PostRequirementBox onQuickRfq={() => setQuickRfqOpen(true)} /></div>;
+                  return <div key={`req-${idx}`} className="col-span-full lg:max-w-4xl lg:mx-auto"><SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} /></div>;
                 }
                 if (item.kind === "recent") {
-                  return <div key={`rv-${idx}`} className="col-span-full lg:max-w-md"><RecentViewsAd /></div>;
+                  return <div key={`rv-${idx}`} className="col-span-full"><RecentViewsAd /></div>;
                 }
                 return <ListingProductCard key={item.product.id} product={item.product} />;
               })}
@@ -596,7 +539,7 @@ const ForYou = () => {
         )}
 
         {/* Bottom Submit Requirement bar */}
-        <div className="mt-2">
+        <div className="mt-2 lg:mt-4 lg:max-w-2xl lg:mx-auto">
           <SubmitRequirementCard />
         </div>
       </div>

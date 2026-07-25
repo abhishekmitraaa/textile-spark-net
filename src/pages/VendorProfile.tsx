@@ -18,12 +18,12 @@ import {
   FileText, ExternalLink,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
-import brandChuu from "@/assets/brands/chuu-fashion.png";
-import brandCherry from "@/assets/brands/cherrykoko.png";
-import brandBrandi from "@/assets/brands/brandi.png";
-import brandStyleNanda from "@/assets/brands/style-nanda.png";
-import brandStyleOnMe from "@/assets/brands/styleonme.png";
-import brandHotPing from "@/assets/brands/hotping.png";
+import catTshirt from "@/assets/categories/brand/tshirt.png";
+import catDenim from "@/assets/categories/brand/denim.png";
+import catPrinting from "@/assets/categories/brand/printing.png";
+import catManufacturing from "@/assets/categories/brand/manufacturing.png";
+import catEmbroidery from "@/assets/categories/brand/embroidery.png";
+import catFinishing from "@/assets/categories/brand/finishing.png";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -41,12 +41,12 @@ const BANNER = "/vendorregistration1banner.png";
 const BRAND = "CARAMEL";
 
 const brandCategories = [
-  { label: "T-Shirt", src: brandChuu },
-  { label: "Denim", src: brandCherry },
-  { label: "Printing", src: brandBrandi },
-  { label: "Manufacturing", src: brandStyleNanda },
-  { label: "Embroidery", src: brandStyleOnMe },
-  { label: "Finishing", src: brandHotPing },
+  { label: "T-Shirt", src: catTshirt },
+  { label: "Denim", src: catDenim },
+  { label: "Printing", src: catPrinting },
+  { label: "Manufacturing", src: catManufacturing },
+  { label: "Embroidery", src: catEmbroidery },
+  { label: "Finishing", src: catFinishing },
 ];
 
 const capacityOptions = [
@@ -288,7 +288,7 @@ const VendorProfile = () => {
             transition={{ duration: 0.22, ease: "easeOut" }}
             className="fixed top-0 inset-x-0 z-40 bg-white/95 backdrop-blur border-b border-gray-100"
           >
-            <div className="max-w-2xl lg:max-w-3xl mx-auto flex items-center gap-3 px-4 py-2.5">
+            <div className="max-w-2xl lg:max-w-5xl mx-auto flex items-center gap-3 px-4 py-2.5">
               <button onClick={() => navigate(-1)} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
               <h2 className="flex-1 text-base font-extrabold tracking-wide text-gray-900 truncate">{brandName}</h2>
               <button onClick={() => setPageSaved((s) => !s)} aria-label="Save vendor" className="p-1">
@@ -300,7 +300,7 @@ const VendorProfile = () => {
       </AnimatePresence>
 
       <motion.div
-        className="max-w-2xl lg:max-w-3xl mx-auto px-3 pt-3 pb-24 space-y-3"
+        className="max-w-2xl lg:max-w-5xl mx-auto px-3 lg:px-4 pt-3 pb-24 space-y-3"
         variants={reduced ? {} : page} initial="hidden" animate="show"
       >
         {/* ══ HERO ══ */}
@@ -553,8 +553,8 @@ const VendorProfile = () => {
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
             {brandCategories.map((cat) => (
               <div key={cat.label} className="flex-shrink-0 text-center">
-                <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-gray-50">
-                  <img src={cat.src} alt={cat.label} className="h-full w-full object-cover" loading="lazy" />
+                <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-white p-2">
+                  <img src={cat.src} alt={cat.label} className="h-full w-full object-contain" loading="lazy" />
                 </div>
                 <p className="mt-1.5 text-xs font-medium text-gray-700 truncate w-20">{cat.label}</p>
               </div>
@@ -565,7 +565,7 @@ const VendorProfile = () => {
         {/* ══ BRAND'S RECOMMENDATIONS (top enquired items) ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand's Recommendations</h2>
-          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
+          <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
             {recommendationsList.map((product) => {
               const isSaved = Boolean(saved.products[product.id]);
               return (
@@ -590,7 +590,7 @@ const VendorProfile = () => {
               );
             })}
             {recommendationsList.length === 0 && (
-              <p className="col-span-3 py-6 text-center text-xs text-gray-400">No recommendations yet.</p>
+              <p className="col-span-full py-6 text-center text-xs text-gray-400">No recommendations yet.</p>
             )}
           </motion.div>
         </motion.section>
@@ -599,7 +599,7 @@ const VendorProfile = () => {
         {vendorVideos.length > 0 && (
           <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
             <h2 className="text-sm font-bold text-gray-900 mb-3">Brand Product Videos</h2>
-            <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
+            <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
               {vendorVideos.map((video, index) => (
                 <motion.button variants={listItem} whileTap={TAP} transition={TAP_T} key={video.id}
                   onClick={() => { setVideoStartIndex(index); setVideoViewerOpen(true); }}
@@ -629,7 +629,7 @@ const VendorProfile = () => {
               <h2 className="text-sm font-bold text-gray-900">Catalogues & Lookbooks</h2>
             </div>
             <p className="text-xs text-gray-400 mb-3">Browse this brand's full product range as PDF catalogues</p>
-            <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
+            <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
               {catalogues.map((cat) => (
                 <motion.a
                   variants={listItem}
@@ -721,7 +721,7 @@ const VendorProfile = () => {
           <p className="text-sm font-semibold text-gray-700 mb-3">Product <span className="text-[#ef4d62]">{vpProducts.length}</span></p>
 
           {/* Product grid */}
-          <div className={cn("grid", gridCols === 2 ? "grid-cols-2 gap-3" : "grid-cols-3 gap-2")}>
+          <div className={cn("grid", gridCols === 2 ? "grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-3 gap-2 lg:grid-cols-5 xl:grid-cols-6")}>
             {filteredProducts.map((product) => {
               const isSaved = Boolean(saved.products[product.id]);
               return (

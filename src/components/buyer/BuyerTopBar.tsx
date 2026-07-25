@@ -14,9 +14,10 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   const t = useT();
 
   const menuItems = [
-    { label: "Dashboard",         href: "/home/new-arrivals" },
+    { label: "Home",              href: "/home/new-arrivals" },
     { label: "Post Requirement",  href: "/requirement/post-requirement" },
     { label: "Browse Products",   href: "/search/results" },
+    { label: "Video Close-Ups",   href: "/video-closeups" },
     { label: "Recently Viewed",   href: "/recently-viewed" },
     { label: "My Quotes",         href: "/requirement/my-quotes" },
     { label: "Chats & Calls",     href: "/chats" },

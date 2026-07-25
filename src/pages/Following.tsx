@@ -4,6 +4,9 @@ import { toast } from "sonner";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
+import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
+import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
+import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
 import {
   DropdownMenu,
@@ -43,7 +46,6 @@ import {
   EyeOff,
   Filter,
   MoreVertical,
-  Plus,
   SlidersHorizontal,
   UserMinus,
 } from "lucide-react";
@@ -74,100 +76,6 @@ const SORT_OPTIONS: { key: SortKey; label: string }[] = [
   { key: "price-desc", label: "Price: High to Low" },
   { key: "rating", label: "Top Rated" },
 ];
-
-// ─────────────────────────────────────────────────────────────
-// "Looking for New Brands?" — swipeable brand discovery carousel.
-// Each slide is a suggested (not-yet-followed) brand with its top
-// inquired products. Swiping left reveals the next brand.
-// ─────────────────────────────────────────────────────────────
-
-function NewBrandsCarousel({ brands, onFollow }: { brands: Brand[]; onFollow: (b: Brand) => void }) {
-  const navigate = useNavigate();
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const [active, setActive] = useState(0);
-
-  const onScroll = () => {
-    const el = trackRef.current;
-    if (!el) return;
-    const idx = Math.round(el.scrollLeft / el.clientWidth);
-    setActive(idx);
-  };
-
-  if (brands.length === 0) return null;
-
-  return (
-    <section className="rounded-2xl bg-[#ececeb] p-3 lg:p-4">
-      <h2 className="text-sm lg:text-lg font-bold text-gray-900 mb-2.5">Looking for New Brands?</h2>
-
-      <div
-        ref={trackRef}
-        onScroll={onScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide -mx-1 px-1 gap-3"
-        style={{ WebkitOverflowScrolling: "touch" }}
-      >
-        {brands.map((brand) => (
-          <div key={brand.id} className="snap-center shrink-0 w-full">
-            <div className="rounded-xl bg-white overflow-hidden border border-gray-100">
-              {/* Brand header */}
-              <div className="flex items-center gap-2.5 p-3">
-                <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
-                  <img src={brand.logo} alt={brand.name} className="w-10 h-10 rounded-full object-cover" />
-                </button>
-                <button onClick={() => navigate(`/vendor/${brand.id}`)} className="min-w-0 flex-1 text-left">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-bold text-gray-900 truncate">{brand.name}</span>
-                    {brand.isAd && <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide shrink-0">AD</span>}
-                  </div>
-                  <p className="text-[11px] text-gray-500 truncate">{brand.location} · {brand.followers} followers</p>
-                </button>
-                <button
-                  onClick={() => { onFollow(brand); toast.success(`Following ${brand.name}`); }}
-                  className="shrink-0 flex items-center gap-1 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs font-bold px-3 py-1.5 rounded-full transition-colors"
-                >
-                  <Plus className="w-3 h-3" /> Follow
-                </button>
-              </div>
-
-              {/* Top inquired products */}
-              <div className="grid grid-cols-2 gap-px bg-gray-100">
-                {brand.topProducts.map((p, i) => (
-                  <button
-                    key={i}
-                    onClick={() => navigate(`/vendor/${brand.id}`)}
-                    className="relative aspect-square bg-gray-100"
-                  >
-                    <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
-                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-left">
-                      <p className="text-[10px] font-semibold text-white truncate">{p.name}</p>
-                      <p className="text-[10px] font-bold text-white">{p.price}</p>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Dots */}
-      {brands.length > 1 && (
-        <div className="flex items-center justify-center gap-1.5 mt-2.5">
-          {brands.map((b, i) => (
-            <button
-              key={b.id}
-              onClick={() => {
-                const el = trackRef.current;
-                if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
-              }}
-              aria-label={`Go to brand ${i + 1}`}
-              className={cn("h-1.5 rounded-full transition-all", i === active ? "w-4 bg-[#ef4d62]" : "w-1.5 bg-gray-400/60")}
-            />
-          ))}
-        </div>
-      )}
-    </section>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 // "Your Followings" — compact list with per-brand Unfollow / Hide
@@ -295,6 +203,35 @@ function applyControls(products: ListingProduct[], gender: GenderFilter, sort: S
   return sorted;
 }
 
+// Render a product grid's children with a "Submit Requirement" card interleaved
+// after every 5 rows — and since a row is 2 cards on mobile but 4 on desktop,
+// the insert positions differ per breakpoint: every 10 products on mobile, every
+// 20 on desktop. Cards at multiples of 20 show on both; the in-between multiples
+// of 10 are mobile-only (`lg:hidden`, so they collapse out of the desktop grid),
+// which leaves desktop with a card only every 20 products (5 desktop rows).
+function feedWithRequirements(products: ListingProduct[], onQuickRfq: () => void): JSX.Element[] {
+  const nodes: JSX.Element[] = [];
+  products.forEach((p, i) => {
+    nodes.push(<ListingProductCard key={p.id} product={p} />);
+    const n = i + 1;
+    if (n >= products.length) return; // never trail the final product with a card
+    if (n % 20 === 0) {
+      nodes.push(
+        <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto">
+          <SubmitRequirementCard onQuickRfq={onQuickRfq} />
+        </div>
+      );
+    } else if (n % 10 === 0) {
+      nodes.push(
+        <div key={`req-m-${i}`} className="col-span-full lg:hidden">
+          <SubmitRequirementCard onQuickRfq={onQuickRfq} />
+        </div>
+      );
+    }
+  });
+  return nodes;
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
@@ -305,12 +242,17 @@ const Following = () => {
   const t = useT();
 
   const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
-  const suggested = useMemo(() => brands.filter((b) => !b.isFollowing && !b.isHidden), [brands]);
+  // Includes already-followed brands (unlike a plain "not yet followed" filter)
+  // so NewBrandsCarousel can keep a just-followed brand's slide in place and
+  // show "Following" on it, instead of the brand disappearing from the list
+  // the instant it's followed.
+  const discoverable = useMemo(() => brands.filter((b) => !b.isHidden), [brands]);
 
   // Feed controls
   const [gender, setGender] = useState<GenderFilter>("all");
   const [sort, setSort] = useState<SortKey>("newest");
   const [verifiedOnly, setVerifiedOnly] = useState(false);
+  const [quickRfqOpen, setQuickRfqOpen] = useState(false);
 
   // Most Popular reveal (when followed-brand New-In is exhausted)
   const [showMostPopular, setShowMostPopular] = useState(false);
@@ -378,7 +320,7 @@ const Following = () => {
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-6 lg:space-y-8">
 
         {/* Looking for New Brands? */}
-        <NewBrandsCarousel brands={suggested} onFollow={(b) => follow(b.id)} />
+        <NewBrandsCarousel brands={discoverable} onFollow={(b) => follow(b.id)} />
 
         {/* Following Top Performing */}
         {topPerforming.length > 0 && (
@@ -397,9 +339,25 @@ const Following = () => {
           </div>
           {followed.length > 0 ? (
             <>
-              <div className="divide-y divide-gray-100">
+              {/* Mobile: single column of 3, always. Desktop: same single column
+                  UNLESS there are more than 3 followed brands, in which case it
+                  splits into two columns of up to 3 with a vertical divider
+                  (up to 6 total) — never duplicates a real brand to pad it out. */}
+              <div className={cn("divide-y divide-gray-100", followed.length > 3 && "lg:hidden")}>
                 {followed.slice(0, 3).map((b) => <FollowingRow key={b.id} brand={b} onUnfollow={(x) => unfollow(x.id)} onHide={(x) => hide(x.id)} />)}
               </div>
+
+              {followed.length > 3 && (
+                <div className="hidden lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-100">
+                  <div className="divide-y divide-gray-100 lg:pr-6">
+                    {followed.slice(0, 3).map((b) => <FollowingRow key={`c1-${b.id}`} brand={b} onUnfollow={(x) => unfollow(x.id)} onHide={(x) => hide(x.id)} />)}
+                  </div>
+                  <div className="divide-y divide-gray-100 lg:pl-6">
+                    {followed.slice(3, 6).map((b) => <FollowingRow key={`c2-${b.id}`} brand={b} onUnfollow={(x) => unfollow(x.id)} onHide={(x) => hide(x.id)} />)}
+                  </div>
+                </div>
+              )}
+
               <Link
                 to="/home/followings/view-all"
                 className="mt-2 flex items-center justify-center gap-1 border-t border-gray-100 pt-3 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors"
@@ -422,7 +380,7 @@ const Following = () => {
           />
           {newIn.length > 0 ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
-              {newIn.map((p) => <ListingProductCard key={p.id} product={p} />)}
+              {feedWithRequirements(newIn, () => setQuickRfqOpen(true))}
             </div>
           ) : (
             <p className="py-6 text-center text-sm text-gray-400">
@@ -447,11 +405,18 @@ const Following = () => {
               verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
             />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
-              {mostPopular.map((p) => <ListingProductCard key={p.id} product={p} />)}
+              {feedWithRequirements(mostPopular, () => setQuickRfqOpen(true))}
             </div>
           </section>
         )}
+
+        {/* Submit Requirement — same shared card + Quick RFQ modal as the other buyer pages */}
+        <div className="lg:max-w-4xl lg:mx-auto">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
       </div>
+
+      <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
     </BuyerShell>
   );
 };

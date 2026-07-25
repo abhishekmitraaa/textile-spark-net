@@ -8,6 +8,17 @@
 //
 // Demo mode (no key secret): publishes directly from the client spec using the
 // vendor id from the JWT, so the ad flow works before the gateway is wired.
+//
+// Plan ad-location-scope enforcement (server-side backstop): the publish path
+// runs as the service role and must NOT trust the spec's target_cities. Before
+// inserting the ad(s) we resolve the vendor's real effective plan and:
+//   * Free (ad_location_scope = 'none') — not a publishable state; we do NOT
+//     publish and flag the order for refund/admin review (never silently drop).
+//   * A paid tier whose spec targets more cities than its scope allows — we
+//     CLAMP the list to the allowed count (keep the first N) and publish anyway.
+//     Ad pricing doesn't vary by city count, so clamping removes no paid-for
+//     line item; failing the whole order over a targeting detail would deny a
+//     vendor who legitimately paid. (This is the deliberate choice.)
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -68,6 +79,88 @@ function adRows(vendorId: string, spec: AdSpec) {
   }));
 }
 
+// ── Plan ad-location-scope resolution + enforcement ──
+function scopeAllowance(scope: string): number | null {
+  switch (scope) {
+    case "none": return 0;      // Free — may not advertise at all
+    case "state_1": return 1;
+    case "state_4": return 4;
+    default: return null;       // pan_india / global — unlimited
+  }
+}
+
+// Resolve the vendor's effective ad_location_scope server-side. get_vendor_plan()
+// is self/admin-guarded (returns null when called for another vendor with the
+// service role), so we read the two tables directly — the same effective-plan
+// rule the RPC/triggers use: an active subscription whose period hasn't lapsed
+// gives its plan, otherwise Free.
+async function resolveAdScope(url: string, key: string, vendorId: string): Promise<string> {
+  const headers = { apikey: key, authorization: `Bearer ${key}` };
+  try {
+    const sr = await fetch(`${url}/rest/v1/vendor_subscriptions?vendor_id=eq.${vendorId}&select=plan_id,status,current_period_end`, { headers });
+    const subs = sr.ok ? await sr.json() : [];
+    let planId = "free";
+    const s = Array.isArray(subs) && subs.length ? subs[0] : null;
+    if (s && s.plan_id && s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() > Date.now()) {
+      planId = s.plan_id;
+    }
+    const pr = await fetch(`${url}/rest/v1/subscription_plans?id=eq.${encodeURIComponent(planId)}&select=limits`, { headers });
+    const plans = pr.ok ? await pr.json() : [];
+    const scope = Array.isArray(plans) && plans.length ? plans[0]?.limits?.ad_location_scope : null;
+    return typeof scope === "string" ? scope : "none";
+  } catch {
+    return "none"; // fail closed — never over-publish on a lookup error
+  }
+}
+
+interface ScopeDecision { blocked: boolean; spec: AdSpec; requested: number; allowed: number }
+// Free (scope 'none') => blocked. A paid tier over its city allowance => spec
+// with target_cities clamped to the first N. Otherwise the spec is unchanged.
+function applyScopeToSpec(spec: AdSpec, scope: string): ScopeDecision {
+  const cities = Array.isArray(spec.targetCities) ? spec.targetCities : [];
+  if (scope === "none") return { blocked: true, spec, requested: cities.length, allowed: 0 };
+  const allowance = scopeAllowance(scope);
+  if (allowance === null || cities.length <= allowance) {
+    return { blocked: false, spec, requested: cities.length, allowed: allowance ?? cities.length };
+  }
+  return { blocked: false, spec: { ...spec, targetCities: cities.slice(0, allowance) }, requested: cities.length, allowed: allowance };
+}
+
+function computeAmountPaise(spec: AdSpec): number {
+  const days = Math.max(1, Math.floor(spec.days || 1));
+  const perProduct = (spec.placementIds || []).reduce((sum, id) => {
+    const price = AD_PRICE[id];
+    return price ? sum + price * (PER_MSG.has(id) ? 1 : days) : sum;
+  }, 0);
+  return perProduct * Math.max(1, (spec.items || []).length) * 100;
+}
+
+// Flag a claimed live/webhook order that shouldn't have published (Free vendor)
+// for refund / admin review — a durable trace on the order itself, never a
+// silent drop. (Ad refunds are a manual admin follow-up; this project has no
+// automated ad-refund gateway call, mirroring the manual subscription refund.)
+async function flagOrderForRefund(url: string, key: string, orderId: string): Promise<boolean> {
+  const r = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}`, {
+    method: "PATCH",
+    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
+    body: JSON.stringify({ status: "refund_review" }),
+  });
+  return r.ok;
+}
+// Demo mode has no pre-recorded intent, so record the blocked attempt as its own
+// 'refund_review' ad_orders row (durable trace) instead of vanishing silently.
+// Returns whether the trace actually persisted, so the response never claims a
+// flag that didn't happen.
+async function recordDemoRefundTrace(url: string, key: string, vendorId: string, spec: AdSpec): Promise<{ ok: boolean; orderId: string }> {
+  const orderId = `demo_blocked_${crypto.randomUUID()}`;
+  const r = await fetch(`${url}/rest/v1/ad_orders`, {
+    method: "POST",
+    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
+    body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount: computeAmountPaise(spec), status: "refund_review" }),
+  });
+  return { ok: r.ok, orderId };
+}
+
 // Grant the time-bound trust seal for any trustedSeal/verifiedCertificate
 // placements in the spec (expires with the campaign). Idempotency isn't critical
 // — a re-grant just extends the max(expires_at), which publishOrder already
@@ -117,7 +210,10 @@ function vendorIdFromJwt(req: Request): string | null {
 }
 
 // Claim the intent ('created' → 'paid') and publish its campaigns exactly once.
-async function publishOrder(url: string, key: string, orderId: string): Promise<{ ok: boolean; count: number }> {
+// Enforces the vendor's ad_location_scope on the stored spec before inserting:
+// Free is flagged for refund and not published; a paid tier's over-limit city
+// list is clamped.
+async function publishOrder(url: string, key: string, orderId: string): Promise<{ ok: boolean; count: number; blocked?: boolean; refundFlagged?: boolean; requested?: number; allowed?: number }> {
   const claim = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
     method: "PATCH",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=representation" },
@@ -126,10 +222,17 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return { ok: true, count: 0 }; // already paid / unknown
   const order = claimed[0];
-  const rows = adRows(order.vendor_id, order.spec as AdSpec);
+  const scope = await resolveAdScope(url, key, order.vendor_id);
+  const decision = applyScopeToSpec(order.spec as AdSpec, scope);
+  if (decision.blocked) {
+    // Free vendor paid — don't publish; flag the order for refund/admin review.
+    const flagged = await flagOrderForRefund(url, key, orderId);
+    return { ok: false, count: 0, blocked: true, refundFlagged: flagged, requested: decision.requested, allowed: 0 };
+  }
+  const rows = adRows(order.vendor_id, decision.spec);
   const ok = await insertAds(url, key, rows);
-  if (ok) await grantSeals(url, key, order.vendor_id, order.spec as AdSpec);
-  return { ok, count: ok ? rows.length : 0 };
+  if (ok) await grantSeals(url, key, order.vendor_id, decision.spec);
+  return { ok, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed };
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -154,10 +257,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const vendorId = vendorIdFromJwt(req);
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     if (!body.spec) return json({ ok: false, error: "missing_spec" }, 400);
-    const rows = adRows(vendorId, body.spec);
+    const scope = await resolveAdScope(url, serviceKey, vendorId);
+    const decision = applyScopeToSpec(body.spec, scope);
+    if (decision.blocked) {
+      // Free vendor — advertising isn't part of their plan; don't publish.
+      const trace = await recordDemoRefundTrace(url, serviceKey, vendorId, body.spec);
+      return json({ ok: false, demo: true, error: "plan_not_eligible", refundFlagged: trace.ok, orderId: trace.orderId, count: 0 });
+    }
+    const rows = adRows(vendorId, decision.spec);
     const ok = await insertAds(url, serviceKey, rows);
-    if (ok) await grantSeals(url, serviceKey, vendorId, body.spec);
-    return json({ ok, demo: true, count: ok ? rows.length : 0 });
+    if (ok) await grantSeals(url, serviceKey, vendorId, decision.spec);
+    return json({ ok, demo: true, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed });
   }
 
   // Live mode — verify the signature, then publish the recorded intent.

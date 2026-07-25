@@ -3,6 +3,18 @@
 // long material/GSM/pattern option lists live in the Search Results filters,
 // not here. JSX-free.
 
+import bannerMenswear from "@/assets/categories/banners/menswear.jpg";
+import bannerWomenswear from "@/assets/categories/banners/womenswear.jpg";
+import bannerKidswear from "@/assets/categories/banners/kidswear.jpg";
+import bannerFootwear from "@/assets/categories/banners/footwear.jpg";
+import bannerAccessories from "@/assets/categories/banners/accessories.jpg";
+import bannerBeauty from "@/assets/categories/banners/beauty.jpg";
+import bannerPackaging from "@/assets/categories/banners/packaging.jpg";
+import bannerRawMaterials from "@/assets/categories/banners/raw-materials.jpg";
+import bannerTrimsHome from "@/assets/categories/banners/trims-home.jpg";
+import bannerServices from "@/assets/categories/banners/services.jpg";
+import bannerFreelancers from "@/assets/categories/banners/freelancers.jpg";
+
 export type CategoryTarget = "products" | "services" | "freelancers";
 
 export interface SubCategory {
@@ -77,7 +89,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "menswear", label: "Menswear", icon: "Shirt", target: "products",
     blurb: "T-shirts, shirts, ethnic, sportswear, suits & more",
-    image: APPAREL_IMGS[0], images: APPAREL_IMGS,
+    image: bannerMenswear, images: APPAREL_IMGS,
     subs: sub([
       "T-Shirts", "Shirts", "Bottomwear", "Ethnic Wear", "Co-ord Sets",
       "Sportswear — Upper Body", "Sportswear — Lower Body", "Summer Jackets",
@@ -87,7 +99,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "womenswear", label: "Womenswear", icon: "Flower2", target: "products",
     blurb: "Dresses, ethnic, tops, lingerie, maternity & more",
-    image: WOMENS_IMGS[0], images: WOMENS_IMGS,
+    image: bannerWomenswear, images: WOMENS_IMGS,
     subs: [
       ...sub(["T-Shirts", "Tops / Blouses / Shirts", "Dresses", "Jumpsuits & Playsuits", "Bottomwear", "Skirts", "Ethnic Wear", "Saree", "Nightwear & Loungewear", "Jackets & Shrugs", "Formal Suits", "Winterwear", "Sportswear — Upper Body", "Sportswear — Lower Body", "Maternity Wear"], "Womenswear"),
       ...sub(["Bra", "Panties", "Lingerie Sets", "Shapewear"], "Lingerie & Shapewear"),
@@ -96,7 +108,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "kidswear", label: "Kids' Wear", icon: "Baby", target: "products",
     blurb: "Babywear, frocks, co-ord sets, ethnic & winterwear",
-    image: KIDS_IMGS[0], images: KIDS_IMGS,
+    image: bannerKidswear, images: KIDS_IMGS,
     subs: sub([
       "Babywear / Onesies", "T-shirts, Vests & Tops", "Frocks / Dresses",
       "Co-ords / Sets", "Bottomwear", "Winterwear", "Ethnic Wear",
@@ -105,13 +117,13 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "footwear", label: "Footwear", icon: "Footprints", target: "products",
     blurb: "Men's, women's & kids' shoes, sandals & more",
-    image: FOOT_IMGS[0], images: FOOT_IMGS,
+    image: bannerFootwear, images: FOOT_IMGS,
     subs: sub(["Men's Footwear", "Women's Footwear", "Kids' Footwear"]),
   },
   {
     id: "accessories", label: "Fashion Accessories", icon: "Watch", target: "products",
     blurb: "Bags, belts, caps, jewellery, watches, socks & more",
-    image: ACC_IMGS[0], images: ACC_IMGS,
+    image: bannerAccessories, images: ACC_IMGS,
     subs: sub([
       "Bags", "Belts", "Caps & Hats", "Scarves & Stoles", "Sunglasses", "Watches",
       "Jewellery", "Bibs", "Hair Accessories", "Office Accessories", "Umbrellas",
@@ -121,7 +133,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "beauty", label: "Beauty & Cosmetics", icon: "Sparkles", target: "products",
     blurb: "Skincare, makeup, haircare, fragrances, tools & devices",
-    image: BEAUTY_IMGS[0], images: BEAUTY_IMGS,
+    image: bannerBeauty, images: BEAUTY_IMGS,
     subs: sub([
       "Skincare", "Makeup", "Lip Products", "Eye & Brow Products", "Hair & Scalp",
       "Nail Products", "Fragrances", "Bath & Body", "Beauty Tools & Accessories",
@@ -131,7 +143,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "packaging", label: "Packaging", icon: "Package", target: "products",
     blurb: "Polybags, paper bags, boxes, envelopes & ziplocks",
-    image: PACK_IMGS[0], images: PACK_IMGS,
+    image: bannerPackaging, images: PACK_IMGS,
     subs: sub([
       "Packaging Bags & Polybags", "Paper Bags", "Corrugated Boxes",
       "Garment Boxes", "Envelope Packaging", "Ziplock Bags",
@@ -140,7 +152,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "raw-materials", label: "Raw Materials", icon: "Layers", target: "products",
     blurb: "Fabrics, yarn, thread, laces, dyes, chemicals & finishes",
-    image: RAW_IMGS[0], images: RAW_IMGS,
+    image: bannerRawMaterials, images: RAW_IMGS,
     subs: sub([
       "Fabrics", "Yarn", "Lining & Interlining", "Thread", "Laces & Nets",
       "Tapes & Cords", "Elastics", "Dyes", "Chemicals", "Finishes", "Labels & Tags",
@@ -149,7 +161,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "trims-home", label: "Trims & Home Textile", icon: "Scissors", target: "products",
     blurb: "Buttons, zippers, patches, mannequins & home textile",
-    image: TRIM_IMGS[0], images: TRIM_IMGS,
+    image: bannerTrimsHome, images: TRIM_IMGS,
     subs: [
       ...sub(["Buttons", "Zippers", "Hook & Eye", "Velcro Tape", "Drawcords & Toggles", "Eyelets & Grommets", "Rivets & Studs", "Cord Locks & Stoppers", "Patches", "Tassels & Fringes"], "Trims & Accessories"),
       ...sub(["Mannequins & Display"], "Display"),
@@ -160,7 +172,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "services", label: "B2B Services", icon: "Wrench", target: "services",
     blurb: "Printing, manufacturing, logistics, IT, finance & machinery",
-    image: SERVICE_IMGS[0], images: SERVICE_IMGS,
+    image: bannerServices, images: SERVICE_IMGS,
     subs: [
       ...sub(["Dyeing", "Printing", "Embroidery", "Processing & Finishing"], "Printing, Dyeing & Finishing"),
       ...sub(["Stitching / Garmenting", "Cutting", "Final Packaging", "Quality Check (QC)", "Pattern Making / CAD", "Tech Pack Development", "Fashion Designing", "Fabric & Trims Sourcing"], "Manufacturing & Fashion Ops"),
@@ -175,7 +187,7 @@ export const CATEGORY_TAXONOMY: TopCategory[] = [
   {
     id: "freelancers", label: "Freelancer Services", icon: "Briefcase", target: "freelancers",
     blurb: "Designers, tech-packs, sourcing, marketing, photography & more",
-    image: FREELANCE_IMGS[0], images: FREELANCE_IMGS,
+    image: bannerFreelancers, images: FREELANCE_IMGS,
     subs: sub([
       "Fashion Designing", "Tech Pack Creation", "All Item Sourcing", "Garment Fit Consulting",
       "E-commerce", "Marketing & Sales", "Performance Marketing", "Influencer Marketing",

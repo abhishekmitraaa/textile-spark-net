@@ -89,7 +89,7 @@ The `buyerShellRoutes` array at the top of App.tsx defines all buyer feature pag
 
 - **React Query** (TanStack Query) for server state and caching
 - **QueryClientProvider** wraps the app for global query management
-- **Buyer-side client stores** — Cross-page reactive state uses **module-level stores backed by `useSyncExternalStore` + `localStorage`** (no React context/provider). Each exposes a `useX()` hook plus mutation functions. Current stores: `src/lib/savedStore.ts` (wishlist folders/products + the global Save-to-folder modal state), `followingStore.ts` (followed brands), `preferencesStore.ts` (For You categories/locations), `profileStore.ts` (buyer profile/social/notifications/regional), `recentlyViewedStore.ts` (viewed products). `src/lib/listingProducts.ts` holds the shared `ListingProduct` type + `img()`/`makeListingProduct()` helpers (kept JSX-free for fast-refresh).
+- **Buyer-side client stores** — Cross-page reactive state uses **module-level stores backed by `useSyncExternalStore` + `localStorage`** (no React context/provider). Each exposes a `useX()` hook plus mutation functions. Current stores: `src/lib/savedStore.ts` (wishlist folders/products + the global Save-to-folder modal state), `followingStore.ts` (followed brands), `preferencesStore.ts` (For You categories/locations), `profileStore.ts` (buyer profile/social/notifications/regional), `recentlyViewedStore.ts` (viewed products), `brandFollowStore.ts` (followed brand ids on the Search-Results **Brand tab** — a `Set<id>`, kept separate from `followingStore` because those search-surface brands have their own ids and shouldn't leak into the Following page). `src/lib/listingProducts.ts` holds the shared `ListingProduct` type + `img()`/`makeListingProduct()` helpers (kept JSX-free for fast-refresh).
 
 ### Buyer-Side Layout & Flows
 
@@ -183,20 +183,27 @@ Rules:
 **Primary**: Deployed on **Vercel** at `https://textile-spark-net.vercel.app`
 - Project: `abhishekmitraaas-projects/textile-spark-net`
 - Team: `abhishekmitraaas-projects` (team_m86fYQNTuPr5kMKkb6qWi32B)
-- To redeploy: `vercel --yes` from project root (requires Vercel CLI login)
-- GitHub auto-deploy: not yet connected — push to GitHub does NOT auto-deploy; manual `vercel --yes` required
+- To redeploy manually: `vercel --prod --yes` from project root (requires Vercel CLI login)
+- GitHub auto-deploy: **connected** (via `vercel git connect`). Pushing to `main` on `github.com/abhishekmitraaa/textile-spark-net` auto-deploys to production; other branches get preview deploys.
 
 **Secondary**: Also synced via Lovable.dev. Push changes to the git repo and they sync automatically. Custom domains can be configured in Lovable project settings.
 
 ## Documentation & Knowledge Management
 
-This project uses automatic documentation hooks configured in `.github/copilot-instructions.md`. Documentation updates happen automatically after each chat without prompting:
+These three files (CLAUDE.md, changelog.md, memory/) are the sole source of truth for project context and state across sessions. Future sessions start by reading them — do not scan chat history.
 
-- **CLAUDE.md** is updated with architectural decisions, technical findings, and constraint changes
-- **changelog.md** is updated with what was built, changed, or fixed (including commit hashes and file ranges)
-- **memory/** directory stores project-specific knowledge:
+- **CLAUDE.md** — architectural decisions, technical findings, constraint changes
+- **changelog.md** — what was built, changed, or fixed (with file paths / ranges)
+- **memory/** — project-specific knowledge:
   - `memory/MEMORY.md` — index of all memory files
   - `memory/cosora_platform.md` — business context, three-sided platform mechanics, domain terms
   - `memory/cosora_constraints.md` — critical business and legal constraints (chat disclosure, currency, moderation, etc.)
 
-These three files (CLAUDE.md, changelog.md, memory/) are the sole source of truth for project context and state across sessions. Future sessions start by reading them — do not scan chat history.
+**How updates actually happen (real mechanism, `.claude/settings.json`):**
+
+- **`PreCompact` hook (agent)** — the only thing that *writes* these docs. It runs a review-and-update agent **before every compaction — automatic or manual `/compact`** (the `matcher` is `""` = all; it was previously `"manual"`-only, so it never fired on auto-compaction). This is the automation, and it's tied to the compaction boundary, **not** literally "after each chat."
+- **`UserPromptSubmit` hook (command)** — read-only: injects CLAUDE.md + changelog.md + memory/MEMORY.md into context on every prompt. Never writes.
+- **`Stop` hook (command)** — posts a reminder only; it does not update anything.
+- `.github/copilot-instructions.md` is prose for GitHub Copilot; Claude Code does **not** execute it. Do not treat it as the hook source.
+
+**What this means for you (the assistant):** the `PreCompact` agent is a safety net, not a guarantee. A short session that never compacts won't trigger it, and agent hooks can fail to fire. So when you complete a meaningful chunk of work, **update these docs yourself before ending the session** — do not assume a hook already did it.

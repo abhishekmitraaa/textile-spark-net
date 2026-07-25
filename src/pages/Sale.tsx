@@ -4,6 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
+import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -284,6 +285,38 @@ const Sale = () => {
 
   const maxDiscount = saleAll.length ? Math.max(...saleAll.map(discountOf)) : 0;
 
+  // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
+  // mobile but `cols*2` on desktop, so the insert positions differ per breakpoint:
+  // every (cols*5) products on mobile, every (cols*10) on desktop. Cards at a
+  // desktop-interval multiple show on both; the in-between mobile multiples are
+  // mobile-only (`lg:hidden`). Intervals follow the active 2-col/3-col toggle.
+  const cols = viewMode === "2-col" ? 2 : 3;
+  const mobileInterval = cols * 5;      // 10 (2-col) or 15 (3-col)
+  const desktopInterval = cols * 2 * 5; // 20 (2-col) or 30 (3-col)
+  const dealFeedNodes: JSX.Element[] = [];
+  products.forEach((p, i) => {
+    dealFeedNodes.push(
+      <motion.div variants={reduced ? {} : listItem} key={p.id}>
+        <SaleCard product={p} />
+      </motion.div>
+    );
+    const n = i + 1;
+    if (n >= products.length) return;
+    if (n % desktopInterval === 0) {
+      dealFeedNodes.push(
+        <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto my-2 lg:my-4">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    } else if (n % mobileInterval === 0) {
+      dealFeedNodes.push(
+        <div key={`req-m-${i}`} className="col-span-full lg:hidden my-2">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    }
+  });
+
   return (
     <BuyerShell>
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
@@ -431,26 +464,13 @@ const Sale = () => {
               animate="show"
               className={cn("grid gap-3 lg:gap-5", viewMode === "2-col" ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}
             >
-              {products.map((p) => (
-                <motion.div variants={reduced ? {} : listItem} key={p.id}>
-                  <SaleCard product={p} />
-                </motion.div>
-              ))}
+              {dealFeedNodes}
             </motion.div>
           )}
 
-          {/* Mid-feed CTA to post a bulk requirement */}
-          <div className="mt-6 rounded-2xl border border-[#ef4d62]/20 bg-[#ef4d62]/5 p-4 flex items-center gap-3 lg:max-w-xl">
-            <span className="w-10 h-10 rounded-xl bg-[#ef4d62]/15 flex items-center justify-center text-[#ef4d62] shrink-0">
-              <Tag className="w-5 h-5" />
-            </span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-gray-900">Not finding your price?</p>
-              <p className="text-xs text-gray-500">Post a bulk requirement and let vendors compete on price.</p>
-            </div>
-            <Link to="/requirement/post-requirement" className="shrink-0 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white px-3.5 py-2.5 text-xs font-bold transition-colors">
-              Post RFQ
-            </Link>
+          {/* Submit Requirement — same shared card + Quick RFQ modal as New Arrivals/Trends */}
+          <div className="mt-6 lg:max-w-4xl lg:mx-auto">
+            <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
           </div>
 
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">

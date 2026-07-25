@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useCallVendor } from "@/lib/queries/calls";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Phone, Star, Bookmark, Share2, Volume2, VolumeX, Play, Heart, Eye } from "lucide-react";
+import CosoraLogo from "@/components/CosoraLogo";
 
 // Compact engagement-count formatting, reel-style: 1600 -> "1.6K",
 // 1_250_000 -> "1.2M". Whole thousands/millions drop the ".0".
@@ -161,9 +162,13 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
         >
           {/* Close — fixed overlay, stays put while the track scrolls beneath it */}
           <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/50 to-transparent">
-            <button onClick={onClose} aria-label="Close" className="p-1.5">
-              <X className="w-6 h-6 text-white" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={onClose} aria-label="Close" className="p-1.5">
+                <X className="w-6 h-6 text-white" />
+              </button>
+              {/* Cosora brand watermark, pinned to the top-left corner */}
+              <CosoraLogo height={16} variant="white" className="opacity-90" />
+            </div>
             <span className="text-sm text-white font-medium">{videos[activeIndex]?.category}</span>
             <button
               onClick={() => setMuted(m => !m)}

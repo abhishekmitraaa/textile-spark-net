@@ -70,8 +70,8 @@ const Landing = () => {
       <header className="sticky top-0 z-40 border-b border-zinc-200/70 bg-[#FAFAF8]/85 backdrop-blur-md">
         <nav className="mx-auto flex h-16 max-w-[1400px] items-center justify-between px-5 lg:px-10">
           <Link to="/" className="flex items-center">
-            <CosoraLogo height={34} className="lg:hidden" />
-            <CosoraLogo height={40} className="hidden lg:inline-block" />
+            <CosoraLogo height={28} className="lg:hidden" />
+            <CosoraLogo height={32} className="hidden lg:inline-block" />
           </Link>
 
           <div className="hidden items-center gap-8 md:flex">

@@ -6,6 +6,12 @@
 // RAZORPAY_WEBHOOK_SECRET) and publishes the order's intent idempotently
 // (shares the 'created' → 'paid' claim with verify-payment).
 //
+// Enforces the vendor's ad_location_scope on the stored spec before inserting,
+// identically to razorpay-verify-payment: a Free vendor's order is flagged for
+// refund/admin review and NOT published; a paid tier's over-limit target-city
+// list is clamped to the allowed count. (Without this the webhook would be an
+// unguarded second publish path — a closed browser must not bypass the check.)
+//
 // Setup: in the Razorpay dashboard add a webhook →
 //   URL:    https://<project>.supabase.co/functions/v1/razorpay-webhook
 //   events: payment.captured (and optionally order.paid)
@@ -59,6 +65,49 @@ function adRows(vendorId: string, spec: AdSpec) {
   }));
 }
 
+// ── Plan ad-location-scope resolution + enforcement (mirrors verify-payment) ──
+function scopeAllowance(scope: string): number | null {
+  switch (scope) {
+    case "none": return 0;
+    case "state_1": return 1;
+    case "state_4": return 4;
+    default: return null; // pan_india / global — unlimited
+  }
+}
+async function resolveAdScope(url: string, key: string, vendorId: string): Promise<string> {
+  const headers = { apikey: key, authorization: `Bearer ${key}` };
+  try {
+    const sr = await fetch(`${url}/rest/v1/vendor_subscriptions?vendor_id=eq.${vendorId}&select=plan_id,status,current_period_end`, { headers });
+    const subs = sr.ok ? await sr.json() : [];
+    let planId = "free";
+    const s = Array.isArray(subs) && subs.length ? subs[0] : null;
+    if (s && s.plan_id && s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() > Date.now()) {
+      planId = s.plan_id;
+    }
+    const pr = await fetch(`${url}/rest/v1/subscription_plans?id=eq.${encodeURIComponent(planId)}&select=limits`, { headers });
+    const plans = pr.ok ? await pr.json() : [];
+    const scope = Array.isArray(plans) && plans.length ? plans[0]?.limits?.ad_location_scope : null;
+    return typeof scope === "string" ? scope : "none";
+  } catch {
+    return "none";
+  }
+}
+interface ScopeDecision { blocked: boolean; spec: AdSpec }
+function applyScopeToSpec(spec: AdSpec, scope: string): ScopeDecision {
+  if (scope === "none") return { blocked: true, spec };
+  const allowance = scopeAllowance(scope);
+  const cities = Array.isArray(spec.targetCities) ? spec.targetCities : [];
+  if (allowance === null || cities.length <= allowance) return { blocked: false, spec };
+  return { blocked: false, spec: { ...spec, targetCities: cities.slice(0, allowance) } };
+}
+async function flagOrderForRefund(url: string, key: string, orderId: string): Promise<void> {
+  await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}`, {
+    method: "PATCH",
+    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
+    body: JSON.stringify({ status: "refund_review" }),
+  });
+}
+
 async function grantSeals(url: string, key: string, vendorId: string, spec: AdSpec): Promise<void> {
   const exp = campaignEndIso(spec);
   for (const pid of spec.placementIds || []) {
@@ -92,14 +141,21 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return 0;
   const order = claimed[0];
-  const rows = adRows(order.vendor_id, order.spec as AdSpec);
+  const scope = await resolveAdScope(url, key, order.vendor_id);
+  const decision = applyScopeToSpec(order.spec as AdSpec, scope);
+  if (decision.blocked) {
+    // Free vendor paid — don't publish; flag for refund/admin review.
+    await flagOrderForRefund(url, key, orderId);
+    return 0;
+  }
+  const rows = adRows(order.vendor_id, decision.spec);
   if (rows.length === 0) return 0;
   const ins = await fetch(`${url}/rest/v1/advertisements`, {
     method: "POST",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify(rows),
   });
-  if (ins.ok) await grantSeals(url, key, order.vendor_id, order.spec as AdSpec);
+  if (ins.ok) await grantSeals(url, key, order.vendor_id, decision.spec);
   return ins.ok ? rows.length : 0;
 }
 

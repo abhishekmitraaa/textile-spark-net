@@ -291,7 +291,7 @@ const Help = () => {
         </div>
       </div>
 
-      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto px-4 py-6 space-y-6 pb-28">
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl lg:max-w-6xl mx-auto px-4 py-6 space-y-6 pb-28">
 
           {/* ── Welcome ── */}
           <motion.div variants={section}>
@@ -300,6 +300,12 @@ const Help = () => {
             </h2>
             <p className="text-sm text-gray-500">What can we help you with?</p>
           </motion.div>
+
+          {/* Desktop: contact/account rail (left) + FAQ & guides (right).
+              Mobile: wrappers carry no layout, so the stack is unchanged. */}
+          <motion.div variants={reduced ? {} : page} className="lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-8 lg:items-start">
+            {/* Left rail — contact & account */}
+            <motion.div variants={reduced ? {} : page} className="space-y-6 lg:sticky lg:top-20">
 
           {/* ── Contact Us ── */}
           <motion.div variants={section}>
@@ -375,6 +381,10 @@ const Help = () => {
               Delete my account
             </motion.button>
           </motion.div>
+            </motion.div>{/* /Left rail */}
+
+            {/* Right main — FAQ & quick guides */}
+            <motion.div variants={reduced ? {} : page} className="space-y-6 mt-6 lg:mt-0">
 
           {/* ── FAQ — single collapsible dropdown ── */}
           <motion.div variants={section}>
@@ -488,6 +498,8 @@ const Help = () => {
               ))}
             </motion.div>
           </motion.div>
+            </motion.div>{/* /Right main */}
+          </motion.div>{/* /two-column grid */}
 
           {/* ── Still Need Help ── */}
           <motion.div variants={section}>

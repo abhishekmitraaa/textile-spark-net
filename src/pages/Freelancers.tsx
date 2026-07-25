@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { FREELANCERS, FREELANCER_CATEGORIES } from "@/lib/freelancersData";
 import { placeCall, demoPhone } from "@/lib/queries/calls";
+import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -39,6 +40,11 @@ const Freelancers = () => {
   const [minRating, setMinRating] = useState(0);
   const [minExp, setMinExp] = useState(0);
   const [sort, setSort] = useState<SortKey>("recommended");
+
+  // Click-and-drag horizontal scrolling for the category pills — the row hides
+  // its scrollbar, so without this a desktop mouse user can't reach the
+  // off-screen categories on the right.
+  const categoryDrag = useDragScroll<HTMLDivElement>();
 
   const locations = useMemo(() => ["all", ...Array.from(new Set(FREELANCERS.map((f) => f.location.split(",")[0].trim())))], []);
 
@@ -114,7 +120,15 @@ const Freelancers = () => {
         </div>
 
         {/* Category pills */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4">
+        <div
+          ref={categoryDrag.ref}
+          className={cn("flex gap-2 overflow-x-auto pb-1 scrollbar-hide mb-4", categoryDrag.className)}
+          onMouseDown={categoryDrag.onMouseDown}
+          onMouseMove={categoryDrag.onMouseMove}
+          onMouseUp={categoryDrag.onMouseUp}
+          onMouseLeave={categoryDrag.onMouseLeave}
+          onClickCapture={categoryDrag.onClickCapture}
+        >
           {FREELANCER_CATEGORIES.map((c) => (
             <button key={c.id} onClick={() => setCategory(c.id)}
               className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95",

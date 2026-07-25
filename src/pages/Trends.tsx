@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
 import { useCallVendor } from "@/lib/queries/calls";
+import { useDragScroll } from "@/hooks/useDragScroll";
+import QuickRfqModal from "@/components/buyer/QuickRfqModal";
+import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 
 // Adapt a live product row to the compact card shape used on this page
 // (moq gets the "MOQ:" prefix the card renders inline).
@@ -116,6 +119,7 @@ const CATEGORIES: TrendCategory[] = [
       { id: "imhere", name: "imhere", logo: img("brand-imhere", 80, 80) },
       { id: "jholic", name: "J.Holic", logo: img("brand-jholic", 80, 80) },
       { id: "ootj", name: "OOTJ", logo: img("brand-ootj", 80, 80) },
+      { id: "denimly", name: "Denimly", logo: img("brand-denimly", 80, 80) },
     ],
   },
   {
@@ -129,6 +133,8 @@ const CATEGORIES: TrendCategory[] = [
       { id: "lumen", name: "Lumen", logo: img("brand-lumen", 80, 80) },
       { id: "verde", name: "Verde", logo: img("brand-verde", 80, 80) },
       { id: "noor", name: "Noor", logo: img("brand-noor", 80, 80) },
+      { id: "elan", name: "Élan", logo: img("brand-elan", 80, 80) },
+      { id: "solstice", name: "Solstice", logo: img("brand-solstice", 80, 80) },
     ],
   },
   {
@@ -142,6 +148,8 @@ const CATEGORIES: TrendCategory[] = [
       { id: "sinsang", name: "Sinsang", logo: img("brand-sinsang", 80, 80) },
       { id: "theot", name: "THEOT", logo: img("brand-theot", 80, 80) },
       { id: "kept", name: "Kept", logo: img("brand-kept", 80, 80) },
+      { id: "basiq", name: "BASIQ", logo: img("brand-basiq", 80, 80) },
+      { id: "coreline", name: "Coreline", logo: img("brand-coreline", 80, 80) },
     ],
   },
   {
@@ -156,6 +164,7 @@ const CATEGORIES: TrendCategory[] = [
       { id: "thirty30", name: "THIRTY 30", logo: img("brand-thirty30", 80, 80), badge: 19 },
       { id: "hana", name: "Hana", logo: img("brand-hana", 80, 80) },
       { id: "suho", name: "Suho", logo: img("brand-suho", 80, 80) },
+      { id: "fold", name: "Fold Atelier", logo: img("brand-fold", 80, 80) },
     ],
   },
   {
@@ -168,6 +177,9 @@ const CATEGORIES: TrendCategory[] = [
       { id: "utility", name: "Utility Co.", logo: img("brand-utility", 80, 80) },
       { id: "drift", name: "Drift", logo: img("brand-drift", 80, 80) },
       { id: "range", name: "Range", logo: img("brand-range", 80, 80) },
+      { id: "fieldgear", name: "Field Gear", logo: img("brand-fieldgear", 80, 80) },
+      { id: "trailmark", name: "Trailmark", logo: img("brand-trailmark", 80, 80) },
+      { id: "basecamp", name: "Basecamp Co.", logo: img("brand-basecamp", 80, 80) },
     ],
   },
   {
@@ -180,6 +192,9 @@ const CATEGORIES: TrendCategory[] = [
       { id: "wooly", name: "Wooly", logo: img("brand-wooly", 80, 80) },
       { id: "queens", name: "Queen's Square", logo: img("brand-queens", 80, 80) },
       { id: "loom", name: "Loom", logo: img("brand-loom", 80, 80) },
+      { id: "purl", name: "Purl & Co.", logo: img("brand-purl", 80, 80) },
+      { id: "cableknit", name: "Cableknit", logo: img("brand-cableknit", 80, 80) },
+      { id: "merino", name: "Merino House", logo: img("brand-merino", 80, 80) },
     ],
   },
 ];
@@ -346,8 +361,10 @@ const Trends = () => {
   const [hotKeyword, setHotKeyword] = useState(HOT_KEYWORDS[APPAREL_GROUPS[0]][0].label);
   const [feedBatches, setFeedBatches] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const savedState = useSaved();
+  const categoryChipsDrag = useDragScroll<HTMLDivElement>();
 
   // Real catalogue, trending-sorted. The product-card grids below render these;
   // the trend chrome (categories / keywords / styled heroes) stays curated.
@@ -392,6 +409,30 @@ const Trends = () => {
       Array.from({ length: 4 }, (_, i) => makeProduct(`feed-${slug}-${b}-${i}`, 3.8 + (i % 3) * 0.15, i % 2 === 0 ? "5.6k" : "1.6k"))
     ).flat();
   }, [hasLive, trending, hotKeyword, feedBatches]);
+
+  // Interleave a Submit Requirement card every 5 rows, different per breakpoint:
+  // every 10 products on mobile (2-col) and every 20 on desktop (4-col). Cards at
+  // a multiple of 20 show on both; the in-between multiples of 10 are mobile-only
+  // (`lg:hidden`, collapsing out of the desktop grid). Must live in ONE grid.
+  const feedNodes: JSX.Element[] = [];
+  feedProducts.forEach((product, i) => {
+    feedNodes.push(<ProductCard key={product.id} product={product} />);
+    const n = i + 1;
+    if (n >= feedProducts.length) return;
+    if (n % 20 === 0) {
+      feedNodes.push(
+        <div key={`req-${i}`} className="col-span-full lg:max-w-4xl lg:mx-auto my-2 lg:my-4">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    } else if (n % 10 === 0) {
+      feedNodes.push(
+        <div key={`req-m-${i}`} className="col-span-full lg:hidden my-2">
+          <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+        </div>
+      );
+    }
+  });
 
   // Reset the feed back to one batch whenever the hot keyword changes.
   useEffect(() => {
@@ -445,61 +486,96 @@ const Trends = () => {
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-6 lg:space-y-10">
 
         {/* ── NEW TREND INSIGHTS ── */}
-        <div className="text-center pt-1">
-          <h1 className="text-base lg:text-2xl font-extrabold tracking-tight text-gray-900">NEW TREND INSIGHTS</h1>
-          <p className="text-xs lg:text-sm text-gray-500 mt-0.5">Discover Trending Arrivals for You</p>
+        <div className="text-center pt-1 lg:pt-2">
+          <h1 className="text-base lg:text-4xl font-extrabold tracking-tight text-gray-900">NEW TREND INSIGHTS</h1>
+          <p className="text-xs lg:text-lg text-gray-500 mt-0.5 lg:mt-2">Discover Trending Arrivals for You</p>
         </div>
 
-        {/* ── Trending category chips (slides horizontally; keywords from Google Trends) ── */}
-        <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-          {CATEGORIES.map((cat) => {
-            const active = cat.id === categoryId;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => selectCategory(cat.id)}
-                className={cn(
-                  "flex items-center gap-2 shrink-0 rounded-full pl-1 pr-3.5 py-1 border transition-colors",
-                  active ? "bg-gray-900 border-gray-900 text-white" : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
-                )}
-              >
-                <img src={cat.thumb} alt="" className="w-6 h-6 rounded-full object-cover" />
-                <span className="text-xs font-semibold whitespace-nowrap">{cat.label}</span>
-              </button>
-            );
-          })}
+        {/* ── Trending category chips (slides horizontally; keywords from Google Trends) ──
+             Outer div is the actual scroll viewport; inner row gets lg:w-max lg:mx-auto so
+             it centers on desktop when it fits (same pattern as the New Arrivals categories
+             slider) instead of hugging the left edge. Chips are also sized up for desktop. */}
+        <div
+          ref={categoryChipsDrag.ref}
+          className={cn("overflow-x-auto scrollbar-hide -mx-1 px-1 pb-1", categoryChipsDrag.className)}
+          onMouseDown={categoryChipsDrag.onMouseDown}
+          onMouseMove={categoryChipsDrag.onMouseMove}
+          onMouseUp={categoryChipsDrag.onMouseUp}
+          onMouseLeave={categoryChipsDrag.onMouseLeave}
+          onClickCapture={categoryChipsDrag.onClickCapture}
+        >
+          <div className="flex gap-2.5 lg:gap-3.5 lg:w-max lg:mx-auto">
+            {CATEGORIES.map((cat) => {
+              const active = cat.id === categoryId;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => selectCategory(cat.id)}
+                  className={cn(
+                    "flex items-center gap-2 lg:gap-2.5 shrink-0 rounded-full pl-1 pr-3.5 py-1 lg:pl-1.5 lg:pr-5 lg:py-1.5 border transition-colors",
+                    active ? "bg-gray-900 border-gray-900 text-white" : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
+                  )}
+                >
+                  <img src={cat.thumb} alt="" className="w-6 h-6 lg:w-8 lg:h-8 rounded-full object-cover" />
+                  <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        {/* ── Featured category image → search results for this category ── */}
+        {/* ── Featured category image → search results for this category ──
+             On desktop this becomes a 3-up row instead of one huge full-width
+             photo: the real featured card plus two more "trending look" cards
+             (same category, different seeded imagery) — smaller each, more of
+             them. Mobile is untouched — a single full-width card exactly as
+             before (the extra two are `hidden lg:block`). */}
         <div>
-          <Link
-            to={`/search/results?q=${encodeURIComponent(category.label)}`}
-            className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100"
-          >
-            <img src={category.featured.image} alt={category.label} className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                openSaveModal({
-                  id: `featured-${category.id}`,
-                  name: category.featured.sub,
-                  category: category.label,
-                  price: category.featured.price,
-                  moq: category.featured.moq,
-                  image: category.featured.image,
-                });
-              }}
-              className="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-              aria-label={savedState.products[`featured-${category.id}`] ? "Edit saved folders" : "Save"}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:gap-4">
+            <Link
+              to={`/search/results?q=${encodeURIComponent(category.label)}`}
+              className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100"
             >
-              {savedState.products[`featured-${category.id}`] ? <BookmarkCheck className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-4 h-4 text-gray-600" />}
-            </button>
-            <div className="absolute bottom-3 left-3 text-white drop-shadow">
-              <p className="text-sm font-bold">{category.featured.sub}</p>
-              <p className="text-xs font-semibold">{category.featured.moq} · {category.featured.price}</p>
-            </div>
-          </Link>
+              <img src={category.featured.image} alt={category.label} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  openSaveModal({
+                    id: `featured-${category.id}`,
+                    name: category.featured.sub,
+                    category: category.label,
+                    price: category.featured.price,
+                    moq: category.featured.moq,
+                    image: category.featured.image,
+                  });
+                }}
+                className="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
+                aria-label={savedState.products[`featured-${category.id}`] ? "Edit saved folders" : "Save"}
+              >
+                {savedState.products[`featured-${category.id}`] ? <BookmarkCheck className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-4 h-4 text-gray-600" />}
+              </button>
+              <div className="absolute bottom-3 left-3 text-white drop-shadow">
+                <p className="text-sm font-bold">{category.featured.sub}</p>
+                <p className="text-xs font-semibold">{category.featured.moq} · {category.featured.price}</p>
+              </div>
+            </Link>
+
+            {["More Looks", "Also Trending"].map((label, n) => (
+              <Link
+                key={label}
+                to={`/search/results?q=${encodeURIComponent(category.label)}`}
+                className="hidden lg:block relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100"
+              >
+                <img src={img(`trend-feat-${category.id}-${n + 2}`, 700, 900)} alt={category.label} className="w-full h-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+                <div className="absolute bottom-3 left-3 text-white drop-shadow">
+                  <p className="text-sm font-bold">{label}</p>
+                  <p className="text-xs font-semibold">{category.label}</p>
+                </div>
+              </Link>
+            ))}
+          </div>
 
           <button
             onClick={() => navigate(`/search/results?q=${encodeURIComponent(category.label)}`)}
@@ -516,31 +592,31 @@ const Trends = () => {
             Top Brands for <span className="text-[#ef4d62]">#{category.hashtag}</span>
           </h2>
 
-          <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
+          <div className="flex gap-4 lg:gap-6 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
             {category.brands.map((brand) => {
               const active = brand.id === brandId;
               return (
                 <button
                   key={brand.id}
                   onClick={() => setBrandId(brand.id)}
-                  className="flex flex-col items-center gap-1.5 shrink-0 w-16"
+                  className="flex flex-col items-center gap-1.5 lg:gap-2 shrink-0 w-16 lg:w-24"
                 >
                   <span className="relative">
                     <span
                       className={cn(
-                        "block w-14 h-14 rounded-full overflow-hidden border-2 transition-colors",
+                        "block w-14 h-14 lg:w-24 lg:h-24 rounded-full overflow-hidden border-2 transition-colors",
                         active ? "border-[#ef4d62]" : "border-transparent"
                       )}
                     >
                       <img src={brand.logo} alt={brand.name} className="w-full h-full object-cover" />
                     </span>
                     {brand.badge ? (
-                      <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-[#ef4d62] text-white text-[10px] font-bold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 min-w-5 h-5 lg:min-w-6 lg:h-6 px-1 rounded-full bg-[#ef4d62] text-white text-[10px] lg:text-xs font-bold flex items-center justify-center">
                         {brand.badge}
                       </span>
                     ) : null}
                   </span>
-                  <span className={cn("text-[10px] leading-tight text-center truncate w-full", active ? "font-bold text-gray-900" : "text-gray-600")}>
+                  <span className={cn("text-[10px] lg:text-sm leading-tight text-center truncate w-full", active ? "font-bold text-gray-900" : "text-gray-600")}>
                     {brand.name}
                   </span>
                 </button>
@@ -671,18 +747,24 @@ const Trends = () => {
             </div>
           </div>
 
-          {/* Product feed (infinite scroll) */}
+          {/* Product feed (infinite scroll) — one continuous grid so the
+              mobile-only (`lg:hidden`) requirement cards collapse out on desktop. */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
-            {feedProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
+            {feedNodes}
           </div>
 
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
             {loadingMore ? "Loading more products..." : "Scroll for more"}
           </div>
+
+          {/* Submit Requirement — same card + Quick RFQ modal as New Arrivals */}
+          <div className="mt-2 lg:max-w-4xl lg:mx-auto">
+            <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
+          </div>
         </div>
       </div>
+
+      <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
 
       {/* Bottom nav retracts on scroll-down, returns on scroll-up */}
       <MobileBottomNav autoHide />

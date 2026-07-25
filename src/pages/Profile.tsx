@@ -68,8 +68,8 @@ const LOCATION_LABEL: Record<string, string> = {
 // Small building blocks
 // ─────────────────────────────────────────────────────────────
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400 px-1 mt-6 mb-2">{children}</p>;
+function SectionLabel({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("text-[11px] lg:text-xs font-bold uppercase tracking-wider text-gray-400 px-1 mt-6 lg:mt-7 mb-2", className)}>{children}</p>;
 }
 
 function Row({
@@ -83,16 +83,16 @@ function Row({
   onClick: () => void;
 }) {
   return (
-    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left">
-      <span className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-        <Icon className={cn("w-4 h-4", iconColor)} />
+    <button onClick={onClick} className="w-full flex items-center gap-3 px-4 py-3.5 lg:px-5 lg:py-4 hover:bg-gray-50 transition-colors text-left">
+      <span className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+        <Icon className={cn("w-4 h-4 lg:w-[18px] lg:h-[18px]", iconColor)} />
       </span>
-      <span className="flex-1 text-sm font-medium text-gray-800">{label}</span>
+      <span className="flex-1 text-sm lg:text-[15px] font-medium text-gray-800">{label}</span>
       {badge !== undefined && (
-        <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#ef4d62] text-white text-[10px] font-bold flex items-center justify-center">{badge}</span>
+        <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#ef4d62] text-white text-[10px] lg:text-[11px] font-bold flex items-center justify-center">{badge}</span>
       )}
-      {value && <span className="text-xs text-gray-400">{value}</span>}
-      <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+      {value && <span className="text-xs lg:text-sm text-gray-400">{value}</span>}
+      <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-gray-300 shrink-0" />
     </button>
   );
 }
@@ -101,10 +101,10 @@ function StatCell({ icon: Icon, value, label, onClick }: {
   icon: React.ComponentType<{ className?: string }>; value: string; label: string; onClick?: () => void;
 }) {
   return (
-    <button onClick={onClick} disabled={!onClick} className={cn("flex flex-col items-center gap-1 py-1", onClick && "active:scale-95 transition-transform")}>
-      <Icon className="w-5 h-5 text-gray-400" />
-      <span className="text-base font-bold text-gray-900">{value}</span>
-      <span className="text-[10px] uppercase tracking-wide text-gray-400">{label}</span>
+    <button onClick={onClick} disabled={!onClick} className={cn("flex flex-col items-center gap-1 py-1 lg:py-1.5", onClick && "active:scale-95 transition-transform")}>
+      <Icon className="w-5 h-5 lg:w-6 lg:h-6 text-gray-400" />
+      <span className="text-base lg:text-xl font-bold text-gray-900">{value}</span>
+      <span className="text-[10px] lg:text-[11px] uppercase tracking-wide text-gray-400">{label}</span>
     </button>
   );
 }
@@ -416,23 +416,30 @@ const Profile = () => {
 
   return (
     <BuyerShell>
-      <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
+      <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3 lg:pt-6 pb-24">
         {/* Header */}
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-lg font-bold text-gray-900">My Profile</h1>
+        <div className="flex items-center justify-between mb-3 lg:mb-5">
+          <h1 className="text-lg lg:text-3xl font-bold text-gray-900">My Profile</h1>
         </div>
 
+        {/* Desktop: sticky identity rail (left) + scrolling lists (right).
+            Mobile: the wrappers are display:contents, so the single-column
+            stack collapses to exactly the original markup — unchanged. */}
+        <div className="contents lg:grid lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:gap-8 lg:items-start">
+          {/* Left rail */}
+          <div className="contents lg:block lg:sticky lg:top-20">
+
         {/* Profile card */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4">
-          <div className="flex items-start gap-3">
+        <div className="rounded-2xl border border-gray-200 bg-white p-4 lg:p-6">
+          <div className="flex items-start gap-3 lg:gap-4">
             <div className="relative shrink-0">
-              <img src={displayAvatar} alt={displayName} className="w-20 h-20 rounded-full object-cover" />
+              <img src={displayAvatar} alt={displayName} className="w-20 h-20 lg:w-24 lg:h-24 rounded-full object-cover" />
               <button
                 onClick={() => openEdit("photo")}
                 aria-label="Change photo"
-                className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-[#ef4d62] flex items-center justify-center border-2 border-white"
+                className="absolute bottom-0 right-0 w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-[#ef4d62] flex items-center justify-center border-2 border-white"
               >
-                <Camera className="w-3.5 h-3.5 text-white" />
+                <Camera className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
               </button>
             </div>
 
@@ -440,20 +447,20 @@ const Profile = () => {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <h2 className="text-lg font-bold text-gray-900 truncate">{displayName}</h2>
-                    <BadgeCheck className="w-4 h-4 text-[#ef4d62] shrink-0" />
+                    <h2 className="text-lg lg:text-xl font-bold text-gray-900 truncate">{displayName}</h2>
+                    <BadgeCheck className="w-4 h-4 lg:w-5 lg:h-5 text-[#ef4d62] shrink-0" />
                   </div>
-                  <p className="text-sm text-gray-500 truncate">{displayBusiness}</p>
+                  <p className="text-sm lg:text-base text-gray-500 truncate">{displayBusiness}</p>
                 </div>
                 <button
                   onClick={() => openEdit("personal")}
-                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors"
+                  className="shrink-0 inline-flex items-center gap-1 rounded-full border border-gray-200 px-3 py-1.5 lg:px-4 lg:py-2 text-xs lg:text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
                 >
-                  <Pencil className="w-3 h-3" /> Edit
+                  <Pencil className="w-3 h-3 lg:w-3.5 lg:h-3.5" /> Edit
                 </button>
               </div>
 
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-gray-500">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 lg:mt-3 text-xs lg:text-sm text-gray-500">
                 <span className="inline-flex items-center gap-1"><Store className="w-3.5 h-3.5" /> {view.businessType || "Buyer"}</span>
                 {view.location && <span className="inline-flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {view.location}</span>}
                 {view.memberSince && <span className="inline-flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> Since {view.memberSince}</span>}
@@ -461,14 +468,14 @@ const Profile = () => {
             </div>
           </div>
 
-          <div className="mt-3 space-y-1.5 text-sm text-gray-600">
-            <p className="inline-flex items-center gap-2"><Mail className="w-3.5 h-3.5 text-gray-400" /> {displayEmail}</p>
-            <p className="inline-flex items-center gap-2"><Phone className="w-3.5 h-3.5 text-gray-400" /> {displayPhone}</p>
+          <div className="mt-3 lg:mt-4 space-y-1.5 text-sm lg:text-[15px] text-gray-600">
+            <p className="inline-flex items-center gap-2"><Mail className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-400" /> {displayEmail}</p>
+            <p className="inline-flex items-center gap-2"><Phone className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-gray-400" /> {displayPhone}</p>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 rounded-2xl border border-gray-200 bg-white mt-3 py-3 divide-x divide-gray-100">
+        <div className="grid grid-cols-4 rounded-2xl border border-gray-200 bg-white mt-3 py-3 lg:py-4 divide-x divide-gray-100">
           <StatCell icon={PhoneCall} value="0" label="Calls" onClick={() => navigate("/chats?tab=calls")} />
           <StatCell icon={FileText} value={String(stats?.quotes ?? 0)} label="Quotes" onClick={() => navigate("/requirement/my-quotes")} />
           <StatCell icon={Heart} value={String(savedCount)} label="Saved" onClick={() => navigate("/saved")} />
@@ -476,27 +483,31 @@ const Profile = () => {
         </div>
 
         {/* Interest & Preferences */}
-        <div className="rounded-2xl border border-gray-200 bg-white mt-3 p-4">
-          <div className="flex items-center justify-between mb-2">
+        <div className="rounded-2xl border border-gray-200 bg-white mt-3 p-4 lg:p-5">
+          <div className="flex items-center justify-between mb-2 lg:mb-3">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-[#ef4d62]" />
-              <h3 className="text-sm font-bold text-gray-900">Interest &amp; Preferences</h3>
+              <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-[#ef4d62]" />
+              <h3 className="text-sm lg:text-base font-bold text-gray-900">Interest &amp; Preferences</h3>
             </div>
-            <button onClick={() => navigate("/profile/interest-preference")} className="text-xs font-semibold text-[#ef4d62] hover:underline">Edit</button>
+            <button onClick={() => navigate("/profile/interest-preference")} className="text-xs lg:text-sm font-semibold text-[#ef4d62] hover:underline">Edit</button>
           </div>
           {interestChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {interestChips.map((c) => (
-                <span key={c} className="bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 text-xs font-medium">{c}</span>
+                <span key={c} className="bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-medium">{c}</span>
               ))}
             </div>
           ) : (
-            <p className="text-xs text-gray-400">Set your sourcing interests to personalize recommendations.</p>
+            <p className="text-xs lg:text-sm text-gray-400">Set your sourcing interests to personalize recommendations.</p>
           )}
         </div>
+          </div>{/* /Left rail */}
+
+          {/* Right main */}
+          <div className="contents lg:block">
 
         {/* Activity */}
-        <SectionLabel>Activity</SectionLabel>
+        <SectionLabel className="lg:mt-0">Activity</SectionLabel>
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
           <Row icon={ClipboardList} iconColor="text-[#ef4d62]" label="Post Your Requirement" onClick={() => navigate("/requirement/post-requirement")} />
           <Row icon={FileText} iconColor="text-[#ef4d62]" label="Quotes Received" badge={stats?.quotes || undefined} onClick={() => navigate("/requirement/my-quotes")} />
@@ -520,6 +531,8 @@ const Profile = () => {
           <Row icon={HelpCircle} label="Help Center" onClick={() => navigate("/profile/help")} />
           <Row icon={MessagesSquare} label="Chat with Us" onClick={() => navigate("/profile/help/chat")} />
         </div>
+          </div>{/* /Right main */}
+        </div>{/* /two-column grid */}
 
         {/* Legal + logout */}
         <div className="mt-6 space-y-1 text-center">
@@ -535,7 +548,7 @@ const Profile = () => {
 
         <button
           onClick={async () => { await signOut(); toast.success("Logged out"); navigate("/"); }}
-          className="mt-4 w-full flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62]/40 py-3 text-sm font-bold text-[#ef4d62] hover:bg-[#ef4d62]/5 transition-colors"
+          className="mt-4 w-full lg:max-w-xs lg:mx-auto flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62]/40 py-3 text-sm font-bold text-[#ef4d62] hover:bg-[#ef4d62]/5 transition-colors"
         >
           <LogOut className="w-4 h-4" /> Log Out
         </button>

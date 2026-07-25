@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import CosoraLogo from "@/components/CosoraLogo";
+import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,10 +73,13 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
 
 const FollowingViewAll = () => {
   const navigate = useNavigate();
-  const { brands, unfollow } = useFollowing();
+  const { brands, follow, unfollow } = useFollowing();
   const [query, setQuery] = useState("");
 
   const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
+  // Includes already-followed brands so the carousel can keep a just-followed
+  // brand's slide in place and show "Following" on it (see NewBrandsCarousel).
+  const discoverable = useMemo(() => brands.filter((b) => !b.isHidden), [brands]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -103,6 +107,11 @@ const FollowingViewAll = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-24">
+        {/* Looking for New Brands? */}
+        <div className="mb-4">
+          <NewBrandsCarousel brands={discoverable} onFollow={(b) => follow(b.id)} />
+        </div>
+
         {/* Search */}
         <div className="flex items-center gap-2 bg-gray-100 rounded-full px-3.5 py-2.5">
           <Search className="w-4 h-4 text-gray-400 shrink-0" />
