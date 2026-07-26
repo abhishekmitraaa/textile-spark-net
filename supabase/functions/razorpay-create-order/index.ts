@@ -63,6 +63,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
   if (!keyId || !keySecret) return json({ error: "not_configured" }, 200);
 
+  // Checked up front, not at write time: without the service role we cannot
+  // record the payment intent, and an order created without one is a charge we
+  // can never fulfil. Bail before touching Razorpay.
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return json({ error: "server_misconfigured" }, 500);
+
   const vendorId = vendorIdFromJwt(req);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
@@ -96,15 +103,20 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // 2) Record the intent (service role) so publish is driven server-side.
-  const url = Deno.env.get("SUPABASE_URL");
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  if (url && serviceKey) {
-    await fetch(`${url}/rest/v1/ad_orders`, {
-      method: "POST",
-      headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, "content-type": "application/json", prefer: "return=minimal" },
-      body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount, status: "created" }),
-    });
-  }
+  //
+  // This MUST succeed before the client is allowed to open Checkout. Both
+  // fulfilment paths (verify-payment and the webhook) publish by claiming this
+  // row; with no row, a completed payment finds nothing to fulfil and
+  // publishOrder's "already paid / unknown" branch reports ok:true / count:0 —
+  // i.e. the vendor is charged, gets no campaign, and the UI says it worked.
+  // Failing here instead leaves only an unpaid orphan order at Razorpay, which
+  // costs nothing and simply expires.
+  const ins = await fetch(`${url}/rest/v1/ad_orders`, {
+    method: "POST",
+    headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, "content-type": "application/json", prefer: "return=minimal" },
+    body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount, status: "created" }),
+  });
+  if (!ins.ok) return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
 
   return json({ configured: true, orderId, amount, currency: "INR", keyId });
 });

@@ -137,8 +137,12 @@ async function createSubscriptionOrder(
   if (error) throw error;
   if (!data) return { configured: false };
   if (data.error === "invite_only") return { configured: false, error: "invite_only" };
-  if (data.error === "not_configured" || !data.configured) return { configured: false, error: data.error };
+  // Order matters — see the same guard in payments.ts. Only `not_configured`
+  // may reach the demo activation path; letting order_failed / intent_failed
+  // through would hand the vendor a paid plan without a successful charge.
+  if (data.error === "not_configured") return { configured: false, error: data.error };
   if (data.error) throw new Error(String(data.detail || data.error));
+  if (!data.configured) return { configured: false, error: data.error };
   return {
     configured: true, orderId: data.orderId, keyId: data.keyId,
     amount: data.amount, currency: data.currency, base: data.base, gst: data.gst,

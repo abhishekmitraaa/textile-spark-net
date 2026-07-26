@@ -106,7 +106,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   }
 
   // 2) Record the intent (service role) so activation is driven server-side.
-  await fetch(`${url}/rest/v1/subscription_payment_orders`, {
+  //
+  // Must succeed before the client opens Checkout — see the same guard in
+  // razorpay-create-order. Without this row a completed payment hits
+  // activateFromOrder's "already paid / unknown" branch, which returns ok:true
+  // without activating: the vendor is charged and stays on their old plan.
+  const ins = await fetch(`${url}/rest/v1/subscription_payment_orders`, {
     method: "POST",
     headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify({
@@ -114,6 +119,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       amount, gst_number: payload.gstNumber ?? null, status: "created",
     }),
   });
+  if (!ins.ok) return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
 
   return json({ configured: true, orderId, amount, currency: "INR", keyId, base, gst, planId, billingCycle });
 });

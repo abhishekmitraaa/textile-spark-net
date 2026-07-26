@@ -176,6 +176,49 @@ Rules:
 - **`design-taste-frontend`** — General frontend design taste skill for polished UI
 - **`emil-design-eng`** (`emilkowalski/skill`) — Emil Kowalski's philosophy on UI polish, micro-interactions, animation decisions, and invisible details. Invoke with `/emil-design-eng`.
 
+## Payments (Razorpay)
+
+Full runbook: **`supabase/RAZORPAY.md`**. Read it before touching anything under
+`supabase/functions/*razorpay*` or `*subscription*`.
+
+Two independent flows — **ads** and **subscriptions** — share one Razorpay
+account and one checkout helper, with three edge functions each
+(`create-order` → `verify-payment` → `webhook`). There is **no Razorpay
+Subscriptions API and no autopay**: every billing period is a discrete order the
+vendor pays explicitly, which is why the subscription flow mirrors the ad flow.
+
+Invariants that must survive any edit here:
+
+- **Amounts are computed server-side, never accepted from the client** — from the
+  placement price table (ads) or `subscription_plans` + 18% GST (subscriptions),
+  at both create-order and verify time. The vendor id comes from the caller's JWT.
+- **create-order must persist its intent row before the client opens Checkout.**
+  Both fulfilment paths work by claiming that row; with no row a completed
+  payment reports success and delivers nothing. Never let that insert go unchecked.
+- **Only `not_configured` may fall back to the simulated checkout.** Any other
+  create-order error must throw. Treating a real gateway failure as "not
+  configured" publishes ads and activates plans for free.
+- **Fulfilment is idempotent via a conditional `'created' → 'paid'` UPDATE**,
+  shared by verify-payment and the webhook. Whichever lands first wins. Don't
+  replace this with a read-then-write.
+- **The two webhooks must keep `verify_jwt = false`** in `supabase/config.toml`;
+  Razorpay authenticates by HMAC of the raw body, not a JWT. With the JWT gate on,
+  every callback 401s before the handler runs and the backstop silently dies.
+- **Both webhook URLs receive every `payment.captured`** for the account and
+  no-op on order ids absent from their own intent table. Intended.
+
+Secrets live only as Supabase function secrets (`RAZORPAY_KEY_ID`,
+`RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET`) — never in `.env`, which is a
+Vite frontend file and ships to the browser. The key **ID** is public; the key
+**secret** and webhook secret must never enter the repo.
+
+The configured account is **live mode** — checkouts move real money. Unsetting
+`RAZORPAY_KEY_SECRET` reverts both flows to simulated checkout with no redeploy.
+
+`ad_orders.status = 'refund_review'` marks a paid order that must not be
+fulfilled (a Free-plan vendor who paid for ads). **Refunds are manual** — there
+is no automated gateway refund call. Monitor that status.
+
 ## Testing
 
 - **E2E**: Playwright tests in `tests/` directory. Run `npm run test:e2e` after installing browsers with `npm run playwright:install`.

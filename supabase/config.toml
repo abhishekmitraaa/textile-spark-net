@@ -1,0 +1,35 @@
+project_id = "vxdhhgdfubqedfpwfyrb"
+
+# ── Edge function auth ──
+#
+# By default the CLI deploys every function with verify_jwt = true, which makes
+# the platform reject any request without a valid Supabase JWT *before* the
+# handler runs. That is correct for the four functions the browser calls (they
+# read the vendor id out of the caller's JWT), but fatal for the two Razorpay
+# webhooks: Razorpay posts server-to-server with only an
+# `x-razorpay-signature` header, so a JWT gate would 401 every callback and the
+# "browser closed before verify-payment ran" backstop would silently never fire.
+#
+# The webhooks are not unauthenticated — they authenticate the *payload*
+# instead, via HMAC-SHA256 of the raw body against RAZORPAY_WEBHOOK_SECRET, and
+# reject a mismatch with a 400. See supabase/functions/razorpay-webhook and
+# subscription-webhook.
+
+[functions.razorpay-webhook]
+verify_jwt = false
+
+[functions.subscription-webhook]
+verify_jwt = false
+
+# Browser-called functions keep the default JWT gate.
+[functions.razorpay-create-order]
+verify_jwt = true
+
+[functions.razorpay-verify-payment]
+verify_jwt = true
+
+[functions.subscription-create-order]
+verify_jwt = true
+
+[functions.subscription-verify-payment]
+verify_jwt = true

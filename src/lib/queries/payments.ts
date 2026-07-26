@@ -42,8 +42,15 @@ export interface OrderResult {
 export async function createRazorpayOrder(spec: AdSpec): Promise<OrderResult> {
   const { data, error } = await supabase.functions.invoke("razorpay-create-order", { body: { spec } });
   if (error) throw error;
-  if (!data || data.error === "not_configured" || !data.configured) return { configured: false };
+  if (!data) return { configured: false };
+  // Order matters. `not_configured` is the ONLY response that may fall back to
+  // the simulated checkout — it means no keys are set yet. Every other error
+  // (order_failed, intent_failed, ...) means the gateway IS live and the charge
+  // failed, so it must surface. Testing `!data.configured` first would swallow
+  // those into the demo branch and publish the campaigns for free.
+  if (data.error === "not_configured") return { configured: false };
   if (data.error) throw new Error(String(data.detail || data.error));
+  if (!data.configured) return { configured: false };
   return { configured: true, orderId: data.orderId, keyId: data.keyId, amount: data.amount, currency: data.currency };
 }
 
