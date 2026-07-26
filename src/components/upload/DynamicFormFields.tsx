@@ -153,6 +153,15 @@ const FieldRenderer = ({ field, value, onChange }: FieldRendererProps) => {
               );
             })}
           </div>
+          {/* products.colour is a single value, so only the first pick is
+              stored. Warn at the point of truncation rather than letting the
+              vendor discover it after publishing. */}
+          {field.id === "colors" && selectedValues.length > 1 && (
+            <p className="text-xs text-muted-foreground">
+              Only the first colour ({selectedValues[0]}) is saved on the listing. Multiple colours
+              per product are not supported yet.
+            </p>
+          )}
         </div>
       );
     }

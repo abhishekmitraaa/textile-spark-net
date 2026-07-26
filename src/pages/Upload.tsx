@@ -56,6 +56,19 @@ import { Progress } from "@/components/ui/progress";
 // with "Free Size" in place of "Custom" to match the seller taxonomy.
 const FALLBACK_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
 
+/**
+ * The upload taxonomy exposes colour under three different field shapes:
+ * `colors` as a multiselect (string[]), `colors` as free text ("20+ colors"),
+ * and `color` as a single select. `products.colour` is one text value, so a
+ * multiselect keeps only its first pick. DynamicFormFields warns the vendor
+ * when that truncation is about to happen.
+ */
+function resolveColour(values: Record<string, string | string[]>): string | null {
+  const raw = values["colors"] ?? values["color"];
+  if (Array.isArray(raw)) return raw[0] ?? null;
+  return (raw as string) || null;
+}
+
 type Step = "category" | "subcategory" | "details" | "images" | "pricing";
 
 const ALL_STEPS: { id: Step; label: string }[] = [
@@ -123,6 +136,7 @@ const Upload = () => {
       fit: editing.fit_type ?? "",
       gender: editing.gender ?? "",
       sizes: editing.sizes ?? [],
+      colors: editing.colour ? [editing.colour] : [],
     }));
   }, [editing]);
 
@@ -254,7 +268,15 @@ const Upload = () => {
 
     // Only product listings are persisted in this phase; services/freelancers
     // keep the prior confirmation until their tables exist.
-    if (category?.type !== "product") {
+    //
+    // `!isEdit` guard: edit mode skips the category/sub-category steps, so
+    // `category` is always null there and this check would swallow every edit
+    // (returning a bogus "Profile submitted!" toast without writing anything).
+    // Editing is products-only by construction: the sole route is /upload, edit
+    // is keyed off ?id=, the only two links to it iterate product rows
+    // (Products.tsx, SellerHome.tsx), fetchProductForEdit reads `products`, and
+    // no services/freelancers table exists to hold an editable row.
+    if (!isEdit && category?.type !== "product") {
       toast.success(`${category?.type === "service" ? "Service" : "Profile"} submitted!`, {
         description: `Your ${category?.name || "listing"} is now pending review.`,
       });
@@ -291,6 +313,7 @@ const Upload = () => {
       // Empty selection persists as NULL rather than {}, so "no sizes specified"
       // and "sizes explicitly cleared" read the same downstream.
       const sizes = selectedSizes.length > 0 ? selectedSizes : null;
+      const colour = resolveColour(formValues);
 
       if (isEdit && editId) {
         // Edit: update the row + append any newly-picked images (existing ones stay).
@@ -301,6 +324,7 @@ const Upload = () => {
           moq: (formValues["moq"] as string) || undefined,
           fabric, gsm, fit_type: fitType, gender,
           sizes,
+          colour,
           customization_available: customizationAvailable,
           status: nextStatus,
         });
@@ -345,6 +369,7 @@ const Upload = () => {
           fit_type: fitType,
           gender,
           sizes,
+          colour,
           customization_available: customizationAvailable,
           status: nextStatus,
         })
@@ -891,6 +916,13 @@ const Upload = () => {
                       </p>
                     </div>
                   )}
+
+                  <div className="space-y-1">
+                    <Label>Colour</Label>
+                    <p className="text-xs text-muted-foreground">
+                      {resolveColour(formValues) ?? "Not set. Buyers see no colour on this listing."}
+                    </p>
+                  </div>
 
                   <div className="flex items-start justify-between gap-4">
                     <div className="space-y-0.5">
