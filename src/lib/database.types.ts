@@ -393,6 +393,8 @@ export type Database = {
           created_at: string
           id: string
           kind: string
+          quote_id: string | null
+          rfq_id: string | null
           sender_id: string
         }
         Insert: {
@@ -401,6 +403,8 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          quote_id?: string | null
+          rfq_id?: string | null
           sender_id: string
         }
         Update: {
@@ -409,6 +413,8 @@ export type Database = {
           created_at?: string
           id?: string
           kind?: string
+          quote_id?: string | null
+          rfq_id?: string | null
           sender_id?: string
         }
         Relationships: [
@@ -417,6 +423,20 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_rfq_id_fkey"
+            columns: ["rfq_id"]
+            isOneToOne: false
+            referencedRelation: "rfqs"
             referencedColumns: ["id"]
           },
           {
@@ -583,6 +603,7 @@ export type Database = {
           compare_at_price: number | null
           created_at: string
           currency: string
+          customization_available: boolean
           description: string | null
           enquiries_count: number
           fabric: string | null
@@ -596,6 +617,7 @@ export type Database = {
           price_value: number | null
           rating_avg: number
           reviews_count: number
+          sizes: string[] | null
           sold_count: number
           status: Database["public"]["Enums"]["product_status"]
           vendor_id: string
@@ -607,6 +629,7 @@ export type Database = {
           compare_at_price?: number | null
           created_at?: string
           currency?: string
+          customization_available?: boolean
           description?: string | null
           enquiries_count?: number
           fabric?: string | null
@@ -620,6 +643,7 @@ export type Database = {
           price_value?: number | null
           rating_avg?: number
           reviews_count?: number
+          sizes?: string[] | null
           sold_count?: number
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id: string
@@ -631,6 +655,7 @@ export type Database = {
           compare_at_price?: number | null
           created_at?: string
           currency?: string
+          customization_available?: boolean
           description?: string | null
           enquiries_count?: number
           fabric?: string | null
@@ -644,6 +669,7 @@ export type Database = {
           price_value?: number | null
           rating_avg?: number
           reviews_count?: number
+          sizes?: string[] | null
           sold_count?: number
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id?: string
@@ -857,42 +883,63 @@ export type Database = {
           budget_min: number | null
           buyer_id: string
           category_id: string | null
+          colors: string[] | null
           created_at: string
+          customization_images: string[] | null
+          customization_notes: string | null
+          customization_requested: boolean
           description: string | null
           id: string
           image: string | null
+          product_id: string | null
           product_name: string | null
           quantity: number | null
+          sizes_breakdown: Json | null
           status: Database["public"]["Enums"]["rfq_status"]
           title: string
+          vendor_id: string | null
         }
         Insert: {
           budget_max?: number | null
           budget_min?: number | null
           buyer_id: string
           category_id?: string | null
+          colors?: string[] | null
           created_at?: string
+          customization_images?: string[] | null
+          customization_notes?: string | null
+          customization_requested?: boolean
           description?: string | null
           id?: string
           image?: string | null
+          product_id?: string | null
           product_name?: string | null
           quantity?: number | null
+          sizes_breakdown?: Json | null
           status?: Database["public"]["Enums"]["rfq_status"]
           title: string
+          vendor_id?: string | null
         }
         Update: {
           budget_max?: number | null
           budget_min?: number | null
           buyer_id?: string
           category_id?: string | null
+          colors?: string[] | null
           created_at?: string
+          customization_images?: string[] | null
+          customization_notes?: string | null
+          customization_requested?: boolean
           description?: string | null
           id?: string
           image?: string | null
+          product_id?: string | null
           product_name?: string | null
           quantity?: number | null
+          sizes_breakdown?: Json | null
           status?: Database["public"]["Enums"]["rfq_status"]
           title?: string
+          vendor_id?: string | null
         }
         Relationships: [
           {
@@ -907,6 +954,20 @@ export type Database = {
             columns: ["category_id"]
             isOneToOne: false
             referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfqs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rfqs_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
         ]

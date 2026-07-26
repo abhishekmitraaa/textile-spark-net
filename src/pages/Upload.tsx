@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -48,6 +49,12 @@ import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
 import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields } from "@/data/sellerCategories";
 import { Progress } from "@/components/ui/progress";
+
+// Shown on the Pricing step only for categories whose Details fields have no
+// "sizes" size-selector of their own (and in edit mode, where Details is
+// skipped). Mirrors the SIZES list used by the buyer's PostRequirement form,
+// with "Free Size" in place of "Custom" to match the seller taxonomy.
+const FALLBACK_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
 
 type Step = "category" | "subcategory" | "details" | "images" | "pricing";
 
@@ -97,6 +104,9 @@ const Upload = () => {
   const [sku, setSku] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("");
+  // Whether this listing accepts customization requests. Drives whether the
+  // buyer's Request Quotation form shows its customization section at all.
+  const [customizationAvailable, setCustomizationAvailable] = useState(false);
 
   // Prefill the form from the loaded product when editing.
   useEffect(() => {
@@ -105,12 +115,14 @@ const Upload = () => {
     setProductDescription(editing.description ?? "");
     setPrice(editing.price_value != null ? String(editing.price_value) : "");
     setImages(editing.images);
+    setCustomizationAvailable(editing.customization_available);
     setFormValues((prev) => ({
       ...prev,
       fabric: editing.fabric ?? "",
       gsm: editing.gsm ?? "",
       fit: editing.fit_type ?? "",
       gender: editing.gender ?? "",
+      sizes: editing.sizes ?? [],
     }));
   }, [editing]);
 
@@ -121,6 +133,18 @@ const Upload = () => {
   const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined) : [];
   const optionalFields = selectedCategory ? getOptionalCategoryFields(selectedCategory) : [];
   const [showOptionalSpecs, setShowOptionalSpecs] = useState(false);
+
+  // Apparel-style categories already render a "sizes" size-selector among their
+  // dynamic Details fields, writing to formValues.sizes. Only fall back to the
+  // generic selector on the Pricing step when the category has no size field of
+  // its own (and always in edit mode, where the Details step is skipped).
+  const hasDynamicSizes = [...dynamicFields, ...optionalFields].some((f) => f.id === "sizes");
+  const selectedSizes = (formValues["sizes"] as string[] | undefined) ?? [];
+  const toggleSize = (size: string) =>
+    handleFieldChange(
+      "sizes",
+      selectedSizes.includes(size) ? selectedSizes.filter((s) => s !== size) : [...selectedSizes, size],
+    );
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -264,6 +288,9 @@ const Upload = () => {
       const gsm = (formValues["gsm"] as string) || null;
       const fitType = (formValues["fit"] as string) || (formValues["fit_type"] as string) || null;
       const gender = (formValues["gender"] as string) || null;
+      // Empty selection persists as NULL rather than {}, so "no sizes specified"
+      // and "sizes explicitly cleared" read the same downstream.
+      const sizes = selectedSizes.length > 0 ? selectedSizes : null;
 
       if (isEdit && editId) {
         // Edit: update the row + append any newly-picked images (existing ones stay).
@@ -273,6 +300,8 @@ const Upload = () => {
           price_value: price ? Number(price) : null,
           moq: (formValues["moq"] as string) || undefined,
           fabric, gsm, fit_type: fitType, gender,
+          sizes,
+          customization_available: customizationAvailable,
           status: nextStatus,
         });
         if (imageFiles.length > 0) {
@@ -315,6 +344,8 @@ const Upload = () => {
           gsm,
           fit_type: fitType,
           gender,
+          sizes,
+          customization_available: customizationAvailable,
           status: nextStatus,
         })
         .select("id")
@@ -811,6 +842,68 @@ const Upload = () => {
                         )}
                       </SelectContent>
                     </Select>
+                  </div>
+                </div>
+
+                {/* Sizes + customization. Both drive the buyer's product-scoped
+                    Request Quotation form: sizes populate its size/quantity rows,
+                    and the toggle decides whether it offers customization at all. */}
+                <div className="mt-6 space-y-4 border-t border-border pt-6">
+                  {!hasDynamicSizes && (
+                    <div className="space-y-2">
+                      <Label>Available sizes</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {FALLBACK_SIZES.map((size) => {
+                          const isSelected = selectedSizes.includes(size);
+                          return (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => toggleSize(size)}
+                              className={cn(
+                                "flex h-10 min-w-[40px] items-center justify-center rounded-lg border px-3 text-sm font-medium transition-all",
+                                isSelected
+                                  ? "border-accent bg-accent text-accent-foreground"
+                                  : "border-border bg-card text-foreground hover:border-accent/50 hover:bg-accent/5",
+                              )}
+                            >
+                              {size}
+                              {isSelected && <Check className="ml-1 h-3 w-3" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedSizes.length > 0
+                          ? `Selected: ${selectedSizes.join(", ")}`
+                          : "Optional. Buyers pick from these when requesting a quotation."}
+                      </p>
+                    </div>
+                  )}
+
+                  {hasDynamicSizes && (
+                    <div className="space-y-1">
+                      <Label>Available sizes</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {selectedSizes.length > 0
+                          ? `${selectedSizes.join(", ")} (set in Details)`
+                          : "None selected. Go back to Details to choose sizes."}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="customization">Customization available</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Let buyers send custom design notes and reference images with a quote request.
+                      </p>
+                    </div>
+                    <Switch
+                      id="customization"
+                      checked={customizationAvailable}
+                      onCheckedChange={setCustomizationAvailable}
+                    />
                   </div>
                 </div>
               </div>
