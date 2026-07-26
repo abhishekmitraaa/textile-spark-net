@@ -120,18 +120,18 @@ export const SellerQuickActionsGrid = () => {
       >
         <Link
           to="/upload-catalogue"
-          className="flex items-center justify-between rounded-xl border-2 border-dashed border-accent/40 bg-accent/5 p-4 transition-all hover:border-accent hover:bg-accent/10"
+          className="flex items-center justify-between rounded-xl border-2 border-dashed border-[#256fef]/40 bg-[#256fef]/5 p-4 transition-all hover:border-[#256fef] hover:bg-[#256fef]/10"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/20">
-              <Upload className="h-5 w-5 text-accent" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#256fef]/20">
+              <Upload className="h-5 w-5 text-[#256fef]" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-foreground">Upload Catalogue</h4>
               <p className="text-xs text-muted-foreground">Share your full product range as a PDF</p>
             </div>
           </div>
-          <BookOpen className="h-5 w-5 text-accent" />
+          <BookOpen className="h-5 w-5 text-[#256fef]" />
         </Link>
       </motion.div>
     </motion.div>

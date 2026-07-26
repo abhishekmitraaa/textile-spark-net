@@ -76,8 +76,12 @@ const SellerHome = () => {
 
   return (
     <DashboardLayout>
+      {/* DashboardLayout imposes no width of its own — each page opts in. This
+          matches BusinessProfile's constraint so the dashboard reads as the same
+          centred column instead of stretching edge-to-edge on wide screens.
+          Both values are above any phone width, so mobile is untouched. */}
       <motion.div
-        className="space-y-4 lg:space-y-6"
+        className="mx-auto max-w-2xl space-y-4 lg:max-w-3xl lg:space-y-6"
         variants={reduced ? {} : page}
         initial="hidden"
         animate="show"
