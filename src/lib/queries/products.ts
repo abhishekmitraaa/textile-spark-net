@@ -299,6 +299,8 @@ export interface ProductDetail {
   fitType: string | null;
   gender: string | null;
   colour: string | null;
+  sizes: string[] | null;
+  customizationAvailable: boolean;
   location: string | null;
   categoryName: string | null;
   categoryId: string | null;
@@ -312,12 +314,13 @@ export interface ProductDetail {
 interface RawDetail extends RawProduct {
   description: string | null; gender: string | null; colour: string | null;
   reviews_count: number; category_id: string | null; categories: { name: string } | null;
+  sizes: string[] | null; customization_available: boolean | null;
 }
 
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, sizes, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -345,6 +348,8 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     fitType: row.fit_type,
     gender: row.gender,
     colour: row.colour,
+    sizes: row.sizes ?? null,
+    customizationAvailable: row.customization_available ?? false,
     location: row.location,
     categoryName: row.categories?.name ?? null,
     categoryId: row.category_id ?? null,
@@ -651,13 +656,14 @@ export interface EditableProduct {
   status: string;
   images: string[];
   sizes: string[] | null;
+  colour: string | null;
   customization_available: boolean;
 }
 
 async function fetchProductForEdit(id: string): Promise<EditableProduct | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, customization_available, product_images ( url, position )")
+    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, customization_available, product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -668,6 +674,7 @@ async function fetchProductForEdit(id: string): Promise<EditableProduct | null> 
     moq: row.moq, fabric: row.fabric, gsm: row.gsm, fit_type: row.fit_type, gender: row.gender,
     category_id: row.category_id, status: row.status,
     sizes: row.sizes ?? null,
+    colour: row.colour ?? null,
     customization_available: row.customization_available ?? false,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
   };
@@ -693,6 +700,7 @@ export interface ProductPatch {
   category_id?: string | null;
   status?: "draft" | "under_review";
   sizes?: string[] | null;
+  colour?: string | null;
   customization_available?: boolean;
 }
 export async function updateProduct(id: string, patch: ProductPatch): Promise<void> {

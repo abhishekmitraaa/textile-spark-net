@@ -3,8 +3,9 @@ import { Link } from "react-router-dom";
 import { Inbox, Package, Megaphone, ArrowRight } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useOpenRfqs } from "@/lib/queries/rfqs";
+import { useOpenRfqs, useDirectQuoteRequests } from "@/lib/queries/rfqs";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
+import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
 
 // Vendor Leads = the live buyer-RFQ pool. All lead browsing + quoting is the
 // real OpenRfqLeads panel (RFQ→quote loop). Previously this page also carried a
@@ -21,7 +22,10 @@ const Leads = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
-  const hasLeads = rfqs.length > 0;
+  const { data: direct = [] } = useDirectQuoteRequests(user?.id);
+  // Direct requests count as leads: without this the page would claim there is
+  // nothing to quote on while the Direct panel above it is showing requests.
+  const hasLeads = rfqs.length > 0 || direct.length > 0;
 
   return (
     <DashboardLayout>
@@ -34,6 +38,7 @@ const Leads = () => {
         </motion.div>
 
         <motion.div variants={section}>
+          <DirectQuoteRequests />
           <OpenRfqLeads />
 
           {!isLoading && !hasLeads && (

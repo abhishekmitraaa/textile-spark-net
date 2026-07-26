@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
+import { ensureConversation } from "@/lib/queries/chat";
 import type { Rfq, VendorQuote, QuoteStatus } from "@/lib/quotesData";
 
 // ─────────────────────────────────────────────────────────────
@@ -16,6 +17,11 @@ interface RawRfq {
   budget_min: number | null; budget_max: number | null; image: string | null;
   category_id: string | null; buyer_id: string;
   status: "active" | "closed"; created_at: string;
+  // Targeting columns. All null on an open-marketplace RFQ.
+  vendor_id: string | null; product_id: string | null;
+  sizes_breakdown: unknown; colors: string[] | null;
+  customization_requested: boolean | null; customization_notes: string | null;
+  customization_images: string[] | null;
 }
 interface RawQuote {
   id: string; rfq_id: string; vendor_id: string; currency: string;
@@ -116,6 +122,125 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
   return data.id;
 }
 
+// ── Buyer: create a TARGETED quote request from a product page ──
+// A row with vendor_id + product_id set is a direct request to one vendor. It
+// stays a real `rfqs` row, so My Quotes / compare keep working unchanged; the
+// tightened rfqs_select policy keeps it out of every other vendor's feed.
+
+export interface SizeQty { size: string; quantity: number }
+
+export interface NewTargetedRfq {
+  vendorId: string;
+  productId: string;
+  productName: string;
+  /** Per-size quantities. Empty when the vendor listed no sizes. */
+  sizesBreakdown: SizeQty[];
+  /** Used when sizesBreakdown is empty. */
+  totalQuantity: number;
+  colors: string[];
+  budgetMin: number | null;
+  budgetMax: number | null;
+  customizationRequested: boolean;
+  customizationNotes: string | null;
+  customizationFiles: File[];
+}
+
+/**
+ * Reference images for a customization request. Reuses the existing
+ * `product-images` bucket: its RLS insert policy is uploader-scoped
+ * (`(storage.foldername(name))[1] = auth.uid()::text`), not vendor-scoped, so a
+ * buyer may write under their own uid folder. The bucket is public, so the
+ * target vendor can read the URLs back. Same call shape as Upload.tsx.
+ */
+async function uploadCustomizationImages(buyerId: string, batchId: string, files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+    const path = `${buyerId}/rfq/${batchId}/${i}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) throw error;
+    urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+  }
+  return urls;
+}
+
+function summarise(input: NewTargetedRfq, total: number): string {
+  const parts = [`Quote request for ${input.productName}`, `Quantity: ${total}`];
+  if (input.sizesBreakdown.length) {
+    parts.push(`Sizes: ${input.sizesBreakdown.map((s) => `${s.size} x ${s.quantity}`).join(", ")}`);
+  }
+  if (input.colors.length) parts.push(`Colour: ${input.colors.join(", ")}`);
+  if (input.budgetMin != null || input.budgetMax != null) {
+    const lo = input.budgetMin != null ? `₹${input.budgetMin}` : "";
+    const hi = input.budgetMax != null ? `₹${input.budgetMax}` : "";
+    parts.push(`Budget: ${lo && hi ? `${lo} - ${hi}` : lo || hi}`);
+  }
+  if (input.customizationRequested) {
+    parts.push(`Customization: ${input.customizationNotes?.trim() || "requested"}`);
+  }
+  return parts.join("\n");
+}
+
+/**
+ * Inserts the targeted RFQ and announces it in the buyer↔vendor conversation as
+ * a `quote_request` message, so it lands in the buyer's messaging immediately.
+ * Returns the new rfq id. Images upload first so the row is written once,
+ * complete, rather than inserted and then patched.
+ */
+export async function createTargetedQuoteRequest(buyerId: string, input: NewTargetedRfq): Promise<string> {
+  const total = input.sizesBreakdown.length
+    ? input.sizesBreakdown.reduce((n, s) => n + s.quantity, 0)
+    : input.totalQuantity;
+
+  let imageUrls: string[] = [];
+  if (input.customizationRequested && input.customizationFiles.length) {
+    imageUrls = await uploadCustomizationImages(buyerId, crypto.randomUUID(), input.customizationFiles);
+  }
+
+  const { data, error } = await supabase
+    .from("rfqs")
+    .insert({
+      buyer_id: buyerId,
+      vendor_id: input.vendorId,
+      product_id: input.productId,
+      title: `Quote request: ${input.productName}`,
+      product_name: input.productName,
+      // Kept in sync with sizes_breakdown so every existing UI that reads
+      // rfq.quantity (lead cards, My Quotes stats) works unmodified.
+      quantity: total,
+      sizes_breakdown: input.sizesBreakdown.length ? input.sizesBreakdown : null,
+      colors: input.colors.length ? input.colors : null,
+      budget_min: input.budgetMin,
+      budget_max: input.budgetMax,
+      customization_requested: input.customizationRequested,
+      customization_notes: input.customizationRequested ? input.customizationNotes : null,
+      customization_images: imageUrls.length ? imageUrls : null,
+      status: "active",
+    })
+    .select("id")
+    .single();
+  if (error) throw error;
+
+  // Non-fatal: the request itself is saved even if the chat echo fails.
+  try {
+    const convId = await ensureConversation(buyerId, input.vendorId);
+    if (convId) {
+      await supabase.from("messages").insert({
+        conversation_id: convId,
+        sender_id: buyerId,
+        kind: "quote_request",
+        rfq_id: data.id,
+        body: summarise(input, total),
+      });
+    }
+  } catch {
+    /* ignore: the RFQ is the source of truth, the chat echo is a convenience */
+  }
+
+  return data.id;
+}
+
 // ── Buyer: change a quote's status (shortlist / accept / reject) ──
 export async function setQuoteStatusDb(id: string, status: QuoteStatus): Promise<void> {
   const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
@@ -133,7 +258,12 @@ export interface LeadRfq {
 }
 async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data, error } = await supabase
-    .from("rfqs").select("*").eq("status", "active").order("created_at", { ascending: false });
+    .from("rfqs").select("*").eq("status", "active")
+    // Open marketplace only. Targeted requests (vendor_id set) belong to the
+    // Direct Quote Requests inbox, not the shared lead pool. Every pre-existing
+    // RFQ has vendor_id NULL, so this is a no-op for them.
+    .is("vendor_id", null)
+    .order("created_at", { ascending: false });
   if (error) throw error;
   const rows = (data ?? []) as RawRfq[];
 
@@ -260,6 +390,129 @@ export function useMySubmittedQuotes(vendorId: string | undefined) {
     queryFn: () => fetchMySubmittedQuotes(vendorId as string),
     enabled: Boolean(vendorId),
   });
+}
+
+// ── Vendor: Direct Quote Requests inbox (targeted RFQs addressed to me) ──
+
+export interface DirectQuoteRequest {
+  id: string;
+  buyerId: string;
+  buyerName: string;
+  productId: string | null;
+  productName: string;
+  productImage: string;
+  quantity: number;
+  sizes: SizeQty[];
+  colors: string[];
+  budgetMin: number;
+  budgetMax: number;
+  customizationRequested: boolean;
+  customizationNotes: string | null;
+  customizationImages: string[];
+  date: string;
+  alreadyQuoted: boolean;
+}
+
+async function fetchDirectQuoteRequests(vendorId: string): Promise<DirectQuoteRequest[]> {
+  // RLS already restricts targeted rows to their target vendor; the explicit
+  // vendor_id filter keeps the query honest rather than relying on the policy.
+  const { data, error } = await supabase
+    .from("rfqs")
+    .select("*")
+    .eq("vendor_id", vendorId)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? []) as RawRfq[];
+  if (rows.length === 0) return [];
+
+  const [{ data: myQuotes }, { data: buyers }, { data: images }] = await Promise.all([
+    supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId),
+    supabase.from("profiles").select("id, full_name").in("id", [...new Set(rows.map((r) => r.buyer_id))]),
+    supabase
+      .from("product_images")
+      .select("product_id, url, position")
+      .in("product_id", [...new Set(rows.map((r) => r.product_id).filter(Boolean))] as string[]),
+  ]);
+
+  const quoted = new Set((myQuotes ?? []).map((q) => q.rfq_id));
+  const nameOf = new Map((buyers ?? []).map((b) => [b.id, b.full_name]));
+  const coverOf = new Map<string, string>();
+  for (const img of [...(images ?? [])].sort((a, b) => a.position - b.position)) {
+    if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    buyerId: r.buyer_id,
+    buyerName: nameOf.get(r.buyer_id) ?? "Buyer",
+    productId: r.product_id ?? null,
+    productName: r.product_name ?? r.title,
+    productImage: (r.product_id && coverOf.get(r.product_id)) || r.image || "",
+    quantity: r.quantity ?? 0,
+    sizes: (r.sizes_breakdown as SizeQty[] | null) ?? [],
+    colors: r.colors ?? [],
+    budgetMin: Number(r.budget_min ?? 0),
+    budgetMax: Number(r.budget_max ?? 0),
+    customizationRequested: r.customization_requested ?? false,
+    customizationNotes: r.customization_notes ?? null,
+    customizationImages: r.customization_images ?? [],
+    date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
+    alreadyQuoted: quoted.has(r.id),
+  }));
+}
+
+export function useDirectQuoteRequests(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["rfqs", "direct", vendorId],
+    queryFn: () => fetchDirectQuoteRequests(vendorId as string),
+    enabled: Boolean(vendorId),
+  });
+}
+
+/**
+ * Mirrors a submitted quote into the buyer↔vendor chat as a `quote_reply`
+ * message, but only for a TARGETED request. Open-marketplace quotes are
+ * unchanged: they have no single conversation to land in.
+ * Non-fatal by design, exactly like the quote_request echo.
+ */
+export async function echoQuoteReplyToChat(
+  vendorId: string,
+  rfqId: string,
+  reply: { pricePerUnit: number; moq: number | null; leadTime: string | null; currency?: string },
+): Promise<void> {
+  try {
+    const { data: rfq } = await supabase
+      .from("rfqs")
+      .select("id, buyer_id, vendor_id, product_name")
+      .eq("id", rfqId)
+      .maybeSingle();
+    if (!rfq?.vendor_id || rfq.vendor_id !== vendorId) return; // not a targeted request
+
+    const { data: quote } = await supabase
+      .from("quotes").select("id").eq("rfq_id", rfqId).eq("vendor_id", vendorId).maybeSingle();
+
+    const cur = reply.currency ?? "₹";
+    const parts = [
+      `Quote for ${rfq.product_name ?? "your request"}`,
+      `Price: ${cur}${reply.pricePerUnit} per unit`,
+    ];
+    if (reply.moq != null) parts.push(`MOQ: ${reply.moq}`);
+    if (reply.leadTime) parts.push(`Lead time: ${reply.leadTime}`);
+
+    const convId = await ensureConversation(vendorId, rfq.buyer_id);
+    if (!convId) return;
+    await supabase.from("messages").insert({
+      conversation_id: convId,
+      sender_id: vendorId,
+      kind: "quote_reply",
+      rfq_id: rfqId,
+      quote_id: quote?.id ?? null,
+      body: parts.join("\n"),
+    });
+  } catch {
+    /* the quote row is the source of truth; the chat echo is a convenience */
+  }
 }
 
 export async function submitQuote(vendorId: string, q: NewQuote): Promise<void> {

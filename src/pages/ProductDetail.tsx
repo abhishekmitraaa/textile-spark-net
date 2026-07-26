@@ -15,6 +15,8 @@ import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { useCallVendor } from "@/lib/queries/calls";
 import { recordView } from "@/lib/recentlyViewedStore";
 import { toast } from "sonner";
+import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet";
+import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
   ChevronDown, BadgeCheck, Clock, Download, Globe, ThumbsUp, ThumbsDown, MoreVertical,
@@ -336,7 +338,12 @@ const ProductDetail = () => {
           reviews: row.vendor?.reviewsCount ?? base.vendor.reviews,
           responseTime: base.vendor.responseTime,
         },
-        availableColors: row.colour ? [row.colour] : base.availableColors,
+        // Real product attributes only. These drive the Request Quotation form,
+        // so a mock fallback here would offer buyers colours/sizes the vendor
+        // never listed. An empty array renders as "not specified".
+        availableColors: row.colour ? [row.colour] : [],
+        availableSizes: row.sizes ?? [],
+        customizationAvailable: row.customizationAvailable,
         specifications: (() => {
           const real = [
             row.fabric && { label: "Fabric", value: row.fabric },
@@ -358,6 +365,16 @@ const ProductDetail = () => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [specsOpen, setSpecsOpen] = useState(true);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [chatOptionsOpen, setChatOptionsOpen] = useState(false);
+  const [quoteOpen, setQuoteOpen] = useState(false);
+
+  // Unchanged direct-chat path, just moved behind the chooser sheet: still
+  // records the enquiry, still lands on /chats/:vendorId.
+  const openDirectChat = () => {
+    setChatOptionsOpen(false);
+    if (row) void recordProductEnquiry(row.id).catch(() => {});
+    navigate(`/chats/${product.vendor.id}`);
+  };
 
   // Real product reviews (only queried for a real DB product). Falls back to the
   // mock template so non-DB demo products still render a populated section.
@@ -527,6 +544,9 @@ const ProductDetail = () => {
             {/* Colors */}
             <div className={card}>
               <h3 className="mb-3 text-sm font-bold text-gray-900">Available Colors</h3>
+              {product.availableColors.length === 0 && (
+                <p className="text-xs text-gray-500">Not specified by the vendor.</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {product.availableColors.map((c) => (
                   <button key={c} onClick={() => setSelectedColor(c)}
@@ -541,6 +561,9 @@ const ProductDetail = () => {
             {/* Sizes */}
             <div className={card}>
               <h3 className="mb-3 text-sm font-bold text-gray-900">Available Sizes</h3>
+              {product.availableSizes.length === 0 && (
+                <p className="text-xs text-gray-500">Not specified by the vendor.</p>
+              )}
               <div className="flex flex-wrap gap-2">
                 {product.availableSizes.map((s) => (
                   <button key={s} onClick={() => setSelectedSize((cur) => (cur === s ? null : s))}
@@ -552,7 +575,7 @@ const ProductDetail = () => {
 
             {/* Chat + Call Now (inline, per reference) */}
             <div className="flex items-center gap-2">
-              <button onClick={() => { if (row) void recordProductEnquiry(row.id).catch(() => {}); navigate(`/chats/${product.vendor.id}`); }} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
+              <button onClick={() => setChatOptionsOpen(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
                 <MessageCircle className="h-4 w-4" /> Chat
               </button>
               <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors active:scale-[0.98]">
@@ -719,6 +742,37 @@ const ProductDetail = () => {
           return submitProductReview(row.id, rating, text);
         }}
       />
+
+      <ProductChatOptionsSheet
+        isOpen={chatOptionsOpen}
+        onClose={() => setChatOptionsOpen(false)}
+        onChatDirectly={openDirectChat}
+        onRequestQuotation={() => {
+          setChatOptionsOpen(false);
+          if (!row) {
+            // Demo/mock products have no DB row to target.
+            toast.info("Quote requests are available on live products only.");
+            return;
+          }
+          setQuoteOpen(true);
+        }}
+        vendorName={product.vendor.name}
+      />
+
+      {row && (
+        <ProductQuoteRequestModal
+          isOpen={quoteOpen}
+          onClose={() => setQuoteOpen(false)}
+          product={{
+            id: row.id,
+            vendorId: row.vendorId,
+            name: row.name,
+            sizes: product.availableSizes,
+            colour: row.colour,
+            customizationAvailable: row.customizationAvailable,
+          }}
+        />
+      )}
     </BuyerShell>
   );
 };

@@ -23,11 +23,31 @@ export interface ThreadMessage {
   imageUrl?: string;
   fileName?: string;
   status?: "sent" | "delivered" | "read";
+  // Set on structured quote messages (kind "quote_request" / "quote_reply") so
+  // the thread can render them as tappable cards linking to the real record.
+  rfqId?: string | null;
+  quoteId?: string | null;
 }
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-interface RawMessage { id: string; sender_id: string; body: string | null; kind: string; created_at: string }
+interface RawMessage { id: string; sender_id: string; body: string | null; kind: string; created_at: string; rfq_id?: string | null; quote_id?: string | null }
+
+/**
+ * Find-or-create the single conversation row for a pair of users.
+ * Canonical (sorted) ordering guarantees one row per pair regardless of which
+ * side opens the chat. Returns null if the upsert fails so callers can decide.
+ */
+export async function ensureConversation(me: string, otherId: string): Promise<string | null> {
+  const [a, b] = [me, otherId].sort();
+  const { data, error } = await supabase
+    .from("conversations")
+    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
+    .select("id")
+    .single();
+  if (error || !data) return null;
+  return data.id;
+}
 
 export function useChatThread(otherId: string | undefined) {
   const { user } = useAuth();
@@ -43,6 +63,8 @@ export function useChatThread(otherId: string | undefined) {
     text: m.body ?? "",
     time: fmtTime(m.created_at),
     kind: m.kind,
+    rfqId: m.rfq_id ?? null,
+    quoteId: m.quote_id ?? null,
   }), [me]);
 
   useEffect(() => {
@@ -51,16 +73,10 @@ export function useChatThread(otherId: string | undefined) {
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {
-      // Canonical ordering guarantees a single row per pair regardless of
-      // which side opens the chat.
-      const [a, b] = [me, otherId].sort();
-      const { data: conv, error } = await supabase
-        .from("conversations")
-        .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
-        .select("id")
-        .single();
-      if (error || cancelled || !conv) { if (!cancelled) setReady(true); return; }
-      convIdRef.current = conv.id;
+      const convId = await ensureConversation(me, otherId);
+      if (!convId || cancelled) { if (!cancelled) setReady(true); return; }
+      convIdRef.current = convId;
+      const conv = { id: convId };
 
       // Display name for the other party (vendor brand → profile name → fallback).
       const [{ data: vp }, { data: pr }] = await Promise.all([
@@ -71,7 +87,7 @@ export function useChatThread(otherId: string | undefined) {
 
       const { data: history } = await supabase
         .from("messages")
-        .select("id, sender_id, body, kind, created_at")
+        .select("id, sender_id, body, kind, created_at, rfq_id, quote_id")
         .eq("conversation_id", conv.id)
         .order("created_at", { ascending: true });
       if (cancelled) return;

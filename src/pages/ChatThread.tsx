@@ -4,7 +4,7 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getOrCreateConversation, CHAT_MONITORING_NOTICE } from "@/lib/chatData";
-import { useChatThread } from "@/lib/queries/chat";
+import { useChatThread, type ThreadMessage } from "@/lib/queries/chat";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -218,6 +218,9 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
                   {m.kind === "audio" && (
                     <span className="inline-flex items-center gap-1.5 text-sm"><Headphones className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-[#ef4d62]")} /> {m.text}</span>
                   )}
+                  {(m.kind === "quote_request" || m.kind === "quote_reply") && (
+                    <QuoteCard message={m} />
+                  )}
                   {(!m.kind || m.kind === "text") && <p className="text-sm leading-relaxed">{m.text}</p>}
                   <div className={cn("mt-0.5 flex items-center gap-1", m.sender === "user" ? "justify-end" : "")}>
                     <span className={cn("text-[10px]", m.sender === "user" ? "text-white/70" : "text-gray-400")}>{m.time}</span>
@@ -285,6 +288,61 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
 
       <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} name={conv.name} onBlock={blockVendor} />
     </div>
+  );
+}
+
+/**
+ * Structured card for the two quote message kinds, following the same
+ * per-kind rendering pattern as image/file/audio above. The body is the
+ * summary written by createTargetedQuoteRequest / echoQuoteReplyToChat: first
+ * line is the heading, the rest are `Label: value` detail rows.
+ *
+ * Tapping opens the full record. There is no per-RFQ detail route in this app,
+ * so it lands on the role-appropriate quotes surface: the vendor's /quotes or
+ * the buyer's My Quotes.
+ */
+function QuoteCard({ message }: { message: ThreadMessage }) {
+  const navigate = useNavigate();
+  const { role } = useUserRole();
+  const mine = message.sender === "user";
+  const isReply = message.kind === "quote_reply";
+  const [heading, ...details] = (message.text || "").split("\n").filter(Boolean);
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate(role === "seller" ? "/quotes" : "/requirement/my-quotes")}
+      className={cn(
+        "-mx-1 mb-1 block w-full rounded-xl border px-3 py-2.5 text-left transition-colors",
+        mine
+          ? "border-white/25 bg-white/10 hover:bg-white/20"
+          : "border-gray-200 bg-gray-50 hover:bg-gray-100",
+      )}
+    >
+      <span className="flex items-center gap-1.5">
+        <FileText className={cn("h-3.5 w-3.5 shrink-0", mine ? "text-white/90" : "text-[#ef4d62]")} />
+        <span className={cn("text-[11px] font-bold uppercase tracking-wide", mine ? "text-white/90" : "text-[#ef4d62]")}>
+          {isReply ? "Quotation" : "Quote request"}
+        </span>
+        <ChevronRight className={cn("ml-auto h-3.5 w-3.5 shrink-0", mine ? "text-white/70" : "text-gray-400")} />
+      </span>
+
+      {heading && (
+        <span className={cn("mt-1 block text-sm font-semibold leading-snug", mine ? "text-white" : "text-gray-900")}>
+          {heading}
+        </span>
+      )}
+
+      {details.length > 0 && (
+        <span className="mt-1 block space-y-0.5">
+          {details.map((line) => (
+            <span key={line} className={cn("block text-xs leading-snug", mine ? "text-white/80" : "text-gray-600")}>
+              {line}
+            </span>
+          ))}
+        </span>
+      )}
+    </button>
   );
 }
 

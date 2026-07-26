@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
+import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
 import type { MySubmittedQuote } from "@/lib/queries/rfqs";
@@ -401,6 +402,7 @@ const Quotes = () => {
 
             {/* Live buyer RFQs (real) — quote inline. Renders nothing when there are none. */}
             <motion.div variants={section} className="min-w-0 min-[1400px]:col-start-1 min-[1400px]:row-start-1">
+              <DirectQuoteRequests />
               <OpenRfqLeads />
             </motion.div>
 
