@@ -395,8 +395,8 @@ const Help = () => {
                 className="w-full flex items-center justify-between px-6 py-5 hover:bg-muted/30 transition-colors text-left"
               >
                 <div className="flex items-center gap-3">
-                  <div className="p-2.5 rounded-xl bg-primary/10">
-                    <HelpCircle className="w-5 h-5 text-primary" />
+                  <div className="p-2.5 rounded-xl bg-[#256fef]/10">
+                    <HelpCircle className="w-5 h-5 text-[#256fef]" />
                   </div>
                   <div>
                     <p className="text-base font-semibold text-foreground">
@@ -433,7 +433,7 @@ const Help = () => {
                     <div className="py-10 text-center">
                       <HelpCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
                       <p className="text-sm text-muted-foreground">No results for "{searchQuery}"</p>
-                      <button onClick={() => setSearchQuery("")} className="text-sm text-primary hover:underline mt-1">
+                      <button onClick={() => setSearchQuery("")} className="text-sm text-[#256fef] hover:underline mt-1">
                         Clear search
                       </button>
                     </div>
@@ -442,8 +442,8 @@ const Help = () => {
                       <div key={cat.id} className={catIdx > 0 ? "border-t border-border/50" : ""}>
                         {/* Category label */}
                         <div className="flex items-center gap-2.5 px-6 py-3 bg-muted/10">
-                          <div className="p-1.5 rounded-lg bg-primary/10">
-                            <cat.icon className="w-3.5 h-3.5 text-primary" />
+                          <div className="p-1.5 rounded-lg bg-[#256fef]/10">
+                            <cat.icon className="w-3.5 h-3.5 text-[#256fef]" />
                           </div>
                           <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                             {cat.title}
@@ -457,7 +457,7 @@ const Help = () => {
                               value={`${cat.id}-${i}`}
                               className="border-0 border-b border-border/40 last:border-b-0 px-6"
                             >
-                              <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-primary py-4 gap-3">
+                              <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-[#256fef] py-4 gap-3">
                                 {faq.question}
                               </AccordionTrigger>
                               <AccordionContent className="text-sm text-muted-foreground pb-4 leading-relaxed">
@@ -484,11 +484,11 @@ const Help = () => {
                   variants={listItem}
                 >
                 <Card
-                  className="border-border hover:border-primary/30 hover:shadow-sm transition-all cursor-pointer group"
+                  className="border-border hover:border-[#256fef]/30 hover:shadow-sm transition-all cursor-pointer group"
                 >
                   <CardContent className="p-4 flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-primary/10 transition-colors">
-                      <guide.icon className="w-4 h-4 text-gray-500 group-hover:text-primary transition-colors" />
+                    <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-[#256fef]/10 transition-colors">
+                      <guide.icon className="w-4 h-4 text-gray-500 group-hover:text-[#256fef] transition-colors" />
                     </div>
                     <span className="text-sm font-medium text-foreground flex-1">{guide.title}</span>
                     <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -503,14 +503,14 @@ const Help = () => {
 
           {/* ── Still Need Help ── */}
           <motion.div variants={section}>
-            <Card className="bg-gradient-to-r from-primary/5 via-primary/10 to-accent/5 border-primary/20">
+            <Card className="bg-gradient-to-r from-[#256fef]/5 via-[#256fef]/10 to-[#256fef]/5 border-[#256fef]/20">
               <CardContent className="py-8 text-center">
                 <h3 className="text-xl font-semibold text-foreground mb-2">Still need help?</h3>
                 <p className="text-muted-foreground mb-4 max-w-md mx-auto text-sm">
                   Our dedicated support team is here to assist you with any questions or concerns.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <Button className="bg-primary hover:bg-primary/90" onClick={() => setChatOpen(true)}>
+                  <Button className="bg-[#256fef] hover:bg-[#256fef]/90" onClick={() => setChatOpen(true)}>
                     <MessageCircle className="w-4 h-4 mr-2" />
                     Start Live Chat
                   </Button>

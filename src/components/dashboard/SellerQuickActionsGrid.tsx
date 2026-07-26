@@ -36,7 +36,10 @@ const primaryActions: QuickActionItem[] = [
 
 const secondaryActions: QuickActionItem[] = [
   { name: "My Quotes", icon: FileText, href: "/quotes", color: "text-rose-600", bgColor: "bg-rose-100" },
-  { name: "Add Website", icon: Globe, href: "/my-store", color: "text-cyan-600", bgColor: "bg-cyan-100" },
+  // Website and email are both fields of Business Profile's Contact Details
+  // section, not My Store — `?focus=` scrolls to and highlights it, the same
+  // deep link the Profile Score checklist uses for these two tasks.
+  { name: "Add Website", icon: Globe, href: "/business-profile?focus=contact-details", color: "text-cyan-600", bgColor: "bg-cyan-100" },
   { name: "Add Social Links", icon: Share2, href: "/add-social-links", color: "text-orange-600", bgColor: "bg-orange-100" },
   { name: "Upload Catalogue", icon: Upload, href: "/upload-catalogue", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
 ];
@@ -44,7 +47,7 @@ const secondaryActions: QuickActionItem[] = [
 const tertiaryActions: QuickActionItem[] = [
   { name: "Help/Connect", icon: HelpCircle, href: "/help", color: "text-indigo-600", bgColor: "bg-indigo-100" },
   { name: "Photo Studio", icon: Camera, href: "/cosora-studio", color: "text-pink-600", bgColor: "bg-pink-100" },
-  { name: "Add Email", icon: Mail, href: "/my-store", color: "text-teal-600", bgColor: "bg-teal-100" },
+  { name: "Add Email", icon: Mail, href: "/business-profile?focus=contact-details", color: "text-teal-600", bgColor: "bg-teal-100" },
   { name: "Video Closeup", icon: Video, href: "/upload-video", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
