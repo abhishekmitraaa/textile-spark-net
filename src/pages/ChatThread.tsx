@@ -1,4 +1,4 @@
-import { ReactElement, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -17,22 +17,39 @@ import { cn } from "@/lib/utils";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 
-const ChatThread = () => {
+// One measure for every band of the thread (header, RFQ banner, messages,
+// composer) so they stay optically aligned. The mobile column is unchanged;
+// desktop gets a wider but still readable column instead of full-bleed text.
+const THREAD_WIDE = "lg:max-w-3xl";
+
+interface ChatThreadViewProps {
+  vendorId?: string;
+  /** Renders the back arrow. Omit it when the thread already sits next to its
+   *  inbox (the seller's desktop split view) and there is nothing to go back to. */
+  onBack?: () => void;
+  /** True when the thread is a pane inside another page rather than a route of
+   *  its own: it fills its parent instead of the viewport. */
+  embedded?: boolean;
+}
+
+/**
+ * The conversation itself. Rendered as a full route on mobile and, on the
+ * seller's desktop inbox, as the right-hand pane next to the chat list.
+ */
+export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThreadViewProps) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { vendorId } = useParams();
   const { user } = useAuth();
   const conv = vendorId ? getOrCreateConversation(vendorId) : null;
   const callVendor = useCallVendor();
 
-  // The thread is shared by both sides. On the seller side it renders inside
-  // DashboardLayout so the vendor sidebar stays reachable, and every "back"
-  // target has to point at the seller's own inbox (/chat), not the buyer's.
+  // The thread is shared by both sides. Every "back" target has to point at the
+  // seller's own inbox (/chat), not the buyer's.
   const { role } = useUserRole();
   const isSeller = role === "seller";
   const inboxHref = isSeller ? "/chat" : "/chats";
-  const wrap = (node: ReactElement) =>
-    isSeller ? <DashboardLayout variant="full-screen">{node}</DashboardLayout> : node;
+  // As a route the thread owns the viewport; as a pane it owns its parent box.
+  const fills = embedded || isSeller;
 
   // Real, realtime message thread from Supabase (find-or-create the
   // conversation, load history, live-subscribe). Text is persisted; the
@@ -54,8 +71,8 @@ const ChatThread = () => {
   const initials = useMemo(() => (conv?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [conv?.name]);
 
   if (!conv) {
-    return wrap(
-      <div className={cn("bg-white grid place-items-center px-6 text-center", isSeller ? "h-full" : "min-h-screen")}>
+    return (
+      <div className={cn("bg-white grid place-items-center px-6 text-center", fills ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">This conversation no longer exists.</p>
           <button onClick={() => navigate(inboxHref)} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Messages</button>
@@ -65,8 +82,8 @@ const ChatThread = () => {
   }
 
   if (!user) {
-    return wrap(
-      <div className={cn("bg-white grid place-items-center px-6 text-center", isSeller ? "h-full" : "min-h-screen")}>
+    return (
+      <div className={cn("bg-white grid place-items-center px-6 text-center", fills ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">Sign in to start chatting.</p>
           <p className="mt-1 text-xs text-gray-400">Use the dev switcher (bottom-left) to sign in.</p>
@@ -119,19 +136,21 @@ const ChatThread = () => {
 
   const blockVendor = () => { toast.success(`${conv.name} has been blocked`); navigate(inboxHref); };
 
-  return wrap(
-    <div className={cn("flex flex-col bg-gray-50", isSeller ? "h-full" : "h-[100dvh]")}>
+  return (
+    <div className={cn("flex flex-col bg-gray-50", fills ? "h-full" : "h-[100dvh]")}>
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-gray-100">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
-          <button onClick={() => navigate(inboxHref)} aria-label="Back to Messages" className="p-1 -ml-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+        <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5", THREAD_WIDE, "lg:px-4 lg:py-3")}>
+          {onBack && (
+            <button onClick={onBack} aria-label="Back to Messages" className="p-1 -ml-1 rounded-full hover:bg-gray-100"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
+          )}
           <button onClick={goProfile} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
             <div className="relative shrink-0">
-              {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover" /> : <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[#ef4d62]/20 to-[#ef4d62]/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
+              {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover lg:w-10 lg:h-10" /> : <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-[#ef4d62]/20 to-[#ef4d62]/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
               {conv.online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate leading-tight">{otherName ?? conv.name}</p>
+              <p className="text-sm font-bold text-gray-900 truncate leading-tight lg:text-[15px]">{otherName ?? conv.name}</p>
               <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
                 {conv.online ? <span className="text-emerald-500 font-medium">Online</span> : <span>Offline</span>}
                 <span className="text-gray-300">·</span>
@@ -163,8 +182,8 @@ const ChatThread = () => {
         </div>
 
         {/* RFQ banner → quotes page */}
-        <button onClick={goQuote} className="w-full bg-[#ef4d62]/5 border-t border-[#ef4d62]/10">
-          <div className="max-w-2xl mx-auto flex items-center gap-2 px-4 py-2">
+        <button onClick={goQuote} className="w-full bg-[#ef4d62]/5 border-t border-[#ef4d62]/10 transition-colors hover:bg-[#ef4d62]/10">
+          <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-4 py-2", THREAD_WIDE)}>
             <FileText className="w-4 h-4 text-[#ef4d62] shrink-0" />
             <div className="flex-1 text-left min-w-0">
               <p className="text-xs font-bold text-gray-900">{conv.rfqId}</p>
@@ -177,7 +196,7 @@ const ChatThread = () => {
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+        <div className={cn("mx-auto w-full max-w-2xl px-4 py-4 lg:py-6", THREAD_WIDE)}>
           {/* Monitoring disclosure (legally required) */}
           <div className="mx-auto mb-4 flex max-w-sm items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center">
             <ShieldCheck className="w-3.5 h-3.5 text-amber-500 shrink-0" />
@@ -190,7 +209,7 @@ const ChatThread = () => {
             {messages.map((m, i) => (
               <motion.div key={m.id} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
                 className={cn("flex", m.sender === "user" ? "justify-end" : "justify-start")}>
-                <div className={cn("max-w-[78%] rounded-2xl px-3.5 py-2 shadow-sm",
+                <div className={cn("max-w-[78%] lg:max-w-[68%] rounded-2xl px-3.5 py-2 shadow-sm",
                   m.sender === "user" ? "bg-[#ef4d62] text-white rounded-br-md" : "bg-white text-gray-900 rounded-bl-md border border-gray-100")}>
                   {m.kind === "image" && m.imageUrl && <img src={m.imageUrl} alt="" className="mb-1 rounded-lg max-h-48 object-cover" />}
                   {m.kind === "file" && (
@@ -219,7 +238,7 @@ const ChatThread = () => {
         {attachOpen && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: 0.18, ease: E }}
             className="shrink-0 bg-white border-t border-gray-100">
-            <div className="max-w-2xl mx-auto grid grid-cols-4 gap-3 px-5 py-4">
+            <div className={cn("mx-auto w-full max-w-2xl grid grid-cols-4 gap-3 px-5 py-4 lg:grid-cols-5", THREAD_WIDE)}>
               <AttachItem icon={ImageIcon} label="Gallery" color="text-violet-600 bg-violet-100" onClick={() => galleryRef.current?.click()} />
               <AttachItem icon={Camera} label="Camera" color="text-[#ef4d62] bg-[#ef4d62]/10" onClick={() => cameraRef.current?.click()} />
               <AttachItem icon={FileIcon} label="Document" color="text-indigo-600 bg-indigo-100" onClick={() => docRef.current?.click()} />
@@ -232,7 +251,7 @@ const ChatThread = () => {
 
       {/* Input bar */}
       <div className="shrink-0 bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)]">
-        <div className="max-w-2xl mx-auto flex items-center gap-2 px-3 py-2.5">
+        <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3", THREAD_WIDE)}>
           <button onClick={() => setAttachOpen((o) => !o)} aria-label="Attach" className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
             <motion.span animate={{ rotate: attachOpen ? 45 : 0 }} transition={{ duration: 0.18 }}><Plus className="w-5 h-5 text-gray-600" /></motion.span>
           </button>
@@ -267,6 +286,21 @@ const ChatThread = () => {
       <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} name={conv.name} onBlock={blockVendor} />
     </div>
   );
+}
+
+/**
+ * `/chats/:vendorId` as its own route. Sellers get DashboardLayout so the
+ * vendor sidebar stays reachable; the seller desktop inbox instead renders
+ * <ChatThreadView> directly as a pane (see Chat.tsx).
+ */
+const ChatThread = () => {
+  const navigate = useNavigate();
+  const { vendorId } = useParams();
+  const { role } = useUserRole();
+  const isSeller = role === "seller";
+
+  const view = <ChatThreadView vendorId={vendorId} onBack={() => navigate(isSeller ? "/chat" : "/chats")} />;
+  return isSeller ? <DashboardLayout variant="full-screen">{view}</DashboardLayout> : view;
 };
 
 function AttachItem({ icon: Icon, label, color, onClick }: { icon: typeof ImageIcon; label: string; color: string; onClick: () => void }) {

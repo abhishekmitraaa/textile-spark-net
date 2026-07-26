@@ -16,14 +16,17 @@ export const BusinessProfileScore = ({ score: scoreOverride }: BusinessProfileSc
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (score / 100) * circumference;
 
+  // `lg:h-full` below only bites where a parent hands this card a definite
+  // height — the SellerHome grid row it shares with the promo banner. On
+  // /dashboard the parent is auto-height, so it resolves to auto: no change.
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.1 }}
-      className="rounded-xl border border-border bg-card p-4 sm:p-5"
+      className="rounded-xl border border-border bg-card p-4 sm:p-5 lg:h-full"
     >
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 lg:h-full">
         <div className="relative flex-shrink-0 w-24 h-24">
           <svg className="w-24 h-24 -rotate-90" viewBox="0 0 96 96">
             <circle cx="48" cy="48" r={radius} fill="none" strokeWidth="6" className="stroke-border" />

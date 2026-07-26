@@ -93,21 +93,32 @@ export const SellerQuickActionsGrid = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5, delay: 0.2 }}
-      className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6"
+      className="space-y-4 rounded-xl border border-border bg-card p-4 sm:p-6 xl:grid xl:grid-cols-6 xl:gap-4 xl:space-y-0"
     >
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+      {/* Three rows of four, split by divider rules, up to 1280px. Past that the
+          card is wide enough that four-across strands each tile in ~270px of
+          empty space, so the groups collapse via `xl:contents` into a single
+          6-across grid (12 actions = exactly 2 full rows) and the dividers,
+          which no longer separate anything, drop out. `contents` reflows
+          without duplicating tiles or reordering the DOM.
+
+          Deliberately xl and not lg: at 1024 the card is only ~672px inside its
+          padding, so six columns would cut each tile to ~98px and wrap labels
+          like "Add Social Links" onto three lines. Four-across holds 156px
+          there — wider than the six-across tile would be even at 1280. */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {primaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index} />
         ))}
       </div>
-      <div className="h-px bg-border" />
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+      <div className="h-px bg-border xl:hidden" />
+      <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {secondaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index + 4} />
         ))}
       </div>
-      <div className="h-px bg-border" />
-      <div className="grid grid-cols-4 gap-2 sm:gap-4">
+      <div className="h-px bg-border xl:hidden" />
+      <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {tertiaryActions.map((item, index) => (
           <QuickActionButton key={item.name} item={item} index={index + 8} />
         ))}
@@ -117,6 +128,7 @@ export const SellerQuickActionsGrid = () => {
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
+        className="xl:col-span-6"
       >
         <Link
           to="/upload-catalogue"

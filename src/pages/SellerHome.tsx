@@ -76,24 +76,29 @@ const SellerHome = () => {
 
   return (
     <DashboardLayout>
-      {/* DashboardLayout imposes no width of its own — each page opts in. This
-          matches BusinessProfile's constraint so the dashboard reads as the same
-          centred column instead of stretching edge-to-edge on wide screens.
-          Both values are above any phone width, so mobile is untouched. */}
+      {/* Mobile keeps the signed-off single 512px column, so every desktop rule
+          below is gated behind `lg:` and nothing moves under 1024px.
+
+          At desktop the eleven stacked sections become a 12-column grid. The DOM
+          order is deliberately left untouched — grid auto-placement follows it —
+          so the mobile reading order survives exactly. Spans are chosen so every
+          row sums to 12 with no orphan cells (12 / 7+5 / 12 / 12 / 7+5 / 7+5 /
+          7+5), which lands the list-style panels in the left column and the
+          promo/action cards in the right without a second wrapper element. */}
       <motion.div
-        className="mx-auto max-w-2xl space-y-4 lg:max-w-3xl lg:space-y-6"
+        className="mx-auto max-w-2xl space-y-4 lg:grid lg:max-w-6xl lg:grid-cols-12 lg:gap-5 lg:space-y-0"
         variants={reduced ? {} : page}
         initial="hidden"
         animate="show"
       >
         {/* 1. PAGE HEADER */}
-        <motion.div variants={section}>
+        <motion.div variants={section} className="lg:col-span-12">
           <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Welcome back! Here's an overview of your business.</p>
         </motion.div>
 
         {/* 2. PROMO BANNER CAROUSEL */}
-        <motion.div variants={section} className="relative h-48 rounded-xl overflow-hidden">
+        <motion.div variants={section} className="relative h-48 rounded-xl overflow-hidden lg:col-span-7 lg:h-64">
           {/* Slide 1 */}
           <div
             className="absolute inset-0"
@@ -171,30 +176,33 @@ const SellerHome = () => {
           </div>
         </motion.div>
 
-        {/* 3. BUSINESS PROFILE SCORE */}
-        <motion.div variants={section}>
+        {/* 3. BUSINESS PROFILE SCORE — sits beside the banner and matches its
+               height, so the two hero cards read as one band. */}
+        <motion.div variants={section} className="lg:col-span-5">
           <BusinessProfileScore />
         </motion.div>
 
         {/* 4. QUICK ACTIONS GRID */}
-        <motion.div variants={section}>
+        <motion.div variants={section} className="lg:col-span-12">
           <SellerQuickActionsGrid />
         </motion.div>
 
         {/* 5. ANALYSIS PANEL */}
-        <motion.div variants={section}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <motion.div variants={section} className="lg:col-span-12">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 lg:p-5">
             <h3 className="text-base font-bold text-gray-900 mb-3">Analysis</h3>
 
             {/* Stat grid — each card staggers in */}
+            {/* 2x2 on mobile; the full row of four at desktop, where the panel
+                spans all twelve columns and a 2x2 would leave half of it empty. */}
             <motion.div
-              className="grid grid-cols-2 gap-3 mb-3"
+              className="grid grid-cols-2 gap-3 mb-3 lg:grid-cols-4 lg:gap-4"
               variants={listContainer}
               initial="hidden"
               animate="show"
             >
               {analysisStats.map(s => (
-                <motion.div key={s.label} variants={listItem} className="bg-gray-50 rounded-xl p-3">
+                <motion.div key={s.label} variants={listItem} className="bg-gray-50 rounded-xl p-3 lg:p-4">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs text-gray-500">{s.label}</span>
                     <s.Icon className="w-4 h-4 text-accent/70" />
@@ -245,8 +253,8 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 6. TOP PERFORMING PRODUCTS */}
-        <motion.div variants={section}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <motion.div variants={section} className="lg:col-span-7">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 lg:h-full lg:p-5">
             <h3 className="text-base font-bold text-gray-900 mb-3">Top Performing Products</h3>
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-0">
               {topProducts.map((p) => (
@@ -289,7 +297,7 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 7. ADD PRODUCT + BROWSE QUOTES */}
-        <motion.div variants={section} className="space-y-2">
+        <motion.div variants={section} className="space-y-2 lg:col-span-5 lg:flex lg:flex-col lg:justify-center lg:space-y-3">
           {[
             { icon: "＋", iconBg: "bg-accent/10", iconColor: "text-accent", title: "Add New Product", subtitle: "Showcase your products to buyers", to: "/upload" },
             { icon: "🔍", iconBg: "bg-blue-50",   iconColor: "text-blue-600", title: "Browse Quotes",  subtitle: "Find new business opportunities",  to: "/quotes" },
@@ -322,8 +330,8 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 8. RECENT LEADS */}
-        <motion.div variants={section}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <motion.div variants={section} className="lg:col-span-7">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 lg:h-full lg:p-5">
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-base font-bold text-gray-900">Recent Leads</h3>
               <Link to="/leads">
@@ -387,9 +395,11 @@ const SellerHome = () => {
           </div>
         </motion.div>
 
-        {/* 9. BOOST YOUR PROFILE */}
-        <motion.div variants={section}>
-          <div className="bg-[#fff5f0] border border-orange-100 rounded-2xl p-4 flex items-start gap-3">
+        {/* 9. BOOST YOUR PROFILE — a short nudge card paired with the much taller
+               Recent Leads. Centring it in the row beats stretching it, which
+               would blow a 130px card up to 450px of empty peach. */}
+        <motion.div variants={section} className="lg:col-span-5 lg:flex lg:flex-col lg:justify-center">
+          <div className="bg-[#fff5f0] border border-orange-100 rounded-2xl p-4 flex items-start gap-3 lg:p-5">
             <div className="w-9 h-9 bg-orange-100 rounded-full flex items-center justify-center shrink-0">
               <TrendingUp className="w-4 h-4 text-orange-500" />
             </div>
@@ -410,8 +420,8 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 10. RECENT MESSAGES */}
-        <motion.div variants={section}>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+        <motion.div variants={section} className="lg:col-span-7">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 lg:h-full lg:p-5">
             <h3 className="text-base font-bold text-gray-900 mb-3">Recent Messages</h3>
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-0">
               {recentMessages.map((msg) => (
@@ -457,12 +467,12 @@ const SellerHome = () => {
         </motion.div>
 
         {/* 11. COMPETITOR'S ADVERTISEMENTS */}
-        <motion.div variants={section}>
+        <motion.div variants={section} className="lg:col-span-5 lg:flex lg:flex-col lg:justify-center">
           <motion.div
             whileHover={{ scale: 1.012 }}
             whileTap={{ scale: 0.98 }}
             transition={{ ease: E, duration: 0.2 }}
-            className="bg-gradient-to-br from-[#ef4d62] to-[#f97316] rounded-2xl p-4 text-white"
+            className="bg-gradient-to-br from-[#ef4d62] to-[#f97316] rounded-2xl p-4 text-white lg:p-5"
           >
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">

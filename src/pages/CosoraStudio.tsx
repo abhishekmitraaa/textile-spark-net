@@ -89,6 +89,35 @@ const PACKAGES = [
 
 const cityOf = (location: string) => location.split(",")[0].trim();
 
+/**
+ * Cover photo for a studio card. A few portfolio URLs in the seed data are
+ * dead, and with a single cover image (instead of the old 4-up collage) a dead
+ * URL is the whole card. So walk down the portfolio until one loads, and fall
+ * back to a neutral tile if none do.
+ */
+const StudioCover = ({ images, name }: { images: string[]; name: string }) => {
+  const [index, setIndex] = useState(0);
+  const src = images[index];
+
+  return (
+    <div className="aspect-[4/3] overflow-hidden bg-gray-50">
+      {src ? (
+        <img
+          src={src}
+          alt={`Recent work by ${name}`}
+          loading="lazy"
+          onError={() => setIndex((i) => i + 1)}
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <Camera className="h-6 w-6 text-gray-300" strokeWidth={1.5} />
+        </div>
+      )}
+    </div>
+  );
+};
+
 const CosoraStudio = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -160,7 +189,7 @@ const CosoraStudio = () => {
           variants={section}
           className="grid overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:grid-cols-[1.05fr_1fr]"
         >
-          <div className="order-2 p-6 md:order-1 md:p-9">
+          <div className="order-2 flex flex-col justify-center p-6 md:order-1 md:p-9">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#256fef]/10 px-3 py-1 text-xs font-medium text-[#256fef]">
               <Camera className="h-3.5 w-3.5" strokeWidth={2} />
               Premium studio service
@@ -282,14 +311,7 @@ const CosoraStudio = () => {
               onClick={() => navigate(`/cosora-studio/${s.id}`)}
               className="group w-full overflow-hidden rounded-2xl border border-gray-100 bg-white text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#256fef]/40"
             >
-              <div className="aspect-[4/3] overflow-hidden bg-gray-50">
-                <img
-                  src={s.portfolio[0]}
-                  alt={`Recent work by ${s.name}`}
-                  loading="lazy"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                />
-              </div>
+              <StudioCover images={s.portfolio} name={s.name} />
 
               <div className="p-4">
                 <div className="flex items-center gap-1.5">

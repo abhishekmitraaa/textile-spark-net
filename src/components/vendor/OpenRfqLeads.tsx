@@ -66,17 +66,17 @@ export default function OpenRfqLeads() {
     }
   };
 
-  const input = "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm focus:outline-none focus:border-[#256fef]";
+  const input = "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm transition-colors focus:outline-none focus:border-[#256fef] focus:ring-1 focus:ring-[#256fef]/20";
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4">
-      <div className="flex items-center justify-between gap-2 mb-3">
+    <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 lg:p-5">
+      <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-gray-900">Buyer Requirements</h2>
-          <span className="rounded-full bg-[#256fef]/10 text-[#256fef] text-[10px] font-bold px-2 py-0.5">{rfqs.length} live</span>
+          <h2 className="text-sm font-bold text-gray-900 lg:text-base">Buyer Requirements</h2>
+          <span className="rounded-full bg-[#256fef]/10 text-[#256fef] text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{rfqs.length} live</span>
         </div>
         {vplan && (
-          <span className={`text-[11px] font-semibold ${capHit ? "text-red-600" : "text-gray-500"}`}>
+          <span className={`text-[11px] font-semibold lg:text-xs ${capHit ? "text-red-600" : "text-gray-500"}`}>
             {isUnlimited(leadCap)
               ? "Unlimited leads"
               : `${Math.min(leadsUsed, leadCap)}/${leadCap} leads used`}
@@ -93,9 +93,10 @@ export default function OpenRfqLeads() {
         </Link>
       )}
 
-      <div className="space-y-3">
+      {/* One column on mobile; two across once there is real width to spend. */}
+      <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {rfqs.map((r) => (
-          <div key={r.id} className={`rounded-xl border p-3 ${r.matched ? "border-[#256fef]/40 bg-[#256fef]/[0.03]" : "border-gray-200"}`}>
+          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched ? "border-[#256fef]/40 bg-[#256fef]/[0.03] lg:hover:border-[#256fef]/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {r.matched && (
@@ -103,13 +104,13 @@ export default function OpenRfqLeads() {
                     <Sparkles className="h-3 w-3" /> Matches your category
                   </span>
                 )}
-                <p className="text-sm font-bold text-gray-900 truncate">{r.title}</p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
+                <p className="text-xs text-gray-500 mt-0.5 lg:text-[13px]">
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}
                   {r.priceMin || r.priceMax ? `₹${r.priceMin}–₹${r.priceMax}/unit · ` : ""}{r.date}
                 </p>
               </div>
-              {r.image && <img src={r.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0" />}
+              {r.image && <img src={r.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0 lg:w-14 lg:h-14" />}
             </div>
 
             {r.alreadyQuoted ? (
@@ -121,7 +122,9 @@ export default function OpenRfqLeads() {
                 <Crown className="w-3.5 h-3.5" /> Upgrade to quote
               </Link>
             ) : openId === r.id ? (
-              <div className="mt-3 space-y-2">
+              // Capped on desktop: at full width the inputs stretch to ~1100px
+              // on /leads, which reads as a form nobody designed.
+              <div className="mt-3 space-y-2 lg:max-w-xl">
                 <div className="grid grid-cols-2 gap-2">
                   <input className={input} inputMode="numeric" placeholder="Price / unit (₹)" value={form.price} onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))} />
                   <input className={input} inputMode="numeric" placeholder="MOQ" value={form.moq} onChange={(e) => setForm((f) => ({ ...f, moq: e.target.value }))} />
@@ -129,14 +132,14 @@ export default function OpenRfqLeads() {
                 <input className={input} placeholder="Lead time (e.g. 20 days)" value={form.leadTime} onChange={(e) => setForm((f) => ({ ...f, leadTime: e.target.value }))} />
                 <textarea className={input} rows={2} placeholder="Comment (optional)" value={form.comment} onChange={(e) => setForm((f) => ({ ...f, comment: e.target.value }))} />
                 <div className="flex gap-2">
-                  <button onClick={() => setOpenId(null)} className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200">Cancel</button>
-                  <button onClick={() => submit(r.id)} disabled={busy} className="flex-1 py-2 rounded-lg text-white text-sm font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-60" style={{ backgroundColor: BLUE }}>
+                  <button onClick={() => setOpenId(null)} className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 text-sm font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
+                  <button onClick={() => submit(r.id)} disabled={busy} className="flex-1 py-2 rounded-lg text-white text-sm font-bold inline-flex items-center justify-center gap-1.5 disabled:opacity-60 transition-opacity hover:opacity-90" style={{ backgroundColor: BLUE }}>
                     {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} Send Quote
                   </button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold" style={{ borderColor: BLUE, color: BLUE }}>
+              <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#256fef]/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="w-3.5 h-3.5" /> Submit Quote
               </button>
             )}

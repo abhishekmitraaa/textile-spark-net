@@ -137,7 +137,9 @@ const FAQS = [
 function AdvHeader() {
   const navigate = useNavigate();
   return (
-    <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+    // Desktop already has the sidebar + dashboard header for orientation, so the
+    // mobile back-bar would just be a second stacked chrome row — hide it there.
+    <div className="bg-white border-b border-gray-200 sticky top-0 z-10 lg:hidden">
       <div className="max-w-4xl mx-auto px-2 py-2">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate(-1)}
@@ -154,16 +156,32 @@ function AdvHeader() {
 // ── HeroSection ──
 function HeroSection() {
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h2 className="text-2xl font-bold mb-2 text-gray-900">Boost Your Visibility</h2>
-          <p className="text-gray-600 text-sm leading-relaxed">
+    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm lg:p-10">
+      <div className="flex items-start justify-between mb-4 lg:mb-0 lg:items-center lg:gap-10">
+        <div className="lg:max-w-2xl">
+          {/* On desktop this eyebrow carries the page title the hidden back-bar used to. */}
+          <div className="hidden lg:block text-[11px] font-bold uppercase tracking-[0.18em] text-[#f75f71] mb-3">
+            Advertise
+          </div>
+          <h2 className="text-2xl font-bold mb-2 text-gray-900 lg:text-4xl lg:mb-3 lg:text-balance">Boost Your Visibility</h2>
+          <p className="text-gray-600 text-sm leading-relaxed lg:text-base">
             Promote your products to reach more buyers and get quality leads
           </p>
+          <div className="hidden lg:flex items-center gap-6 mt-6">
+            {[
+              { k: "From ₹22", v: "per day" },
+              { k: "Instant", v: "go-live" },
+              { k: "Anytime", v: "pause or stop" },
+            ].map((m) => (
+              <div key={m.k} className="flex flex-col">
+                <span className="text-sm font-bold text-gray-900">{m.k}</span>
+                <span className="text-xs text-gray-500">{m.v}</span>
+              </div>
+            ))}
+          </div>
         </div>
         <a href="#adCreationSteps"
-          className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors whitespace-nowrap">
+          className="bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-orange-700 transition-colors whitespace-nowrap lg:shrink-0 lg:rounded-xl lg:px-7 lg:py-3.5 lg:text-base lg:shadow-lg lg:shadow-orange-600/20">
           Start Advertising
         </a>
       </div>
@@ -174,15 +192,17 @@ function HeroSection() {
 // ── StatsGrid ──
 function StatsGrid() {
   return (
-    <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
+    // The vendor sidebar eats 256px, so the six-across strip only earns its keep
+    // past ~1400px — below that three columns keeps the labels readable.
+    <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 lg:grid-cols-3 min-[1400px]:grid-cols-6">
       {STATS.map((s, i) => (
-        <motion.div key={i} variants={listItem} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow">
+        <motion.div key={i} variants={listItem} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow min-[1400px]:p-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className={cn("p-2 rounded-lg", s.bg)}>
                 <s.Icon className={cn("w-5 h-5", s.color)} />
               </div>
-              <div className="text-2xl font-bold text-gray-900">{s.value}</div>
+              <div className="text-2xl font-bold text-gray-900 lg:tabular-nums">{s.value}</div>
             </div>
             {s.trend === "up"
               ? <TrendingUp className="w-4 h-4 text-green-500" />
@@ -199,10 +219,16 @@ function StatsGrid() {
 }
 
 // ── CompetitorAds ──
-function CompetitorAdsLink() {
+// `inRail` — the panel sits beside the campaigns table on wide screens, so it
+// stays a single stacked column there; on its own it pairs up side by side
+// rather than leaving a full-width row mostly empty.
+function CompetitorAdsLink({ inRail }: { inRail: boolean }) {
   const navigate = useNavigate();
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200 space-y-4">
+    <div className={cn(
+      "bg-white rounded-xl p-4 border border-gray-200 space-y-4 lg:h-full lg:p-6 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-6 lg:content-start",
+      inRail && "min-[1400px]:grid-cols-1 min-[1400px]:gap-5",
+    )}>
       {/* Competitor Ads */}
       <div>
         <div className="flex items-center gap-3 mb-2">
@@ -216,7 +242,7 @@ function CompetitorAdsLink() {
         </button>
       </div>
 
-      <div className="border-t border-gray-100" />
+      <div className={cn("border-t border-gray-100 lg:hidden", inRail && "min-[1400px]:block")} />
 
       {/* Old Advertisements */}
       <div>
@@ -237,11 +263,11 @@ function CompetitorAdsLink() {
 // ── PricingHeader ──
 function PricingHeader() {
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-200">
+    <div className="bg-white rounded-xl p-6 border border-gray-200 lg:py-10">
       <div className="text-center">
-        <div className="text-orange-600 text-sm font-semibold mb-2">PAY PER AD</div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Simple, Transparent Pricing</h2>
-        <p className="text-sm text-gray-600 leading-relaxed">
+        <div className="text-orange-600 text-sm font-semibold mb-2 lg:tracking-[0.18em] lg:uppercase lg:text-xs">PAY PER AD</div>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 lg:text-3xl">Simple, Transparent Pricing</h2>
+        <p className="text-sm text-gray-600 leading-relaxed lg:max-w-2xl lg:mx-auto lg:text-base">
           No subscriptions. Choose your product, set your duration, target your audience. Pay only for what you use.
         </p>
       </div>
@@ -345,13 +371,13 @@ function AdCreationSteps({
   ];
 
   return (
-    <section id="adCreationSteps" className="bg-white rounded-xl p-4 md:p-6 border border-gray-200">
-      <div className="mb-6">
-        <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2">Create Your Ad in 3 Steps</h3>
+    <section id="adCreationSteps" className="bg-white rounded-xl p-4 md:p-6 border border-gray-200 lg:p-8 xl:scroll-mt-24">
+      <div className="mb-6 lg:mb-8">
+        <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 lg:text-2xl">Create Your Ad in 3 Steps</h3>
         <p className="text-sm text-gray-600">Select products from your catalogue, choose targeting, and go live instantly</p>
       </div>
 
-      <div className="space-y-12">
+      <div className="space-y-12 lg:space-y-14">
         {/* ── Step 1: Ad Type ── */}
         <div>
           <div className="flex items-center gap-3 mb-6">
@@ -360,7 +386,56 @@ function AdCreationSteps({
           </div>
 
           <div className="space-y-3 pl-0 md:pl-11">
-            <div className="grid grid-cols-1 gap-3">
+            {/* Desktop: every placement shows its artwork and description up front,
+                so there is nothing to expand — the accordion below is mobile-only. */}
+            <div className="hidden lg:grid lg:grid-cols-2 min-[1700px]:grid-cols-3 gap-4">
+              {displayed.map(ad => {
+                const on = selectedAdTypes.includes(ad.id);
+                const included = SEAL_AD_TYPES.has(ad.id) && planGrantsSeal;
+                return (
+                  <button key={ad.id} onClick={() => toggleAdType(ad)} aria-pressed={on}
+                    className={cn(
+                      "group flex flex-col overflow-hidden rounded-2xl border-2 text-left transition-colors",
+                      on ? "border-[#FF6B6B] bg-[#fff5f5]" : "border-gray-100 bg-white hover:border-gray-200"
+                    )}>
+                    <div className="relative h-28 w-full overflow-hidden bg-gray-100">
+                      <img src={ad.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" loading="lazy" />
+                      <span className="absolute left-3 top-3 flex h-7 w-7 items-center justify-center rounded-lg bg-white/95 shadow-sm">
+                        <ad.Icon className="h-4 w-4 text-[#f75f71]" />
+                      </span>
+                      <span className={cn(
+                        "absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors",
+                        on ? "border-[#FF6B6B] bg-[#f75f71]" : "border-white/80 bg-white/90"
+                      )}>
+                        {on && <Check className="h-3.5 w-3.5 text-white" strokeWidth={4} />}
+                      </span>
+                    </div>
+                    <div className="flex flex-1 flex-col p-4">
+                      <h5 className="text-sm font-bold text-gray-900">{ad.name}</h5>
+                      <p className="mt-1.5 text-xs leading-relaxed text-gray-500">{ad.description}</p>
+                      <div className="mt-4 flex items-end justify-between border-t border-gray-100 pt-3">
+                        {included ? (
+                          <span className="rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
+                            Included in {planName}
+                          </span>
+                        ) : (
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-lg font-bold lg:tabular-nums text-gray-900">{ad.price}</span>
+                            <span className="text-xs font-medium text-gray-500">{ad.period || "one-time"}</span>
+                          </div>
+                        )}
+                        <span className={cn("text-[10px] font-bold uppercase tracking-wider transition-colors",
+                          on ? "text-[#FF6B6B]" : "text-gray-300 group-hover:text-gray-400")}>
+                          {on ? "Selected" : "Select"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 lg:hidden">
               {displayed.map(ad => (
                 <div key={ad.id} className="space-y-2">
                   <button
@@ -419,7 +494,7 @@ function AdCreationSteps({
 
             <button
               onClick={() => setShowMoreAdTypes(!showMoreAdTypes)}
-              className="w-full py-3 rounded-xl font-bold text-sm text-[#FF6B6B] bg-[#fff5f5] hover:bg-[#fff0f0] transition-all border border-[#FF6B6B]/20">
+              className="w-full py-3 rounded-xl font-bold text-sm text-[#FF6B6B] bg-[#fff5f5] hover:bg-[#fff0f0] transition-all border border-[#FF6B6B]/20 lg:mx-auto lg:block lg:w-auto lg:px-12">
               {showMoreAdTypes ? "Show Less" : `More (${AD_TYPES.length - 5} more options)`}
             </button>
           </div>
@@ -432,7 +507,7 @@ function AdCreationSteps({
             <h4 className="text-base md:text-lg font-bold text-gray-900">Select Products</h4>
           </div>
 
-          <div className="pl-0 md:pl-11 space-y-8">
+          <div className="pl-0 md:pl-11 space-y-8 xl:grid xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] xl:items-start xl:gap-6 xl:space-y-0">
             {/* Product tiles — the vendor's real live products */}
             <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100">
               <h5 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
@@ -488,7 +563,9 @@ function AdCreationSteps({
                   <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Date Range</span>
                 </button>
               </div>
-              <div className="grid grid-cols-4 gap-3 mt-4">
+              {/* Once the checkout rail claims 300px this column is too narrow for
+                  four abreast — fold to 2×2 until there is room again. */}
+              <div className="grid grid-cols-4 gap-3 mt-4 min-[1400px]:grid-cols-2 min-[1700px]:grid-cols-4">
                 {DURATIONS.map(d => (
                   <button key={d.value} onClick={() => setSelectedDuration(d.value)}
                     className={cn(
@@ -516,7 +593,7 @@ function AdCreationSteps({
           <div className="pl-0 md:pl-11 space-y-6">
             <p className="text-sm text-gray-500 font-medium italic">Automatically finds and updates audiences</p>
 
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start">
               {/* Category — REAL: filters which buyers see the ad on category
                   pages (e.g. product-detail). Empty = shown to everyone. */}
               <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
@@ -709,13 +786,44 @@ function CostSummary({
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  if (!selectedAdTypes.length || !selectedProducts.length || !selectedDuration) return null;
+
+  if (!selectedAdTypes.length || !selectedProducts.length || !selectedDuration) {
+    // Mobile keeps its original behaviour — nothing appears until the form is
+    // complete. The desktop rail is a fixed column, so instead of collapsing to
+    // an empty gutter it holds its place and names what is still missing.
+    const checklist = [
+      { label: "Choose an ad type", done: selectedAdTypes.length > 0 },
+      { label: "Select products to promote", done: selectedProducts.length > 0 },
+      { label: "Pick a duration", done: Boolean(selectedDuration) },
+    ];
+    return (
+      <div className="hidden min-[1400px]:block bg-white rounded-xl p-6 border border-dashed border-gray-200">
+        <h3 className="text-sm font-bold text-gray-900">Your campaign</h3>
+        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+          Finish the steps and your cost appears here before you pay.
+        </p>
+        <ul className="mt-5 space-y-3">
+          {checklist.map((c) => (
+            <li key={c.label} className="flex items-center gap-2.5">
+              <span className={cn("flex h-5 w-5 items-center justify-center rounded-full border-2",
+                c.done ? "border-[#FF6B6B] bg-[#f75f71]" : "border-gray-200 bg-white")}>
+                {c.done && <Check className="h-3 w-3 text-white" strokeWidth={4} />}
+              </span>
+              <span className={cn("text-xs font-semibold", c.done ? "text-gray-400 line-through" : "text-gray-700")}>
+                {c.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
 
   // Free tier can't run ads (ad_location_scope = none) — show an upsell instead
   // of the checkout so enforcement happens at the point of action.
   if (!canAds) {
     return (
-      <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center">
+      <div className="bg-white rounded-xl p-6 border border-amber-200 mt-6 text-center min-[1400px]:mt-0 min-[1400px]:text-left">
         <p className="text-base font-bold text-gray-900 mb-1">Advertising is a paid feature</p>
         <p className="text-sm text-gray-500 mb-4">Your current (Free) plan can't run ad campaigns. Upgrade to a paid plan to promote your products.</p>
         <Link to="/subscription" className="inline-flex items-center gap-1.5 rounded-2xl bg-[#ff2160] px-6 py-3 text-sm font-bold text-white hover:bg-[#ff2160]/80 transition-colors">
@@ -804,28 +912,30 @@ function CostSummary({
   };
 
   return (
-    <div className="bg-white rounded-xl p-6 border border-gray-200 mt-6">
-      <div className="text-center mb-6">
-        <div className="flex items-center justify-center gap-2 mb-2">
-          <span className="text-gray-600 text-base">Estimated Cost:</span>
-          <span className="text-4xl font-bold text-gray-900">₹{total.toLocaleString("en-IN")}</span>
-          <span className="text-gray-600 text-base">for {selectedDuration} days</span>
+    <div className="bg-white rounded-xl p-6 border border-gray-200 mt-6 min-[1400px]:mt-0 min-[1400px]:shadow-sm">
+      <div className="text-center mb-6 min-[1400px]:text-left">
+        {/* One inline sentence reads well full-width; in the 360px rail it has to
+            stack, so the amount gets its own line. */}
+        <div className="flex items-center justify-center gap-2 mb-2 min-[1400px]:flex-col min-[1400px]:items-start min-[1400px]:gap-0 min-[1400px]:mb-3">
+          <span className="text-gray-600 text-base min-[1400px]:text-xs min-[1400px]:font-semibold min-[1400px]:uppercase min-[1400px]:tracking-wider min-[1400px]:text-gray-400">Estimated Cost:</span>
+          <span className="text-4xl font-bold text-gray-900 lg:tabular-nums min-[1400px]:leading-tight">₹{total.toLocaleString("en-IN")}</span>
+          <span className="text-gray-600 text-base min-[1400px]:text-sm">for {selectedDuration} days</span>
         </div>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 min-[1400px]:text-xs min-[1400px]:leading-relaxed">
           {selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.price).join(" + ")}/day × {selectedDuration} days × {selectedProducts.length} product{selectedProducts.length > 1 ? "s" : ""}
         </p>
       </div>
 
       <button onClick={startCheckout} disabled={busy}
-        className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60">
+        className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 min-[1400px]:text-base">
         {busy ? "Processing…" : <>Pay &amp; Publish · ₹{total.toLocaleString("en-IN")}<ChevronRight className="w-5 h-5" /></>}
       </button>
 
-      <div className="grid grid-cols-2 gap-4 mt-6">
+      <div className="grid grid-cols-2 gap-4 mt-6 min-[1400px]:grid-cols-1 min-[1400px]:gap-2.5 min-[1400px]:mt-5 min-[1400px]:border-t min-[1400px]:border-gray-100 min-[1400px]:pt-5">
         {["No minimum spend", "Start from ₹22/day", "Go live instantly", "Pause or stop anytime"].map(b => (
           <div key={b} className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-pink-500 rounded-full" />
-            <span className="text-sm text-gray-600">{b}</span>
+            <div className="w-2 h-2 bg-pink-500 rounded-full shrink-0" />
+            <span className="text-sm text-gray-600 min-[1400px]:text-xs">{b}</span>
           </div>
         ))}
       </div>
@@ -861,10 +971,10 @@ function SuccessStoriesCarousel() {
   const max = SUCCESS_STORIES.length - 1;
 
   return (
-    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100 mt-10">
-      <div className="mb-6 flex items-end justify-between">
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100 mt-10 lg:p-8">
+      <div className="mb-6 flex items-end justify-between lg:mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Success Stories</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1 lg:text-3xl">Success Stories</h2>
           <p className="text-gray-600 text-sm">5.9 Lakh+ Advertisers</p>
         </div>
         <div className="flex gap-2">
@@ -931,11 +1041,11 @@ function FAQSection() {
 
   return (
     <div>
-      <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Frequently Asked Questions</h2>
+      <div className="text-center mb-8 lg:mb-10">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2 lg:text-3xl">Frequently Asked Questions</h2>
         <p className="text-gray-600">Everything you need to know about advertising on Cosora</p>
       </div>
-      <div className="max-w-3xl mx-auto space-y-4">
+      <div className="max-w-3xl mx-auto space-y-4 lg:max-w-none lg:grid lg:grid-cols-2 lg:gap-4 lg:space-y-0 lg:items-start">
         {FAQS.map((faq, i) => (
           <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <button onClick={() => setOpen(open === i ? null : i)}
@@ -959,10 +1069,10 @@ function FAQSection() {
 // ── WhyCosoraSection ──
 function WhyCosoraSection() {
   return (
-    <div className="p-6">
-      <div className="text-center mb-8">
-        <div className="text-pink-600 text-sm font-bold mb-2 uppercase tracking-wide">WHY COSORA</div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-3">The Platform That Gets You Orders</h2>
+    <div className="p-6 lg:px-0 lg:py-10">
+      <div className="text-center mb-8 lg:mb-10">
+        <div className="text-pink-600 text-sm font-bold mb-2 uppercase tracking-wide lg:text-xs lg:tracking-[0.18em]">WHY COSORA</div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-3 lg:text-4xl lg:text-balance">The Platform That Gets You Orders</h2>
         <p className="text-gray-600 text-sm leading-relaxed max-w-2xl mx-auto">
           We understand what manufacturers need. That's why every feature is designed to connect you with serious buyers.
         </p>
@@ -985,9 +1095,9 @@ function WhyCosoraSection() {
 // ── ManufacturersSection ──
 function ManufacturersSection() {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="bg-gray-900 border border-gray-800 rounded-2xl grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-0 lg:divide-x lg:divide-gray-800">
       {MANUFACTURERS_CARDS.map((c, i) => (
-        <div key={i} className="p-5 flex flex-col items-center justify-center text-center">
+        <div key={i} className="p-5 flex flex-col items-center justify-center text-center lg:px-6 lg:py-10">
           <div className="w-12 h-12 bg-orange-900/30 rounded-full flex items-center justify-center mb-4">
             <Building2 className="w-6 h-6 text-orange-500" />
           </div>
@@ -1002,8 +1112,8 @@ function ManufacturersSection() {
 // ── CTASection ──
 function CTASection() {
   return (
-    <div className="bg-gray-200 rounded-2xl p-8 text-center">
-      <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">
+    <div className="bg-gray-200 rounded-2xl p-8 text-center lg:py-16">
+      <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-3 lg:text-5xl lg:text-balance lg:max-w-3xl lg:mx-auto">
         Your Products Deserve{" "}
         <span className="bg-gradient-to-r from-[#f74d61] to-[#ff6d59] bg-clip-text text-transparent">
           the Right Buyers.
@@ -1030,17 +1140,17 @@ function AdvertiseCards() {
   const featured = AD_TYPES.slice(0, 4);
   return (
     <div className="rounded-xl mt-12 mb-12">
-      <h2 className="text-lg font-bold text-gray-900 mb-4">Popular ad types</h2>
-      <motion.div variants={listContainer} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <h2 className="text-lg font-bold text-gray-900 mb-4 lg:text-2xl lg:mb-6">Popular ad types</h2>
+      <motion.div variants={listContainer} className="grid grid-cols-1 md:grid-cols-2 gap-6 xl:grid-cols-4">
         {featured.map((ad) => (
           <motion.div key={ad.id} variants={listItem}
-            className="bg-white rounded-xl p-4 text-left flex gap-4 shadow-sm hover:shadow-2xl transition-all duration-500 group overflow-hidden border border-gray-100">
-            <div className="h-full w-[120px] shrink-0 flex items-center justify-center">
-              <div className="w-full h-24 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center">
+            className="bg-white rounded-xl p-4 text-left flex gap-4 shadow-sm hover:shadow-2xl transition-all duration-500 group overflow-hidden border border-gray-100 xl:flex-col xl:gap-3">
+            <div className="h-full w-[120px] shrink-0 flex items-center justify-center xl:h-auto xl:w-full">
+              <div className="w-full h-24 rounded-xl overflow-hidden bg-gray-100 flex items-center justify-center xl:h-36">
                 <img src={ad.image} alt={ad.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
               </div>
             </div>
-            <div className="mt-1 flex flex-col gap-2 flex-1 min-w-0">
+            <div className="mt-1 flex flex-col gap-2 flex-1 min-w-0 xl:mt-0">
               <h3 className="text-base font-black text-gray-900 leading-tight">{ad.name}</h3>
               <p className="text-xs text-gray-500 line-clamp-2">{ad.description}</p>
               <div className="mt-auto">
@@ -1075,19 +1185,19 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
   const ctr = (clicks: number, impr: number) => (impr > 0 ? ((clicks / impr) * 100).toFixed(1) : "0.0");
   const activeCount = ads.filter((a) => a.status === "active").length;
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-200">
-      <h3 className="text-sm font-bold text-gray-900 mb-3">Your Campaigns ({ads.length})</h3>
+    <div className="bg-white rounded-xl p-4 border border-gray-200 lg:h-full lg:p-6">
+      <h3 className="text-sm font-bold text-gray-900 mb-3 lg:text-base lg:mb-4">Your Campaigns ({ads.length})</h3>
 
       {/* Analytics summary across all campaigns */}
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4 lg:gap-3 lg:mb-5">
         {[
           { label: "Active", value: String(activeCount) },
           { label: "Impressions", value: totalImpr.toLocaleString("en-IN") },
           { label: "Clicks", value: totalClicks.toLocaleString("en-IN") },
           { label: "CTR", value: `${ctr(totalClicks, totalImpr)}%` },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl bg-[#fff5f5] border border-[#FF6B6B]/15 p-2.5 text-center">
-            <p className="text-base font-extrabold text-gray-900 leading-none">{s.value}</p>
+          <div key={s.label} className="rounded-xl bg-[#fff5f5] border border-[#FF6B6B]/15 p-2.5 text-center lg:p-4">
+            <p className="text-base font-extrabold text-gray-900 leading-none lg:tabular-nums lg:text-2xl">{s.value}</p>
             <p className="text-[10px] text-gray-500 mt-1 uppercase tracking-wide">{s.label}</p>
           </div>
         ))}
@@ -1164,30 +1274,42 @@ const Advertisements = () => {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showMoreAdTypes, setShowMoreAdTypes] = useState(false);
+  const hasAds = myAds.length > 0;
 
   return (
     <DashboardLayout>
-        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="pb-20">
+        <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="pb-20 lg:pb-4">
           <AdvHeader />
-          <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+          {/* Mobile keeps the 4xl reading column; desktop opens up to a real
+              dashboard canvas so the content stops sitting in a narrow strip. */}
+          <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 lg:max-w-6xl lg:px-0 lg:py-0 lg:space-y-8 xl:max-w-[1400px]">
             <motion.div variants={section}>
               <HeroSection />
             </motion.div>
             <motion.div variants={section}>
               <StatsGrid />
             </motion.div>
-            {myAds.length > 0 && (
-              <motion.div variants={section}>
-                <MyCampaigns ads={myAds} onToggle={toggleAd} onDelete={removeAd} />
-              </motion.div>
-            )}
-            <motion.div variants={section}>
-              <CompetitorAdsLink />
+            {/* Campaigns and the shortcut panel pair up into one row on desktop. */}
+            <motion.div
+              variants={section}
+              className={cn(
+                "space-y-6 lg:space-y-8",
+                hasAds && "min-[1400px]:grid min-[1400px]:grid-cols-3 min-[1400px]:gap-6 min-[1400px]:items-stretch min-[1400px]:space-y-0",
+              )}
+            >
+              {hasAds && (
+                <div className="min-[1400px]:col-span-2">
+                  <MyCampaigns ads={myAds} onToggle={toggleAd} onDelete={removeAd} />
+                </div>
+              )}
+              <CompetitorAdsLink inRail={hasAds} />
             </motion.div>
             <motion.div variants={section}>
               <PricingHeader />
             </motion.div>
-            <motion.div variants={section}>
+            {/* Builder + checkout: stacked on mobile, side-by-side with a sticky
+                summary rail once there is room for both. */}
+            <motion.div variants={section} className="space-y-6 min-[1400px]:space-y-0 min-[1400px]:grid min-[1400px]:grid-cols-[minmax(0,1fr)_300px] min-[1400px]:gap-6 min-[1400px]:items-start">
               <AdCreationSteps
                 products={myProducts}
                 selectedAdTypes={selectedAdTypes} setSelectedAdTypes={setSelectedAdTypes}
@@ -1200,19 +1322,19 @@ const Advertisements = () => {
                 cityLimit={cityLimit} scopeLabel={scopeLabel}
                 vendorCats={vendorCats} planGrantsSeal={planGrantsSeal} planName={planName}
               />
-            </motion.div>
-            <motion.div variants={section}>
-              <CostSummary
-                products={myProducts}
-                selectedAdTypes={selectedAdTypes}
-                selectedProducts={selectedProducts}
-                selectedDuration={selectedDuration}
-                selectedCategories={selectedCategories}
-                selectedCities={selectedCities}
-                vendorId={user?.id}
-                onCreated={refreshAds}
-                canAds={canAds}
-              />
+              <div className="min-[1400px]:sticky min-[1400px]:top-24">
+                <CostSummary
+                  products={myProducts}
+                  selectedAdTypes={selectedAdTypes}
+                  selectedProducts={selectedProducts}
+                  selectedDuration={selectedDuration}
+                  selectedCategories={selectedCategories}
+                  selectedCities={selectedCities}
+                  vendorId={user?.id}
+                  onCreated={refreshAds}
+                  canAds={canAds}
+                />
+              </div>
             </motion.div>
             <motion.div variants={section}>
               <SuccessStoriesCarousel />

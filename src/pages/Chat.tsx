@@ -8,8 +8,10 @@ import { useConversations, type ChatSummary } from "@/lib/queries/chat";
 import { useCalls, useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useIsDesktop } from "@/hooks/use-mobile";
+import { ChatThreadView } from "./ChatThread";
 import {
-  ArrowLeft, Search, MessageCircle, Phone, FileText, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+  ArrowLeft, Search, MessageCircle, MessagesSquare, Phone, FileText, PhoneIncoming, PhoneOutgoing, PhoneMissed,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,13 +32,38 @@ const Chat = () => {
   const reduced = useReducedMotion();
   const [params, setParams] = useSearchParams();
   const tab: Tab = params.get("tab") === "calls" ? "calls" : "chats";
-  const setTab = (t: Tab) => setParams(t === "calls" ? { tab: "calls" } : {}, { replace: true });
   const [query, setQuery] = useState("");
 
   // Sellers reach this hub from the vendor sidebar/bottom nav, so it renders
   // inside DashboardLayout — without it the sidebar disappears with no way back.
   const { role } = useUserRole();
   const isSeller = role === "seller";
+
+  // Sellers work this inbox from a laptop, where a single 672px column stranded
+  // in a 1200px content area reads as broken. From `lg` up the page becomes a
+  // real master-detail: list on the left, the live thread on the right, so
+  // replying never costs a page navigation. Buyers keep the single-column flow.
+  const isDesktop = useIsDesktop();
+  const splitView = isSeller && isDesktop;
+  // The open thread lives in the URL so refresh, back, and deep links all work.
+  const activeId = splitView ? params.get("c") : null;
+
+  const patchParams = (patch: Record<string, string | null>, replace = false) => {
+    const next = new URLSearchParams(params);
+    for (const [k, v] of Object.entries(patch)) {
+      if (v === null) next.delete(k);
+      else next.set(k, v);
+    }
+    setParams(next, { replace });
+  };
+
+  const setTab = (t: Tab) => patchParams({ tab: t === "calls" ? "calls" : null }, true);
+  // Selecting a thread replaces history while a pane is already open, so Back
+  // returns to the inbox rather than walking every conversation you clicked.
+  const openThread = (id: string) => {
+    if (splitView) patchParams({ c: id }, Boolean(activeId));
+    else navigate(`/chats/${id}`);
+  };
 
   // Real conversations + calls when signed in; seeded lists only as signed-out fallback.
   const { user } = useAuth();
@@ -74,97 +101,125 @@ const Chat = () => {
   };
 
   const body = (
-    <div className={cn("min-h-screen bg-gray-50", isSeller && "-m-4 lg:-m-6")}>
-      {/* Header */}
-      <div className={cn("sticky bg-white border-b border-gray-100", isSeller ? "top-14 z-20 lg:top-16" : "top-0 z-30")}>
-        <div className="max-w-2xl mx-auto px-4 pt-4">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-2">
-              {isSeller && (
-                <button onClick={goBack} aria-label="Back" className="-ml-1 p-1 rounded-full hover:bg-gray-100">
-                  <ArrowLeft className="w-5 h-5 text-gray-700" />
-                </button>
-              )}
-              <div>
-                <h1 className="text-xl font-extrabold text-gray-900">Messages</h1>
-                <p className="text-xs text-gray-500">
-                  {tab === "chats" ? `${convos.length} Conversations` : `${filteredGroups.reduce((n, g) => n + g.calls.length, 0)} Calls`}
-                </p>
+    <div
+      className={cn(
+        "min-h-screen bg-gray-50",
+        isSeller && "-m-4 lg:-m-6",
+        // At `lg` the page stops scrolling and becomes two independently
+        // scrolling panes pinned under the dashboard header.
+        isSeller && "lg:flex lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden",
+      )}
+    >
+      {/* Conversation list — the whole page on mobile, the left pane at `lg` */}
+      <div
+        className={cn(
+          isSeller &&
+            "lg:flex lg:h-full lg:w-[368px] lg:min-h-0 lg:shrink-0 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white xl:w-[400px]",
+        )}
+      >
+        {/* Header */}
+        <div className={cn("sticky bg-white border-b border-gray-100", isSeller ? "top-14 z-20 lg:static lg:z-auto lg:shrink-0" : "top-0 z-30")}>
+          <div className={cn("mx-auto w-full max-w-2xl px-4 pt-4", isSeller && "lg:max-w-none")}>
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-2">
+                {isSeller && (
+                  <button onClick={goBack} aria-label="Back" className="-ml-1 p-1 rounded-full hover:bg-gray-100 lg:hidden">
+                    <ArrowLeft className="w-5 h-5 text-gray-700" />
+                  </button>
+                )}
+                <div>
+                  <h1 className="text-xl font-extrabold text-gray-900">Messages</h1>
+                  <p className="text-xs text-gray-500">
+                    {tab === "chats" ? `${convos.length} Conversations` : `${filteredGroups.reduce((n, g) => n + g.calls.length, 0)} Calls`}
+                  </p>
+                </div>
               </div>
-            </div>
-            {onlineCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {onlineCount} online
-              </span>
-            )}
-          </div>
-
-          {/* Tabs */}
-          <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
-            {(["chats", "calls"] as Tab[]).map((t) => (
-              <button key={t} onClick={() => setTab(t)}
-                className={cn("relative flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-bold transition-colors",
-                  tab === t ? "text-white" : "text-gray-500")}>
-                {tab === t && <motion.span layoutId="chat-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
-                <span className="relative z-10 inline-flex items-center gap-1.5">
-                  {t === "chats" ? <MessageCircle className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
-                  {t === "chats" ? "Chats" : "Calls"}
+              {onlineCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-600">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {onlineCount} online
                 </span>
-              </button>
-            ))}
-          </div>
+              )}
+            </div>
 
-          {/* Search */}
-          <div className="relative py-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              value={query} onChange={(e) => setQuery(e.target.value)}
-              placeholder={tab === "chats" ? "Search conversations..." : "Search call history..."}
-              className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] focus:bg-white"
-            />
+            {/* Tabs */}
+            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-gray-100 p-1">
+              {(["chats", "calls"] as Tab[]).map((t) => (
+                <button key={t} onClick={() => setTab(t)}
+                  className={cn("relative flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-bold transition-colors",
+                    tab === t ? "text-white" : "text-gray-500")}>
+                  {tab === t && <motion.span layoutId="chat-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+                  <span className="relative z-10 inline-flex items-center gap-1.5">
+                    {t === "chats" ? <MessageCircle className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
+                    {t === "chats" ? "Chats" : "Calls"}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Search */}
+            <div className="relative py-3">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                value={query} onChange={(e) => setQuery(e.target.value)}
+                placeholder={tab === "chats" ? "Search conversations..." : "Search call history..."}
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] focus:bg-white"
+              />
+            </div>
           </div>
+        </div>
+
+        {/* Body — sellers get bottom-nav clearance from DashboardLayout's own padding */}
+        <div
+          className={cn(
+            "mx-auto w-full max-w-2xl px-4 pt-2",
+            isSeller ? "pb-6 lg:max-w-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4" : "pb-28",
+          )}
+        >
+          <AnimatePresence mode="wait">
+            {tab === "chats" ? (
+              <motion.div key="chats" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} variants={listContainer}>
+                {chats.length === 0 ? (
+                  <Empty icon={MessageCircle} label="No conversations found" />
+                ) : (
+                  <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5")}>
+                    {chats.map((c) => (
+                      <motion.div key={c.id} variants={listItem}>
+                        <ChatRow conv={c} active={c.id === activeId} onOpen={() => openThread(c.id)} onQuote={goQuotes} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+              </motion.div>
+            ) : (
+              <motion.div key="calls" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                {filteredGroups.length === 0 ? (
+                  <Empty icon={Phone} label="No calls found" />
+                ) : (
+                  filteredGroups.map((g) => (
+                    <div key={g.group} className="mb-2">
+                      <p className="px-1 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{g.group}</p>
+                      <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5")}>
+                        {g.calls.map((c) => (
+                          <motion.div key={c.id} variants={listItem}>
+                            <CallRow call={c} onOpen={() => openThread(c.vendorId)} onCall={() => callVendor(c.vendorId, c.rfqProduct)} onQuote={goQuotes} />
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    </div>
+                  ))
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Body — sellers get bottom-nav clearance from DashboardLayout's own padding */}
-      <div className={cn("max-w-2xl mx-auto px-4 pt-2", isSeller ? "pb-6" : "pb-28")}>
-        <AnimatePresence mode="wait">
-          {tab === "chats" ? (
-            <motion.div key="chats" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} variants={listContainer}>
-              {chats.length === 0 ? (
-                <Empty icon={MessageCircle} label="No conversations found" />
-              ) : (
-                <motion.div variants={listContainer} initial="hidden" animate="show" className="divide-y divide-gray-100">
-                  {chats.map((c) => (
-                    <motion.div key={c.id} variants={listItem}>
-                      <ChatRow conv={c} onOpen={() => navigate(`/chats/${c.id}`)} onQuote={goQuotes} />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </motion.div>
-          ) : (
-            <motion.div key="calls" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              {filteredGroups.length === 0 ? (
-                <Empty icon={Phone} label="No calls found" />
-              ) : (
-                filteredGroups.map((g) => (
-                  <div key={g.group} className="mb-2">
-                    <p className="px-1 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{g.group}</p>
-                    <motion.div variants={listContainer} initial="hidden" animate="show" className="divide-y divide-gray-100">
-                      {g.calls.map((c) => (
-                        <motion.div key={c.id} variants={listItem}>
-                          <CallRow call={c} onOpen={() => navigate(`/chats/${c.vendorId}`)} onCall={() => callVendor(c.vendorId, c.rfqProduct)} onQuote={goQuotes} />
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  </div>
-                ))
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* Thread pane — desktop only; the seller reads and replies in place */}
+      {isSeller && (
+        <div className="hidden lg:block lg:h-full lg:min-w-0 lg:flex-1">
+          {activeId ? <ChatThreadView key={activeId} vendorId={activeId} embedded /> : <NoThreadSelected />}
+        </div>
+      )}
 
       {/* Post Requirement FAB — buyer-only action */}
       {!isSeller && (
@@ -207,10 +262,14 @@ function QuoteChip({ product, onClick }: { product: string; onClick: () => void 
   );
 }
 
-function ChatRow({ conv, onOpen, onQuote }: { conv: ChatSummary; onOpen: () => void; onQuote: () => void }) {
+// `active` only paints at `lg`, where the row genuinely drives a visible pane.
+const ROW_DESKTOP = "transition-colors lg:-mx-2 lg:rounded-xl lg:px-2 lg:hover:bg-gray-100/70";
+const ROW_ACTIVE = "lg:bg-[#ef4d62]/[0.07] lg:hover:bg-[#ef4d62]/[0.07]";
+
+function ChatRow({ conv, active, onOpen, onQuote }: { conv: ChatSummary; active?: boolean; onOpen: () => void; onQuote: () => void }) {
   return (
-    <div onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
-      className="w-full flex items-center gap-3 py-3 text-left cursor-pointer">
+    <div onClick={onOpen} role="button" tabIndex={0} aria-current={active ? "true" : undefined} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
+      className={cn("w-full flex items-center gap-3 py-3 text-left cursor-pointer", ROW_DESKTOP, active && ROW_ACTIVE)}>
       <Avatar src={conv.avatar} name={conv.name} online={conv.online} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
@@ -229,13 +288,16 @@ function ChatRow({ conv, onOpen, onQuote }: { conv: ChatSummary; onOpen: () => v
   );
 }
 
+// Calls are a log, not the pane's content: one vendor can own several call
+// rows, so painting them all "active" when their thread is open reads as a bug.
+// They get hover only.
 function CallRow({ call, onOpen, onCall, onQuote }: { call: CallRecord; onOpen: () => void; onCall: () => void; onQuote: () => void }) {
   const missed = call.direction === "missed";
   const Icon = missed ? PhoneMissed : call.direction === "incoming" ? PhoneIncoming : PhoneOutgoing;
   const color = missed ? "text-red-500" : "text-emerald-500";
   const label = missed ? "Missed" : call.direction === "incoming" ? "Incoming" : "Outgoing";
   return (
-    <div className="w-full flex items-center gap-3 py-3">
+    <div className={cn("w-full flex items-center gap-3 py-3", ROW_DESKTOP)}>
       <div onClick={onOpen} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") onOpen(); }}
         className="flex items-center gap-3 flex-1 min-w-0 text-left cursor-pointer">
         <Avatar src={call.avatar} name={call.name} />
@@ -253,6 +315,24 @@ function CallRow({ call, onOpen, onCall, onQuote }: { call: CallRecord; onOpen: 
       <button onClick={onCall} aria-label={`Call ${call.name}`} className="shrink-0 w-9 h-9 rounded-full bg-[#ef4d62]/10 flex items-center justify-center hover:bg-[#ef4d62]/15">
         <Phone className="w-4 h-4 text-[#ef4d62]" />
       </button>
+    </div>
+  );
+}
+
+// Resting state of the desktop thread pane. Composed rather than blank, so an
+// empty right half reads as "pick one" instead of "something failed to load".
+function NoThreadSelected() {
+  return (
+    <div className="grid h-full w-full place-items-center bg-gray-50 px-8">
+      <div className="max-w-[15rem] text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-gray-100">
+          <MessagesSquare className="h-7 w-7 text-gray-300" strokeWidth={1.75} />
+        </div>
+        <p className="text-sm font-bold text-gray-900">No conversation open</p>
+        <p className="mt-1 text-xs leading-relaxed text-gray-500">
+          Pick a chat on the left to read it here and reply without leaving the page.
+        </p>
+      </div>
     </div>
   );
 }
