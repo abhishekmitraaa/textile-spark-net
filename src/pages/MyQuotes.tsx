@@ -20,9 +20,15 @@ import ReceivedQuoteCard from "@/components/buyer/quotes/ReceivedQuoteCard";
 import QuoteDetailsModal from "@/components/buyer/quotes/QuoteDetailsModal";
 import VendorChatModal from "@/components/buyer/quotes/VendorChatModal";
 import CompareTable from "@/components/buyer/quotes/CompareTable";
+import DirectRequestThread from "@/components/buyer/quotes/DirectRequestThread";
 import { cn } from "@/lib/utils";
 
-type View = "list" | "received";
+// "received" is the open-marketplace comparison screen (many competing
+// vendors). "direct" is a product-page request addressed to one vendor, where
+// comparison is meaningless — see DirectRequestThread.
+type View = "list" | "received" | "direct";
+
+const BLUE = "#256fef";
 type StatusFilter = "all" | QuoteStatus;
 type SortKey = "recent" | "price" | "rating";
 
@@ -93,10 +99,20 @@ const MyQuotes = () => {
     return list;
   }, [rfqQuotes, search, status, sort, rfq]);
 
+  // A targeted request has exactly one vendor in it, so it opens the
+  // single-vendor thread; everything else keeps the comparison screen.
   const openReceived = (id: string) => {
-    setRfqId(id); setView("received"); setSearch(""); setStatus("all"); setSort("recent");
+    const target = rfqs.find((r) => r.id === id);
+    setRfqId(id); setView(target?.targetVendorId ? "direct" : "received");
+    setSearch(""); setStatus("all"); setSort("recent");
     setCompareMode(false); setSelected([]); setBanner(null);
   };
+
+  // The target vendor's reply, or null while the request is still pending.
+  const directQuote = useMemo(() => {
+    if (!rfq?.targetVendorId) return null;
+    return rfqQuotes.find((q) => q.vendorId === rfq.targetVendorId) ?? null;
+  }, [rfq, rfqQuotes]);
 
   const flashBanner = (type: "accepted" | "rejected") => {
     setBanner({ type });
@@ -180,7 +196,9 @@ const MyQuotes = () => {
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 mb-1.5">
+                          {/* Wraps so the vendor name in the Direct chip stays
+                              readable next to the Active / "N new" badges. */}
+                          <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                             <span className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-bold",
                               r.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"
@@ -190,6 +208,15 @@ const MyQuotes = () => {
                             {r.newCount > 0 && (
                               <span className="rounded-full bg-[#ef4d62] text-white px-2 py-0.5 text-[10px] font-bold">{r.newCount} new</span>
                             )}
+                            {r.targetVendorId && (
+                              <span
+                                className="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                                style={{ backgroundColor: `${BLUE}1a`, color: BLUE }}
+                              >
+                                <Send className="w-2.5 h-2.5 shrink-0" />
+                                <span className="truncate">Direct to {r.targetVendorName}</span>
+                              </span>
+                            )}
                           </div>
                           <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{r.units} units • ₹{r.priceMin} - ₹{r.priceMax}/unit</p>
@@ -197,8 +224,21 @@ const MyQuotes = () => {
                         <img src={r.image} alt={r.title} className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
-                        <span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {rq.length} quotes</span>
-                        <span>Lowest: <span className="font-bold text-gray-800">₹{r.lowest}</span></span>
+                        {/* A direct request has one vendor, so "N quotes" and a
+                            "lowest" price are both meaningless on it. */}
+                        {r.targetVendorId ? (
+                          <span className="inline-flex items-center gap-1">
+                            <MessageCircle className="w-3.5 h-3.5" />
+                            {rq.length > 0
+                              ? <>Quoted <span className="font-bold text-gray-800">₹{r.lowest}</span></>
+                              : "Awaiting reply"}
+                          </span>
+                        ) : (
+                          <>
+                            <span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {rq.length} quotes</span>
+                            <span>Lowest: <span className="font-bold text-gray-800">₹{r.lowest}</span></span>
+                          </>
+                        )}
                         <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {r.date}</span>
                         <ChevronRight className="w-4 h-4 text-gray-300" />
                       </div>
@@ -207,6 +247,40 @@ const MyQuotes = () => {
                 })}
               </div>
             </motion.div>
+          )}
+
+          {/* ───────── DIRECT REQUEST VIEW (one vendor) ───────── */}
+          {view === "direct" && rfq && rfq.targetVendorId && (
+            <div key="direct">
+              <AnimatePresence>
+                {banner && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
+                    className={cn(
+                      "rounded-xl px-4 py-3 mb-3 text-white",
+                      banner.type === "accepted" ? "bg-emerald-600" : "bg-red-500"
+                    )}
+                  >
+                    <p className="text-sm font-bold">
+                      {banner.type === "accepted" ? "Quote Accepted 🎉" : "Quote Rejected"}
+                    </p>
+                    <p className="text-xs opacity-90">
+                      {banner.type === "accepted"
+                        ? "Congratulations! The vendor will be notified to proceed."
+                        : "The vendor will be notified of your decision."}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <DirectRequestThread
+                rfq={rfq}
+                quote={directQuote}
+                onBack={() => setView("list")}
+                onChat={() => navigate(`/chats/${rfq.targetVendorId}`)}
+                onCall={() => callVendor(rfq.targetVendorId as string, rfq.productName)}
+                onStatus={(s) => { if (directQuote) changeStatus(directQuote.id, s); }}
+              />
+            </div>
           )}
 
           {/* ───────── RECEIVED VIEW ───────── */}

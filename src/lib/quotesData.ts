@@ -5,6 +5,22 @@
 export type RfqStatus = "active" | "closed";
 export type QuoteStatus = "pending" | "shortlisted" | "accepted" | "rejected";
 
+export interface SizeQty { size: string; quantity: number }
+
+/**
+ * The extra detail a product-page quote request captures, which an open
+ * marketplace RFQ has no equivalent of. Non-null only on a targeted request.
+ */
+export interface DirectRequestDetail {
+  /** "2 days ago" — how long the buyer has been waiting. */
+  sentAgo: string;
+  sizes: SizeQty[];
+  colors: string[];
+  customizationRequested: boolean;
+  customizationNotes: string | null;
+  customizationImages: string[];
+}
+
 export interface Rfq {
   id: string;
   title: string;
@@ -17,7 +33,31 @@ export interface Rfq {
   newCount: number;         // "N new" badge
   lowest: number;           // lowest quote (₹) shown on the request card
   date: string;             // "March 30, 2024"
+
+  // ── Targeting ──
+  // A request raised from a product page is addressed to ONE vendor, so it is
+  // a conversation rather than a field of competing bids. `targetVendorId` is
+  // the discriminator: non-null = direct, null = open marketplace (unchanged).
+  targetVendorId: string | null;
+  targetVendorName: string | null;
+  targetVendorInitials: string | null;
+  targetVendorVerified: boolean;
+  targetVendorRating: number;
+  targetVendorLocation: string;
+  /** Non-null exactly when targetVendorId is non-null. */
+  direct: DirectRequestDetail | null;
 }
+
+/** Defaults for an open-marketplace RFQ: no vendor, no product-page detail. */
+export const UNTARGETED = {
+  targetVendorId: null,
+  targetVendorName: null,
+  targetVendorInitials: null,
+  targetVendorVerified: false,
+  targetVendorRating: 0,
+  targetVendorLocation: "",
+  direct: null,
+} as const;
 
 export interface QuoteAttachments {
   images: string[];
@@ -73,6 +113,7 @@ export const RFQS: Rfq[] = [
     newCount: 2,
     lowest: 245,
     date: "March 30, 2024",
+    ...UNTARGETED,
   },
   {
     id: "rfq-2",
@@ -86,6 +127,7 @@ export const RFQS: Rfq[] = [
     newCount: 0,
     lowest: 380,
     date: "April 15, 2024",
+    ...UNTARGETED,
   },
   {
     id: "rfq-3",
@@ -99,6 +141,7 @@ export const RFQS: Rfq[] = [
     newCount: 0,
     lowest: 620,
     date: "March 10, 2024",
+    ...UNTARGETED,
   },
 ];
 

@@ -2,7 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
 import { ensureConversation } from "@/lib/queries/chat";
-import type { Rfq, VendorQuote, QuoteStatus } from "@/lib/quotesData";
+import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type SizeQty } from "@/lib/quotesData";
+
+// SizeQty lives with the other quote types (quotesData is the JSX-free type
+// home). Re-exported here because callers already import it from this module.
+export type { SizeQty };
 
 // ─────────────────────────────────────────────────────────────
 // RFQ ↔ Quotes data access (React Query over Supabase).
@@ -58,14 +62,38 @@ function mapQuote(q: RawQuote, v?: RawVendor): VendorQuote {
   };
 }
 
-function mapRfq(r: RawRfq, quotes: RawQuote[]): Rfq {
+function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor): Rfq {
   const prices = quotes.map((q) => Number(q.price_inr ?? q.price_per_unit ?? 0)).filter((n) => n > 0);
-  return {
+  const base = {
     id: r.id, title: r.title, productName: r.product_name ?? r.title, units: r.quantity ?? 0,
     priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0), image: r.image ?? "",
     status: r.status, newCount: quotes.filter((q) => q.status === "pending").length,
     lowest: prices.length ? Math.min(...prices) : 0,
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
+  };
+
+  // Open marketplace: nothing to target, nothing extra captured.
+  if (!r.vendor_id) return { ...base, ...UNTARGETED };
+
+  // Targeted: the vendor row is resolved even with zero quotes, so a pending
+  // request can still name who it went to.
+  const name = targetVendor?.brand_name ?? "Vendor";
+  return {
+    ...base,
+    targetVendorId: r.vendor_id,
+    targetVendorName: name,
+    targetVendorInitials: initials(name),
+    targetVendorVerified: trustSealFromParts(targetVendor?.is_verified, targetVendor?.plan_expires_at, targetVendor?.ad_verified_until),
+    targetVendorRating: Number(targetVendor?.rating_avg ?? 0),
+    targetVendorLocation: targetVendor?.city ?? "India",
+    direct: {
+      sentAgo: ago(r.created_at),
+      sizes: (r.sizes_breakdown as SizeQty[] | null) ?? [],
+      colors: r.colors ?? [],
+      customizationRequested: r.customization_requested ?? false,
+      customizationNotes: r.customization_notes ?? null,
+      customizationImages: r.customization_images ?? [],
+    },
   };
 }
 
@@ -83,7 +111,15 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
     const { data } = await supabase.from("quotes").select("*").in("rfq_id", rfqIds);
     quoteRows = (data ?? []) as RawQuote[];
   }
-  const vendorIds = Array.from(new Set(quoteRows.map((q) => q.vendor_id)));
+  // One batched vendor lookup covering BOTH sources: the vendors who quoted,
+  // and the target vendor of every targeted request. The second set matters on
+  // its own because a targeted request that has not been replied to yet has no
+  // quote row to carry its vendor, and the buyer still needs to see who it
+  // went to.
+  const vendorIds = Array.from(new Set([
+    ...quoteRows.map((q) => q.vendor_id),
+    ...rfqRows.map((r) => r.vendor_id).filter(Boolean) as string[],
+  ]));
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
     const { data } = await supabase.from("vendor_profiles").select("id, brand_name, is_verified, city, rating_avg, reviews_count, plan_expires_at, ad_verified_until").in("id", vendorIds);
@@ -92,7 +128,11 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
 
   const quotesMap: Record<string, VendorQuote> = {};
   for (const q of quoteRows) quotesMap[q.id] = mapQuote(q, vendorMap.get(q.vendor_id));
-  const rfqs = rfqRows.map((r) => mapRfq(r, quoteRows.filter((q) => q.rfq_id === r.id)));
+  const rfqs = rfqRows.map((r) => mapRfq(
+    r,
+    quoteRows.filter((q) => q.rfq_id === r.id),
+    r.vendor_id ? vendorMap.get(r.vendor_id) : undefined,
+  ));
   return { rfqs, quotesMap };
 }
 
@@ -126,8 +166,6 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
 // A row with vendor_id + product_id set is a direct request to one vendor. It
 // stays a real `rfqs` row, so My Quotes / compare keep working unchanged; the
 // tightened rfqs_select policy keeps it out of every other vendor's feed.
-
-export interface SizeQty { size: string; quantity: number }
 
 export interface NewTargetedRfq {
   vendorId: string;
