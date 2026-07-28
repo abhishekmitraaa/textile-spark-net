@@ -56,7 +56,10 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
   const buyerNavItems = [
     { name: "Home", href: "/home/new-arrivals", icon: Home },
     { name: "Categories", href: "/categories", icon: LayoutGrid },
-    { name: "Requirement", href: "/requirement", icon: Plus, isCenter: true },
+    // Goes straight to Post Your Requirement. It used to point at
+    // "/requirement", which is only a BuyerRouteShell scaffold ("Route
+    // scaffold / Phase 1"), so the raised centre button led nowhere.
+    { name: "Requirement", href: "/requirement/post-requirement", icon: Plus, isCenter: true },
     { name: "Chats", href: "/chats", icon: MessageCircle, badge: unreadMessages },
     { name: "My Profile", href: "/profile", icon: UserCircle },
   ];
