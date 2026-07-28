@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { BUYER_CATEGORIES } from "@/lib/buyerCategories";
+import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import { usePreferences, setCategories } from "@/lib/preferencesStore";
 
 // Buyer registration interests. These are the shared buyer categories used by
@@ -19,6 +19,7 @@ const InterestPreference = () => {
   const inProfile = useLocation().pathname.startsWith("/profile");
   const prefs = usePreferences();
   const [selected, setSelected] = useState<string[]>(prefs.categories);
+  const [query, setQuery] = useState("");
   // Mirror store→local until the buyer starts editing, so a signed-in buyer who
   // already has saved preferences sees them pre-selected once the store hydrates.
   const touched = useRef(false);
@@ -53,49 +54,22 @@ const InterestPreference = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 flex flex-col max-w-lg mx-auto w-full"
       >
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Interest Preference</h2>
-
-        <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 mb-4">
-          <p className="text-xs text-gray-500 leading-relaxed">
-            Select the product categories you usually source. We'll use these to recommend brands and products across Cosora.
-          </p>
+        {/* Same question, same wording and same control as the For You
+            preference step on the buyer side — see CategoryPickerGrid. */}
+        <div className="text-center mb-5">
+          <h1 className="text-xl font-bold text-gray-900">What are you looking to source?</h1>
+          <p className="mt-1.5 text-sm text-gray-500">Select all that apply</p>
         </div>
 
-        <p className="text-sm font-bold text-gray-800 mb-3">Your Interest</p>
-
-        <div className="grid grid-cols-4 gap-x-3 gap-y-4 mb-2">
-          {BUYER_CATEGORIES.map((cat) => {
-            const isSelected = selected.includes(cat.id);
-            return (
-              <button key={cat.id} onClick={() => toggle(cat.id)} className="text-center">
-                <div className={cn(
-                  "relative aspect-square rounded-full overflow-hidden mb-1.5 ring-2 transition-all flex items-center justify-center bg-gray-50",
-                  isSelected ? "ring-[#a4172c]" : "ring-transparent"
-                )}>
-                  <span className="text-2xl" aria-hidden>{cat.icon}</span>
-                  {isSelected && (
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                      <div className="w-6 h-6 rounded-full bg-[#a4172c] flex items-center justify-center">
-                        <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />
-                      </div>
-                    </div>
-                  )}
-                </div>
-                <span className="text-[10px] text-gray-600 font-medium leading-tight line-clamp-2">
-                  {cat.label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+        <CategoryPickerGrid selected={selected} onToggle={toggle} query={query} setQuery={setQuery} />
 
         <button
           onClick={handleSave}
           disabled={!isValid}
           className={cn(
-            "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-6",
+            "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-6 active:scale-[0.99]",
             isValid
-              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >

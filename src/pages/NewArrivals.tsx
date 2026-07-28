@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
@@ -7,11 +7,13 @@ import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
-import { Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
+import { BadgeCheck, Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
+import { useActiveAds, logAdImpression, logAdClick, type ActiveAd } from "@/lib/queries/ads";
+import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
@@ -95,25 +97,25 @@ const LOOKING_FOR_THESE = [
   { id: "lft6", name: "Ribbed Tank Top",     price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&h=520&fit=crop" },
 ];
 
-// Same idea as LOOKING_FOR_THESE — this rail scrolls horizontally, so adding
-// more entries only extends what's reachable by scrolling; the cards visible
-// on mobile without scrolling are unchanged. More entries just mean desktop's
-// wider viewport doesn't run out of rail and look sparse.
-const BRAND_PICKS = [
-  { name: "THEOT / J mering...",        category: "Shirts",            price: "$27.53", image: "https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=300&h=380&fit=crop" },
-  { name: "Queen's Square /...",        category: "Knitwear/Sweaters", price: "$20.09", image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=300&h=380&fit=crop" },
-  { name: "THEOT / high tou...",        category: "Blouses",           price: "$17.11", image: "https://images.unsplash.com/photo-1551803091-e20673f15770?w=300&h=380&fit=crop" },
-  { name: "Aurelia / linen wr...",      category: "Dresses",           price: "$24.10", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=380&fit=crop" },
-  { name: "Northfield / cotto...",      category: "Trousers",          price: "$15.60", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=380&fit=crop" },
-  { name: "Solace / denim sh...",       category: "Shirts",            price: "$21.40", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=380&fit=crop" },
-];
+// Brand Picks and Recommended Premium Brands were static mock arrays whose
+// cards all routed to the same placeholder (`/search/results` and
+// `/vendor/premium-1`). Both now read real data:
+//   Brand Picks     → useActiveAds(), the same paid-ad pipeline SponsoredRail
+//                     uses, routed to the real promoted product.
+//   Premium Brands  → useTopVendors(), routed to the real vendor.
+// See the render blocks below for the SponsoredRail de-duplication rule.
 
-const PREMIUM_BRANDS = [
-  { name: "Long Dresses",  moq: "MOQ:2", price: "$10.41", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=300&h=380&fit=crop" },
-  { name: "Cotton Pants",  moq: "MOQ:2", price: "$14.88", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=300&h=380&fit=crop" },
-  { name: "Knit Sets",     moq: "MOQ:2", price: "$12.30", image: "https://images.unsplash.com/photo-1551489186-cf8726f514f8?w=300&h=380&fit=crop" },
-  { name: "Denim Shirts",  moq: "MOQ:2", price: "$18.20", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=380&fit=crop" },
-];
+// De-duplication between the two ad surfaces on this page. SponsoredRail sits
+// higher and is served first; Brand Picks takes the rows after it. The RPC
+// orders deterministically (advertisements.created_at desc), so the split is
+// stable and the same ad can never appear twice in one scroll — which also
+// keeps impression counts honest, since those feed ad reporting.
+//
+// Consequence worth knowing: the two sections SPLIT the available inventory
+// rather than both showing everything, so Brand Picks stays empty until more
+// than SPONSORED_MAX campaigns are live. Kept low for that reason.
+const SPONSORED_MAX = 3;
+const BRAND_PICKS_MAX = 6;
 
 const HOME_TABS = [
   { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
@@ -209,8 +211,34 @@ function ProductCard({ product }: { product: Product }) {
 
 const NewArrivals = () => {
   const t = useT();
+  const navigate = useNavigate();
+  const callVendor = useCallVendor();
   const { profile } = useAuth();
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
+
+  // ── Brand Picks: real paid ads, de-duplicated against SponsoredRail ──
+  // One window covering both sections; SponsoredRail renders the first
+  // SPONSORED_MAX, Brand Picks takes the rest. Ordering is deterministic, so
+  // the split is stable across renders.
+  const { data: adWindow = [] } = useActiveAds(SPONSORED_MAX + BRAND_PICKS_MAX);
+  const brandPicks = useMemo(() => adWindow.slice(SPONSORED_MAX), [adWindow]);
+  const loggedAds = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    brandPicks.forEach((a) => {
+      if (!loggedAds.current.has(a.adId)) {
+        loggedAds.current.add(a.adId);
+        void logAdImpression(a.adId);
+      }
+    });
+  }, [brandPicks]);
+
+  const openAd = (a: ActiveAd) => {
+    void logAdClick(a.adId);
+    if (a.productId) navigate(`/product/${a.productId}`);
+  };
+
+  // ── Recommended Premium Brands: real vendors, ranked paid-plan-first ──
+  const { data: topVendors = [] } = useTopVendors(4);
 
   // Mouse click-and-drag scrolling for the horizontal rails below — touch/
   // trackpad already scroll them natively, this is what makes desktop mouse
@@ -393,8 +421,10 @@ const NewArrivals = () => {
           </div>
         </div>
 
-        {/* ── Sponsored (vendor ad campaigns) ── */}
-        <SponsoredRail />
+        {/* ── Sponsored (vendor ad campaigns) ──
+            Explicit max so Brand Picks below knows exactly how many rows to
+            skip; the component itself is unchanged. */}
+        <SponsoredRail max={SPONSORED_MAX} />
 
         {/* ── Video Close-Ups — Reels style ── */}
         <div>
@@ -458,7 +488,11 @@ const NewArrivals = () => {
           </div>
         </div>
 
-        {/* ── Brand Picks — sponsored ── */}
+        {/* ── Brand Picks — real paid ad campaigns ──
+            Renders nothing when no vendor has a live campaign, same rule as
+            SponsoredRail: a sponsored rail with no sponsors should be absent,
+            not filled with placeholders. */}
+        {brandPicks.length > 0 && (
         <div>
           <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
             <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
@@ -474,21 +508,29 @@ const NewArrivals = () => {
             onMouseLeave={brandPicksDrag.onMouseLeave}
             onClickCapture={brandPicksDrag.onClickCapture}
           >
-            {BRAND_PICKS.map((b, i) => (
-              <Link key={i} to="/search/results" className="shrink-0 w-32 lg:w-48">
-                <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
-                  <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
-                </div>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{b.name}</p>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.category}</p>
-                <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{b.price}</p>
-                <button onClick={(e) => { e.preventDefault(); placeCall(b.name, demoPhone(b.name)); }} className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+            {/* Card body and Call Now are siblings, not nested buttons — the
+                old markup nested a button inside a Link, which is invalid. */}
+            {brandPicks.map((a) => (
+              <div key={a.adId} className="shrink-0 w-32 lg:w-48">
+                <button onClick={() => openAd(a)} className="w-full text-left">
+                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
+                    {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
+                  </div>
+                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.productName ?? a.title}</p>
+                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.categoryName ?? a.vendorName ?? ""}</p>
+                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{a.price ?? ""}</p>
+                </button>
+                <button
+                  onClick={() => { if (a.vendorId) void callVendor(a.vendorId, a.productName ?? a.title); }}
+                  className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded"
+                >
                   <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
                 </button>
-              </Link>
+              </div>
             ))}
           </div>
         </div>
+        )}
 
         {/* ── Today's New In + first 2 rows + Submit Requirement Box + more rows ── */}
         <div>
@@ -538,24 +580,39 @@ const NewArrivals = () => {
           </div>
         </div>
 
-        {/* ── Recommended Premium Brands ── */}
+        {/* ── Recommended Premium Brands — real vendors ──
+            Ranked paid-plan-first, then rating (see useTopVendors). There is
+            no vendor-level ad placement to sell yet, so the old "AD" label is
+            dropped: this is a merit ranking, not paid inventory. Labelling it
+            AD would misrepresent it. */}
+        {topVendors.length > 0 && (
         <div>
           <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-1 lg:mb-2 px-1">Recommended Premium Brands</h2>
-          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2 lg:mb-4">AD</p>
+          <p className="text-[10px] lg:text-xs text-gray-400 px-1 mb-2 lg:mb-4">Top-rated verified suppliers on Cosora</p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-            {PREMIUM_BRANDS.map((b, i) => (
-              <Link key={i} to="/vendor/premium-1" className="relative rounded-xl overflow-hidden aspect-square">
-                <img src={b.image} alt={b.name} className="w-full h-full object-cover" />
+            {topVendors.map((v) => (
+              <Link key={v.id} to={`/vendor/${v.id}`} className="relative rounded-xl overflow-hidden aspect-square bg-gray-100">
+                {v.imageUrl && <img src={v.imageUrl} alt={v.brandName} className="w-full h-full object-cover" loading="lazy" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                <div className="absolute bottom-2 lg:bottom-4 left-2 lg:left-4">
-                  <p className="text-xs lg:text-base font-bold text-white">{b.name}</p>
-                  <p className="text-[10px] lg:text-xs text-white/80">{b.moq}</p>
-                  <p className="text-xs lg:text-base font-bold text-white">{b.price}</p>
+                {v.verified && (
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold text-[#14ae5c]">
+                    <BadgeCheck className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Verified
+                  </span>
+                )}
+                <div className="absolute bottom-2 lg:bottom-4 left-2 lg:left-4 right-2">
+                  <p className="text-xs lg:text-base font-bold text-white truncate">{v.brandName}</p>
+                  {v.city && <p className="text-[10px] lg:text-xs text-white/80 truncate">{v.city}</p>}
+                  <p className="inline-flex items-center gap-0.5 text-xs lg:text-base font-bold text-white">
+                    <Star className="w-2.5 lg:w-3.5 h-2.5 lg:h-3.5 text-yellow-400 fill-yellow-400" />
+                    {v.ratingAvg.toFixed(1)}
+                    <span className="font-normal text-[10px] lg:text-xs text-white/70"> · {v.liveProducts} products</span>
+                  </p>
                 </div>
               </Link>
             ))}
           </div>
         </div>
+        )}
 
       </div>
 

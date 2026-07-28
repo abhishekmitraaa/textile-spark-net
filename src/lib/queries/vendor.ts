@@ -149,3 +149,107 @@ export function useVendorProfile(id: string | undefined) {
     enabled: Boolean(id),
   });
 }
+
+// ─────────────────────────────────────────────────────────────
+// Top vendors, for the buyer home "Recommended Premium Brands" tiles.
+//
+// Ranking reuses the paid-plan signal already used elsewhere in this codebase
+// (fetchOpenRfqs' `isPaid` check, trustSealFromParts): an active paid plan
+// first, then rating, then review volume. There is no vendor-level ad
+// placement to sell against yet, so this is an editorial/merit ranking, not
+// a paid one — the "AD" label on that section is therefore not accurate for
+// this data and the caller drops it.
+//
+// Only vendors with at least one live product qualify: a brand tile that
+// opens onto an empty storefront is worse than no tile.
+// ─────────────────────────────────────────────────────────────
+
+export interface TopVendor {
+  id: string;
+  brandName: string;
+  city: string | null;
+  ratingAvg: number;
+  reviewsCount: number;
+  verified: boolean;
+  /** Active paid plan — the tile ordering signal, also shown as a label. */
+  paid: boolean;
+  /** Cover image: the vendor's first live product photo. */
+  imageUrl: string | null;
+  liveProducts: number;
+}
+
+interface RawTopVendor {
+  id: string; brand_name: string | null; city: string | null;
+  rating_avg: number | null; reviews_count: number | null;
+  is_verified: boolean | null; plan_expires_at: string | null; ad_verified_until: string | null;
+}
+
+async function fetchTopVendors(max: number): Promise<TopVendor[]> {
+  const { data, error } = await supabase
+    .from("vendor_profiles")
+    .select("id, brand_name, city, rating_avg, reviews_count, is_verified, plan_expires_at, ad_verified_until")
+    .not("brand_name", "is", null);
+  if (error) throw error;
+  const rows = (data ?? []) as RawTopVendor[];
+  if (rows.length === 0) return [];
+
+  // Live-product counts and cover images, batched over all candidates rather
+  // than one query per vendor.
+  const { data: prods } = await supabase
+    .from("products")
+    .select("id, vendor_id, created_at")
+    .in("vendor_id", rows.map((r) => r.id))
+    .eq("status", "live")
+    .order("created_at", { ascending: true });
+  const productsBy = new Map<string, string[]>();
+  for (const p of (prods ?? []) as { id: string; vendor_id: string }[]) {
+    const list = productsBy.get(p.vendor_id) ?? [];
+    list.push(p.id);
+    productsBy.set(p.vendor_id, list);
+  }
+
+  const firstProductIds = [...productsBy.values()].map((ids) => ids[0]).filter(Boolean);
+  const coverOf = new Map<string, string>();
+  if (firstProductIds.length) {
+    const { data: imgs } = await supabase
+      .from("product_images")
+      .select("product_id, url, position")
+      .in("product_id", firstProductIds);
+    for (const img of [...(imgs ?? [])].sort((a, b) => a.position - b.position)) {
+      if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
+    }
+  }
+
+  const now = Date.now();
+  const isPaid = (ts: string | null) => Boolean(ts && new Date(ts).getTime() > now);
+
+  return rows
+    .map((v): TopVendor => {
+      const ids = productsBy.get(v.id) ?? [];
+      return {
+        id: v.id,
+        brandName: v.brand_name as string,
+        city: v.city,
+        ratingAvg: Number(v.rating_avg ?? 0),
+        reviewsCount: Number(v.reviews_count ?? 0),
+        verified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until),
+        paid: isPaid(v.plan_expires_at),
+        imageUrl: ids.length ? coverOf.get(ids[0]) ?? null : null,
+        liveProducts: ids.length,
+      };
+    })
+    .filter((v) => v.liveProducts > 0)
+    .sort((a, b) =>
+      Number(b.paid) - Number(a.paid) ||
+      b.ratingAvg - a.ratingAvg ||
+      b.reviewsCount - a.reviewsCount)
+    .slice(0, max);
+}
+
+export function useTopVendors(max = 4) {
+  return useQuery({
+    queryKey: ["vendor_profiles", "top", max],
+    queryFn: () => fetchTopVendors(max),
+    staleTime: 5 * 60 * 1000,
+  });
+}

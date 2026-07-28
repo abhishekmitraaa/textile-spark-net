@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import BuyerTopBar from "@/components/buyer/BuyerTopBar";
 import { CONVERSATIONS, callGroupsInOrder, type CallRecord } from "@/lib/chatData";
 import { useConversations, type ChatSummary } from "@/lib/queries/chat";
 import { useCalls, useCallVendor } from "@/lib/queries/calls";
@@ -39,12 +40,17 @@ const Chat = () => {
   const { role } = useUserRole();
   const isSeller = role === "seller";
 
-  // Sellers work this inbox from a laptop, where a single 672px column stranded
-  // in a 1200px content area reads as broken. From `lg` up the page becomes a
-  // real master-detail: list on the left, the live thread on the right, so
-  // replying never costs a page navigation. Buyers keep the single-column flow.
+  // A single 672px column stranded in a 1200px viewport reads as broken. From
+  // `lg` up the page becomes a real master-detail: list on the left, the live
+  // thread on the right, so replying never costs a page navigation. Both sides
+  // get it — buyers used to be stuck with the stretched mobile column.
   const isDesktop = useIsDesktop();
-  const splitView = isSeller && isDesktop;
+  const splitView = isDesktop;
+  // Buyers don't render inside DashboardLayout, so their split view needs its
+  // own desktop chrome and its own copies of the pane classes. Kept as a
+  // separate flag (rather than widening the `isSeller &&` gates below) so the
+  // seller's emitted classNames are untouched by this change.
+  const buyerSplit = splitView && !isSeller;
   // The open thread lives in the URL so refresh, back, and deep links all work.
   const activeId = splitView ? params.get("c") : null;
 
@@ -92,22 +98,28 @@ const Chat = () => {
   // Sellers quote on buyer requirements (/quotes); buyers track their own RFQs.
   const goQuotes = () => navigate(isSeller ? "/quotes" : "/requirement/my-quotes");
 
-  // Back → wherever the user came from; fall back to the seller dashboard on a
-  // deep link / refresh where there's no in-app history to pop.
+  // Back → wherever the user came from; on a deep link / refresh with no in-app
+  // history to pop, fall back to that role's own home rather than stranding a
+  // buyer on the seller dashboard.
   const goBack = () => {
     const idx = (window.history.state && (window.history.state as { idx?: number }).idx) ?? 0;
     if (idx > 0) navigate(-1);
-    else navigate("/seller-home");
+    else navigate(isSeller ? "/seller-home" : "/home/new-arrivals");
   };
 
   const body = (
     <div
       className={cn(
-        "min-h-screen bg-gray-50",
+        "bg-gray-50",
+        !buyerSplit && "min-h-screen",
         isSeller && "-m-4 lg:-m-6",
         // At `lg` the page stops scrolling and becomes two independently
         // scrolling panes pinned under the dashboard header.
         isSeller && "lg:flex lg:h-[calc(100dvh-4rem)] lg:min-h-0 lg:overflow-hidden",
+        // Buyer equivalent. No `lg:` prefixes needed — buyerSplit is already
+        // gated on the same 1024px breakpoint. Height comes from the flex
+        // parent in `shell` below, so there's no header-height magic number.
+        buyerSplit && "flex h-full min-h-0 overflow-hidden",
       )}
     >
       {/* Conversation list — the whole page on mobile, the left pane at `lg` */}
@@ -115,18 +127,30 @@ const Chat = () => {
         className={cn(
           isSeller &&
             "lg:flex lg:h-full lg:w-[368px] lg:min-h-0 lg:shrink-0 lg:flex-col lg:border-r lg:border-gray-200 lg:bg-white xl:w-[400px]",
+          buyerSplit &&
+            "flex h-full w-[368px] min-h-0 shrink-0 flex-col border-r border-gray-200 bg-white xl:w-[400px]",
         )}
       >
         {/* Header */}
-        <div className={cn("sticky bg-white border-b border-gray-100", isSeller ? "top-14 z-20 lg:static lg:z-auto lg:shrink-0" : "top-0 z-30")}>
-          <div className={cn("mx-auto w-full max-w-2xl px-4 pt-4", isSeller && "lg:max-w-none")}>
+        <div
+          className={cn(
+            "bg-white border-b border-gray-100",
+            isSeller
+              ? "sticky top-14 z-20 lg:static lg:z-auto lg:shrink-0"
+              : buyerSplit
+                ? "shrink-0"
+                : "sticky top-0 z-30",
+          )}
+        >
+          <div className={cn("mx-auto w-full max-w-2xl px-4 pt-4", isSeller && "lg:max-w-none", buyerSplit && "max-w-none")}>
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-2">
-                {isSeller && (
-                  <button onClick={goBack} aria-label="Back" className="-ml-1 p-1 rounded-full hover:bg-gray-100 lg:hidden">
-                    <ArrowLeft className="w-5 h-5 text-gray-700" />
-                  </button>
-                )}
+                {/* Both roles: the hub is a destination you navigate INTO, so
+                    it needs a way out. Hidden at `lg`, where both sides now
+                    have surrounding chrome to navigate from. */}
+                <button onClick={goBack} aria-label="Back" className="-ml-1 p-1 rounded-full hover:bg-gray-100 lg:hidden">
+                  <ArrowLeft className="w-5 h-5 text-gray-700" />
+                </button>
                 <div>
                   <h1 className="text-xl font-extrabold text-gray-900">Messages</h1>
                   <p className="text-xs text-gray-500">
@@ -173,6 +197,7 @@ const Chat = () => {
           className={cn(
             "mx-auto w-full max-w-2xl px-4 pt-2",
             isSeller ? "pb-6 lg:max-w-none lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-4" : "pb-28",
+            buyerSplit && "max-w-none min-h-0 flex-1 overflow-y-auto pb-4",
           )}
         >
           <AnimatePresence mode="wait">
@@ -181,7 +206,7 @@ const Chat = () => {
                 {chats.length === 0 ? (
                   <Empty icon={MessageCircle} label="No conversations found" />
                 ) : (
-                  <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5")}>
+                  <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5", buyerSplit && "divide-y-0 space-y-0.5")}>
                     {chats.map((c) => (
                       <motion.div key={c.id} variants={listItem}>
                         <ChatRow conv={c} active={c.id === activeId} onOpen={() => openThread(c.id)} onQuote={goQuotes} />
@@ -198,7 +223,7 @@ const Chat = () => {
                   filteredGroups.map((g) => (
                     <div key={g.group} className="mb-2">
                       <p className="px-1 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-gray-400">{g.group}</p>
-                      <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5")}>
+                      <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5", buyerSplit && "divide-y-0 space-y-0.5")}>
                         {g.calls.map((c) => (
                           <motion.div key={c.id} variants={listItem}>
                             <CallRow call={c} onOpen={() => openThread(c.vendorId)} onCall={() => callVendor(c.vendorId, c.rfqProduct)} onQuote={goQuotes} />
@@ -214,15 +239,16 @@ const Chat = () => {
         </div>
       </div>
 
-      {/* Thread pane — desktop only; the seller reads and replies in place */}
-      {isSeller && (
+      {/* Thread pane — desktop only; you read and reply in place */}
+      {(isSeller || buyerSplit) && (
         <div className="hidden lg:block lg:h-full lg:min-w-0 lg:flex-1">
           {activeId ? <ChatThreadView key={activeId} vendorId={activeId} embedded /> : <NoThreadSelected />}
         </div>
       )}
 
-      {/* Post Requirement FAB — buyer-only action */}
-      {!isSeller && (
+      {/* Post Requirement FAB — buyer-only, and single-column only: as a fixed
+          centre-bottom pill it would sit across both panes in the split view. */}
+      {!isSeller && !buyerSplit && (
         <motion.button
           whileTap={reduced ? undefined : { scale: 0.95 }}
           onClick={() => navigate("/requirement/post-requirement")}
@@ -237,7 +263,23 @@ const Chat = () => {
     </div>
   );
 
-  return isSeller ? <DashboardLayout>{body}</DashboardLayout> : body;
+  // Sellers get the vendor dashboard chrome. Buyers get a minimal desktop
+  // frame instead: BuyerTopBar is the buyer app's standard header (its logo is
+  // the route home), which keeps this page consistent with every other buyer
+  // screen without dragging in the vendor sidebar. The fixed-height flex column
+  // is what lets the two panes scroll independently.
+  if (isSeller) return <DashboardLayout>{body}</DashboardLayout>;
+  if (buyerSplit) {
+    return (
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-white">
+        <div className="shrink-0">
+          <BuyerTopBar />
+        </div>
+        <div className="min-h-0 flex-1">{body}</div>
+      </div>
+    );
+  }
+  return body;
 };
 
 function Avatar({ src, name, size = 48, online }: { src: string | null; name: string; size?: number; online?: boolean }) {

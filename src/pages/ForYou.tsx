@@ -6,6 +6,7 @@ import BuyerShell from "@/components/buyer/BuyerShell";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
+import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { BUYER_CATEGORIES as CATEGORIES, PREF_CAT_KEYWORDS } from "@/lib/buyerCategories";
@@ -171,41 +172,13 @@ function RecentViewsAd() {
 // Preference editor (used in onboarding steps AND the filter popup)
 // ─────────────────────────────────────────────────────────────
 
+// Markup now lives in CategoryPickerGrid so the registration interest step can
+// render the identical control. This wrapper just binds it to the store.
 function CategoryPicker({
   selected, query, setQuery,
 }: { selected: string[]; query: string; setQuery: (v: string) => void }) {
-  const filtered = CATEGORIES.filter((c) => c.label.toLowerCase().includes(query.trim().toLowerCase()));
   return (
-    <div>
-      <div className="relative mb-3">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search product types"
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {filtered.map((cat) => {
-          const active = selected.includes(cat.id);
-          return (
-            <button
-              key={cat.id}
-              onClick={() => toggleCategory(cat.id)}
-              className={cn(
-                "flex items-center gap-2.5 rounded-xl border-2 p-3 transition-all active:scale-[0.98]",
-                active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40"
-              )}
-            >
-              <span className="text-xl">{cat.icon}</span>
-              <span className="text-sm font-medium text-gray-800 text-left">{cat.label}</span>
-            </button>
-          );
-        })}
-        {filtered.length === 0 && <p className="col-span-2 py-4 text-center text-sm text-gray-400">No types match</p>}
-      </div>
-    </div>
+    <CategoryPickerGrid selected={selected} onToggle={toggleCategory} query={query} setQuery={setQuery} />
   );
 }
 

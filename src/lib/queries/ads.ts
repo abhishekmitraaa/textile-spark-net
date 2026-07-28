@@ -110,12 +110,16 @@ export interface ActiveAd {
   imageUrl: string | null;
   vendorId: string | null;
   vendorName: string | null;
+  /** Promoted product's category, e.g. "T-shirts/Tops". Returned by the RPC so
+   *  buyers never have to read `products`/`advertisements` directly for it. */
+  categoryName: string | null;
 }
 
 interface RawActiveAd {
   ad_id: string; product_id: string | null; title: string; placement: string | null;
   product_name: string | null; price_value: number | null; currency: string | null;
   image_url: string | null; vendor_id: string | null; vendor_name: string | null;
+  category_name: string | null;
 }
 
 // categoryId (optional) filters serving to ads targeting that category, plus
@@ -134,6 +138,7 @@ async function fetchActiveAds(max: number, categoryId?: string | null): Promise<
     imageUrl: a.image_url,
     vendorId: a.vendor_id,
     vendorName: a.vendor_name,
+    categoryName: a.category_name,
   }));
 }
 

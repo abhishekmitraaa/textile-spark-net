@@ -6,17 +6,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLang, setLang, langCodeFromName } from "@/lib/i18n";
+import { useLang, setLang, langCodeFromName, LANG_OPTIONS } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-const LANGUAGES = [
-  "English", "Hindi", "Bengali", "Assamese", "Marathi", "Gujarati",
-  "Tamil", "Telugu", "Kannada", "Malayalam", "Punjabi", "Odia",
-  "Urdu", "Rajasthani/Marwari", "Bhojpuri",
-];
+// Only the languages that actually have dictionaries. This list used to name
+// all 15 from the product spec, but 13 of them had no translations at all, so
+// choosing one silently did nothing — the single biggest reason the language
+// feature read as broken. Sourced from i18n.ts so it can never drift again.
+const LANGUAGES = LANG_OPTIONS;
 
 const COUNTRY_CODES = [
   { flag: "🇮🇳", code: "+91",  name: "India" },
@@ -63,14 +63,15 @@ function LanguageModal({
             <div className="overflow-y-auto py-2">
               {LANGUAGES.map(lang => (
                 <button
-                  key={lang}
-                  onClick={() => { onSelect(lang); onClose(); }}
+                  key={lang.code}
+                  onClick={() => { onSelect(lang.label); onClose(); }}
                   className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <span className={cn("text-sm", selected === lang ? "text-[#a4172c] font-semibold" : "text-gray-700")}>
-                    {lang}
+                  <span className={cn("text-sm", selected === lang.label ? "text-[#a4172c] font-semibold" : "text-gray-700")}>
+                    {lang.label}
+                    {lang.native !== lang.label && <span className="ml-2 text-gray-400">{lang.native}</span>}
                   </span>
-                  {selected === lang && <span className="text-[#a4172c]">✓</span>}
+                  {selected === lang.label && <span className="text-[#a4172c]">✓</span>}
                 </button>
               ))}
             </div>
@@ -135,7 +136,11 @@ const Login = () => {
   const lang = useLang();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [phone, setPhone] = useState("");
-  const [selectedLang, setSelectedLang] = useState(lang === "hi" ? "Hindi" : "English");
+  // Derived from the active language code so Gujarati doesn't load showing
+  // "English" — the old check only special-cased Hindi.
+  const [selectedLang, setSelectedLang] = useState(
+    () => LANG_OPTIONS.find((l) => l.code === lang)?.label ?? "English",
+  );
   // Selecting a language here also switches the whole app's UI language.
   const handleSelectLang = (l: string) => { setSelectedLang(l); setLang(langCodeFromName(l)); };
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);

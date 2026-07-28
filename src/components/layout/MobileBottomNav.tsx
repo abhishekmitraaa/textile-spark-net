@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
+  Home,
   LayoutGrid,
   MessageCircle,
   UserCircle,
   Plus,
-  Clapperboard,
   Package,
   Upload,
   FileText,
@@ -47,16 +47,15 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
     return () => window.removeEventListener("scroll", onScroll);
   }, [autoHide]);
 
-  // Buyer: Categories, Video Close-Ups, Requirement (center), Chats, My Profile
+  // Buyer: Home, Categories, Requirement (center), Chats, My Profile
   //
-  // NOTE on "Video Close-Ups": this opens the full-screen reels viewer via
-  // the dedicated /video-closeups route (see src/pages/VideoCloseUpsPage.tsx),
-  // which exists specifically so this nav item works from ANY page, not
-  // just from inside New Arrivals where the viewer used to be page-local
-  // component state.
+  // "Video Close-Ups" used to sit here. It was removed from the bar to make
+  // room for Home; the /video-closeups route and VideoCloseUpsPage are
+  // untouched and the feature is still reached from the inline Video
+  // Close-Ups rail on the New Arrivals feed.
   const buyerNavItems = [
+    { name: "Home", href: "/home/new-arrivals", icon: Home },
     { name: "Categories", href: "/categories", icon: LayoutGrid },
-    { name: "Video Close-Ups", href: "/video-closeups", icon: Clapperboard },
     { name: "Requirement", href: "/requirement", icon: Plus, isCenter: true },
     { name: "Chats", href: "/chats", icon: MessageCircle, badge: unreadMessages },
     { name: "My Profile", href: "/profile", icon: UserCircle },

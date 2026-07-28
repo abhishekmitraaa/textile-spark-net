@@ -14,7 +14,7 @@ import {
 } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting } from "@/lib/queries/profile";
-import { setLang, langCodeFromName } from "@/lib/i18n";
+import { setLang, langCodeFromName, isSupportedLanguageName } from "@/lib/i18n";
 
 function SettingsHeader({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -92,9 +92,34 @@ const ProfileAccountPrefs = () => {
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Language</label>
               <div className="relative">
                 <Languages className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <select className={selectCls} value={regional.language} onChange={(e) => { patchRegional({ language: e.target.value }); setLang(langCodeFromName(e.target.value)); toast.success("Language updated"); }}>
+                <select
+                  className={selectCls}
+                  value={regional.language}
+                  onChange={(e) => {
+                    const name = e.target.value;
+                    patchRegional({ language: name });
+                    setLang(langCodeFromName(name));
+                    if (isSupportedLanguageName(name)) toast.success("Language updated");
+                    // Never fail silently: a language with no dictionary reads
+                    // as "translation is broken" if we just show English.
+                    else toast.info(`${name} isn't available yet`, { description: "Showing English for now." });
+                  }}
+                >
                   {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
+                  {/* A previously-saved language we no longer offer (e.g. Tamil)
+                      would otherwise render as a blank select. Show it, disabled
+                      and labelled, so the state is legible rather than missing. */}
+                  {!isSupportedLanguageName(regional.language) && (
+                    <option value={regional.language} disabled>
+                      {regional.language} (not available yet)
+                    </option>
+                  )}
                 </select>
+                {!isSupportedLanguageName(regional.language) && (
+                  <p className="mt-1.5 text-[11px] text-amber-600">
+                    {regional.language} isn&rsquo;t translated yet, so the app is showing English. Pick another language to change it.
+                  </p>
+                )}
               </div>
             </div>
           </div>

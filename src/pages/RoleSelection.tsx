@@ -6,20 +6,24 @@ import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 
+// Gradients and proportions follow the Canva reference: the coloured panel is
+// the dominant element of each card (a near-square block filling the card's
+// top portion), not a small icon chip. Both gradients run straight down —
+// buyer bright-to-deep red, seller indigo-to-black.
 const roles = [
   {
     id: "buyer",
     label: "BUYER",
     icon: ShoppingCart,
     description: "I am a Brand Owner, Sourcing Manager, or I run a retail chain",
-    bg: "bg-[#a4172c]",
+    bg: "bg-gradient-to-b from-[#ff3752] to-[#cf0006]",
   },
   {
     id: "seller",
     label: "SELLER",
     icon: Store,
     description: "I am a Manufacturer, Supplier, Freelancer, or Service Provider",
-    bg: "bg-[#1b2a52]",
+    bg: "bg-gradient-to-b from-[#3432c7] to-[#000000]",
   },
 ];
 
@@ -68,18 +72,20 @@ const RoleSelection = () => {
                 key={role.id}
                 onClick={() => setSelected(role.id)}
                 className={cn(
-                  "relative flex flex-col items-center gap-3 rounded-2xl border-2 p-5 transition-all",
-                  isSelected ? "border-gray-900" : "border-transparent"
+                  "relative flex flex-col items-center gap-3 rounded-xl border-2 bg-white p-3 text-left transition-colors",
+                  isSelected ? "border-gray-900" : "border-gray-200 hover:border-gray-300"
                 )}
               >
+                {/* Sits on the gradient, so it needs the white ring to read
+                    against both the deep red and the near-black. */}
                 {isSelected && (
-                  <div className="absolute top-2 right-2 w-5 h-5 bg-green-500 rounded-full flex items-center justify-center text-white text-xs">
+                  <div className="absolute top-5 right-5 z-10 w-5 h-5 bg-green-500 ring-2 ring-white rounded-full flex items-center justify-center text-white text-xs">
                     ✓
                   </div>
                 )}
-                <div className={cn("w-16 h-16 rounded-2xl flex flex-col items-center justify-center gap-1", role.bg)}>
-                  <role.icon className="w-6 h-6 text-white" strokeWidth={1.75} />
-                  <span className="text-[9px] font-bold text-white tracking-wide">{role.label}</span>
+                <div className={cn("w-full aspect-square rounded-lg flex flex-col items-center justify-center gap-2", role.bg)}>
+                  <role.icon className="w-9 h-9 text-white" strokeWidth={1.75} />
+                  <span className="text-[11px] font-bold text-white tracking-wide">{role.label}</span>
                 </div>
                 <p className="text-xs text-gray-600 text-center leading-snug">{role.description}</p>
               </button>
@@ -92,8 +98,10 @@ const RoleSelection = () => {
           disabled={!selected || saving}
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",
+            // Active state is the buyer brand coral, per the Canva reference.
+            // The disabled state is deliberately untouched.
             selected && !saving
-              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >

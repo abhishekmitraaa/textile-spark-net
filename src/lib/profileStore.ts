@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { img } from "@/lib/listingProducts";
+import { LANGUAGE_NAMES } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer profile + account settings.
@@ -109,7 +110,10 @@ export const TIMEZONES = [
   "GMT (Greenwich Mean)",
   "CET (Central European)",
 ];
-export const LANGUAGES = ["English", "Hindi", "Tamil", "Gujarati"];
+// Only languages that actually translate. "Tamil" used to be offered here and
+// silently fell back to English (no dictionary). Re-exported from i18n so the
+// picker can never drift from what's really supported.
+export const LANGUAGES = LANGUAGE_NAMES;
 
 const DEFAULT_STATE: ProfileState = {
   profile: {

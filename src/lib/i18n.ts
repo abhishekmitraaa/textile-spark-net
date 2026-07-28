@@ -20,6 +20,20 @@ export const LANG_OPTIONS: { code: Lang; label: string; native: string }[] = [
 
 const SUPPORTED: Lang[] = ["en", "hi", "gu"];
 
+/**
+ * The ONLY languages any picker may offer. Every language selector in the app
+ * must derive its list from here rather than hardcoding its own — the buyer
+ * Login modal used to advertise 15 and the regional-settings select 4, while
+ * only these three have dictionaries, so picking Bengali/Tamil/etc. silently
+ * did nothing and read as "translation is broken".
+ */
+export const LANGUAGE_NAMES: string[] = LANG_OPTIONS.map((l) => l.label);
+
+/** True when `name` is a language this app can actually render. */
+export function isSupportedLanguageName(name: string): boolean {
+  return LANG_OPTIONS.some((l) => l.label.toLowerCase() === name.trim().toLowerCase());
+}
+
 const KEY = "cosora.lang";
 
 function read(): Lang {
@@ -48,8 +62,11 @@ export function setLang(l: Lang) {
 }
 
 // Map a human language name (from the Login modal / regional select) to a
-// supported code. Only English & Hindi are translated today; anything else
-// falls back to English so the app stays fully readable.
+// supported code. English, Hindi and Gujarati are the only translated
+// languages; anything else falls back to English so the app stays readable.
+// Callers that might receive an arbitrary name should check
+// `isSupportedLanguageName()` first and tell the user, rather than letting the
+// fallback happen silently.
 export function langCodeFromName(name: string): Lang {
   if (/gujarati|ગુજરાતી|ગુજરાતિ/i.test(name)) return "gu";
   if (/hindi|हिंदी|हिन्दी/i.test(name)) return "hi";
@@ -241,6 +258,115 @@ const HI: Record<string, string> = {
   "Total Orders": "कुल ऑर्डर", "Total Revenue": "कुल राजस्व", "Active Leads": "सक्रिय लीड्स",
   "Profile Score": "प्रोफ़ाइल स्कोर", "Recent Activity": "हाल की गतिविधि", "Quick Actions": "त्वरित क्रियाएँ",
   "View Details": "विवरण देखें", "Manage": "प्रबंधित करें", "Active": "सक्रिय", "New": "नया",
+
+  // ─────────────────────────────────────────────────────────
+  // Added after a route-by-route audit of every buyer page under hi/gu.
+  // Everything below rendered in English before. Dynamic catalogue data
+  // (product names, vendor names, cities, fabrics) is deliberately excluded —
+  // that's the documented "chrome only" scope.
+  // ─────────────────────────────────────────────────────────
+
+  // Home feed sections
+  "Today's New In": "आज का नया", "Looking for these?": "क्या आप ये खोज रहे हैं?",
+  "Recommended Premium Brands": "अनुशंसित प्रीमियम ब्रांड",
+  "Top-rated verified suppliers on Cosora": "कोसोरा पर शीर्ष-रेटेड सत्यापित आपूर्तिकर्ता",
+  "WHAT'S ON YOUR MIND": "आपके मन में क्या है", "SLIDE TO SEE": "देखने के लिए स्लाइड करें",
+  "Sponsored": "प्रायोजित", "Looking for New Brands?": "नए ब्रांड खोज रहे हैं?",
+  "NEW EVERYDAY FASHION": "नया रोज़मर्रा फ़ैशन",
+  "Discover New Fashion Everyday": "हर दिन नया फ़ैशन खोजें",
+
+  // Category tiles (fixed taxonomy shown as navigation)
+  "Women's Apparel": "महिलाओं के वस्त्र", "Men's Apparel": "पुरुषों के वस्त्र",
+  "Men's Jeans": "पुरुषों की जींस", "Men's Shirt": "पुरुषों की शर्ट",
+  "Accessories": "एक्सेसरीज़", "Women's Trousers": "महिलाओं की ट्राउज़र",
+  "Women's T-shirts": "महिलाओं की टी-शर्ट", "Women's Shoes": "महिलाओं के जूते",
+  "Kidswear": "बच्चों के वस्त्र", "Ethnic Wear": "एथनिक वियर",
+  "Activewear": "एक्टिववियर", "Winter Wear": "सर्दियों के वस्त्र",
+
+  // Product card labels
+  "Fabric:": "कपड़ा:", "Fit Type:": "फ़िट प्रकार:", "CALL NOW": "अभी कॉल करें",
+  "Create New": "नया बनाएँ",
+
+  // Submit-requirement card
+  "Just upload an image + quantity. Get quotes in minutes!": "बस एक छवि + मात्रा अपलोड करें। मिनटों में कोटेशन पाएँ!",
+  "Detailed specifications for precise quotes": "सटीक कोटेशन के लिए विस्तृत विनिर्देश",
+  "Quick Quote": "त्वरित कोटेशन", "Takes 30 seconds": "30 सेकंड लगते हैं",
+
+  // Search
+  "Hot Keywords": "लोकप्रिय कीवर्ड", "Trending Keywords": "ट्रेंडिंग कीवर्ड",
+  "Popular keywords": "लोकप्रिय कीवर्ड", "Recent keywords": "हाल के कीवर्ड",
+  "Popular search categories": "लोकप्रिय खोज श्रेणियाँ", "PHOTO SEARCH": "फ़ोटो खोज",
+  "Delete all": "सभी हटाएँ", "Click a photo": "फ़ोटो लें", "Select a photo": "फ़ोटो चुनें",
+  "Search categories…": "श्रेणियाँ खोजें…", "Search services...": "सेवाएँ खोजें...",
+  "Search freelancers by name or skill...": "नाम या कौशल से फ्रीलांसर खोजें...",
+  "Rating 4+": "रेटिंग 4+", "1-Day Delivery": "1-दिन डिलीवरी",
+
+  // Trends
+  "Hot Trends, Styled for You": "आपके लिए स्टाइल किए गए हॉट ट्रेंड्स",
+  "Discover Trending Arrivals for You": "आपके लिए ट्रेंडिंग नए आगमन खोजें",
+  "NEW TREND INSIGHTS": "नई ट्रेंड जानकारी", "View More": "और देखें",
+  "View More Styles": "और स्टाइल देखें", "View Item": "आइटम देखें",
+  "Visit Brand": "ब्रांड देखें", "Top Brands for": "के लिए शीर्ष ब्रांड",
+
+  // Sale
+  "MEGA SALE": "मेगा सेल", "Flash Deals": "फ्लैश डील्स", "All Deals": "सभी डील्स",
+  "Shop by Discount": "छूट के अनुसार खरीदें", "Biggest Discount": "सबसे बड़ी छूट",
+  "Sale ends in": "सेल समाप्त होने में", "Limited time": "सीमित समय", "Up to": "तक",
+  "on bulk orders from verified manufacturers": "सत्यापित निर्माताओं से थोक ऑर्डर पर",
+
+  // Followings / saved
+  "Your Followings": "आपकी फ़ॉलोइंग", "Following New-In": "फ़ॉलोइंग में नया",
+  "Following Top Performing": "फ़ॉलोइंग में शीर्ष प्रदर्शन", "Most Popular": "सर्वाधिक लोकप्रिय",
+  "Your Collections": "आपके संग्रह", "My Saves": "मेरे सहेजे", "All Saves": "सभी सहेजे",
+  "New Folder": "नया फ़ोल्डर",
+
+  // My Quotes
+  "YOUR REQUESTS": "आपके अनुरोध", "New Quotes": "नए कोटेशन", "Total Quotes": "कुल कोटेशन",
+  "Manage your quote requests": "अपने कोटेशन अनुरोध प्रबंधित करें", "Active RFQs": "सक्रिय RFQ",
+
+  // Notifications settings
+  "Email Notifications": "ईमेल सूचनाएँ", "Push Notifications": "पुश सूचनाएँ",
+  "Message Alerts": "संदेश अलर्ट", "New Messages": "नए संदेश",
+  "Quote Notifications": "कोटेशन सूचनाएँ", "New Quote Received": "नया कोटेशन प्राप्त",
+  "RFQ Updates": "RFQ अपडेट", "Newsletter & Tips": "न्यूज़लेटर और सुझाव",
+  "Save Notification Settings": "सूचना सेटिंग्स सहेजें",
+  "Manage your email notification preferences": "अपनी ईमेल सूचना प्राथमिकताएँ प्रबंधित करें",
+  "Browser and app notifications": "ब्राउज़र और ऐप सूचनाएँ",
+  "Get notified when vendors message you": "विक्रेता संदेश भेजें तो सूचना पाएँ",
+  "Get notified when vendors submit quotes": "विक्रेता कोटेशन भेजें तो सूचना पाएँ",
+  "Instant alerts for new messages": "नए संदेशों के लिए तुरंत अलर्ट",
+  "Instant alerts for new quotes": "नए कोटेशन के लिए तुरंत अलर्ट",
+  "Updates on your RFQ status changes": "आपकी RFQ स्थिति बदलने पर अपडेट",
+  "Sourcing tips and platform updates": "सोर्सिंग सुझाव और प्लेटफ़ॉर्म अपडेट",
+
+  // Regional & data
+  "Customize your regional preferences": "अपनी क्षेत्रीय प्राथमिकताएँ अनुकूलित करें",
+  "Export All Data": "सभी डेटा निर्यात करें", "Export RFQ History": "RFQ इतिहास निर्यात करें",
+  "Download all your RFQs, quotes, and messages": "अपने सभी RFQ, कोटेशन और संदेश डाउनलोड करें",
+  "Download your RFQ history as CSV": "अपना RFQ इतिहास CSV के रूप में डाउनलोड करें",
+  "Download or manage your data": "अपना डेटा डाउनलोड या प्रबंधित करें",
+
+  // Social links
+  "Connect your social profiles": "अपनी सोशल प्रोफ़ाइल जोड़ें",
+  "Update Social Links": "सोशल लिंक अपडेट करें", "Business Page": "व्यवसाय पेज",
+  "Company Page": "कंपनी पेज", "Business profile": "व्यवसाय प्रोफ़ाइल",
+  "Any other link": "कोई अन्य लिंक",
+
+  // Help
+  "What can we help you with?": "हम आपकी किसमें मदद कर सकते हैं?",
+  "Welcome to Cosora's Customer Service": "कोसोरा ग्राहक सेवा में आपका स्वागत है",
+  "Chat with us": "हमसे चैट करें", "How to Complete Verification": "सत्यापन कैसे पूरा करें",
+  "Payment & Subscription Guide": "भुगतान और सब्सक्रिप्शन गाइड",
+  "Audio, PDF & Image Support": "ऑडियो, PDF और छवि समर्थन",
+  "Get connected for our latest news & updates!": "हमारी नवीनतम खबरों और अपडेट के लिए जुड़ें!",
+
+  // Chat hub
+  "Search conversations...": "बातचीत खोजें...", "Search call history...": "कॉल इतिहास खोजें...",
+  "No conversation open": "कोई बातचीत खुली नहीं", "No conversations found": "कोई बातचीत नहीं मिली",
+  "No calls found": "कोई कॉल नहीं मिली",
+
+  // For You onboarding
+  "Skip for now": "अभी छोड़ें",
 };
 
 // ── English → Gujarati dictionary (mirrors the HI keys) ──
@@ -416,6 +542,112 @@ const GU: Record<string, string> = {
   // Uppercase home-feed tab strip
   "NEW ARRIVALS": "નવા આગમન", "TRENDS": "ટ્રેન્ડ્સ", "SALE": "સેલ",
   "FOR YOU": "તમારા માટે", "FOLLOWINGS": "ફોલોઇંગ", "FOLLOWING": "ફોલોઇંગ",
+
+  // ─────────────────────────────────────────────────────────
+  // Mirrors the audited additions in HI above, same keys.
+  // ─────────────────────────────────────────────────────────
+
+  // Home feed sections
+  "Today's New In": "આજનું નવું", "Looking for these?": "શું તમે આ શોધી રહ્યા છો?",
+  "Recommended Premium Brands": "ભલામણ કરેલ પ્રીમિયમ બ્રાન્ડ્સ",
+  "Top-rated verified suppliers on Cosora": "કોસોરા પર ટોચના રેટિંગવાળા ચકાસાયેલ સપ્લાયર્સ",
+  "WHAT'S ON YOUR MIND": "તમારા મનમાં શું છે", "SLIDE TO SEE": "જોવા માટે સ્લાઇડ કરો",
+  "Sponsored": "પ્રાયોજિત", "Looking for New Brands?": "નવી બ્રાન્ડ્સ શોધી રહ્યા છો?",
+  "NEW EVERYDAY FASHION": "નવું રોજિંદું ફૅશન",
+  "Discover New Fashion Everyday": "દરરોજ નવું ફૅશન શોધો",
+
+  // Category tiles
+  "Women's Apparel": "મહિલાઓનાં વસ્ત્રો", "Men's Apparel": "પુરુષોનાં વસ્ત્રો",
+  "Men's Jeans": "પુરુષોના જીન્સ", "Men's Shirt": "પુરુષોનું શર્ટ",
+  "Accessories": "એક્સેસરીઝ", "Women's Trousers": "મહિલાઓના ટ્રાઉઝર",
+  "Women's T-shirts": "મહિલાઓની ટી-શર્ટ", "Women's Shoes": "મહિલાઓના જૂતા",
+  "Kidswear": "બાળકોનાં વસ્ત્રો", "Ethnic Wear": "એથનિક વેર",
+  "Activewear": "એક્ટિવવેર", "Winter Wear": "શિયાળુ વસ્ત્રો",
+
+  // Product card labels
+  "Fabric:": "કાપડ:", "Fit Type:": "ફિટ પ્રકાર:", "CALL NOW": "હમણાં કૉલ કરો",
+  "Create New": "નવું બનાવો",
+
+  // Submit-requirement card
+  "Just upload an image + quantity. Get quotes in minutes!": "ફક્ત એક છબી + જથ્થો અપલોડ કરો. મિનિટોમાં ક્વોટ્સ મેળવો!",
+  "Detailed specifications for precise quotes": "ચોક્કસ ક્વોટ્સ માટે વિગતવાર સ્પષ્ટીકરણો",
+  "Quick Quote": "ઝડપી ક્વોટ", "Takes 30 seconds": "30 સેકન્ડ લાગે છે",
+
+  // Search
+  "Hot Keywords": "લોકપ્રિય કીવર્ડ્સ", "Trending Keywords": "ટ્રેન્ડિંગ કીવર્ડ્સ",
+  "Popular keywords": "લોકપ્રિય કીવર્ડ્સ", "Recent keywords": "તાજેતરના કીવર્ડ્સ",
+  "Popular search categories": "લોકપ્રિય શોધ શ્રેણીઓ", "PHOTO SEARCH": "ફોટો શોધ",
+  "Delete all": "બધું કાઢી નાખો", "Click a photo": "ફોટો લો", "Select a photo": "ફોટો પસંદ કરો",
+  "Search categories…": "શ્રેણીઓ શોધો…", "Search services...": "સેવાઓ શોધો...",
+  "Search freelancers by name or skill...": "નામ અથવા કૌશલ્ય દ્વારા ફ્રીલાન્સર શોધો...",
+  "Rating 4+": "રેટિંગ 4+", "1-Day Delivery": "1-દિવસ ડિલિવરી",
+
+  // Trends
+  "Hot Trends, Styled for You": "તમારા માટે સ્ટાઇલ કરેલા હૉટ ટ્રેન્ડ્સ",
+  "Discover Trending Arrivals for You": "તમારા માટે ટ્રેન્ડિંગ નવા આગમન શોધો",
+  "NEW TREND INSIGHTS": "નવી ટ્રેન્ડ માહિતી", "View More": "વધુ જુઓ",
+  "View More Styles": "વધુ સ્ટાઇલ જુઓ", "View Item": "આઇટમ જુઓ",
+  "Visit Brand": "બ્રાન્ડ જુઓ", "Top Brands for": "માટે ટોચની બ્રાન્ડ્સ",
+
+  // Sale
+  "MEGA SALE": "મેગા સેલ", "Flash Deals": "ફ્લેશ ડીલ્સ", "All Deals": "બધી ડીલ્સ",
+  "Shop by Discount": "ડિસ્કાઉન્ટ પ્રમાણે ખરીદો", "Biggest Discount": "સૌથી મોટું ડિસ્કાઉન્ટ",
+  "Sale ends in": "સેલ સમાપ્ત થવામાં", "Limited time": "મર્યાદિત સમય", "Up to": "સુધી",
+  "on bulk orders from verified manufacturers": "ચકાસાયેલ ઉત્પાદકો પાસેથી જથ્થાબંધ ઓર્ડર પર",
+
+  // Followings / saved
+  "Your Followings": "તમારી ફોલોઇંગ", "Following New-In": "ફોલોઇંગમાં નવું",
+  "Following Top Performing": "ફોલોઇંગમાં ટોચનું પ્રદર્શન", "Most Popular": "સૌથી લોકપ્રિય",
+  "Your Collections": "તમારા સંગ્રહો", "My Saves": "મારા સાચવેલા", "All Saves": "બધા સાચવેલા",
+  "New Folder": "નવું ફોલ્ડર",
+
+  // My Quotes
+  "YOUR REQUESTS": "તમારી વિનંતીઓ", "New Quotes": "નવા ક્વોટ્સ", "Total Quotes": "કુલ ક્વોટ્સ",
+  "Manage your quote requests": "તમારી ક્વોટ વિનંતીઓ સંચાલિત કરો", "Active RFQs": "સક્રિય RFQ",
+
+  // Notifications settings
+  "Email Notifications": "ઇમેઇલ સૂચનાઓ", "Push Notifications": "પુશ સૂચનાઓ",
+  "Message Alerts": "સંદેશ ચેતવણીઓ", "New Messages": "નવા સંદેશા",
+  "Quote Notifications": "ક્વોટ સૂચનાઓ", "New Quote Received": "નવો ક્વોટ મળ્યો",
+  "RFQ Updates": "RFQ અપડેટ્સ", "Newsletter & Tips": "ન્યૂઝલેટર અને ટિપ્સ",
+  "Save Notification Settings": "સૂચના સેટિંગ્સ સાચવો",
+  "Manage your email notification preferences": "તમારી ઇમેઇલ સૂચના પસંદગીઓ સંચાલિત કરો",
+  "Browser and app notifications": "બ્રાઉઝર અને ઍપ સૂચનાઓ",
+  "Get notified when vendors message you": "વિક્રેતા સંદેશ મોકલે ત્યારે સૂચના મેળવો",
+  "Get notified when vendors submit quotes": "વિક્રેતા ક્વોટ મોકલે ત્યારે સૂચના મેળવો",
+  "Instant alerts for new messages": "નવા સંદેશા માટે તાત્કાલિક ચેતવણી",
+  "Instant alerts for new quotes": "નવા ક્વોટ્સ માટે તાત્કાલિક ચેતવણી",
+  "Updates on your RFQ status changes": "તમારી RFQ સ્થિતિ બદલાય ત્યારે અપડેટ",
+  "Sourcing tips and platform updates": "સોર્સિંગ ટિપ્સ અને પ્લેટફોર્મ અપડેટ્સ",
+
+  // Regional & data
+  "Customize your regional preferences": "તમારી પ્રાદેશિક પસંદગીઓ કસ્ટમાઇઝ કરો",
+  "Export All Data": "બધો ડેટા નિકાસ કરો", "Export RFQ History": "RFQ ઇતિહાસ નિકાસ કરો",
+  "Download all your RFQs, quotes, and messages": "તમારા બધા RFQ, ક્વોટ્સ અને સંદેશા ડાઉનલોડ કરો",
+  "Download your RFQ history as CSV": "તમારો RFQ ઇતિહાસ CSV તરીકે ડાઉનલોડ કરો",
+  "Download or manage your data": "તમારો ડેટા ડાઉનલોડ અથવા સંચાલિત કરો",
+
+  // Social links
+  "Connect your social profiles": "તમારી સોશિયલ પ્રોફાઇલ્સ જોડો",
+  "Update Social Links": "સોશિયલ લિંક્સ અપડેટ કરો", "Business Page": "વ્યવસાય પેજ",
+  "Company Page": "કંપની પેજ", "Business profile": "વ્યવસાય પ્રોફાઇલ",
+  "Any other link": "અન્ય કોઈ લિંક",
+
+  // Help
+  "What can we help you with?": "અમે તમને શેમાં મદદ કરી શકીએ?",
+  "Welcome to Cosora's Customer Service": "કોસોરા ગ્રાહક સેવામાં આપનું સ્વાગત છે",
+  "Chat with us": "અમારી સાથે ચેટ કરો", "How to Complete Verification": "ચકાસણી કેવી રીતે પૂર્ણ કરવી",
+  "Payment & Subscription Guide": "ચુકવણી અને સબ્સ્ક્રિપ્શન માર્ગદર્શિકા",
+  "Audio, PDF & Image Support": "ઑડિયો, PDF અને છબી સપોર્ટ",
+  "Get connected for our latest news & updates!": "અમારા નવીનતમ સમાચાર અને અપડેટ્સ માટે જોડાઓ!",
+
+  // Chat hub
+  "Search conversations...": "વાતચીત શોધો...", "Search call history...": "કૉલ ઇતિહાસ શોધો...",
+  "No conversation open": "કોઈ વાતચીત ખુલ્લી નથી", "No conversations found": "કોઈ વાતચીત મળી નથી",
+  "No calls found": "કોઈ કૉલ મળ્યો નથી",
+
+  // For You onboarding
+  "Skip for now": "હમણાં છોડો",
 };
 
 // Non-English dictionaries by code.
