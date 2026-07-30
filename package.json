@@ -10,7 +10,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "playwright:install": "npx playwright install --with-deps",
-    "test:e2e": "npx playwright test"
+    "test:e2e": "npx playwright test",
+    "check:fields": "node scripts/check-seller-fields.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

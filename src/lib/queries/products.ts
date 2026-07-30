@@ -222,16 +222,35 @@ export interface CatalogueRow {
   priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: string; colour: string; image: string; secondaryImage: string; verified: boolean; boost: number;
+  // Real vendor-entered attributes, so the search facets can filter on the
+  // actual product instead of hashPick()ing a stable fake value per id.
+  moqValue: number | null;
+  pattern: string[]; occasion: string[]; sizes: string[];
+  neckType: string; sleeveType: string; collarType: string; countryOfOrigin: string;
+  waistSizes: string[]; lengths: string[];
+  categoryId: string | null; categoryName: string; parentCategoryName: string;
 }
 
 async function fetchCatalogue(): Promise<CatalogueRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, product_images ( url, position )")
+    .select("id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )")
     .eq("status", "live")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  const rows = (data ?? []) as unknown as (RawProduct & { gender: string | null; colour: string | null })[];
+  const rows = (data ?? []) as unknown as (RawProduct & {
+    gender: string | null; colour: string | null; sizes: string[] | null;
+    pattern: string[] | null; occasion: string[] | null;
+    neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
+    country_of_origin: string | null; waist_sizes: string[] | null; lengths: string[] | null;
+    category_id: string | null; categories: { name: string; parent_id: string | null } | null;
+  })[];
+
+  // Parent name for each product's category, so the Categories facet can group
+  // subcategories under the taxonomy root the vendor picked from.
+  const cats = await loadCategories();
+  const parentName = (parentId: string | null | undefined) =>
+    (parentId ? cats.find((c) => c.id === parentId)?.name : null) ?? "";
 
   const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
   const vendorMap = new Map<string, RawVendor>();
@@ -271,6 +290,24 @@ async function fetchCatalogue(): Promise<CatalogueRow[]> {
       secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
       verified: trustSealFromParts(v?.is_verified, v?.plan_expires_at, v?.ad_verified_until),
       boost: v?.searchBoost ?? 0,
+      // `moq` is free text the vendor typed ("100", "100 pcs", "MOQ 500"), so
+      // pull the first number out of it rather than trusting the whole string.
+      moqValue: (() => {
+        const m = (p.moq ?? "").match(/\d[\d,]*/);
+        return m ? Number(m[0].replace(/,/g, "")) : null;
+      })(),
+      pattern: p.pattern ?? [],
+      occasion: p.occasion ?? [],
+      sizes: p.sizes ?? [],
+      neckType: p.neck_type ?? "",
+      sleeveType: p.sleeve_type ?? "",
+      collarType: p.collar_type ?? "",
+      countryOfOrigin: p.country_of_origin ?? "",
+      waistSizes: p.waist_sizes ?? [],
+      lengths: p.lengths ?? [],
+      categoryId: p.category_id ?? null,
+      categoryName: p.categories?.name ?? "",
+      parentCategoryName: parentName(p.categories?.parent_id),
     };
   });
   // Higher plan tiers rank first in search (real weight).
@@ -300,6 +337,17 @@ export interface ProductDetail {
   gender: string | null;
   colour: string | null;
   sizes: string[] | null;
+  // Collected by the vendor at listing time (see sellerCategories.ts). Null on
+  // listings created before these columns existed, and on subcategories that
+  // don't ask — e.g. shirts have collarType but no neckType, and vice versa.
+  pattern: string[] | null;
+  occasion: string[] | null;
+  neckType: string | null;
+  sleeveType: string | null;
+  collarType: string | null;
+  countryOfOrigin: string | null;
+  waistSizes: string[] | null;
+  lengths: string[] | null;
   customizationAvailable: boolean;
   location: string | null;
   categoryName: string | null;
@@ -315,12 +363,16 @@ interface RawDetail extends RawProduct {
   description: string | null; gender: string | null; colour: string | null;
   reviews_count: number; category_id: string | null; categories: { name: string } | null;
   sizes: string[] | null; customization_available: boolean | null;
+  pattern: string[] | null; occasion: string[] | null;
+  neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
+  country_of_origin: string | null;
+  waist_sizes: string[] | null; lengths: string[] | null;
 }
 
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, sizes, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -349,6 +401,14 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     gender: row.gender,
     colour: row.colour,
     sizes: row.sizes ?? null,
+    pattern: row.pattern ?? null,
+    occasion: row.occasion ?? null,
+    neckType: row.neck_type ?? null,
+    sleeveType: row.sleeve_type ?? null,
+    collarType: row.collar_type ?? null,
+    countryOfOrigin: row.country_of_origin ?? null,
+    waistSizes: row.waist_sizes ?? null,
+    lengths: row.lengths ?? null,
     customizationAvailable: row.customization_available ?? false,
     location: row.location,
     categoryName: row.categories?.name ?? null,
@@ -616,15 +676,43 @@ const CATEGORY_KEYWORDS: [RegExp, string][] = [
   [/accessor|\bbag\b|belt|\bcap\b|\bhat\b|watch|sunglass|jewel|scarf|stole|\bsock|glove|wallet|clutch/i, "Accessories"],
 ];
 
-let categoryCache: { id: string; name: string }[] | null = null;
-async function loadCategories(): Promise<{ id: string; name: string }[]> {
+interface CategoryRow { id: string; name: string; parent_id: string | null }
+let categoryCache: CategoryRow[] | null = null;
+async function loadCategories(): Promise<CategoryRow[]> {
   if (categoryCache) return categoryCache;
-  const { data } = await supabase.from("categories").select("id, name");
-  categoryCache = (data ?? []) as { id: string; name: string }[];
+  const { data } = await supabase.from("categories").select("id, name, parent_id");
+  categoryCache = (data ?? []) as CategoryRow[];
   return categoryCache;
 }
 
-/** Best-effort map of upload taxonomy text → a DB category id (or null). */
+/**
+ * The precise category for a listing: the seeded subcategory row matching the
+ * subcategory the vendor actually picked, looked up under its parent category.
+ *
+ * Prefer this over resolveCategoryId. The vendor selects an exact subcategory
+ * ("Men's T-Shirts") in step 2 of the upload wizard; resolveCategoryId ignored
+ * that and re-derived a far coarser bucket by regex-matching the product NAME,
+ * so "Lounge Tee" and "Graphic Tee" both collapsed to "T-shirts/Tops" and the
+ * buyer-facing Categories filter had nothing granular to group by.
+ */
+export async function resolveSubcategoryId(
+  categoryName: string | null | undefined,
+  subName: string | null | undefined,
+): Promise<string | null> {
+  if (!categoryName || !subName) return null;
+  const cats = await loadCategories();
+  const parent = cats.find((c) => c.name === categoryName && c.parent_id === null);
+  if (!parent) return null;
+  return cats.find((c) => c.name === subName && c.parent_id === parent.id)?.id ?? null;
+}
+
+/**
+ * Best-effort map of upload taxonomy text → a DB category id (or null).
+ *
+ * Kept as the fallback for callers with no clean subcategory to work from —
+ * chiefly the vendorOnboarding bulk-import path, which only has free-text
+ * category names off an onboarding form.
+ */
 export async function resolveCategoryId(...hints: (string | null | undefined)[]): Promise<string | null> {
   const hay = hints.filter(Boolean).join(" ");
   if (!hay.trim()) return null;
@@ -657,13 +745,25 @@ export interface EditableProduct {
   images: string[];
   sizes: string[] | null;
   colour: string | null;
+  // Edit mode skips the category/subcategory steps, so the Details step renders
+  // no dynamic fields and the vendor never re-answers these. They are still read
+  // back and written through unchanged on save — without that, every edit would
+  // blank out attributes the vendor set when the listing was created.
+  pattern: string[] | null;
+  occasion: string[] | null;
+  neck_type: string | null;
+  sleeve_type: string | null;
+  collar_type: string | null;
+  country_of_origin: string | null;
+  waist_sizes: string[] | null;
+  lengths: string[] | null;
   customization_available: boolean;
 }
 
 async function fetchProductForEdit(id: string): Promise<EditableProduct | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, customization_available, product_images ( url, position )")
+    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -675,6 +775,14 @@ async function fetchProductForEdit(id: string): Promise<EditableProduct | null> 
     category_id: row.category_id, status: row.status,
     sizes: row.sizes ?? null,
     colour: row.colour ?? null,
+    pattern: row.pattern ?? null,
+    occasion: row.occasion ?? null,
+    neck_type: row.neck_type ?? null,
+    sleeve_type: row.sleeve_type ?? null,
+    collar_type: row.collar_type ?? null,
+    country_of_origin: row.country_of_origin ?? null,
+    waist_sizes: row.waist_sizes ?? null,
+    lengths: row.lengths ?? null,
     customization_available: row.customization_available ?? false,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
   };
@@ -701,6 +809,14 @@ export interface ProductPatch {
   status?: "draft" | "under_review";
   sizes?: string[] | null;
   colour?: string | null;
+  pattern?: string[] | null;
+  occasion?: string[] | null;
+  neck_type?: string | null;
+  sleeve_type?: string | null;
+  collar_type?: string | null;
+  country_of_origin?: string | null;
+  waist_sizes?: string[] | null;
+  lengths?: string[] | null;
   customization_available?: boolean;
 }
 export async function updateProduct(id: string, patch: ProductPatch): Promise<void> {

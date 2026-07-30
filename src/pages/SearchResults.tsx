@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import {
-  resolveFilterSchema, defaultSelections, gsmBucket, ratingThreshold, hashPick,
+  resolveFilterSchema, defaultSelections, gsmBucket, ratingThreshold, hashPick, moqBucket,
   type Facet,
 } from "@/lib/searchFilters";
 import { useCallVendor } from "@/lib/queries/calls";
@@ -72,6 +72,15 @@ interface RProduct {
   priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: Gender; colour: string; image: string; secondaryImage: string; verified: boolean;
+  // Real vendor-entered attributes, carried through from CatalogueRow. Optional
+  // because BASE_PRODUCTS (the pre-load placeholder set) has none of them — a
+  // product with no value for a field simply doesn't match a filter on it,
+  // which is the honest answer rather than a hash-derived one.
+  moqValue?: number | null;
+  pattern?: string[]; occasion?: string[]; sizes?: string[];
+  neckType?: string; sleeveType?: string; collarType?: string; countryOfOrigin?: string;
+  waistSizes?: string[]; lengths?: string[];
+  categoryName?: string; parentCategoryName?: string;
 }
 
 const img = (s: string) => `https://picsum.photos/seed/${s}/500/650`;
@@ -347,6 +356,10 @@ function FilterPanel({ children }: { children: React.ReactNode }) {
 // ─────────────────────────────────────────────────────────────
 // Facet matcher — tests a product against one context-aware facet
 // ─────────────────────────────────────────────────────────────
+// A text[] column matches when the product carries any of the chosen values.
+const anyOf = (col: string[] | undefined, values: string[]) =>
+  !!col && col.some((v) => values.includes(v));
+
 function matchFacet(p: RProduct, f: Facet, values?: string[]): boolean {
   if (!values || values.length === 0) return true;
   switch (f.field) {
@@ -362,10 +375,30 @@ function matchFacet(p: RProduct, f: Facet, values?: string[]): boolean {
     }
     case "gsm": return values.includes(gsmBucket(p.gsm));
     case "colour": return values.includes(p.colour);
-    case "moq": return values.includes(hashPick(p.id + "|moq", f.options));
+    // moq has had a real column all along; it was hashPicked by oversight.
+    case "moq": return p.moqValue != null && values.includes(moqBucket(p.moqValue));
     case "rating": return p.rating >= Math.min(...values.map(ratingThreshold));
     case "verified": return p.verified;
-    // Facets with no backing field derive a stable pseudo-value per product.
+
+    // ── Real vendor-entered attributes ──
+    // Array columns match if the product carries ANY of the selected values.
+    case "pattern": return anyOf(p.pattern, values);
+    case "occasion": return anyOf(p.occasion, values);
+    case "sizes": return anyOf(p.sizes, values);
+    case "waist": return anyOf(p.waistSizes, values);
+    case "lengths": return anyOf(p.lengths, values);
+    case "neckType": return !!p.neckType && values.includes(p.neckType);
+    case "sleeveType": return !!p.sleeveType && values.includes(p.sleeveType);
+    case "collarType": return !!p.collarType && values.includes(p.collarType);
+    case "countryOfOrigin": return !!p.countryOfOrigin && values.includes(p.countryOfOrigin);
+    // Selecting a parent taxonomy row keeps everything beneath it, so
+    // "Apparel & Home Categories" matches a product filed under Men's T-Shirts.
+    case "category":
+      return (!!p.categoryName && values.includes(p.categoryName))
+        || (!!p.parentCategoryName && values.includes(p.parentCategoryName));
+
+    // Facets with no backing column derive a stable pseudo-value per product.
+    // See the KNOWN GAPS note at the bottom of searchFilters.ts.
     default: return values.includes(hashPick(p.id + "|" + f.id, f.options));
   }
 }
@@ -454,6 +487,8 @@ function FacetControls({
               <div className="flex flex-wrap gap-2">
                 {f.options.map((opt) => {
                   const on = sel.includes(opt);
+                  // Real product count, only present on catalogue-derived facets.
+                  const count = f.optionCounts?.[opt];
                   return (
                     <button key={opt} onClick={() => onToggle(f, opt)}
                       className={cn(
@@ -461,6 +496,11 @@ function FacetControls({
                         on ? "bg-[#ef4d62] text-white border-[#ef4d62]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
                       )}>
                       {opt}
+                      {count != null && (
+                        <span className={cn("ml-1.5 font-medium", on ? "text-white/75" : "text-gray-400")}>
+                          {count}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -576,7 +616,7 @@ const SearchResults = () => {
   // Context-aware filters resolved from the search query. The price range's
   // bounds are overridden with the catalogue's actual min/max so the slider
   // always fits the real data instead of the schema's static fallback.
-  const schema = useMemo(() => {
+  const baseSchema = useMemo(() => {
     const s = resolveFilterSchema(query);
     return {
       ...s,
@@ -585,8 +625,42 @@ const SearchResults = () => {
       ),
     };
   }, [query, priceBounds]);
+
   const [filterOpen, setFilterOpen] = useState(false);
   const [selections, setSelections] = useState<Record<string, string[]>>(() => defaultSelections(query));
+
+  // The Category facet is the one facet whose options can't be written ahead of
+  // time — they're the taxonomy rows that actually have matching products. Both
+  // the options and their counts come from the live catalogue, counted against
+  // every OTHER active facet (not the category selection itself), so a number
+  // says what picking that category would actually return.
+  //
+  // Declared after `selections` because it reads it — a const is in its temporal
+  // dead zone until initialised, so hoisting this above the useState throws
+  // "Cannot access 'selections' before initialization" and blanks the page.
+  const categoryOptions = useMemo(() => {
+    if (!catalogue) return { names: [] as string[], counts: {} as Record<string, number> };
+    const scoped = (catalogue as unknown as RProduct[]).filter((p) =>
+      baseSchema.facets.every((f) => f.field === "category" || matchFacet(p, f, selections[f.id])));
+    const counts: Record<string, number> = {};
+    for (const p of scoped) {
+      // A product counts towards its own subcategory and its parent, so picking
+      // either narrows sensibly.
+      for (const n of [p.parentCategoryName, p.categoryName]) {
+        if (n) counts[n] = (counts[n] ?? 0) + 1;
+      }
+    }
+    const names = Object.keys(counts).sort((a, b) => counts[b] - counts[a] || a.localeCompare(b)).slice(0, 12);
+    return { names, counts };
+  }, [catalogue, baseSchema, selections]);
+
+  const schema = useMemo(() => ({
+    ...baseSchema,
+    facets: baseSchema.facets.map((f) =>
+      f.field === "category"
+        ? { ...f, options: categoryOptions.names, optionCounts: categoryOptions.counts }
+        : f),
+  }), [baseSchema, categoryOptions]);
 
   // Re-derive default selections (e.g. gender pre-scope) when the query changes.
   useEffect(() => { setSelections(defaultSelections(query)); }, [query]);
@@ -595,7 +669,12 @@ const SearchResults = () => {
   // pulled out of the filter sheet — the sheet + its active-count only cover the
   // remaining facets. `genderFacet` is context-aware (e.g. dresses → Women/Girls)
   // and absent for non-apparel searches, in which case the GENDER button hides.
-  const sheetFacets = useMemo(() => schema.facets.filter((f) => f.id !== "gender"), [schema]);
+  // Also drop any facet left with no options — the Category facet is empty
+  // until the catalogue loads, and an empty heading is just noise.
+  const sheetFacets = useMemo(
+    () => schema.facets.filter((f) => f.id !== "gender" && (f.kind === "range" || f.options.length > 0)),
+    [schema],
+  );
   const genderFacet = useMemo(() => schema.facets.find((f) => f.id === "gender"), [schema]);
   const genderOptions = genderFacet?.options ?? [...GENDERS];
   const genderSel = selections.gender?.[0] ?? null;
@@ -747,7 +826,10 @@ const SearchResults = () => {
 
           {/* Tabs */}
           <div className="flex gap-6">
-            {([["product", `Product 9,999+`], ["brand", `Brand ${brandResults.length}`]] as const).map(([key, label]) => (
+            {/* Both counts are real. "Product" was a hardcoded `9,999+` sitting
+                next to a genuine brand count — it now reports the filtered
+                result set, so it moves as the buyer narrows the facets. */}
+            {([["product", `Product ${products.length}`], ["brand", `Brand ${brandResults.length}`]] as const).map(([key, label]) => (
               <button key={key} onClick={() => { setTab(key); setMenu(null); }} className="relative pb-2.5">
                 <span className={cn("text-sm font-bold", tab === key ? "text-gray-900" : "text-gray-400")}>{label}</span>
                 {tab === key && <motion.span layoutId="sr-tab" className="absolute inset-x-0 -bottom-px h-0.5 bg-gray-900 rounded-full" />}

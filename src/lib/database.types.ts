@@ -44,6 +44,41 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_flags: {
+        Row: {
+          author_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          note: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          note: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          note?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_flags_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       advertisements: {
         Row: {
           clicks: number
@@ -53,6 +88,9 @@ export type Database = {
           id: string
           image_url: string | null
           impressions: number
+          moderated_at: string | null
+          moderated_by: string | null
+          moderation_reason: string | null
           placement: string | null
           product_id: string | null
           starts_at: string | null
@@ -70,6 +108,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           impressions?: number
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
           placement?: string | null
           product_id?: string | null
           starts_at?: string | null
@@ -87,6 +128,9 @@ export type Database = {
           id?: string
           image_url?: string | null
           impressions?: number
+          moderated_at?: string | null
+          moderated_by?: string | null
+          moderation_reason?: string | null
           placement?: string | null
           product_id?: string | null
           starts_at?: string | null
@@ -97,6 +141,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "advertisements_moderated_by_fkey"
+            columns: ["moderated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "advertisements_product_id_fkey"
             columns: ["product_id"]
@@ -599,8 +650,10 @@ export type Database = {
       products: {
         Row: {
           category_id: string | null
+          collar_type: string | null
           colour: string | null
           compare_at_price: number | null
+          country_of_origin: string | null
           created_at: string
           currency: string
           customization_available: boolean
@@ -611,22 +664,31 @@ export type Database = {
           gender: string | null
           gsm: string | null
           id: string
+          lengths: string[] | null
           location: string | null
           moq: string | null
           name: string
+          neck_type: string | null
+          occasion: string[] | null
+          pattern: string[] | null
           price_value: number | null
           rating_avg: number
+          rejection_reason: string | null
           reviews_count: number
           sizes: string[] | null
+          sleeve_type: string | null
           sold_count: number
           status: Database["public"]["Enums"]["product_status"]
           vendor_id: string
           views_count: number
+          waist_sizes: string[] | null
         }
         Insert: {
           category_id?: string | null
+          collar_type?: string | null
           colour?: string | null
           compare_at_price?: number | null
+          country_of_origin?: string | null
           created_at?: string
           currency?: string
           customization_available?: boolean
@@ -637,22 +699,31 @@ export type Database = {
           gender?: string | null
           gsm?: string | null
           id?: string
+          lengths?: string[] | null
           location?: string | null
           moq?: string | null
           name: string
+          neck_type?: string | null
+          occasion?: string[] | null
+          pattern?: string[] | null
           price_value?: number | null
           rating_avg?: number
+          rejection_reason?: string | null
           reviews_count?: number
           sizes?: string[] | null
+          sleeve_type?: string | null
           sold_count?: number
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id: string
           views_count?: number
+          waist_sizes?: string[] | null
         }
         Update: {
           category_id?: string | null
+          collar_type?: string | null
           colour?: string | null
           compare_at_price?: number | null
+          country_of_origin?: string | null
           created_at?: string
           currency?: string
           customization_available?: boolean
@@ -663,17 +734,24 @@ export type Database = {
           gender?: string | null
           gsm?: string | null
           id?: string
+          lengths?: string[] | null
           location?: string | null
           moq?: string | null
           name?: string
+          neck_type?: string | null
+          occasion?: string[] | null
+          pattern?: string[] | null
           price_value?: number | null
           rating_avg?: number
+          rejection_reason?: string | null
           reviews_count?: number
           sizes?: string[] | null
+          sleeve_type?: string | null
           sold_count?: number
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id?: string
           views_count?: number
+          waist_sizes?: string[] | null
         }
         Relationships: [
           {
@@ -695,6 +773,7 @@ export type Database = {
       profiles: {
         Row: {
           active_role: string
+          admin_role: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url: string | null
           created_at: string
           email: string | null
@@ -706,6 +785,7 @@ export type Database = {
         }
         Insert: {
           active_role?: string
+          admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
@@ -717,6 +797,7 @@ export type Database = {
         }
         Update: {
           active_role?: string
+          admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url?: string | null
           created_at?: string
           email?: string | null
@@ -1121,6 +1202,10 @@ export type Database = {
           plan_id: string | null
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
+          razorpay_refund_id: string | null
+          refund_status: string | null
+          refunded_amount: number | null
+          refunded_at: string | null
           status: string
           subscription_id: string | null
           tds_amount: number | null
@@ -1140,6 +1225,10 @@ export type Database = {
           plan_id?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          razorpay_refund_id?: string | null
+          refund_status?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
           status?: string
           subscription_id?: string | null
           tds_amount?: number | null
@@ -1159,6 +1248,10 @@ export type Database = {
           plan_id?: string | null
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
+          razorpay_refund_id?: string | null
+          refund_status?: string | null
+          refunded_amount?: number | null
+          refunded_at?: string | null
           status?: string
           subscription_id?: string | null
           tds_amount?: number | null
@@ -1386,6 +1479,7 @@ export type Database = {
       vendor_profiles: {
         Row: {
           about: string | null
+          account_status: string
           ad_verified_until: string | null
           address_line: string | null
           area: string | null
@@ -1404,6 +1498,7 @@ export type Database = {
           is_verified: boolean
           landmark: string | null
           logo_url: string | null
+          notifications: Json | null
           office_photos: string[] | null
           onboarding_complete: boolean
           owner_email: string | null
@@ -1415,17 +1510,17 @@ export type Database = {
           postal_code: string | null
           profile_score: number
           rating_avg: number
+          regional: Json | null
           reviews_count: number
           social: Json | null
           state: string | null
-          notifications: Json | null
-          regional: Json | null
           website: string | null
           whatsapp: string | null
           year_established: number | null
         }
         Insert: {
           about?: string | null
+          account_status?: string
           ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
@@ -1444,6 +1539,7 @@ export type Database = {
           is_verified?: boolean
           landmark?: string | null
           logo_url?: string | null
+          notifications?: Json | null
           office_photos?: string[] | null
           onboarding_complete?: boolean
           owner_email?: string | null
@@ -1455,17 +1551,17 @@ export type Database = {
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
+          regional?: Json | null
           reviews_count?: number
           social?: Json | null
           state?: string | null
-          notifications?: Json | null
-          regional?: Json | null
           website?: string | null
           whatsapp?: string | null
           year_established?: number | null
         }
         Update: {
           about?: string | null
+          account_status?: string
           ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
@@ -1484,6 +1580,7 @@ export type Database = {
           is_verified?: boolean
           landmark?: string | null
           logo_url?: string | null
+          notifications?: Json | null
           office_photos?: string[] | null
           onboarding_complete?: boolean
           owner_email?: string | null
@@ -1495,11 +1592,10 @@ export type Database = {
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
+          regional?: Json | null
           reviews_count?: number
           social?: Json | null
           state?: string | null
-          notifications?: Json | null
-          regional?: Json | null
           website?: string | null
           whatsapp?: string | null
           year_established?: number | null
@@ -1597,6 +1693,7 @@ export type Database = {
         Args: { filter_category?: string; max_count?: number }
         Returns: {
           ad_id: string
+          category_name: string
           currency: string
           image_url: string
           placement: string
@@ -1611,6 +1708,11 @@ export type Database = {
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string }; Returns: undefined }
       ad_impression: { Args: { ad: string }; Returns: undefined }
+      admin_role: {
+        Args: never
+        Returns: Database["public"]["Enums"]["admin_role_type"]
+      }
+      admin_role_values: { Args: never; Returns: string[] }
       approve_vendor_content: { Args: { target: string }; Returns: undefined }
       expire_subscriptions: { Args: never; Returns: number }
       get_vendor_plan: { Args: { v?: string }; Returns: Json }
@@ -1629,8 +1731,16 @@ export type Database = {
         Args: { reply: string; review_id: string }
         Returns: undefined
       }
+      user_has_password: { Args: { target_email: string }; Returns: boolean }
     }
     Enums: {
+      admin_role_type:
+        | "super_admin"
+        | "product_moderator"
+        | "vendor_ops"
+        | "ads_moderator"
+        | "finance_admin"
+        | "support"
       product_status: "draft" | "under_review" | "live" | "rejected"
       quote_status: "pending" | "shortlisted" | "accepted" | "rejected"
       rfq_status: "active" | "closed"
@@ -1761,6 +1871,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role_type: [
+        "super_admin",
+        "product_moderator",
+        "vendor_ops",
+        "ads_moderator",
+        "finance_admin",
+        "support",
+      ],
       product_status: ["draft", "under_review", "live", "rejected"],
       quote_status: ["pending", "shortlisted", "accepted", "rejected"],
       rfq_status: ["active", "closed"],

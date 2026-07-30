@@ -11,6 +11,14 @@ export interface FormField {
   required?: boolean;
   unit?: string;
   fullWidth?: boolean;
+  /**
+   * Only meaningful on a category's `commonFields`, which are fallbacks offered
+   * to every subcategory in that category. Restricts the fallback to the
+   * subcategory ids where the question actually makes sense — without it,
+   * "Neck Type" and "Sleeve Type" get asked about a bedsheet and a pair of
+   * shoes. Omit to apply the field to every subcategory.
+   */
+  appliesTo?: string[];
 }
 
 export interface SubCategory {
@@ -36,7 +44,36 @@ const kidsSizes = ["0-3M", "3-6M", "6-12M", "1-2Y", "2-3Y", "3-4Y", "4-5Y", "5-6
 const originCountries = ["India", "China", "Vietnam", "Bangladesh", "Turkey", "Pakistan", "Indonesia", "Sri Lanka"];
 const fashionGenderOptions = ["Men", "Women", "Unisex", "Boys", "Girls", "Kids", "Baby"];
 const fashionOccasionOptions = ["Casual", "Formal", "Sports", "Party", "Beach", "Festive", "Gym Wear", "Work"];
-const fashionCertificationOptions = ["GOTS", "OEKO-TEX", "ISO 9001", "WRAP", "SEDEX", "BCI"];
+// Widened from ["GOTS","OEKO-TEX","ISO 9001","WRAP","SEDEX","BCI"] to absorb the
+// richer list that used to live on apparel-home as a separate `apparelCertificates`
+// field. Every apparel listing rendered BOTH — "Certifications" from
+// productCommonFields and "Certificates" from the category fallback — two
+// dropdowns asking the same thing with different option sets. One field now, and
+// these are supply-chain-wide certifications, so the fuller list suits every
+// product category rather than just apparel.
+const fashionCertificationOptions = [
+  "OEKO-TEX Standard 100", "GOTS (Organic)", "BCI (Better Cotton)", "GRS (Recycled)",
+  "Fair Trade", "SA8000", "WRAP", "ISO 9001", "Sedex/SMETA", "BSCI",
+  "OCS (Organic Content)", "None",
+];
+
+// ── apparel-home subcategory groups ───────────────────────────────────────────
+// The category's commonFields are fallbacks for subcategories that don't ask a
+// question themselves. They used to be offered to all 11 subcategories, which is
+// how Home Textiles ended up being asked for a neckline and Footwear for a
+// sleeve type. These groups scope them via FormField.appliesTo.
+const TOPWEAR = ["mens-tshirts", "mens-shirts", "womens-tops", "womens-dresses", "womens-ethnic", "kids-wear", "ready-made-garments"];
+const BOTTOMWEAR = ["mens-pants", "mens-jeans", "womens-ethnic", "kids-wear", "ready-made-garments"];
+// A shirt has a collar, not a neckline — asking a shirt vendor for "Neck Type"
+// is the same category of noise as asking a bedsheet.
+const NECKLINE = TOPWEAR.filter((id) => id !== "mens-shirts");
+// The fallback length options are hem lengths (Mini / Midi / Maxi / Floor
+// Length), which describe a dress or kurta, not a t-shirt or a shirt.
+const DRESS_LENGTH = ["womens-dresses", "womens-ethnic", "kids-wear", "ready-made-garments"];
+// Anything worn on the body. Excludes home-textiles (not worn) and, where a
+// field is about garment construction, footwear.
+const GARMENTS = Array.from(new Set([...TOPWEAR, ...BOTTOMWEAR]));
+const WEARABLES = [...GARMENTS, "footwear"];
 
 // Common fields for all product-based sellers
 export const productCommonFields: FormField[] = [
@@ -533,16 +570,52 @@ export const sellerCategories: SellerCategory[] = [
         { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
       ]},
     ],
+    // Category-level fallbacks. These render only for subcategories that don't
+    // already ask the same question — getOptionalCategoryFields() drops any id
+    // the subcategory (or the base common fields) already collects — so e.g.
+    // Women's Ethnic Wear can still state a neckline even though its own field
+    // list has none, without Men's T-Shirts asking for Pattern twice.
+    //
+    // The ids here are the CANONICAL ones (`pattern`, `neckType`, `sleeveType`,
+    // ...) so one read per concept in Upload.tsx catches both the subcategory
+    // field and this fallback. They used to be `apparelPattern`,
+    // `apparelNeckCollar` and `apparelSleeveLength` — ids no reader ever looked
+    // for, which is part of why this data was silently discarded.
     commonFields: [
-      { id: "apparelPattern", label: "Pattern", type: "select", options: ["Solid", "Striped", "Checked", "Printed", "Floral", "Geometric", "Abstract", "Polka Dot", "Camo", "Color Block", "Tie-Dye", "Graphic", "Embroidered", "Self Textured"] },
-      { id: "apparelFitType", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Tailored", "Boxy", "A-Line", "Bodycon", "Straight", "Muscle Fit"] },
-      { id: "apparelGender", label: "Gender", type: "multiselect", options: fashionGenderOptions, fullWidth: true },
-      { id: "apparelSizes", label: "Sizes", type: "size-selector", options: standardSizes, fullWidth: true },
-      { id: "apparelNeckCollar", label: "Neck / Collar Type", type: "select", options: ["Round Neck", "V-Neck", "Crew Neck", "Polo Collar", "Mandarin", "Henley", "Spread Collar", "Button Down", "Boat Neck", "Square Neck", "Sweetheart", "Off-Shoulder", "Halter", "High Neck", "Keyhole", "Cowl Neck", "Shirt Collar", "Stand Collar", "Hood", "N/A"] },
-      { id: "apparelSleeveLength", label: "Sleeve / Length Type", type: "select", options: ["Sleeveless", "Cap Sleeve", "Half Sleeve", "3/4 Sleeve", "Full Sleeve", "Bell Sleeve", "Puff Sleeve", "Raglan", "Cold Shoulder", "Rolled Up", "Mini", "Midi", "Maxi", "Knee Length", "Ankle Length", "Floor Length", "N/A"] },
-      { id: "apparelBottomType", label: "Bottom Type", type: "select", options: ["Trouser", "Chino", "Jogger", "Cargo", "Legging", "Palazzo", "Culottes", "Shorts", "Skirt", "Dhoti", "Salwar", "Churidar", "N/A"] },
-      { id: "apparelClosure", label: "Closure / Additional Details", type: "select", options: ["Button", "Zipper", "Hook & Eye", "Snap", "Drawstring", "Elastic Waist", "Tie/Wrap", "Pullover", "Magnetic", "Velcro", "Back Zip", "Side Zip", "None"] },
-      { id: "apparelCertificates", label: "Certificates", type: "multiselect", options: ["OEKO-TEX Standard 100", "GOTS (Organic)", "BCI (Better Cotton)", "GRS (Recycled)", "Fair Trade", "SA8000", "WRAP", "ISO 9001", "Sedex/SMETA", "BSCI", "OCS (Organic Content)", "None"], fullWidth: true },
+      // Was a single-select `apparelPattern`; every subcategory that asks for a
+      // pattern treats it as multiselect, so this follows them rather than
+      // forcing the DB column down to a scalar.
+      // Pattern is left unscoped: prints apply to garments, footwear and home
+      // textiles alike. The subcategories that ask for it themselves (tees,
+      // shirts, tops, home textiles) drop this copy via the de-dup below.
+      { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Checked", "Printed", "Floral", "Geometric", "Abstract", "Polka Dot", "Camo", "Color Block", "Tie-Dye", "Graphic", "Embroidered", "Self Textured"] },
+      { id: "fit", label: "Fit Type", type: "select", appliesTo: GARMENTS, options: ["Regular", "Slim", "Relaxed", "Oversized", "Tailored", "Boxy", "A-Line", "Bodycon", "Straight", "Muscle Fit"] },
+      // Still `apparelGender`, deliberately: this is a multiselect but every
+      // subcategory `gender` field is a single select and products.gender is a
+      // scalar text column. Renaming it would push an array into a text field.
+      // Scoping it instead removes the duplicate on the three subcategories that
+      // define their own `gender` (kids-wear, footwear, ready-made-garments),
+      // which is what the rename would have achieved, without the type clash.
+      { id: "apparelGender", label: "Gender", type: "multiselect", appliesTo: ["mens-tshirts", "mens-shirts", "mens-pants", "mens-jeans", "womens-tops", "womens-dresses", "womens-ethnic"], options: fashionGenderOptions, fullWidth: true },
+      // Letter sizes. Not bottomwear (it collects waistSizes + lengths), not
+      // footwear (UK sizes), not home textiles (bed/bath dimensions).
+      { id: "sizes", label: "Sizes", type: "size-selector", appliesTo: TOPWEAR, options: standardSizes, fullWidth: true },
+      // `apparelNeckCollar` was one dropdown mixing necklines and collars, so a
+      // single value could mean either. Split to match how the subcategories
+      // already ask, and so each maps to exactly one column.
+      { id: "neckType", label: "Neck Type", type: "select", appliesTo: NECKLINE, options: ["Round Neck", "V-Neck", "Crew Neck", "Henley", "Boat Neck", "Square Neck", "Sweetheart", "Off-Shoulder", "Halter", "High Neck", "Keyhole", "Cowl Neck", "Hood", "N/A"] },
+      { id: "collarType", label: "Collar Type", type: "select", appliesTo: TOPWEAR, options: ["Polo Collar", "Mandarin", "Spread Collar", "Button Down", "Shirt Collar", "Stand Collar", "N/A"] },
+      // Likewise `apparelSleeveLength` mixed sleeve cut with garment length.
+      { id: "sleeveType", label: "Sleeve Type", type: "select", appliesTo: TOPWEAR, options: ["Sleeveless", "Cap Sleeve", "Half Sleeve", "3/4 Sleeve", "Full Sleeve", "Bell Sleeve", "Puff Sleeve", "Raglan", "Cold Shoulder", "Rolled Up", "N/A"] },
+      // NOTE: `length` (garment length) has no products column yet, so this one
+      // is still discarded on submit — same as the existing `length` fields on
+      // Women's Dresses and Women's Ethnic Wear. Flagged, not silently dropped.
+      { id: "length", label: "Length", type: "select", appliesTo: DRESS_LENGTH, options: ["Mini", "Midi", "Maxi", "Knee Length", "Ankle Length", "Floor Length", "N/A"] },
+      { id: "apparelBottomType", label: "Bottom Type", type: "select", appliesTo: BOTTOMWEAR, options: ["Trouser", "Chino", "Jogger", "Cargo", "Legging", "Palazzo", "Culottes", "Shorts", "Skirt", "Dhoti", "Salwar", "Churidar", "N/A"] },
+      // Renamed from `apparelClosure` so it de-dups against the `closure` field
+      // Men's Pants and Women's Dresses already define — they used to render
+      // "Closure" and "Closure / Additional Details" side by side.
+      { id: "closure", label: "Closure / Additional Details", type: "select", appliesTo: WEARABLES, options: ["Button", "Zipper", "Hook & Eye", "Snap", "Drawstring", "Elastic Waist", "Tie/Wrap", "Pullover", "Magnetic", "Velcro", "Back Zip", "Side Zip", "None"] },
     ],
   },
   {
@@ -1218,7 +1291,11 @@ export const sellerCategories: SellerCategory[] = [
       { id: "brandName", label: "Brand Name", type: "text", placeholder: "e.g., Mamaearth, Dot & Key, Your Brand", required: true },
       { id: "privateLabelAvailable", label: "Private Label / White Label Available?", type: "select", options: ["Yes", "No", "On Request"], required: true },
       { id: "customFormulation", label: "Custom Formulation Available?", type: "select", options: ["Yes", "No", "On Request"] },
-      { id: "countryOfOrigin", label: "Country of Origin", type: "text", placeholder: "e.g., India", required: true },
+      // Country of Origin used to be asked twice on every cosmetics listing: once
+      // here as free text (`countryOfOrigin`) and once as a dropdown via
+      // `originCountry` in productCommonFields, which this category inherits
+      // because it is type: "product". The dropdown is the canonical one — it
+      // feeds products.country_of_origin — so the free-text duplicate is gone.
       { id: "manufacturingLicense", label: "Manufacturing License No.", type: "text", placeholder: "e.g., MFG/2024/XXXX" },
       { id: "certification", label: "Certifications", type: "multiselect", options: ["FDA Approved", "FSSAI", "Dermatologically Tested", "GMP Certified", "ISO 22716", "ISO 9001", "Cruelty-free (PETA/Leaping Bunny)", "Vegan", "USDA Organic", "Ecocert", "Halal", "COSMOS", "NSF", "Made Safe"], fullWidth: true },
       { id: "testingReports", label: "Testing Reports Available", type: "multiselect", options: ["Stability Testing", "Microbial Testing", "Heavy Metal Testing", "Patch Testing", "SPF Testing", "Dermatological Testing", "Allergen Testing"], fullWidth: true },
@@ -1241,10 +1318,63 @@ export const getSubCategoryById = (categoryId: string, subCategoryId: string): S
   return category?.subCategories.find((sub) => sub.id === subCategoryId);
 };
 
-// Get optional category-level common fields (e.g. apparel specs)
-export const getOptionalCategoryFields = (categoryId: string): FormField[] => {
+// Get optional category-level common fields (e.g. apparel specs).
+//
+// Category commonFields are FALLBACKS: they let a subcategory that doesn't ask
+// a question still answer it. Once their ids were normalized to the canonical
+// ones (`pattern`, `neckType`, `sizes`, ...) they collide with the identically
+// named subcategory fields, and both bind to the same formValues key — so the
+// vendor would see the question twice and the two inputs would overwrite each
+// other (worse still when the types differ, e.g. a multiselect array vs a
+// single-select string).
+//
+// Passing the subcategory drops any fallback the vendor is already being asked,
+// whether by the subcategory itself or by the base common fields. This is a
+// single generic rule keyed on field id, not a per-field special case.
+export const getOptionalCategoryFields = (categoryId: string, subCategoryId?: string): FormField[] => {
   const category = getCategoryById(categoryId);
-  return category?.commonFields || [];
+  if (!category) return [];
+
+  const alreadyAsked = new Set(
+    getFieldsForCategory(categoryId, subCategoryId).map((f) => f.id),
+  );
+  return (category.commonFields || []).filter((f) => {
+    if (alreadyAsked.has(f.id)) return false;
+    // `appliesTo` narrows a fallback to the subcategories it makes sense for, so
+    // a bedsheet isn't asked for a neckline. A field with no `appliesTo` applies
+    // everywhere in the category, which is the right default for genuinely
+    // category-wide questions (e.g. Pattern).
+    if (f.appliesTo && (!subCategoryId || !f.appliesTo.includes(subCategoryId))) return false;
+    return true;
+  });
+};
+
+/**
+ * The option list a vendor actually chooses from for `fieldId`, unioned across
+ * the given subcategories.
+ *
+ * The buyer-side search facets source their options from here rather than
+ * keeping a parallel hand-written list. The two had already drifted — the tee
+ * "Pattern" facet offered "Colour-Block" while vendors were picking from a list
+ * containing "Color Block" — and a buyer filtering on an option no vendor could
+ * ever have selected is a dead end that silently returns nothing.
+ *
+ * "N/A" and "None" are dropped: they are placeholders for the vendor form, not
+ * things a buyer would filter by.
+ */
+export const vendorOptions = (
+  fieldId: string,
+  subCategoryIds: string[],
+  categoryId = "apparel-home",
+): string[] => {
+  const seen = new Set<string>();
+  for (const sub of subCategoryIds) {
+    const fields = [...getFieldsForCategory(categoryId, sub), ...getOptionalCategoryFields(categoryId, sub)];
+    for (const o of fields.find((f) => f.id === fieldId)?.options ?? []) {
+      if (o !== "N/A" && o !== "None") seen.add(o);
+    }
+  }
+  return [...seen];
 };
 
 // Get all fields for a category + subcategory combination (excluding optional category commonFields)
@@ -1266,6 +1396,18 @@ export const getFieldsForCategory = (categoryId: string, subCategoryId?: string)
     subCategoryFields = subCategory?.fields || [];
   }
 
-  // Return fields in order: subcategory-specific first, then base common (category commonFields handled separately)
-  return [...subCategoryFields, ...baseFields];
+  // Return fields in order: subcategory-specific first, then base common
+  // (category commonFields handled separately by getOptionalCategoryFields).
+  //
+  // Same de-duplication rule as getOptionalCategoryFields, applied here because
+  // a subcategory can also collide with the base common fields: Tech Pack
+  // Development defines `turnaround` with one set of options while
+  // serviceCommonFields defines `turnaround` with a different set, so the vendor
+  // was asked the same question twice and whichever they answered second
+  // overwrote the first — both bind to formValues.turnaround.
+  //
+  // More specific wins: the subcategory's own field takes precedence over the
+  // generic common field.
+  const subCategoryIds = new Set(subCategoryFields.map((f) => f.id));
+  return [...subCategoryFields, ...baseFields.filter((f) => !subCategoryIds.has(f.id))];
 };

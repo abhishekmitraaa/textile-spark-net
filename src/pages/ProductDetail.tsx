@@ -345,12 +345,24 @@ const ProductDetail = () => {
         availableSizes: row.sizes ?? [],
         customizationAvailable: row.customizationAvailable,
         specifications: (() => {
+          // Multi-value attributes are stored as text[]; join for display and
+          // skip empty arrays so a listing that didn't collect one shows no row
+          // rather than a blank one.
+          const list = (v: string[] | null) => (v && v.length ? v.join(", ") : null);
           const real = [
             row.fabric && { label: "Fabric", value: row.fabric },
             row.gsm && { label: "GSM", value: row.gsm },
+            list(row.pattern) && { label: "Pattern", value: list(row.pattern) },
             row.fitType && { label: "Fit Type", value: row.fitType },
+            row.neckType && { label: "Neck Type", value: row.neckType },
+            row.collarType && { label: "Collar Type", value: row.collarType },
+            row.sleeveType && { label: "Sleeve Type", value: row.sleeveType },
+            list(row.occasion) && { label: "Occasion", value: list(row.occasion) },
             row.gender && { label: "Gender", value: row.gender },
             row.colour && { label: "Colour", value: row.colour },
+            list(row.waistSizes) && { label: "Waist Sizes", value: list(row.waistSizes) },
+            list(row.lengths) && { label: "Length Options", value: list(row.lengths) },
+            row.countryOfOrigin && { label: "Country of Origin", value: row.countryOfOrigin },
           ].filter(Boolean) as Spec[];
           return real.length ? real : base.specifications;
         })(),

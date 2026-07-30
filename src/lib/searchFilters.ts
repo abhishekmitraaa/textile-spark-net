@@ -1,3 +1,5 @@
+import { vendorOptions } from "@/data/sellerCategories";
+
 // Context-aware search filters.
 //
 // The Search Results filter panel adapts tightly to WHAT the buyer searched:
@@ -9,7 +11,12 @@
 // the query and applied as a pre-scope (not shown as a redundant filter). JSX-free.
 
 export type MatchField =
-  | "gender" | "fabric" | "fit" | "price" | "gsm" | "rating" | "verified" | "moq" | "colour";
+  | "gender" | "fabric" | "fit" | "price" | "gsm" | "rating" | "verified" | "moq" | "colour"
+  // Backed by real products columns as of the attribute-persistence work. A
+  // facet without a `field` still falls back to hashPick, which is a stable
+  // fake — only leave it unset when no column exists to match against.
+  | "pattern" | "occasion" | "neckType" | "sleeveType" | "collarType"
+  | "countryOfOrigin" | "sizes" | "waist" | "lengths" | "category";
 
 export interface Facet {
   id: string;
@@ -23,6 +30,12 @@ export interface Facet {
   max?: number;         // range facets: slider upper bound
   step?: number;        // range facets: slider step
   hidden?: boolean;     // applied to filtering but not rendered (e.g. inferred gender)
+  /**
+   * Result count per option, shown beside the chip. Only set for facets whose
+   * options are derived from the live catalogue at query time (Category), where
+   * a count is a real number of matching products rather than decoration.
+   */
+  optionCounts?: Record<string, number>;
 }
 
 export interface FilterSchema {
@@ -44,6 +57,11 @@ export const gsmBucket = (g: string | number) => {
 };
 
 export const MOQ_BUCKETS = ["Up to 50 pcs", "50 – 100 pcs", "100 – 500 pcs", "500+ pcs"];
+// products.moq is free text the vendor typed, so the caller parses a number out
+// of it first (see CatalogueRow.moqValue) and buckets it here. This facet used
+// to hashPick despite moq having had a real column all along.
+export const moqBucket = (n: number) =>
+  n <= 50 ? MOQ_BUCKETS[0] : n <= 100 ? MOQ_BUCKETS[1] : n <= 500 ? MOQ_BUCKETS[2] : MOQ_BUCKETS[3];
 export const RATING_OPTIONS = ["4.5★ & above", "4.0★ & above", "3.5★ & above"];
 export const ratingThreshold = (label: string) => parseFloat(label) || 0;
 
@@ -66,12 +84,44 @@ const gender = (options = ["Men", "Women", "Boys", "Girls"]): Facet => ({ id: "g
 const fabric = (options: string[]): Facet => ({ id: "fabric", label: "Fabric", field: "fabric", options });
 const fit: Facet = { id: "fit", label: "Fit", field: "fit", options: ["Slim", "Regular", "Relaxed", "Oversized"] };
 
-// Focused item facets (no backing field → hashPick, narrows deterministically).
+// `type` has no backing column — a vendor never answers "T-Shirt Type" as such —
+// so it stays on hashPick. See the KNOWN GAPS note at the bottom of this file.
 const type = (label: string, options: string[]): Facet => ({ id: "type", label, options });
-const sleeve = (options: string[]): Facet => ({ id: "sleeve", label: "Sleeve", options });
-const pattern = (options: string[]): Facet => ({ id: "pattern", label: "Pattern", options });
+
+// ── Facets backed by real products columns ──
+// Options come from vendorOptions() so the buyer's choices are exactly what a
+// vendor could have picked; matching is against the product's own column.
+const TEE_SUBS = ["mens-tshirts", "womens-tops"];
+const SHIRT_SUBS = ["mens-shirts"];
+const DRESS_SUBS = ["womens-dresses", "womens-ethnic"];
+const BOTTOM_SUBS = ["mens-jeans", "mens-pants"];
+const APPAREL_SUBS = [...TEE_SUBS, ...SHIRT_SUBS, ...DRESS_SUBS];
+
+const sleeve = (subs: string[]): Facet =>
+  ({ id: "sleeve", label: "Sleeve", field: "sleeveType", options: vendorOptions("sleeveType", subs) });
+const neck = (subs: string[]): Facet =>
+  ({ id: "neck", label: "Neck Type", field: "neckType", options: vendorOptions("neckType", subs) });
+const collar = (subs: string[]): Facet =>
+  ({ id: "collar", label: "Collar", field: "collarType", options: vendorOptions("collarType", subs) });
+const pattern = (subs: string[]): Facet =>
+  ({ id: "pattern", label: "Pattern", field: "pattern", options: vendorOptions("pattern", subs) });
+const occasion = (subs: string[]): Facet =>
+  ({ id: "occasion", label: "Occasion", field: "occasion", options: vendorOptions("occasion", subs) });
+const sizes = (subs: string[]): Facet =>
+  ({ id: "sizes", label: "Size", field: "sizes", options: vendorOptions("sizes", subs) });
+const waist = (): Facet =>
+  ({ id: "waist", label: "Waist Size", field: "waist", options: vendorOptions("waistSizes", BOTTOM_SUBS) });
+// Bottomwear inseam, backed by products.lengths.
+const inseam = (): Facet =>
+  ({ id: "inseam", label: "Length (inseam)", field: "lengths", options: vendorOptions("lengths", BOTTOM_SUBS) });
+const ORIGIN: Facet =
+  { id: "origin", label: "Country of Origin", field: "countryOfOrigin", options: vendorOptions("originCountry", ["mens-tshirts"]) };
+// Buyer-facing category tree. Options are filled in at query time from the
+// result set (see SearchResults) because they depend on what actually matched.
+const CATEGORY: Facet = { id: "category", label: "Category", field: "category", options: [] };
+
+// Garment hem length (Mini / Midi / Maxi). No backing column — see KNOWN GAPS.
 const length = (options: string[]): Facet => ({ id: "length", label: "Length", options });
-const waist = (): Facet => ({ id: "waist", label: "Waist Size", options: ["28", "30", "32", "34", "36", "38", "40"] });
 
 const APPAREL_FABRICS = ["Cotton", "Linen", "Denim", "Polyester", "Rayon", "Satin", "Terry"];
 
@@ -87,27 +137,35 @@ const wordHit = (q: string, k: string) =>
 interface ItemGroup { key: string; kws: string[]; facets: () => Facet[] }
 
 const teeFacets = (): Facet[] => [
+  CATEGORY,
   type("T-Shirt Type", ["Round Neck", "V-Neck", "Polo", "Henley", "Oversized", "Graphic", "Tank Top"]),
-  fit, fabric(["Cotton", "Poly-Cotton", "Polyester", "Modal", "Supima"]),
-  sleeve(["Half Sleeve", "Full Sleeve", "Sleeveless"]),
-  pattern(["Solid", "Printed", "Striped", "Graphic", "Colour-Block"]), GSM, COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["mens-tshirts"])),
+  neck(["mens-tshirts"]), sleeve(["mens-tshirts"]), pattern(["mens-tshirts"]),
+  sizes(["mens-tshirts"]), occasion(["mens-tshirts"]),
+  GSM, COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const poloFacets = (): Facet[] => [
+  CATEGORY,
   type("Polo Style", ["Classic", "Tipped", "Pique", "Colour-Block", "Long-Sleeve"]),
-  fit, fabric(["Cotton Pique", "Poly-Cotton", "Cotton"]), sleeve(["Half Sleeve", "Full Sleeve"]),
-  pattern(["Solid", "Striped", "Tipped", "Colour-Block"]), GSM, COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["mens-tshirts"])),
+  neck(["mens-tshirts"]), sleeve(["mens-tshirts"]), pattern(["mens-tshirts"]),
+  sizes(["mens-tshirts"]), GSM, COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const shirtFacets = (): Facet[] => [
+  CATEGORY,
   type("Shirt Type", ["Casual", "Formal", "Denim", "Check", "Oxford", "Linen", "Flannel", "Printed"]),
-  fit, fabric(["Cotton", "Linen", "Denim", "Poly-Cotton", "Oxford"]), sleeve(["Half Sleeve", "Full Sleeve"]),
-  { id: "collar", label: "Collar", options: ["Spread", "Button-Down", "Mandarin", "Cuban", "Club"] },
-  pattern(["Solid", "Checked", "Striped", "Printed"]), COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", SHIRT_SUBS)),
+  collar(SHIRT_SUBS), sleeve(SHIRT_SUBS), pattern(SHIRT_SUBS),
+  sizes(SHIRT_SUBS), occasion(SHIRT_SUBS),
+  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const womensTopFacets = (): Facet[] => [
+  CATEGORY,
   type("Type", ["Top", "Blouse", "Tank", "Camisole", "Crop Top", "Tunic", "Shrug"]),
-  fit, fabric(["Cotton", "Rayon", "Georgette", "Satin", "Crepe", "Linen"]),
-  sleeve(["Sleeveless", "Half Sleeve", "Full Sleeve", "Puff"]),
-  pattern(["Solid", "Printed", "Floral", "Embroidered"]), COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["womens-tops"])),
+  neck(["womens-tops"]), sleeve(["womens-tops"]), pattern(["womens-tops"]),
+  sizes(["womens-tops"]), occasion(["womens-tops"]),
+  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const TOP_GROUPS: ItemGroup[] = [
   { key: "tee", kws: ["t-shirt", "tshirt", "t shirt", "tee"], facets: teeFacets },
@@ -117,26 +175,30 @@ const TOP_GROUPS: ItemGroup[] = [
 ];
 
 const jeansFacets = (): Facet[] => [
+  CATEGORY,
   type("Jeans Style", ["Skinny", "Slim", "Straight", "Bootcut", "Relaxed", "Baggy", "Mom", "Boyfriend"]),
-  fit, { id: "wash", label: "Wash", options: ["Light", "Mid", "Dark", "Raw", "Distressed", "Black"] },
-  waist(), length(["Ankle Length", "Full Length", "Cropped"]), COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, { id: "wash", label: "Wash", options: vendorOptions("wash", ["mens-jeans"]) },
+  waist(), inseam(), pattern(BOTTOM_SUBS),
+  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const shortsFacets = (): Facet[] => [
+  CATEGORY,
   type("Shorts Type", ["Bermuda", "Cargo", "Denim", "Chino", "Sports", "Boxer"]),
-  fit, fabric(["Cotton", "Denim", "Polyester", "Terry", "Nylon"]),
-  length(["Above Knee", "Knee Length"]), waist(),
-  pattern(["Solid", "Printed", "Cargo", "Washed"]), COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["mens-pants"])),
+  waist(), inseam(), pattern(BOTTOM_SUBS),
+  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const joggersFacets = (): Facet[] => [
+  CATEGORY,
   type("Type", ["Joggers", "Track Pants", "Leggings", "Sweatpants", "Cargo Joggers", "Pyjamas"]),
-  fit, fabric(["Cotton", "Polyester", "Terry", "Fleece", "Lycra"]), GSM,
-  length(["Ankle Length", "Full Length", "Capri"]), COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["mens-pants"])), GSM,
+  waist(), inseam(), COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const trousersFacets = (): Facet[] => [
+  CATEGORY,
   type("Trouser Type", ["Formal", "Chino", "Cargo", "Casual", "Pleated", "Cropped"]),
-  fit, fabric(["Cotton", "Poly-Viscose", "Linen", "Terry", "Denim"]), waist(),
-  length(["Ankle Length", "Full Length", "Cropped"]), pattern(["Solid", "Checked", "Striped"]),
-  COLOUR, PRICE, MOQ, RATING, VERIFIED,
+  fit, fabric(vendorOptions("fabric", ["mens-pants"])), waist(), inseam(),
+  pattern(BOTTOM_SUBS), COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
 ];
 const BOTTOM_GROUPS: ItemGroup[] = [
   { key: "jeans", kws: ["jean", "jeans"], facets: jeansFacets },
@@ -238,7 +300,7 @@ const DOMAINS: Domain[] = [
       type("Type", ["Bedsheet", "Towel", "Curtain", "Cushion", "Carpet", "Table Linen", "Blanket"]),
       { id: "material", label: "Material", options: ["Cotton", "Microfiber", "Polyester", "Jute", "Velvet", "Linen"] },
       { id: "size", label: "Size", options: ["Single", "Double", "Queen", "King"] },
-      { id: "pattern", label: "Pattern", options: ["Solid", "Printed", "Woven", "Embroidered"] },
+      pattern(["home-textiles"]),
       COLOUR, PRICE, MOQ, VERIFIED],
   },
   {
@@ -255,7 +317,7 @@ const DOMAINS: Domain[] = [
     build: () => [gender(),
       fabric(["Cotton", "Silk", "Rayon", "Georgette", "Chanderi", "Linen"]),
       { id: "work", label: "Work / Embellishment", options: ["Plain", "Embroidered", "Printed", "Zari", "Mirror", "Sequin"] },
-      { id: "occasion", label: "Occasion", options: ["Casual", "Festive", "Wedding", "Formal"] },
+      occasion(["womens-ethnic"]),
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
   {
@@ -264,7 +326,7 @@ const DOMAINS: Domain[] = [
     build: () => [gender(),
       fabric(["Fleece", "Wool", "Nylon", "Cotton", "Polyester", "Denim"]),
       type("Type", ["Bomber", "Puffer", "Denim", "Hooded", "Zipper", "Pullover", "Blazer"]),
-      pattern(["Solid", "Printed", "Colour-Block", "Melange"]),
+      pattern(["ready-made-garments"]),
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
   {
@@ -273,8 +335,8 @@ const DOMAINS: Domain[] = [
     build: () => [gender(["Women", "Girls"]),
       fabric(["Cotton", "Rayon", "Satin", "Georgette", "Linen", "Crepe"]),
       length(["Mini", "Knee Length", "Midi", "Maxi"]),
-      { id: "occasion", label: "Occasion", options: ["Casual", "Party", "Festive", "Formal", "Beach"] },
-      pattern(["Solid", "Printed", "Floral", "Embroidered"]),
+      occasion(["womens-dresses"]),
+      pattern(["womens-dresses"]),
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
   {
@@ -283,7 +345,7 @@ const DOMAINS: Domain[] = [
     build: () => [gender(["Women", "Girls"]),
       fabric(APPAREL_FABRICS),
       length(["Mini", "Knee Length", "Midi", "Maxi"]),
-      pattern(["Solid", "Printed", "Pleated", "A-Line", "Denim"]),
+      pattern(["womens-dresses"]),
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
   {
@@ -303,8 +365,8 @@ const DEFAULT_DOMAIN: Domain = {
   id: "general", keywords: [], label: "All Products",
   build: () => [gender(),
     fabric(APPAREL_FABRICS),
-    pattern(["Solid", "Printed", "Striped", "Checked", "Graphic"]),
-    COLOUR, GSM, PRICE, MOQ, RATING, VERIFIED],
+    pattern(APPAREL_SUBS),
+    CATEGORY, COLOUR, GSM, PRICE, MOQ, ORIGIN, RATING, VERIFIED],
 };
 
 // ── Gender detection ──
@@ -338,6 +400,32 @@ export function resolveFilterSchema(query: string): FilterSchema {
   const domainLabel = domain.label ?? (q ? titleCase(query) : "All Products");
   return { domainId: domain.id, domainLabel, categoryId: domain.categoryId, facets };
 }
+
+// ── KNOWN GAPS: facets still on hashPick ──
+// These have no backing products column, so matchFacet falls through to
+// hashPick — a deterministic pseudo-value per product id. Selecting one still
+// narrows the list, but not by anything the vendor actually entered.
+//
+//   type      ("T-Shirt Type", "Jeans Style", "Shirt Type", …) — the vendor
+//             picks a subcategory, never a style label like "Oversized".
+//   material  (bags / trims / packaging / footwear / home textiles) — collected
+//             per subcategory in sellerCategories but never persisted; would
+//             need a products.material column.
+//   size      (innerwear / footwear UK / packaging / trims) — Footwear and
+//             Other Ready-made Garments declare `sizes` as free TEXT, so it
+//             cannot feed the sizes[] column. Fixing needs those two converted
+//             to size-selector.
+//   length    (dress / skirt hem length) — distinct from bottomwear inseam,
+//             which is real (products.lengths). No garment_length column yet.
+//   wash      (jeans) — options now come from the vendor list, but Men's Jeans
+//             stores `wash` nowhere.
+//   pack, sole, printing, skin, formulation, concern, finish, productType,
+//   fabricType, width, weave, composition, work — same story: real questions in
+//   the upload form with no column behind them.
+//
+// Everything else (gender, fabric, fit, price, gsm, colour, moq, rating,
+// verified, pattern, occasion, neckType, sleeveType, collarType,
+// countryOfOrigin, sizes, waist, lengths, category) matches a real column.
 
 // Initial selections — pre-scope gender if the query implies it (e.g. "mens shorts").
 export function defaultSelections(query: string): Record<string, string[]> {

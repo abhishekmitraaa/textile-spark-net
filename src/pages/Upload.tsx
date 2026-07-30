@@ -4,7 +4,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { resolveCategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
+import { resolveCategoryId, resolveSubcategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { capReached, isUnlimited } from "@/lib/plan";
 import { Button } from "@/components/ui/button";
@@ -129,6 +129,10 @@ const Upload = () => {
     setPrice(editing.price_value != null ? String(editing.price_value) : "");
     setImages(editing.images);
     setCustomizationAvailable(editing.customization_available);
+    // Edit mode skips the category/subcategory steps, so none of the dynamic
+    // fields render and the vendor never re-answers them. Seeding formValues
+    // here is what makes handleSubmit write the existing values straight back —
+    // without it every save would null out attributes set at listing time.
     setFormValues((prev) => ({
       ...prev,
       fabric: editing.fabric ?? "",
@@ -137,6 +141,14 @@ const Upload = () => {
       gender: editing.gender ?? "",
       sizes: editing.sizes ?? [],
       colors: editing.colour ? [editing.colour] : [],
+      pattern: editing.pattern ?? [],
+      occasion: editing.occasion ?? [],
+      neckType: editing.neck_type ?? "",
+      sleeveType: editing.sleeve_type ?? "",
+      collarType: editing.collar_type ?? "",
+      originCountry: editing.country_of_origin ?? "",
+      waistSizes: editing.waist_sizes ?? [],
+      lengths: editing.lengths ?? [],
     }));
   }, [editing]);
 
@@ -145,7 +157,11 @@ const Upload = () => {
 
   const category = selectedCategory ? getCategoryById(selectedCategory) : null;
   const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined) : [];
-  const optionalFields = selectedCategory ? getOptionalCategoryFields(selectedCategory) : [];
+  // Subcategory is passed so the category-level fallbacks skip anything the
+  // subcategory already asks — see getOptionalCategoryFields.
+  const optionalFields = selectedCategory
+    ? getOptionalCategoryFields(selectedCategory, selectedSubCategory || undefined)
+    : [];
   const [showOptionalSpecs, setShowOptionalSpecs] = useState(false);
 
   // Apparel-style categories already render a "sizes" size-selector among their
@@ -291,6 +307,19 @@ const Upload = () => {
       toast.error("Add a price before publishing", { description: "Or use Save as Draft to finish it later." });
       return;
     }
+    // Country of Origin is required on every product listing (it's in
+    // productCommonFields with required: true), so publishing without it is
+    // blocked the same way a missing price is — but only when the form is
+    // actually asking. Edit mode skips the category/subcategory steps and so
+    // renders no dynamic fields at all; an unconditional check would make every
+    // listing created before this column existed impossible to republish.
+    const asksOriginCountry = dynamicFields.some((f) => f.id === "originCountry");
+    if (intent === "review" && asksOriginCountry && !(formValues["originCountry"] as string)?.trim()) {
+      toast.error("Add a country of origin before publishing", {
+        description: "It's required on every listing. Or use Save as Draft to finish it later.",
+      });
+      return;
+    }
     // Plan product-cap: block publishing a NEW listing beyond the vendor's cap
     // (drafts and edits are unaffected — a draft doesn't occupy a listing slot).
     if (intent === "review" && productCapReached) {
@@ -310,10 +339,32 @@ const Upload = () => {
       const gsm = (formValues["gsm"] as string) || null;
       const fitType = (formValues["fit"] as string) || (formValues["fit_type"] as string) || null;
       const gender = (formValues["gender"] as string) || null;
-      // Empty selection persists as NULL rather than {}, so "no sizes specified"
-      // and "sizes explicitly cleared" read the same downstream.
-      const sizes = selectedSizes.length > 0 ? selectedSizes : null;
+      // Empty selection persists as NULL rather than {}, so "no value specified"
+      // and "value explicitly cleared" read the same downstream.
+      //
+      // `arr` checks Array.isArray rather than a truthy `.length`, because a
+      // `text` field sharing an id would yield a *string* whose `.length` is
+      // also > 0 — that's how "UK 6-11" reaches the sizes text[] column today
+      // (Footwear and Other Ready-made Garments declare `sizes` as type "text").
+      const arr = (id: string): string[] | null => {
+        const v = formValues[id];
+        return Array.isArray(v) && v.length > 0 ? v : null;
+      };
+      const str = (id: string): string | null => {
+        const v = formValues[id];
+        return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
+      };
+      const sizes = arr("sizes");
       const colour = resolveColour(formValues);
+      // Attributes the upload form has always collected but never persisted.
+      const pattern = arr("pattern");
+      const occasion = arr("occasion");
+      const neckType = str("neckType");
+      const sleeveType = str("sleeveType");
+      const collarType = str("collarType");
+      const countryOfOrigin = str("originCountry");
+      const waistSizes = arr("waistSizes");
+      const lengths = arr("lengths");
 
       if (isEdit && editId) {
         // Edit: update the row + append any newly-picked images (existing ones stay).
@@ -325,6 +376,14 @@ const Upload = () => {
           fabric, gsm, fit_type: fitType, gender,
           sizes,
           colour,
+          pattern,
+          occasion,
+          neck_type: neckType,
+          sleeve_type: sleeveType,
+          collar_type: collarType,
+          country_of_origin: countryOfOrigin,
+          waist_sizes: waistSizes,
+          lengths,
           customization_available: customizationAvailable,
           status: nextStatus,
         });
@@ -348,11 +407,16 @@ const Upload = () => {
         return;
       }
 
-      // Map the granular upload taxonomy to a buyer-facing DB category.
+      // Use the subcategory the vendor actually picked. resolveCategoryId is
+      // only a fallback for a taxonomy row that hasn't been seeded yet — it
+      // regex-matches the product NAME down to one of the 11 legacy buckets,
+      // which is what made the buyer-facing Categories filter useless.
       const subName = selectedSubCategory
         ? category?.subCategories.find((s) => s.id === selectedSubCategory)?.name
         : undefined;
-      const category_id = await resolveCategoryId(subName, category?.name, productName);
+      const category_id =
+        (await resolveSubcategoryId(category?.name, subName)) ??
+        (await resolveCategoryId(subName, category?.name, productName));
 
       const { data: inserted, error } = await supabase
         .from("products")
@@ -370,6 +434,14 @@ const Upload = () => {
           gender,
           sizes,
           colour,
+          pattern,
+          occasion,
+          neck_type: neckType,
+          sleeve_type: sleeveType,
+          collar_type: collarType,
+          country_of_origin: countryOfOrigin,
+          waist_sizes: waistSizes,
+          lengths,
           customization_available: customizationAvailable,
           status: nextStatus,
         })
