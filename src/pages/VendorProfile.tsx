@@ -34,7 +34,6 @@ import officeFactoryFloor from "@/assets/office/factory-floor.jpg";
 import cataMenswear from "@/assets/categories/banners/menswear.jpg";
 import cataWomenswear from "@/assets/categories/banners/womenswear.jpg";
 import cataRawMaterials from "@/assets/categories/banners/raw-materials.jpg";
-import { VIDEO_CLOSE_UPS } from "@/data/videoCloseUps";
 import type { MyCatalogueRow } from "@/lib/queries/catalogues";
 
 // === Animation constants (project convention) ===
@@ -293,10 +292,15 @@ const VendorProfile = () => {
     [vendor],
   );
   const recommendationsList = useMemo(() => vpProducts.slice(0, 6), [vpProducts]);
-  // Videos + catalogues fall back to demo content when the vendor hasn't
-  // uploaded any, so buyers always see these sections (mirrors the vendor-side
-  // BusinessProfile). Real vendor uploads take precedence when present.
-  const vendorVideos = vendor?.videos?.length ? vendor.videos : VIDEO_CLOSE_UPS;
+  // Videos are this vendor's own or nothing — the section below hides itself on
+  // an empty list. The old demo fallback was a correctness bug, not just a
+  // cosmetic one: a real vendor with no videos rendered seven OTHER brands'
+  // sample clips inside their profile, and the viewer's Call Now button then
+  // fired callVendor() with the mock vendorId ("v5"), so the buyer both saw
+  // content misattributed to a named business and dialled the wrong supplier.
+  const vendorVideos = vendor?.videos ?? [];
+  // NOTE: catalogues still fall back to demo content — same class of issue,
+  // separate feature, left alone deliberately.
   const catalogueList = catalogues.length ? catalogues : DEMO_CATALOGUES;
 
   // Scroll-aware sticky header (appears after the hero scrolls away)
@@ -675,7 +679,7 @@ const VendorProfile = () => {
                 <button key={video.id}
                   onClick={() => { setVideoStartIndex(index); setVideoViewerOpen(true); }}
                   className="relative aspect-[3/4] w-32 lg:w-40 shrink-0 overflow-hidden rounded-xl bg-gray-100">
-                  <img src={video.thumbnail} alt={video.brandLine} draggable={false} className="absolute inset-0 h-full w-full object-cover pointer-events-none" loading="lazy" />
+                  <img src={video.thumbnail} alt={video.brandLine} draggable={false} className="absolute inset-0 h-full w-full object-cover pointer-events-none" loading="lazy" decoding="async" width={300} height={400} />
                   <div className="absolute inset-0 bg-black/25" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">

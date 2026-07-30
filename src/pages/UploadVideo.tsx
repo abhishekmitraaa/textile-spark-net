@@ -5,7 +5,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyProducts } from "@/lib/queries/products";
-import { useMyVideos, createProductVideo, deleteProductVideo } from "@/lib/queries/videos";
+import {
+  useMyVideos, createProductVideo, deleteProductVideo, probeVideoFile,
+  MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, ACCEPTED_VIDEO_MIME, type VideoProbe,
+} from "@/lib/queries/videos";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
@@ -270,11 +273,19 @@ const UploadVideo = () => {
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [productOpen, setProductOpen]         = useState(false);
   const [isSubmitting, setIsSubmitting]       = useState(false);
+  // Duration / intrinsic size / generated poster, read off the picked file.
+  const [probe, setProbe]                     = useState<VideoProbe | null>(null);
+  const [probing, setProbing]                 = useState(false);
+  // 0..1, driven by TUS chunk callbacks so a long upload isn't a dead spinner.
+  const [progress, setProgress]               = useState(0);
 
   const fileInputRef  = useRef<HTMLInputElement>(null);
   const thumbInputRef = useRef<HTMLInputElement>(null);
 
   const selectedProductObj = myProducts.find((p) => p.id === selectedProduct);
+
+  // 45 -> "0:45", 92 -> "1:32"
+  const formatDuration = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
 
   // Vendor's own closeups (any status) mapped into the card shape.
   const closeups: UploadedVideoCloseup[] = myVideos.map((v) => ({
@@ -282,7 +293,9 @@ const UploadVideo = () => {
     caption: v.caption,
     productName: v.productName || v.category,
     thumbnail: v.thumbnail ?? THUMB_PLACEHOLDER,
-    duration: "",
+    // Real length now that it's probed at upload; blank on rows created before
+    // duration_seconds existed rather than showing a made-up number.
+    duration: v.durationSeconds != null ? formatDuration(v.durationSeconds) : "",
     uploadedAt: v.createdAt,
     status: v.status === "draft" ? "under_review" : v.status,
     views: v.views,
@@ -305,18 +318,52 @@ const UploadVideo = () => {
     if (file) handleFileSelect(file);
   };
 
-  const handleFileSelect = (file: File) => {
-    const allowed = ["video/mp4", "video/quicktime", "video/webm"];
-    if (!allowed.includes(file.type)) {
-      toast.error("Please upload an MP4, MOV, or WebM file");
+  const handleFileSelect = async (file: File) => {
+    // .mov is no longer accepted: an iPhone's default .mov is HEVC, which
+    // plays on Safari and fails on Chrome and Android — most buyers here —
+    // and there is no transcoding step to rescue it. The bucket enforces the
+    // same allowlist server-side.
+    if (!(ACCEPTED_VIDEO_MIME as readonly string[]).includes(file.type)) {
+      toast.error("Please upload an MP4 or WebM file", {
+        description: "On iPhone, share the clip as \"Most Compatible\" to get an MP4.",
+      });
       return;
     }
-    if (file.size > 200 * 1024 * 1024) {
-      toast.error("Video must be under 200 MB");
+    if (file.size > MAX_VIDEO_BYTES) {
+      toast.error(`Video must be under ${Math.round(MAX_VIDEO_BYTES / (1024 * 1024))} MB`, {
+        description: "Shorter clips at 1080×1920 look better in the reel and load far faster for buyers.",
+      });
       return;
     }
     setSelectedFile(file);
     setVideoPreviewUrl(URL.createObjectURL(file));
+
+    // Probe for duration/size and take a poster frame from the file itself.
+    // Never blocks: if the browser won't decode a frame, this resolves null
+    // after a short timeout and the upload proceeds without a cover.
+    setProbing(true);
+    const probe = await probeVideoFile(file);
+    setProbing(false);
+    if (!probe) return;
+
+    if (probe.durationSeconds > MAX_VIDEO_SECONDS) {
+      toast.error(`Clip must be ${MAX_VIDEO_SECONDS} seconds or shorter`, {
+        description: `This one is ${Math.round(probe.durationSeconds)}s.`,
+      });
+      removeFile();
+      return;
+    }
+    if (probe.width > probe.height) {
+      toast.warning("This clip is landscape", {
+        description: "The reel is full-screen portrait (9:16), so a landscape video will be cropped.",
+      });
+    }
+    setProbe(probe);
+    // The vendor's own cover always wins — only fill in when they haven't set one.
+    if (probe.poster && !thumbnailFile) {
+      setThumbnailFile(probe.poster);
+      setThumbnailUrl(URL.createObjectURL(probe.poster));
+    }
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -349,12 +396,17 @@ const UploadVideo = () => {
     if (!selectedProduct) { toast.error("Tag a product so buyers can shop directly"); return; }
 
     setIsSubmitting(true);
+    setProgress(0);
     try {
       await createProductVideo(user.id, {
         file: selectedFile,
         thumbnail: thumbnailFile,
         caption: caption.trim(),
         productId: selectedProduct,
+        durationSeconds: probe ? Math.round(probe.durationSeconds) : null,
+        videoWidth: probe?.width ?? null,
+        videoHeight: probe?.height ?? null,
+        onProgress: setProgress,
       });
       qc.invalidateQueries({ queryKey: ["product_videos"] });
       removeFile();
@@ -362,6 +414,7 @@ const UploadVideo = () => {
       setSelectedProduct("");
       setThumbnailFile(null);
       setThumbnailUrl(null);
+      setProbe(null);
       toast.success("Video closeup uploaded!", {
         description: "It'll appear in the buyer feed after review (24–48 hours).",
       });
@@ -426,7 +479,7 @@ const UploadVideo = () => {
           {[
             { label: "Duration", value: "15–60 sec", hint: "Sweet spot for engagement" },
             { label: "Ratio",    value: "9 : 16",    hint: "Portrait for full-screen"  },
-            { label: "Max Size", value: "200 MB",    hint: "MP4, MOV, or WebM"         },
+            { label: "Max Size", value: "50 MB",     hint: "MP4 or WebM"              },
           ].map((tip) => (
             <div key={tip.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
               <p className="text-xs font-bold text-gray-900">{tip.value}</p>
@@ -472,11 +525,11 @@ const UploadVideo = () => {
                     or <span className="text-[#256fef] font-semibold">browse files</span>
                   </p>
                 </div>
-                <p className="text-[10px] text-gray-400">MP4 · MOV · WebM · Max 200 MB</p>
+                <p className="text-[10px] text-gray-400">MP4 · WebM · Max 50 MB · up to 60s</p>
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept="video/mp4,video/quicktime,video/webm"
+                  accept="video/mp4,video/webm"
                   className="hidden"
                   onChange={handleInputChange}
                 />
@@ -592,7 +645,9 @@ const UploadVideo = () => {
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                 Cover Thumbnail{" "}
-                <span className="text-gray-400 font-normal">(optional — auto-generated if blank)</span>
+                <span className="text-gray-400 font-normal">
+                  {probing ? "(generating a cover from your video…)" : "(optional — taken from your video if blank)"}
+                </span>
               </label>
               <div
                 onClick={() => thumbInputRef.current?.click()}
@@ -660,7 +715,7 @@ const UploadVideo = () => {
                     transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }}
                     className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full"
                   />
-                  Uploading…
+                  {progress > 0 ? `Uploading… ${Math.round(progress * 100)}%` : "Uploading…"}
                 </>
               ) : (
                 <>
@@ -668,6 +723,18 @@ const UploadVideo = () => {
                 </>
               )}
             </button>
+
+            {/* Real chunk-level progress from the resumable upload. Worth
+                showing: a 50MB clip on a phone connection is a long wait, and
+                if it drops the next attempt resumes rather than restarting. */}
+            {isSubmitting && (
+              <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
+                <div
+                  className="h-full rounded-full bg-[#256fef] transition-[width] duration-200"
+                  style={{ width: `${Math.max(3, Math.round(progress * 100))}%` }}
+                />
+              </div>
+            )}
           </motion.div>
 
           {/* RIGHT — Phone mockup preview */}

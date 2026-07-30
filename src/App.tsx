@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import BusinessProfileScorePage from "./pages/BusinessProfileScorePage";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -57,7 +58,12 @@ import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
 import NewArrivals from "./pages/NewArrivals";
-import VideoCloseUpsPage from "./pages/VideoCloseUpsPage";
+// Lazily loaded. These two are the video routes, and neither is on the path a
+// buyer lands on — but their dependencies (the reel viewer, the upload page's
+// probe/preview machinery) were being shipped inside the single main chunk that
+// every visitor downloads before anything renders. Route-level splitting only:
+// vite.config.ts:15 records that a manualChunks pass caused runtime problems.
+const VideoCloseUpsPage = lazy(() => import("./pages/VideoCloseUpsPage"));
 import Trends from "./pages/Trends";
 import Following from "./pages/Following";
 import FollowingViewAll from "./pages/FollowingViewAll";
@@ -87,11 +93,29 @@ import CallNumberModal from "./components/buyer/CallNumberModal";
 import AutoTranslate from "./components/i18n/AutoTranslate";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
 import UploadCatalogue from "./pages/UploadCatalogue";
-import UploadVideo from "./pages/UploadVideo";
+const UploadVideo = lazy(() => import("./pages/UploadVideo"));
 import Notifications from "./pages/Notifications";
 import VendorSettings from "./pages/VendorSettings";
 
-const queryClient = new QueryClient();
+// A bare `new QueryClient()` uses staleTime: 0, which means EVERY query in the
+// app was considered stale the instant it resolved: navigating back to a page
+// refetched it, and so did alt-tabbing away and back. For a catalogue app whose
+// content changes on a 24-48h moderation cycle that is a lot of egress and a lot
+// of loading spinners for data we already had.
+//
+// A minute of freshness is well inside how fast anything here actually changes.
+// Queries that need something different set it themselves (see useVideoCloseUps
+// at 5 min, useMyVideos at 30s, and the subscription queries).
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 type BuyerShellRoute = {
   path: string;
@@ -183,6 +207,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AutoTranslate />
+          {/* Covers the lazily-loaded routes below. Deliberately a blank div
+              rather than a spinner: these chunks are small and load in a frame
+              or two on any reasonable connection, and a flashed spinner reads
+              worse than nothing. */}
+          <Suspense fallback={<div className="min-h-screen bg-white" />}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
@@ -291,6 +320,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           {/* Global wishlist modal: available from every page's product cards */}
           <SaveToFolderModal />
           {/* Desktop "call this number" dialog (mobile opens the dialer directly) */}

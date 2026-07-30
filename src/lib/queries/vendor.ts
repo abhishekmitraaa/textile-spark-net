@@ -94,7 +94,8 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url")
     .eq("vendor_id", id)
     .eq("status", "live")
-    .order("views_count", { ascending: false });
+    .order("views_count", { ascending: false })
+    .limit(24);
   const videos: VideoCloseUp[] = ((vids ?? []) as unknown as RawVid[]).map((r) => ({
     id: r.id,
     vendorId: r.vendor_id,
@@ -147,6 +148,12 @@ export function useVendorProfile(id: string | undefined) {
     queryKey: ["vendor_profile", id],
     queryFn: () => fetchVendorProfile(id as string),
     enabled: Boolean(id),
+    // This fans out to several queries (profile, products, videos, catalogues),
+    // so refetching it on every mount and tab focus was the most expensive
+    // default in the app.
+    staleTime: 5 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
   });
 }
 

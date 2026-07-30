@@ -10,7 +10,7 @@ import { useCatalogue } from "@/lib/queries/products";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
-import { VIDEO_CLOSE_UPS } from "@/data/videoCloseUps";
+import { devOnlyVideoCloseUps } from "@/data/videoCloseUps";
 import { useVideoCloseUps } from "@/lib/queries/videos";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import CosoraLogo from "@/components/CosoraLogo";
@@ -84,6 +84,10 @@ interface RProduct {
 }
 
 const img = (s: string) => `https://picsum.photos/seed/${s}/500/650`;
+
+// Thumbnails rendered in the Video Close-Ups teaser rail. The viewer still
+// receives the full related list; this only caps images fetched by the page.
+const VIDEO_RAIL_MAX = 12;
 const BASE_PRODUCTS: RProduct[] = [
   { id: "sr1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Artisan Weaves Co.", location: "Bangalore", priceValue: 499, moq: "MOQ: 2", sold: "800+ sold", enquiries: "5.6k", rating: 4.1, popularity: 5600, discount: 40, fabric: "Cotton", gsm: "200", fit: "Regular", gender: "Women", colour: "White", image: img("sr-tank"), secondaryImage: img("sr-tank-b"), verified: true },
   { id: "sr2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "SilkThread Mills", location: "Bangalore", priceValue: 629, moq: "MOQ: 2", sold: "1.2k sold", enquiries: "1.6k", rating: 3.8, popularity: 1600, discount: 20, fabric: "Cotton", gsm: "200", fit: "Regular", gender: "Men", colour: "Blue", image: img("sr-camp"), secondaryImage: img("sr-camp-b"), verified: false },
@@ -737,13 +741,13 @@ const SearchResults = () => {
       .filter((x) => x.hit);
   }, [query]);
 
-  // Video Close-Ups related to the search. Real vendor-uploaded reels when
-  // present, else local samples. Ranked so the ones whose category / product
-  // line / brand match the query tokens surface first; the full set is always
-  // returned (stable order) so the rail is never empty for an arbitrary query.
+  // Video Close-Ups related to the search — vendor-uploaded reels only (the
+  // sample set is dev-only, so an empty catalogue hides the whole section via
+  // the `relatedVideos.length > 0` guard below). Ranked so the ones whose
+  // category / product line / brand match the query tokens surface first.
   const { data: dbVideos } = useVideoCloseUps();
   const relatedVideos = useMemo(() => {
-    const base: VideoCloseUp[] = dbVideos && dbVideos.length > 0 ? dbVideos : VIDEO_CLOSE_UPS;
+    const base: VideoCloseUp[] = dbVideos?.length ? dbVideos : devOnlyVideoCloseUps();
     const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (tokens.length === 0) return base;
     const score = (v: VideoCloseUp) => {
@@ -993,13 +997,22 @@ const SearchResults = () => {
                     onMouseLeave={videoRailDrag.onMouseLeave}
                     onClickCapture={videoRailDrag.onClickCapture}
                   >
-                    {relatedVideos.map((v, i) => (
+                    {relatedVideos.slice(0, VIDEO_RAIL_MAX).map((v, i) => (
                       <button
                         key={v.id}
                         onClick={() => { setVideoStartIndex(i); setVideoViewerOpen(true); }}
                         className="relative shrink-0 w-36 lg:w-52 aspect-[3/4] rounded-lg overflow-hidden bg-gray-100"
                       >
-                        <img src={v.thumbnail} alt={v.brandLine} className="w-full h-full object-cover" draggable={false} />
+                        <img
+                          src={v.thumbnail}
+                          alt={v.brandLine}
+                          loading="lazy"
+                          decoding="async"
+                          width={300}
+                          height={400}
+                          className="w-full h-full object-cover"
+                          draggable={false}
+                        />
                         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
                         <div className="absolute top-2 lg:top-3 right-2 lg:right-3 w-6 lg:w-8 h-6 lg:h-8 bg-white/85 rounded-full flex items-center justify-center backdrop-blur-sm">
                           <Play className="w-2.5 lg:w-3.5 h-2.5 lg:h-3.5 text-gray-900 fill-gray-900" />

@@ -80,6 +80,12 @@ interface VideoCloseUpsViewerProps {
 //     and upgrades automatically once real video URLs exist.
 // ─────────────────────────────────────────────────────────────
 
+// Slides either side of the active one that render their contents. Beyond this
+// the shell is an empty <div>: no image, no <video>, no layout work. 2 keeps a
+// poster ready one slide ahead of where a <video> is mounted, so scrolling
+// never reveals an unpainted slide.
+const SLIDE_WINDOW = 2;
+
 export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, onBookmarkChange }: VideoCloseUpsViewerProps) {
   const callVendor = useCallVendor();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
@@ -185,21 +191,38 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
             className="w-full h-full max-w-md mx-auto overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
             style={{ scrollSnapType: "y mandatory" }}
           >
-            {videos.map((video, i) => (
-              <VideoSlide
-                key={video.id}
-                setSlideEl={el => { slideRefs.current[i] = el; }}
-                index={i}
-                video={video}
-                isActive={i === activeIndex}
-                muted={muted}
-                saved={saved.has(video.id)}
-                liked={liked.has(video.id)}
-                onToggleSave={() => toggleSave(video.id)}
-                onToggleLike={() => toggleLike(video.id)}
-                onCallNow={() => callVendor(video.vendorId, video.brandName)}
-              />
-            ))}
+            {videos.map((video, i) => {
+              const distance = Math.abs(i - activeIndex);
+              // The shell ALWAYS renders; only its contents are windowed. That
+              // keeps scroll height, snap positions and slideRefs[i] exactly
+              // correct with no measurement code, and — the reason this beats a
+              // virtualiser here — every IntersectionObserver target stays
+              // stable for the viewer's lifetime, so the observer effect never
+              // has to re-run as the window slides.
+              return (
+                <div
+                  key={video.id}
+                  ref={el => { slideRefs.current[i] = el; }}
+                  data-index={i}
+                  className="relative w-full h-full snap-start snap-always"
+                  style={{ scrollSnapAlign: "start", scrollSnapStop: "always" }}
+                >
+                  {distance <= SLIDE_WINDOW && (
+                    <VideoSlide
+                      video={video}
+                      distance={distance}
+                      isActive={i === activeIndex}
+                      muted={muted}
+                      saved={saved.has(video.id)}
+                      liked={liked.has(video.id)}
+                      onToggleSave={() => toggleSave(video.id)}
+                      onToggleLike={() => toggleLike(video.id)}
+                      onCallNow={() => callVendor(video.vendorId, video.brandName)}
+                    />
+                  )}
+                </div>
+              );
+            })}
           </div>
         </motion.div>
       )}
@@ -211,7 +234,8 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
 
 interface VideoSlideProps {
   video: VideoCloseUp;
-  index: number;
+  /** Slides away from the active one. Drives preload and whether a <video> mounts at all. */
+  distance: number;
   isActive: boolean;
   muted: boolean;
   saved: boolean;
@@ -219,13 +243,13 @@ interface VideoSlideProps {
   onToggleSave: () => void;
   onToggleLike: () => void;
   onCallNow: () => void;
-  setSlideEl: (el: HTMLDivElement | null) => void;
 }
 
-function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave, onToggleLike, onCallNow, setSlideEl }: VideoSlideProps) {
+function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showPlayHint, setShowPlayHint] = useState(false);
   const [videoErrored, setVideoErrored] = useState(false);
+  const [videoReady, setVideoReady] = useState(false);
 
   // Play the active slide's video, pause every other slide's. This is the
   // actual "reels" behavior — only one video plays at a time, and it's
@@ -235,7 +259,10 @@ function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave,
     if (!el || !video.videoUrl || videoErrored) return;
 
     if (isActive) {
-      el.currentTime = 0;
+      // Only rewind when there is something to rewind. An unconditional
+      // `currentTime = 0` on an element with no buffered data queues a seek
+      // and delays the first painted frame.
+      if (el.readyState >= 1 && el.currentTime > 0.05) el.currentTime = 0;
       const playPromise = el.play();
       // Autoplay can still be rejected by the browser in some cases (e.g.
       // power-saving mode) even when muted. Show a manual play affordance
@@ -245,6 +272,22 @@ function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave,
       el.pause();
     }
   }, [isActive, video.videoUrl, videoErrored]);
+
+  // Release the media buffer when this slide scrolls out of the window.
+  // Removing the element isn't enough on its own: the browser keeps the
+  // decoded buffer around until GC and an in-flight range request carries on
+  // downloading. `removeAttribute` + `load()` is the documented way to abort
+  // it — NOT `src=""`, which resolves against the document URL and makes the
+  // browser fetch the current page and try to decode it as media.
+  useEffect(() => {
+    const el = videoRef.current;
+    return () => {
+      if (!el) return;
+      el.pause();
+      el.removeAttribute("src");
+      el.load();
+    };
+  }, []);
 
   // Keep mute state in sync with the shared viewer-level toggle.
   useEffect(() => {
@@ -263,27 +306,46 @@ function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave,
   const baseLikes = video.likes ?? 0;
   const likeCount = baseLikes + (liked ? 1 : 0);
 
+  // A <video> only exists for the active slide and its immediate neighbours.
+  // Slide 2 shows just its poster, so a fling-scroll costs a handful of images
+  // rather than speculatively downloading a video per slide passed.
+  const mountVideo = hasVideo && distance <= 1;
+
   return (
-    <div
-      ref={setSlideEl}
-      data-index={index}
-      className="relative w-full h-full snap-start snap-always"
-      style={{ scrollSnapAlign: "start", scrollSnapStop: "always" }}
-    >
-      {hasVideo ? (
+    <>
+      {/* Poster underlay — always painted, never removed. This is what makes
+          the swap seamless: with preload="none" the browser has nothing to
+          draw when play() is called, and a bare <video> renders as a black
+          rectangle. The poster sits underneath and the video fades in over it
+          once it has a frame. `poster` is also set on the element itself,
+          which costs nothing extra since it is the same cached URL. */}
+      <img
+        src={video.thumbnail}
+        alt={video.brandLine}
+        decoding="async"
+        className="absolute inset-0 w-full h-full object-cover"
+      />
+
+      {mountVideo && (
         <video
           ref={videoRef}
           src={video.videoUrl}
           poster={video.thumbnail}
-          className="w-full h-full object-cover"
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-200 ${videoReady ? "opacity-100" : "opacity-0"}`}
           loop
           muted={muted}
           playsInline
-          preload={Math.abs(index) <= 1 ? "auto" : "none"}
+          // Distance-based, not index-based. This used to read
+          // `Math.abs(index) <= 1`, where `index` is the absolute slide number
+          // — so slides 0 and 1 downloaded eagerly on open and every slide
+          // from 2 on was permanently preload="none", stalling the moment it
+          // was scrolled to. "metadata" on the neighbour fetches the moov atom
+          // and one decodable frame, so the next slide is instantly playable
+          // without pulling a whole second video.
+          preload={distance === 0 ? "auto" : "metadata"}
+          onLoadedData={() => setVideoReady(true)}
           onError={() => setVideoErrored(true)}
         />
-      ) : (
-        <img src={video.thumbnail} alt={video.brandLine} className="w-full h-full object-cover" />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 pointer-events-none" />
@@ -343,7 +405,10 @@ function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave,
       {/* Bottom product info card */}
       <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
         <div className="bg-white/95 backdrop-blur rounded-2xl p-3 flex items-center gap-3">
-          <img src={video.thumbnail} alt="" className="w-12 h-12 rounded-xl object-cover shrink-0" />
+          {/* Same URL as the poster, so this is a cache hit — but without the
+              size hints the browser decodes the full 500x650 source to paint
+              48px. */}
+          <img src={video.thumbnail} alt="" loading="lazy" decoding="async" width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-gray-900 truncate">{video.brandName}</p>
             <p className="text-[11px] text-gray-500 truncate">{video.brandLine}</p>
@@ -363,6 +428,6 @@ function VideoSlide({ video, index, isActive, muted, saved, liked, onToggleSave,
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

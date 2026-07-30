@@ -583,51 +583,63 @@ export type Database = {
           brand_line: string
           category: string
           created_at: string
+          duration_seconds: number | null
           id: string
           likes_count: number
           moq: string | null
           price: string | null
           product_id: string | null
+          provider: string
           rating: number
           reviews: string | null
           status: Database["public"]["Enums"]["product_status"]
           thumbnail_url: string | null
           vendor_id: string
+          video_height: number | null
           video_url: string | null
+          video_width: number | null
           views_count: number
         }
         Insert: {
           brand_line?: string
           category?: string
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           likes_count?: number
           moq?: string | null
           price?: string | null
           product_id?: string | null
+          provider?: string
           rating?: number
           reviews?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           thumbnail_url?: string | null
           vendor_id: string
+          video_height?: number | null
           video_url?: string | null
+          video_width?: number | null
           views_count?: number
         }
         Update: {
           brand_line?: string
           category?: string
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           likes_count?: number
           moq?: string | null
           price?: string | null
           product_id?: string | null
+          provider?: string
           rating?: number
           reviews?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           thumbnail_url?: string | null
           vendor_id?: string
+          video_height?: number | null
           video_url?: string | null
+          video_width?: number | null
           views_count?: number
         }
         Relationships: [
@@ -643,6 +655,13 @@ export type Database = {
             columns: ["vendor_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_videos_vendor_profile_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
             referencedColumns: ["id"]
           },
         ]

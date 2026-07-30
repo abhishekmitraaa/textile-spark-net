@@ -1,19 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Clapperboard, Loader2 } from "lucide-react";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
-import { VIDEO_CLOSE_UPS, rankVideoCloseUps } from "@/data/videoCloseUps";
+import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { useVideoCloseUps } from "@/lib/queries/videos";
 
 // ─────────────────────────────────────────────────────────────
 // /video-closeups — dedicated route
 //
-// Opens the full-screen Instagram-reel-style viewer immediately on mount
-// (arriving here via a nav tap IS the "open" action) and navigates back
-// when the viewer closes.
+// Opens the full-screen reel viewer immediately on mount (arriving here via a
+// nav tap IS the "open" action) and navigates back when the viewer closes.
 //
-// Data source: real vendor-uploaded reels from `product_videos` (Supabase).
-// While that loads, or if the catalogue has no videos yet, we fall back to
-// the local sample clips so the reel never opens empty.
+// Data source: vendor-uploaded reels from `product_videos` (Supabase), and
+// nothing else in production. The sample clips are dev-only — see
+// devOnlyVideoCloseUps().
+//
+// The viewer renders null on an empty list, so with no live videos this route
+// used to be a blank white screen with no way back. Loading and empty states
+// are handled here instead.
 // ─────────────────────────────────────────────────────────────
 
 export default function VideoCloseUpsPage() {
@@ -21,8 +25,8 @@ export default function VideoCloseUpsPage() {
   const [isOpen, setIsOpen] = useState(true);
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
-  const { data: dbVideos } = useVideoCloseUps();
-  const catalogue = dbVideos && dbVideos.length > 0 ? dbVideos : VIDEO_CLOSE_UPS;
+  const { data: dbVideos, isPending } = useVideoCloseUps();
+  const catalogue = dbVideos?.length ? dbVideos : devOnlyVideoCloseUps();
 
   // Same in-session interest signal NewArrivals.tsx uses.
   const interestedCategories = useMemo(() => {
@@ -38,6 +42,20 @@ export default function VideoCloseUpsPage() {
     [catalogue, interestedCategories]
   );
 
+  // The viewer must receive a list whose ORDER never changes while it's open.
+  // Bookmarking a slide feeds interestedCategories, which re-runs the ranking
+  // and produces a differently-ordered array — so without this snapshot the
+  // reel reshuffles under the user's finger mid-scroll, and with windowing that
+  // is a visible jump onto a different product. Re-ranking now affects the next
+  // open instead, which is the correct semantic anyway: in-session interest
+  // should shape what you see next time, not shuffle the deck you're holding.
+  const [openList, setOpenList] = useState<typeof rankedVideoCloseUps>([]);
+  useEffect(() => {
+    if (isOpen && openList.length === 0 && rankedVideoCloseUps.length > 0) {
+      setOpenList(rankedVideoCloseUps);
+    }
+  }, [isOpen, openList.length, rankedVideoCloseUps]);
+
   const handleClose = () => {
     setIsOpen(false);
     setTimeout(() => {
@@ -46,10 +64,52 @@ export default function VideoCloseUpsPage() {
     }, 200);
   };
 
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1);
+    else navigate("/home/new-arrivals");
+  };
+
+  // Nothing to show: either still fetching, or genuinely no live videos. The
+  // viewer would render null in both cases, stranding the buyer on a blank
+  // page, so this route owns those states itself.
+  if (isPending || rankedVideoCloseUps.length === 0) {
+    return (
+      <div className="min-h-screen bg-white flex flex-col">
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+          <button onClick={goBack} aria-label="Go back" className="-ml-1 p-1.5 rounded-full hover:bg-gray-100">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <h1 className="text-base font-bold text-gray-900">Video Close-Ups</h1>
+        </div>
+        <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
+          {isPending ? (
+            <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
+          ) : (
+            <>
+              <div className="w-14 h-14 rounded-full bg-gray-50 flex items-center justify-center mb-4">
+                <Clapperboard className="w-6 h-6 text-gray-300" />
+              </div>
+              <p className="text-sm font-semibold text-gray-900">No video close-ups yet</p>
+              <p className="mt-1.5 text-sm text-gray-500 max-w-xs">
+                Suppliers haven't posted any product videos yet. Check back soon.
+              </p>
+              <button
+                onClick={goBack}
+                className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white active:scale-[0.99]"
+              >
+                Back to browsing
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-white">
       <VideoCloseUpsViewer
-        videos={rankedVideoCloseUps}
+        videos={openList.length ? openList : rankedVideoCloseUps}
         initialIndex={0}
         isOpen={isOpen}
         onClose={handleClose}

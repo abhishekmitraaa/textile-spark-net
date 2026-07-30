@@ -5,7 +5,7 @@ import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
-import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
+import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import { BadgeCheck, Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -82,7 +82,7 @@ const BASE_PRODUCTS: Product[] = [
 // URLs once the catalogue has them — the viewer component already
 // falls back to the thumbnail image automatically if videoUrl is
 // absent or fails to load, so removing these is also safe.
-import { VIDEO_CLOSE_UPS, rankVideoCloseUps } from "@/data/videoCloseUps";
+import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
@@ -116,6 +116,9 @@ const LOOKING_FOR_THESE = [
 // than SPONSORED_MAX campaigns are live. Kept low for that reason.
 const SPONSORED_MAX = 3;
 const BRAND_PICKS_MAX = 6;
+// Thumbnails shown in the Video Close-Ups teaser rail. The viewer still gets
+// the full ranked list; this just caps how many images the feed page fetches.
+const VIDEO_RAIL_MAX = 12;
 
 const HOME_TABS = [
   { label: "NEW ARRIVALS", href: "/home/new-arrivals" },
@@ -247,15 +250,18 @@ const NewArrivals = () => {
   const videoRailDrag = useDragScroll<HTMLDivElement>();
   const brandPicksDrag = useDragScroll<HTMLDivElement>();
 
-  // Real vendor-uploaded reels; fall back to local samples while loading / if empty.
+  // Vendor-uploaded reels. The sample set is dev-only, so in production an
+  // empty catalogue means the section is genuinely omitted (see the rail below).
   const { data: dbVideos } = useVideoCloseUps();
-  const videoCatalogue = dbVideos && dbVideos.length > 0 ? dbVideos : VIDEO_CLOSE_UPS;
+  const videoCatalogue = dbVideos?.length ? dbVideos : devOnlyVideoCloseUps();
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
   const [batchCount, setBatchCount] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
+  // Snapshot of the ranked reel taken when the viewer opens — see the mount.
+  const [openList, setOpenList] = useState<VideoCloseUp[]>([]);
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
   // Categories the buyer has shown interest in THIS session, derived from
@@ -274,6 +280,11 @@ const NewArrivals = () => {
     () => rankVideoCloseUps(videoCatalogue, interestedCategories),
     [videoCatalogue, interestedCategories]
   );
+  // The rail is a teaser, not the catalogue — a 30-item horizontal scroller
+  // eagerly fetching every thumbnail off-screen is pure waste. Indices still
+  // line up with the full ranked list the viewer receives, since this is a
+  // prefix slice.
+  const railVideoCloseUps = useMemo(() => rankedVideoCloseUps.slice(0, VIDEO_RAIL_MAX), [rankedVideoCloseUps]);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -426,8 +437,12 @@ const NewArrivals = () => {
             skip; the component itself is unchanged. */}
         <SponsoredRail max={SPONSORED_MAX} />
 
-        {/* ── Video Close-Ups — Reels style ── */}
+        {/* ── Video Close-Ups — Reels style ──
+            Omitted entirely when no supplier has posted one, rather than
+            rendering a heading above an empty scroller. */}
         <div>
+          {railVideoCloseUps.length > 0 && (
+          <>
           <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-2 lg:mb-4 px-1">Video Close-Ups</h2>
           <div
             ref={videoRailDrag.ref}
@@ -438,13 +453,21 @@ const NewArrivals = () => {
             onMouseLeave={videoRailDrag.onMouseLeave}
             onClickCapture={videoRailDrag.onClickCapture}
           >
-            {rankedVideoCloseUps.map((v, i) => (
+            {railVideoCloseUps.map((v, i) => (
               <button
                 key={v.id}
-                onClick={() => { setVideoStartIndex(i); setVideoViewerOpen(true); }}
+                onClick={() => { setOpenList(rankedVideoCloseUps); setVideoStartIndex(i); setVideoViewerOpen(true); }}
                 className="relative shrink-0 w-36 lg:w-56 aspect-[3/4] rounded-md overflow-hidden bg-gray-100"
               >
-                <img src={v.thumbnail} alt={v.brandLine} className="w-full h-full object-cover" />
+                <img
+                  src={v.thumbnail}
+                  alt={v.brandLine}
+                  loading="lazy"
+                  decoding="async"
+                  width={300}
+                  height={400}
+                  className="w-full h-full object-cover"
+                />
                 {/* Bottom gradient only — keeps the image clear, just ensures the text below stays legible */}
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/55 via-black/10 to-transparent pointer-events-none" />
                 {/* Small play indicator, corner-placed instead of a large centered overlay */}
@@ -458,6 +481,8 @@ const NewArrivals = () => {
               </button>
             ))}
           </div>
+          </>
+          )}
 
           {/* Looking for these? */}
           <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
@@ -617,8 +642,12 @@ const NewArrivals = () => {
       </div>
 
       <QuickRfqModal isOpen={quickRfqOpen} onClose={() => setQuickRfqOpen(false)} />
+      {/* `openList` is the ranked list frozen at the moment the reel opened.
+          Bookmarking inside the viewer feeds interestedCategories, which
+          re-ranks and returns a differently-ordered array — passing that
+          straight through reshuffled the reel under the user's finger. */}
       <VideoCloseUpsViewer
-        videos={rankedVideoCloseUps}
+        videos={openList}
         initialIndex={videoStartIndex}
         isOpen={videoViewerOpen}
         onClose={() => setVideoViewerOpen(false)}
