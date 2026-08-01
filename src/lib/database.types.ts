@@ -840,6 +840,7 @@ export type Database = {
           product_id: string | null
           provider: string
           rating: number
+          rejection_reason: string | null
           reviews: string | null
           status: Database["public"]["Enums"]["product_status"]
           thumbnail_url: string | null
@@ -861,6 +862,7 @@ export type Database = {
           product_id?: string | null
           provider?: string
           rating?: number
+          rejection_reason?: string | null
           reviews?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           thumbnail_url?: string | null
@@ -882,6 +884,7 @@ export type Database = {
           product_id?: string | null
           provider?: string
           rating?: number
+          rejection_reason?: string | null
           reviews?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           thumbnail_url?: string | null
@@ -1981,7 +1984,14 @@ export type Database = {
         Returns: Database["public"]["Enums"]["admin_role_type"]
       }
       admin_role_values: { Args: never; Returns: string[] }
-      approve_vendor_content: { Args: { target: string }; Returns: undefined }
+      approve_vendor_content: {
+        Args: { target_id: string; target_table: string }
+        Returns: undefined
+      }
+      approve_vendor_content_bulk: {
+        Args: { target: string }
+        Returns: undefined
+      }
       expire_subscriptions: { Args: never; Returns: number }
       get_vendor_plan: { Args: { v?: string }; Returns: Json }
       grant_ad_verification: {
@@ -1995,6 +2005,10 @@ export type Database = {
       next_invoice_number: { Args: never; Returns: string }
       owns_product: { Args: { pid: string }; Returns: boolean }
       owns_rfq: { Args: { rid: string }; Returns: boolean }
+      reject_vendor_content: {
+        Args: { reason?: string; target_id: string; target_table: string }
+        Returns: undefined
+      }
       reply_to_review: {
         Args: { reply: string; review_id: string }
         Returns: undefined
