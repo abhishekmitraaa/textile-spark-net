@@ -4,14 +4,14 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getOrCreateConversation, CHAT_MONITORING_NOTICE } from "@/lib/chatData";
-import { useChatThread, type ThreadMessage } from "@/lib/queries/chat";
+import { useChatThread, submitReport, type ThreadMessage } from "@/lib/queries/chat";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import {
   ArrowLeft, Phone, Star, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
-  Plus, X, ShieldCheck, Image as ImageIcon, File as FileIcon, User, Headphones,
-  Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen,
+  Plus, X, ShieldCheck, ShieldAlert, Image as ImageIcon, File as FileIcon, User, Headphones,
+  Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen, Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,7 +54,10 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   // Real, realtime message thread from Supabase (find-or-create the
   // conversation, load history, live-subscribe). Text is persisted; the
   // attachment buttons send a short text placeholder for now.
-  const { messages, otherName, sendText } = useChatThread(vendorId);
+  //
+  // `underReview` is the moderation lock (migration 20260801095820). The DB is
+  // what actually refuses the insert; everything below is the honest UI for it.
+  const { messages, otherName, sendText, conversationId, underReview, refreshStatus } = useChatThread(vendorId);
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
@@ -67,6 +70,11 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const docRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // The lock can land while the composer is open mid-interaction.
+  useEffect(() => {
+    if (underReview) { setAttachOpen(false); setRecording(false); }
+  }, [underReview]);
 
   const initials = useMemo(() => (conv?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [conv?.name]);
 
@@ -92,15 +100,17 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
     );
   }
 
-  const send = () => {
-    if (!draft.trim()) return;
-    void sendText(draft.trim());
-    setDraft("");
+  // The draft survives a rejected send (blocklisted term, locked thread,
+  // suspended account) — clearing it would lose what the user typed on the one
+  // path where they most need to edit it.
+  const send = async () => {
+    if (!draft.trim() || underReview) return;
+    if (await sendText(draft.trim())) setDraft("");
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "file") => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || underReview) return;
     // Chat media storage is a later pass; send a text placeholder so the
     // message still persists and reaches the other side in realtime.
     void sendText(kind === "image" ? "📷 Photo" : `📎 ${file.name}`, kind);
@@ -109,6 +119,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   };
 
   const toggleRecord = () => {
+    if (underReview) return;
     if (recording) {
       setRecording(false);
       void sendText("🎤 Voice message", "audio");
@@ -160,7 +171,13 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               </div>
             </div>
           </button>
-          <button onClick={() => vendorId && callVendor(vendorId, conv.rfqProduct)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
+          {/* Calling reveals the other party's real phone number (useCallVendor
+              → placeCall). While the thread is under review the two sides must
+              not be able to take it off-platform, so the affordance goes away
+              entirely rather than sitting there dead. */}
+          {!underReview && (
+            <button onClick={() => vendorId && callVendor(vendorId, conv.rfqProduct)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
+          )}
           <div className="relative shrink-0">
             <button onClick={() => setMenuOpen((o) => !o)} aria-label="More" className="p-1.5 rounded-full hover:bg-gray-100"><MoreVertical className="w-5 h-5 text-gray-600" /></button>
             <AnimatePresence>
@@ -192,6 +209,21 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             <ChevronRight className="w-4 h-4 text-[#ef4d62] shrink-0" />
           </div>
         </button>
+
+        {/* Moderation banner. Deliberately not dismissable and part of the
+            sticky header band, so it cannot be scrolled away either. Identical
+            for the buyer and the seller — the lock is on the thread, not on a
+            role. */}
+        {underReview && (
+          <div className="w-full bg-amber-100 border-t border-amber-200">
+            <div className={cn("mx-auto w-full max-w-2xl flex items-start gap-2 px-4 py-2.5", THREAD_WIDE)}>
+              <ShieldAlert className="w-4 h-4 text-amber-700 shrink-0 mt-px" />
+              <p role="status" className="text-[11px] font-medium text-amber-900 leading-snug">
+                This chat is under review for a possible policy violation. Our team will follow up.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -255,25 +287,34 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       {/* Input bar */}
       <div className="shrink-0 bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)]">
         <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3", THREAD_WIDE)}>
-          <button onClick={() => setAttachOpen((o) => !o)} aria-label="Attach" className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+          <button onClick={() => setAttachOpen((o) => !o)} disabled={underReview} aria-label="Attach"
+            className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 disabled:cursor-not-allowed">
             <motion.span animate={{ rotate: attachOpen ? 45 : 0 }} transition={{ duration: 0.18 }}><Plus className="w-5 h-5 text-gray-600" /></motion.span>
           </button>
-          <div className="flex-1 flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-2">
-            <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-              placeholder="Message" className="flex-1 bg-transparent text-sm placeholder:text-gray-400 focus:outline-none" />
-            <button onClick={() => docRef.current?.click()} aria-label="Attach file" className="shrink-0"><Paperclip className="w-4 h-4 text-gray-400" /></button>
-            <button onClick={() => cameraRef.current?.click()} aria-label="Camera" className="shrink-0"><Camera className="w-4 h-4 text-gray-400" /></button>
+          <div className={cn("flex-1 flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2", underReview ? "bg-gray-100" : "bg-gray-50")}>
+            <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
+              disabled={underReview}
+              placeholder={underReview ? "Sending is paused while this chat is reviewed" : "Message"}
+              className="flex-1 bg-transparent text-sm placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed" />
+            <button onClick={() => docRef.current?.click()} disabled={underReview} aria-label="Attach file" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Paperclip className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => cameraRef.current?.click()} disabled={underReview} aria-label="Camera" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Camera className="w-4 h-4 text-gray-400" /></button>
           </div>
           <AnimatePresence mode="wait" initial={false}>
+            {/* Opacity is driven through `animate`, not a disabled: class:
+                framer writes an inline style, and an inline style beats the
+                class — the button would be genuinely disabled but still look
+                fully enabled. */}
             {hasText ? (
-              <motion.button key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
-                onClick={send} aria-label="Send" className="shrink-0 w-10 h-10 rounded-full bg-[#ef4d62] flex items-center justify-center hover:bg-[#ef4d62]/90">
+              <motion.button key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
+                onClick={() => void send()} disabled={underReview} aria-label="Send"
+                className="shrink-0 w-10 h-10 rounded-full bg-[#ef4d62] flex items-center justify-center hover:bg-[#ef4d62]/90 disabled:hover:bg-[#ef4d62] disabled:cursor-not-allowed">
                 <Send className="w-4 h-4 text-white" />
               </motion.button>
             ) : (
-              <motion.button key="mic" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
-                onClick={toggleRecord} aria-label="Record audio"
-                className={cn("shrink-0 w-10 h-10 rounded-full flex items-center justify-center", recording ? "bg-red-500 animate-pulse" : "bg-[#ef4d62] hover:bg-[#ef4d62]/90")}>
+              <motion.button key="mic" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
+                onClick={toggleRecord} disabled={underReview} aria-label="Record audio"
+                className={cn("shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:cursor-not-allowed",
+                  recording ? "bg-red-500 animate-pulse" : "bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:hover:bg-[#ef4d62]")}>
                 <Mic className="w-4 h-4 text-white" />
               </motion.button>
             )}
@@ -286,7 +327,17 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e, "image")} />
       <input ref={docRef} type="file" className="hidden" onChange={(e) => onFile(e, "file")} />
 
-      <ReportModal open={reportOpen} onClose={() => setReportOpen(false)} name={conv.name} onBlock={blockVendor} />
+      <ReportModal
+        open={reportOpen}
+        onClose={() => setReportOpen(false)}
+        name={conv.name}
+        onBlock={blockVendor}
+        conversationId={conversationId}
+        // submit_report() takes the offending message; the thread has no
+        // per-message report affordance, so the newest one is what it refers to.
+        messageId={messages.length ? messages[messages.length - 1].id : null}
+        onReported={refreshStatus}
+      />
     </div>
   );
 }
@@ -380,9 +431,46 @@ const REPORT_REASONS = [
   "False information",
 ];
 
-function ReportModal({ open, onClose, name, onBlock }: { open: boolean; onClose: () => void; name: string; onBlock: () => void }) {
+interface ReportModalProps {
+  open: boolean;
+  onClose: () => void;
+  name: string;
+  onBlock: () => void;
+  conversationId: string | null;
+  messageId: string | null;
+  /** Pull the thread's new status — submit_report() locks it server-side. */
+  onReported: () => void;
+}
+
+/**
+ * Real report submission. The reason list stays a UI-only triage prompt:
+ * submit_report(conversation_id, message_id) takes no reason, because
+ * conversation_reviews.reason_id points at the admin-curated
+ * chat_block_reasons table, which is not this list.
+ *
+ * The confirmation screen is only reached once the RPC has actually succeeded —
+ * telling someone their report was filed when it was not is the one failure
+ * mode this flow must not have.
+ */
+function ReportModal({ open, onClose, name, onBlock, conversationId, messageId, onReported }: ReportModalProps) {
   const [done, setDone] = useState(false);
-  useEffect(() => { if (open) setDone(false); }, [open]);
+  const [pending, setPending] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => { if (open) { setDone(false); setPending(null); setError(null); } }, [open]);
+
+  const submit = async (reason: string) => {
+    if (pending) return;
+    if (!conversationId) { setError("This chat isn't ready yet. Please try again in a moment."); return; }
+    setPending(reason);
+    setError(null);
+    const ok = await submitReport(conversationId, messageId);
+    setPending(null);
+    if (!ok) { setError("We couldn't submit your report. Please try again."); return; }
+    setDone(true);
+    onReported();
+  };
+
   return (
     <AnimatePresence>
       {open && (
@@ -396,10 +484,17 @@ function ReportModal({ open, onClose, name, onBlock }: { open: boolean; onClose:
                 </div>
                 <div className="px-4 py-3">
                   <p className="text-sm font-semibold text-gray-900 mb-1">Why are you reporting this?</p>
+                  {error && (
+                    <p role="alert" className="mb-1 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600">{error}</p>
+                  )}
                   <div className="divide-y divide-gray-100">
                     {REPORT_REASONS.map((r) => (
-                      <button key={r} onClick={() => setDone(true)} className="w-full flex items-center justify-between py-3 text-left text-sm text-gray-700 hover:text-gray-900">
-                        {r} <ChevronRight className="w-4 h-4 text-gray-300" />
+                      <button key={r} onClick={() => void submit(r)} disabled={pending !== null}
+                        className="w-full flex items-center justify-between py-3 text-left text-sm text-gray-700 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed">
+                        {r}
+                        {pending === r
+                          ? <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                          : <ChevronRight className="w-4 h-4 text-gray-300" />}
                       </button>
                     ))}
                   </div>

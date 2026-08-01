@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -34,19 +35,45 @@ const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hou
 interface RawMessage { id: string; sender_id: string; body: string | null; kind: string; created_at: string; rfq_id?: string | null; quote_id?: string | null }
 
 /**
+ * Moderation state of a thread. 'under_review' means the regex flag trigger
+ * fired or somebody reported the chat; the DB refuses new messages until an
+ * admin resumes it (see migration 20260801095820).
+ */
+export type ConversationStatus = "active" | "under_review";
+
+interface ConversationRow { id: string; status: ConversationStatus }
+
+async function upsertConversation(me: string, otherId: string): Promise<ConversationRow | null> {
+  const [a, b] = [me, otherId].sort();
+  const { data, error } = await supabase
+    .from("conversations")
+    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
+    .select("id, status")
+    .single();
+  if (error || !data) return null;
+  return { id: data.id, status: (data.status as ConversationStatus) ?? "active" };
+}
+
+/**
  * Find-or-create the single conversation row for a pair of users.
  * Canonical (sorted) ordering guarantees one row per pair regardless of which
  * side opens the chat. Returns null if the upsert fails so callers can decide.
  */
 export async function ensureConversation(me: string, otherId: string): Promise<string | null> {
-  const [a, b] = [me, otherId].sort();
-  const { data, error } = await supabase
-    .from("conversations")
-    .upsert({ user_a: a, user_b: b }, { onConflict: "user_a,user_b" })
-    .select("id")
-    .single();
-  if (error || !data) return null;
-  return data.id;
+  return (await upsertConversation(me, otherId))?.id ?? null;
+}
+
+/**
+ * Participant-initiated report. Files a pending `conversation_reviews` row and
+ * locks the thread. SECURITY DEFINER on the DB side, gated on membership.
+ * Resolves true only when the row actually landed.
+ */
+export async function submitReport(conversationId: string, messageId: string | null): Promise<boolean> {
+  const { error } = await supabase.rpc("submit_report", {
+    p_conversation_id: conversationId,
+    p_message_id: messageId,
+  });
+  return !error;
 }
 
 export function useChatThread(otherId: string | undefined) {
@@ -55,7 +82,33 @@ export function useChatThread(otherId: string | undefined) {
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [otherName, setOtherName] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [status, setStatus] = useState<ConversationStatus>("active");
+  // State as well as a ref: the ref is what the stable callbacks read, the
+  // state is what the UI needs (ReportModal takes the id as a prop).
+  const [conversationId, setConversationId] = useState<string | null>(null);
   const convIdRef = useRef<string | null>(null);
+  // Mirrors `status` for the realtime callback, whose closure is created once.
+  const statusRef = useRef<ConversationStatus>("active");
+
+  const applyStatus = useCallback((next: ConversationStatus) => {
+    statusRef.current = next;
+    setStatus(next);
+  }, []);
+
+  /**
+   * Re-read this thread's moderation status. `conversations` is NOT in the
+   * realtime publication (only `messages` is), so the lock cannot be pushed to
+   * us — we pull it on the events that can cause it: a new message arriving
+   * (either side's message may trip the regex flag trigger) and a successful
+   * report. Callers skip this once already locked; only an admin can unlock,
+   * and that is not observable from here either way.
+   */
+  const refreshStatus = useCallback(async () => {
+    const id = convIdRef.current;
+    if (!id) return;
+    const { data } = await supabase.from("conversations").select("status").eq("id", id).maybeSingle();
+    applyStatus((data?.status as ConversationStatus) ?? "active");
+  }, [applyStatus]);
 
   const mapMsg = useCallback((m: RawMessage): ThreadMessage => ({
     id: m.id,
@@ -69,14 +122,21 @@ export function useChatThread(otherId: string | undefined) {
 
   useEffect(() => {
     if (!me || !otherId || me === otherId) { setReady(false); return; }
+    // Switching threads must not carry the previous one's lock over: default to
+    // active and let the load below report the truth.
+    convIdRef.current = null;
+    setConversationId(null);
+    applyStatus("active");
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     (async () => {
-      const convId = await ensureConversation(me, otherId);
-      if (!convId || cancelled) { if (!cancelled) setReady(true); return; }
-      convIdRef.current = convId;
-      const conv = { id: convId };
+      const row = await upsertConversation(me, otherId);
+      if (!row || cancelled) { if (!cancelled) setReady(true); return; }
+      convIdRef.current = row.id;
+      setConversationId(row.id);
+      applyStatus(row.status);
+      const conv = { id: row.id };
 
       // Display name for the other party (vendor brand → profile name → fallback).
       const [{ data: vp }, { data: pr }] = await Promise.all([
@@ -102,21 +162,62 @@ export function useChatThread(otherId: string | undefined) {
           (payload) => {
             const m = payload.new as RawMessage;
             setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, mapMsg(m)]));
+            // Any message — mine or theirs — can trip the regex flag trigger and
+            // lock the thread. This echo is the only push signal we get.
+            if (statusRef.current === "active") void refreshStatus();
           }
         )
         .subscribe();
     })();
 
     return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
-  }, [me, otherId, mapMsg]);
+  }, [me, otherId, mapMsg, applyStatus, refreshStatus]);
 
-  const sendText = useCallback(async (text: string, kind = "text") => {
+  /**
+   * Insert a message. Resolves true only when the row was actually written, so
+   * the caller can keep the draft on failure. Nothing is added to local state
+   * here either way — the realtime echo is the single source of truth, which is
+   * what makes a rejected message impossible to show as sent.
+   */
+  const sendText = useCallback(async (text: string, kind = "text"): Promise<boolean> => {
     const body = text.trim();
-    if (!body || !me || !convIdRef.current) return;
-    await supabase.from("messages").insert({ conversation_id: convIdRef.current, sender_id: me, body, kind });
-  }, [me]);
+    if (!body || !me || !convIdRef.current) return false;
 
-  return { messages, otherName, ready, sendText, canChat: Boolean(me && otherId) };
+    const { error } = await supabase
+      .from("messages")
+      .insert({ conversation_id: convIdRef.current, sender_id: me, body, kind });
+    if (!error) return true;
+
+    // check_message_blocklist() RAISEs; PostgREST passes the text through verbatim.
+    if (error.message?.toLowerCase().includes("message blocked")) {
+      toast.error("Message not sent", {
+        description: "It contains a term that isn't allowed on Cosora.",
+      });
+    } else if (error.code === "42501") {
+      // messages_insert additionally requires the conversation to be 'active'
+      // and the sender's account_status to be 'active'. Both read as an RLS
+      // violation, so the copy has to cover either cause.
+      toast.error("You can't send messages in this chat", {
+        description: "This chat is under review, or your account has been suspended.",
+      });
+      void refreshStatus();
+    } else {
+      toast.error("Message not sent", { description: error.message });
+    }
+    return false;
+  }, [me, refreshStatus]);
+
+  return {
+    messages,
+    otherName,
+    ready,
+    sendText,
+    canChat: Boolean(me && otherId),
+    conversationId,
+    status,
+    underReview: status === "under_review",
+    refreshStatus,
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
