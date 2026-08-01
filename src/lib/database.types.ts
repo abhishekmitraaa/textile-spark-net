@@ -14,6 +14,81 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_suspensions: {
+        Row: {
+          active: boolean
+          conversation_review_id: string | null
+          id: string
+          profile_id: string
+          reason_id: string | null
+          reinstated_at: string | null
+          reinstated_by: string | null
+          source: string
+          suspended_at: string
+          suspended_by: string | null
+        }
+        Insert: {
+          active?: boolean
+          conversation_review_id?: string | null
+          id?: string
+          profile_id: string
+          reason_id?: string | null
+          reinstated_at?: string | null
+          reinstated_by?: string | null
+          source: string
+          suspended_at?: string
+          suspended_by?: string | null
+        }
+        Update: {
+          active?: boolean
+          conversation_review_id?: string | null
+          id?: string
+          profile_id?: string
+          reason_id?: string | null
+          reinstated_at?: string | null
+          reinstated_by?: string | null
+          source?: string
+          suspended_at?: string
+          suspended_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_suspensions_conversation_review_id_fkey"
+            columns: ["conversation_review_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_suspensions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_suspensions_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "chat_block_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_suspensions_reinstated_by_fkey"
+            columns: ["reinstated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_suspensions_suspended_by_fkey"
+            columns: ["suspended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_orders: {
         Row: {
           amount: number
@@ -362,12 +437,120 @@ export type Database = {
           },
         ]
       }
+      chat_block_reasons: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_block_reasons_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_reviews: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          flagged_message_id: string | null
+          id: string
+          matched_pattern_id: string | null
+          reason_id: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          flagged_message_id?: string | null
+          id?: string
+          matched_pattern_id?: string | null
+          reason_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source: string
+          status?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          flagged_message_id?: string | null
+          id?: string
+          matched_pattern_id?: string | null
+          reason_id?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_reviews_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_reviews_flagged_message_id_fkey"
+            columns: ["flagged_message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_reviews_matched_pattern_id_fkey"
+            columns: ["matched_pattern_id"]
+            isOneToOne: false
+            referencedRelation: "flag_patterns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_reviews_reason_id_fkey"
+            columns: ["reason_id"]
+            isOneToOne: false
+            referencedRelation: "chat_block_reasons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
           id: string
           last_message: string | null
           last_message_at: string
+          status: string
           user_a: string
           user_b: string
         }
@@ -376,6 +559,7 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string
+          status?: string
           user_a: string
           user_b: string
         }
@@ -384,6 +568,7 @@ export type Database = {
           id?: string
           last_message?: string | null
           last_message_at?: string
+          status?: string
           user_a?: string
           user_b?: string
         }
@@ -398,6 +583,41 @@ export type Database = {
           {
             foreignKeyName: "conversations_user_b_fkey"
             columns: ["user_b"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      flag_patterns: {
+        Row: {
+          active: boolean
+          added_by: string | null
+          created_at: string
+          id: string
+          label: string
+          pattern: string
+        }
+        Insert: {
+          active?: boolean
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          label: string
+          pattern: string
+        }
+        Update: {
+          active?: boolean
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          label?: string
+          pattern?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flag_patterns_added_by_fkey"
+            columns: ["added_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -431,6 +651,35 @@ export type Database = {
           {
             foreignKeyName: "follows_vendor_id_fkey"
             columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      keyword_blocklist: {
+        Row: {
+          added_by: string | null
+          created_at: string
+          id: string
+          term: string
+        }
+        Insert: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          term: string
+        }
+        Update: {
+          added_by?: string | null
+          created_at?: string
+          id?: string
+          term?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyword_blocklist_added_by_fkey"
+            columns: ["added_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -791,6 +1040,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: Database["public"]["Enums"]["account_status_type"]
           active_role: string
           admin_role: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url: string | null
@@ -803,6 +1053,7 @@ export type Database = {
           phone: string | null
         }
         Insert: {
+          account_status?: Database["public"]["Enums"]["account_status_type"]
           active_role?: string
           admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url?: string | null
@@ -815,6 +1066,7 @@ export type Database = {
           phone?: string | null
         }
         Update: {
+          account_status?: Database["public"]["Enums"]["account_status_type"]
           active_role?: string
           admin_role?: Database["public"]["Enums"]["admin_role_type"] | null
           avatar_url?: string | null
@@ -1498,7 +1750,6 @@ export type Database = {
       vendor_profiles: {
         Row: {
           about: string | null
-          account_status: string
           ad_verified_until: string | null
           address_line: string | null
           area: string | null
@@ -1539,7 +1790,6 @@ export type Database = {
         }
         Insert: {
           about?: string | null
-          account_status?: string
           ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
@@ -1580,7 +1830,6 @@ export type Database = {
         }
         Update: {
           about?: string | null
-          account_status?: string
           ad_verified_until?: string | null
           address_line?: string | null
           area?: string | null
@@ -1750,9 +1999,24 @@ export type Database = {
         Args: { reply: string; review_id: string }
         Returns: undefined
       }
+      set_account_status: {
+        Args: {
+          p_conversation_review_id?: string
+          p_new_status: Database["public"]["Enums"]["account_status_type"]
+          p_profile_id: string
+          p_reason_id: string
+          p_source: string
+        }
+        Returns: undefined
+      }
+      submit_report: {
+        Args: { p_conversation_id: string; p_message_id: string }
+        Returns: undefined
+      }
       user_has_password: { Args: { target_email: string }; Returns: boolean }
     }
     Enums: {
+      account_status_type: "active" | "suspended"
       admin_role_type:
         | "super_admin"
         | "product_moderator"
@@ -1890,6 +2154,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_status_type: ["active", "suspended"],
       admin_role_type: [
         "super_admin",
         "product_moderator",
