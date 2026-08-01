@@ -178,8 +178,23 @@ export const ACCEPTED_VIDEO_MIME = ["video/mp4", "video/webm"] as const;
  *  - the endpoint uses the DIRECT storage hostname (<ref>.storage.supabase.co),
  *    which Supabase documents as materially faster for large files than routing
  *    through the main project hostname.
+ *
+ * RETURNS THE PATH THE BYTES ACTUALLY LANDED AT, which is not always the path
+ * passed in. tus fingerprints an upload as
+ *   tus-br-{name}-{type}-{size}-{lastModified}-{endpoint}
+ * — note the absence of objectName. So when a vendor reloads mid-upload and
+ * resubmits, the caller mints a fresh random path but findPreviousUploads()
+ * matches the OLD session, whose server-side URL is already bound to the OLD
+ * objectName. The bytes go there; anything recorded against the fresh path is
+ * a dangling reference, and the real object becomes an unreachable orphan
+ * (audited: a 30MB object referenced by no row, which the delete path can
+ * never find because it only looks at URLs a row points at).
+ *
+ * So the resolution order is: look for a resumable session for this exact file
+ * FIRST, adopt its objectName if there is one, and only mint a new path when
+ * there isn't. The caller must persist what this returns.
  */
-async function resumableUpload(path: string, file: File, onProgress?: (f: number) => void): Promise<void> {
+async function resumableUpload(path: string, file: File, onProgress?: (f: number) => void): Promise<string> {
   // Named export. Supabase's docs show `require('tus-js-client')` then
   // `new tus.Upload(...)`, which is the CommonJS namespace — under ESM the
   // dynamic import resolves to the module namespace, so destructure `Upload`
@@ -194,34 +209,55 @@ async function resumableUpload(path: string, file: File, onProgress?: (f: number
 
   // https://<ref>.supabase.co -> https://<ref>.storage.supabase.co
   const base = (import.meta.env.VITE_SUPABASE_URL as string).replace(".supabase.co", ".storage.supabase.co");
+  const endpoint = `${base}/storage/v1/upload/resumable`;
+
+  const options = (objectName: string) => ({
+    endpoint,
+    retryDelays: [0, 3000, 5000, 10000, 20000],
+    headers: { authorization: `Bearer ${token}`, "x-upsert": "true" },
+    uploadDataDuringCreation: true,
+    // Without this the fingerprint sticks around and re-uploading the same
+    // file later resumes a completed upload instead of starting fresh.
+    removeFingerprintOnSuccess: true,
+    metadata: {
+      bucketName: VIDEO_BUCKET,
+      objectName,
+      contentType: file.type,
+      cacheControl: "3600",
+    },
+    chunkSize: 6 * 1024 * 1024,
+  });
+
+  // Probe only — never started. findPreviousUploads() just reads the URL
+  // storage under this file's fingerprint, so the objectName handed in here is
+  // irrelevant to the lookup; it exists to satisfy the constructor.
+  const probe = new TusUpload(file, options(path));
+  const previous = await probe.findPreviousUploads();
+
+  // Adopt the earlier session's objectName so the resumed bytes and the row we
+  // are about to write agree. Guarded on the folder prefix: the fingerprint is
+  // per-file, not per-user, so on a shared browser a different vendor could
+  // otherwise resume into someone else's folder — which storage RLS would
+  // reject, turning a clean retry into an opaque failure.
+  const folder = path.slice(0, path.lastIndexOf("/") + 1);
+  const carried = previous.find(
+    (p) => typeof p.metadata?.objectName === "string" && p.metadata.objectName.startsWith(folder),
+  );
+  const objectName = carried?.metadata.objectName ?? path;
 
   await new Promise<void>((resolve, reject) => {
     const upload = new TusUpload(file, {
-      endpoint: `${base}/storage/v1/upload/resumable`,
-      retryDelays: [0, 3000, 5000, 10000, 20000],
-      headers: { authorization: `Bearer ${token}`, "x-upsert": "true" },
-      uploadDataDuringCreation: true,
-      // Without this the fingerprint sticks around and re-uploading the same
-      // file later resumes a completed upload instead of starting fresh.
-      removeFingerprintOnSuccess: true,
-      metadata: {
-        bucketName: VIDEO_BUCKET,
-        objectName: path,
-        contentType: file.type,
-        cacheControl: "3600",
-      },
-      chunkSize: 6 * 1024 * 1024,
+      ...options(objectName),
       onError: reject,
       onProgress: (sent, total) => onProgress?.(total ? sent / total : 0),
       onSuccess: () => resolve(),
     });
-
-    // Resume an interrupted upload of this exact file if one is pending.
-    upload.findPreviousUploads().then((prev) => {
-      if (prev.length) upload.resumeFromPreviousUpload(prev[0]);
-      upload.start();
-    }).catch(reject);
+    // Only resume the session we actually adopted above.
+    if (carried) upload.resumeFromPreviousUpload(carried);
+    upload.start();
   });
+
+  return objectName;
 }
 
 // Uploads the video (+ optional cover) to the product-videos bucket under the
@@ -230,16 +266,23 @@ async function resumableUpload(path: string, file: File, onProgress?: (f: number
 export async function createProductVideo(vendorId: string, v: NewProductVideo): Promise<void> {
   const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const vext = v.file.name.split(".").pop()?.toLowerCase() || "mp4";
-  const vpath = `${vendorId}/${key}.${vext}`;
   // Resumable, so a dropped connection mid-upload continues rather than
   // restarting. The vendorId prefix is what the storage RLS policy checks.
-  await resumableUpload(vpath, v.file, v.onProgress);
+  //
+  // The path we propose is only a proposal: if this file has an interrupted
+  // session pending, the upload resumes into THAT session's object instead.
+  // Record what comes back, never the proposal — recording the proposal is
+  // what produced a broken video_url plus a permanently orphaned object.
+  const vpath = await resumableUpload(`${vendorId}/${key}.${vext}`, v.file, v.onProgress);
   const video_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(vpath).data.publicUrl;
 
   let thumbnail_url: string | null = null;
   if (v.thumbnail) {
     const text = v.thumbnail.name.split(".").pop()?.toLowerCase() || "jpg";
-    const tpath = `${vendorId}/${key}-thumb.${text}`;
+    // Derive the poster path from the video path that actually won, not from
+    // `key`. On a resumed upload those differ, and pairing them means a retry
+    // overwrites its own poster (upsert) instead of leaving one stranded.
+    const tpath = `${vpath.replace(/\.[^./]+$/, "")}-thumb.${text}`;
     // Posters are small, so a plain upload is fine here — but note this lands
     // in the SAME bucket as the video, which is why the bucket's MIME allowlist
     // has to include image types.
