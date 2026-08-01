@@ -276,6 +276,9 @@ const UploadVideo = () => {
   // Duration / intrinsic size / generated poster, read off the picked file.
   const [probe, setProbe]                     = useState<VideoProbe | null>(null);
   const [probing, setProbing]                 = useState(false);
+  // Set when probeVideoFile() came back null, i.e. the browser could not read
+  // this file's duration. Blocks submit — see handleFileSelect.
+  const [probeFailed, setProbeFailed]         = useState(false);
   // 0..1, driven by TUS chunk callbacks so a long upload isn't a dead spinner.
   const [progress, setProgress]               = useState(0);
 
@@ -337,14 +340,30 @@ const UploadVideo = () => {
     }
     setSelectedFile(file);
     setVideoPreviewUrl(URL.createObjectURL(file));
+    // Clear any previous file's probe before starting a new one. Without this,
+    // picking a good clip and then a bad one leaves the OLD probe in state —
+    // the duration check would pass on the previous file's numbers, and those
+    // numbers would be persisted against the new upload.
+    setProbe(null);
+    setProbeFailed(false);
 
     // Probe for duration/size and take a poster frame from the file itself.
-    // Never blocks: if the browser won't decode a frame, this resolves null
-    // after a short timeout and the upload proceeds without a cover.
     setProbing(true);
     const probe = await probeVideoFile(file);
     setProbing(false);
-    if (!probe) return;
+
+    // A failed probe used to fall through here and leave the file selected and
+    // submittable — which silently skipped the MAX_VIDEO_SECONDS check below,
+    // leaving only the 50MB byte cap. At a low bitrate that is many minutes of
+    // video. Duration is not optional, so an unverifiable clip is held back
+    // rather than waved through.
+    if (!probe) {
+      setProbeFailed(true);
+      toast.error("Couldn't read this video's length", {
+        description: "Re-export it as an MP4 (H.264) and try again — we can't publish a clip we can't check against the 60s limit.",
+      });
+      return;
+    }
 
     if (probe.durationSeconds > MAX_VIDEO_SECONDS) {
       toast.error(`Clip must be ${MAX_VIDEO_SECONDS} seconds or shorter`, {
@@ -380,6 +399,8 @@ const UploadVideo = () => {
     if (videoPreviewUrl) URL.revokeObjectURL(videoPreviewUrl);
     setSelectedFile(null);
     setVideoPreviewUrl(null);
+    setProbe(null);
+    setProbeFailed(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -394,6 +415,16 @@ const UploadVideo = () => {
     if (!selectedFile) { toast.error("Please select a video to upload"); return; }
     if (!caption.trim()) { toast.error("Add a caption for your video closeup"); return; }
     if (!selectedProduct) { toast.error("Tag a product so buyers can shop directly"); return; }
+    if (probing) { toast.error("Still checking your video — one moment"); return; }
+    // The real duration gate. handleFileSelect rejects anything over
+    // MAX_VIDEO_SECONDS, but only when it managed to read a duration at all;
+    // this is what stops an unverifiable file being submitted anyway.
+    if (!probe || probeFailed) {
+      toast.error("Couldn't verify this video's length", {
+        description: `We can't publish a clip without checking it against the ${MAX_VIDEO_SECONDS}s limit. Re-export as MP4 (H.264) and reselect it.`,
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     setProgress(0);
@@ -415,6 +446,7 @@ const UploadVideo = () => {
       setThumbnailFile(null);
       setThumbnailUrl(null);
       setProbe(null);
+      setProbeFailed(false);
       toast.success("Video closeup uploaded!", {
         description: "It'll appear in the buyer feed after review (24–48 hours).",
       });
@@ -552,6 +584,19 @@ const UploadVideo = () => {
                     {selectedFile.name} · {formatBytes(selectedFile.size)}
                   </p>
                 </div>
+              </div>
+            )}
+
+            {/* Duration could not be read — submit is blocked, so say so here
+                rather than letting the vendor fill the whole form first. */}
+            {probeFailed && selectedFile && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                <p className="text-[11px] leading-relaxed text-amber-800">
+                  <span className="font-bold">We couldn't read this video's length.</span>{" "}
+                  Closeups have to be {MAX_VIDEO_SECONDS}s or shorter, and we can't publish a clip we
+                  weren't able to check. Re-export it as an MP4 (H.264) and select it again.
+                </p>
               </div>
             )}
 

@@ -26,7 +26,8 @@ export default function VideoCloseUpsPage() {
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
   const { data: dbVideos, isPending } = useVideoCloseUps();
-  const catalogue = dbVideos?.length ? dbVideos : devOnlyVideoCloseUps();
+  const usingDevFallback = !dbVideos?.length;
+  const catalogue = usingDevFallback ? devOnlyVideoCloseUps() : dbVideos;
 
   // Same in-session interest signal NewArrivals.tsx uses.
   const interestedCategories = useMemo(() => {
@@ -49,12 +50,24 @@ export default function VideoCloseUpsPage() {
   // is a visible jump onto a different product. Re-ranking now affects the next
   // open instead, which is the correct semantic anyway: in-session interest
   // should shape what you see next time, not shuffle the deck you're holding.
+  //
+  // The snapshot must not latch onto the dev fallback, though.
+  // devOnlyVideoCloseUps() returns its samples SYNCHRONOUSLY while the real
+  // query is still pending, so the first pass froze those and never re-synced —
+  // in dev the reel showed sample clips even with real rows in the table, which
+  // makes hand-testing this feature actively misleading. Tracking which source
+  // the snapshot came from lets it re-arm exactly once, when real rows
+  // supersede the fallback, without giving up the freeze.
   const [openList, setOpenList] = useState<typeof rankedVideoCloseUps>([]);
+  const [snapshotFromDev, setSnapshotFromDev] = useState(false);
   useEffect(() => {
-    if (isOpen && openList.length === 0 && rankedVideoCloseUps.length > 0) {
+    if (!isOpen || rankedVideoCloseUps.length === 0) return;
+    const supersededByRealData = snapshotFromDev && !usingDevFallback;
+    if (openList.length === 0 || supersededByRealData) {
       setOpenList(rankedVideoCloseUps);
+      setSnapshotFromDev(usingDevFallback);
     }
-  }, [isOpen, openList.length, rankedVideoCloseUps]);
+  }, [isOpen, openList.length, rankedVideoCloseUps, snapshotFromDev, usingDevFallback]);
 
   const handleClose = () => {
     setIsOpen(false);
