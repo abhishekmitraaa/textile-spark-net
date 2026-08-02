@@ -10,7 +10,7 @@ import { useVendorCatalogues } from "@/lib/queries/catalogues";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
-import { useCallVendor } from "@/lib/queries/calls";
+import { useCallVendor, useContactGate } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
@@ -18,7 +18,7 @@ import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
   Bookmark, BookmarkCheck, Star, ChevronDown, Users, Mail, Globe,
   Search, ArrowUpDown, Filter, Grid2X2, Grid3X3, Play, Factory, Send,
-  FileText, ExternalLink,
+  FileText, ExternalLink, LogIn,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import catTshirt from "@/assets/categories/brand/tshirt.png";
@@ -150,6 +150,15 @@ const VendorProfile = () => {
   const [showAllReviews, setShowAllReviews] = useState(false);
   const { brands, follow, unfollow } = useFollowing();
   const callVendor = useCallVendor();
+  // Same moderation rule the Call Now buttons run on click, resolved up front
+  // so the contact card can decide whether it may render at all. Two
+  // independent checks by design — neither can go stale against the other.
+  const { loading: contactLoading, blocked: contactBlocked } = useContactGate(vendorId);
+  // The single answer to "may this viewer see a way to reach this vendor?",
+  // resolved once and consumed by both the Contact Details card and the
+  // Website Address row further down. Unresolved counts as NOT visible — the
+  // whole point is never to paint a contact channel and take it back.
+  const contactVisible = Boolean(user) && !contactLoading && !contactBlocked;
   const following = brands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const toggleFollow = () => (following ? unfollow(vendorId) : follow(vendorId));
 
@@ -359,16 +368,56 @@ const VendorProfile = () => {
         </motion.section>
 
         {/* ══ CONTACT DETAILS ══ */}
+        {/* Gated on exactly the same rule as calling (useCallVendor → callGate).
+            A phone number printed on the page is as much of a leak as a dial
+            button, so locking the chat has to close both or it closes neither.
+            Signed-out visitors previously got the full card with no check at all. */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Contact Details</h2>
-          <div className="divide-y divide-gray-100">
-            {contactRows.map(({ Icon, value }, i) => (
-              <div key={i} className={cn("flex items-start gap-3", i === 0 ? "pb-3" : "py-3 last:pb-0")}>
-                <Icon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-                <span className="text-sm text-gray-700">{value}</span>
+          {!user ? (
+            <div className="py-2 text-center">
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#ef4d62]/10">
+                <LogIn className="h-5 w-5 text-[#ef4d62]" />
               </div>
-            ))}
-          </div>
+              <p className="text-sm font-bold text-gray-900">Sign in to see contact details</p>
+              <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500">
+                Phone, address and email are shared with signed-in Cosora accounts.
+              </p>
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/login")}
+                className="mt-4 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90">
+                Sign in
+              </motion.button>
+            </div>
+          ) : contactLoading ? (
+            /* Skeleton, never the real rows. Rendering them "just until the
+               check resolves" would flash the number and leak it anyway. */
+            <div className="divide-y divide-gray-100" aria-hidden="true">
+              {contactRows.map((_, i) => (
+                <div key={i} className={cn("flex items-center gap-3", i === 0 ? "pb-3" : "py-3 last:pb-0")}>
+                  <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200" />
+                  <div className="h-3 flex-1 animate-pulse rounded bg-gray-200" style={{ maxWidth: `${72 - i * 8}%` }} />
+                </div>
+              ))}
+            </div>
+          ) : contactBlocked ? (
+            /* callGate's own wording, verbatim, so the reason a buyer reads here
+               is the same sentence the Call Now button gives them. */
+            <div className="rounded-xl bg-amber-50 px-3 py-3">
+              <p className="text-sm font-semibold text-amber-900">{contactBlocked.title}</p>
+              {contactBlocked.description && (
+                <p className="mt-0.5 text-xs text-amber-800">{contactBlocked.description}</p>
+              )}
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {contactRows.map(({ Icon, value }, i) => (
+                <div key={i} className={cn("flex items-start gap-3", i === 0 ? "pb-3" : "py-3 last:pb-0")}>
+                  <Icon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                  <span className="text-sm text-gray-700">{value}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </motion.section>
 
         {/* ══ REVIEWS & RATINGS ══ */}
@@ -509,18 +558,26 @@ const VendorProfile = () => {
                     </div>
                   </div>
 
-                  {/* Website */}
-                  <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-gray-500">Website Address</span>
-                    <a
-                      href={websiteValue.startsWith("http") ? websiteValue : `https://${websiteValue}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="font-semibold text-[#ef4d62] text-right truncate"
-                    >
-                      {websiteValue}
-                    </a>
-                  </div>
+                  {/* Website — a contact channel, so it lives behind the same
+                      gate as phone/email even though it sits in this section.
+                      The rest of these rows (Company MD, Business Type, GST,
+                      PAN, Capacity) are registry data, not a way to reach
+                      anyone, and stay visible regardless. Reuses the gate
+                      already resolved for the Contact Details card above rather
+                      than running it a second time on the same page. */}
+                  {contactVisible && (
+                    <div className="flex items-center justify-between gap-4 text-sm">
+                      <span className="text-gray-500">Website Address</span>
+                      <a
+                        href={websiteValue.startsWith("http") ? websiteValue : `https://${websiteValue}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-semibold text-[#ef4d62] text-right truncate"
+                      >
+                        {websiteValue}
+                      </a>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             )}

@@ -59,13 +59,36 @@ export function demoPhone(seed: string): string {
 // trusting anything cached.
 // ─────────────────────────────────────────────────────────────
 
-// Null means "go ahead". A nullable object rather than an { ok } discriminated
+// Why the gate said no. The gate reports the REASON and each surface writes its
+// own sentence: "calling is paused" is the right thing to tell someone who
+// tapped Call, and the wrong thing to tell someone reading a contact card.
+export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_review";
+
+// Null means "go ahead". A nullable value rather than an { ok } discriminated
 // union on purpose: this project compiles with `strict: false`, so
 // strictNullChecks is off and TS will not narrow a boolean-literal discriminant
 // — `if (!gate.ok)` leaves the union unnarrowed and every field access errors.
-type CallBlock = { title: string; description?: string } | null;
+export type CallBlock = CallBlockReason | null;
 
-async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
+export interface BlockCopy { title: string; description?: string }
+
+// Someone tried to place a call. Wording unchanged from before the reason-code
+// refactor — this is what the Call Now button has always said.
+const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
+  caller_suspended: { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this." },
+  target_suspended: { title: "Calling is unavailable", description: "This account is currently suspended." },
+  under_review: { title: "This chat is under review — calling is paused", description: "Our team will follow up." },
+};
+
+// Someone is looking at a contact card. Same three reasons, phrased as "why
+// can't I see this" rather than "why can't I call".
+const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
+  caller_suspended: { title: "Contact details aren't available", description: "Your account is suspended. Contact support to resolve this." },
+  target_suspended: { title: "Contact details aren't available", description: "This account is currently suspended." },
+  under_review: { title: "This chat is under review", description: "Contact details aren't available right now. Our team will follow up." },
+};
+
+export async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
   // Both account statuses in one round trip. profiles_select is `true`, so the
   // other party's row is readable.
   const ids = meId && meId !== otherId ? [meId, otherId] : [otherId];
@@ -73,10 +96,10 @@ async function callGate(meId: string | undefined, otherId: string): Promise<Call
   const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
 
   if (meId && statusOf(meId) === "suspended") {
-    return { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this." };
+    return "caller_suspended";
   }
   if (statusOf(otherId) === "suspended") {
-    return { title: "Calling is unavailable", description: "This account is currently suspended." };
+    return "target_suspended";
   }
 
   // A plain SELECT on the canonical (sorted) pair — deliberately NOT
@@ -91,11 +114,44 @@ async function callGate(meId: string | undefined, otherId: string): Promise<Call
       .eq("user_b", b)
       .maybeSingle();
     if (conv?.status === "under_review") {
-      return { title: "This chat is under review — calling is paused", description: "Our team will follow up." };
+      return "under_review";
     }
   }
 
   return null;
+}
+
+/**
+ * The same gate, as reactive state, for surfaces that must decide what to
+ * RENDER rather than what to do on click — a phone number printed on the page
+ * is exactly as much of a leak as a dial button, so both consult one rule.
+ *
+ * `loading` starts true and matters: a caller that renders real contact details
+ * while this resolves would flash the number before hiding it, which defeats
+ * the point entirely. Callers must render nothing (or a skeleton) until false.
+ *
+ * React Query, matching useCalls() below rather than a bespoke useEffect.
+ *
+ * Returns copy already resolved for the contact-card context, not the raw
+ * reason: consumers stay dumb renderers and never have to know the reason codes
+ * exist, which keeps the wording for a given reason in one place instead of
+ * drifting across every page that grows a contact card.
+ */
+export function useContactGate(otherId: string | undefined): { loading: boolean; blocked: BlockCopy | null } {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: ["contact-gate", user?.id ?? null, otherId ?? null],
+    queryFn: () => callGate(user?.id, otherId as string),
+    enabled: Boolean(otherId),
+    // Moderation state is the kind of thing that must not be served stale from
+    // a previous mount — a lock applied a minute ago has to be respected now.
+    staleTime: 0,
+  });
+
+  return {
+    loading: Boolean(otherId) && query.isPending,
+    blocked: query.data ? CONTACT_BLOCK_COPY[query.data] : null,
+  };
 }
 
 export function useCallVendor() {
@@ -109,7 +165,8 @@ export function useCallVendor() {
       // reveal a number, log a `calls` row, or fall back to opening the chat.
       const blocked = await callGate(user?.id, vendorId);
       if (blocked) {
-        toast.error(blocked.title, blocked.description ? { description: blocked.description } : undefined);
+        const copy = CALL_BLOCK_COPY[blocked];
+        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
         return;
       }
 
@@ -165,7 +222,8 @@ export function useCallBuyer() {
       // directions, and a suspended vendor must not be able to ring the buyer.
       const blocked = await callGate(user?.id, buyerId);
       if (blocked) {
-        toast.error(blocked.title, blocked.description ? { description: blocked.description } : undefined);
+        const copy = CALL_BLOCK_COPY[blocked];
+        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
         return;
       }
 
