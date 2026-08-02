@@ -8,8 +8,10 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useVendorProfile } from "@/lib/queries/vendor";
 import { useVendorCatalogues } from "@/lib/queries/catalogues";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
 import { useCallVendor } from "@/lib/queries/calls";
+import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
 import {
@@ -116,77 +118,6 @@ const ratingBreakdown = [
 type Gender = "Men" | "Women" | "Unisex";
 
 // ─────────────────────────────────────────────────────────────
-// Write a Review modal
-// ─────────────────────────────────────────────────────────────
-function WriteReviewModal({
-  open,
-  onClose,
-  brandName,
-  initialRating = 0,
-  initialText = "",
-  onSubmit,
-}: {
-  open: boolean;
-  onClose: () => void;
-  brandName: string;
-  initialRating?: number;
-  initialText?: string;
-  onSubmit: (rating: number, text: string) => Promise<void>;
-}) {
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => { if (open) { setRating(initialRating); setHover(0); setText(initialText); setSaving(false); } }, [open, initialRating, initialText]);
-
-  const submit = async () => {
-    if (rating === 0) { toast.error("Please pick a star rating"); return; }
-    setSaving(true);
-    try {
-      await onSubmit(rating, text);
-      toast.success(initialRating ? "Your review has been updated" : "Thanks! Your review has been submitted");
-      onClose();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not submit your review");
-      setSaving(false);
-    }
-  };
-
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-          <motion.div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5"
-            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-gray-900">Write a Review</h3>
-              <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <p className="text-xs text-gray-500 mb-2">Rate your experience with {brandName}</p>
-            <div className="flex items-center gap-1.5 mb-4">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)} onClick={() => setRating(s)} aria-label={`${s} star`}>
-                  <Star className={cn("w-8 h-8 transition-colors", (hover || rating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
-                </button>
-              ))}
-            </div>
-            <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)}
-              placeholder="Share details about product quality, communication, delivery…"
-              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]" />
-            <button onClick={submit} disabled={saving} className="mt-3 w-full rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors">
-              {saving ? "Submitting…" : initialRating ? "Update Review" : "Submit Review"}
-            </button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────────────────────
 const VendorProfile = () => {
@@ -215,6 +146,7 @@ const VendorProfile = () => {
   const { data: catalogues = [] } = useVendorCatalogues(id);
   const { data: reviewData } = useVendorReviews(id);
   const { submit: submitReview } = useReviewMutations();
+  const { user } = useAuth();
   const [showAllReviews, setShowAllReviews] = useState(false);
   const { brands, follow, unfollow } = useFollowing();
   const callVendor = useCallVendor();
@@ -267,6 +199,11 @@ const VendorProfile = () => {
     : ratingBreakdown;
   const reviewList = reviewData?.reviews ?? [];
   const visibleReviews = showAllReviews ? reviewList : reviewList.slice(0, 3);
+  // Reviews can only be written against a real vendor_profiles row. Mock/demo
+  // vendor pages (slug ids) have no such row, so the CTA is hidden rather than
+  // offering an action whose insert can only fail.
+  const canReview = Boolean(vendor?.id);
+  const myReview = reviewList.find((r) => r.buyerId && r.buyerId === user?.id);
   const fmtReviewDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -438,10 +375,12 @@ const VendorProfile = () => {
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-bold text-gray-900">Reviews and Ratings</h2>
-            <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setReviewOpen(true)}
-              className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
-              Write a Review
-            </motion.button>
+            {canReview && (
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setReviewOpen(true)}
+                className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
+                {myReview ? "Edit your Review" : "Write a Review"}
+              </motion.button>
+            )}
           </div>
 
           <div className="flex items-center gap-4 mb-5">
@@ -861,8 +800,17 @@ const VendorProfile = () => {
       <WriteReviewModal
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        brandName={brandName}
-        onSubmit={(rating, text) => submitReview(vendorId, rating, text)}
+        subjectName={brandName}
+        initialRating={myReview?.rating ?? 0}
+        initialBody={myReview?.body ?? ""}
+        placeholder="Share details about product quality, communication, delivery…"
+        onSubmit={(rating, text) => {
+          // Must be the resolved vendor_profiles UUID, never the route param:
+          // buyer-side vendor links use slugs, and reviews.vendor_id is a uuid
+          // FK, so submitting `id` blew up on the cast and the review was lost.
+          if (!vendor?.id) throw new Error("Reviews aren't available for this vendor yet");
+          return submitReview(vendor.id, rating, text);
+        }}
       />
       <MobileBottomNav />
     </div>

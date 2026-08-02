@@ -477,6 +477,7 @@ export type Database = {
           id: string
           matched_pattern_id: string | null
           reason_id: string | null
+          reported_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
           source: string
@@ -489,6 +490,7 @@ export type Database = {
           id?: string
           matched_pattern_id?: string | null
           reason_id?: string | null
+          reported_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source: string
@@ -501,6 +503,7 @@ export type Database = {
           id?: string
           matched_pattern_id?: string | null
           reason_id?: string | null
+          reported_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
           source?: string
@@ -2024,7 +2027,11 @@ export type Database = {
         Returns: undefined
       }
       submit_report: {
-        Args: { p_conversation_id: string; p_message_id: string }
+        Args: {
+          p_conversation_id: string
+          p_message_id: string
+          p_reported_reason?: string
+        }
         Returns: undefined
       }
       user_has_password: { Args: { target_email: string }; Returns: boolean }

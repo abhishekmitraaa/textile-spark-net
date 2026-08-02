@@ -67,11 +67,20 @@ export async function ensureConversation(me: string, otherId: string): Promise<s
  * Participant-initiated report. Files a pending `conversation_reviews` row and
  * locks the thread. SECURITY DEFINER on the DB side, gated on membership.
  * Resolves true only when the row actually landed.
+ *
+ * `reportedReason` is the reporter's own words, stored verbatim on the review.
+ * It is NOT conversation_reviews.reason_id — that is the admin's later verdict
+ * from the curated chat_block_reasons table.
  */
-export async function submitReport(conversationId: string, messageId: string | null): Promise<boolean> {
+export async function submitReport(
+  conversationId: string,
+  messageId: string | null,
+  reportedReason?: string | null,
+): Promise<boolean> {
   const { error } = await supabase.rpc("submit_report", {
     p_conversation_id: conversationId,
     p_message_id: messageId,
+    p_reported_reason: reportedReason ?? null,
   });
   return !error;
 }
@@ -87,7 +96,7 @@ export function useChatThread(otherId: string | undefined) {
   // state is what the UI needs (ReportModal takes the id as a prop).
   const [conversationId, setConversationId] = useState<string | null>(null);
   const convIdRef = useRef<string | null>(null);
-  // Mirrors `status` for the realtime callback, whose closure is created once.
+  // Mirrors `status` for the realtime callbacks, whose closures are made once.
   const statusRef = useRef<ConversationStatus>("active");
 
   const applyStatus = useCallback((next: ConversationStatus) => {
@@ -96,12 +105,11 @@ export function useChatThread(otherId: string | undefined) {
   }, []);
 
   /**
-   * Re-read this thread's moderation status. `conversations` is NOT in the
-   * realtime publication (only `messages` is), so the lock cannot be pushed to
-   * us — we pull it on the events that can cause it: a new message arriving
-   * (either side's message may trip the regex flag trigger) and a successful
-   * report. Callers skip this once already locked; only an admin can unlock,
-   * and that is not observable from here either way.
+   * Re-read this thread's moderation status. The realtime UPDATE subscription
+   * below is now the primary signal; this stays as the belt-and-braces path —
+   * called right after a successful report (so the lock shows without waiting
+   * on the round trip) and after an RLS rejection on send (which means the DB
+   * disagrees with what we think the status is, so we go and ask).
    */
   const refreshStatus = useCallback(async () => {
     const id = convIdRef.current;
@@ -155,16 +163,30 @@ export function useChatThread(otherId: string | undefined) {
       setReady(true);
 
       channel = supabase
-        .channel(`messages:${conv.id}`)
+        .channel(`thread:${conv.id}`)
         .on(
           "postgres_changes",
           { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
           (payload) => {
             const m = payload.new as RawMessage;
             setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, mapMsg(m)]));
-            // Any message — mine or theirs — can trip the regex flag trigger and
-            // lock the thread. This echo is the only push signal we get.
+            // Backstop, kept deliberately. The conversations UPDATE below is the
+            // primary signal, but the message that just arrived may be the very
+            // thing that locked the thread — the case a user actually notices —
+            // and measured end-to-end that push can lag the composer staying
+            // live. One indexed PK read, and only while still unlocked.
             if (statusRef.current === "active") void refreshStatus();
+          }
+        )
+        // The moderation lock, pushed. `conversations` joined the realtime
+        // publication in 20260801154739; before that this had to be inferred by
+        // re-reading the row whenever a message arrived, which could never see
+        // an admin RESUMING a thread — no message accompanies that.
+        .on(
+          "postgres_changes",
+          { event: "UPDATE", schema: "public", table: "conversations", filter: `id=eq.${conv.id}` },
+          (payload) => {
+            applyStatus((payload.new as { status?: ConversationStatus })?.status ?? "active");
           }
         )
         .subscribe();

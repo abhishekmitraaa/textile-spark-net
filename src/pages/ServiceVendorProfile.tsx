@@ -6,6 +6,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { getServiceVendor } from "@/lib/serviceVendorsData";
 import { placeCall, demoPhone } from "@/lib/queries/calls";
 import { useServiceReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Star, MapPin, Bookmark, BookmarkCheck, Share2,
   MessageCircle, Phone, Clock, Briefcase, Timer, Wallet, X, ThumbsUp,
@@ -15,43 +16,6 @@ import { cn } from "@/lib/utils";
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 type Tab = "services" | "portfolio" | "reviews";
 
-function WriteReviewModal({ open, onClose, name, onSubmit }: { open: boolean; onClose: () => void; name: string; onSubmit: (rating: number, text: string) => Promise<void> }) {
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => { if (open) { setRating(0); setHover(0); setText(""); setSaving(false); } }, [open]);
-  const submit = async () => {
-    if (!rating) { toast.error("Please pick a star rating"); return; }
-    setSaving(true);
-    try { await onSubmit(rating, text); toast.success("Thanks! Your review has been submitted"); onClose(); }
-    catch (e) { toast.error(e instanceof Error ? e.message : "Could not submit your review"); setSaving(false); }
-  };
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-          <motion.div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5" initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }} transition={{ type: "spring", stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-gray-900">Write a Review</h3>
-              <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <p className="text-xs text-gray-500 mb-2">Rate your experience with {name}</p>
-            <div className="flex items-center gap-1.5 mb-4">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)} onClick={() => setRating(s)} aria-label={`${s} star`}>
-                  <Star className={cn("w-8 h-8 transition-colors", (hover || rating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
-                </button>
-              ))}
-            </div>
-            <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Share details about the work quality, communication and delivery…" className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]" />
-            <button onClick={submit} disabled={saving} className="mt-3 w-full rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors">{saving ? "Submitting…" : "Submit Review"}</button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
 
 const ServiceVendorProfile = () => {
   const navigate = useNavigate();
@@ -259,7 +223,8 @@ const ServiceVendorProfile = () => {
       <WriteReviewModal
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        name={v.name}
+        subjectName={v.name}
+        placeholder="Share details about the work quality, communication and delivery…"
         onSubmit={(rating, text) => submitServiceReview("service_vendor", vendorId ?? "", v.name, rating, text)}
       />
       <MobileBottomNav />

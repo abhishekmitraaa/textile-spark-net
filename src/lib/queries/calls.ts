@@ -44,6 +44,60 @@ export function demoPhone(seed: string): string {
   return `+91 ${d.slice(0, 5)} ${d.slice(5)}`;
 }
 
+// ─────────────────────────────────────────────────────────────
+// Moderation gate for click-to-call.
+//
+// Locking a chat is pointless if either party can just phone the other — the
+// number is one tap away on the vendor profile. So the same three facts that
+// stop a message stop a call, checked HERE rather than at each call site:
+// VendorProfile alone has two "Call Now" buttons, and the next surface to add
+// one would silently miss the check.
+//
+// Unlike messaging, there is no database-level enforcement possible: placing a
+// call is a `tel:` URL, not a write. This is a client-side gate over data the
+// DB owns, which is why it re-reads that data on every attempt rather than
+// trusting anything cached.
+// ─────────────────────────────────────────────────────────────
+
+// Null means "go ahead". A nullable object rather than an { ok } discriminated
+// union on purpose: this project compiles with `strict: false`, so
+// strictNullChecks is off and TS will not narrow a boolean-literal discriminant
+// — `if (!gate.ok)` leaves the union unnarrowed and every field access errors.
+type CallBlock = { title: string; description?: string } | null;
+
+async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
+  // Both account statuses in one round trip. profiles_select is `true`, so the
+  // other party's row is readable.
+  const ids = meId && meId !== otherId ? [meId, otherId] : [otherId];
+  const { data: rows } = await supabase.from("profiles").select("id, account_status").in("id", ids);
+  const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
+
+  if (meId && statusOf(meId) === "suspended") {
+    return { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this." };
+  }
+  if (statusOf(otherId) === "suspended") {
+    return { title: "Calling is unavailable", description: "This account is currently suspended." };
+  }
+
+  // A plain SELECT on the canonical (sorted) pair — deliberately NOT
+  // ensureConversation(), which would CREATE a row as a side effect of merely
+  // checking whether calling is allowed.
+  if (meId) {
+    const [a, b] = [meId, otherId].sort();
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("status")
+      .eq("user_a", a)
+      .eq("user_b", b)
+      .maybeSingle();
+    if (conv?.status === "under_review") {
+      return { title: "This chat is under review — calling is paused", description: "Our team will follow up." };
+    }
+  }
+
+  return null;
+}
+
 export function useCallVendor() {
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -51,6 +105,14 @@ export function useCallVendor() {
 
   return useCallback(
     async (vendorId: string, productContext?: string) => {
+      // Runs before the phone lookup on purpose: a blocked attempt should not
+      // reveal a number, log a `calls` row, or fall back to opening the chat.
+      const blocked = await callGate(user?.id, vendorId);
+      if (blocked) {
+        toast.error(blocked.title, blocked.description ? { description: blocked.description } : undefined);
+        return;
+      }
+
       // Look up the vendor's number + brand (only fires on click, not per render).
       const { data: v } = await supabase
         .from("vendor_profiles")
@@ -89,12 +151,21 @@ export function useCallVendor() {
 // would be rejected by RLS. Logging vendor-initiated calls needs a policy
 // change, which is out of scope for this hook.
 export function useCallBuyer() {
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   return useCallback(
     async (buyerId: string) => {
       if (!buyerId) {
         toast("Buyer unavailable", { description: "This quote has no buyer on file." });
+        return;
+      }
+
+      // Same gate as useCallVendor — a locked thread has to be locked in both
+      // directions, and a suspended vendor must not be able to ring the buyer.
+      const blocked = await callGate(user?.id, buyerId);
+      if (blocked) {
+        toast.error(blocked.title, blocked.description ? { description: blocked.description } : undefined);
         return;
       }
 
@@ -115,7 +186,7 @@ export function useCallBuyer() {
 
       placeCall(p?.full_name ?? "buyer", phone);
     },
-    [navigate],
+    [user, navigate],
   );
 }
 

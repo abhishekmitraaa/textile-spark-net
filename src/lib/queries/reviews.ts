@@ -16,6 +16,8 @@ export interface VendorReview {
   id: string;
   rating: number;
   body: string | null;
+  /** Author's uid — lets a surface pre-fill "your" review for editing. */
+  buyerId: string | null;
   reviewerName: string;
   reviewerCompany: string | null;
   replyBody: string | null;
@@ -40,6 +42,7 @@ interface RawReview {
   id: string;
   rating: number;
   body: string | null;
+  buyer_id: string | null;
   reviewer_name: string | null;
   reviewer_company: string | null;
   reply_body: string | null;
@@ -58,7 +61,7 @@ function buildBreakdown(ratings: number[]): RatingBucket[] {
 async function fetchVendorReviews(vendorId: string): Promise<VendorReviewsData> {
   const { data, error } = await supabase
     .from("reviews")
-    .select("id, rating, body, reviewer_name, reviewer_company, reply_body, replied_at, created_at")
+    .select("id, rating, body, buyer_id, reviewer_name, reviewer_company, reply_body, replied_at, created_at")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -67,6 +70,7 @@ async function fetchVendorReviews(vendorId: string): Promise<VendorReviewsData> 
     id: r.id,
     rating: r.rating,
     body: r.body,
+    buyerId: r.buyer_id,
     reviewerName: r.reviewer_name ?? "Cosora Buyer",
     reviewerCompany: r.reviewer_company,
     replyBody: r.reply_body,
@@ -91,6 +95,8 @@ export interface ProductReview {
   id: string;
   rating: number;
   body: string | null;
+  /** Author's uid — lets ProductDetail pre-fill "your" review for editing. */
+  buyerId: string | null;
   reviewerName: string;
   sizeBought: string | null;
   photos: string[];
@@ -108,6 +114,7 @@ interface RawProductReview {
   id: string;
   rating: number;
   body: string | null;
+  buyer_id: string | null;
   reviewer_name: string | null;
   size_bought: string | null;
   photos: string[] | null;
@@ -117,7 +124,7 @@ interface RawProductReview {
 async function fetchProductReviews(productId: string): Promise<ProductReviewsData> {
   const { data, error } = await supabase
     .from("product_reviews")
-    .select("id, rating, body, reviewer_name, size_bought, photos, created_at")
+    .select("id, rating, body, buyer_id, reviewer_name, size_bought, photos, created_at")
     .eq("product_id", productId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -126,6 +133,7 @@ async function fetchProductReviews(productId: string): Promise<ProductReviewsDat
     id: r.id,
     rating: r.rating,
     body: r.body,
+    buyerId: r.buyer_id,
     reviewerName: r.reviewer_name ?? "Cosora Buyer",
     sizeBought: r.size_bought,
     photos: r.photos ?? [],
@@ -160,6 +168,7 @@ interface RawServiceReview {
   id: string;
   rating: number;
   body: string | null;
+  buyer_id: string | null;
   reviewer_name: string | null;
   created_at: string;
 }
@@ -167,7 +176,7 @@ interface RawServiceReview {
 async function fetchServiceReviews(kind: ServiceKind, serviceId: string): Promise<ServiceReviewsData> {
   const { data, error } = await supabase
     .from("service_reviews")
-    .select("id, rating, body, reviewer_name, created_at")
+    .select("id, rating, body, buyer_id, reviewer_name, created_at")
     .eq("service_kind", kind)
     .eq("service_id", serviceId)
     .order("created_at", { ascending: false });
@@ -177,6 +186,7 @@ async function fetchServiceReviews(kind: ServiceKind, serviceId: string): Promis
     id: r.id,
     rating: r.rating,
     body: r.body,
+    buyerId: r.buyer_id,
     reviewerName: r.reviewer_name ?? "Cosora Buyer",
     reviewerCompany: null,
     replyBody: null,
@@ -206,6 +216,11 @@ export interface MyReviewItem {
   name: string;
   subtitle: string;
   image: string | null;
+  photos: string[];
+  /** Route back to the reviewed entity, or null when it's no longer reachable. */
+  href: string | null;
+  /** True when the subject row didn't come back (deleted, or no longer live). */
+  unavailable: boolean;
 }
 
 interface RawMyVendorReview {
@@ -213,6 +228,7 @@ interface RawMyVendorReview {
   rating: number;
   body: string | null;
   created_at: string;
+  vendor_id: string;
   vendor_profiles: { brand_name: string | null; city: string | null; business_type: string | null; logo_url: string | null } | null;
 }
 interface RawMyProductReview {
@@ -220,6 +236,8 @@ interface RawMyProductReview {
   rating: number;
   body: string | null;
   created_at: string;
+  product_id: string;
+  photos: string[] | null;
   products: { name: string | null; location: string | null; product_images: { url: string; position: number }[] | null } | null;
 }
 interface RawMyServiceReview {
@@ -228,8 +246,15 @@ interface RawMyServiceReview {
   body: string | null;
   created_at: string;
   service_kind: ServiceKind;
+  service_id: string;
   service_name: string | null;
 }
+
+const SERVICE_ROUTE: Record<ServiceKind, string> = {
+  service_vendor: "/services",
+  freelancer: "/freelancers",
+  photographer: "/cosora-studio",
+};
 
 const SERVICE_LABEL: Record<ServiceKind, string> = {
   service_vendor: "Service Vendor",
@@ -241,33 +266,45 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
   const [{ data: vendorRows, error: ve }, { data: productRows, error: pe }, { data: serviceRows, error: se }] = await Promise.all([
     supabase
       .from("reviews")
-      .select("id, rating, body, created_at, vendor_profiles ( brand_name, city, business_type, logo_url )")
+      .select("id, rating, body, created_at, vendor_id, vendor_profiles ( brand_name, city, business_type, logo_url )")
       .eq("buyer_id", buyerId),
     supabase
       .from("product_reviews")
-      .select("id, rating, body, created_at, products ( name, location, product_images ( url, position ) )")
+      .select("id, rating, body, created_at, product_id, photos, products ( name, location, product_images ( url, position ) )")
       .eq("buyer_id", buyerId),
     supabase
       .from("service_reviews")
-      .select("id, rating, body, created_at, service_kind, service_name")
+      .select("id, rating, body, created_at, service_kind, service_id, service_name")
       .eq("buyer_id", buyerId),
   ]);
   if (ve) throw ve;
   if (pe) throw pe;
   if (se) throw se;
 
-  const vendorItems: MyReviewItem[] = ((vendorRows ?? []) as unknown as RawMyVendorReview[]).map((r) => ({
-    kind: "vendor",
-    id: r.id,
-    rating: r.rating,
-    body: r.body,
-    createdAt: r.created_at,
-    name: r.vendor_profiles?.brand_name ?? "Vendor",
-    subtitle: [r.vendor_profiles?.business_type, r.vendor_profiles?.city].filter(Boolean).join(" · ") || "Vendor",
-    image: r.vendor_profiles?.logo_url ?? null,
-  }));
+  const vendorItems: MyReviewItem[] = ((vendorRows ?? []) as unknown as RawMyVendorReview[]).map((r) => {
+    // vendor_profiles is world-readable, so a null join means the vendor is gone.
+    const gone = !r.vendor_profiles;
+    return {
+      kind: "vendor",
+      id: r.id,
+      rating: r.rating,
+      body: r.body,
+      createdAt: r.created_at,
+      name: r.vendor_profiles?.brand_name ?? "Vendor no longer available",
+      subtitle: [r.vendor_profiles?.business_type, r.vendor_profiles?.city].filter(Boolean).join(" · ") || "Vendor",
+      image: r.vendor_profiles?.logo_url ?? null,
+      photos: [],
+      href: gone ? null : `/vendor/${r.vendor_id}`,
+      unavailable: gone,
+    };
+  });
 
   const productItems: MyReviewItem[] = ((productRows ?? []) as unknown as RawMyProductReview[]).map((r) => {
+    // `products_select` RLS is `status = 'live' OR own OR admin`, so a product
+    // that was unlisted or rejected comes back as a null join even though the
+    // review row is perfectly valid. Keep the review, say so plainly, and drop
+    // the dead link — never substitute an unrelated placeholder image.
+    const gone = !r.products;
     const cover = [...(r.products?.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url ?? null;
     return {
       kind: "product",
@@ -275,9 +312,12 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
       rating: r.rating,
       body: r.body,
       createdAt: r.created_at,
-      name: r.products?.name ?? "Product",
+      name: r.products?.name ?? "Product no longer available",
       subtitle: r.products?.location || "Product",
       image: cover,
+      photos: r.photos ?? [],
+      href: gone ? null : `/product/${r.product_id}`,
+      unavailable: gone,
     };
   });
 
@@ -290,6 +330,9 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
     name: r.service_name ?? SERVICE_LABEL[r.service_kind] ?? "Service",
     subtitle: SERVICE_LABEL[r.service_kind] ?? "Service",
     image: null,
+    photos: [],
+    href: SERVICE_ROUTE[r.service_kind] ? `${SERVICE_ROUTE[r.service_kind]}/${r.service_id}` : null,
+    unavailable: false,
   }));
 
   return [...vendorItems, ...productItems, ...serviceItems].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
@@ -302,6 +345,46 @@ export function useMyReviews() {
     queryFn: () => fetchMyReviews(user!.id),
     enabled: Boolean(user),
   });
+}
+
+// ── Review photos (product reviews only) ─────────────────────────────────
+/**
+ * A review photo is either an existing public URL (unchanged on edit) or a
+ * freshly picked File that still needs uploading.
+ */
+export type ReviewPhotoInput = File | string;
+
+/**
+ * Uploads the File entries and returns the final ordered URL list.
+ *
+ * Reuses the `product-images` bucket, exactly as `rfqs.ts` already does for
+ * buyer-uploaded RFQ reference images: its storage insert policy is
+ * uploader-scoped (`(storage.foldername(name))[1] = auth.uid()::text`), not
+ * vendor-scoped, so a buyer may write under their own uid folder, and the
+ * bucket is public so everyone can read the photos back on the product page.
+ * No new bucket and no migration needed.
+ */
+async function uploadReviewPhotos(buyerId: string, photos: ReviewPhotoInput[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const entry of photos) {
+    if (typeof entry === "string") {
+      urls.push(entry);
+      continue;
+    }
+    const ext = entry.name.split(".").pop()?.toLowerCase() || "jpg";
+    // Random per-upload key: keeps the path stable-free so replacing a photo
+    // never serves a stale CDN object from a reused path, and means the edit
+    // path doesn't need to know which product the review belongs to.
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const path = `${buyerId}/reviews/${key}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, entry, {
+      upsert: true,
+      contentType: entry.type || undefined,
+    });
+    if (error) throw error;
+    urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
+  }
+  return urls;
 }
 
 // ── Mutations ────────────────────────────────────────────────────────────
@@ -375,9 +458,13 @@ export function useReviewMutations() {
   );
 
   // Buyer creates or edits their review of a product (unique per product+buyer).
+  // `photos` mixes already-uploaded URLs with newly picked Files; passing
+  // undefined leaves the stored photos untouched.
   const submitProductReview = useCallback(
-    async (productId: string, rating: number, body: string) => {
+    async (productId: string, rating: number, body: string, photos?: ReviewPhotoInput[]) => {
       const reviewer = await resolveReviewer();
+      // undefined => leave stored photos alone; [] => explicitly clear them.
+      const uploaded = photos ? await uploadReviewPhotos(user!.id, photos) : undefined;
       const { error } = await supabase.from("product_reviews").upsert(
         {
           product_id: productId,
@@ -385,6 +472,7 @@ export function useReviewMutations() {
           rating,
           body: body.trim() || null,
           reviewer_name: reviewer.name,
+          ...(uploaded ? { photos: uploaded } : {}),
         },
         { onConflict: "product_id,buyer_id" },
       );
@@ -395,12 +483,17 @@ export function useReviewMutations() {
   );
 
   const updateProductReview = useCallback(
-    async (id: string, rating: number, body: string) => {
-      const { error } = await supabase.from("product_reviews").update({ rating, body: body.trim() || null }).eq("id", id);
+    async (id: string, rating: number, body: string, photos?: ReviewPhotoInput[]) => {
+      if (!user) throw new Error("Please sign in to edit your review");
+      const uploaded = photos ? await uploadReviewPhotos(user.id, photos) : undefined;
+      const { error } = await supabase
+        .from("product_reviews")
+        .update({ rating, body: body.trim() || null, ...(uploaded ? { photos: uploaded } : {}) })
+        .eq("id", id);
       if (error) throw error;
       invalidate();
     },
-    [invalidate],
+    [user, invalidate],
   );
 
   const removeProductReview = useCallback(

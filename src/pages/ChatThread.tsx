@@ -443,10 +443,10 @@ interface ReportModalProps {
 }
 
 /**
- * Real report submission. The reason list stays a UI-only triage prompt:
- * submit_report(conversation_id, message_id) takes no reason, because
- * conversation_reviews.reason_id points at the admin-curated
- * chat_block_reasons table, which is not this list.
+ * Real report submission. The selected reason is sent through to
+ * submit_report() and stored verbatim on conversation_reviews.reported_reason
+ * (migration 20260801154739) — it is what the reporter CLAIMED, and stays
+ * distinct from reason_id, the admin's later verdict from chat_block_reasons.
  *
  * The confirmation screen is only reached once the RPC has actually succeeded —
  * telling someone their report was filed when it was not is the one failure
@@ -464,7 +464,7 @@ function ReportModal({ open, onClose, name, onBlock, conversationId, messageId, 
     if (!conversationId) { setError("This chat isn't ready yet. Please try again in a moment."); return; }
     setPending(reason);
     setError(null);
-    const ok = await submitReport(conversationId, messageId);
+    const ok = await submitReport(conversationId, messageId, reason);
     setPending(null);
     if (!ok) { setError("We couldn't submit your report. Please try again."); return; }
     setDone(true);

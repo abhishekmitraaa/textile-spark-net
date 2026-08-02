@@ -3,12 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  ArrowLeft, Star, MoreVertical, Pencil, Trash2, Store, Package,
-  Sparkles, X, MessageSquarePlus,
+  ArrowLeft, MoreVertical, Pencil, Trash2, Store, Package,
+  Sparkles, X, MessageSquarePlus, ChevronRight, AlertCircle, LogIn,
 } from "lucide-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useMyReviews, useReviewMutations, type MyReviewItem } from "@/lib/queries/reviews";
-import { img } from "@/lib/listingProducts";
+import { StarRating, StarPicker } from "@/components/reviews/StarRating";
+import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
+import { ReviewPhotoPicker, type ReviewPhoto } from "@/components/reviews/ReviewPhotoPicker";
+import { useAuth } from "@/contexts/AuthContext";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -28,39 +31,33 @@ interface MyReview {
   name: string;
   type: ReviewType;
   subtitle: string;
-  image: string;
+  image: string | null;
   rating: number;
   date: string;
   text: string;
+  photos: string[];
+  href: string | null;
+  unavailable: boolean;
 }
 
-// A buyer's real review (vendor or product) mapped into this page's display shape.
+// A buyer's real review (vendor, product or service) in this page's display shape.
 function mapMyReview(r: MyReviewItem): MyReview {
   return {
     id: r.id,
     name: r.name,
     type: r.kind === "product" ? "Product" : r.kind === "service" ? "Service" : "Vendor",
     subtitle: r.subtitle,
-    image: r.image || img(`${r.kind}-${r.id}`, 200, 200),
+    // Deliberately no placeholder-image fallback: this used to substitute a
+    // random picsum photo, which showed a real review of a real product next to
+    // an unrelated stock image. A neutral tile is honest; a wrong photo isn't.
+    image: r.image,
     rating: r.rating,
     date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     text: r.body ?? "",
+    photos: r.photos,
+    href: r.href,
+    unavailable: r.unavailable,
   };
-}
-
-function Stars({ value, className = "" }: { value: number; className?: string }) {
-  return (
-    <div className={`flex items-center gap-0.5 ${className}`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <Star
-          key={n}
-          className="w-3.5 h-3.5"
-          style={{ color: n <= value ? "#f5a623" : "#e5e7eb" }}
-          fill={n <= value ? "#f5a623" : "#e5e7eb"}
-        />
-      ))}
-    </div>
-  );
 }
 
 const TYPE_META: Record<ReviewType, { icon: typeof Store; tint: string }> = {
@@ -71,20 +68,34 @@ const TYPE_META: Record<ReviewType, { icon: typeof Store; tint: string }> = {
 
 const FILTERS: ("All" | ReviewType)[] = ["All", "Vendor", "Product", "Service"];
 
-// Interactive star picker used in the edit sheet.
-function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
-  const [hover, setHover] = useState(0);
+/** Neutral tile for a review whose subject has no image (or is gone). */
+function SubjectThumb({ review, size = "w-11 h-11" }: { review: MyReview; size?: string }) {
+  const Icon = TYPE_META[review.type].icon;
+  if (review.image) {
+    return <img src={review.image} alt="" className={`${size} rounded-xl object-cover shrink-0 bg-gray-100`} />;
+  }
   return (
-    <div className="flex items-center gap-1.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <button key={n} type="button"
-          onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}
-          onClick={() => onChange(n)} className="p-0.5">
-          <Star className="w-7 h-7 transition-colors"
-            style={{ color: n <= (hover || value) ? "#f5a623" : "#d1d5db" }}
-            fill={n <= (hover || value) ? "#f5a623" : "#d1d5db"} />
-        </button>
-      ))}
+    <div className={`${size} rounded-xl shrink-0 bg-gray-100 flex items-center justify-center`}>
+      <Icon className="w-4 h-4 text-gray-400" />
+    </div>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-4 animate-pulse">
+      <div className="flex items-start gap-3">
+        <div className="w-11 h-11 rounded-xl bg-gray-100 shrink-0" />
+        <div className="flex-1 space-y-2">
+          <div className="h-3.5 w-2/5 rounded bg-gray-100" />
+          <div className="h-2.5 w-1/4 rounded bg-gray-100" />
+          <div className="h-2.5 w-1/3 rounded bg-gray-100" />
+        </div>
+      </div>
+      <div className="mt-3 space-y-2">
+        <div className="h-3 w-full rounded bg-gray-100" />
+        <div className="h-3 w-3/4 rounded bg-gray-100" />
+      </div>
     </div>
   );
 }
@@ -92,7 +103,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
 const MyReviews = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { data: raw = [] } = useMyReviews();
+  const { user, loading: authLoading } = useAuth();
+  const { data: raw = [], isPending, isError, error, refetch } = useMyReviews();
   const {
     updateReview, removeReview,
     updateProductReview, removeProductReview,
@@ -103,6 +115,7 @@ const MyReviews = () => {
   const [editing, setEditing] = useState<MyReview | null>(null);
   const [draftRating, setDraftRating] = useState(5);
   const [draftText, setDraftText] = useState("");
+  const [draftPhotos, setDraftPhotos] = useState<ReviewPhoto[]>([]);
   const [saving, setSaving] = useState(false);
 
   const reviews = useMemo(() => raw.map(mapMyReview), [raw]);
@@ -120,6 +133,7 @@ const MyReviews = () => {
     setEditing(r);
     setDraftRating(r.rating);
     setDraftText(r.text);
+    setDraftPhotos(r.photos);
     setMenuFor(null);
   };
 
@@ -127,9 +141,13 @@ const MyReviews = () => {
     if (!editing) return;
     setSaving(true);
     try {
-      const update =
-        editing.type === "Product" ? updateProductReview : editing.type === "Service" ? updateServiceReview : updateReview;
-      await update(editing.id, draftRating, draftText);
+      if (editing.type === "Product") {
+        await updateProductReview(editing.id, draftRating, draftText, draftPhotos);
+      } else if (editing.type === "Service") {
+        await updateServiceReview(editing.id, draftRating, draftText);
+      } else {
+        await updateReview(editing.id, draftRating, draftText);
+      }
       setEditing(null);
       toast.success("Review updated");
     } catch (e) {
@@ -150,6 +168,158 @@ const MyReviews = () => {
     }
   };
 
+  // Signed out, loading, failed and genuinely-empty are four different things.
+  // They used to all render the same "No reviews here yet" copy, which made a
+  // broken page indistinguishable from a working one.
+  const signedOut = !authLoading && !user;
+  const showSkeletons = authLoading || (Boolean(user) && isPending);
+
+  const body = () => {
+    if (signedOut) {
+      return (
+        <div className="mt-16 flex flex-col items-center text-center px-6">
+          <div className="w-16 h-16 rounded-full bg-[#ef4d62]/10 flex items-center justify-center mb-4">
+            <LogIn className="w-7 h-7 text-[#ef4d62]" />
+          </div>
+          <p className="text-base font-bold text-gray-900">Sign in to see your reviews</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-xs">
+            Your reviews of vendors, products and services are saved to your account.
+          </p>
+          <button onClick={() => navigate("/login")}
+            className="mt-5 px-5 py-2.5 rounded-xl text-white text-sm font-bold" style={{ backgroundColor: CORAL }}>
+            Sign in
+          </button>
+        </div>
+      );
+    }
+
+    if (showSkeletons) {
+      return (
+        <div className="space-y-3">
+          {[0, 1, 2].map((i) => <SkeletonCard key={i} />)}
+        </div>
+      );
+    }
+
+    if (isError) {
+      return (
+        <div className="mt-16 flex flex-col items-center text-center px-6">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center mb-4">
+            <AlertCircle className="w-7 h-7 text-red-500" />
+          </div>
+          <p className="text-base font-bold text-gray-900">Couldn't load your reviews</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-xs">
+            {error instanceof Error ? error.message : "Something went wrong. Please try again."}
+          </p>
+          <button onClick={() => refetch()}
+            className="mt-5 px-5 py-2.5 rounded-xl text-white text-sm font-bold" style={{ backgroundColor: CORAL }}>
+            Retry
+          </button>
+        </div>
+      );
+    }
+
+    if (visible.length === 0) {
+      return (
+        <div className="mt-16 flex flex-col items-center text-center px-6">
+          <div className="w-16 h-16 rounded-full bg-[#ef4d62]/10 flex items-center justify-center mb-4">
+            <MessageSquarePlus className="w-7 h-7 text-[#ef4d62]" />
+          </div>
+          <p className="text-base font-bold text-gray-900">No reviews here yet</p>
+          <p className="text-sm text-gray-500 mt-1 max-w-xs">
+            {filter === "All"
+              ? "Once you review vendors, products or services, they'll show up here."
+              : `You haven't reviewed any ${filter.toLowerCase()}s yet.`}
+          </p>
+          <button onClick={() => navigate("/home/new-arrivals")}
+            className="mt-5 px-5 py-2.5 rounded-xl text-white text-sm font-bold" style={{ backgroundColor: CORAL }}>
+            Explore products
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <motion.div variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="space-y-3">
+        <AnimatePresence initial={false}>
+          {visible.map((r) => {
+            const meta = TYPE_META[r.type];
+            const Icon = meta.icon;
+            return (
+              <motion.div
+                key={r.id}
+                variants={listItem}
+                layout
+                exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
+                className="rounded-2xl border border-gray-200 bg-white p-4"
+              >
+                <div className="flex items-start gap-3">
+                  <SubjectThumb review={r} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <p className={`text-sm font-bold truncate ${r.unavailable ? "text-gray-400 italic" : "text-gray-900"}`}>
+                        {r.name}
+                      </p>
+                      <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${meta.tint}`}>
+                        <Icon className="w-2.5 h-2.5" /> {r.type}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400 truncate">{r.subtitle}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <StarRating value={r.rating} />
+                      <span className="text-[11px] text-gray-400">· {r.date}</span>
+                    </div>
+                  </div>
+
+                  {/* Kebab menu */}
+                  <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <button onClick={() => setMenuFor(menuFor === r.id ? null : r.id)}
+                      className="p-1.5 -mr-1 text-gray-400 hover:text-gray-700 rounded-lg" aria-label="Options">
+                      <MoreVertical className="w-4 h-4" />
+                    </button>
+                    <AnimatePresence>
+                      {menuFor === r.id && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.94, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.94, y: -4 }}
+                          transition={{ duration: 0.14, ease: E }}
+                          className="absolute right-0 top-8 z-10 w-36 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
+                        >
+                          <button onClick={() => openEdit(r)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                            <Pencil className="w-4 h-4" /> Edit
+                          </button>
+                          <button onClick={() => remove(r)}
+                            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </div>
+
+                {r.text && <p className="text-sm text-gray-600 leading-relaxed mt-3">{r.text}</p>}
+
+                <ReviewPhotoStrip photos={r.photos} className="mt-3" />
+
+                {r.href && (
+                  <button
+                    onClick={() => navigate(r.href!)}
+                    className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-[#ef4d62] hover:underline"
+                  >
+                    View {r.type.toLowerCase()} <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
+      </motion.div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50" onClick={() => setMenuFor(null)}>
       {/* Header */}
@@ -163,122 +333,43 @@ const MyReviews = () => {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-28">
-        {/* Summary */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-center gap-5 mb-4">
-          <div className="text-center shrink-0">
-            <p className="text-3xl font-extrabold text-gray-900 leading-none">{reviews.length}</p>
-            <p className="text-[11px] text-gray-500 mt-1">Reviews written</p>
-          </div>
-          <div className="w-px self-stretch bg-gray-100" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-extrabold text-gray-900 leading-none">{avg}</span>
-              <Stars value={Math.round(Number(avg))} />
+        {/* Summary + filters only make sense once we have data to describe. */}
+        {!signedOut && !isError && !showSkeletons && (
+          <>
+            <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-center gap-5 mb-4">
+              <div className="text-center shrink-0">
+                <p className="text-3xl font-extrabold text-gray-900 leading-none">{reviews.length}</p>
+                <p className="text-[11px] text-gray-500 mt-1">Reviews written</p>
+              </div>
+              <div className="w-px self-stretch bg-gray-100" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-extrabold text-gray-900 leading-none">{avg}</span>
+                  <StarRating value={Math.round(Number(avg))} />
+                </div>
+                <p className="text-[11px] text-gray-500 mt-1.5">Average rating you've given to vendors, products &amp; services</p>
+              </div>
             </div>
-            <p className="text-[11px] text-gray-500 mt-1.5">Average rating you've given to vendors, products & services</p>
-          </div>
-        </div>
 
-        {/* Filters */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-3">
-          {FILTERS.map((f) => {
-            const active = filter === f;
-            const count = f === "All" ? reviews.length : reviews.filter((r) => r.type === f).length;
-            return (
-              <button key={f} onClick={() => setFilter(f)}
-                className={`shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                  active ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
-                }`}
-                style={active ? { backgroundColor: CORAL } : undefined}>
-                {f === "All" ? "All" : `${f}s`} <span className={active ? "opacity-80" : "text-gray-400"}>{count}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* List */}
-        {visible.length === 0 ? (
-          <div className="mt-16 flex flex-col items-center text-center px-6">
-            <div className="w-16 h-16 rounded-full bg-[#ef4d62]/10 flex items-center justify-center mb-4">
-              <MessageSquarePlus className="w-7 h-7 text-[#ef4d62]" />
-            </div>
-            <p className="text-base font-bold text-gray-900">No reviews here yet</p>
-            <p className="text-sm text-gray-500 mt-1 max-w-xs">
-              {filter === "All"
-                ? "Once you review vendors, products or services, they'll show up here."
-                : `You haven't reviewed any ${filter.toLowerCase()}s yet.`}
-            </p>
-            <button onClick={() => navigate("/home/new-arrivals")}
-              className="mt-5 px-5 py-2.5 rounded-xl text-white text-sm font-bold" style={{ backgroundColor: CORAL }}>
-              Explore products
-            </button>
-          </div>
-        ) : (
-          <motion.div variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="space-y-3">
-            <AnimatePresence initial={false}>
-              {visible.map((r) => {
-                const meta = TYPE_META[r.type];
-                const Icon = meta.icon;
+            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 mb-3">
+              {FILTERS.map((f) => {
+                const active = filter === f;
+                const count = f === "All" ? reviews.length : reviews.filter((r) => r.type === f).length;
                 return (
-                  <motion.div
-                    key={r.id}
-                    variants={listItem}
-                    layout
-                    exit={{ opacity: 0, scale: 0.96, transition: { duration: 0.18 } }}
-                    className="rounded-2xl border border-gray-200 bg-white p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <img src={r.image} alt="" className="w-11 h-11 rounded-xl object-cover shrink-0 bg-gray-100" />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="text-sm font-bold text-gray-900 truncate">{r.name}</p>
-                          <span className={`shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${meta.tint}`}>
-                            <Icon className="w-2.5 h-2.5" /> {r.type}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-gray-400 truncate">{r.subtitle}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <Stars value={r.rating} />
-                          <span className="text-[11px] text-gray-400">· {r.date}</span>
-                        </div>
-                      </div>
-
-                      {/* Kebab menu */}
-                      <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
-                        <button onClick={() => setMenuFor(menuFor === r.id ? null : r.id)}
-                          className="p-1.5 -mr-1 text-gray-400 hover:text-gray-700 rounded-lg" aria-label="Options">
-                          <MoreVertical className="w-4 h-4" />
-                        </button>
-                        <AnimatePresence>
-                          {menuFor === r.id && (
-                            <motion.div
-                              initial={{ opacity: 0, scale: 0.94, y: -4 }}
-                              animate={{ opacity: 1, scale: 1, y: 0 }}
-                              exit={{ opacity: 0, scale: 0.94, y: -4 }}
-                              transition={{ duration: 0.14, ease: E }}
-                              className="absolute right-0 top-8 z-10 w-36 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden"
-                            >
-                              <button onClick={() => openEdit(r)}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
-                                <Pencil className="w-4 h-4" /> Edit
-                              </button>
-                              <button onClick={() => remove(r)}
-                                className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-red-600 hover:bg-red-50 border-t border-gray-100">
-                                <Trash2 className="w-4 h-4" /> Delete
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-gray-600 leading-relaxed mt-3">{r.text}</p>
-                  </motion.div>
+                  <button key={f} onClick={() => setFilter(f)}
+                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
+                      active ? "text-white border-transparent" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                    }`}
+                    style={active ? { backgroundColor: CORAL } : undefined}>
+                    {f === "All" ? "All" : `${f}s`} <span className={active ? "opacity-80" : "text-gray-400"}>{count}</span>
+                  </button>
                 );
               })}
-            </AnimatePresence>
-          </motion.div>
+            </div>
+          </>
         )}
+
+        {body()}
       </div>
 
       {/* Edit sheet */}
@@ -290,7 +381,7 @@ const MyReviews = () => {
             onClick={() => setEditing(null)}
           >
             <motion.div
-              className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl p-5"
+              className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
               initial={reduced ? { opacity: 0 } : { y: "100%" }}
               animate={{ y: 0, opacity: 1 }}
               exit={reduced ? { opacity: 0 } : { y: "100%" }}
@@ -305,7 +396,7 @@ const MyReviews = () => {
               </div>
 
               <div className="flex items-center gap-3 mb-4">
-                <img src={editing.image} alt="" className="w-10 h-10 rounded-lg object-cover bg-gray-100" />
+                <SubjectThumb review={editing} size="w-10 h-10" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">{editing.name}</p>
                   <p className="text-[11px] text-gray-400 truncate">{editing.subtitle}</p>
@@ -323,6 +414,14 @@ const MyReviews = () => {
                 className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 focus:outline-none focus:border-[#ef4d62] resize-none"
                 placeholder="Share your experience…"
               />
+
+              {/* photos exist on product_reviews only */}
+              {editing.type === "Product" && (
+                <>
+                  <p className="text-xs font-semibold text-gray-500 mt-4 mb-1.5">Photos</p>
+                  <ReviewPhotoPicker photos={draftPhotos} onChange={setDraftPhotos} disabled={saving} />
+                </>
+              )}
 
               <div className="flex gap-3 mt-5">
                 <button onClick={() => setEditing(null)}

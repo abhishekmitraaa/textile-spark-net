@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useServiceReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
+import { StarRating } from "@/components/reviews/StarRating";
 import {
   Camera,
   Star,
@@ -222,8 +225,18 @@ const PhotographerProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const photographer = allPhotographers.find((p) => p.id === Number(id));
+
+  // Real reviews. Photographers are still client-side seed data, so these key
+  // off the seed id via service_reviews (service_id is text, no FK), same as
+  // the service-vendor and freelancer profiles. Read and write must use the
+  // same canonical id — the seed's own, not the raw route param.
+  const serviceId = photographer ? String(photographer.id) : undefined;
+  const { data: svcReviews } = useServiceReviews("photographer", serviceId);
+  const { submitServiceReview } = useReviewMutations();
+  const hasRealReviews = (svcReviews?.count ?? 0) > 0;
 
   if (!photographer) {
     return (
@@ -238,6 +251,11 @@ const PhotographerProfile = () => {
       </DashboardLayout>
     );
   }
+
+  // Fall back to the seed aggregate until this photographer has real reviews,
+  // matching ServiceVendorProfile / FreelancerProfile.
+  const displayRating = hasRealReviews ? svcReviews!.avg : photographer.rating;
+  const displayCount = hasRealReviews ? svcReviews!.count : photographer.reviews;
 
   return (
     <DashboardLayout>
@@ -265,7 +283,7 @@ const PhotographerProfile = () => {
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {photographer.location}</span>
-              <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-accent text-accent" /> {photographer.rating} ({photographer.reviews} reviews)</span>
+              <span className="flex items-center gap-1"><Star className="h-4 w-4 fill-accent text-accent" /> {displayRating} ({displayCount} reviews)</span>
               <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {photographer.turnaround} delivery</span>
               <span className="flex items-center gap-1"><Award className="h-4 w-4" /> {photographer.experience}</span>
             </div>
@@ -368,7 +386,46 @@ const PhotographerProfile = () => {
             </div>
           </div>
         )}
+
+        {/* Reviews */}
+        <div>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-foreground">Reviews</h2>
+            <Button size="sm" onClick={() => setReviewOpen(true)} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              Write a Review
+            </Button>
+          </div>
+
+          {hasRealReviews ? (
+            <div className="space-y-3">
+              {svcReviews!.reviews.map((r) => (
+                <div key={r.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-semibold text-foreground">{r.reviewerName}</p>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                    </span>
+                  </div>
+                  <StarRating value={r.rating} className="mt-1.5" />
+                  {r.body && <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{r.body}</p>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-border bg-card py-6 text-center text-sm text-muted-foreground">
+              No reviews yet. Be the first to review this studio.
+            </p>
+          )}
+        </div>
       </div>
+
+      <WriteReviewModal
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        subjectName={photographer.name}
+        placeholder="Share details about the shoot quality, communication and delivery…"
+        onSubmit={(rating, text) => submitServiceReview("photographer", serviceId!, photographer.name, rating, text)}
+      />
 
       {/* Lightbox */}
       {selectedImage && (

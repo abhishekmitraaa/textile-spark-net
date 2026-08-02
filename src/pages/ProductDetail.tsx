@@ -12,6 +12,9 @@ import {
   useYouMightLike, useVendorOtherProducts, type ProductCardData,
 } from "@/lib/queries/products";
 import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
+import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
+import { useAuth } from "@/contexts/AuthContext";
 import { useCallVendor } from "@/lib/queries/calls";
 import { recordView } from "@/lib/recentlyViewedStore";
 import { toast } from "sonner";
@@ -212,62 +215,8 @@ function ReviewCard({ review }: { review: Review }) {
       </div>
       {review.comment && <p className="mt-1.5 text-sm text-gray-700 leading-relaxed">{review.comment}</p>}
       {review.sizeBought && <p className="mt-1.5 inline-block rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Size bought: {review.sizeBought}</p>}
-      {review.photos.length > 0 && (
-        <div className="mt-2.5 flex gap-2">
-          {review.photos.map((photo, idx) => (
-            <div key={idx} className="h-16 w-16 overflow-hidden rounded-lg bg-gray-100"><img src={photo} alt="Review" className="h-full w-full object-cover" /></div>
-          ))}
-        </div>
-      )}
+      <ReviewPhotoStrip photos={review.photos} className="mt-2.5" />
     </div>
-  );
-}
-
-// === Write a Review modal ===
-function WriteReviewModal({ open, onClose, onSubmit }: { open: boolean; onClose: () => void; onSubmit: (rating: number, text: string) => Promise<void> }) {
-  const [rating, setRating] = useState(0);
-  const [hover, setHover] = useState(0);
-  const [text, setText] = useState("");
-  const [saving, setSaving] = useState(false);
-  useEffect(() => { if (open) { setRating(0); setHover(0); setText(""); setSaving(false); } }, [open]);
-  const submit = async () => {
-    if (rating === 0) { toast.error("Please pick a star rating"); return; }
-    setSaving(true);
-    try {
-      await onSubmit(rating, text);
-      toast.success("Thanks! Your review has been submitted");
-      onClose();
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not submit your review");
-      setSaving(false);
-    }
-  };
-  return (
-    <AnimatePresence>
-      {open && (
-        <motion.div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose}>
-          <motion.div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl p-5"
-            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 28 }} onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-base font-bold text-gray-900">Write a Review</h3>
-              <button onClick={onClose} aria-label="Close"><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <div className="flex items-center gap-1.5 mb-4">
-              {[1, 2, 3, 4, 5].map((s) => (
-                <button key={s} onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)} onClick={() => setRating(s)} aria-label={`${s} star`}>
-                  <Star className={cn("w-8 h-8 transition-colors", (hover || rating) >= s ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />
-                </button>
-              ))}
-            </div>
-            <textarea rows={4} value={text} onChange={(e) => setText(e.target.value)} placeholder="Share your experience with this product…"
-              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]" />
-            <button onClick={submit} disabled={saving} className="mt-3 w-full rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors">{saving ? "Submitting…" : "Submit Review"}</button>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
   );
 }
 
@@ -392,7 +341,13 @@ const ProductDetail = () => {
   // mock template so non-DB demo products still render a populated section.
   const { data: productReviews } = useProductReviews(row?.id);
   const { submitProductReview } = useReviewMutations();
+  const { user } = useAuth();
   const hasRealReviews = (productReviews?.count ?? 0) > 0;
+  // product_reviews.product_id is a real FK, so only a live DB product can be
+  // reviewed. Hide the CTA on mock/demo products instead of letting the submit
+  // fail after the buyer has typed their review.
+  const canReview = Boolean(row?.id);
+  const myReview = (productReviews?.reviews ?? []).find((r) => r.buyerId && r.buyerId === user?.id);
 
   // Real recommendation strips. "You might also like" = the buyer's preferred
   // categories (fallback: this product's category); "Brand Picks" = the same
@@ -689,7 +644,11 @@ const ProductDetail = () => {
             <div className={card}>
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-900">Customer Reviews</h3>
-                <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">Write a Review</button>
+                {canReview && (
+                  <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">
+                    {myReview ? "Edit your Review" : "Write a Review"}
+                  </button>
+                )}
               </div>
               {reviewCards.length > 0 ? (
                 <div className="space-y-4">{reviewCards.map((r) => <ReviewCard key={r.id} review={r} />)}</div>
@@ -749,9 +708,15 @@ const ProductDetail = () => {
       <WriteReviewModal
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        onSubmit={(rating, text) => {
+        subjectName={product.name}
+        allowPhotos
+        initialRating={myReview?.rating ?? 0}
+        initialBody={myReview?.body ?? ""}
+        initialPhotos={myReview?.photos}
+        placeholder="Share your experience with this product…"
+        onSubmit={(rating, text, photos) => {
           if (!row?.id) throw new Error("Reviews are available on live products only");
-          return submitProductReview(row.id, rating, text);
+          return submitProductReview(row.id, rating, text, photos);
         }}
       />
 
