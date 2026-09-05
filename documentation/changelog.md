@@ -1,3 +1,81 @@
+- 2026-09-05: **Chat pipeline tested at both layers for the first time — and the UI layer was hiding a blank page.** New `playwright.config.ts`, `tests/chat-pipeline.spec.ts`, `tests/admin-chat-moderation.spec.ts`, `screenshots/chat-pipeline/`; new `supabase/migrations/20260905120000_notifications_read_only_except_read_flag.sql`; `src/lib/queries/notifications.ts`, `documentation/test.md`. In Cosora-Admin: new `scripts/chat-pipeline-matrix.mjs`, `scripts/seed-chat-fixtures.sql`, `scripts/drop-chat-fixtures.sql`, and a fix to `scripts/seed-test-admins.sql`. 72 DB cases + 9 Playwright cases, T1–T13.
+  - **`/notifications` was a white screen, and every database check said it was fine.** Opening the page threw *"cannot add `postgres_changes` callbacks for realtime:notifications:&lt;uid&gt; after `subscribe()`"*; the error escaped the effect, killed the React tree, and rendered an empty body. `supabase.channel(name)` **returns an existing channel** when one with that topic is open, and two components use `useNotifications()` at once on that route — `DashboardHeader` via `useUnreadCount()`, and the page itself — so the second mount called `.on()` on the first mount's already-subscribed channel. React 18 StrictMode's double-invoked effects reach it alone. Fixed with a per-instance channel topic; React Query already dedupes the data, so the only cost is a second socket.
+  - **This is the exact failure this pass existed to find.** `notifications-check.mjs` passed 6/6 earlier the same day, the rows were correct in the table throughout, and the RLS was right. Nobody had opened the page in a browser. A feature is not verified until both layers are.
+  - **A client can rewrite its own notification's `title`, `body` and `kind`.** `notifications_mark_read` constrains WHICH ROW (`profile_id = auth.uid()`) and says nothing about WHICH COLUMN. Confirmed with a real login: the row came back reading `title = "TAMPERED"`, `kind = "account_reinstated"`. That matters because the table has **no INSERT policy for any role** and `notify()` has no EXECUTE grant, precisely so a client cannot manufacture *"Your account has been reinstated"* — unconstrained UPDATE hands that back through the side door, same row. Fix written as a BEFORE UPDATE trigger (RLS sees rows, not columns — the same division of labour `products.status`, `profiles.account_status` and `conversations.status` already use). **The migration is NOT applied**: the Supabase MCP connection dropped mid-pass and neither repo holds a service-role key, by design. Left as a FAIL in `documentation/test.md` rather than marked PASS on the strength of the fix looking right.
+  - **The test harness poisoned its own probes, twice, before it found anything real.** `TAG` was `chatfx-${Date.now()}` — a 13-digit timestamp contains a 10-digit run starting 6-9, which is exactly what the seeded *Indian mobile number* pattern matches (`select 'chatfx-1788604604310' ~* '(\+?91[\-\s]?)?[6-9]\d{9}\y'` → **true**). Every T3 probe was flagged by the phone pattern first, and first-match-wins filed the review against the wrong pattern id. A fixture must not be matchable by the rules it is testing. Separately, T2 did not unlock the thread first, so a lock left by an earlier run made an RLS refusal indistinguishable from a blocklist hit — both are `42501` — and three cases failed for a reason that had nothing to do with the blocklist.
+  - **Two assertions were passing without testing anything.** T7.6b set `conversations.status` to the value the row already held, so `enforce_conversation_status`'s `is distinct from` guard never fired, the UPDATE was a legal no-op, and 1 row came back looking like a successful bypass. And T2.6/T3 counted `conversation_reviews` absolutely, which measures history rather than the test — that table has no DELETE policy for any client, so earlier runs' rows cannot be cleared. Both now assert deltas across a single action.
+  - **`seed-test-admins.sql` could not run at all.** It inserted `vendor_profiles.account_status`, a column `20260801095820` dropped — so the repo's own fixture seeder had been broken since that migration landed.
+  - **The suspension scope regression is now guarded.** T8 suspends a vendor holding a **live** product, an **active** ad and an existing review, and asserts none of them is hidden, paused or altered — `product live→live, ad active→active, review intact`. That is the distinction that makes the current INSERT-only scope safe, and the exact thing a later "helpful" widening to UPDATE would silently break by taking down a paying vendor's campaign. The fixture carries a **live gold subscription** for the same reason: without it `enforce_plan_limits` raises `P0001` from a BEFORE trigger before RLS is consulted, and the advertisement case reports DENY whether or not the gate works.
+  - **The `p_resume` trap is real, and the UI does not fall into it.** `resolve_conversation_review(verdict='resumed')` with `p_resume` omitted leaves the thread `under_review` (T6.3b) — the function's default is FALSE. The admin Resume button was then driven for real and `conversations.status` read back out of the database afterwards: it returns to `active` (T6.3). A UI that forgot the flag would have shown the same success toast over a still-locked thread.
+  - **Everything else held.** Blocklist is a hard stop with no review trail and no lock; regex flags keep the message and file exactly one review; `reported_reason` is stored verbatim with `reason_id` left null; double-resolve raises `P0002`; `account_suspensions` is genuinely append-only for every role including super_admin; nobody — owner, admin, or plain user — can UPDATE `conversations.status` or `profiles.account_status` directly, or UPDATE/DELETE `messages`; suspension and conversation lock are still independent axes; contact details are gated in all four states with registry data still visible; and the four non-chat admin roles are refused both in the nav and by direct API call.
+  - **Behaviour newly documented rather than assumed:** reporting an already-locked conversation **succeeds and files a second review row** (T4.3). Defensible — two complaints are two facts — but one thread can accumulate many pending reviews and the queue shows each.
+  - **Re-confirmed, not assumed:** `useCallBuyer()` still deliberately does not log to `calls` (its insert policy is `buyer_id = auth.uid()`, unsatisfiable by a vendor caller); there is still no buyer-side contact card to mirror the vendor one; seed service vendors and freelancers still have no `profiles` row and so are still not suspension-gated (R-23). No other asymmetry appeared — every buyer→vendor case has a vendor→buyer twin with an identical result.
+  - **Test hygiene.** Dedicated fixtures only (`chatfx-*@cosora.test`, ids `cf00000*`), never the demo accounts — `messages` has no DELETE policy for any role, so every probe message is permanent, and a crashed run would leave a demo account suspended. Blocklist terms were throwaway and deleted; the production blocklist is still empty as designed. Final state verified: 0 blocklist terms, 3 flag patterns, 7 block reasons, 0 suspended profiles anywhere, 0 locked conversations anywhere, 0 pending reviews.
+  - **Outstanding, needs a service-role session:** apply `20260905120000`, re-run `node Cosora-Admin/scripts/chat-pipeline-matrix.mjs`, flip T10.3 only if it passes — then run `Cosora-Admin/scripts/drop-chat-fixtures.sql` and `drop-test-admins.sql`. The fixture and `rlstest-*` accounts are still in the live database, and they are logins with a known password.
+  - `tests/new-arrivals.spec.ts` still fails on its own pre-existing reason (no `[role="tab"]` on `/home/new-arrivals`), unchanged by the new config and already recorded as failing.
+# Changelog
+
+Reverse-chronological log of every change, maintained automatically after every
+prompt/session that changes anything — no manual request needed.
+
+Entry format:
+
+```
+## YYYY-MM-DD — <short title>
+- What changed:
+- Why:
+- Files touched:
+```
+
+> **Note on older entries.** Everything below the 2026-09-05 entry predates this format and
+> is kept verbatim as `- YYYY-MM-DD: <title>` with nested bullets. It is still
+> reverse-chronological. Do not reformat it; write new entries in the format above.
+
+---
+
+## 2026-09-05 — Documentation system moved into `documentation/`
+
+- **What changed:** Introduced a persistent documentation system. Created
+  `documentation/` at the repo root; `git mv`'d `CLAUDE.md` → `documentation/claude.md`
+  and `changelog.md` → `documentation/changelog.md`; rewrote `documentation/claude.md`
+  around a Project-Memory template (positioning, predefined vs. discovered business rules,
+  architecture snapshot, pointers, Documentation Protocol) with all previous technical
+  depth relocated rather than discarded. Added `documentation/technicalimplementation.md`
+  (stack, architecture, data model, key modules, integrations, and the full verbatim
+  invariants/tech-debt list from the old CLAUDE.md), `documentation/sitemap.md` (all 97
+  routes grouped by side, extracted from `src/App.tsx`), `documentation/sides.md`
+  (buyer/vendor/admin scope, migrated from `cosora.md`) and `documentation/test.md`
+  (Playwright suite + the verification scripts under `scripts/`). Root `CLAUDE.md` is now a
+  one-line `@documentation/claude.md` import. Updated the `UserPromptSubmit` and `Stop`
+  hooks plus the `PreCompact` agent prompt in `.claude/settings.json` to the new paths.
+- **Why:** Project context was concentrated in one 38 KB CLAUDE.md plus a 345 KB changelog,
+  with no separation between "read this first" baseline and reference depth, and the
+  `memory/` directory those files told every session to read does not exist in this repo.
+  Splitting by concern keeps session-start context small while making the protocol for
+  keeping it current explicit and unprompted.
+- **Files touched:** `CLAUDE.md` (now a stub), `documentation/claude.md` (moved +
+  rewritten), `documentation/changelog.md` (moved + header), `documentation/test.md`,
+  `documentation/technicalimplementation.md`, `documentation/sitemap.md`,
+  `documentation/sides.md`, `.claude/settings.json`.
+- **Hook bugs found and fixed while repointing `.claude/settings.json`:**
+  1. The `UserPromptSubmit` hook invoked **`pwsh`, which is not installed on this
+     machine** — it had been failing silently, so no project context was ever injected.
+     Now `powershell`.
+  2. It built its payload with a **single-quoted PowerShell here-string** (`@'` … `'@`),
+     which is literal — so even had `pwsh` existed it would have injected the characters
+     `$claudemd` rather than the file's contents. Replaced with string concatenation.
+  3. Added `-Encoding UTF8` to `Get-Content`; without it PS 5.1 reads the UTF-8 doc as
+     ANSI and mangles every em dash.
+  4. The hook **no longer injects the changelog**. At 348 KB, injecting it on every
+     prompt contradicts protocol step 1 (read only `claude.md` for baseline); the other
+     documentation files are named in the injected text so they can be opened on demand.
+  Verified end to end: the hook now emits valid JSON carrying 12,438 characters of
+  context with correct punctuation, and the `Stop` hook's JSON parses.
+- **Note:** `cosora.md` at the repo root is now fully superseded by
+  `documentation/sides.md` and `documentation/claude.md`; it was left in place rather than
+  deleted. Its "Admin side: not designed, not built" and "Backend: not started" lines are
+  stale — both are false as of this date.
+
 - 2026-09-05: **Chat moderation 3 — the lock got an unlock, the pipeline got seeded, moderation started telling people, and suspension started meaning something.** New `supabase/migrations/{20260802130000_notifications,20260802130100_notify_from_moderation_functions,20260802130200_seed_chat_moderation_rules,20260802150000_suspension_blocks_content_creation}.sql`; new `src/lib/queries/notifications.ts`, `scripts/{notifications-check,suspension-gate-check,contact-gate-check}.mjs`; `src/lib/notificationsStore.ts`, `src/pages/Notifications.tsx`, `src/components/layout/DashboardHeader.tsx`, `src/lib/database.types.ts` regenerated, `CLAUDE.md`. The `resolve_conversation_review` and `regex_probe` RPCs live in Cosora-Admin's migrations.
   - **A locked conversation could not be unlocked. At all.** `enforce_conversation_status()` permits support/super_admin to change `conversations.status`, so it read as done — but `conversations_update`'s USING clause is participants-only, and **a trigger cannot grant visibility**. An admin's UPDATE matched zero rows and PostgREST returned success, so the panel would have reported a resumed chat that was still locked. Fixed with a `SECURITY DEFINER` RPC rather than a widened policy: widening `conversations_update` lets an admin bypass the trigger's gating entirely, which is the bigger hole.
   - **`p_resume` defaults to FALSE, and that is a product decision, not a default that fell out.** A verdict closes the review and leaves the thread locked unless the reviewer ticks "reopen for the other party". Safe either way — `messages_insert` independently requires the *sender's* account to be active, so reopening cannot undo a suspension — but it is the reviewer's call, so it is asked. `'kept_locked'` never resumes regardless. The UPDATE is guarded on `status = 'pending'`, so a second admin gets `P0002` rather than overwriting the first decision and its `reviewed_by`.
