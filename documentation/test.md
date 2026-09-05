@@ -78,25 +78,47 @@ file was created; they record real runs, but only those the changelog captured.
   (`rlstest-*@cosora.test`, all six roles). **No demo/seed account was touched.**
   All blocklist terms and flag patterns used were throwaway (`chatfx-*`) and
   deleted; suspensions were reversed; locked conversations were resumed.
-- **Result:** **71/72 DB PASS, 9/9 UI PASS. 2 confirmed defects — 1 fixed and
-  re-verified, 1 fixed-but-unapplied. 3 POTENTIAL.**
+  **The fixture accounts themselves were subsequently deleted on 2026-09-05**
+  (see the close-out note below), so re-running this suite requires re-seeding.
+- **Result:** **72/72 DB PASS, 9/9 UI PASS. 2 confirmed defects, both fixed and
+  verified. 3 POTENTIAL** (plus 6 further POTENTIAL rows recorded per-area below).
+  Counts reflect the state after the 2026-09-05 out-of-session reconciliation.
   - **FIXED + RE-VERIFIED —** `/notifications` rendered a **blank page**
     (T10.5, commit `8bca619`). Re-run after the fix: real rows render, zero
     console errors.
-  - **FIX WRITTEN, NOT APPLIED, STILL FAIL —** notification `title`/`body`/`kind`
-    are client-rewritable (T10.3, commit `8bca619` carries
-    `20260905120000_notifications_read_only_except_read_flag.sql`). The Supabase
-    MCP connection dropped mid-pass and no service-role key exists in either repo
-    by design, so the DDL could not be run. **Deliberately left FAIL** rather
-    than marked PASS on the strength of the fix looking correct.
+  - **FIXED + VERIFIED (out of session) —** notification `title`/`body`/`kind`
+    were client-rewritable (T10.3). Closed **2026-09-05** by migration
+    `restrict_notifications_update_to_read_column`, applied and verified through
+    **direct Supabase access outside this session**, after the MCP connection
+    this session was using dropped and with no service-role key in either repo by
+    design. Local `20260905120000_notifications_read_only_except_read_flag.sql`
+    (commit `8bca619`) did the same thing under different object names and was
+    **deleted** so `supabase db push` cannot install a duplicate trigger; its
+    rationale survives in that commit.
   - Also fixed en route: `seed-test-admins.sql` could not run at all — it
     inserted `vendor_profiles.account_status`, dropped by `20260801095820`
     (commit `8047b71`).
 
-**How to finish this entry:** apply
-`supabase/migrations/20260905120000_notifications_read_only_except_read_flag.sql`,
-re-run `node Cosora-Admin/scripts/chat-pipeline-matrix.mjs`, and flip T10.3 to
-PASS **only** if it reports PASS.
+**Closed out 2026-09-05, out of session.** Both remaining items were completed
+through direct Supabase access rather than from this repo:
+
+- **T10.3 fixed and verified live** — see the T10.3 row for the exact trigger,
+  columns and error string. It was **not** re-run through
+  `chat-pipeline-matrix.mjs`, because the fixtures that case needs were deleted
+  by the cleanup below. To re-exercise it, re-run
+  `Cosora-Admin/scripts/seed-chat-fixtures.sql` first.
+- **Fixtures deleted** — all 10 known-password accounts (`chatfx-buyer-a/b`,
+  `chatfx-vendor-a/b`, and the six `rlstest-*` admins) and everything they
+  touched: 84 `conversation_reviews`, 18 `account_suspensions`, 178
+  `notifications`, 8 `messages`, 4 `conversations`, 2 `vendor_profiles`, 5
+  `admin_flags`. Verified afterwards: **0 leftover fixture users**, `real_admins`
+  back to **2**, and the 4 conversations / 8 messages that remain belong to real
+  non-fixture accounts and were untouched. Done directly, **not** via
+  `drop-chat-fixtures.sql` / `drop-test-admins.sql` — those would now no-op.
+
+**Consequence for re-running this suite:** it is no longer runnable as-is. Both
+`Cosora-Admin/scripts/seed-chat-fixtures.sql` and `seed-test-admins.sql` must be
+re-run first; every case in the tables below depends on those accounts.
 
 #### T1 — Core message pipeline
 
@@ -227,7 +249,7 @@ Cosora-Admin **does** have the chat-moderation UI: `Chats.tsx`, `ChatThread.tsx`
 |---|---|---|---|---|---|---|---|---|
 | T10.1 | n/a | DB | trigger each of the four kinds and read the row back | all four written by their function | `account_suspended` + `account_reinstated` (T7.1/T7.5), `chat_locked` (T4/T5 setup), `chat_resumed` (T6.7) all observed | PASS | — | matrix `T7.1`, `T7.5`, `T6.7`; rows read back per-kind |
 | T10.2 | n/a | DB | buyerB lists notifications | only own rows | `0 foreign of 10` | PASS | Critical | matrix `T10.2` |
-| **T10.3** | n/a | DB | signed-in user UPDATEs their own notification's `title`/`kind`/`body` | refused — only `read` may be client-written | **`*** REWROTE title/kind/body ***`** — row came back `title="TAMPERED"`, `kind="account_reinstated"` | **FAIL** | High | matrix `T10.3`. Fix written (`20260905120000_notifications_read_only_except_read_flag.sql`, commit `8bca619`) but **NOT APPLIED** — MCP connection lost, no service-role key by design. Left FAIL rather than assumed. |
+| **T10.3** | n/a | DB | signed-in user UPDATEs their own notification's `title`/`kind`/`body` | refused — only `read` may be client-written | Originally **`*** REWROTE title/kind/body ***`** (`title="TAMPERED"`, `kind="account_reinstated"`). **Now refused.** | **FAIL → FIXED → PASS** | High | Fixed and verified **2026-09-05 via direct Supabase access outside this session** (Supabase MCP in another Claude session), **not** by `chat-pipeline-matrix.mjs`. Migration `restrict_notifications_update_to_read_column` adds BEFORE UPDATE trigger `enforce_notification_update_columns` on `public.notifications`, rejecting any UPDATE that changes `title`/`body`/`kind`/`conversation_id`/`profile_id`. Verified live as an authenticated user: updating `read` **succeeds**; updating `title` raises `42501: Only the read column may be changed on a notification`. **Not re-run through the matrix** — the `chatfx-*` fixtures it needs were deleted in the same cleanup (see the run header), so `chat-pipeline-matrix.mjs` cannot execute T10.3 again until `seed-chat-fixtures.sql` is re-run. |
 | T10.4a | n/a | DB | user deletes their own notification | 1 row | `1 row` | PASS | — | matrix `T10.4a` |
 | T10.4b | n/a | DB | buyerB deletes buyerA's notifications | 0 rows | `0 rows` | PASS | Critical | matrix `T10.4b` |
 | **T10.5** | n/a | UI | open `/notifications` as a signed-in fixture with real rows on file | real rows render | **BLANK PAGE.** `cannot add postgres_changes callbacks for realtime:notifications:<uid> after subscribe()` → React tree died → empty body. DB rows were correct throughout. | **FAIL → FIXED → PASS** | Critical | Fixed in commit `8bca619` (per-instance channel topic). Re-run after the fix: rows render, **zero console errors**, `T10-05-notifications.png` |
