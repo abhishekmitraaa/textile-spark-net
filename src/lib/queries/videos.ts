@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
+import videoThumbPlaceholder from "@/assets/placeholders/video-thumb-placeholder.svg";
 
 // ─────────────────────────────────────────────────────────────
 // Video closeups data access (React Query over Supabase).
@@ -11,8 +12,33 @@ import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 // brandName comes from the owning vendor's public profile.
 // ─────────────────────────────────────────────────────────────
 
-const THUMB_PLACEHOLDER =
-  "https://images.unsplash.com/photo-1489987707025-afc232f7ea0f?w=500&h=650&fit=crop";
+// Bundled, not hotlinked. This sits on the critical path of every reel card
+// that has no poster of its own, and the whole premise of the feed is staying
+// fast — a third-party image host is a DNS lookup, a TLS handshake and an
+// availability dependency for something the app can ship itself in 652 bytes.
+// It is also the poster the <video> element paints underneath before the first
+// frame decodes, so a slow/blocked fetch shows as a black rectangle.
+const THUMB_PLACEHOLDER = videoThumbPlaceholder;
+
+/**
+ * Swap a poster that failed to load for the bundled placeholder.
+ *
+ * Needed because of Bunny: a provider='bunny' row records its thumbnail URL at
+ * INSERT time (it is deterministic from the GUID) but the file does not exist
+ * until Bunny finishes encoding — seconds to a couple of minutes after upload.
+ * In that window the vendor's own list would otherwise paint a browser
+ * broken-image glyph over their brand-new video.
+ *
+ * Guarded against a loop: if the placeholder itself somehow fails, clearing
+ * onerror stops the handler re-firing forever.
+ */
+export function onThumbError(e: { currentTarget: HTMLImageElement }): void {
+  const el = e.currentTarget;
+  if (el.dataset.fallbackApplied) return;
+  el.dataset.fallbackApplied = "1";
+  el.onerror = null;
+  el.src = THUMB_PLACEHOLDER;
+}
 
 // Reels pulled for the buyer feed in one page. The viewer windows its slides,
 // so this is about bytes over the wire, not what renders: an unbounded select
@@ -96,19 +122,30 @@ export interface MyVideoRow {
   likes: number;
   createdAt: string;
   durationSeconds: number | null;
+  /**
+   * The moderator's note from `reject_vendor_content`. Only ever meaningful
+   * alongside status === "rejected": approve now nulls it out
+   * (20260905172020), but a row rejected, resubmitted and still pending keeps
+   * the old note, so read it WITH the status, never on its own.
+   *
+   * The vendor has to be told what to fix. It was stored and trigger-protected
+   * from the start, but never selected here, so the rejected badge was a dead
+   * end — resubmit, get rejected again, no new information.
+   */
+  rejectionReason: string | null;
 }
 
 interface RawMyVideo {
   id: string; brand_line: string; category: string; thumbnail_url: string | null;
   status: string; views_count: number; likes_count: number; created_at: string;
-  duration_seconds: number | null;
+  duration_seconds: number | null; rejection_reason: string | null;
   products: { name: string } | null;
 }
 
 async function fetchMyVideos(vendorId: string): Promise<MyVideoRow[]> {
   const { data, error } = await supabase
     .from("product_videos")
-    .select("id, brand_line, category, thumbnail_url, status, views_count, likes_count, created_at, duration_seconds, products ( name )")
+    .select("id, brand_line, category, thumbnail_url, status, views_count, likes_count, created_at, duration_seconds, rejection_reason, products ( name )")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -120,6 +157,7 @@ async function fetchMyVideos(vendorId: string): Promise<MyVideoRow[]> {
     thumbnail: v.thumbnail_url,
     durationSeconds: v.duration_seconds,
     status: (v.status as MyVideoRow["status"]) ?? "under_review",
+    rejectionReason: v.rejection_reason,
     views: v.views_count,
     likes: v.likes_count,
     createdAt: new Date(v.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" }),
@@ -260,35 +298,167 @@ async function resumableUpload(path: string, file: File, onProgress?: (f: number
   return objectName;
 }
 
-// Uploads the video (+ optional cover) to the product-videos bucket under the
-// vendor's own folder, then inserts an under_review row. When a real product is
-// tagged, its price/MOQ/category are copied so the buyer card shows live data.
-export async function createProductVideo(vendorId: string, v: NewProductVideo): Promise<void> {
-  const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const vext = v.file.name.split(".").pop()?.toLowerCase() || "mp4";
-  // Resumable, so a dropped connection mid-upload continues rather than
-  // restarting. The vendorId prefix is what the storage RLS policy checks.
-  //
-  // The path we propose is only a proposal: if this file has an interrupted
-  // session pending, the upload resumes into THAT session's object instead.
-  // Record what comes back, never the proposal — recording the proposal is
-  // what produced a broken video_url plus a permanently orphaned object.
-  const vpath = await resumableUpload(`${vendorId}/${key}.${vext}`, v.file, v.onProgress);
-  const video_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(vpath).data.publicUrl;
+// ─────────────────────────────────────────────────────────────
+// Bunny Stream upload path (provider='bunny').
+//
+// The bytes never touch Supabase Storage on this path. The browser uploads
+// straight to Bunny over TUS, authorised by a signature only the
+// `bunny-upload-url` edge function can compute — see that function's header for
+// why the API key cannot come anywhere near here.
+//
+// `product_videos.provider` exists precisely so this is a data change rather
+// than a schema change (20260730205449). Nothing about moderation is affected:
+// the row still inserts as under_review and the same BEFORE trigger still
+// enforces it.
+// ─────────────────────────────────────────────────────────────
 
+interface BunnyUploadSlot {
+  videoId: string;
+  libraryId: string;
+  expirationTime: number;
+  signature: string;
+  endpoint: string;
+  playbackUrl: string;
+  thumbnailUrl: string;
+}
+
+/**
+ * Ask the edge function for an upload slot.
+ *
+ * Returns null ONLY for `not_configured`, which is the single response that may
+ * fall back to the Supabase Storage path — it means Bunny was never set up on
+ * this project, not that this upload failed. Every other error throws, exactly
+ * as createRazorpayOrder distinguishes them, and for the same reason: swallowing
+ * a real failure into the fallback branch would silently keep writing
+ * provider='supabase' rows long after the migration was supposed to be done.
+ */
+async function requestBunnySlot(title: string): Promise<BunnyUploadSlot | null> {
+  const { data, error } = await supabase.functions.invoke("bunny-upload-url", { body: { title } });
+  if (error) {
+    // A non-2xx surfaces as FunctionsHttpError whose message is just
+    // "non-2xx status"; dig the real reason out of the response body so the
+    // vendor sees "This account is suspended" rather than a status code.
+    let detail = error.message;
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const body = await ctx.json();
+        detail = body.detail || body.error || detail;
+      } catch {
+        /* keep the original message */
+      }
+    }
+    throw new Error(detail);
+  }
+  if (data?.error === "not_configured") return null;
+  if (data?.error) throw new Error(String(data.detail || data.error));
+  if (!data?.configured) return null;
+  return data as BunnyUploadSlot;
+}
+
+/**
+ * TUS straight to Bunny.
+ *
+ * Deliberately does NOT reuse resumableUpload(): that function's whole body
+ * past the constructor is Supabase-specific (the objectName-adoption dance that
+ * exists because Supabase binds an upload session to an object path). Bunny
+ * binds the session to a VideoId instead, so none of it applies.
+ *
+ * Resume is switched OFF here — `storeFingerprintForResuming: false`. The
+ * signature and VideoId come from a slot minted seconds ago and expire in an
+ * hour, so a fingerprint persisted from a previous attempt would resume against
+ * a stale VideoId with a signature that no longer validates: an opaque 401
+ * where a clean restart would have worked. The cost is that an abandoned
+ * attempt leaves an empty video object at Bunny, which is exactly what
+ * bunny-reconcile lists (and why its age guard exists).
+ *
+ * chunkSize is 8MB. Supabase requires exactly 6MB; Bunny has no such rule, but
+ * tus-js-client defaults to a single unsplit request, which would throw away
+ * resumability on the connections this feature exists to survive.
+ */
+async function bunnyResumableUpload(
+  slot: BunnyUploadSlot,
+  file: File,
+  title: string,
+  onProgress?: (f: number) => void,
+): Promise<void> {
+  const { Upload: TusUpload } = await import("tus-js-client");
+  await new Promise<void>((resolve, reject) => {
+    const upload = new TusUpload(file, {
+      endpoint: slot.endpoint,
+      retryDelays: [0, 3000, 5000, 10000, 20000],
+      headers: {
+        AuthorizationSignature: slot.signature,
+        AuthorizationExpire: String(slot.expirationTime),
+        LibraryId: slot.libraryId,
+        VideoId: slot.videoId,
+      },
+      storeFingerprintForResuming: false,
+      metadata: { filetype: file.type, title },
+      chunkSize: 8 * 1024 * 1024,
+      onError: reject,
+      onProgress: (sent, total) => onProgress?.(total ? sent / total : 0),
+      onSuccess: () => resolve(),
+    });
+    upload.start();
+  });
+}
+
+// Uploads the video (+ optional cover) and inserts an under_review row. When a
+// real product is tagged, its price/MOQ/category are copied so the buyer card
+// shows live data.
+//
+// Two upload paths, chosen by whether Bunny is configured on this project:
+//   'bunny'    — browser uploads straight to Bunny Stream; no Supabase egress,
+//                no bucket limit, poster generated by Bunny.
+//   'supabase' — the original TUS-to-Storage path, unchanged. Still the only
+//                path when Bunny is not configured, and still what every
+//                existing row uses.
+export async function createProductVideo(vendorId: string, v: NewProductVideo): Promise<void> {
+  let video_url: string;
   let thumbnail_url: string | null = null;
-  if (v.thumbnail) {
-    const text = v.thumbnail.name.split(".").pop()?.toLowerCase() || "jpg";
-    // Derive the poster path from the video path that actually won, not from
-    // `key`. On a resumed upload those differ, and pairing them means a retry
-    // overwrites its own poster (upsert) instead of leaving one stranded.
-    const tpath = `${vpath.replace(/\.[^./]+$/, "")}-thumb.${text}`;
-    // Posters are small, so a plain upload is fine here — but note this lands
-    // in the SAME bucket as the video, which is why the bucket's MIME allowlist
-    // has to include image types.
-    const { error: te } = await supabase.storage.from(VIDEO_BUCKET).upload(tpath, v.thumbnail, { upsert: true });
-    if (te) throw te;
-    thumbnail_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(tpath).data.publicUrl;
+  let provider = "supabase";
+  let bunny_video_id: string | null = null;
+
+  const slot = await requestBunnySlot(v.caption || "Video closeup");
+
+  if (slot) {
+    provider = "bunny";
+    bunny_video_id = slot.videoId;
+    await bunnyResumableUpload(slot, v.file, v.caption || "Video closeup", v.onProgress);
+    video_url = slot.playbackUrl;
+    // Bunny extracts its own poster during encoding, so the canvas-probe poster
+    // is not uploaded on this path — that is the point of moving providers. The
+    // URL is deterministic from the GUID, so it can be recorded now even though
+    // the file does not exist until encoding finishes; until then the UI falls
+    // back to the bundled placeholder via the img onError handlers.
+    thumbnail_url = slot.thumbnailUrl;
+  } else {
+    const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const vext = v.file.name.split(".").pop()?.toLowerCase() || "mp4";
+    // Resumable, so a dropped connection mid-upload continues rather than
+    // restarting. The vendorId prefix is what the storage RLS policy checks.
+    //
+    // The path we propose is only a proposal: if this file has an interrupted
+    // session pending, the upload resumes into THAT session's object instead.
+    // Record what comes back, never the proposal — recording the proposal is
+    // what produced a broken video_url plus a permanently orphaned object.
+    const vpath = await resumableUpload(`${vendorId}/${key}.${vext}`, v.file, v.onProgress);
+    video_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(vpath).data.publicUrl;
+
+    if (v.thumbnail) {
+      const text = v.thumbnail.name.split(".").pop()?.toLowerCase() || "jpg";
+      // Derive the poster path from the video path that actually won, not from
+      // `key`. On a resumed upload those differ, and pairing them means a retry
+      // overwrites its own poster (upsert) instead of leaving one stranded.
+      const tpath = `${vpath.replace(/\.[^./]+$/, "")}-thumb.${text}`;
+      // Posters are small, so a plain upload is fine here — but note this lands
+      // in the SAME bucket as the video, which is why the bucket's MIME allowlist
+      // has to include image types.
+      const { error: te } = await supabase.storage.from(VIDEO_BUCKET).upload(tpath, v.thumbnail, { upsert: true });
+      if (te) throw te;
+      thumbnail_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(tpath).data.publicUrl;
+    }
   }
 
   let category = v.category ?? "Fashion";
@@ -320,7 +490,8 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     duration_seconds: v.durationSeconds ?? null,
     video_width: v.videoWidth ?? null,
     video_height: v.videoHeight ?? null,
-    provider: "supabase",
+    provider,
+    bunny_video_id,
     status: "under_review",
   });
   if (error) throw error;
@@ -335,19 +506,49 @@ function storageKeyFromPublicUrl(url: string | null): string | null {
 }
 
 export async function deleteProductVideo(id: string): Promise<void> {
-  // Remove the objects BEFORE the row. The row is the only record of where the
-  // files live, so deleting it first and then failing on storage leaves an
-  // orphan nothing in the app can ever find again. This order fails the other
-  // way: the row survives, and the vendor can simply retry the delete.
+  // Remove the media BEFORE the row. The row is the only record of where the
+  // files live, so deleting it first and then failing leaves an orphan nothing
+  // in the app can ever find again. This order fails the other way: the row
+  // survives, and the vendor can simply retry the delete.
+  //
+  // That reasoning did not stop applying when the bytes moved to Bunny — it got
+  // sharper. Bunny storage is billed and there is no bucket table to reconcile
+  // against from SQL, so the row is genuinely the only handle. The Bunny call
+  // goes first for the same reason, and it needs the row to still exist because
+  // the row is what proves the caller owns the asset.
   const { data: row } = await supabase
     .from("product_videos")
-    .select("video_url, thumbnail_url")
+    .select("video_url, thumbnail_url, provider, bunny_video_id")
     .eq("id", id)
     .maybeSingle();
 
+  if (row?.provider === "bunny" && row.bunny_video_id) {
+    // The API key lives only in the edge function, so deletion has to go
+    // through it. It resolves ownership from the row itself and treats a 404 at
+    // Bunny as success, which is what makes a retry after a partial failure
+    // able to finish instead of deadlocking.
+    const { data, error } = await supabase.functions.invoke("bunny-delete-video", { body: { rowId: id } });
+    if (error) {
+      let detail = error.message;
+      const ctx = (error as { context?: Response }).context;
+      if (ctx && typeof ctx.json === "function") {
+        try {
+          const body = await ctx.json();
+          detail = body.detail || body.error || detail;
+        } catch {
+          /* keep the original message */
+        }
+      }
+      throw new Error(detail);
+    }
+    if (data?.error) throw new Error(String(data.detail || data.error));
+  }
+
   if (row) {
-    // Skip anything not hosted in our bucket — externally hosted rows (and any
-    // future streaming-provider URLs) have nothing to remove here.
+    // Storage objects. A bunny row has none — storageKeyFromPublicUrl returns
+    // null for any URL outside our bucket, so this is a no-op there rather than
+    // a special case. It still runs for a bunny row on purpose: a row that was
+    // migrated between providers could carry one of each.
     const keys = [storageKeyFromPublicUrl(row.video_url), storageKeyFromPublicUrl(row.thumbnail_url)]
       .filter((k): k is string => Boolean(k));
     if (keys.length) {
@@ -373,6 +574,50 @@ export async function deleteProductVideo(id: string): Promise<void> {
 // This is not transcoding — no ffmpeg.wasm, no WebCodecs. It's one off-DOM
 // <video> plus a canvas, works everywhere, and costs about 40 lines.
 // ─────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────
+// Container sniffing — a STOPGAP, and worth being precise about what it does
+// and does not close.
+//
+// `file.type` is whatever the OS guessed from the extension. Rename an iPhone
+// .mov to .mp4 and the browser reports video/mp4, ACCEPTED_VIDEO_MIME passes
+// it, the bucket's server-side allowlist passes it too (it checks the same
+// declared type), and it lands in the feed as a clip that plays on Safari and
+// shows a black rectangle on Chrome and Android — most buyers here.
+//
+// Reading the first 12 bytes settles it, because the discriminator is not
+// "does this have an ftyp box" — QuickTime is ISO-BMFF too and has one. It is
+// the MAJOR BRAND in bytes 8..12: 'qt  ' is QuickTime, anything else with an
+// ftyp box is an MP4 family brand.
+//
+// What this does NOT catch, deliberately: HEVC muxed into a genuine MP4
+// container (brand 'isom'/'hvc1'), or a hand-crafted header on any payload.
+// Those need a real transcoder to reject — Phase 8's provider migration, where
+// the encoder simply fails on what it cannot decode. This narrows the
+// ACCIDENTAL case, which is the realistic one: a phone renaming a file.
+// ─────────────────────────────────────────────────────────────
+
+export type VideoContainer = "mp4" | "webm" | "quicktime" | "unknown";
+
+export async function sniffVideoContainer(file: File): Promise<VideoContainer> {
+  let head: Uint8Array;
+  try {
+    head = new Uint8Array(await file.slice(0, 12).arrayBuffer());
+  } catch {
+    return "unknown";
+  }
+  if (head.length < 12) return "unknown";
+
+  // EBML magic — Matroska, of which WebM is a profile.
+  if (head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3) return "webm";
+
+  const ascii = (from: number, to: number) =>
+    Array.from(head.slice(from, to), (b) => String.fromCharCode(b)).join("");
+
+  // ISO base media: [4-byte size][ 'f','t','y','p' ][4-byte major brand]
+  if (ascii(4, 8) !== "ftyp") return "unknown";
+  return ascii(8, 12) === "qt  " ? "quicktime" : "mp4";
+}
 
 export interface VideoProbe {
   durationSeconds: number;

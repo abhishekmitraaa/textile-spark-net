@@ -881,6 +881,7 @@ export type Database = {
       product_videos: {
         Row: {
           brand_line: string
+          bunny_video_id: string | null
           category: string
           created_at: string
           duration_seconds: number | null
@@ -903,6 +904,7 @@ export type Database = {
         }
         Insert: {
           brand_line?: string
+          bunny_video_id?: string | null
           category?: string
           created_at?: string
           duration_seconds?: number | null
@@ -925,6 +927,7 @@ export type Database = {
         }
         Update: {
           brand_line?: string
+          bunny_video_id?: string | null
           category?: string
           created_at?: string
           duration_seconds?: number | null
@@ -1476,6 +1479,39 @@ export type Database = {
           },
         ]
       }
+      saved_videos: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          video_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          video_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_videos_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saved_videos_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "product_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_reviews: {
         Row: {
           body: string | null
@@ -2009,11 +2045,45 @@ export type Database = {
           },
         ]
       }
+      video_likes: {
+        Row: {
+          buyer_id: string
+          created_at: string
+          video_id: string
+        }
+        Insert: {
+          buyer_id: string
+          created_at?: string
+          video_id: string
+        }
+        Update: {
+          buyer_id?: string
+          created_at?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "video_likes_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_likes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "product_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      account_is_active: { Args: { p_id: string }; Returns: boolean }
       active_ads: {
         Args: { filter_category?: string; max_count?: number }
         Returns: {
@@ -2054,6 +2124,7 @@ export type Database = {
       }
       increment_product_enquiry: { Args: { p: string }; Returns: undefined }
       increment_product_view: { Args: { p: string }; Returns: undefined }
+      increment_video_view: { Args: { p: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
       next_invoice_number: { Args: never; Returns: string }

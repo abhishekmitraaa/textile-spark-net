@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyProducts } from "@/lib/queries/products";
 import {
-  useMyVideos, createProductVideo, deleteProductVideo, probeVideoFile,
+  useMyVideos, createProductVideo, deleteProductVideo, probeVideoFile, sniffVideoContainer, onThumbError,
   MAX_VIDEO_BYTES, MAX_VIDEO_SECONDS, ACCEPTED_VIDEO_MIME, type VideoProbe,
 } from "@/lib/queries/videos";
 import { toast } from "sonner";
@@ -18,6 +18,7 @@ import {
   Trash2, TrendingUp, ChevronDown, ChevronRight,
   Volume2, ShoppingBag,
 } from "lucide-react";
+import videoThumbPlaceholder from "@/assets/placeholders/video-thumb-placeholder.svg";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -51,12 +52,17 @@ interface UploadedVideoCloseup {
   duration: string;
   uploadedAt: string;
   status: "live" | "under_review" | "rejected";
+  /** Moderator's note, shown only on a rejected card — see MyVideoRow. */
+  rejectionReason: string | null;
   views: number;
   likes: number;
   shares: number;
 }
 
-const THUMB_PLACEHOLDER = "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=400&h=700&fit=crop";
+// Bundled asset, not a hotlinked Unsplash URL: the vendor's own closeup list
+// renders one of these per card with no poster, and an image the app ships is
+// one fewer third party on a page a vendor already waits on to upload.
+const THUMB_PLACEHOLDER = videoThumbPlaceholder;
 
 const statusConfig = {
   live:         { label: "Live",         bg: "bg-green-50",  text: "text-green-600",  border: "border-green-200",  icon: CheckCircle2 },
@@ -81,7 +87,7 @@ function VideoCloseupPhoneMockup({
 }) {
   const displayCaption = caption || "Your caption will appear here…";
   const displayProduct = productName || "Tag a product";
-  const bgImage = thumbnail || "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=400&h=700&fit=crop";
+  const bgImage = thumbnail || THUMB_PLACEHOLDER;
 
   return (
     <div className="flex flex-col items-center gap-2">
@@ -190,7 +196,7 @@ function VideoCloseupCard({
       <div className="flex gap-3 p-4">
         {/* Thumbnail */}
         <div className="relative w-16 h-24 rounded-xl overflow-hidden shrink-0 bg-gray-100">
-          <img src={closeup.thumbnail} alt="" className="w-full h-full object-cover" />
+          <img src={closeup.thumbnail} alt="" onError={onThumbError} className="w-full h-full object-cover" />
           <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
             <Play className="w-4 h-4 text-white fill-white" />
           </div>
@@ -244,6 +250,17 @@ function VideoCloseupCard({
           {closeup.status === "under_review" && (
             <p className="text-[10px] text-orange-500 mt-1.5 flex items-center gap-1">
               <Clock className="w-2.5 h-2.5" /> Under review · 24–48 hrs
+            </p>
+          )}
+
+          {/* Why the moderator turned it down. Gated on status as well as the
+              column: a rejected row that the vendor resubmits keeps its old
+              note until an approve clears it, so `rejectionReason` alone would
+              caption an under_review card with a stale rejection. Same guard
+              Cosora-Admin's Products.tsx/Videos.tsx now use. */}
+          {closeup.status === "rejected" && closeup.rejectionReason && (
+            <p className="text-[10px] text-red-600 mt-1.5 leading-snug">
+              <span className="font-semibold">Rejected:</span> {closeup.rejectionReason}
             </p>
           )}
         </div>
@@ -301,6 +318,7 @@ const UploadVideo = () => {
     duration: v.durationSeconds != null ? formatDuration(v.durationSeconds) : "",
     uploadedAt: v.createdAt,
     status: v.status === "draft" ? "under_review" : v.status,
+    rejectionReason: v.rejectionReason,
     views: v.views,
     likes: v.likes,
     shares: 0,
@@ -338,6 +356,27 @@ const UploadVideo = () => {
       });
       return;
     }
+
+    // The check above trusts the file's DECLARED type, which is just the
+    // extension. Read the actual container bytes: a .mov renamed to .mp4
+    // reports video/mp4 and would otherwise sail through to a buyer feed where
+    // Chrome and Android cannot decode it. See sniffVideoContainer for exactly
+    // what this catches and what it does not.
+    const container = await sniffVideoContainer(file);
+    const declared = file.type === "video/webm" ? "webm" : "mp4";
+    if (container !== declared) {
+      toast.error(
+        container === "quicktime"
+          ? "This is a QuickTime (.mov) file renamed to .mp4"
+          : "This file isn't really an MP4 or WebM",
+        {
+          description:
+            "Re-export it as an MP4 (H.264) and try again — renaming the extension doesn't change the video inside, and buyers on Chrome and Android would see a blank screen.",
+        },
+      );
+      return;
+    }
+
     setSelectedFile(file);
     setVideoPreviewUrl(URL.createObjectURL(file));
     // Clear any previous file's probe before starting a new one. Without this,

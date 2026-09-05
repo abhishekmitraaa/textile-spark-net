@@ -1,0 +1,13 @@
+<svg width="450" height="800" viewBox="0 0 450 800" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Video closeup placeholder">
+  <defs>
+    <linearGradient id="vt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f5f5f5" />
+      <stop offset="1" stop-color="#e3e8ef" />
+    </linearGradient>
+  </defs>
+  <rect width="450" height="800" fill="url(#vt)" />
+  <circle cx="225" cy="360" r="64" fill="#d0d4dc" />
+  <path d="M208 331l50 29-50 29z" fill="#f5f5f5" />
+  <rect x="105" y="486" width="240" height="18" rx="9" fill="#d0d4dc" />
+  <rect x="145" y="522" width="160" height="18" rx="9" fill="#e0e4ea" />
+</svg>

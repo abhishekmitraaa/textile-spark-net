@@ -92,9 +92,50 @@ undocumented. Deep technical rationale for each lives in
   across database, auth and storage; exceeding it 402s the whole app. Video uploads are
   capped at 50 MB / 60 s, review photos at 4 photos / 2 MB.
 - **iPhone `.mov` is deliberately not accepted** (HEVC plays on Safari, fails on
-  Chrome/Android, and there is no transcoding step).
+  Chrome/Android, and there is no transcoding step). A renamed `.mov` is now caught
+  client-side by a magic-byte check on the ISO-BMFF major brand (`qt  ` = QuickTime) —
+  a stopgap for the accidental case, not a security control; HEVC inside a genuine MP4
+  container still passes and needs a real transcoder to reject.
+- **Raising the video size cap has a dashboard-first ordering that cannot be skipped.**
+  See "Raising MAX_VIDEO_BYTES" below. A bucket's `file_size_limit` can never exceed the
+  project's global limit, so bumping the bucket or the client constant before raising the
+  global limit in the dashboard silently does nothing.
 - **No mock data in production.** Dev-only helpers return `[]` in a production build; an
   empty catalogue is meant to render empty. Do not seed demo rows to "fix" an empty state.
+- **A view is monotonic; a like is a toggle. They are modelled differently on purpose.**
+  Views go through a SECURITY DEFINER `increment_video_view(uuid)` scoped to
+  `status='live'` (mirroring `increment_product_view`) — a buyer owns no video row, so the
+  +1 cannot be a client UPDATE. Likes get a per-buyer join table (`video_likes`) with
+  `product_videos.likes_count` maintained by an AFTER trigger, because a counter-only RPC
+  gives no way to undo a like and no source of truth for *who* liked. Same reasoning made
+  `saved_videos` a table rather than a column.
+- **Durably saved ≠ interested this session.** `saved_videos` is what the buyer chose to
+  keep; the in-session `bookmarkedVideoIds` set is what caught their eye in the last few
+  minutes, and only the second one feeds `rankVideoCloseUps`. Hydrating stored saves into
+  the ranking signal would let a save from six weeks ago reshuffle today's reel.
+- **A rejection reason must reach the vendor.** `reject_vendor_content` stores it and the
+  BEFORE trigger protects it, but it is only meaningful read together with
+  `status = 'rejected'` — a resubmitted row keeps the old note until an approve clears it
+  (`approve_vendor_content` nulls it as of 20260905172020). Every surface that renders it,
+  vendor- or admin-side, gates on the status as well as the column.
+- **The Bunny API key is the only credential in this codebase that a server must
+  hold on the client's behalf.** Bunny's TUS upload is authorised by
+  `SHA256(library_id + api_key + expiration + video_id)`, which cannot be computed in
+  a browser without shipping the key, so `bunny-upload-url` is the first signed-URL
+  edge function here — every other upload goes browser→Supabase Storage under RLS.
+  The **Library ID is not a secret and cannot be one**: Bunny requires it as a plain
+  `LibraryId` header on the client's own request and it appears in every playback URL.
+- **An unconfigured provider must fall back, not fail.** `bunny-upload-url` returns
+  `not_configured` as a **200** (the razorpay-create-order convention) and
+  `createProductVideo` then takes the original Supabase Storage path. That keeps
+  uploads working before Bunny is wired up — but it is SILENT, so
+  `node scripts/bunny-config-check.mjs` and the provider census in
+  `documentation/orphan-reconciliation.sql` are how you tell whether the migration
+  actually happened.
+- **Video placeholders ship in the bundle, never hotlinked.** The reel's poster is on the
+  critical path of every card and is what the `<video>` paints under before the first
+  frame decodes; a third-party image host there is a DNS lookup and an availability
+  dependency on a surface whose whole premise is staying fast.
 - **A review's subject id must be the resolved entity id, never the route param** — buyer
   side vendor links carry slugs. And where no real row exists, the Write-a-Review CTA is
   hidden rather than shown and left to fail.
@@ -116,6 +157,65 @@ undocumented. Deep technical rationale for each lives in
 - **Known papercut, deliberately unfixed:** `UserRoleContext` initialises to `"buyer"` and
   never seeds from `profile.active_role`, so signing in as a vendor still starts in buyer
   mode until the sidebar SWITCH MODE toggle is used.
+
+## Raising MAX_VIDEO_BYTES (the 90 MB / Pro-plan step)
+
+Written down now so it is not a judgement call under pressure later. The order matters
+and the first step is the one that cannot be automated.
+
+1. **Upgrade the Supabase org to Pro.** Free caps the project's global file size limit at
+   50 MB, which is where today's `MAX_VIDEO_BYTES` comes from.
+2. **Raise Storage → Settings → Global file size limit in the dashboard. FIRST.**
+   This cannot be done via a migration, via the Storage API, or via MCP — it is a project
+   setting, not schema, and there is no SQL for it. Set it to the new ceiling (90 MB).
+3. **Then** bump the two places that mirror it, together, in the same change:
+   - `MAX_VIDEO_BYTES` in `src/lib/queries/videos.ts` (the client gate), and
+   - the `product-videos` bucket's `file_size_limit` (the server-side gate, so bypassing
+     the client gains nothing).
+
+**Skipping step 2, or doing it after step 3, silently accomplishes nothing.** A bucket's
+`file_size_limit` can never exceed the project's global limit — set the bucket to 90 MB
+while the project is still at 50 MB and uploads keep failing at 50 MB with an error that
+points at the bucket, which is the wrong place to look. The client constant would then be
+advertising a ceiling the platform will not honour, so a vendor picks an 80 MB file, waits
+through a long resumable upload on a phone connection, and gets rejected at the end.
+
+Egress, not just size, is the real constraint — see "Media is rationed by the Supabase
+Free plan" above. Raising the cap raises what a single view costs.
+
+## Bunny Stream — the deploy checklist (order matters, twice)
+
+Two settings here are **not retroactive**, which is the same shape of trap as the
+storage-limit ordering above: doing them late looks like it worked and is not.
+
+1. **Enable MP4 Fallback in the Bunny library's Encoding tab — BEFORE the first
+   upload.** `bunny-upload-url` hands the client a `play_720p.mp4` playback URL
+   because the reel viewer plays a plain `<video src>`, which cannot decode an HLS
+   manifest outside Safari. Bunny only generates those MP4 renditions for videos
+   uploaded *while the setting is on*. Turn it on afterwards and every already-uploaded
+   video 404s forever — the fix is a re-encode or a re-upload, per video.
+2. **Set all three edge-function secrets**, none of which may ever reach the client:
+   ```
+   npx supabase secrets set --project-ref vxdhhgdfubqedfpwfyrb "BUNNY_API_KEY=..."
+   npx supabase secrets set --project-ref vxdhhgdfubqedfpwfyrb "BUNNY_LIBRARY_ID=..."
+   npx supabase secrets set --project-ref vxdhhgdfubqedfpwfyrb "BUNNY_CDN_HOSTNAME=vz-....b-cdn.net"
+   ```
+   `BUNNY_CDN_HOSTNAME` is the library's CDN hostname from the Bunny dashboard. It is
+   **not** a secret (it is in every playback URL) but it lives with the others so the
+   edge function can compose complete URLs and the client needs no constant at all —
+   which is what lets the delivery domain change later without a client release.
+3. **Deploy the three functions**, all with `verify_jwt = true` (declared in
+   `supabase/config.toml`; the manual JWT decode inside each is only sound because of it):
+   `bunny-upload-url`, `bunny-delete-video`, `bunny-reconcile`.
+4. **Verify:** `node scripts/bunny-config-check.mjs`. It signs in as a real vendor and
+   calls the function's `{"probe":true}` branch, which reports the configuration verdict
+   **without creating a Bunny video** — the only other way to check leaves a stray empty
+   video in the library every time. It prints secret *names*, never values.
+5. **Then** upload one real clip and confirm the `play_720p.mp4` URL returns 200 once
+   encoding finishes. A 404 here means step 1 was skipped.
+
+Nothing about moderation changes: the row still inserts as `under_review` and the same
+BEFORE trigger still enforces it, whatever the provider.
 
 ## Domain Terms
 

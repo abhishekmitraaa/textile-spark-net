@@ -4,6 +4,8 @@ import { ArrowLeft, Clapperboard, Loader2 } from "lucide-react";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { useVideoCloseUps } from "@/lib/queries/videos";
+import { usePreferences } from "@/lib/preferencesStore";
+import { preferredVideoCategoryNames } from "@/lib/buyerCategories";
 
 // ─────────────────────────────────────────────────────────────
 // /video-closeups — dedicated route
@@ -29,14 +31,23 @@ export default function VideoCloseUpsPage() {
   const usingDevFallback = !dbVideos?.length;
   const catalogue = usingDevFallback ? devOnlyVideoCloseUps() : dbVideos;
 
-  // Same in-session interest signal NewArrivals.tsx uses.
+  // The buyer's REAL stored preferences (buyer_profiles.preferred_categories,
+  // hydrated on sign-in by preferencesStore), which is what already drives
+  // products.ts's useYouMightLike. Seeding the ranking with these means a
+  // signed-in buyer gets a personalised reel on their FIRST slide, not only
+  // after they have bookmarked something — the previous behaviour ignored a
+  // signal the account had been carrying all along.
+  const { categories: preferredIds } = usePreferences();
+
+  // Same in-session interest signal NewArrivals.tsx uses, now folded on top of
+  // the stored one. Order matters only for readability — it's a Set union.
   const interestedCategories = useMemo(() => {
-    const cats = new Set<string>();
+    const cats = new Set<string>(preferredVideoCategoryNames(preferredIds));
     for (const video of catalogue) {
       if (bookmarkedVideoIds.has(video.id)) cats.add(video.category);
     }
     return cats;
-  }, [bookmarkedVideoIds, catalogue]);
+  }, [bookmarkedVideoIds, catalogue, preferredIds]);
 
   const rankedVideoCloseUps = useMemo(
     () => rankVideoCloseUps(catalogue, interestedCategories),

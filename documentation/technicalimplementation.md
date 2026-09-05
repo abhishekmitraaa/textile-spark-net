@@ -117,7 +117,7 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (36 as of 2026-09-05). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (40 as of 2026-09-06). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
@@ -127,9 +127,10 @@ function is missing.
 | Domain | Tables |
 |---|---|
 | Identity & roles | `profiles`, `buyer_profiles`, `vendor_profiles`, `vendor_documents`, `admin_role`, `admin_role_values` |
-| Catalogue | `products`, `product_images`, `product_videos`, `catalogues`, `categories` |
+| Catalogue | `products`, `product_images`, `product_videos` (+`provider`/`bunny_video_id` — see Bunny Stream below), `catalogues`, `categories` |
 | Sourcing | `rfqs`, `quotes`, `leads` (via rfq/quote joins), `recently_viewed` |
-| Saves & follows | `saved_items`, `saved_folders`, `saved_folder_items`, `follows` |
+| Saves & follows | `saved_items`, `saved_folders`, `saved_folder_items`, `saved_videos`, `follows` |
+| Video engagement | `video_likes` (per-buyer like rows; `product_videos.likes_count` is the denormalised counter kept in step by an AFTER trigger) |
 | Chat | `conversations`, `messages`, `conversation_reviews`, `chat_block_reasons`, `flag_patterns`, `keyword_blocklist` |
 | Reviews | `reviews` (vendor), `product_reviews`, `service_reviews` |
 | Ads | `advertisements`, `active_ads` (view), `ad_orders`, `ad_category_benchmarks`, `vendor_ad_verifications` |
@@ -143,7 +144,8 @@ function is missing.
 `resolve_conversation_review`, `submit_report`, `set_account_status`, `regex_probe`,
 `notify`, `account_is_active`, `is_admin`, `is_conversation_member`, `owns_product`,
 `owns_rfq`, `get_vendor_plan`, `expire_subscriptions`, `grant_ad_verification`,
-`increment_product_view`, `increment_product_enquiry`, `next_invoice_number`,
+`increment_product_view`, `increment_product_enquiry`, `increment_video_view`,
+`sync_video_likes_count` (trigger fn), `next_invoice_number`,
 `reply_to_review`, `user_has_password`.
 
 Enforcement pattern used throughout: **RLS decides who may touch a row; BEFORE triggers
@@ -157,7 +159,86 @@ must not be undone.
   (`(storage.foldername(name))[1] = auth.uid()::text`). Review photos live here under
   `${buyerId}/reviews/…` — **not** a separate bucket.
 - `product-videos` — holds both videos and their posters. MIME allowlist must keep
-  `image/jpeg` + `image/webp`; `file_size_limit` 50 MB.
+  `image/jpeg` + `image/webp`; `file_size_limit` 50 MB. Raising that cap has a
+  dashboard-first ordering that cannot be skipped — see "Raising MAX_VIDEO_BYTES" in
+  `claude.md`. Reconciling objects against rows: `documentation/orphan-reconciliation.sql`
+  (read-only by design; the delete step is deliberately a human one).
+
+### Video closeup engagement — why three different shapes
+
+`product_videos` carries two counters and has two companion tables, and the differences
+between them are deliberate rather than incidental:
+
+- **`views_count`** — monotonic. A view happened and cannot un-happen, so `+1` forever is
+  the correct semantic and a `SECURITY DEFINER` RPC (`increment_video_view(p uuid)`,
+  scoped to `status='live'`) is enough. Exactly mirrors `increment_product_view`; a buyer
+  owns no video row, so the write cannot be a client UPDATE. Dedup is the caller's
+  responsibility — `recordVideoViewOnce` in `lib/queries/videoEngagement.ts` layers an
+  in-memory `Set` under `sessionStorage`, because a reel slide re-activates and remounts
+  in a way a product page never does.
+- **`likes_count` + `video_likes`** — a like is a *toggle*, so it needs a row that can be
+  deleted, not a number that only grows. The join table is the source of truth (and the
+  only way to answer "did I already like this?"); the counter is a denormalisation the
+  feed sorts and renders from, maintained by `sync_video_likes_count` (AFTER INSERT/DELETE,
+  `SECURITY DEFINER`, floored at 0).
+- **`saved_videos`** — same RLS shape as `saved_items` but deliberately outside
+  `savedStore.ts`, because that store models folders-of-products and a saved video has no
+  folder. Kept separate from the in-session `bookmarkedVideoIds` signal that
+  `rankVideoCloseUps` reads: durable saves and this-session interest answer different
+  questions.
+
+### Bunny Stream — the first non-Supabase media provider (built, NOT yet live)
+
+The first time this codebase delivers media from somewhere other than Supabase Storage,
+and the first time an edge function mints a signed upload URL. Both are new patterns, so
+the reasoning matters more than the mechanics.
+
+**Why a server hop at all.** Every other upload here goes browser→Supabase Storage
+authorised by RLS on `storage.objects`. Bunny's TUS upload is authorised by
+`SHA256(library_id + api_key + expiration + video_id)`, which cannot be computed in a
+browser without shipping the key. Hence `bunny-upload-url` — the only thing in either repo
+that holds `BUNNY_API_KEY`. The **Library ID is not and cannot be a secret**: Bunny
+requires it as a plain `LibraryId` header on the client's own request.
+
+**Three functions, all `verify_jwt = true` in `config.toml`** (load-bearing: each decodes
+the JWT payload without verifying the signature, exactly as the payment functions do, which
+is sound only because the platform validated it first):
+
+| Function | Caller | Authorization |
+|---|---|---|
+| `bunny-upload-url` | vendor | must have a `vendor_profiles` row **and** `account_status='active'`; fails closed on lookup error. Also serves `{"probe":true}`, a config check that creates nothing. |
+| `bunny-delete-video` | vendor or moderator | resolves the `product_videos` row by id and reads owner + GUID **from the row** — never from the request body |
+| `bunny-reconcile` | `super_admin` / `product_moderator` | read-only two-way diff of the library against `bunny_video_id` |
+
+**Why the delete function takes a row id, not a GUID.** `pvideos_select` is
+`status='live' OR vendor_id=auth.uid() OR is_admin()`, so every live row's
+`bunny_video_id` is readable by anon with the publishable key in the bundle. It is an
+attacker-known value. Ownership must come from the row.
+
+**Provider selection is a runtime fallback, not a build flag.** `createProductVideo` asks
+`bunny-upload-url` for a slot; `not_configured` (a **200**, per the `razorpay-create-order`
+convention) means Bunny was never set up and the original Supabase path runs unchanged.
+Every other error throws. This is why the migration can ship dark — and why it is silent,
+so `scripts/bunny-config-check.mjs` and the provider census in
+`documentation/orphan-reconciliation.sql` exist to tell you which path is actually running.
+
+**Two coupled constants.** `UPLOAD_WINDOW_SECONDS` (6h) bounds the whole upload, not its
+start, because tus-js-client resends the auth headers on every PATCH and Bunny re-validates
+per chunk. `bunny-reconcile`'s `ORPHAN_MIN_AGE_HOURS` (8h) must stay above it — that
+inequality is what makes the age guard *provable* (an upload cannot outlive its signature)
+rather than the estimate the storage-side reconciliation settles for.
+
+**Known-open, must be resolved before the first real upload:** the playback URL hardcodes
+`play_720p.mp4`. Bunny only produces renditions present in the source, so a sub-720p clip
+may never have that file — the same permanent-404 symptom as forgetting the Encoding-tab
+MP4-fallback setting. The robust fix is to insert the row first and PATCH the URLs from
+`availableResolutions` / `thumbnailFileName` once encoding reports finished, rather than
+composing URLs at insert time. Deploy order and the non-retroactive settings are in
+`claude.md`.
+
+None of these paths trips `enforce_product_videos_moderation` — it short-circuits on
+`current_user <> 'authenticated'`, and a `SECURITY DEFINER` function owned by `postgres`
+runs as `postgres`. It guards only `status` and `rejection_reason` regardless.
 
 ---
 

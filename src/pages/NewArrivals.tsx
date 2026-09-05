@@ -83,6 +83,8 @@ const BASE_PRODUCTS: Product[] = [
 // falls back to the thumbnail image automatically if videoUrl is
 // absent or fails to load, so removing these is also safe.
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
+import { usePreferences } from "@/lib/preferencesStore";
+import { preferredVideoCategoryNames } from "@/lib/buyerCategories";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
@@ -264,17 +266,24 @@ const NewArrivals = () => {
   const [openList, setOpenList] = useState<VideoCloseUp[]>([]);
   const [bookmarkedVideoIds, setBookmarkedVideoIds] = useState<Set<string>>(new Set());
 
-  // Categories the buyer has shown interest in THIS session, derived from
-  // which video close-ups they've bookmarked. Recomputed only when the
-  // bookmark set actually changes. See rankVideoCloseUps for what this
-  // feeds into and why it's scoped to session-only signal.
+  // Categories the buyer is interested in, from two sources that answer
+  // different questions and are deliberately both used:
+  //   - buyer_profiles.preferred_categories — what they told us at
+  //     registration, account-tied and durable. Mapped into the
+  //     `categories.name` vocabulary product_videos.category actually stores.
+  //     This is the same signal products.ts's useYouMightLike runs on; the
+  //     reel was the one surface still ignoring it.
+  //   - bookmarkedVideoIds — what caught their eye in the last few minutes.
+  // Recomputed only when either actually changes. See rankVideoCloseUps for
+  // what this feeds into.
+  const { categories: preferredIds } = usePreferences();
   const interestedCategories = useMemo(() => {
-    const cats = new Set<string>();
+    const cats = new Set<string>(preferredVideoCategoryNames(preferredIds));
     for (const video of videoCatalogue) {
       if (bookmarkedVideoIds.has(video.id)) cats.add(video.category);
     }
     return cats;
-  }, [bookmarkedVideoIds, videoCatalogue]);
+  }, [bookmarkedVideoIds, videoCatalogue, preferredIds]);
 
   const rankedVideoCloseUps = useMemo(
     () => rankVideoCloseUps(videoCatalogue, interestedCategories),

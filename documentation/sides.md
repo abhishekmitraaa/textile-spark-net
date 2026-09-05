@@ -38,7 +38,11 @@ the demand side of India's fashion and textile supply chain.
 - **Discovery feeds** — New Arrivals, For You (preference-driven), Trends, Sale, Following,
   Categories, Recently Viewed.
 - **Video Closeups** — a product video reel in the buyer feed. Never called "Reels".
-  Windowed viewer, at most 3 `<video>` elements in the DOM.
+  Windowed viewer, at most 3 `<video>` elements in the DOM. **Saves and likes are durable**
+  (`saved_videos` / `video_likes`, hydrated on open) rather than session-local, and the
+  active slide records a real view via `increment_video_view`, which is what makes the
+  feed's existing `views_count` ordering mean anything. Ranking is seeded from the
+  buyer's stored `preferred_categories` and then folded with this-session bookmarks.
 - **Search** — text search plus filters and an image-search edge function.
 - **RFQs** — **Quick RFQ** (image + quantity, designed for under 30 seconds) or a
   **detailed requirement** via a schema-driven, per-category form.
@@ -67,6 +71,9 @@ the demand side of India's fashion and textile supply chain.
 
 ### Known gaps
 - No dedicated buyer Settings page — the sidebar "Settings" link points at `/profile`.
+- Video Closeups: the **Share** button in the reel viewer is still inert, and the reel's
+  `rating`/`reviews` fields are stored on `product_videos` rather than derived from the
+  tagged product's real review data.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
 
@@ -101,7 +108,10 @@ rather than a supplier directory.
 - **Onboarding** — multi-step: business details, documents, products, contract.
 - **Catalogue** — products (fabric type, GSM, MOQ, sizes, customization, certifications),
   catalogues, and Video Closeups. **Everything goes through admin moderation before going
-  live (24–48 h)** — products and videos both default to `under_review`.
+  live (24–48 h)** — products and videos both default to `under_review`. A **rejected
+  Video Closeup now shows the moderator's reason** on its card in Upload Video, so a
+  vendor can act on it instead of resubmitting blind. (A rejected *product* still does
+  not — the vendor-facing product list has no equivalent surface yet.)
 - **Leads** — buyer inquiries arriving in the dashboard.
 - **Quote requests** — respond to RFQs; targeted RFQs are excluded from the leads-used count.
 - **Advertisements** — paid campaigns with category and geographic targeting (including Pan

@@ -33,3 +33,18 @@ verify_jwt = true
 
 [functions.subscription-verify-payment]
 verify_jwt = true
+
+# Bunny Stream. These are load-bearing, not decorative: all three functions read
+# the caller's id by base64-decoding the JWT payload WITHOUT verifying its
+# signature, exactly as the payment functions do. That is only sound because the
+# platform has already validated the token by the time the handler runs. Remove
+# verify_jwt = true here and any anonymous caller could mint upload slots, or
+# delete another vendor's video, by hand-writing a `sub` claim.
+[functions.bunny-upload-url]
+verify_jwt = true
+
+[functions.bunny-delete-video]
+verify_jwt = true
+
+[functions.bunny-reconcile]
+verify_jwt = true

@@ -64,6 +64,88 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-06 — Bunny Stream configuration probe + reconciliation false-positive (Phase 8)
+- **Suite/test:** new `scripts/bunny-config-check.mjs`, run twice against the live project;
+  plus one rolled-back SQL transaction proving a bug in
+  `documentation/orphan-reconciliation.sql`.
+- **Test data used:** the real `demo-vendor@cosora.dev` account (an active vendor, as the
+  other `scripts/*.mjs` use) for the probe. For the SQL case, one throwaway
+  `product_videos` row `00000000-…-0000000000cc` with `provider='bunny'` and a fake
+  `vz-test.b-cdn.net` URL, inside `begin … rollback`. The one real row `35783726…` was
+  read-only throughout.
+- **Result — the probe: `*** NOT CONFIGURED ***`,** detail
+  `missing secret(s): BUNNY_API_KEY, BUNNY_LIBRARY_ID, BUNNY_CDN_HOSTNAME`. Run twice
+  against a function deployed minutes earlier, so this is absence rather than propagation
+  lag. This contradicts the phase brief, which stated two of the three were already stored.
+  The probe branch reports secret NAMES only and creates no Bunny video.
+- **Result — the SQL case: FAIL then PASS.** The old Query 2 (no provider filter) reported
+  the bunny row as `video_object = MISSING` — a column the file documents as meaning
+  "renders as a broken video in the buyer feed" — while the fixed shape
+  (`where v.provider = 'supabase'`) excludes it and still reports the real supabase row as
+  `ok`. Cause: `split_part()` returns an empty string, not null, when the delimiter is
+  absent, so every Bunny URL collapsed to `''` and matched no storage object. Left
+  unfixed, the first run after Bunny shipped would have declared the entire Bunny
+  catalogue broken.
+- **Post-run state verified:** `product_videos` back to 1 row, the real row untouched.
+- **Not covered, and it is most of the phase.** With no credentials there is no Bunny
+  library, so nothing downstream of the probe has been exercised: no video was ever
+  created, no TUS upload ran, no signature was validated by Bunny, no MP4 rendition was
+  fetched, `bunny-delete-video` and `bunny-reconcile` have never executed against a real
+  library, and the client's Bunny branch in `createProductVideo` has never run — it always
+  takes the `not_configured` fallback today. The upload/playback/delete chain is argued
+  from the docs and the code, not demonstrated. Treat every claim about Bunny behaviour in
+  this entry as unverified until `scripts/bunny-config-check.mjs` passes.
+
+### 2026-09-05 — Video Closeup engagement counters + saves (Phases 2–3, DB layer)
+- **Suite/test:** ad-hoc SQL executed through Supabase MCP against the **live project**
+  `vxdhhgdfubqedfpwfyrb`, wrapped in a single `begin … rollback` so nothing survived the
+  run. Not a scripted suite; recorded here because it is the only verification these two
+  migrations have.
+- **Test data used:** one **throwaway** `product_videos` row, id
+  `00000000-0000-4000-8000-0000000000aa`, `status='live'`, owned by the real vendor
+  `6f66d05d…` (the only vendor with a video), plus the first `profiles` row as the liking
+  buyer. The one real video row `35783726…` (`status='rejected'`) was used **read-only**,
+  as the negative case. Nothing was seeded permanently and no demo account was modified.
+- **What was checked (5 assertions, all PASS):**
+
+  | # | Assertion | Result |
+  |---|---|---|
+  | T1 | `increment_video_view` on a `live` row increments — two calls | `views_count = 2` |
+  | T2 | `increment_video_view` on the `rejected` row is a **no-op** (the `status='live'` scope is inside the function, not the caller) | `views_count` stayed `0` |
+  | T3a | Inserting a `video_likes` row fires `sync_video_likes_count` | `likes_count = 1` |
+  | T3b | Deleting it decrements | `likes_count = 0` |
+  | T4 | Unlike when the counter is already `0` floors rather than going negative (`greatest(…, 0)`) | `likes_count = 0`, not `-1` |
+  | T5 | Deleting the parent video cascades `video_likes` **and** `saved_videos` away, and the AFTER-DELETE trigger updating a row that no longer exists does not error | both tables `0`, no exception |
+
+- **Post-run state verified, not assumed:** `product_videos` back to 1 row, `video_likes`
+  0, `saved_videos` 0, and the real row `35783726…` still reads `views_count = 0` — i.e.
+  the rollback took and the live data is untouched.
+- **Function ACLs checked, and one was tightened and re-tested.** `increment_video_view` has no PUBLIC grant and is executable by `anon` + `authenticated` only (anon matters — the buyer feed is browsable signed-out). `sync_video_likes_count` still had PUBLIC EXECUTE; revoked, then the like/unlike case was re-run in a fresh rolled-back transaction to prove the trigger still fires (1, then 0). Postgres checks EXECUTE at `CREATE TRIGGER` time, not per fire — verified rather than assumed.
+- **RLS shape confirmed separately** (outside the transaction, `pg_policies`):
+  `saved_videos_owner` and `video_likes_owner` are both `ALL` with
+  `USING (buyer_id = auth.uid())` and `WITH CHECK (buyer_id = auth.uid())`, `rowsecurity`
+  true on both — identical to `saved_items.sitems_all`.
+- **Not covered by this run, and worth being explicit about:** everything above executes
+  as `postgres` via MCP, which means **RLS was never actually exercised** — a buyer
+  attempting to write another buyer's like/save row was not tested, only the policy text
+  was read back. The same applies to the client-side dedup, the `base + delta` like count,
+  and the active-slide view call, none of which a SQL transaction can reach. Those need an
+  authenticated browser session. Recorded as a gap rather than implied to be green.
+
+### 2026-09-05 — `product-videos` storage reconciliation queries (Phase 5)
+- **Suite/test:** the two queries in `documentation/orphan-reconciliation.sql`, run
+  read-only against the live project.
+- **Test data used:** the live bucket as-is — 2 objects
+  (`6f66d05d…/1785812083443-65j7ju.mp4`, 4.3 MB, and its `-thumb.jpg`, 12.9 KB) and the
+  one `product_videos` row.
+- **Result:** Query 1 returned **0 orphans**. Query 2 reported the real row as
+  `video_object = ok, thumb_object = ok`. The `split_part` key extraction was checked
+  independently and reproduces exactly the two object names present in the bucket, which
+  is what makes the 0-orphan result meaningful rather than vacuous.
+- **Not covered:** the queries have never been run against a database that actually has an
+  orphan, so the *positive* case is unexercised — the age guard and the key match are
+  argued from the schema, not demonstrated.
+
 ### 2026-09-05 — Chat + Chat-Moderation Full Pipeline (T1–T13, both layers)
 - **Suite/test:** `Cosora-Admin/scripts/chat-pipeline-matrix.mjs` (72 DB cases) +
   `tests/chat-pipeline.spec.ts` and `tests/admin-chat-moderation.spec.ts`

@@ -63,3 +63,29 @@ export const PREF_TO_DB_CATEGORY_NAMES: Record<string, string[]> = {
   kidswear: ["Kidswear"],
   activewear: ["Activewear"],
 };
+
+/**
+ * The buyer's preferences, expressed in the vocabulary `product_videos.category`
+ * actually uses.
+ *
+ * Checked against the live DB before writing this: `product_videos.category` is
+ * plain text with a default of 'Apparel', NOT an FK like `products.category_id`
+ * — but createProductVideo populates it by copying the TAGGED PRODUCT's
+ * `categories.name`, and UploadVideo refuses to submit without a tagged product.
+ * So in practice every real row carries a genuine `categories.name` (the one
+ * live row's is "Buttons"), which is exactly the vocabulary the map above
+ * already targets. Same taxonomy, reached one step earlier: the video side
+ * wants the NAMES, where products.ts's resolvePreferredCategoryIds goes on to
+ * trade those names for `categories.id`.
+ *
+ * The two defaults ('Apparel' server-side, 'Fashion' in createProductVideo's
+ * fallback) are not `categories.name` values and match no preference. That is
+ * correct rather than a gap — an untagged video has no category signal to
+ * personalise on — but it is why this is a lookup and not an assumption that
+ * every video row maps to something.
+ */
+export function preferredVideoCategoryNames(prefIds: string[]): string[] {
+  const names = new Set<string>();
+  for (const id of prefIds) for (const n of PREF_TO_DB_CATEGORY_NAMES[id] ?? []) names.add(n);
+  return Array.from(names);
+}

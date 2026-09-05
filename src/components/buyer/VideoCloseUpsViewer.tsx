@@ -1,8 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCallVendor } from "@/lib/queries/calls";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Phone, Star, Bookmark, Share2, Volume2, VolumeX, Play, Heart, Eye } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
+import { useAuth } from "@/contexts/AuthContext";
+import { onThumbError } from "@/lib/queries/videos";
+import {
+  recordVideoViewOnce,
+  fetchLikedVideoIds, likeVideo, unlikeVideo,
+  fetchSavedVideoIds, dbSaveVideo, dbUnsaveVideo,
+  isPersistableVideoId,
+} from "@/lib/queries/videoEngagement";
 
 // Compact engagement-count formatting, reel-style: 1600 -> "1.6K",
 // 1_250_000 -> "1.2M". Whole thousands/millions drop the ".0".
@@ -88,12 +96,47 @@ const SLIDE_WINDOW = 2;
 
 export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, onBookmarkChange }: VideoCloseUpsViewerProps) {
   const callVendor = useCallVendor();
+  const { user } = useAuth();
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [saved, setSaved] = useState<Set<string>>(new Set());
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  // What the DB said when the viewer opened. `video.likes` already counts
+  // these, so the displayed number is base + (current - hydrated), never
+  // base + current — otherwise a like the buyer made yesterday would be
+  // counted twice the moment the feed refetched.
+  const [hydratedLikes, setHydratedLikes] = useState<Set<string>>(new Set());
   const [muted, setMuted] = useState(true);
   const trackRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Stable across re-renders that hand back a new array of the same reels —
+  // the parent re-ranks on every bookmark change, so `videos` identity alone
+  // would re-run the hydration fetch on every tap.
+  const persistableIds = useMemo(
+    () => videos.map((v) => v.id).filter(isPersistableVideoId),
+    [videos],
+  );
+  const idsKey = persistableIds.join(",");
+
+  // Hydrate durable likes/saves for the signed-in buyer. Signed out, both
+  // stay session-local exactly as before — there is no row to own.
+  useEffect(() => {
+    if (!isOpen || !user || !persistableIds.length) return;
+    let cancelled = false;
+    void Promise.all([
+      fetchLikedVideoIds(persistableIds).catch(() => new Set<string>()),
+      fetchSavedVideoIds(persistableIds).catch(() => new Set<string>()),
+    ]).then(([likedIds, savedIds]) => {
+      if (cancelled) return;
+      // Merge rather than replace: a tap that landed while this was in flight
+      // must not be undone by the response.
+      setLiked((prev) => new Set([...likedIds, ...prev]));
+      setSaved((prev) => new Set([...savedIds, ...prev]));
+      setHydratedLikes(likedIds);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user?.id, idsKey]);
 
   // Scroll to the requested starting slide as soon as the viewer opens.
   useEffect(() => {
@@ -138,21 +181,40 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
+  // A save is durable now: it writes saved_videos so a refresh keeps it, the
+  // same way a saved product already behaves. The set handed to
+  // onBookmarkChange stays the IN-SESSION signal rankVideoCloseUps reads —
+  // deliberately not seeded from the hydrated saves, because "what this buyer
+  // kept six weeks ago" and "what caught their eye just now" are different
+  // questions and only the second one should reshuffle the next open.
   const toggleSave = (id: string) => {
     setSaved(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
+      const removing = next.has(id);
+      if (removing) next.delete(id);
       else next.add(id);
+      if (user && isPersistableVideoId(id)) {
+        if (removing) dbUnsaveVideo(user.id, id);
+        else dbSaveVideo(user.id, id);
+      }
       onBookmarkChange?.(next);
       return next;
     });
   };
 
+  // Likes go through video_likes, not a counter RPC — a like is a toggle, so
+  // it needs a row that can be deleted, not a number that only grows. The
+  // AFTER trigger keeps product_videos.likes_count in step.
   const toggleLike = (id: string) => {
     setLiked(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
+      const removing = next.has(id);
+      if (removing) next.delete(id);
       else next.add(id);
+      if (user && isPersistableVideoId(id)) {
+        if (removing) unlikeVideo(user.id, id);
+        else likeVideo(user.id, id);
+      }
       return next;
     });
   };
@@ -215,6 +277,7 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
                       muted={muted}
                       saved={saved.has(video.id)}
                       liked={liked.has(video.id)}
+                      likeDelta={(liked.has(video.id) ? 1 : 0) - (hydratedLikes.has(video.id) ? 1 : 0)}
                       onToggleSave={() => toggleSave(video.id)}
                       onToggleLike={() => toggleLike(video.id)}
                       onCallNow={() => callVendor(video.vendorId, video.brandName)}
@@ -240,12 +303,14 @@ interface VideoSlideProps {
   muted: boolean;
   saved: boolean;
   liked: boolean;
+  /** +1 / 0 / -1 — this session's change relative to the count already in `video.likes`. */
+  likeDelta: number;
   onToggleSave: () => void;
   onToggleLike: () => void;
   onCallNow: () => void;
 }
 
-function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
+function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const [showPlayHint, setShowPlayHint] = useState(false);
   const [videoErrored, setVideoErrored] = useState(false);
@@ -272,6 +337,20 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSa
       el.pause();
     }
   }, [isActive, video.videoUrl, videoErrored]);
+
+  // Count a real view. The ACTIVE slide is the only one that counts — a slide
+  // at distance 1 has a <video> mounted and metadata preloading, but nobody is
+  // watching it, and counting those would make views_count a measure of
+  // scroll velocity rather than attention. recordVideoViewOnce owns the
+  // once-per-session dedup (a reel slide re-activates every time you scroll
+  // back to it, and remounts as it re-enters SLIDE_WINDOW).
+  //
+  // This is what finally gives fetchVideoCloseUps's existing
+  // .order("views_count") something real to sort on.
+  useEffect(() => {
+    if (!isActive) return;
+    recordVideoViewOnce(video.id);
+  }, [isActive, video.id]);
 
   // Release the media buffer when this slide scrolls out of the window.
   // Removing the element isn't enough on its own: the browser keeps the
@@ -300,11 +379,14 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSa
 
   const hasVideo = Boolean(video.videoUrl) && !videoErrored;
 
-  // Displayed like count = the closeup's base likes + the buyer's own tap
-  // this session, so the number visibly ticks up the moment they like it,
-  // exactly like a reel.
+  // Displayed like count = the stored count plus this session's CHANGE to it,
+  // so the number ticks up the moment they tap, exactly like a reel — and
+  // ticks back down on an unlike, which a plain `+ (liked ? 1 : 0)` could not
+  // express once likes became durable (a like made yesterday is already inside
+  // `video.likes`; adding 1 for it again would double-count it). Floored at 0
+  // for the unlike-a-stale-zero case.
   const baseLikes = video.likes ?? 0;
-  const likeCount = baseLikes + (liked ? 1 : 0);
+  const likeCount = Math.max(baseLikes + likeDelta, 0);
 
   // A <video> only exists for the active slide and its immediate neighbours.
   // Slide 2 shows just its poster, so a fling-scroll costs a handful of images
@@ -323,6 +405,10 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSa
         src={video.thumbnail}
         alt={video.brandLine}
         decoding="async"
+        // A Bunny poster is recorded at insert time but only exists once
+        // encoding finishes, so a just-approved reel can 404 here. Falling back
+        // to the bundled placeholder beats a broken-image glyph under the video.
+        onError={onThumbError}
         className="absolute inset-0 w-full h-full object-cover"
       />
 
@@ -408,7 +494,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, onToggleSa
           {/* Same URL as the poster, so this is a cache hit — but without the
               size hints the browser decodes the full 500x650 source to paint
               48px. */}
-          <img src={video.thumbnail} alt="" loading="lazy" decoding="async" width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+          <img src={video.thumbnail} alt="" loading="lazy" decoding="async" onError={onThumbError} width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-gray-900 truncate">{video.brandName}</p>
             <p className="text-[11px] text-gray-500 truncate">{video.brandLine}</p>
