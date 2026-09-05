@@ -33,6 +33,64 @@ Entry format:
 
 ---
 
+## 2026-09-05 — Cosora-Admin can moderate Video Closeups at all (Phase 0)
+
+- **What changed:** Added a Video Closeups moderation queue to `Cosora-Admin`. New
+  `src/pages/Videos.tsx` (route `/videos`, nav entry, three tabs: queue / live / rejected),
+  a `"videos"` section in `src/lib/roles.ts` with `SECTION_READ` =
+  super_admin · product_moderator · support and `SECTION_WRITE` = super_admin ·
+  product_moderator, and the matching `RequireSection` route in `src/App.tsx` and rail item
+  in `src/components/Shell.tsx`. Nothing in this repo changed — no schema, no RLS, no
+  trigger, no migration. The gates this screen leans on all shipped on 2026-08-01.
+- **Why:** The moderation *machinery* for `product_videos` has existed since
+  `20260801085830` — default `under_review`, a BEFORE trigger, per-item approve and reject
+  RPCs, a `rejection_reason` column — but no operator surface ever consumed it. One real
+  vendor video (`brand_line "Yoyoyo"`, uploaded 2026-08-04) had sat `under_review` for a
+  month with no screen anywhere able to approve or reject it. A moderation gate nobody can
+  open is a queue that fills up, not a control.
+- **Design decisions worth keeping:**
+  - **Raw `.update()` + `assertWrote`, not `approve_vendor_content` / `reject_vendor_content`.**
+    Both RPCs exist and are correctly role-gated, but Products, Ads and VendorDetail all
+    write the column directly and let RLS + the trigger refuse it. One convention beats two.
+    The cost is the RPC's `P0002` "you may only approve something that is `under_review`"
+    guard, which the UI supplies exactly as `Products.tsx` does — Approve is not rendered
+    for a live row, and each tab holds one status.
+  - **The bulk button IS an RPC**, because vendor-wide approval has no column to write.
+    `approve_vendor_content_bulk` returns `void`, so there is nothing to `assertWrote` and
+    no count to report; the page counts that vendor's pending videos either side of the
+    call and reports what actually moved. Its confirm dialog names the real blast radius —
+    products **and** videos **and** catalogues, including items nobody looked at — because
+    the RPC's reach is wider than the screen it is invoked from.
+  - **A moderator can watch the clip in-panel.** Moderating video off a poster frame is
+    theatre. The `<video>` mounts only when the modal opens, so the list costs one poster
+    JPEG per row rather than an mp4 — the 5 GB/month egress ceiling is shared with the
+    buyer app.
+  - **A row with no `video_url` is called out in red**, not left silently approvable. That
+    is the signature the resumed-upload bug left behind (row recorded one path, bytes went
+    to another), and approving one publishes a broken player to buyers.
+  - **No `<FlagLog />`, deliberately.** `admin_flags_entity_type_check` allows
+    `('vendor','product','ad','conversation')` — `'video'` would `23514` on the first note
+    saved. Adding it is a one-line constraint migration in Cosora-Admin, out of scope here.
+- **Verified in a real browser against the live project, not by reading the code:**
+  signed in as `super_admin`; the queue rendered the real pending video with its vendor,
+  wait time, tagged product, length and pixel size; the clip decoded and played
+  (`readyState 4`, 478×850, `currentTime` advancing); **the real video was approved** and
+  then confirmed playing in the **signed-out** buyer feed at `/video-closeups`
+  (`readyState 4`, HTTP 206 range streaming, `currentTime` 14.49 → 17.07 over 2.5 s), with
+  no `[DEV]` sample clips present. Reject, the required-reason gate, the stored reason
+  rendering back in the audit tab, the missing-poster fallback, the no-`video_url` notice
+  and the bulk approve were all exercised on a throwaway row seeded as `demo-vendor` and
+  **deleted afterwards** (`product_videos` back to exactly one row, zero storage objects).
+  The four database gates were re-proven with a real vendor JWT along the way: insert with
+  `status:'live'` is downgraded to `under_review`, a pre-seeded `rejection_reason` is
+  nulled, and both a vendor `PATCH` to `live` and a vendor `PATCH` of `rejection_reason`
+  are refused `42501`.
+- **Files touched:** all in `Cosora-Admin` — `src/pages/Videos.tsx` (new),
+  `src/lib/roles.ts`, `src/App.tsx`, `src/components/Shell.tsx`, `README.md`. In this repo:
+  `documentation/changelog.md`, `documentation/sides.md`, `documentation/sitemap.md`.
+  `Cosora-Admin` typecheck and `vite build` both clean.
+
+
 ## 2026-09-05 — Documentation system moved into `documentation/`
 
 - **What changed:** Introduced a persistent documentation system. Created
