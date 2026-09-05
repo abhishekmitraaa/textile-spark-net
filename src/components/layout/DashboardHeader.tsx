@@ -6,7 +6,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { useUnreadCount } from "@/lib/notificationsStore";
+import { useUnreadCount } from "@/lib/queries/notifications";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;

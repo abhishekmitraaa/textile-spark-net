@@ -1,17 +1,31 @@
-import { useSyncExternalStore } from "react";
 
 // ─────────────────────────────────────────────────────────────
-// Vendor notifications store.
+// Notifications — view model, and the DEV-ONLY sample feed.
 //
-// Drives the vendor Notifications page (`/notifications`) and the unread
-// badge on the dashboard header bell. The headline event is a NEW BUYER
-// REQUIREMENT (RFQ) posted in one of the vendor's domains/categories — the
-// vendor's cue to jump in and quote. Alongside that it carries the full
-// spread of vendor-side updates: quote status changes, direct leads, buyer
-// messages, ad performance, payments, reviews and platform/account updates.
+// WHAT IS REAL AND WHAT IS NOT:
 //
-// Same module-level `useSyncExternalStore` + localStorage pattern the buyer
-// stores use (savedStore, followingStore, …) — no React context/provider.
+//   Real, from the `notifications` table (migration 20260802130000), read by
+//   `useNotifications()` in src/lib/queries/notifications.ts:
+//     account_suspended · account_reinstated · chat_locked · chat_resumed
+//   Those are written server-side by SECURITY DEFINER functions and are the
+//   only notifications that exist in production today.
+//
+//   NOT real: requirement / quote / lead / message / ad / review / payment.
+//   Nothing writes them. The `SEED` below is a design fixture so the page can
+//   be worked on with a populated feed, and it is `[]` in a production build —
+//   the same rule `devOnlyVideoCloseUps()` follows, and for the same reason
+//   CLAUDE.md gives: an empty feed must render as genuinely empty rather than
+//   quietly showing fabricated business events. A vendor being told "New
+//   requirement in Cotton Fabrics — quote now" about an RFQ that does not
+//   exist is worse than an empty page.
+//
+//   Extending the table to cover those kinds is a real piece of work (triggers
+//   on rfqs / quotes / ad_orders / reviews), not a schema tweak, and it is not
+//   part of the moderation work this file was changed for.
+//
+// This module keeps the VIEW MODEL (`VendorNotification`, tone/group/icon
+// mapping) and the dev seed. It no longer owns state: read/dismiss now go to
+// the database, so localStorage would only be a second, disagreeing copy.
 // ─────────────────────────────────────────────────────────────
 
 /** Which filter tab a notification belongs to. */
@@ -60,8 +74,6 @@ export interface VendorNotification {
   actionLabel: string;
   requirement?: RequirementMeta;
 }
-
-const STORAGE_KEY = "cosora.vendor.notifications.v1";
 
 // minutes-ago → ISO, evaluated once at module init so the seeded feed reads
 // as "just now / 2h ago / yesterday" the first time it's opened.
@@ -235,81 +247,67 @@ const SEED: VendorNotification[] = [
   },
 ];
 
-function load(): VendorNotification[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as VendorNotification[];
-      if (Array.isArray(parsed) && parsed.length) return parsed;
-    }
-  } catch {
-    /* ignore corrupt storage */
-  }
-  return SEED;
+/**
+ * Sample notifications for local development and Playwright runs only — `[]` in
+ * a production build, so the page shows the user's REAL notifications and
+ * nothing else.
+ *
+ * `import.meta.env.DEV` is statically replaced by Vite, so SEED is tree-shaken
+ * out of the production bundle entirely.
+ */
+export function devOnlySampleNotifications(): VendorNotification[] {
+  return import.meta.env.DEV ? SEED : [];
 }
 
-let state: VendorNotification[] = load();
-const listeners = new Set<() => void>();
+// ─────────────────────────────────────────────────────────────
+// Mapping the real rows onto the view model.
+// ─────────────────────────────────────────────────────────────
 
-function persist() {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    /* storage may be unavailable (private mode); state still lives in memory */
-  }
+/**
+ * `kind` is un-CHECKed in SQL on purpose, so this is a lookup with a FALLBACK,
+ * never an exhaustive Record. A kind shipped by a newer migration than this
+ * bundle renders as a neutral system notice instead of throwing.
+ */
+const KIND_META: Record<string, { type: NotifType; tone: NotifTone; group: NotifGroup; actionLabel: string }> = {
+  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support" },
+  account_reinstated:  { type: "system",  tone: "positive", group: "updates", actionLabel: "Go to dashboard" },
+  chat_locked:         { type: "message", tone: "warning",  group: "updates", actionLabel: "Open chat" },
+  chat_resumed:        { type: "message", tone: "positive", group: "updates", actionLabel: "Open chat" },
+};
+
+const FALLBACK_META = {
+  type: "system" as NotifType,
+  tone: "neutral" as NotifTone,
+  group: "updates" as NotifGroup,
+  actionLabel: "View",
+};
+
+/** Shape of one row from `notifications`. Structural, to avoid a circular import. */
+export interface RawNotification {
+  id: string;
+  kind: string;
+  title: string;
+  body: string | null;
+  conversation_id: string | null;
+  read: boolean;
+  created_at: string;
 }
 
-function emit() {
-  persist();
-  listeners.forEach((l) => l());
-}
-
-export function markRead(id: string) {
-  if (state.find((n) => n.id === id)?.read) return;
-  state = state.map((n) => (n.id === id ? { ...n, read: true } : n));
-  emit();
-}
-
-export function markUnread(id: string) {
-  if (state.find((n) => n.id === id)?.read === false) return;
-  state = state.map((n) => (n.id === id ? { ...n, read: false } : n));
-  emit();
-}
-
-export function markAllRead() {
-  if (state.every((n) => n.read)) return;
-  state = state.map((n) => (n.read ? n : { ...n, read: true }));
-  emit();
-}
-
-export function removeNotification(id: string) {
-  state = state.filter((n) => n.id !== id);
-  emit();
-}
-
-function subscribe(cb: () => void) {
-  listeners.add(cb);
-  return () => listeners.delete(cb);
-}
-function getSnapshot() {
-  return state;
-}
-
-export function useNotifications(): VendorNotification[] {
-  return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-}
-
-/** Cached so the header badge doesn't re-render on every unrelated tick. */
-let cachedUnread = state.filter((n) => !n.read).length;
-let cachedForState: VendorNotification[] = state;
-function getUnreadSnapshot() {
-  if (cachedForState !== state) {
-    cachedForState = state;
-    cachedUnread = state.filter((n) => !n.read).length;
-  }
-  return cachedUnread;
-}
-
-export function useUnreadCount(): number {
-  return useSyncExternalStore(subscribe, getUnreadSnapshot, getUnreadSnapshot);
+export function toVendorNotification(row: RawNotification): VendorNotification {
+  const meta = KIND_META[row.kind] ?? FALLBACK_META;
+  return {
+    id: row.id,
+    type: meta.type,
+    tone: meta.tone,
+    group: meta.group,
+    title: row.title,
+    body: row.body ?? "",
+    createdAt: row.created_at,
+    read: row.read,
+    // conversation_id is the OTHER end of the link: /chat is the hub, and the
+    // thread route keys on the other participant rather than the conversation,
+    // so a row without one lands on the hub instead of a broken deep link.
+    href: row.conversation_id ? "/chat" : "/notifications",
+    actionLabel: meta.actionLabel,
+  };
 }

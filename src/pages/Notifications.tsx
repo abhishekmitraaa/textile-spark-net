@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { formatDistanceToNow } from "date-fns";
@@ -25,16 +26,19 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { cn } from "@/lib/utils";
 import {
-  useNotifications,
-  useUnreadCount,
-  markRead,
-  markAllRead,
-  removeNotification,
+  devOnlySampleNotifications,
+  toVendorNotification,
   type VendorNotification,
   type NotifType,
   type NotifTone,
   type NotifGroup,
 } from "@/lib/notificationsStore";
+import {
+  useNotifications,
+  markNotificationRead,
+  markAllNotificationsRead,
+  dismissNotification,
+} from "@/lib/queries/notifications";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -111,7 +115,15 @@ function RequirementChips({ meta }: { meta: NonNullable<VendorNotification["requ
   );
 }
 
-function NotificationCard({ n }: { n: VendorNotification }) {
+function NotificationCard({
+  n,
+  onRead,
+  onDismiss,
+}: {
+  n: VendorNotification;
+  onRead: (id: string) => void;
+  onDismiss: (id: string) => void;
+}) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const Icon = TYPE_ICON[n.type];
@@ -119,7 +131,7 @@ function NotificationCard({ n }: { n: VendorNotification }) {
   const primary = n.type === "requirement";
 
   const open = () => {
-    if (!n.read) markRead(n.id);
+    if (!n.read) onRead(n.id);
     navigate(n.href);
   };
 
@@ -143,7 +155,7 @@ function NotificationCard({ n }: { n: VendorNotification }) {
       <div className="pointer-events-none absolute right-2.5 top-2.5 z-20 flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
         {!n.read && (
           <button
-            onClick={() => markRead(n.id)}
+            onClick={() => onRead(n.id)}
             aria-label="Mark as read"
             title="Mark as read"
             className="pointer-events-auto rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#256fef]"
@@ -152,7 +164,7 @@ function NotificationCard({ n }: { n: VendorNotification }) {
           </button>
         )}
         <button
-          onClick={() => removeNotification(n.id)}
+          onClick={() => onDismiss(n.id)}
           aria-label="Dismiss notification"
           title="Dismiss"
           className="pointer-events-auto rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700"
@@ -215,9 +227,27 @@ function NotificationCard({ n }: { n: VendorNotification }) {
 
 const Notifications = () => {
   const reduced = useReducedMotion();
-  const all = useNotifications();
-  const unread = useUnreadCount();
+  const qc = useQueryClient();
+  const { data: rows, isPending, error } = useNotifications();
   const [tab, setTab] = useState<TabKey>("all");
+
+  // Real rows first, then the dev-only samples beneath them. In a production
+  // build devOnlySampleNotifications() returns [] and is tree-shaken, so what
+  // renders is exactly what the database holds — see notificationsStore.ts.
+  const all = useMemo(
+    () => [...(rows ?? []).map(toVendorNotification), ...devOnlySampleNotifications()],
+    [rows],
+  );
+  const unread = useMemo(() => all.filter((n) => !n.read).length, [all]);
+
+  const refresh = () => void qc.invalidateQueries({ queryKey: ["notifications"] });
+
+  // Writes go to the database and the list re-reads. A sample row (dev only)
+  // has no database row, so its write matches nothing and returns false — the
+  // refresh is harmless and the card simply stays as it was.
+  const onRead = (id: string) => void markNotificationRead(id).then(refresh);
+  const onDismiss = (id: string) => void dismissNotification(id).then(refresh);
+  const onReadAll = () => void markAllNotificationsRead().then(refresh);
 
   // Unread counts per tab (drive the little count pills).
   const counts = useMemo(() => {
@@ -275,7 +305,7 @@ const Notifications = () => {
           <motion.button
             whileTap={reduced || unread === 0 ? undefined : TAP}
             transition={TAP_T}
-            onClick={markAllRead}
+            onClick={onReadAll}
             disabled={unread === 0}
             className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-gray-200 px-3.5 py-2 text-xs font-bold text-gray-700 transition-colors hover:border-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
           >
@@ -347,8 +377,23 @@ const Notifications = () => {
           </div>
         </motion.div>
 
-        {/* List */}
-        {filtered.length === 0 ? (
+        {/* List. Loading, error and empty are three DISTINCT states: collapsing
+            them is how a broken feed reads as an empty one, which is exactly the
+            failure CLAUDE.md records for My Reviews. */}
+        {isPending ? (
+          <div className="mt-5 space-y-2.5" aria-busy="true">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-24 animate-pulse rounded-2xl bg-gray-100" />
+            ))}
+          </div>
+        ) : error ? (
+          <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center">
+            <p className="text-sm font-bold text-amber-900">Notifications could not be loaded</p>
+            <p className="mx-auto mt-1.5 max-w-sm text-xs text-amber-800">
+              {(error as Error).message}
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
           <motion.div
             variants={section}
             className="mt-5 rounded-2xl border border-dashed border-gray-200 bg-white p-12 text-center"
@@ -374,7 +419,7 @@ const Notifications = () => {
                   className="space-y-2.5"
                 >
                   {items.map((n) => (
-                    <NotificationCard key={n.id} n={n} />
+                    <NotificationCard key={n.id} n={n} onRead={onRead} onDismiss={onDismiss} />
                   ))}
                 </motion.div>
               </motion.div>
