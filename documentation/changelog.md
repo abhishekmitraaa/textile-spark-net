@@ -41,6 +41,65 @@ Entry format:
 
 ---
 
+## 2026-09-05 — Approve no longer leaves a stale rejection reason on a live row
+
+- **What changed:** `approve_vendor_content(target_table, target_id)` and
+  `approve_vendor_content_bulk(target)` set `status = 'live'` but never touched
+  `rejection_reason` — a video that was rejected, edited back to `under_review`
+  by its vendor, then re-approved went live still carrying the old moderator
+  note. New migration
+  `supabase/migrations/20260905170000_approve_vendor_content_clears_rejection_reason.sql`
+  (`CREATE OR REPLACE`, both functions) adds `rejection_reason = null` to the
+  `products` and `product_videos` branches of each. **`catalogues` is
+  deliberately left as `status = 'live'` only** — it has no `rejection_reason`
+  column (confirmed live: `SELECT rejection_reason FROM catalogues` →
+  `42703 undefined_column`), and `reject_vendor_content` already carries the
+  identical exclusion for the same reason. Adding the clause there would not
+  fix a display bug, it would `42703` on every approval for a vendor with a
+  pending catalogue — and because a PL/pgSQL function body has no implicit
+  per-statement savepoint, that error would abort the whole call and roll back
+  the `products`/`product_videos` updates that ran earlier in the same
+  transaction, turning a cosmetic bug into "moderators can no longer approve
+  anything for a vendor who also has a pending catalogue."
+- **In `Cosora-Admin`**, the display side of the same bug: `Products.tsx` and
+  `Videos.tsx` both rendered `{row.rejection_reason && (<red banner>)}` with no
+  `status` check, so a live row carrying a stale reason showed a "Rejection
+  reason:" banner under its green "live" badge. Both now read
+  `{row.status === "rejected" && row.rejection_reason && (...)}`.
+  `VendorDetail.tsx` was checked too — it renders vendor profile fields only,
+  never `rejection_reason`, so nothing there needed changing.
+- **Also in `Cosora-Admin`:** the dev server 404'd on `/favicon.ico` — no
+  `public/` directory exists and `index.html` declared no icon at all. Added an
+  inlined `data:image/svg+xml;base64,...` favicon (no new file, no `public/`
+  dir needed) that echoes the real monogram from `src/components/ui.tsx`'s
+  `<Logo>` (near-black rounded tile, gradient `#1d1d20`→`#050506`, bold white
+  "C", the selvedge stripe), rather than a generic placeholder icon.
+- **Reproduced end-to-end and confirmed fixed against the live app**, using
+  throwaway `product_videos` rows created, exercised and deleted in the same
+  session (zero storage objects either row, since neither carried a real
+  upload): insert → `reject_vendor_content` → vendor PATCH back to
+  `under_review` (confirmed: `rejection_reason` survives that transition,
+  nothing clears it) → `approve_vendor_content_bulk` → resulting row was
+  `status: 'live'` with the stale reason still attached, and loading
+  `Cosora-Admin`'s Live tab against that exact row showed no rejection banner
+  once the display fix was in place. **Not yet confirmed**: the migration
+  itself. The Supabase MCP connection was down for this entire session (every
+  MCP tool call failed, matching the same disconnect noted in the 2026-09-05
+  chat-pipeline entries above), and neither repo holds a service-role key or a
+  linked Supabase CLI project — so the `CREATE OR REPLACE` in the migration
+  file has not been applied to the live database. The exact throwaway-row
+  sequence above is what proves it once it is: `rejection_reason` should come
+  back `null` on the resulting live row instead of carrying the stale reason.
+- **Also completed:** the specific mismatched video flagged for takedown
+  (`product_videos.id = 35783726-439f-4e02-b2fe-3cd2eda8f707`, "Yoyoyo") was
+  still `live` at the start of this session; rejected via
+  `reject_vendor_content('product_videos', ..., 'Test content — footage does
+  not match tagged product/category')` and confirmed `status = 'rejected'`
+  with that exact reason stored.
+- **Files touched:** `supabase/migrations/20260905170000_...sql` (new, this
+  repo, not yet applied — see above). In `Cosora-Admin`:
+  `src/pages/Products.tsx`, `src/pages/Videos.tsx`, `index.html`.
+
 ## 2026-09-05 — Cosora-Admin can moderate Video Closeups at all (Phase 0)
 
 - **What changed:** Added a Video Closeups moderation queue to `Cosora-Admin`. New
