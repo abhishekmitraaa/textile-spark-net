@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -83,10 +83,27 @@ export function useNotifications() {
   // The filter is belt AND braces: RLS already restricts what Realtime will
   // deliver, but filtering server-side means the socket does not carry other
   // people's rows to be discarded here.
+  //
+  // The topic carries a per-instance suffix, and that is NOT cosmetic.
+  // `supabase.channel(name)` RETURNS AN EXISTING CHANNEL when one with that
+  // topic is already open. Two components use this hook at once on
+  // /notifications — DashboardHeader via useUnreadCount(), and the page itself —
+  // so with a shared topic the second mount got the first mount's
+  // already-subscribed channel and called .on() on it, which throws:
+  //
+  //   "cannot add `postgres_changes` callbacks for realtime:notifications:<uid>
+  //    after `subscribe()`"
+  //
+  // That escaped the effect, killed the React tree, and rendered /notifications
+  // as a blank page. The DB layer was fine the whole time, which is precisely
+  // why it was invisible until the page was driven in a real browser.
+  // React 18 StrictMode's double-invoked effects reach the same failure alone.
+  const topic = useRef(`notifications:${Math.random().toString(36).slice(2)}`);
+
   useEffect(() => {
     if (!userId) return;
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(topic.current)
       .on(
         "postgres_changes",
         {
