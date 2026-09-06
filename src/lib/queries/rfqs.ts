@@ -376,10 +376,10 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   // a sort key invented in the browser.
   //
   // Degrades to the old behaviour rather than failing. Until the embedding
-  // pipeline has run (it needs OPENAI_API_KEY on generate-embedding and the
-  // service_role_key vault secret — neither is set today), every similarity
-  // comes back null and score collapses to the category term alone, which is
-  // exactly what this code did before. A failed RPC does the same.
+  // pipeline has run — it is waiting on OpenAI billing and on the
+  // service_role_key vault secret; the OPENAI_API_KEY itself is already set —
+  // every similarity comes back null and score collapses to the category term
+  // alone. A failed RPC does the same.
   let matchOf = new Map<string, { similarity: number | null; categoryMatch: boolean; score: number }>();
   if (isPaid) {
     const { data: scores, error: scoreErr } = await supabase

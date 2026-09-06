@@ -5,6 +5,10 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { createRfq } from "@/lib/queries/rfqs";
+import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
+import { getCategoryById } from "@/data/sellerCategories";
+import { CategorySelector } from "@/components/upload/CategorySelector";
+import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import CosoraLogo from "@/components/CosoraLogo";
@@ -15,56 +19,53 @@ import {
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────
-// CATEGORIES ("All Category" grid — matches the reference)
+// CATEGORY VOCABULARY
 //
-// Uses the SAME local preference thumbnails as the registration
-// Interest-Preference screen (src/assets/Buyer/Preference/*.png), so the
-// imagery is consistent across the app. The four categories without a
-// provided asset (cosmetics/designer/marketing/photography) keep an
-// Unsplash image, which also serves as a fallback if an asset is missing.
+// This step used to render a hardcoded 17-tile list local to this file
+// ("Fabrics", "Women's clothing", "IT & Software"...) that was never resolved
+// against anything. It looked like a taxonomy and behaved like decoration: the
+// chosen tile reached the RFQ only as part of the title string, and only 2 of
+// its 17 labels named a category any live product actually used. An RFQ and a
+// vendor's catalogue could not be compared at all.
+//
+// Buyers now pick from the SAME rows vendors list under — sellerCategories.ts,
+// which the categories table is seeded from — through the SAME two components
+// Upload.tsx uses. One vocabulary, one picker, one source of truth, so the
+// selected row's id is directly comparable to a product's category_id in
+// match_vendor_rfqs. Nothing here maps names after the fact.
+//
+// The old per-tile preference thumbnails go with it: CategorySelector is
+// icon-and-type based (Products / Services / Freelancer), and keeping a second
+// image-grid variant purely for buyers would rebuild the divergence this
+// change removes.
 // ─────────────────────────────────────────────────────────────
 
-const prefFiles = import.meta.glob("../assets/Buyer/Preference/*.png", { eager: true, import: "default" }) as Record<string, string>;
-const prefImg = (basename: string): string | undefined =>
-  Object.entries(prefFiles).find(([p]) => p.split("/").pop() === basename)?.[1];
-
-// Category id → local preference asset filename (curly apostrophes / spacing
-// match the actual files on disk).
-const PREF_FILE_BY_ID: Record<string, string> = {
-  fabrics: "fabrics.png",
-  womens: "Women’s clothing.png",
-  mens: "Men’s Clothing.png",
-  unisex: "Unisex Clothing.png",
-  kidswear: "Kidswear.png",
-  accessories: "Accessories.png",
-  raw: "Raw Materials.png",
-  trims: "Trims & Accessories.png",
-  labels: "Labels & Tags.png",
-  packaging: "Packaging.png",
-  software: "IT &  Software.png",
-  freelancer: "Freelance.png",
-  exporter: "Exporter.png",
+/**
+ * Taxonomy parent id -> which of this file's question sets to ask.
+ *
+ * Deliberately NOT the same thing as category_id. These schemas decide which
+ * FORM FIELDS a buyer sees; category_id comes from the picker's own selection
+ * and never from this map. Keeping them separate is the point — a wrong entry
+ * here shows someone a slightly-off question, it cannot mis-file the RFQ.
+ *
+ * The four taxonomy parents with no bespoke schema (machinery-equipment,
+ * chemicals-dyes, printing-manufacturing, finance-compliance) fall through to
+ * the generic set rather than getting invented questions.
+ */
+const SCHEMA_BY_TAXONOMY: Record<string, string> = {
+  "apparel-home": "womens",
+  "raw-materials": "fabrics",
+  "cosmetics-beauty": "cosmetics",
+  "fashion-accessories": "accessories",
+  "labels-tags": "labels",
+  "packaging": "packaging",
+  "trims-accessories": "trims",
+  "it-software-saas": "software",
+  "marketing-pr-photography": "marketing",
+  "freelancers-job-workers": "freelancer",
+  "logistics-supply-chain": "exporter",
+  "service-providers": "designer",
 };
-
-const CATEGORIES = [
-  { id: "fabrics", name: "Fabrics", img: "https://images.unsplash.com/photo-1558171813-4c088753af8f?w=200&h=200&fit=crop" },
-  { id: "womens", name: "Women's clothing", img: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=200&h=200&fit=crop" },
-  { id: "mens", name: "Men's Clothing", img: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=200&h=200&fit=crop" },
-  { id: "cosmetics", name: "Cosmetics", img: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=200&h=200&fit=crop" },
-  { id: "unisex", name: "Unisex Clothing", img: "https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=200&h=200&fit=crop" },
-  { id: "kidswear", name: "Kidswear", img: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea?w=200&h=200&fit=crop" },
-  { id: "accessories", name: "Accessories", img: "https://images.unsplash.com/photo-1606760227091-3dd870d97f1d?w=200&h=200&fit=crop" },
-  { id: "labels", name: "Labels & Tags", img: "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=200&h=200&fit=crop" },
-  { id: "software", name: "IT & Software", img: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=200&h=200&fit=crop" },
-  { id: "raw", name: "Raw Materials", img: "https://images.unsplash.com/photo-1605000797499-95a51c5269ae?w=200&h=200&fit=crop" },
-  { id: "packaging", name: "Packaging", img: "https://images.unsplash.com/photo-1607166452427-7e4477c2cc4e?w=200&h=200&fit=crop" },
-  { id: "trims", name: "Trims & Accessories", img: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=200&h=200&fit=crop" },
-  { id: "designer", name: "Fashion Designer", img: "https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?w=200&h=200&fit=crop" },
-  { id: "marketing", name: "Marketing PR", img: "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=200&h=200&fit=crop" },
-  { id: "freelancer", name: "Freelancer", img: "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=200&h=200&fit=crop" },
-  { id: "exporter", name: "Exporter", img: "https://images.unsplash.com/photo-1494412574643-ff11b0a5eb19?w=200&h=200&fit=crop" },
-  { id: "photography", name: "Photography", img: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=200&h=200&fit=crop" },
-].map((c) => ({ ...c, img: prefImg(PREF_FILE_BY_ID[c.id]) ?? c.img }));
 
 // ─────────────────────────────────────────────────────────────
 // SHARED OPTION LISTS
@@ -497,21 +498,30 @@ const PostRequirement = () => {
 
   const [step, setStep] = useState<Step>("main");
   const [quickOpen, setQuickOpen] = useState(false);
+  // Both ids are sellerCategories ids (e.g. "apparel-home" / "womens-dresses"),
+  // NOT categories.id. They are resolved to a real taxonomy row once, on submit.
   const [categoryId, setCategoryId] = useState<string | null>(null);
+  const [subCategoryId, setSubCategoryId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [openSelect, setOpenSelect] = useState<string | null>(null);
 
   const [values, setValues] = useState<FormValues>({});
   const [files, setFiles] = useState<File[]>([]);
 
-  const category = CATEGORIES.find((c) => c.id === categoryId) ?? null;
-  const sections = categoryId ? (SCHEMAS[categoryId] ?? SCHEMAS.womens) : [];
+  const category = categoryId ? (getCategoryById(categoryId) ?? null) : null;
+  const subCategory = category?.subCategories.find((s) => s.id === subCategoryId) ?? null;
+  const sections = categoryId
+    ? (SCHEMAS[SCHEMA_BY_TAXONOMY[categoryId] ?? ""] ?? SCHEMAS.womens)
+    : [];
 
-  // Reset the form whenever the chosen category changes (fields differ per category).
+  // Reset the form whenever the chosen category changes (fields differ per
+  // category). The subcategory is cleared too: it belongs to the old parent and
+  // would otherwise resolve against a category the buyer is no longer choosing.
   useEffect(() => {
     setValues({});
     setFiles([]);
     setOpenSelect(null);
+    setSubCategoryId(null);
   }, [categoryId]);
 
   const sVal = (k: string) => (values[k] as string) ?? "";
@@ -583,15 +593,38 @@ const PostRequirement = () => {
       }
       return undefined;
     };
-    const productName = findVal(["producttype", "apparel", "type", "item", "name"]) || category?.name || "Requirement";
+    // Prefer the SUBCATEGORY over the parent for both of these. The parent is a
+    // shelf label ("Apparel & Home Categories"), not a description of what the
+    // buyer wants, and this title is the first line of search_text -- so a
+    // vague title makes a vaguer embedding, not just an uglier lead card.
+    const categoryLabel = subCategory?.name ?? category?.name;
+    const productName = findVal(["producttype", "apparel", "type", "item", "name"]) || categoryLabel || "Requirement";
     const quantity = num(findVal(["quantity", "qty", "units", "moq", "order"]));
     const budgetMin = num(findVal(["budgetmin", "minprice", "pricemin", "targetmin"]));
     const budgetMax = num(findVal(["budgetmax", "maxprice", "pricemax", "budget", "targetprice", "price"]));
     const description = (values.description as string) || "";
-    const title = `${category?.name ?? "General"} — ${productName}`.slice(0, 120);
+    const title = `${categoryLabel ?? "General"} — ${productName}`.slice(0, 120);
+
+    // The buyer picked these rows out of the taxonomy, so resolving them is an
+    // exact lookup of a name the picker itself offered — not a derivation from
+    // anything the buyer typed. Subcategory when there is one, parent otherwise.
+    // resolveCategoryId (the free-text regex) is deliberately NOT in this path.
+    let categoryDbId: string | null = null;
+    try {
+      categoryDbId =
+        (await resolveSubcategoryId(category?.name, subCategory?.name)) ??
+        (await resolveParentCategoryId(category?.name));
+    } catch {
+      // A taxonomy lookup failure must not cost the buyer their requirement.
+      // The RFQ is still worth saving uncategorised: semantic matching carries
+      // the larger share of the score either way.
+    }
 
     try {
-      await createRfq(user.id, { title, productName, quantity, budgetMin, budgetMax, description });
+      await createRfq(user.id, {
+        title, productName, quantity, budgetMin, budgetMax, description,
+        categoryId: categoryDbId,
+      });
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
     } catch (e) {
       toast.error("Couldn't submit your requirement", { description: e instanceof Error ? e.message : String(e) });
@@ -851,25 +884,29 @@ const PostRequirement = () => {
 
               <div className="rounded-2xl border border-gray-200 bg-white p-4">
                 <h2 className="text-sm font-bold text-gray-900 mb-3">Select one Category</h2>
-                <div className="grid grid-cols-4 gap-x-3 gap-y-4">
-                  {CATEGORIES.map((cat) => {
-                    const active = cat.id === categoryId;
-                    return (
-                      <button key={cat.id} onClick={() => setCategoryId(cat.id)} className="text-center">
-                        <div className={cn("relative aspect-square rounded-full overflow-hidden mb-1.5 ring-2 transition-all", active ? "ring-[#ef4d62]" : "ring-transparent")}>
-                          <img src={cat.img} alt={cat.name} className="w-full h-full object-cover" loading="lazy" />
-                          {active && (
-                            <div className="absolute inset-0 bg-black/25 flex items-center justify-center">
-                              <span className="w-6 h-6 rounded-full bg-[#ef4d62] flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white" strokeWidth={3} /></span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-[10px] text-gray-600 font-medium leading-tight line-clamp-2">{cat.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
+                <CategorySelector selectedCategory={categoryId} onSelectCategory={setCategoryId} />
               </div>
+
+              {/* Subcategory is OPTIONAL for a buyer, unlike the vendor upload
+                  wizard where it is required. "I need packaging" is a complete
+                  requirement; a listing has to say which packaging. Skipping it
+                  files the RFQ against the parent row, which still matches every
+                  vendor selling anything under that parent. */}
+              {category && (
+                <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4">
+                  <h2 className="text-sm font-bold text-gray-900 mb-1">
+                    Narrow it down <span className="font-medium text-gray-400">(optional)</span>
+                  </h2>
+                  <p className="mb-3 text-xs text-gray-500">
+                    More specific means better-matched sellers. Leave it blank to reach everyone in {category.name}.
+                  </p>
+                  <SubCategorySelector
+                    categoryId={category.id}
+                    selectedSubCategory={subCategoryId}
+                    onSelectSubCategory={setSubCategoryId}
+                  />
+                </div>
+              )}
 
               <button
                 onClick={() => categoryId && setStep("form")}
@@ -892,14 +929,21 @@ const PostRequirement = () => {
                 </div>
               </div>
 
-              {/* Category card */}
+              {/* Category card. Shows the subcategory too when one was chosen,
+                  because that — not the parent — is what the RFQ gets filed
+                  under, and the buyer should see the value being used. */}
               <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-center gap-3">
-                <img src={category.img} alt={category.name} className="w-11 h-11 rounded-full object-cover" />
-                <div className="flex-1">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ef4d62]/10 text-sm font-bold text-[#ef4d62]">
+                  {category.name.slice(0, 2).toUpperCase()}
+                </span>
+                <div className="min-w-0 flex-1">
                   <p className="text-[11px] text-gray-400">Category</p>
-                  <p className="text-sm font-bold text-gray-900">{category.name}</p>
+                  <p className="truncate text-sm font-bold text-gray-900">
+                    {category.name}
+                    {subCategory && <span className="font-medium text-gray-500"> · {subCategory.name}</span>}
+                  </p>
                 </div>
-                <button onClick={() => setStep("category")} className="text-xs font-semibold text-[#ef4d62] hover:underline">Change</button>
+                <button onClick={() => setStep("category")} className="shrink-0 text-xs font-semibold text-[#ef4d62] hover:underline">Change</button>
               </div>
 
               {/* Numbered sections for this category */}

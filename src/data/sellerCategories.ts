@@ -561,6 +561,29 @@ export const sellerCategories: SellerCategory[] = [
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Printed", "Embroidered", "Jacquard", "Geometric"], fullWidth: true },
         { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Tumble Dry Low"], fullWidth: true },
       ]},
+      // Activewear and Winter Wear were in the original flat 11-bucket scheme
+      // and carry live inventory, but the 2026-07-29 taxonomy tree dropped
+      // them. Re-added here (and seeded in 20260907130100) so those listings
+      // have a real home instead of being forced into "Other Ready-made
+      // Garments". Gender-neutral on purpose, like Footwear: the product's own
+      // `gender` column already carries that, and a puffer jacket does not
+      // usefully split into men's/women's at the category level.
+      { id: "activewear", name: "Activewear", fields: [
+        { id: "garmentType", label: "Garment Type", type: "select", options: ["Training Tee", "Tank", "Track Pants", "Shorts", "Leggings", "Sports Bra", "Track Jacket", "Co-ord Set"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Polyester", "Poly-Spandex", "Nylon-Spandex", "Cotton-Spandex", "Mesh", "Recycled Polyester"], required: true },
+        { id: "fit", label: "Fit", type: "select", options: ["Compression", "Slim Fit", "Regular Fit", "Relaxed", "Oversized"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+        { id: "features", label: "Performance Features", type: "multiselect", options: ["Moisture-Wicking", "Quick Dry", "Four-Way Stretch", "Anti-Odour", "Breathable Mesh", "UV Protection", "Seamless"], fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
+      ]},
+      { id: "winter-wear", name: "Winter Wear", fields: [
+        { id: "garmentType", label: "Garment Type", type: "select", options: ["Jacket", "Puffer Jacket", "Blazer", "Coat", "Cardigan", "Sweater", "Sweatshirt", "Hoodie", "Thermal Set"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Fleece", "Wool", "Wool Blend", "Nylon", "Polyester", "Corduroy", "Quilted Poly", "Acrylic Knit"], required: true },
+        { id: "lining", label: "Lining", type: "select", options: ["Unlined", "Polyfill", "Sherpa", "Fleece", "Quilted", "Down"] },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+        { id: "closure", label: "Closure", type: "select", options: ["Zip", "Button", "Snap", "Pullover", "Open Front"] },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
+      ]},
       { id: "ready-made-garments", name: "Other Ready-made Garments", fields: [
         { id: "garmentType", label: "Garment Type", type: "text", placeholder: "e.g., Jackets, Suits, Activewear", required: true },
         { id: "gender", label: "Gender", type: "select", options: ["Men", "Women", "Unisex", "Kids"] },

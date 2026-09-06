@@ -729,6 +729,25 @@ export async function resolveSubcategoryId(
 }
 
 /**
+ * The taxonomy PARENT row for a top-level category the user actually selected.
+ *
+ * The buyer flow needs this because picking a subcategory is optional there —
+ * "I need packaging" is a complete requirement, where a vendor listing must say
+ * which packaging. An exact lookup of a name the user chose from the taxonomy,
+ * not a derivation: it can only return a row the picker already offered.
+ *
+ * Distinct from resolveCategoryId below, which guesses from free text. Do not
+ * merge them.
+ */
+export async function resolveParentCategoryId(
+  categoryName: string | null | undefined,
+): Promise<string | null> {
+  if (!categoryName) return null;
+  const cats = await loadCategories();
+  return cats.find((c) => c.name === categoryName && c.parent_id === null)?.id ?? null;
+}
+
+/**
  * Best-effort map of upload taxonomy text → a DB category id (or null).
  *
  * Kept as the fallback for callers with no clean subcategory to work from —

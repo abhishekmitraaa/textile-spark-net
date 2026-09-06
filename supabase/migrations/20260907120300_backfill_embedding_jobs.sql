@@ -32,10 +32,11 @@
 -- STILL REQUIRED, and deliberately not automatable from a migration -- both are
 -- credentials that must not enter version control or a chat transcript:
 --
---   1. OPENAI_API_KEY on the generate-embedding edge function
---      (Dashboard -> Edge Functions -> generate-embedding -> Secrets).
---      Without it the worker returns {"error":"not_configured"} and archives
---      nothing, so the queue simply waits.
+--   1. OpenAI BILLING. The OPENAI_API_KEY secret itself is already set on
+--      generate-embedding (see the 2026-09-07 changelog entry); what the
+--      account lacks is active billing, so the embeddings call fails and the
+--      worker leaves every message in-queue for the next tick. Nothing to
+--      deploy here -- this is an account setting.
 --   2. The service_role_key vault secret the cron poller authenticates with:
 --        select vault.create_secret(
 --          '<the project service_role key>', 'service_role_key',
