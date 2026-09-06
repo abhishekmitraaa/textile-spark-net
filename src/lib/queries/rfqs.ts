@@ -161,6 +161,12 @@ export function useBuyerQuotes(buyerId: string | undefined) {
 export interface NewRfq {
   title: string; productName?: string; quantity?: number | null;
   budgetMin?: number | null; budgetMax?: number | null; description?: string | null; image?: string | null;
+  /** A categories.id. Feeds the `category_match` half of match_vendor_rfqs, so
+   *  it must be a real taxonomy row the caller RESOLVED — never a display name,
+   *  a slug, or a guess re-derived from free text. Null is the correct value
+   *  when no confident resolution exists; a wrong id is worse than none,
+   *  because it scores the RFQ against vendors who do not sell the thing. */
+  categoryId?: string | null;
 }
 export async function createRfq(buyerId: string, input: NewRfq): Promise<string> {
   const { data, error } = await supabase
@@ -168,7 +174,8 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
     .insert({
       buyer_id: buyerId, title: input.title, product_name: input.productName ?? input.title,
       quantity: input.quantity ?? null, budget_min: input.budgetMin ?? null, budget_max: input.budgetMax ?? null,
-      description: input.description ?? null, image: input.image ?? null, status: "active",
+      description: input.description ?? null, image: input.image ?? null,
+      category_id: input.categoryId ?? null, status: "active",
     })
     .select("id").single();
   if (error) throw error;
@@ -249,12 +256,21 @@ export async function createTargetedQuoteRequest(buyerId: string, input: NewTarg
     imageUrls = await uploadCustomizationImages(buyerId, crypto.randomUUID(), input.customizationFiles);
   }
 
+  // A targeted request is "quote me THIS listing", so the listing's own category
+  // is the request's category by definition — read off the product rather than
+  // prop-drilled from the modal, which keeps the caller unchanged and makes the
+  // value impossible to get wrong. Nothing is inferred here: if the product has
+  // no category_id, neither does the request.
+  const { data: prod } = await supabase
+    .from("products").select("category_id").eq("id", input.productId).maybeSingle();
+
   const { data, error } = await supabase
     .from("rfqs")
     .insert({
       buyer_id: buyerId,
       vendor_id: input.vendorId,
       product_id: input.productId,
+      category_id: prod?.category_id ?? null,
       title: `Quote request: ${input.productName}`,
       product_name: input.productName,
       // Kept in sync with sizes_breakdown so every existing UI that reads
