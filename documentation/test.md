@@ -2,7 +2,7 @@
 
 Updated automatically whenever a test is written or run.
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 
 ---
 
@@ -54,6 +54,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
+| `search-smoke.mjs` | The rebuilt search surfaces in a real browser (Playwright, standalone — not part of `tests/`). 10 checks: no fabricated data on `/search` or `/search/results`, real autocomplete counts, real product cards, a real result count, a real Brand tab, the honest empty state, and zero console errors. Takes an optional base URL: `node scripts/search-smoke.mjs http://localhost:8080` |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -89,6 +90,83 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-07 — Hybrid product search: DB layer verified, browser layer 10/10 GREEN
+
+**What was tested and how.** The semantic half cannot be exercised yet (OpenAI billing is
+not active, so every `products.embedding` is null). Everything else was, and the keyword
+half is fully live. DB assertions ran through the Supabase MCP against the live project;
+the browser layer ran against a real dev server on `:8081` via `scripts/search-smoke.mjs`.
+
+**Database layer — verified against live data:**
+
+| Check | Result |
+|---|---|
+| `halfvec(1536)` resolves; pgvector 0.8.2 | PASS |
+| `pgmq.create('embedding_jobs')` + `list_queues()` | PASS |
+| `net.http_post` exists (functions under `net`, extension on `public`) | PASS |
+| `search_text` / `fts` generated correctly, category included | PASS — `"Linen Camp Collar Shirt  Linen 150 Regular Sky      Shirt"` |
+| `category_name` backfilled | 26/26 live rows |
+| `match_products('cotton t-shirt')` | 5 cotton tops, correctly ranked |
+| `match_products('linen shirt')` | exactly the 2 linen shirts |
+| **Draft rows leaking into results** | **0** — the 3 junk rows are invisible |
+| `related_products` fallback branch | PASS — `is_fallback: true`, distance null |
+| Anon key calling `generate-embedding` | **403 forbidden** (the credit-burn hole is closed) |
+| Category-rename cascade mechanism | PASS — no-op `SET category_id = category_id` produced a correct queue job |
+
+**The gap the vector half will close, measured rather than asserted.** Four natural buyer
+queries return **0 results each** on keyword search today: `summer beachwear`,
+`breathable office wear`, `wedding outfit`, `gym clothing`. Re-run these after the backfill;
+that is the before/after.
+
+**One thing could not be tested:** the `AFTER UPDATE OF name ON categories` trigger firing.
+The auto-mode classifier blocked a write to the shared `categories` taxonomy — correctly.
+The *mechanism* it depends on was verified from the products side instead (see the last row
+above), so what remains unproven is only the trigger's own firing, which is stock Postgres.
+Worth closing with one real rename through the admin panel.
+
+**Browser layer — `node scripts/search-smoke.mjs`, 10/10 PASS, 0 console errors:**
+no fabricated data on `/search` (swept for H&M / Zara / Levi's / "Popular keywords" /
+"Trending Keywords" / "Father's Day" / the six fake manufacturers / `$27.53` / "Sponsored");
+category rail renders; autocomplete returns real counts (`T-shirts/Tops — 5 listings`,
+`Shirt — 2 listings`, `Premium Cotton Polo T-Shirt — 5,600 enquiries`); `/search/results?q=shirt`
+renders **7 real product cards** from real vendors with a real `7 results` footer carrying
+the honest `· keyword match only` suffix; Brand tab shows real suppliers
+(`Tirupur · 3 matching listings`); `?q=zzzznotathing` renders the real empty state.
+Screenshots in `screenshots/search-*.png`.
+
+**ProductDetail** separately verified after `useYouMightLike` was switched to
+`related_products`: title renders, "You might also like" and "Brand Picks" both present,
+8 related product links, 0 console errors — exercising the same-category fallback branch,
+which is the expected path while embeddings are null.
+
+**Security advisors — run after the DDL, and it caught something real.** `get_advisors(security)`
+went **76 → 66** lints after a hardening pass (`20260906200000`). Two findings were genuinely
+mine: (1) Postgres grants EXECUTE to PUBLIC by default, so the three new **trigger** functions
+(`sync_product_category_name`, `enqueue_product_embedding`, `cascade_category_rename`) were
+reachable at `/rest/v1/rpc/<name>` by anon — low severity, since calling a trigger function
+directly errors, but this codebase already revokes these (20260801100327, 20260905182854);
+(2) `immutable_array_to_string` and `normalise_search_query` had role-mutable search_paths,
+now pinned — verified first that pinning is accepted despite a generated column depending on
+one of them. `match_products` was additionally revoked from anon/authenticated: it is the
+ranking engine, not the entry point, and being reachable let anyone POST an arbitrary
+1536-float vector.
+
+Verified through the **real REST path with the public anon key**: `search_products` and
+`search_suggestions` still return results, `match_products` now answers
+`42501 permission denied`, `enqueue_product_embedding` has left the schema cache entirely.
+`scripts/search-smoke.mjs` re-run after the revokes: **still 10/10**.
+
+Remaining advisories on this work are all intentional and recorded in `claude.md`:
+`search_products` / `related_products` / `search_suggestions` stay anon-executable (they are
+the buyer-facing API, each SECURITY DEFINER *and* internally filtered to `status = 'live'`);
+`search_query_embeddings` has RLS on with no policies **by design** (deny-all, service_role
+only); `extension_in_public: pg_net` is cosmetic — all 12 of its functions live in `net`
+and none in `public`, confirmed via `pg_depend`.
+
+**Build/lint:** `tsc -p tsconfig.app.json` holds at the unchanged **23-error baseline**
+(vendorDashboard 11, i18n 5, VendorProfile 2, vendorStore 2, profile 2, rfqs 1 — none in
+any file touched here); eslint clean on all changed files; `vite build` green in 33s.
 
 ### 2026-09-06 (browser half) — Bunny Stream in a real browser: 6/6 GREEN, and a correction
 

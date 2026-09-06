@@ -96,14 +96,25 @@ export default function OpenRfqLeads() {
       {/* One column on mobile; two across once there is real width to spend. */}
       <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {rfqs.map((r) => (
-          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched ? "border-[#256fef]/40 bg-[#256fef]/[0.03] lg:hover:border-[#256fef]/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
+          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched || r.strongMatch ? "border-[#256fef]/40 bg-[#256fef]/[0.03] lg:hover:border-[#256fef]/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                {r.matched && (
+                {/* Two distinct claims, deliberately not merged into one badge.
+                    "Matches your category" asserts an exact category overlap and
+                    has to stay literally true; "Strong match" is the semantic
+                    signal — the RFQ text reads like this vendor's catalogue —
+                    and says so in its own words rather than borrowing the
+                    category badge's. The category badge wins when both hold,
+                    being the more specific claim. */}
+                {r.matched ? (
                   <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-bold text-[#256fef]">
                     <Sparkles className="h-3 w-3" /> Matches your category
                   </span>
-                )}
+                ) : r.strongMatch ? (
+                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-bold text-[#256fef]">
+                    <Sparkles className="h-3 w-3" /> Strong match
+                  </span>
+                ) : null}
                 <p className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5 lg:text-[13px]">
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}

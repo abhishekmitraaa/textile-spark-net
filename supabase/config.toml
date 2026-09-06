@@ -48,3 +48,18 @@ verify_jwt = true
 
 [functions.bunny-reconcile]
 verify_jwt = true
+
+# Embedding worker. Called by pg_cron via pg_net, never by a browser. The handler
+# additionally requires the caller's JWT to carry role = 'service_role', which is
+# only meaningful because verify_jwt = true has already validated the signature —
+# the same layering the bunny-* functions rely on. Without that second check any
+# holder of the public anon key could invoke it and burn OpenAI credits.
+[functions.generate-embedding]
+verify_jwt = true
+
+# Query-embedding cache warmer. Unlike generate-embedding this IS a buyer-facing
+# endpoint (the search box calls it), so it has no service_role check — the JWT
+# gate is the whole gate. It returns a status only, never the vector, and a
+# cached term costs one indexed lookup with no OpenAI call.
+[functions.embed-query]
+verify_jwt = true

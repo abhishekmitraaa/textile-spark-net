@@ -975,6 +975,7 @@ export type Database = {
       products: {
         Row: {
           category_id: string | null
+          category_name: string | null
           collar_type: string | null
           colour: string | null
           compare_at_price: number | null
@@ -983,9 +984,11 @@ export type Database = {
           currency: string
           customization_available: boolean
           description: string | null
+          embedding: unknown
           enquiries_count: number
           fabric: string | null
           fit_type: string | null
+          fts: unknown
           gender: string | null
           gsm: string | null
           id: string
@@ -1000,6 +1003,7 @@ export type Database = {
           rating_avg: number
           rejection_reason: string | null
           reviews_count: number
+          search_text: string | null
           sizes: string[] | null
           sleeve_type: string | null
           sold_count: number
@@ -1010,6 +1014,7 @@ export type Database = {
         }
         Insert: {
           category_id?: string | null
+          category_name?: string | null
           collar_type?: string | null
           colour?: string | null
           compare_at_price?: number | null
@@ -1018,9 +1023,11 @@ export type Database = {
           currency?: string
           customization_available?: boolean
           description?: string | null
+          embedding?: unknown
           enquiries_count?: number
           fabric?: string | null
           fit_type?: string | null
+          fts?: unknown
           gender?: string | null
           gsm?: string | null
           id?: string
@@ -1035,6 +1042,7 @@ export type Database = {
           rating_avg?: number
           rejection_reason?: string | null
           reviews_count?: number
+          search_text?: string | null
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
@@ -1045,6 +1053,7 @@ export type Database = {
         }
         Update: {
           category_id?: string | null
+          category_name?: string | null
           collar_type?: string | null
           colour?: string | null
           compare_at_price?: number | null
@@ -1053,9 +1062,11 @@ export type Database = {
           currency?: string
           customization_available?: boolean
           description?: string | null
+          embedding?: unknown
           enquiries_count?: number
           fabric?: string | null
           fit_type?: string | null
+          fts?: unknown
           gender?: string | null
           gsm?: string | null
           id?: string
@@ -1070,6 +1081,7 @@ export type Database = {
           rating_avg?: number
           rejection_reason?: string | null
           reviews_count?: number
+          search_text?: string | null
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
@@ -1298,12 +1310,14 @@ export type Database = {
           customization_notes: string | null
           customization_requested: boolean
           description: string | null
+          embedding: unknown
           id: string
           image: string | null
           images: string[] | null
           product_id: string | null
           product_name: string | null
           quantity: number | null
+          search_text: string | null
           sizes_breakdown: Json | null
           status: Database["public"]["Enums"]["rfq_status"]
           title: string
@@ -1320,12 +1334,14 @@ export type Database = {
           customization_notes?: string | null
           customization_requested?: boolean
           description?: string | null
+          embedding?: unknown
           id?: string
           image?: string | null
           images?: string[] | null
           product_id?: string | null
           product_name?: string | null
           quantity?: number | null
+          search_text?: string | null
           sizes_breakdown?: Json | null
           status?: Database["public"]["Enums"]["rfq_status"]
           title: string
@@ -1342,12 +1358,14 @@ export type Database = {
           customization_notes?: string | null
           customization_requested?: boolean
           description?: string | null
+          embedding?: unknown
           id?: string
           image?: string | null
           images?: string[] | null
           product_id?: string | null
           product_name?: string | null
           quantity?: number | null
+          search_text?: string | null
           sizes_breakdown?: Json | null
           status?: Database["public"]["Enums"]["rfq_status"]
           title?: string
@@ -1511,6 +1529,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      search_query_embeddings: {
+        Row: {
+          created_at: string
+          embedding: unknown
+          hits: number
+          last_used_at: string
+          query_norm: string
+        }
+        Insert: {
+          created_at?: string
+          embedding: unknown
+          hits?: number
+          last_used_at?: string
+          query_norm: string
+        }
+        Update: {
+          created_at?: string
+          embedding?: unknown
+          hits?: number
+          last_used_at?: string
+          query_norm?: string
+        }
+        Relationships: []
       }
       service_reviews: {
         Row: {
@@ -1849,6 +1891,8 @@ export type Database = {
           banner_url: string | null
           brand_name: string | null
           business_type: string | null
+          catalog_embedding: unknown
+          catalog_embedding_updated_at: string | null
           category: string[] | null
           cin: string | null
           city: string | null
@@ -1889,6 +1933,8 @@ export type Database = {
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          catalog_embedding?: unknown
+          catalog_embedding_updated_at?: string | null
           category?: string[] | null
           cin?: string | null
           city?: string | null
@@ -1929,6 +1975,8 @@ export type Database = {
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          catalog_embedding?: unknown
+          catalog_embedding_updated_at?: string | null
           category?: string[] | null
           cin?: string | null
           city?: string | null
@@ -2116,18 +2164,70 @@ export type Database = {
         Args: { target: string }
         Returns: undefined
       }
+      cache_query_embedding: {
+        Args: { p_embedding: string; p_query: string }
+        Returns: boolean
+      }
+      embedding_jobs_archive: { Args: { p_msg_id: number }; Returns: boolean }
+      embedding_jobs_read: {
+        Args: { batch_size?: number; vt?: number }
+        Returns: {
+          message: Json
+          msg_id: number
+          read_ct: number
+        }[]
+      }
       expire_subscriptions: { Args: never; Returns: number }
       get_vendor_plan: { Args: { v?: string }; Returns: Json }
       grant_ad_verification: {
         Args: { exp: string; src: string; v: string }
         Returns: undefined
       }
+      has_query_embedding: { Args: { p_query: string }; Returns: boolean }
+      immutable_array_to_string: {
+        Args: { arr: string[]; sep: string }
+        Returns: string
+      }
       increment_product_enquiry: { Args: { p: string }; Returns: undefined }
       increment_product_view: { Args: { p: string }; Returns: undefined }
       increment_video_view: { Args: { p: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
+      match_products: {
+        Args: {
+          boost_weight?: number
+          match_count?: number
+          query: string
+          query_embedding?: unknown
+        }
+        Returns: {
+          boost_tier: number
+          fts_rank: number
+          id: string
+          score: number
+          vec_rank: number
+        }[]
+      }
+      match_rfq_vendors: {
+        Args: { match_count?: number; p_rfq_id: string }
+        Returns: {
+          category_match: boolean
+          score: number
+          similarity: number
+          vendor_id: string
+        }[]
+      }
+      match_vendor_rfqs: {
+        Args: { match_count?: number; p_vendor_id: string }
+        Returns: {
+          category_match: boolean
+          rfq_id: string
+          score: number
+          similarity: number
+        }[]
+      }
       next_invoice_number: { Args: never; Returns: string }
+      normalise_search_query: { Args: { q: string }; Returns: string }
       notify: {
         Args: {
           p_body?: string
@@ -2140,6 +2240,10 @@ export type Database = {
       }
       owns_product: { Args: { pid: string }; Returns: boolean }
       owns_rfq: { Args: { rid: string }; Returns: boolean }
+      recompute_vendor_catalog_embedding: {
+        Args: { v_id: string }
+        Returns: undefined
+      }
       regex_probe: {
         Args: { p_pattern: string; p_sample: string }
         Returns: Json
@@ -2147,6 +2251,14 @@ export type Database = {
       reject_vendor_content: {
         Args: { reason?: string; target_id: string; target_table: string }
         Returns: undefined
+      }
+      related_products: {
+        Args: { match_count?: number; p_id: string }
+        Returns: {
+          distance: number
+          id: string
+          is_fallback: boolean
+        }[]
       }
       reply_to_review: {
         Args: { reply: string; review_id: string }
@@ -2161,6 +2273,27 @@ export type Database = {
         }
         Returns: undefined
       }
+      search_products: {
+        Args: { match_count?: number; query: string }
+        Returns: {
+          boost_tier: number
+          embedding_used: boolean
+          fts_rank: number
+          id: string
+          score: number
+          vec_rank: number
+        }[]
+      }
+      search_suggestions: {
+        Args: { max_results?: number; q: string }
+        Returns: {
+          count_hint: number
+          kind: string
+          label: string
+          ref_id: string
+          verified: boolean
+        }[]
+      }
       set_account_status: {
         Args: {
           p_conversation_review_id?: string
@@ -2170,6 +2303,14 @@ export type Database = {
           p_source: string
         }
         Returns: undefined
+      }
+      set_product_embedding: {
+        Args: { p_embedding: string; p_id: string }
+        Returns: boolean
+      }
+      set_rfq_embedding: {
+        Args: { p_embedding: string; p_id: string }
+        Returns: boolean
       }
       submit_report: {
         Args: {

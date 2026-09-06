@@ -43,7 +43,16 @@ the demand side of India's fashion and textile supply chain.
   active slide records a real view via `increment_video_view`, which is what makes the
   feed's existing `views_count` ordering mean anything. Ranking is seeded from the
   buyer's stored `preferred_categories` and then folded with this-session bookmarks.
-- **Search** — text search plus filters and an image-search edge function.
+- **Search** — **hybrid keyword + semantic search, ranked server-side** by `search_products`
+  → `match_products`: full-text and vector results fused with RRF, then weighted by the
+  vendor's paid `search_boost_tier` so relevance and paid boost trade off in one place
+  instead of two layers. Plus context-aware filters (faceted over the returned result set),
+  voice search, and an image-search edge function. Autocomplete suggests real categories with
+  live-listing counts, real listings with enquiry counts, and real vendor storefronts with
+  real follower counts. The Brand tab is grouped out of the ranked results, so it can never
+  disagree with the Product tab. When a query has no cached embedding the results are
+  keyword-only and the footer says so. *(Semantic half activates once OpenAI billing is on —
+  see the runbook in `claude.md`.)*
 - **RFQs** — **Quick RFQ** (image + quantity, designed for under 30 seconds) or a
   **detailed requirement** via a schema-driven, per-category form.
 - **My Quotes** — receive quotes from multiple vendors, compare, accept/reject/negotiate.

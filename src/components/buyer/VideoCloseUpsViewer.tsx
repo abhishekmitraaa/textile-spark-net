@@ -312,7 +312,15 @@ interface VideoSlideProps {
 
 function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [showPlayHint, setShowPlayHint] = useState(false);
+  /**
+   * Real playback state, and the ONE thing the tap overlay reads. Covers two
+   * situations that used to be separate — the browser refusing autoplay, and
+   * the buyer tapping to pause — because both leave a stopped video on screen
+   * and both want the same affordance. Kept honest by the element's own
+   * `play`/`pause` events below, so it can never disagree with what the video
+   * is actually doing.
+   */
+  const [paused, setPaused] = useState(false);
   const [videoErrored, setVideoErrored] = useState(false);
   const [videoReady, setVideoReady] = useState(false);
 
@@ -328,11 +336,20 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
       // `currentTime = 0` on an element with no buffered data queues a seek
       // and delays the first painted frame.
       if (el.readyState >= 1 && el.currentTime > 0.05) el.currentTime = 0;
+      // Optimistic, and it matters: leaving `paused` true for the frame
+      // between activation and play() resolving flashes a play icon over a
+      // video that is starting perfectly well. `onPause`/`onPlay` below is
+      // what corrects it if the browser actually refuses.
+      //
+      // This is also what makes a manual pause NOT survive a scroll away and
+      // back — scrolling to a slide is a request to watch it, same as every
+      // reel app.
+      setPaused(false);
       const playPromise = el.play();
       // Autoplay can still be rejected by the browser in some cases (e.g.
-      // power-saving mode) even when muted. Show a manual play affordance
-      // instead of failing silently.
-      playPromise?.catch(() => setShowPlayHint(true));
+      // power-saving mode) even when muted. Show the same tap-to-play
+      // affordance a manual pause uses, instead of failing silently.
+      playPromise?.catch(() => setPaused(true));
     } else {
       el.pause();
     }
@@ -373,8 +390,23 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
     if (videoRef.current) videoRef.current.muted = muted;
   }, [muted]);
 
-  const handleManualPlay = () => {
-    videoRef.current?.play().then(() => setShowPlayHint(false)).catch(() => {});
+  /**
+   * Tap the video to pause, tap again to resume — the actual reels
+   * interaction, not just a fallback for a blocked autoplay.
+   *
+   * Reads `el.paused` rather than the React state on purpose: the element is
+   * the source of truth for whether it's playing, so a tap arriving while the
+   * two disagree does what the video is actually doing, not what the last
+   * render thought it was doing.
+   */
+  const togglePlayback = () => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) {
+      el.play().catch(() => setPaused(true)); // onPlay below clears it on success
+    } else {
+      el.pause(); // onPause below flips `paused`
+    }
   };
 
   const hasVideo = Boolean(video.videoUrl) && !videoErrored;
@@ -421,6 +453,19 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           loop
           muted={muted}
           playsInline
+          // No picture-in-picture: a reel is a full-screen, scroll-snapped
+          // surface. Popping the video into a floating window leaves this
+          // slide's track scrolling underneath an empty spot while the
+          // detached window keeps playing a slide the buyer has since
+          // scrolled away from, and the two fight over play/pause — this is
+          // the "it just glitches" a buyer hits from Chrome's native PiP
+          // hover control or its context-menu entry. `disablePictureInPicture`
+          // removes both AND blocks a programmatic requestPictureInPicture().
+          disablePictureInPicture
+          // Same reasoning for casting: handing a muted, looping, few-second
+          // reel to a TV via the Remote Playback button is another surface
+          // that can grab the element mid-scroll.
+          disableRemotePlayback
           // Distance-based, not index-based. This used to read
           // `Math.abs(index) <= 1`, where `index` is the absolute slide number
           // — so slides 0 and 1 downloaded eagerly on open and every slide
@@ -431,21 +476,45 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           preload={distance === 0 ? "auto" : "metadata"}
           onLoadedData={() => setVideoReady(true)}
           onError={() => setVideoErrored(true)}
+          // Source of truth for `paused`: anything that stops the video — a
+          // tap, the browser refusing autoplay, the OS taking focus — is
+          // reflected here rather than guessed at from whichever code path
+          // triggered it.
+          onPlay={() => setPaused(false)}
+          onPause={() => setPaused(true)}
         />
       )}
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 pointer-events-none" />
 
-      {/* Manual play affordance — shown only if browser autoplay was rejected */}
-      {hasVideo && isActive && showPlayHint && (
+      {/* Tap-to-pause, and the manual-play affordance when autoplay was
+          refused — one surface, because they're one interaction.
+
+          Deliberately NOT z-10. It sits in the default stacking order, below
+          the right-side actions, the views pill and the product card (all
+          z-10) and below the top bar (z-20), so a tap on Like / Save / Share /
+          Call Now still reaches those buttons and only a tap on the video
+          itself toggles playback. Scrolling the reel is unaffected: a browser
+          does not fire a click after a scroll gesture. */}
+      {mountVideo && isActive && (
         <button
-          onClick={handleManualPlay}
-          aria-label="Play video"
-          className="absolute inset-0 flex items-center justify-center z-10"
+          type="button"
+          onClick={togglePlayback}
+          aria-label={paused ? "Play video" : "Pause video"}
+          className="absolute inset-0 flex items-center justify-center focus-visible:outline-none"
         >
-          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-            <Play className="w-7 h-7 text-white fill-white" />
-          </div>
+          {/* Only the paused state gets an icon — a pause glyph sitting over
+              a playing reel is the thing every video app learned to remove. */}
+          {paused && (
+            <motion.span
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 500, damping: 15 }}
+              className="w-16 h-16 rounded-full bg-white/20 backdrop-blur flex items-center justify-center"
+            >
+              <Play className="w-7 h-7 text-white fill-white" />
+            </motion.span>
+          )}
         </button>
       )}
 

@@ -1,6 +1,6 @@
 # Cosora — Project Memory (read this first, every session)
 
-Last updated: 2026-09-06
+Last updated: 2026-09-07
 
 ## What Cosora Is
 
@@ -157,6 +157,105 @@ undocumented. Deep technical rationale for each lives in
 - **Known papercut, deliberately unfixed:** `UserRoleContext` initialises to `"buyer"` and
   never seeds from `profile.active_role`, so signing in as a vendor still starts in buyer
   mode until the sidebar SWITCH MODE toggle is used.
+- **Search ranking happens in ONE place: `match_products`.** Keyword rank and vector rank
+  are fused with RRF (k = 60, the paper's constant, deliberately untuned), and the vendor's
+  paid `search_boost_tier` is applied as a multiplication **after** fusion — bounded at
+  1 + 4×0.05 = 1.20, so it can reorder near-neighbours but cannot lift an irrelevant listing
+  over a relevant one. Never reintroduce a client-side sort over search results: the browser
+  cannot see relevance, so any re-sort silently discards the ranking it was given. (The
+  browse feed still sorts by boost — that is a different surface with nothing to rank
+  against.)
+- **No fabricated data on the search surfaces, ever again.** Search.tsx and SearchResults.tsx
+  previously shipped invented search volumes, **real trademarked brands (H&M, Zara, Levi's)
+  that are not vendors here**, invented follower counts, a "Popular keywords" list stamped
+  with today's date implying a trending job that did not exist, a "Sponsored" rail of fake
+  listings priced in USD, and a 15-item picsum product pool rendered whenever the catalogue
+  was empty. All removed. Every number on those pages is now counted from a real row, and an
+  empty catalogue renders empty (see "No mock data in production").
+- **A degraded search must admit it.** When a query has no cached embedding the results are
+  keyword-only, and the footer says `· keyword match only`. Loading / empty / results stay
+  three distinct states — a failed fetch used to render eight placeholder products and pass
+  for a populated catalogue.
+- **Query embeddings never reach the browser.** `search_products` resolves the cached vector
+  server-side; the client sends text and gets ids back. Shipping 1536 floats each way for a
+  value the browser cannot use was the shape this replaced.
+- **The embedding pipeline is a queue, and failure is the retry.** `generate-embedding`
+  archives a pgmq message ONLY after the row is written; anything else leaves it queued for
+  the next `pg_cron` tick. That is what lets the backfill be enqueued before OpenAI billing
+  exists and drain by itself afterwards. Do not "fix" a stuck queue by archiving messages.
+- **`generate-embedding` is service_role-only and `embed-query` is the public one, on
+  purpose.** The queue drainer checks `role = 'service_role'` inside the handler on top of
+  `verify_jwt` (the anon key gets 403 — verified), because the anon key ships in the bundle
+  and would otherwise let anyone burn OpenAI credits. They are separate functions so an auth
+  mistake on the buyer-facing path cannot expose the drainer.
+
+### Postgres facts that are not guessable (all cost a failed migration to learn)
+
+- **A generated column cannot reference another generated column.** `fts` therefore inlines
+  the whole `search_text` expression rather than reading the column. They cannot drift —
+  both derive from the same own-row columns — but the duplication is deliberate, not an
+  oversight to "clean up".
+- **`array_to_string` is STABLE, not IMMUTABLE**, so it cannot appear in a generated column.
+  `public.immutable_array_to_string(text[], text)` is the narrow wrapper that makes
+  `pattern`/`occasion` indexable. Do not widen it to other element types.
+- **A generated column cannot run a subquery**, which is the entire reason `category_name`
+  is denormalised onto `products` (synced by a BEFORE `UPDATE OF category_id` trigger).
+  Category is the best-populated field on the table and the single most valuable search
+  signal — a query for `t-shirt` matches "Ribbed Tank Top" only through its category.
+- **`UPDATE ... OF <col>` fires on the columns NAMED as a target, not on the ones whose
+  values changed.** That is what makes the category-rename cascade
+  (`UPDATE products SET category_id = category_id`) work; it looks like a no-op and is not.
+  Verified against this database.
+- **`pg_net` registers against the `public` schema but its FUNCTIONS live under `net`.** The
+  cron poller calls `net.http_post`. The extension namespace and the callable namespace are
+  not the same thing here. This is also why `get_advisors` reports
+  `extension_in_public: pg_net` and why that warning is **left alone**: all 12 of its
+  functions are in `net` and **zero** are in `public` (verified via `pg_depend`), so nothing
+  is actually exposed. `ALTER EXTENSION pg_net SET SCHEMA` would try to relocate objects out
+  of a schema the extension creates for itself, and the only thing it would buy is silencing
+  a cosmetic lint on the surface that carries the embedding cron.
+- **A SECURITY DEFINER function pinned to `search_path = public` cannot resolve pgvector's
+  `<=>` operator at all.** Every function touching embeddings needs
+  `set search_path = public, extensions`.
+- **Postgres grants EXECUTE to PUBLIC by default.** `grant ... to service_role` alone does
+  not restrict anything; the matching `revoke all ... from public, anon, authenticated` is
+  the part that does the work.
+
+## Product semantic search — what is left to switch it on
+
+Everything is built, applied and deployed. Search **works today** as keyword-only and says
+so in the UI. Two steps turn on the semantic half, and neither can be done from a migration.
+
+1. **Store the service-role key in Vault.** Run once in the dashboard SQL editor — never in
+   a migration, so the key never enters git or a chat transcript:
+   ```sql
+   select vault.create_secret('<the project service_role key>', 'service_role_key',
+     'Lets pg_cron authenticate to edge functions');
+   ```
+   The `embedding-worker` cron job is already scheduled and guarded on this secret existing,
+   so it is inert until the row appears and starts working by itself afterwards. The anon key
+   will **not** do: `generate-embedding` rejects anything that is not `role = 'service_role'`.
+2. **Enable billing on the OpenAI account.** `OPENAI_API_KEY` is already set as an edge
+   function secret. Verify with the probe branch, which spends no tokens and touches no
+   queue: `POST /functions/v1/generate-embedding {"probe":true}` (service-role auth) →
+   `has_openai_key`, `has_service_key`, `supabase_url_set`.
+3. **Then enqueue the backfill** (26 live rows, drains in one cron tick):
+   ```sql
+   select pgmq.send('embedding_jobs', jsonb_build_object(
+     'table','products','id',id,'text',search_text))
+   from public.products
+   where status = 'live' and embedding is null and length(trim(search_text)) > 0;
+   ```
+4. **Verify:** `select count(*) from products where status='live' and embedding is null`
+   should reach 0, and the four queries that return nothing today — `summer beachwear`,
+   `breathable office wear`, `wedding outfit`, `gym clothing` — should start returning
+   sensible neighbours. Do that check by hand; at this catalogue size it is five minutes and
+   it is the only thing that actually tells you the embeddings are good.
+
+**Watch the spend.** `embed-query` is callable by any holder of the public anon key and
+costs one OpenAI call per *novel* query (repeat queries are served from
+`search_query_embeddings` and cost nothing). ~$0.00002 each, length-capped, **not** rate
+limited. If the marketplace is ever scraped, that is the line item to look at.
 
 ## Raising MAX_VIDEO_BYTES (the 90 MB / Pro-plan step)
 

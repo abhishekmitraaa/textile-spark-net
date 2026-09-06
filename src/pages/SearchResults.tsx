@@ -7,6 +7,7 @@ import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useBrandFollows, toggleBrandFollow } from "@/lib/brandFollowStore";
 import { useCatalogue } from "@/lib/queries/products";
+import { useProductSearch } from "@/lib/queries/search";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
@@ -73,9 +74,8 @@ interface RProduct {
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: Gender; colour: string; image: string; secondaryImage: string; verified: boolean;
   // Real vendor-entered attributes, carried through from CatalogueRow. Optional
-  // because BASE_PRODUCTS (the pre-load placeholder set) has none of them — a
-  // product with no value for a field simply doesn't match a filter on it,
-  // which is the honest answer rather than a hash-derived one.
+  // because a product with no value for a field simply doesn't match a filter
+  // on it, which is the honest answer rather than a hash-derived one.
   moqValue?: number | null;
   pattern?: string[]; occasion?: string[]; sizes?: string[];
   neckType?: string; sleeveType?: string; collarType?: string; countryOfOrigin?: string;
@@ -83,155 +83,59 @@ interface RProduct {
   categoryName?: string; parentCategoryName?: string;
 }
 
-const img = (s: string) => `https://picsum.photos/seed/${s}/500/650`;
-
 // Thumbnails rendered in the Video Close-Ups teaser rail. The viewer still
 // receives the full related list; this only caps images fetched by the page.
 const VIDEO_RAIL_MAX = 12;
-const BASE_PRODUCTS: RProduct[] = [
-  { id: "sr1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Artisan Weaves Co.", location: "Bangalore", priceValue: 499, moq: "MOQ: 2", sold: "800+ sold", enquiries: "5.6k", rating: 4.1, popularity: 5600, discount: 40, fabric: "Cotton", gsm: "200", fit: "Regular", gender: "Women", colour: "White", image: img("sr-tank"), secondaryImage: img("sr-tank-b"), verified: true },
-  { id: "sr2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "SilkThread Mills", location: "Bangalore", priceValue: 629, moq: "MOQ: 2", sold: "1.2k sold", enquiries: "1.6k", rating: 3.8, popularity: 1600, discount: 20, fabric: "Cotton", gsm: "200", fit: "Regular", gender: "Men", colour: "Blue", image: img("sr-camp"), secondaryImage: img("sr-camp-b"), verified: false },
-  { id: "sr3", vendorId: "v3", name: "Kids Cotton Tee", manufacturer: "Gujarat Garments", location: "Ahmedabad", priceValue: 299, moq: "MOQ: 2", sold: "600+ sold", enquiries: "980", rating: 4.4, popularity: 980, discount: 55, fabric: "Cotton", gsm: "180", fit: "Regular", gender: "Boys", colour: "Yellow", image: img("sr-boy"), secondaryImage: img("sr-boy-b"), verified: true },
-  { id: "sr4", vendorId: "v4", name: "Printed Frock", manufacturer: "Jaipur Weaves", location: "Jaipur", priceValue: 459, moq: "MOQ: 2", sold: "500+ sold", enquiries: "1.2k", rating: 4.0, popularity: 1200, discount: 30, fabric: "Rayon", gsm: "160", fit: "Regular", gender: "Girls", colour: "Pink", image: img("sr-girl"), secondaryImage: img("sr-girl-b"), verified: false },
-  { id: "sr5", vendorId: "v5", name: "Oversized Crew Tee", manufacturer: "Tiruppur Knitworks", location: "Tirupur", priceValue: 549, moq: "MOQ: 2", sold: "900+ sold", enquiries: "3.2k", rating: 4.3, popularity: 3200, discount: 45, fabric: "Cotton", gsm: "240", fit: "Oversized", gender: "Men", colour: "Black", image: img("sr-crew"), secondaryImage: img("sr-crew-b"), verified: true },
-  { id: "sr6", vendorId: "v6", name: "Satin Slip Dress", manufacturer: "Atelier Noor", location: "Surat", priceValue: 799, moq: "MOQ: 2", sold: "400+ sold", enquiries: "870", rating: 4.5, popularity: 870, discount: 25, fabric: "Satin", gsm: "140", fit: "Regular", gender: "Women", colour: "Maroon", image: img("sr-slip"), secondaryImage: img("sr-slip-b"), verified: true },
-  { id: "sr7", vendorId: "v7", name: "Graphic Print Tee", manufacturer: "StyleCraft Apparels", location: "Bangalore", priceValue: 399, moq: "MOQ: 2", sold: "2.4k sold", enquiries: "1.6k", rating: 3.9, popularity: 2400, discount: 60, fabric: "Cotton", gsm: "180", fit: "Regular", gender: "Boys", colour: "Navy", image: img("sr-graphic"), secondaryImage: img("sr-graphic-b"), verified: false },
-  { id: "sr8", vendorId: "v8", name: "Linen Blend Shirt", manufacturer: "Mumbai Linen House", location: "Mumbai", priceValue: 689, moq: "MOQ: 2", sold: "780+ sold", enquiries: "760", rating: 4.2, popularity: 760, discount: 15, fabric: "Linen", gsm: "180", fit: "Regular", gender: "Men", colour: "Beige", image: img("sr-linen"), secondaryImage: img("sr-linen-b"), verified: true },
-];
 
-// Price-slider bounds derived from the live catalogue (rounded out to the
-// nearest ₹100) rather than a hardcoded ceiling — so the range always spans
-// the real products and can never clip prices above an arbitrary cap.
-const PRICE_BOUNDS = (() => {
-  const vals = BASE_PRODUCTS.map((p) => p.priceValue);
-  return {
-    min: Math.floor(Math.min(...vals) / 100) * 100,
-    max: Math.ceil(Math.max(...vals) / 100) * 100,
-  };
-})();
+// Price-slider bounds are ALWAYS derived from the rows actually on screen (see
+// priceBounds below). This is only the degenerate fallback for when there are
+// no rows yet or none carry a price — a slider still needs a min and a max to
+// render. It is not a claim about the catalogue.
+const PRICE_BOUNDS = { min: 0, max: 2000 };
 
-// Sponsored brand picks. Fashion product imagery (not the generic picsum
-// scenery) so the sponsored rail reads as real merchandise, and enough
-// entries (6) that the enlarged cards fill the desktop width and still scroll.
-const BRAND_PICKS = [
-  { id: "bp1", name: "THEOT / J mering...",   category: "Shirts",            price: "$27.53", image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=520&fit=crop" },
-  { id: "bp2", name: "Queen's Square /...",   category: "Knitwear/Sweaters", price: "$20.09", image: "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=400&h=520&fit=crop" },
-  { id: "bp3", name: "THEOT / high tou...",   category: "Blouses",           price: "$17.11", image: "https://images.unsplash.com/photo-1551803091-e20673f15770?w=400&h=520&fit=crop" },
-  { id: "bp4", name: "Aurelia / linen wr...", category: "Dresses",           price: "$24.10", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
-  { id: "bp5", name: "Northfield / cotto...", category: "Trousers",          price: "$15.60", image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=400&h=520&fit=crop" },
-  { id: "bp6", name: "Solace / denim sh...",  category: "Shirts",            price: "$21.40", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=520&fit=crop" },
-];
-
-// ── Brand-tab data ──────────────────────────────────────────
-// Brands (manufacturers / exporters) tagged by what they DEAL IN, each with a
-// small product line. The Brand tab shows only the brands relevant to what the
-// buyer searched (matched on brand name, `deals`, or product name), and each
-// card leads with that brand's products related to the query. Product lines
-// deliberately overlap categories (e.g. multiple brands make a "Jacket") so a
-// single query surfaces several competing suppliers.
-interface BrandProduct { id: string; name: string; price: string; moq: string; image: string; }
+// ── Brand tab ───────────────────────────────────────────────
+// Derived from the ranked product results, not from a fixture. Grouping the
+// matched listings by vendor answers exactly the question the tab asks — which
+// suppliers make what I searched for — using rows that are already on screen,
+// with no extra request.
+//
+// What used to be here: BRAND_RESULTS, six invented manufacturers (Everest
+// Outerwear Co., Denim Republic Mills, …) with invented ratings, review counts
+// and follower numbers ("9,999+"), stock Unsplash photography, and product
+// lines that existed nowhere in the database — so tapping one led to a vendor
+// page that does not exist. Alongside it, BRAND_PICKS: a "Sponsored" rail of
+// six more fake listings priced in USD ("$27.53") on an INR marketplace, with
+// no ad system behind it. Both are gone.
+//
+// Rating / reviews / followers are deliberately NOT shown here. They exist in
+// the schema but not on the rows this tab already has, and inventing them is
+// what got the previous version into trouble. Fewer real fields beats more
+// fabricated ones.
+interface BrandProduct { id: string; name: string; price: string; image: string; }
 interface BrandResult {
-  id: string; name: string; type: string; location: string;
-  verified: boolean; rating: number; reviews: string; followers: string;
-  deals: string[]; logo: string; products: BrandProduct[];
+  id: string; name: string; location: string;
+  verified: boolean; products: BrandProduct[];
 }
 
-// Image IDs below are the fashion Unsplash photos already proven elsewhere in
-// this codebase (New Arrivals / video close-ups / brand picks) — known-good
-// apparel shots, so no product renders a stray non-clothing image.
-const U = (id: string) => `https://images.unsplash.com/photo-${id}?w=400&h=500&fit=crop`;
-const BRAND_RESULTS: BrandResult[] = [
-  {
-    id: "everest-outerwear", name: "Everest Outerwear Co.", type: "Manufacturer", location: "Ludhiana",
-    verified: true, rating: 4.6, reviews: "3.2k", followers: "8,540",
-    deals: ["Windbreaker Jackets", "Puffer Jackets", "Bomber Jackets", "Winter Wear"],
-    logo: U("1591047139829-d91aecb6caea"),
-    products: [
-      { id: "eo1", name: "Windbreaker Jacket",  price: "₹899", moq: "50", image: U("1591047139829-d91aecb6caea") },
-      { id: "eo2", name: "Hooded Windcheater",  price: "₹1,050", moq: "50", image: U("1576566588028-4147f3842f27") },
-      { id: "eo3", name: "Puffer Jacket",       price: "₹1,499", moq: "30", image: U("1516257984-b1b4d707412e") },
-      { id: "eo4", name: "Bomber Jacket",       price: "₹1,199", moq: "40", image: U("1591047139829-d91aecb6caea") },
-      { id: "eo5", name: "Fleece Jacket",       price: "₹749", moq: "50", image: U("1620799139507-2a76f79a2f4d") },
-    ],
-  },
-  {
-    id: "denim-republic", name: "Denim Republic Mills", type: "Manufacturer", location: "Ahmedabad",
-    verified: true, rating: 4.3, reviews: "2.1k", followers: "6,120",
-    deals: ["Jeans", "Denim Jackets", "Denim Shirts"],
-    logo: U("1542272604-787c3835535d"),
-    products: [
-      { id: "dr1", name: "Slim Fit Jeans",      price: "₹649", moq: "100", image: U("1542272604-787c3835535d") },
-      { id: "dr2", name: "Straight Fit Jeans",  price: "₹699", moq: "100", image: U("1541099649105-f69ad21f3246") },
-      { id: "dr3", name: "Denim Jacket",        price: "₹1,090", moq: "40", image: U("1516257984-b1b4d707412e") },
-      { id: "dr4", name: "Denim Shirt",         price: "₹579", moq: "60", image: U("1602810318383-e386cc2a3ccf") },
-      { id: "dr5", name: "Distressed Jeans",    price: "₹729", moq: "80", image: U("1594633312681-425c7b97ccd1") },
-    ],
-  },
-  {
-    id: "tirupur-knit", name: "Tirupur Knitworks", type: "Manufacturer", location: "Tirupur",
-    verified: true, rating: 4.4, reviews: "4.5k", followers: "9,999+",
-    deals: ["T-Shirts", "Polo Shirts", "Tank Tops", "Oversized Tees"],
-    logo: U("1620799139507-2a76f79a2f4d"),
-    products: [
-      { id: "tk1", name: "Oversized Crew Tee",  price: "₹329", moq: "100", image: U("1576566588028-4147f3842f27") },
-      { id: "tk2", name: "Ribbed Tank Top",     price: "₹249", moq: "100", image: U("1620799139507-2a76f79a2f4d") },
-      { id: "tk3", name: "Cotton Polo Shirt",   price: "₹399", moq: "100", image: U("1596755094514-f87e34085b2c") },
-      { id: "tk4", name: "Graphic Print Tee",   price: "₹359", moq: "100", image: U("1576566588028-4147f3842f27") },
-      { id: "tk5", name: "Henley Tee",          price: "₹379", moq: "80", image: U("1516257984-b1b4d707412e") },
-    ],
-  },
-  {
-    id: "silkthread-atelier", name: "SilkThread Atelier", type: "Exporter", location: "Mumbai",
-    verified: true, rating: 4.7, reviews: "1.8k", followers: "5,430",
-    deals: ["Shirts", "Camp Collar Shirts", "Linen Shirts", "Blouses"],
-    logo: U("1596755094514-f87e34085b2c"),
-    products: [
-      { id: "sa1", name: "Camp Collar Shirt",   price: "₹629", moq: "50", image: U("1602810318383-e386cc2a3ccf") },
-      { id: "sa2", name: "Linen Blend Shirt",   price: "₹689", moq: "50", image: U("1596755094514-f87e34085b2c") },
-      { id: "sa3", name: "Oxford Shirt",        price: "₹599", moq: "60", image: U("1602810318383-e386cc2a3ccf") },
-      { id: "sa4", name: "Satin Blouse",        price: "₹549", moq: "50", image: U("1551803091-e20673f15770") },
-      { id: "sa5", name: "Flannel Shirt",       price: "₹659", moq: "40", image: U("1516257984-b1b4d707412e") },
-    ],
-  },
-  {
-    id: "aurelia-womens", name: "Aurelia Womenswear", type: "Manufacturer", location: "Jaipur",
-    verified: false, rating: 4.1, reviews: "970", followers: "3,220",
-    deals: ["Dresses", "Kurtas", "Frocks", "Ethnic Wear"],
-    logo: U("1595777457583-95e059d581b8"),
-    products: [
-      { id: "aw1", name: "Floral Midi Dress",   price: "₹759", moq: "40", image: U("1595777457583-95e059d581b8") },
-      { id: "aw2", name: "Satin Slip Dress",    price: "₹799", moq: "40", image: U("1551803091-e20673f15770") },
-      { id: "aw3", name: "Block-Print Kurta",   price: "₹549", moq: "50", image: U("1610030469983-98e550d6193c") },
-      { id: "aw4", name: "Printed Frock",       price: "₹459", moq: "50", image: U("1551803091-e20673f15770") },
-      { id: "aw5", name: "Wrap Dress",          price: "₹689", moq: "40", image: U("1595777457583-95e059d581b8") },
-    ],
-  },
-  {
-    id: "fitform-active", name: "FitForm Activewear", type: "Manufacturer", location: "Bangalore",
-    verified: true, rating: 4.2, reviews: "1.3k", followers: "4,760",
-    deals: ["Activewear", "Track Jackets", "Leggings", "Training Tees"],
-    logo: U("1571019613454-1cb2f99b2d8b"),
-    products: [
-      { id: "ff1", name: "Mesh Training Tee",   price: "₹429", moq: "60", image: U("1571019613454-1cb2f99b2d8b") },
-      { id: "ff2", name: "Track Jacket",        price: "₹899", moq: "40", image: U("1516257984-b1b4d707412e") },
-      { id: "ff3", name: "Compression Leggings",price: "₹549", moq: "60", image: U("1594633312681-425c7b97ccd1") },
-      { id: "ff4", name: "Windbreaker Jacket",  price: "₹949", moq: "40", image: U("1591047139829-d91aecb6caea") },
-      { id: "ff5", name: "Jogger Pants",        price: "₹599", moq: "60", image: U("1620799139507-2a76f79a2f4d") },
-    ],
-  },
-];
-
-// Match a brand against the searched query. Returns whether it's relevant and
-// the product line to show (query-matching products first, then the rest).
-function matchBrand(brand: BrandResult, tokens: string[]): { hit: boolean; products: BrandProduct[] } {
-  if (tokens.length === 0) return { hit: true, products: brand.products };
-  const hay = (brand.name + " " + brand.deals.join(" ")).toLowerCase();
-  const nameHit = tokens.some((tk) => hay.includes(tk));
-  const matched = brand.products.filter((p) => tokens.some((tk) => p.name.toLowerCase().includes(tk)));
-  const hit = nameHit || matched.length > 0;
-  if (!hit) return { hit: false, products: [] };
-  const rest = brand.products.filter((p) => !matched.includes(p));
-  return { hit, products: [...matched, ...rest] };
+/** Group the ranked product results by their owning vendor. Vendors appear in
+ *  the order their best-ranked product did, so the tab inherits the server's
+ *  relevance ordering rather than inventing one. */
+function brandsFromProducts(rows: RProduct[]): BrandResult[] {
+  const byVendor = new Map<string, BrandResult>();
+  for (const p of rows) {
+    let brand = byVendor.get(p.vendorId);
+    if (!brand) {
+      brand = { id: p.vendorId, name: p.manufacturer, location: p.location, verified: p.verified, products: [] };
+      byVendor.set(p.vendorId, brand);
+    }
+    brand.products.push({
+      id: p.id,
+      name: p.name,
+      price: p.priceValue > 0 ? `₹${p.priceValue.toLocaleString("en-IN")}` : "—",
+      image: p.image,
+    });
+  }
+  return [...byVendor.values()];
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -304,13 +208,20 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
       {/* Store header */}
       <div className="flex items-center gap-3">
         <button onClick={() => navigate(`/vendor/${brand.id}`)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
-          <img src={brand.logo} alt="" className="w-11 h-11 lg:w-12 lg:h-12 rounded-full object-cover bg-gray-100 shrink-0" />
+          {/* No logo column: vendor_profiles carries no logo on the rows this
+              tab already has, and the previous version filled the gap with
+              stock photography. An initial is honest and costs no request. */}
+          <span className="w-11 h-11 lg:w-12 lg:h-12 rounded-full bg-gray-100 shrink-0 flex items-center justify-center text-sm font-bold text-gray-500">
+            {brand.name.trim().charAt(0).toUpperCase() || "?"}
+          </span>
           <span className="min-w-0">
             <span className="flex items-center gap-1">
               <span className="text-sm lg:text-[15px] font-semibold text-gray-900 truncate">{brand.name}</span>
               {brand.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#ef4d62] shrink-0" />}
             </span>
-            <span className="block text-xs text-gray-400 truncate mt-0.5">{brand.location} · {brand.followers} {t("followers")}</span>
+            <span className="block text-xs text-gray-400 truncate mt-0.5">
+              {brand.location} · {brand.products.length} {brand.products.length === 1 ? t("matching listing") : t("matching listings")}
+            </span>
           </span>
         </button>
         <button onClick={() => toggleBrandFollow(brand.id)} aria-label={following ? "Unfollow" : "Follow"} className="shrink-0 -mr-1 p-1.5">
@@ -592,22 +503,33 @@ const SearchResults = () => {
   const [menu, setMenu] = useState<Menu>(null);
   const [sort, setSort] = useState<SortKey>("new");
   const [cols, setCols] = useState<2 | 3>(2);
-  const [batches, setBatches] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [pageSaved, setPageSaved] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
-  const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   // Mouse click-and-drag panning for the horizontal Brand Picks / Video rails
   // (touch + trackpad already pan natively; this is for desktop mouse users).
   const brandPicksDrag = useDragScroll<HTMLDivElement>();
   const videoRailDrag = useDragScroll<HTMLDivElement>();
 
-  // Live catalogue from Supabase (all status='live' products). Feeds the grid
-  // and the filter/sort pipeline below.
-  const { data: catalogue } = useCatalogue();
+  // ── Results source ──
+  // With a query, ranking happens server-side in match_products (keyword +
+  // vector, fused by RRF, weighted by the vendor's paid boost) and only the
+  // matched rows come back. The page no longer downloads the whole live table
+  // to run `.includes()` over it in the browser.
+  //
+  // Without a query — arriving via ?category= with an empty q — there is nothing
+  // to rank, so the full catalogue is still the right source. Both hooks are
+  // called unconditionally (rules of hooks); `enabled` decides which one runs.
+  const hasQuery = query.trim().length > 0;
+  const { data: searchData, isLoading: searchLoading } = useProductSearch(query);
+  const { data: browseData, isLoading: browseLoading } = useCatalogue(!hasQuery);
+
+  const catalogue = hasQuery ? searchData?.rows : browseData;
+  const isLoading = hasQuery ? searchLoading : browseLoading;
+  // False when the query had no cached embedding, so results were keyword-only.
+  const semanticActive = hasQuery ? (searchData?.embeddingUsed ?? false) : false;
 
   // Price-slider bounds derived from the live catalogue (fallback to the static
   // sample bounds while it loads or if the catalogue is empty).
@@ -716,30 +638,27 @@ const SearchResults = () => {
   };
 
   const products = useMemo(() => {
-    // Real catalogue once loaded; the local samples only stand in while the
-    // query is still in flight (avoids an empty flash on first paint).
-    const source: RProduct[] = catalogue === undefined
-      ? Array.from({ length: batches }, (_, b) =>
-          BASE_PRODUCTS.map((p) => ({ ...p, id: `${p.id}-${b}`, vendorId: `${p.vendorId}-${b}` }))
-        ).flat()
-      : (catalogue as unknown as RProduct[]);
+    // No placeholder rows while loading. The page previously stood in 8 fake
+    // products to avoid an empty flash, which made a failed fetch look like a
+    // populated catalogue — and the project's rule is that an empty catalogue
+    // renders empty. Loading is its own state, rendered below.
+    const source = (catalogue ?? []) as unknown as RProduct[];
     let list = source.filter((p) => schema.facets.every((f) => matchFacet(p, f, selections[f.id])));
+    // "What's new" keeps the incoming order. For a search that order IS the
+    // server's fused relevance ranking, so re-sorting here would throw away the
+    // result of match_products.
     if (sort === "price-asc") list = [...list].sort((a, b) => a.priceValue - b.priceValue);
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.priceValue - a.priceValue);
     else if (sort === "popularity") list = [...list].sort((a, b) => b.popularity - a.popularity);
     else if (sort === "discount") list = [...list].sort((a, b) => b.discount - a.discount);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [catalogue, batches, schema, selections, sort]);
+  }, [catalogue, schema, selections, sort]);
 
-  // Brands relevant to the search — those that deal in the searched item, each
-  // paired with its query-related product line (see matchBrand).
-  const brandResults = useMemo(() => {
-    const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    return BRAND_RESULTS
-      .map((brand) => ({ brand, ...matchBrand(brand, tokens) }))
-      .filter((x) => x.hit);
-  }, [query]);
+  // Suppliers who actually make what was searched for — grouped straight out of
+  // the ranked, facet-filtered product results, so the tab can never disagree
+  // with the Product tab beside it.
+  const brandResults = useMemo(() => brandsFromProducts(products), [products]);
 
   // Video Close-Ups related to the search — vendor-uploaded reels only (the
   // sample set is dev-only, so an empty catalogue hides the whole section via
@@ -790,21 +709,11 @@ const SearchResults = () => {
     }
   });
 
-  // Infinite scroll (product tab only)
-  useEffect(() => {
-    const target = loadMoreRef.current;
-    if (!target || tab !== "product") return;
-    const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !loadingMore) {
-        setLoadingMore(true);
-        window.setTimeout(() => { setBatches((c) => c + 1); setLoadingMore(false); }, 300);
-      }
-    }, { rootMargin: "300px" });
-    observer.observe(target);
-    return () => observer.disconnect();
-  }, [loadingMore, tab]);
-
-  useEffect(() => { setBatches(1); }, [selections, sort]);
+  // The infinite-scroll batching that used to live here only ever grew the
+  // FAKE placeholder set — the real catalogue was rendered in full on first
+  // paint. With search served by match_products the result set is already
+  // bounded (SEARCH_MATCH_COUNT), so a "Scroll for more" affordance that loads
+  // nothing was advertising pagination this page has never had.
 
   const sortLabel = sort === "new" ? "SORT" : SORTS.find((s) => s.key === sort)?.label ?? "SORT";
 
@@ -936,9 +845,9 @@ const SearchResults = () => {
                 variants={reduced ? {} : listContainer} initial="hidden" animate="show"
                 className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-start"
               >
-                {brandResults.map(({ brand, products }) => (
+                {brandResults.map((brand) => (
                   <motion.div variants={reduced ? {} : listItem} key={brand.id}>
-                    <BrandCard brand={brand} products={products} />
+                    <BrandCard brand={brand} products={brand.products} />
                   </motion.div>
                 ))}
               </motion.div>
@@ -949,38 +858,14 @@ const SearchResults = () => {
               </div>
             </>
           )
-        ) : products.length === 0 ? (
-          <SubmitRequirementCard />
         ) : (
           <>
-            {/* Brand Picks — sponsored (enlarged cards, horizontal rail) */}
-            <div className="mb-6 lg:mb-8">
-                <div className="flex items-center justify-between mb-2 lg:mb-3">
-                  <h2 className="inline-flex items-center gap-1 text-lg lg:text-xl font-bold text-gray-900">Brand Picks <ChevronRight className="w-5 h-5 text-gray-400" /></h2>
-                  <span className="text-[10px] lg:text-xs text-gray-300 font-semibold">sponsored</span>
-                </div>
-                <div
-                  ref={brandPicksDrag.ref}
-                  className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1", brandPicksDrag.className)}
-                  onMouseDown={brandPicksDrag.onMouseDown}
-                  onMouseMove={brandPicksDrag.onMouseMove}
-                  onMouseUp={brandPicksDrag.onMouseUp}
-                  onMouseLeave={brandPicksDrag.onMouseLeave}
-                  onClickCapture={brandPicksDrag.onClickCapture}
-                >
-                  {BRAND_PICKS.map((b) => (
-                    <div key={b.id} className="shrink-0 w-40 lg:w-52 rounded-xl border border-[#ef4d62]/15 bg-[#ef4d62]/5 overflow-hidden">
-                      <Link to="/search/results" className="block aspect-[3/4] bg-gray-100"><img src={b.image} alt={b.name} className="w-full h-full object-cover" draggable={false} /></Link>
-                      <div className="p-2 lg:p-3">
-                        <p className="text-xs lg:text-sm font-semibold text-gray-700 truncate">{b.name}</p>
-                        <p className="text-[11px] lg:text-xs text-gray-500 truncate">{b.category}</p>
-                        <p className="text-sm lg:text-base font-bold text-gray-900 mt-0.5">{b.price}</p>
-                        <button className="mt-2 w-full flex items-center justify-center gap-1 bg-[#ef4d62] hover:bg-[#ef4d62]/90 transition-colors text-white text-[10px] lg:text-xs font-bold py-1.5 lg:py-2 rounded-lg"><Phone className="w-2.5 h-2.5 lg:w-3 lg:h-3" /> Call Now</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+            {/* The "Brand Picks — sponsored" rail that used to sit here was six
+                hardcoded listings in USD with a Call Now button wired to
+                nothing, labelled sponsored despite no ad ever having been sold
+                against it. Real sponsored placement belongs to the ad system
+                (advertisements / ad_orders), which serves through active_ads —
+                not to a literal array in a page component. */}
 
               {/* Video Close-Ups — related to the search */}
               {relatedVideos.length > 0 && (
@@ -1027,13 +912,51 @@ const SearchResults = () => {
                 </div>
               )}
 
-              {/* Product grid (Submit Requirement card interleaved every 5 rows) */}
-              <motion.div key={`${JSON.stringify(selections)}-${sort}`} variants={reduced ? {} : listContainer} initial="hidden" animate="show"
-                className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
-                {feedNodes}
-              </motion.div>
-
-            <div ref={loadMoreRef} className="py-6 text-center text-xs text-gray-400">{loadingMore ? "Loading more..." : "Scroll for more"}</div>
+              {/* Loading / empty / results stay three distinct states — the
+                  project rule. A spinner is not an empty catalogue, and an
+                  empty catalogue is not a failure. */}
+              {isLoading ? (
+                <div className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
+                  {Array.from({ length: cols * 4 }).map((_, i) => (
+                    <div key={i} className="rounded-xl border border-gray-100 overflow-hidden">
+                      <div className="aspect-[4/5] bg-gray-100 animate-pulse" />
+                      <div className="p-2 space-y-1.5">
+                        <div className="h-2.5 w-3/4 bg-gray-100 rounded animate-pulse" />
+                        <div className="h-2 w-1/2 bg-gray-100 rounded animate-pulse" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="py-16 text-center">
+                  <p className="text-sm font-semibold text-gray-700">
+                    No products match {query ? <>&ldquo;{query}&rdquo;</> : "these filters"}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    {activeCount > 0
+                      ? "Try clearing a filter, or search for a broader term."
+                      : "Try a broader term, or post a requirement and let suppliers come to you."}
+                  </p>
+                  <button
+                    onClick={() => setQuickRfqOpen(true)}
+                    className="mt-4 px-4 py-2 rounded-lg bg-[#ef4d62] text-white text-xs font-bold"
+                  >
+                    Post a requirement
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Product grid (Submit Requirement card interleaved every 5 rows) */}
+                  <motion.div key={`${JSON.stringify(selections)}-${sort}`} variants={reduced ? {} : listContainer} initial="hidden" animate="show"
+                    className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
+                    {feedNodes}
+                  </motion.div>
+                  <div className="py-6 text-center text-xs text-gray-400">
+                    {products.length} {products.length === 1 ? "result" : "results"}
+                    {hasQuery && !semanticActive && " · keyword match only"}
+                  </div>
+                </>
+              )}
           </>
         )}
       </div>

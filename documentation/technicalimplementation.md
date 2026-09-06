@@ -4,7 +4,7 @@ Updated automatically whenever implementation details change (schema, APIs, libr
 patterns, infra choices). This is the depth layer — `documentation/claude.md` holds only
 the snapshot.
 
-Last updated: 2026-09-05
+Last updated: 2026-09-07
 
 ---
 
@@ -271,12 +271,87 @@ runs as `postgres`. It guards only `status` and `rejection_reason` regardless.
 
 ---
 
+## Product search — hybrid FTS + vector (2026-09-07)
+
+### Schema on `products`
+| Column | Type | Maintained by |
+|---|---|---|
+| `category_name` | `text` | BEFORE `INSERT OR UPDATE OF category_id` trigger (`sync_product_category_name`, SECURITY DEFINER — `categories` has RLS) |
+| `search_text` | `text` GENERATED STORED | Postgres, from own-row columns incl. `category_name` |
+| `fts` | `tsvector` GENERATED STORED | Postgres — **inlines the whole expression**, because a generated column may not reference another generated column |
+| `embedding` | `extensions.halfvec(1536)` | `generate-embedding` edge function via `set_product_embedding` |
+
+Indexes: `products_fts_idx` (GIN on `fts`), `products_trgm_idx` (GIN trgm on `search_text`).
+**HNSW (`halfvec_cosine_ops`) is deliberately NOT created yet** — it is built after the
+backfill, per the standard "index a populated table" ordering. At 26 rows a sequential scan
+is faster anyway; add it before the catalogue grows.
+
+`halfvec` rather than `vector`: half-precision halves the index footprint at no measurable
+recall cost for OpenAI embeddings. Requires pgvector ≥ 0.7 (project is on 0.8.2).
+
+### Pipeline
+`products` trigger → `pgmq` queue `embedding_jobs` → `pg_cron` (`embedding-worker`, every
+minute, guarded so it fires **only** when a visible message exists **and** the Vault secret
+is present) → `net.http_post` → `generate-embedding` → OpenAI `text-embedding-3-small`
+(1536 dims, whole batch in one call) → `set_product_embedding` → `pgmq.archive`.
+
+An OpenAI round-trip must never sit on the critical path of a vendor saving a listing, which
+is why this is a queue and not an inline call. A message is archived **only after** the row
+is written, so failure is the retry.
+
+`pgmq` is not exposed to PostgREST (only `public` and `graphql_public` are), so the worker
+reaches the queue through three SECURITY DEFINER wrappers — `embedding_jobs_read`,
+`embedding_jobs_archive`, `set_product_embedding` — rather than widening the exposed schema
+list and putting the whole queue API on the wire for every key.
+
+`set_product_embedding` writes `embedding`, which is **not** in the enqueue trigger's column
+list. That is load-bearing: without it every successful embedding would enqueue another one,
+forever.
+
+### RPCs
+| Function | Used by | Notes |
+|---|---|---|
+| `match_products(query, query_embedding, match_count, boost_weight)` | `search_products` | RRF k=60 over two ≥40-deep lists; boost applied **after** fusion as `× (1 + 0.05 × tier)`, max 1.20 |
+| `search_products(query, match_count)` | `useProductSearch` | Resolves the cached vector server-side; returns `embedding_used` so the UI can admit a keyword-only degrade |
+| `related_products(p_id, match_count)` | `useYouMightLike` | Cosine NN with a same-category fallback; the two branches are mutually exclusive by construction |
+| `search_suggestions(q, max_results)` | `useSearchSuggestions` | Keyword-only autocomplete over real categories / products / vendors |
+
+All are `STABLE SECURITY DEFINER` with `set search_path = public, extensions` — pgvector's
+`<=>` is unresolvable without `extensions` on the path. Because SECURITY DEFINER bypasses
+RLS, the explicit `status = 'live'` filter inside each is the **only** thing keeping drafts
+out of buyer results.
+
+### Query-embedding cache
+`search_query_embeddings (query_norm PK, embedding, hits, created_at, last_used_at)`, RLS on
+with **no policies** — service_role / SECURITY DEFINER only. Warmed by the `embed-query` edge
+function, read by `search_products`. The vector never crosses the wire to a browser.
+
+### Edge functions
+- **`generate-embedding`** — queue drainer. `verify_jwt = true` **plus** an in-handler
+  `role = 'service_role'` check, because the anon key ships in the client bundle and
+  `verify_jwt` alone accepts it. Anon → 403, verified.
+- **`embed-query`** — buyer-facing cache warmer. Returns a status, never the vector.
+  Deliberately a separate function so an auth mistake here cannot expose the drainer.
+  Cost exposure documented in `claude.md`: one OpenAI call per *novel* query, no rate limit.
+
+Both follow the project's `not_configured`-as-200 convention and carry a `{"probe":true}`
+branch that reports configuration without spending a token.
+
+---
+
 ## Key Modules
 
 ### Data access — `src/lib/queries/`
 `ads.ts`, `calls.ts`, `catalogues.ts`, `chat.ts`, `follows.ts`, `notifications.ts`,
-`payments.ts`, `products.ts`, `profile.ts`, `reviews.ts`, `rfqs.ts`, `subscriptions.ts`,
-`vendor.ts`, `vendorDashboard.ts`, `vendorOnboarding.ts`, `vendorStore.ts`, `videos.ts`.
+`payments.ts`, `products.ts`, `profile.ts`, `reviews.ts`, `rfqs.ts`, `search.ts`,
+`subscriptions.ts`, `vendor.ts`, `vendorDashboard.ts`, `vendorOnboarding.ts`,
+`vendorStore.ts`, `videos.ts`.
+
+`search.ts` owns the search read model: `useSearchSuggestions` (debounced autocomplete),
+`useProductSearch` (server-ranked results, hydrated through `fetchCatalogueByIds` so search
+rows and browse rows share one mapping), and `useDebounced`. Facets are computed over the
+returned result set (`SEARCH_MATCH_COUNT = 200`), not over the whole catalogue — a search
+page's facet counts describe the results, which is what a buyer expects.
 
 ### Client stores — `src/lib/*Store.ts`
 Module-level stores backed by `useSyncExternalStore` + `localStorage`, **not** React

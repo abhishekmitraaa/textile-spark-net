@@ -5,9 +5,10 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import { useSearchSuggestions, useDebounced } from "@/lib/queries/search";
 import {
   ArrowLeft, Search as SearchIcon, Mic, Camera, ImagePlus, X, BadgeCheck,
-  Gift, Truck, Shirt, Briefcase, Flame, TrendingUp, Loader2,
+  Gift, Truck, Shirt, Briefcase, Flame, LayoutGrid, Loader2, Store,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -16,15 +17,6 @@ import { useProfileState } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSpeechSearch } from "@/hooks/useSpeechSearch";
 import { supabase } from "@/lib/supabase";
-
-// Keywords per trending chip, matched against a live product's category + name.
-const CAT_KEYWORDS: Record<TrendCat, string[]> = {
-  tshirt: ["t-shirt", "tee", "tank", "polo", "tops"],
-  knit: ["knit", "cardigan", "sweater", "pullover"],
-  windbreaker: ["jacket", "windbreaker", "puffer", "blazer"],
-  skirt: ["skirt", "dress"],
-  cargo: ["cargo", "trouser", "jean", "pant", "track", "jogger"],
-};
 
 function toListing(p: ProductCardData): ListingProduct {
   return makeListingProduct(p.id, {
@@ -46,113 +38,40 @@ const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 
 // ─────────────────────────────────────────────────────────────
 // DATA
+//
+// What used to live here — and why it is gone:
+//
+//   SEARCH_SUGGESTIONS   invented search volumes ("Handbags For Clothes
+//                        2,348,215") for terms no vendor lists.
+//   BRAND_SUGGESTIONS    real trademarked brands (H&M, Zara, Levi's) that are
+//                        not vendors on this marketplace, with invented
+//                        follower counts and fake storefront ids that routed to
+//                        /vendor/<id> pages which do not exist.
+//   POPULAR_KEYWORDS     a hardcoded list rendered under a "Popular keywords"
+//                        heading stamped with today's date, implying a daily
+//                        trending job that was never built.
+//   TRENDING_KEYWORDS    fabricated "trending" labels with picsum placeholder
+//                        imagery.
+//   RECOMMENDED_PRODUCTS 15 fake listings with picsum images, shown whenever the
+//                        real catalogue was empty — which the project's own rule
+//                        forbids ("No mock data in production. An empty
+//                        catalogue is meant to render empty.").
+//
+// All of it is now derived from real rows: autocomplete comes from the
+// search_suggestions RPC, and the category rail is counted off the live
+// catalogue this page already loads.
 // ─────────────────────────────────────────────────────────────
 
-// Numbered list shown before the user types. In production this should be
-// refreshed DAILY from a trending-search job (e.g. Google Trends), not hardcoded.
-const POPULAR_KEYWORDS = [
-  "Cotton Dresses", "Tank Tops", "Windbreaker Jackets", "Bermuda Shorts", "Satin Blouses", "Linen Jackets",
-  "Oversized Hoodies", "Cropped Cardigans", "Pleated Skorts", "Flip-Flops", "Bustier Tops", "Wide-Leg Trousers",
-];
-const POPULAR_PER_PAGE = 6;
-
-type TrendCat = "tshirt" | "knit" | "windbreaker" | "skirt" | "cargo";
-
-// Each trending keyword maps to a product category so selecting a chip filters
-// the recommendation feed below it.
-const TRENDING_KEYWORDS: { label: string; category: TrendCat; image: string }[] = [
-  { label: "Functional T-shirt", category: "tshirt", image: "https://picsum.photos/seed/trend-tshirt/80/80" },
-  { label: "Cropped Knit", category: "knit", image: "https://picsum.photos/seed/trend-knit/80/80" },
-  { label: "Men's Windbreaker", category: "windbreaker", image: "https://picsum.photos/seed/trend-windbreaker/80/80" },
-  { label: "Pleated Skirt", category: "skirt", image: "https://picsum.photos/seed/trend-skirt/80/80" },
-  { label: "Cargo Pants", category: "cargo", image: "https://picsum.photos/seed/trend-cargo/80/80" },
-];
-
-// Product / category dictionary for the autocomplete dropdown (top 5 shown).
-const SEARCH_SUGGESTIONS = [
-  { term: "Tshirts For Men", count: 106347 },
-  { term: "Handbags Women", count: 42073 },
-  { term: "Handbags For Clothes", count: 2348215 },
-  { term: "Handbags", count: 42145 },
-  { term: "Hrx Shoes", count: 1219 },
-  { term: "Highlander Shirts", count: 4624 },
-  { term: "Women's Dresses", count: 88210 },
-  { term: "Denim Jackets", count: 31456 },
-  { term: "Ethnic Kurtas", count: 19872 },
-  { term: "Activewear Leggings", count: 27310 },
-];
-
-// Brand / store dictionary (top 5 shown after products). `keywords` lets a short
-// query (e.g. "Ha") surface a relevant storefront even when not a literal substring.
-const BRAND_SUGGESTIONS = [
-  { id: "hm-home", name: "H&M Home Brand Store", followers: 5893, verified: true, logo: "https://picsum.photos/seed/brand-hm-home/64/64", keywords: ["ha", "hm", "home"] },
-  { id: "hm-season", name: "H&M New Season Styles", followers: 7654, verified: true, logo: "https://picsum.photos/seed/brand-hm-season/64/64", keywords: ["ha", "hm", "season", "new"] },
-  { id: "zara", name: "Zara Essentials Studio", followers: 4218, verified: true, logo: "https://picsum.photos/seed/brand-zara/64/64", keywords: ["za", "essentials"] },
-  { id: "levis", name: "Levi's Official Store", followers: 9027, verified: true, logo: "https://picsum.photos/seed/brand-levis/64/64", keywords: ["le", "denim", "jeans"] },
-];
-
-type RecProduct = ListingProduct & { trendCat: TrendCat };
-
-// Recommendation pool tagged by trend category — selecting a trending chip
-// filters this feed. ~3 items per category so a filtered view has real density.
-const REC_SPECS: { category: TrendCat; name: string; manufacturer: string; enq: string; rating: number }[] = [
-  { category: "tshirt", name: "Functional Crew Tee", manufacturer: "Artisan Weaves Co.", enq: "5.6k", rating: 4.1 },
-  { category: "tshirt", name: "Oversized Graphic Tee", manufacturer: "Tiruppur Knitworks", enq: "3.2k", rating: 4.3 },
-  { category: "tshirt", name: "Performance Sport Tee", manufacturer: "FitForm Apparel", enq: "1.8k", rating: 3.9 },
-  { category: "knit", name: "Cropped Rib Knit", manufacturer: "SilkThread Mills", enq: "2.1k", rating: 4.0 },
-  { category: "knit", name: "Waffle Knit Pullover", manufacturer: "Studio Kintsugi", enq: "1.4k", rating: 4.2 },
-  { category: "knit", name: "Cable Knit Cardigan", manufacturer: "Jaipur Weaves", enq: "980", rating: 4.4 },
-  { category: "windbreaker", name: "Men's Windbreaker", manufacturer: "UrbanShell Co.", enq: "2.7k", rating: 4.1 },
-  { category: "windbreaker", name: "Packable Rain Jacket", manufacturer: "TrailForm Gear", enq: "1.1k", rating: 3.8 },
-  { category: "windbreaker", name: "Colour-block Windcheater", manufacturer: "UrbanShell Co.", enq: "1.6k", rating: 4.0 },
-  { category: "skirt", name: "Pleated Midi Skirt", manufacturer: "Atelier Noor", enq: "2.3k", rating: 4.5 },
-  { category: "skirt", name: "A-line Denim Skirt", manufacturer: "Ahmedabad Denim Co.", enq: "1.2k", rating: 3.9 },
-  { category: "skirt", name: "Wrap Satin Skirt", manufacturer: "Surat Studio", enq: "870", rating: 4.1 },
-  { category: "cargo", name: "Utility Cargo Pants", manufacturer: "Ludhiana Active Wear", enq: "3.4k", rating: 4.2 },
-  { category: "cargo", name: "Relaxed Cargo Joggers", manufacturer: "FitForm Apparel", enq: "1.9k", rating: 4.0 },
-  { category: "cargo", name: "Wide-leg Cargo Trouser", manufacturer: "UrbanShell Co.", enq: "1.3k", rating: 3.8 },
-];
-
-const RECOMMENDED_PRODUCTS: RecProduct[] = REC_SPECS.map((s, i) => ({
-  id: `rec-${i}`,
-  vendorId: `v-rec-${i}`,
-  name: s.name,
-  manufacturer: s.manufacturer,
-  location: "Bangalore",
-  price: "₹499",
-  priceValue: 499,
-  moq: "MOQ: 2",
-  soldCount: "800+ sold",
-  enquiries: s.enq,
-  rating: s.rating,
-  fabric: "Cotton",
-  gsm: "200",
-  fitType: "Regular",
-  image: `https://picsum.photos/seed/search-rec-${i}/500/650`,
-  secondaryImage: `https://picsum.photos/seed/search-rec-${i}b/500/650`,
-  gender: "unisex",
-  trendCat: s.category,
-}));
-
-const GIFTING_PICKS = [
-  { label: "Gifting", icon: Gift },
-  { label: "1-Day Delivery", icon: Truck },
+// Navigational shortcuts. These are search terms, not claims about data — each
+// one just runs the search it names.
+const QUICK_PICKS = [
   { label: "T-Shirts", icon: Shirt },
   { label: "Shirts", icon: Shirt },
-  { label: "Suits & Blazers", icon: Briefcase },
-  { label: "Edgy Jeans", icon: Flame },
+  { label: "Jeans", icon: Flame },
+  { label: "Kurta", icon: Gift },
+  { label: "Activewear", icon: Briefcase },
+  { label: "Jackets", icon: Truck },
 ];
-
-const FOR_HIM_CATEGORIES = [
-  { label: "Trendy T-Shirts", image: "https://picsum.photos/seed/for-him-tshirt/200/200" },
-  { label: "Suave Shirts", image: "https://picsum.photos/seed/for-him-shirt/200/200" },
-  { label: "Edgy Jeans", image: "https://picsum.photos/seed/for-him-jeans/200/200" },
-];
-
-const todayStamp = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
@@ -183,49 +102,44 @@ const Search = () => {
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [query, setQuery] = useState("");
-  const [recentKeywords, setRecentKeywords] = useState<string[]>(["dress", "tank top"]);
-  const [popPage, setPopPage] = useState(0);
+  const [recentKeywords, setRecentKeywords] = useState<string[]>([]);
   const [recBatches, setRecBatches] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
-  // Trending chip that filters the recommendation feed (first one active by default).
-  const [selectedCat, setSelectedCat] = useState<TrendCat | null>(TRENDING_KEYWORDS[0].category);
+  // Category chip filtering the feed below. Null = everything.
+  const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const isSearching = query.trim().length > 0;
-  const popularPages = Math.ceil(POPULAR_KEYWORDS.length / POPULAR_PER_PAGE);
 
-  const suggestions = useMemo(() => {
-    if (!isSearching) return [];
-    const q = query.trim().toLowerCase();
-    return SEARCH_SUGGESTIONS.filter((s) => s.term.toLowerCase().includes(q)).slice(0, 5);
-  }, [query, isSearching]);
+  // Real autocomplete: categories (with live listing counts), live product
+  // names, and actual vendor storefronts. Debounced so it is one request per
+  // pause in typing, not one per keystroke.
+  const debouncedQuery = useDebounced(query, 200);
+  const { data: suggestionRows, isLoading: suggestLoading } = useSearchSuggestions(debouncedQuery);
+  const suggestions = (suggestionRows ?? []).filter((s) => s.kind !== "vendor");
+  const vendorSuggestions = (suggestionRows ?? []).filter((s) => s.kind === "vendor");
 
-  const brands = useMemo(() => {
-    if (!isSearching) return [];
-    const q = query.trim().toLowerCase();
-    return BRAND_SUGGESTIONS.filter((b) => b.name.toLowerCase().includes(q) || b.keywords.some((k) => k.includes(q))).slice(0, 5);
-  }, [query, isSearching]);
+  // Category rail counted off the live catalogue this page already fetched —
+  // no extra request, and every count is a real number of live listings.
+  const categoryRail = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of live ?? []) {
+      const name = p.categoryName;
+      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 8)
+      .map(([label, count]) => ({ label, count }));
+  }, [live]);
 
   const recommended = useMemo(() => {
+    // No fabricated fallback pool. An empty catalogue renders empty — that is
+    // the project's documented rule, and a fake grid hides a real outage.
     const catalogue = live ?? [];
-    if (catalogue.length > 0) {
-      // Real catalogue, filtered by the active trending chip (falls back to all
-      // when a chip has no matches), then paginated by infinite scroll.
-      let pool = catalogue;
-      if (selectedCat) {
-        const kws = CAT_KEYWORDS[selectedCat];
-        const matched = catalogue.filter((p) => {
-          const hay = `${p.categoryName ?? ""} ${p.name}`.toLowerCase();
-          return kws.some((k) => hay.includes(k));
-        });
-        pool = matched.length ? matched : catalogue;
-      }
-      return pool.map(toListing).slice(0, recBatches * 8);
-    }
-    // Fallback (still loading / empty): seeded imagery, tagged by trend category.
-    const seedPool = selectedCat ? RECOMMENDED_PRODUCTS.filter((p) => p.trendCat === selectedCat) : RECOMMENDED_PRODUCTS;
-    return Array.from({ length: recBatches }, (_, b) =>
-      seedPool.map((p) => ({ ...p, id: `${p.id}-${b}`, vendorId: `${p.vendorId}-${b}` }))
-    ).flat();
+    const pool = selectedCat
+      ? catalogue.filter((p) => p.categoryName === selectedCat)
+      : catalogue;
+    return pool.map(toListing).slice(0, recBatches * 8);
   }, [live, recBatches, selectedCat]);
 
   // Infinite scroll for the recommendation feed (paused while searching).
@@ -430,87 +344,46 @@ const Search = () => {
             </motion.div>
           )}
 
-          {/* Popular keywords (paginated — refreshes daily from trending source) */}
-          <motion.div variants={section} className="pt-5">
-            <div className="flex items-baseline justify-between mb-2">
-              <p className="text-sm font-bold text-gray-900">Popular keywords</p>
-              <span className="text-[10px] text-gray-300">{todayStamp()}</span>
-            </div>
-            <div className="relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={popPage}
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.25}
-                  onDragEnd={(_, info) => {
-                    if (info.offset.x < -50 && popPage < popularPages - 1) setPopPage((p) => p + 1);
-                    else if (info.offset.x > 50 && popPage > 0) setPopPage((p) => p - 1);
-                  }}
-                  initial={reduced ? false : { opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={reduced ? undefined : { opacity: 0, x: -20 }}
-                  transition={{ duration: 0.25, ease: E }}
-                  className="grid grid-cols-2 gap-y-2 gap-x-6 cursor-grab active:cursor-grabbing"
-                >
-                  {POPULAR_KEYWORDS.slice(popPage * POPULAR_PER_PAGE, popPage * POPULAR_PER_PAGE + POPULAR_PER_PAGE).map((k, i) => {
-                    const n = popPage * POPULAR_PER_PAGE + i + 1;
-                    return (
-                      <button key={k} onClick={() => runSearch(k)} className="flex items-center gap-2 py-0.5 text-left">
-                        <span className={cn("w-4 text-xs font-bold shrink-0", n <= 3 ? "text-[#ef4d62]" : "text-gray-400")}>{n}</span>
-                        <span className="text-sm text-gray-700 truncate">{k}</span>
-                      </button>
-                    );
-                  })}
-                </motion.div>
-              </AnimatePresence>
-            </div>
-            {/* Pagination dots */}
-            <div className="flex items-center justify-center gap-1.5 mt-3">
-              {Array.from({ length: popularPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setPopPage(i)}
-                  aria-label={`Popular keywords page ${i + 1}`}
-                  className={cn("h-1.5 rounded-full transition-all", i === popPage ? "w-4 bg-[#ef4d62]" : "w-1.5 bg-gray-300 hover:bg-gray-400")}
-                />
-              ))}
-            </div>
-          </motion.div>
+          {/* Browse by category — counted off the live catalogue. The number on
+              each chip is how many live listings it actually holds, so an empty
+              marketplace shows no chips rather than fabricated ones. */}
+          {categoryRail.length > 0 && (
+            <motion.div variants={section} className="pt-5">
+              <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-2">
+                <LayoutGrid className="w-4 h-4 text-[#ef4d62]" /> Browse by category
+              </p>
+              <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
+                {categoryRail.map((c) => {
+                  const active = selectedCat === c.label;
+                  return (
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      key={c.label}
+                      onClick={() => setSelectedCat((cur) => (cur === c.label ? null : c.label))}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex items-center gap-1.5 shrink-0 rounded-full py-1.5 px-3.5 transition-colors",
+                        active ? "bg-gray-900" : "bg-gray-100 hover:bg-gray-200"
+                      )}
+                    >
+                      <span className={cn("text-xs font-medium whitespace-nowrap", active ? "text-white" : "text-gray-700")}>{c.label}</span>
+                      <span className={cn("text-[10px] font-semibold", active ? "text-white/70" : "text-gray-400")}>{c.count}</span>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
 
-          {/* Trending Keywords */}
-          <motion.div variants={section} className="pt-5">
-            <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-2">
-              <TrendingUp className="w-4 h-4 text-[#ef4d62]" /> Trending Keywords
-            </p>
-            <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
-              {TRENDING_KEYWORDS.map((t) => {
-                const active = selectedCat === t.category;
-                return (
-                  <motion.button
-                    whileTap={{ scale: 0.96 }}
-                    key={t.label}
-                    onClick={() => setSelectedCat((c) => (c === t.category ? null : t.category))}
-                    aria-pressed={active}
-                    className={cn(
-                      "flex items-center gap-2 shrink-0 rounded-full py-1 transition-colors",
-                      active ? "bg-gray-900 pl-3 pr-3.5" : "bg-gray-100 hover:bg-gray-200 pl-1 pr-3"
-                    )}
-                  >
-                    {!active && <img src={t.image} alt="" className="w-6 h-6 rounded-full object-cover" />}
-                    <span className={cn("text-xs font-medium whitespace-nowrap", active ? "text-white" : "text-gray-700")}>{t.label}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
-
-          {/* Recommended products (personalized + sponsored, infinite scroll) */}
+          {/* Live catalogue feed, optionally scoped by the category chip above.
+              Previously headed "Sponsored" — nothing here is paid placement, so
+              the label was a false claim on the buyer's read of the ranking. */}
           <motion.div variants={section} className="pt-6">
             <p className="text-sm mb-3">
               <span className="text-blue-600 font-semibold">{firstName}</span>
-              <span className="text-gray-900 font-bold">, we recommend</span>
-              <span className="float-right text-[10px] text-gray-300 font-semibold">Sponsored</span>
+              <span className="text-gray-900 font-bold">
+                , {selectedCat ? `browsing ${selectedCat}` : "here's what's live"}
+              </span>
             </p>
             <motion.div key={selectedCat ?? "all"} variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
               {recommended.map((p) => (
@@ -524,12 +397,15 @@ const Search = () => {
             </div>
           </motion.div>
 
-          {/* Seasonal promo strip */}
+          {/* Quick picks — plain search shortcuts. The old version framed these
+              as "Father's Day gifting top picks", a seasonal claim tied to no
+              campaign and no data, and sat beside a "Popular search categories /
+              For Him" grid built on picsum placeholder photography. */}
           <motion.div variants={section} className="pt-2">
             <div className="rounded-xl bg-[#ef4d62]/5 p-4">
-              <p className="text-sm font-bold text-gray-900">Father's Day gifting top picks</p>
+              <p className="text-sm font-bold text-gray-900">Jump to a category</p>
               <div className="flex gap-3 mt-3 overflow-x-auto scrollbar-hide">
-                {GIFTING_PICKS.map((g) => (
+                {QUICK_PICKS.map((g) => (
                   <motion.button whileTap={{ scale: 0.95 }} key={g.label} onClick={() => runSearch(g.label)} className="flex flex-col items-center gap-1.5 shrink-0">
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
                       <g.icon className="w-5 h-5 text-[#ef4d62]" />
@@ -538,22 +414,6 @@ const Search = () => {
                   </motion.button>
                 ))}
               </div>
-            </div>
-          </motion.div>
-
-          {/* Popular search categories */}
-          <motion.div variants={section} className="pt-6">
-            <p className="text-sm font-bold text-gray-900 mb-2">Popular search categories</p>
-            <p className="text-xs text-gray-400 mb-2">For Him</p>
-            <div className="grid grid-cols-3 gap-3">
-              {FOR_HIM_CATEGORIES.map((c) => (
-                <motion.button whileTap={{ scale: 0.97 }} key={c.label} onClick={() => runSearch(c.label)} className="text-center">
-                  <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 mb-1.5">
-                    <img src={c.image} alt={c.label} className="w-full h-full object-cover" />
-                  </div>
-                  <span className="text-[10px] text-gray-600 font-medium">{c.label}</span>
-                </motion.button>
-              ))}
             </div>
           </motion.div>
         </motion.div>
@@ -572,39 +432,54 @@ const Search = () => {
                 className="bg-white shadow-sm" onClick={(e) => e.stopPropagation()}
               >
                 <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 py-1">
-                  {suggestions.length === 0 && brands.length === 0 ? (
+                  {suggestLoading && suggestions.length === 0 && vendorSuggestions.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-gray-400">Searching…</p>
+                  ) : suggestions.length === 0 && vendorSuggestions.length === 0 ? (
                     <p className="py-6 text-center text-sm text-gray-400">No matches for &ldquo;{query}&rdquo;</p>
                   ) : (
                     <>
-                      {/* Top 5: products / categories with result counts */}
+                      {/* Categories and live listings. The trailing number is the
+                          real count — live listings for a category, enquiries for
+                          a product — not an invented search volume. */}
                       {suggestions.map((s) => (
                         <button
-                          key={s.term}
-                          onClick={() => runSearch(s.term)}
+                          key={`${s.kind}-${s.refId}`}
+                          onClick={() => (s.kind === "product" ? navigate(`/product/${s.refId}`) : runSearch(s.label))}
                           className="w-full flex items-center justify-between gap-3 py-2.5 border-b border-gray-50 last:border-0 text-left"
                         >
                           <span className="flex items-center gap-2.5 min-w-0">
-                            <SearchIcon className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-                            <HighlightMatch text={s.term} query={query} />
+                            {s.kind === "category"
+                              ? <LayoutGrid className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                              : <SearchIcon className="w-3.5 h-3.5 text-gray-300 shrink-0" />}
+                            <HighlightMatch text={s.label} query={query} />
                           </span>
-                          <span className="text-xs text-gray-300 shrink-0">{s.count.toLocaleString("en-IN")}</span>
+                          <span className="text-xs text-gray-300 shrink-0">
+                            {s.kind === "category"
+                              ? `${s.countHint} listing${s.countHint === 1 ? "" : "s"}`
+                              : `${s.countHint.toLocaleString("en-IN")} enquiries`}
+                          </span>
                         </button>
                       ))}
 
-                      {/* Then 5: brand stores with logo + followers */}
-                      {brands.map((b) => (
+                      {/* Real vendor storefronts on this marketplace, with real
+                          follower counts, routing to a vendor id that exists. */}
+                      {vendorSuggestions.map((b) => (
                         <button
-                          key={b.id}
-                          onClick={() => navigate(`/vendor/${b.id}`)}
+                          key={`vendor-${b.refId}`}
+                          onClick={() => navigate(`/vendor/${b.refId}`)}
                           className="w-full flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0 text-left"
                         >
-                          <img src={b.logo} alt="" className="w-8 h-8 rounded-full object-cover shrink-0 bg-gray-100" />
+                          <span className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                            <Store className="w-4 h-4 text-gray-400" />
+                          </span>
                           <div className="min-w-0">
                             <p className="flex items-center gap-1 text-sm font-medium text-gray-800 truncate">
-                              {b.name}
+                              {b.label}
                               {b.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#ef4d62] shrink-0" />}
                             </p>
-                            <p className="text-xs text-gray-400">{b.followers.toLocaleString("en-IN")} followers</p>
+                            <p className="text-xs text-gray-400">
+                              {b.countHint.toLocaleString("en-IN")} follower{b.countHint === 1 ? "" : "s"}
+                            </p>
                           </div>
                         </button>
                       ))}

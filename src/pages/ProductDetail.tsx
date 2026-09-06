@@ -6,7 +6,6 @@ import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import type { ListingProduct, Gender } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { usePreferences } from "@/lib/preferencesStore";
 import {
   useProductById, recordProductView, recordProductEnquiry,
   useYouMightLike, useVendorOtherProducts, type ProductCardData,
@@ -353,8 +352,7 @@ const ProductDetail = () => {
   // categories (fallback: this product's category); "Brand Picks" = the same
   // vendor's other live products. Both exclude the current product and only
   // surface live listings; empty results hide the section (Part 3, no padding).
-  const prefs = usePreferences();
-  const { data: relatedRaw } = useYouMightLike(row?.id, row?.categoryId, prefs.categories);
+  const { data: relatedRaw } = useYouMightLike(row?.id);
   const { data: brandPicksRaw } = useVendorOtherProducts(row?.vendorId, row?.id);
   const likeProducts: ListingProduct[] = (relatedRaw ?? []).map(cardToListing);
   const brandPickProducts: ListingProduct[] = (brandPicksRaw ?? []).map(cardToListing);

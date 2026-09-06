@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
-import { PREF_TO_DB_CATEGORY_NAMES } from "@/lib/buyerCategories";
 
 // ─────────────────────────────────────────────────────────────
 // Products data access (React Query over Supabase)
@@ -231,21 +230,44 @@ export interface CatalogueRow {
   categoryId: string | null; categoryName: string; parentCategoryName: string;
 }
 
+// Shared by the full-catalogue read and the search-result hydration, so a
+// server-ranked result set is mapped through exactly the same code path as the
+// browse feed — one definition of what a catalogue row is.
+export const CATALOGUE_SELECT =
+  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )";
+
 async function fetchCatalogue(): Promise<CatalogueRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )")
+    .select(CATALOGUE_SELECT)
     .eq("status", "live")
     .order("created_at", { ascending: false });
   if (error) throw error;
-  const rows = (data ?? []) as unknown as (RawProduct & {
-    gender: string | null; colour: string | null; sizes: string[] | null;
-    pattern: string[] | null; occasion: string[] | null;
-    neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
-    country_of_origin: string | null; waist_sizes: string[] | null; lengths: string[] | null;
-    category_id: string | null; categories: { name: string; parent_id: string | null } | null;
-  })[];
+  return (await mapCatalogueRows((data ?? []) as unknown as RawCatalogueRow[]))
+    // Higher plan tiers rank first in the browse feed (real weight). Search
+    // results do NOT re-sort here — match_products has already fused relevance
+    // with the same boost server-side, and re-sorting would discard that.
+    .sort((a, b) => b.boost - a.boost);
+}
 
+type RawCatalogueRow = RawProduct & {
+  gender: string | null; colour: string | null; sizes: string[] | null;
+  pattern: string[] | null; occasion: string[] | null;
+  neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
+  country_of_origin: string | null; waist_sizes: string[] | null; lengths: string[] | null;
+  category_id: string | null; categories: { name: string; parent_id: string | null } | null;
+};
+
+/** Hydrate a specific set of product ids into catalogue rows — the search path,
+ *  where ranking is decided server-side and only the matched ids come back. */
+export async function fetchCatalogueByIds(ids: string[]): Promise<CatalogueRow[]> {
+  if (!ids.length) return [];
+  const { data, error } = await supabase.from("products").select(CATALOGUE_SELECT).in("id", ids);
+  if (error) throw error;
+  return mapCatalogueRows((data ?? []) as unknown as RawCatalogueRow[]);
+}
+
+export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<CatalogueRow[]> {
   // Parent name for each product's category, so the Categories facet can group
   // subcategories under the taxonomy root the vendor picked from.
   const cats = await loadCategories();
@@ -265,7 +287,10 @@ async function fetchCatalogue(): Promise<CatalogueRow[]> {
     }
   }
 
-  const mapped = rows.map((p) => {
+  // No sort here on purpose. The browse feed applies its own boost ordering;
+  // the search path keeps the server's fused ranking. Sorting inside the shared
+  // mapper would silently override match_products.
+  return rows.map((p) => {
     const v = vendorMap.get(p.vendor_id);
     const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
     return {
@@ -310,12 +335,13 @@ async function fetchCatalogue(): Promise<CatalogueRow[]> {
       parentCategoryName: parentName(p.categories?.parent_id),
     };
   });
-  // Higher plan tiers rank first in search (real weight).
-  return mapped.sort((a, b) => b.boost - a.boost);
 }
 
-export function useCatalogue() {
-  return useQuery({ queryKey: ["products", "catalogue"], queryFn: fetchCatalogue });
+/** Full live catalogue. `enabled` exists so the search page can skip this
+ *  entirely when it has a query — the whole point of server-side search is not
+ *  shipping the catalogue to the browser. */
+export function useCatalogue(enabled = true) {
+  return useQuery({ queryKey: ["products", "catalogue"], queryFn: fetchCatalogue, enabled });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -472,32 +498,31 @@ async function vendorMapFor(vendorIds: string[]): Promise<Map<string, RawVendor>
   return vendorMap;
 }
 
-/** Turn a buyer's preferred category ids (buyerCategories vocabulary) into the
- *  real DB category ids they map to. Preferences with no dedicated DB category
- *  (co-ords / fabrics) contribute nothing. */
-export async function resolvePreferredCategoryIds(prefIds: string[]): Promise<string[]> {
-  const names = new Set<string>();
-  for (const pid of prefIds) for (const n of PREF_TO_DB_CATEGORY_NAMES[pid] ?? []) names.add(n);
-  if (!names.size) return [];
-  const cats = await loadCategories();
-  return cats.filter((c) => names.has(c.name)).map((c) => c.id);
-}
-
-async function fetchProductsByCategoryIds(categoryIds: string[], excludeId: string, limit: number): Promise<ProductCardData[]> {
-  if (!categoryIds.length) return [];
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_CARD_SELECT)
-    .eq("status", "live")
-    .in("category_id", categoryIds)
-    .neq("id", excludeId)
-    .order("enquiries_count", { ascending: false })
-    .order("views_count", { ascending: false })
-    .limit(limit);
+/**
+ * Nearest-neighbour related products for one listing, via the `related_products`
+ * RPC (cosine distance over the product embedding, same-category fallback when
+ * the anchor has no embedding yet).
+ *
+ * Ordering is decided server-side, so the hydration below has to restore it:
+ * `.in("id", ids)` returns rows in whatever order Postgres finds them, which is
+ * not the ranked order. Re-sorting by the RPC's position is what preserves it.
+ */
+async function fetchRelatedProducts(currentId: string, limit: number): Promise<ProductCardData[]> {
+  const { data, error } = await supabase.rpc("related_products", { p_id: currentId, match_count: limit });
   if (error) throw error;
-  const rows = (data ?? []) as unknown as RawProduct[];
+  const ranked = (data ?? []) as { id: string; distance: number | null; is_fallback: boolean }[];
+  if (!ranked.length) return [];
+
+  const position = new Map(ranked.map((r, i) => [r.id, i]));
+  const { data: products, error: prodErr } = await supabase
+    .from("products").select(PRODUCT_CARD_SELECT).in("id", ranked.map((r) => r.id));
+  if (prodErr) throw prodErr;
+
+  const rows = (products ?? []) as unknown as RawProduct[];
   const vendorMap = await vendorMapFor(Array.from(new Set(rows.map((r) => r.vendor_id))));
-  return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
+  return rows
+    .map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)))
+    .sort((a, b) => (position.get(a.id) ?? 0) - (position.get(b.id) ?? 0));
 }
 
 async function fetchVendorOtherProducts(vendorId: string, excludeId: string, limit: number): Promise<ProductCardData[]> {
@@ -517,25 +542,22 @@ async function fetchVendorOtherProducts(vendorId: string, excludeId: string, lim
 }
 
 /**
- * "You might also like": products in the buyer's preferred categories (from
- * `preferred_categories`), ranked by real performance. Falls back to the current
- * product's own category when the buyer has no usable saved preferences
- * (skipped onboarding / anonymous), so the strip never comes up empty for lack
- * of preference data.
+ * "You might also like": the listings most similar to the one being viewed,
+ * by embedding distance.
+ *
+ * This used to rank by the BUYER's saved category preferences, which answered a
+ * different question — "things you generally like" rather than "things like
+ * this" — and could only ever resolve to a whole category bucket with no notion
+ * of similarity inside it. Buyer preference still drives the home feed
+ * (filterForYou); on a product page, similarity to the product is the honest
+ * signal. The RPC falls back to the same category when the anchor has no
+ * embedding yet, so the strip degrades rather than emptying.
  */
-export function useYouMightLike(
-  currentId: string | undefined,
-  currentCategoryId: string | null | undefined,
-  preferredCategoryIds: string[],
-) {
+export function useYouMightLike(currentId: string | undefined) {
   return useQuery({
-    queryKey: ["products", "related", currentId, currentCategoryId, preferredCategoryIds],
+    queryKey: ["products", "related", currentId],
     enabled: Boolean(currentId),
-    queryFn: async () => {
-      const preferred = await resolvePreferredCategoryIds(preferredCategoryIds);
-      const categoryIds = preferred.length ? preferred : currentCategoryId ? [currentCategoryId] : [];
-      return fetchProductsByCategoryIds(categoryIds, currentId as string, RELATED_LIMIT);
-    },
+    queryFn: () => fetchRelatedProducts(currentId as string, RELATED_LIMIT),
   });
 }
 
