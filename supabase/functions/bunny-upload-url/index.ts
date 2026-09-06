@@ -100,6 +100,38 @@ async function sha256Hex(input: string): Promise<string> {
 // the other, or reconciliation starts listing live uploads as orphans.
 const UPLOAD_WINDOW_SECONDS = 6 * 3600;
 
+/**
+ * Which play_<res>p.mp4 to point video_url at.
+ *
+ * NOT a constant, and this is the one place the phase brief's "store the
+ * play_720p.mp4 rendition URL" had to be read for intent rather than letter.
+ * Measured against the real library on 2026-09-06: the platform's own vendor
+ * clip (478x850 portrait, shot on a phone) encoded to 240p, 360p and 480p and
+ * NO 720p, because Bunny only produces renditions the source can support. A
+ * hardcoded 720p URL therefore 404s for exactly the content this marketplace
+ * receives. The intent — serve the MP4 fallback rendition, not HLS — is
+ * unchanged; only the resolution label is now derived instead of assumed, and
+ * a >=720p source still gets 720p.
+ *
+ * Keyed on the SHORTER edge, which is what Bunny's ladder tracks: a 478-wide
+ * portrait clip yielded 480p, so the comparison carries a small tolerance
+ * rather than a strict <=. Without it, 478 would select 360p and needlessly
+ * serve a worse rendition than the one Bunny actually built.
+ *
+ * Capped at 720p deliberately: this is a 9:16 phone-screen reel, 1080p is
+ * bytes nobody sees, and egress at Bunny is billed.
+ */
+const RENDITION_LADDER = [240, 360, 480, 720];
+const LADDER_TOLERANCE = 1.05;
+
+function pickRendition(width: number, height: number): number {
+  const shorter = Math.min(width, height);
+  if (!Number.isFinite(shorter) || shorter <= 0) return 720; // unknown: ask for the cap
+  let chosen = RENDITION_LADDER[0];
+  for (const step of RENDITION_LADDER) if (step <= shorter * LADDER_TOLERANCE) chosen = step;
+  return chosen;
+}
+
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -133,7 +165,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const vendorId = vendorIdFromJwt(req);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
-  let payload: { title?: unknown; probe?: unknown };
+  let payload: { title?: unknown; probe?: unknown; width?: unknown; height?: unknown };
   try {
     payload = await req.json();
   } catch {
@@ -145,6 +177,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const isProbe = payload.probe === true;
   const title = typeof payload.title === "string" ? payload.title.trim().slice(0, 200) : "";
   if (!isProbe && !title) return json({ error: "bad_title" }, 400);
+
+  // Source dimensions, probed client-side by probeVideoFile() before upload.
+  // They decide which rendition actually gets built — see pickRendition. Absent
+  // or nonsense values fall back to the 720p cap, which is the pre-existing
+  // behaviour and is correct for any source big enough to matter.
+  const width = Number(payload.width);
+  const height = Number(payload.height);
+  const rendition = pickRendition(width, height);
 
   // ── Authorize ─────────────────────────────────────────────────────────────
   // The service-role key below bypasses RLS by design, so these are the real
@@ -244,6 +284,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // IT 404s UNTIL ENCODING FINISHES, and it 404s FOREVER if "MP4 Fallback" was
   // not enabled in the library's Encoding tab BEFORE this upload — that setting
   // is not retroactive. See the deploy checklist in documentation/claude.md.
+  //
+  // The library also has hotlink protection ("block direct URL file access"),
+  // so these URLs 403 for any request with a blank Referer. A browser playing
+  // the reel always sends one; a curl/HEAD probe does not. That is expected,
+  // not a fault — see scripts/bunny-e2e-check.mjs, which probes both ways
+  // precisely because conflating the two once produced a false alarm.
   return json({
     configured: true,
     videoId,
@@ -251,7 +297,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     expirationTime,
     signature,
     endpoint: "https://video.bunnycdn.com/tusupload",
-    playbackUrl: `https://${cdnHostname}/${videoId}/play_720p.mp4`,
+    rendition,
+    playbackUrl: `https://${cdnHostname}/${videoId}/play_${rendition}p.mp4`,
     thumbnailUrl: `https://${cdnHostname}/${videoId}/thumbnail.jpg`,
   });
 });

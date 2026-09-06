@@ -19,7 +19,9 @@
 // Accepting a bunny_video_id from the body instead would be the hole: the
 // service role bypasses RLS, so "delete the Bunny asset with this GUID" from an
 // authenticated buyer would delete any vendor's video. There is no ownership
-// information in a GUID.
+// information in a GUID — and pvideos_select is
+// `status='live' OR vendor_id=auth.uid() OR is_admin()`, so every live row's
+// GUID is readable by anon with the publishable key that ships in the bundle.
 //
 // See bunny-upload-url's header for the shared conventions and for why
 // verify_jwt = true in config.toml is load-bearing here too.

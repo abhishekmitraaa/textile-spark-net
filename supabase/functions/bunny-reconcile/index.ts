@@ -24,6 +24,11 @@
 //     is broken for that row right now, in the buyer feed and the moderation
 //     queue alike.
 //
+// It also returns the whole library with encode state, which is what makes it
+// the only honest answer to "did this encode, and into which renditions". The
+// public CDN cannot answer that: a protected pull zone returns 403 for a file
+// that does not exist and for one that does.
+//
 // Admin-gated: this enumerates every vendor's video library, which is not a
 // vendor's business. super_admin / product_moderator, the same pair that
 // moderates product_videos.
@@ -80,9 +85,15 @@ interface BunnyVideo {
   guid: string;
   title: string;
   dateUploaded: string;
+  /** 0 Queued, 1 Processing, 2 Encoding, 3 Finished, 4 Resolution finished, 5 Failed. */
   status: number;
   storageSize: number;
   length: number;
+  encodeProgress: number;
+  /** e.g. "240p,360p,480p" — which play_<res>p.mp4 files actually exist. */
+  availableResolutions: string | null;
+  hasMP4Fallback: boolean;
+  thumbnailFileName: string | null;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -174,6 +185,16 @@ Deno.serve(async (req: Request): Promise<Response> => {
       status: v.status,
       storageBytes: v.storageSize,
       seconds: v.length,
+      // Carried because they are the only authoritative answer to "will the
+      // URL we composed actually play". availableResolutions says which
+      // play_<res>p.mp4 files exist; hasMP4Fallback says whether the library
+      // was set to produce any at all when this video was uploaded — the
+      // non-retroactive Encoding-tab setting. The CDN cannot answer this: a
+      // protected pull zone returns 403 for a missing file and for an existing
+      // one alike.
+      availableResolutions: v.availableResolutions,
+      hasMP4Fallback: v.hasMP4Fallback,
+      thumbnailFileName: v.thumbnailFileName,
     };
     // A NaN date must not be treated as old — fail toward "in flight", which is
     // the non-destructive reading.
@@ -204,6 +225,18 @@ Deno.serve(async (req: Request): Promise<Response> => {
     orphansAtBunny,
     inFlight,
     missingAtBunny,
+    // Every video the library holds, with its encode state. Not part of the
+    // diff — this is what makes the function usable as the "did it encode, and
+    // into what" oracle that the public CDN cannot be.
+    library: bunnyVideos.map((v) => ({
+      guid: v.guid,
+      status: v.status,
+      encodeProgress: v.encodeProgress,
+      availableResolutions: v.availableResolutions,
+      hasMP4Fallback: v.hasMP4Fallback,
+      thumbnailFileName: v.thumbnailFileName,
+      seconds: v.length,
+    })),
     note:
       "Read-only. Nothing was deleted. Review orphansAtBunny by hand before removing anything; " +
       "inFlight entries are younger than the age guard and may be uploads in progress." +

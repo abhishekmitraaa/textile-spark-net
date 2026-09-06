@@ -2,20 +2,44 @@
 
 Updated automatically whenever a test is written or run.
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 ---
 
 ## Test Suites
 
 ### Playwright E2E — `tests/`
-- **Location:** `tests/` (currently one spec: `tests/new-arrivals.spec.ts`)
-- **Covers:** buyer New Arrivals page — that the `[role="tab"]` buyer tabs render (at least
-  5), and that the correct tab is marked selected/current for the active route.
-- **Run:** `npm run playwright:install` once, then `npm run test:e2e`.
-- **Notes:** there is **no `playwright.config.ts`** in the repo; the spec compensates by
-  trying `http://localhost:8080` through `:8085` in turn and failing if none respond, so a
-  dev/preview server must already be running. Artifacts land in `test-results/`.
+- **Location:** `tests/`
+
+| Spec | Covers | Accounts |
+|---|---|---|
+| `new-arrivals.spec.ts` | Buyer New Arrivals tabs render (>=5) and the active route's tab is marked selected | anon |
+| `chat-pipeline.spec.ts` | Chat + chat-moderation, UI layer (T1–T13's browser half) | `chatfx-*` / `rlstest-*` fixtures |
+| `admin-chat-moderation.spec.ts` | Cosora-Admin's chat review queue | `rlstest-*` fixtures |
+| `video-closeups-bunny.spec.ts` | Phase 8 Bunny Stream, browser half: the container gate, the moderation queue, real MP4 playback in both apps, approve-to-publish | `demo-*` |
+
+- **Run:** `npm run playwright:install` once, then `npm run test:e2e` (or a single file:
+  `npx playwright test tests/<spec>.ts`).
+- **Config:** `playwright.config.ts` exists — `baseURL` `http://localhost:8080`, workers 1,
+  `fullyParallel: false`. It deliberately has **no `webServer`**: both apps are long-running
+  dev servers a human usually already has open, and letting Playwright start and kill them
+  makes a test run stomp on that. Start them yourself (`npm run dev` in each);
+  `video-closeups-bunny.spec.ts` and `admin-chat-moderation.spec.ts` need Cosora-Admin on
+  `:5174` too (override with `ADMIN_APP_URL`).
+- **Auth convention:** sessions are minted through supabase-js in Node and injected into
+  `localStorage` via `addInitScript` before the app boots, rather than driven through a login
+  form. The form is not what these tests are about, and OTP is the real production path
+  anyway. Both apps leave supabase-js's storage key at its default and point at the same
+  project, so one injected value signs a context into either.
+- **Which accounts, and why it differs per spec.** The chat specs are **fixtures only, never
+  `demo-*`**, because `messages` has no DELETE policy for any role — every message they send
+  is permanent. That reason is specific to chat and does not generalise:
+  `video-closeups-bunny.spec.ts` uses `demo-vendor` / `demo-admin` / `demo-buyer` because
+  `product_videos` *has* `pvideos_delete`, and its `afterAll` removes both the row and the
+  asset at Bunny. Do not copy "fixtures only" into a new spec without checking whether its
+  table can actually be cleaned up.
+- **Notes:** artifacts land in `test-results/`, which Playwright **wipes at the start of every
+  run** — durable evidence for this file goes in `screenshots/` instead.
 
 ### Live-database verification scripts — `scripts/`
 These are not a unit-test framework. They are `node` scripts that assert invariants against
@@ -28,6 +52,8 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies. Runs each case **twice — active and suspended — and passes only if the answer changes** |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
+| `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
+| `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -63,6 +89,130 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-06 (browser half) — Bunny Stream in a real browser: 6/6 GREEN, and a correction
+
+- **Suite/test:** `tests/video-closeups-bunny.spec.ts`, 6 cases (T8.1, T8.1b, T8.2–T8.5),
+  serial, Chromium, against the live project, the live Bunny library and both dev servers.
+- **Result: 6 passed in 48.4s.**
+
+**CORRECTION to the two entries below.** Both recorded the Playwright half as blocked until
+`seed-chat-fixtures.sql` / `seed-test-admins.sql` were re-run, framed as a decision about
+putting known-password logins back into a live database. That was wrong. It conflated *the
+chat suite's* fixtures with *any* browser test. `chat-pipeline.spec.ts`'s "FIXTURES ONLY,
+never `demo-*`" rule states its own reason — `messages` has no DELETE policy for any role, so
+its writes are permanent — and that reason does not transfer to `product_videos`, which has
+`pvideos_delete`. `demo-vendor`, `demo-admin` (`super_admin`, active) and `demo-buyer` all
+exist and sign in; `bunny-e2e-check.mjs` had already been round-tripping insert → delete
+against them for two sessions. **No seeding was required and none was done.**
+
+**Why a browser was required, not merely nicer.** Bunny's "block direct URL file access"
+refuses any request with a blank `Referer`, and Node's `fetch` sends none — so from a script
+every playback URL returns 403 whether the file exists or not. That is exactly how an earlier
+session mistook working hotlink protection for a dead pull zone. A browser loading a real
+`<video>` sends a real `Referer`, so the browser is the only instrument that can tell
+"protected" from "broken".
+
+| Case | Asserts | Result |
+|---|---|---|
+| T8.1 | A QuickTime-branded file named `.mp4` is rejected: the toast names it, no `<video>` is staged, and **a request spy records zero traffic** to `video.bunnycdn.com`, `/storage/v1/upload/resumable` or `/functions/v1/bunny-upload-url` | PASS |
+| T8.1b | Positive control — the same bytes with their real MP4 brand are **accepted** and staged | PASS |
+| T8.2 | The `provider='bunny'` row reaches Cosora-Admin's `under_review` queue, renders 478x850, Approve enabled | PASS |
+| T8.3 | The moderator's player **decodes a frame** from the Bunny MP4: `readyState >= 2`, `videoWidth > 0`, and the "did not load" Note absent | PASS |
+| T8.4 | Approving through the admin UI removes the card **and** `product_videos.status` reads back `live`, `provider='bunny'`, GUID intact | PASS |
+| T8.5 | The buyer reel mounts `video[src="<the stored Bunny URL>"]` and decodes a frame; the URL is `play_480p.mp4`, not a hardcoded 720p | PASS |
+
+- **Test data:** the platform's own real vendor clip (478x850, 21s, ~4 MB), uploaded to Bunny
+  fresh in `beforeAll` and deleted in `afterAll`. The renamed-`.mov` fixture is **derived from
+  it**, not stubbed: ffmpeg is not on PATH, so the spec verifies `ftyp` at bytes 4–8 and
+  rewrites only the 4-byte major brand to `qt  `. That is precisely and entirely what
+  `sniffVideoContainer` reads. It proves the gate discriminates on container signature; it
+  claims nothing about HEVC, nor about Bunny's own behaviour on such a file (out of scope by
+  instruction — a transcoder would likely normalise it, silently reversing the documented
+  "iPhone .mov not accepted" rule).
+- **A real hazard caught by strict mode, not a selector nit.**
+  `getByRole("button", {name: "Approve"})` also matches **"Approve all for vendor…"** —
+  `approve_vendor_content_bulk`, which approves that vendor's pending *products and
+  catalogues* as well. Playwright refused the ambiguous click. An auto-first-match API would
+  have silently taken one or the other. Now `exact: true`, with the reason in the spec.
+- **T8.4 asserts the UI and the DB separately** rather than trusting either. The two
+  disagreeing is the whole reason this layer exists — it is the shape of the
+  `vendor_profiles.account_status` regression: a correct database under a UI that had not
+  caught up.
+- **State afterwards, verified:** Bunny library **0 videos / 0 orphans / 0 in flight**;
+  `product_videos` back to the single real row (`Yoyoyo`, `rejected`, `provider='supabase'`),
+  untouched and un-backfilled. Cleanup is provider-first (asset, then row — the order
+  `deleteProductVideo()` uses, so a crash cannot strand a paid asset) and lives in `afterAll`,
+  so it also held through the intermediate **failed** run, which is the harder case.
+- `tsc -p tsconfig.app.json` at the unchanged 23-error baseline; the spec typechecks clean
+  standalone (`tests/` is outside that project's `include`).
+
+### 2026-09-06 (second run) — Bunny Stream end to end: GREEN, and a retraction
+- **Suite/test:** `scripts/bunny-e2e-check.mjs`, 20 assertions, run repeatedly against the
+  live project and the live Bunny library.
+- **Test data used:** unchanged — the platform's own real vendor clip (478x850, 21s,
+  4.1 MB) as the upload source, `demo-vendor@cosora.dev` as uploader,
+  `demo-admin@cosora.dev` (super_admin) for the admin-gated `bunny-reconcile` oracle, one
+  throwaway `product_videos` row deleted in a `finally`.
+- **Result: PASS, all 20.** Slot minted with no API key in the response; TUS upload;
+  encoding finished; MP4 Fallback enabled; renditions produced (`240p, 360p, 480p`);
+  **the chosen rendition exists at Bunny** (480p, derived from 478x850); hotlink
+  protection blocks a blank referer; dev and production origins both served 200;
+  thumbnail served; **the moderation trigger still forces `under_review` on a
+  `provider='bunny'` insert that asked for `live`**; provider + GUID persist;
+  `bunny-delete-video` removes the asset, confirmed via Bunny's API listing; row cleaned
+  up. Library left at 0 videos / 0 orphans.
+- **RETRACTION of the previous entry's blocker.** That run reported "the pull zone returns
+  403 for everything" and called playback blocked catalogue-wide. **That was a defect in
+  the probe, not in the CDN.** The library has "block direct URL file access", which
+  refuses requests with a blank `Referer`; a script `HEAD` sends none. Re-probed with
+  `Referer: http://localhost:8080/` and `Referer: https://textile-spark-net.vercel.app/`,
+  the MP4 rendition, thumbnail and HLS manifest all return **200**. The check now probes
+  both shapes and treats the blank-referer 403 as the expected negative control rather
+  than a failure — asserting 200 there had kept the suite red for correct behaviour.
+- **The second blocker was real and is fixed.** A hardcoded `play_720p.mp4` 404s for a
+  478x850 source. `pickRendition()` now derives the label from the client-probed
+  dimensions, and the suite asserts the chosen rendition is one Bunny actually built.
+- **Not covered:** the browser half — renamed-`.mov` client rejection and
+  moderation-queue / buyer-feed rendering. The Playwright suite remains unrunnable until
+  `seed-chat-fixtures.sql` / `seed-test-admins.sql` are re-run.
+
+### 2026-09-06 — Bunny Stream end to end, against the real library (Phase 8)
+- **Suite/test:** new `scripts/bunny-e2e-check.mjs` (15 assertions), plus
+  `scripts/bunny-config-check.mjs`. Both run against the live project and the live Bunny
+  library.
+- **Test data used:** the platform's own real vendor clip as the source — 478x850, 21s,
+  4.1 MB, fetched from the existing `product-videos` object — chosen deliberately over a
+  synthetic file because its dimensions are what decide whether a hardcoded 720p URL is
+  safe. Accounts: `demo-vendor@cosora.dev` (uploader) and `demo-admin@cosora.dev`
+  (super_admin, needed because `bunny-reconcile` is admin-gated). One throwaway
+  `product_videos` row, deleted in a `finally`. The one real row was never touched.
+- **PASS (10):** secrets configured (`cdnHostname=vz-835c6bf5-df7.b-cdn.net`);
+  `bunny-upload-url` mints a slot; **its response carries no API key**; TUS upload to
+  Bunny succeeds; encoding completes (status 3/4, 100%); **MP4 Fallback is enabled on the
+  library** (`hasMP4Fallback: true`); renditions were produced; **the moderation trigger
+  still forces `under_review` on a `provider='bunny'` insert that explicitly asked for
+  `live`**; `provider` + `bunny_video_id` persist; `bunny-delete-video` removes the asset,
+  **verified by the GUID disappearing from the library listing via Bunny's API**; the
+  throwaway row is cleaned up. Library left at 0 videos / 0 orphans.
+- **FAIL (2 real blockers, both Bunny dashboard settings, not code):**
+  1. **`play_720p.mp4` does not exist.** The 478x850 source produced `240p, 360p, 480p`
+     and no 720p — Bunny only generates renditions the source supports. The composed
+     `video_url` would 404 for exactly the phone-shot portrait content this platform
+     receives.
+  2. **The pull zone returns 403 for everything** — `play_480p.mp4` (which the API says
+     exists), `thumbnail.jpg` and `playlist.m3u8` alike. Playback is blocked for MP4 and
+     HLS equally, so no URL-format change avoids it.
+- **A false pass was found and removed.** The first version of this script used CDN HEAD
+  probes as its oracle. On a protected pull zone that cannot distinguish "missing" from
+  "blocked", and its delete assertion passed for the wrong reason — 403 before the delete
+  and 403 after. Rewritten to use `bunny-reconcile` (Bunny's API) as the oracle, which is
+  what the phase brief had specified. Recorded because the earlier run's PASS was not
+  evidence of anything.
+- **Not covered:** the browser half. The Playwright suite is unrunnable until
+  `seed-chat-fixtures.sql` / `seed-test-admins.sql` are re-run (those accounts were
+  deleted previously), and the moderation-queue / buyer-feed rendering assertions cannot
+  pass while the CDN 403s regardless.
 
 ### 2026-09-06 — Bunny Stream configuration probe + reconciliation false-positive (Phase 8)
 - **Suite/test:** new `scripts/bunny-config-check.mjs`, run twice against the live project;

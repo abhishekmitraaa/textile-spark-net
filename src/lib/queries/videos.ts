@@ -318,6 +318,8 @@ interface BunnyUploadSlot {
   expirationTime: number;
   signature: string;
   endpoint: string;
+  /** The resolution the function chose from the source dimensions, e.g. 480. */
+  rendition: number;
   playbackUrl: string;
   thumbnailUrl: string;
 }
@@ -332,8 +334,19 @@ interface BunnyUploadSlot {
  * a real failure into the fallback branch would silently keep writing
  * provider='supabase' rows long after the migration was supposed to be done.
  */
-async function requestBunnySlot(title: string): Promise<BunnyUploadSlot | null> {
-  const { data, error } = await supabase.functions.invoke("bunny-upload-url", { body: { title } });
+async function requestBunnySlot(
+  title: string,
+  width?: number | null,
+  height?: number | null,
+): Promise<BunnyUploadSlot | null> {
+  // width/height come from probeVideoFile(). They are not cosmetic: the function
+  // uses them to pick which play_<res>p.mp4 rendition to point video_url at,
+  // because Bunny only builds renditions the source supports. Sending nothing
+  // falls back to the 720p cap, which 404s for a sub-720p phone clip — measured,
+  // not theorised (a real 478x850 vendor video encodes to 240/360/480 only).
+  const { data, error } = await supabase.functions.invoke("bunny-upload-url", {
+    body: { title, width, height },
+  });
   if (error) {
     // A non-2xx surfaces as FunctionsHttpError whose message is just
     // "non-2xx status"; dig the real reason out of the response body so the
@@ -420,7 +433,7 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
   let provider = "supabase";
   let bunny_video_id: string | null = null;
 
-  const slot = await requestBunnySlot(v.caption || "Video closeup");
+  const slot = await requestBunnySlot(v.caption || "Video closeup", v.videoWidth, v.videoHeight);
 
   if (slot) {
     provider = "bunny";

@@ -28,3 +28,9 @@ dist-ssr
 *.sln
 *.sw?
 .vercel
+
+# Playwright artifacts. Wiped at the start of every run, so nothing here is durable
+# evidence — screenshots meant for documentation/test.md go in screenshots/ instead.
+# video-closeups-bunny.spec.ts also stages a ~4 MB video fixture under here.
+test-results/
+playwright-report/

@@ -1,6 +1,6 @@
 # Cosora — Project Memory (read this first, every session)
 
-Last updated: 2026-09-05
+Last updated: 2026-09-06
 
 ## What Cosora Is
 
@@ -189,11 +189,30 @@ Two settings here are **not retroactive**, which is the same shape of trap as th
 storage-limit ordering above: doing them late looks like it worked and is not.
 
 1. **Enable MP4 Fallback in the Bunny library's Encoding tab — BEFORE the first
-   upload.** `bunny-upload-url` hands the client a `play_720p.mp4` playback URL
+   upload.** `bunny-upload-url` hands the client a `play_<res>p.mp4` playback URL
    because the reel viewer plays a plain `<video src>`, which cannot decode an HLS
    manifest outside Safari. Bunny only generates those MP4 renditions for videos
    uploaded *while the setting is on*. Turn it on afterwards and every already-uploaded
    video 404s forever — the fix is a re-encode or a re-upload, per video.
+   **Verified done on 2026-09-06** (`hasMP4Fallback: true` on a real upload).
+1b. **Hotlink protection is ON, and that is fine — do not "fix" it.** The library
+   has "block direct URL file access", so every playback URL returns **403 to a
+   request with a blank `Referer`** and **200 to one from `localhost:8080` or
+   `textile-spark-net.vercel.app`**. A browser playing the reel always sends a
+   Referer; `curl -I` and a script `HEAD` never do. Verified 2026-09-06 both ways.
+   Anything that probes these URLs must send a Referer or it will report a
+   catalogue-wide outage that does not exist — which is exactly what happened
+   before `scripts/bunny-e2e-check.mjs` learned to probe both shapes. If new
+   origins are added (a custom domain), they must be added to Bunny's referrer
+   allowlist or playback stops there.
+1c. **The rendition is derived, never hardcoded.** `pickRendition()` in
+   `bunny-upload-url` chooses from the source dimensions the client already probed,
+   because Bunny only builds renditions the source supports. Verified 2026-09-06
+   with the platform's own vendor clip (478×850 portrait phone video): Bunny
+   produced **240p, 360p and 480p and no 720p**, and the function correctly chose
+   480p. A hardcoded `play_720p.mp4` would have 404'd for exactly the content this
+   marketplace receives. A ≥720p source still gets 720p; 1080p is deliberately not
+   on the ladder (9:16 phone reel, and Bunny egress is billed).
 2. **Set all three edge-function secrets**, none of which may ever reach the client:
    ```
    npx supabase secrets set --project-ref vxdhhgdfubqedfpwfyrb "BUNNY_API_KEY=..."
@@ -211,11 +230,27 @@ storage-limit ordering above: doing them late looks like it worked and is not.
    calls the function's `{"probe":true}` branch, which reports the configuration verdict
    **without creating a Bunny video** — the only other way to check leaves a stray empty
    video in the library every time. It prints secret *names*, never values.
-5. **Then** upload one real clip and confirm the `play_720p.mp4` URL returns 200 once
-   encoding finishes. A 404 here means step 1 was skipped.
+5. **Then** run `node scripts/bunny-e2e-check.mjs`. It uploads the real 478×850 vendor
+   clip through the whole chain — slot, TUS, encode, row insert, delete — and asserts
+   each step against **Bunny's API**, not the CDN. That distinction is load-bearing: a
+   protected pull zone answers 403 for a file that exists and for one that does not, so
+   a CDN probe cannot tell "encoded fine" from "never encoded", and an earlier version
+   of this script passed its delete assertion for exactly that wrong reason (403 before,
+   403 after). The script leaves nothing behind — it deletes its own Bunny video through
+   the real delete path and removes its throwaway row in a `finally`.
+6. **Finally, with both dev servers up, run
+   `npx playwright test tests/video-closeups-bunny.spec.ts`.** Step 5 cannot answer the
+   only question a buyer has — does the reel *play* — because from Node every playback
+   URL is a 403 (see 1b). A browser sends a `Referer`, so this spec is the instrument
+   that measures playback: it asserts `readyState >= 2` (a frame actually decoded) on the
+   stored Bunny MP4 in **both** the moderator's player and the buyer reel, plus the
+   renamed-`.mov` rejection with a request spy proving nothing was uploaded. It uses the
+   `demo-*` accounts and cleans up asset-then-row in `afterAll`.
 
 Nothing about moderation changes: the row still inserts as `under_review` and the same
-BEFORE trigger still enforces it, whatever the provider.
+BEFORE trigger still enforces it, whatever the provider — asserted at both layers
+(`bunny-e2e-check.mjs` step 5 against an insert that explicitly asks for `live`, and
+`video-closeups-bunny.spec.ts` T8.2/T8.4 through the real moderation UI).
 
 ## Domain Terms
 

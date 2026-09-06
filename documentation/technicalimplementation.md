@@ -187,7 +187,7 @@ between them are deliberate rather than incidental:
   `rankVideoCloseUps` reads: durable saves and this-session interest answer different
   questions.
 
-### Bunny Stream — the first non-Supabase media provider (built, NOT yet live)
+### Bunny Stream — the first non-Supabase media provider (built, deployed, verified end to end)
 
 The first time this codebase delivers media from somewhere other than Supabase Storage,
 and the first time an edge function mints a signed upload URL. Both are new patterns, so
@@ -228,13 +228,42 @@ per chunk. `bunny-reconcile`'s `ORPHAN_MIN_AGE_HOURS` (8h) must stay above it �
 inequality is what makes the age guard *provable* (an upload cannot outlive its signature)
 rather than the estimate the storage-side reconciliation settles for.
 
-**Known-open, must be resolved before the first real upload:** the playback URL hardcodes
-`play_720p.mp4`. Bunny only produces renditions present in the source, so a sub-720p clip
-may never have that file — the same permanent-404 symptom as forgetting the Encoding-tab
-MP4-fallback setting. The robust fix is to insert the row first and PATCH the URLs from
-`availableResolutions` / `thumbnailFileName` once encoding reports finished, rather than
-composing URLs at insert time. Deploy order and the non-retroactive settings are in
+**Verified end to end on 2026-09-06** by `scripts/bunny-e2e-check.mjs`, which uploads the
+platform's own 478×850 vendor clip through the real chain — slot, TUS, encode, row insert,
+delete — and asserts each step against Bunny's API. Two things it settled, both of which
+had looked like blockers:
+
+1. *Hotlink protection is on, and playback is fine.* The library blocks direct URL file
+   access, so every playback URL 403s a blank-`Referer` request and returns 200 from
+   `localhost:8080` and the production origin. A script `HEAD` looks exactly like a
+   hotlink; a `<video>` element does not. Probing without a Referer once produced a
+   false "catalogue-wide 403" report, so the check now probes both shapes and treats the
+   blank-referer 403 as the *expected* negative control.
+2. *The rendition is derived, not hardcoded.* Bunny only builds renditions the source
+   supports: the 478×850 clip yielded 240p/360p/480p and no 720p. `pickRendition()` picks
+   from the client-probed dimensions (shorter edge, small tolerance — 478 selects 480p,
+   which Bunny really built), capped at 720p. The e2e check asserts the chosen rendition
+   is one Bunny actually produced, which is what makes it a tested rule rather than a guess.
+
+**The CDN is not a usable oracle for "does this file exist"**, both because of the referer
+rule above and because a protected zone answers identically for present and absent files.
+So the check asserts through `bunny-reconcile`, whose `library` block carries `status`,
+`encodeProgress`, `availableResolutions`, `hasMP4Fallback` and `thumbnailFileName` per
+video for exactly this purpose. Deploy order and the non-retroactive settings are in
 `claude.md`.
+
+**And the CDN is not a usable oracle for "does this file *play*" either — which is why
+this provider is verified at two layers, not one.** The referer rule means Node can only
+ever establish that Bunny's *API* reports a healthy asset; it structurally cannot decode
+one. `tests/video-closeups-bunny.spec.ts` closes that gap in Chromium, which sends a real
+`Referer`: it asserts `readyState >= 2` and `videoWidth > 0` on the stored MP4 in both the
+Cosora-Admin moderation player and the buyer reel, drives an approval through the real
+admin UI and reads the resulting `status` back from Postgres independently, and proves the
+renamed-`.mov` rejection with a request spy rather than a toast — the brief's claim is
+"rejected *before any upload attempt*", and only the spy tests that. The split follows the
+boundary `chat-pipeline.spec.ts` already draws against `chat-pipeline-matrix.mjs`, for the
+same reason: the failure worth catching is a correct database under a UI that has not
+caught up.
 
 None of these paths trips `enforce_product_videos_moderation` — it short-circuits on
 `current_user <> 'authenticated'`, and a `SECURITY DEFINER` function owned by `postgres`
