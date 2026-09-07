@@ -5,11 +5,12 @@
 // back to that row via a service-role RPC, then archives the message.
 //
 // The queue carries a `table` discriminator and this worker dispatches on it
-// (see WRITERS). It handles two producers today — products (buyer catalogue
-// search) and rfqs (vendor lead matching) — and the two share one queue, one
-// cron poller and one OpenAI batch on purpose: an RFQ and a product listing are
-// the same operation to this function, and splitting them would double the
-// invocation cost for no behavioural gain.
+// (see WRITERS). It handles three producers today — products (buyer catalogue
+// search), rfqs (vendor lead matching) and product_videos (related-reel
+// ranking) — and they share one queue, one cron poller and one OpenAI batch on
+// purpose: a reel, an RFQ and a product listing are the same operation to this
+// function, and splitting them would triple the invocation cost for no
+// behavioural gain.
 //
 // Invoked by pg_cron through pg_net — see the schedule_embedding_worker
 // migration. Nothing else should call it, which is why the handler requires a
@@ -34,13 +35,14 @@ const BATCH = 20;
 const VT_SECONDS = 90;
 
 // Queue `table` value -> the service-role RPC that writes the vector back.
-// Adding a third embeddable table is this map plus a set_<table>_embedding
+// Adding another embeddable table is one line here plus a set_<table>_embedding
 // function; nothing else in this file needs to know about it. A job naming a
 // table absent from here is unprocessable by definition and gets archived
 // rather than left to cycle forever.
 const WRITERS: Record<string, string> = {
   products: "set_product_embedding",
   rfqs: "set_rfq_embedding",
+  product_videos: "set_video_embedding",
 };
 
 const corsHeaders = {

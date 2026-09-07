@@ -9,7 +9,9 @@ import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
-import { BUYER_CATEGORIES as CATEGORIES, PREF_CAT_KEYWORDS } from "@/lib/buyerCategories";
+import { useAuth } from "@/contexts/AuthContext";
+import { useForYouRanking, usePrefCategoryMap, categoryToPrefId } from "@/lib/queries/forYou";
+import { BUYER_CATEGORIES as CATEGORIES } from "@/lib/buyerCategories";
 import {
   usePreferences,
   toggleCategory,
@@ -79,26 +81,28 @@ const PRODUCT_POOL: ListingProduct[] = Array.from({ length: 48 }, (_, i) => {
 });
 
 // Map DB locations → preference location ids, so real products flow through the
-// exact same preference-filter logic. (Category keyword mapping now lives in
-// the shared src/lib/buyerCategories.ts as PREF_CAT_KEYWORDS.)
+// exact same preference-filter logic. Locations are still matched by keyword;
+// only the CATEGORY side moved to the database (see below).
 const PREF_LOC_KEYWORDS: Record<string, string> = {
   tiruppur: "tirupur", surat: "surat", ludhiana: "ludhiana",
   delhi: "delhi", bangalore: "bangalore", mumbai: "mumbai",
 };
 
-function prefCategoryOf(p: ProductCardData): string | undefined {
-  const hay = `${p.categoryName ?? ""} ${p.name}`.toLowerCase();
-  for (const [id, kws] of Object.entries(PREF_CAT_KEYWORDS)) {
-    if (kws.some((k) => hay.includes(k))) return id;
-  }
-  return undefined;
-}
+// Category matching used to be a PREF_CAT_KEYWORDS substring scan over the
+// product's category name + title. It is now a lookup against pref_category_map
+// keyed on the real categories.id, which fixes two concrete misreads:
+//   * "Mesh Panel Training Tee" (Activewear) matched the "tee" keyword and was
+//     filed under tshirts.
+//   * A product whose wording contained no keyword at all matched nothing and
+//     silently vanished from every filtered view.
+// The map is also the same source buyer_cold_start_embedding() reads, so the
+// filter and the ranking can no longer disagree about what a preference means.
 function prefLocationOf(p: ProductCardData): string | undefined {
   const loc = p.location.toLowerCase();
   for (const [id, kw] of Object.entries(PREF_LOC_KEYWORDS)) if (loc.includes(kw)) return id;
   return undefined;
 }
-function toListing(p: ProductCardData): ListingProduct {
+function toListing(p: ProductCardData, catToPref: Map<string, string>): ListingProduct {
   return makeListingProduct(p.id, {
     name: p.name,
     manufacturer: p.manufacturer,
@@ -116,7 +120,7 @@ function toListing(p: ProductCardData): ListingProduct {
     image: p.image,
     secondaryImage: p.secondaryImage,
     gender: (p.gender.toLowerCase() as Gender),
-    category: prefCategoryOf(p),
+    category: p.categoryId ? catToPref.get(p.categoryId) : undefined,
     locationId: prefLocationOf(p),
   });
 }
@@ -265,7 +269,30 @@ const ForYou = () => {
   // Real catalogue mapped into the listing shape; fall back to the seeded pool
   // only while it loads / if it's empty.
   const { data: live } = useLiveProducts();
-  const pool = useMemo(() => (live && live.length ? live.map(toListing) : PRODUCT_POOL), [live]);
+
+  // Personalised ORDER for this buyer, straight from the database:
+  // taste vector → onboarding-preference centroid → global popularity. The RPC
+  // reports which tier it used; `ranking.source` is the honest answer to "is
+  // this actually personalised?" and is never inferred client-side.
+  //
+  // Ids only — the card data still comes from the single cached useLiveProducts
+  // fetch that Trends / Sale / For You already share.
+  const { user } = useAuth();
+  const { data: ranking } = useForYouRanking(user?.id);
+  const { data: prefMap } = usePrefCategoryMap();
+  const catToPref = useMemo(() => categoryToPrefId(prefMap ?? {}), [prefMap]);
+
+  const pool = useMemo(() => {
+    if (!live || !live.length) return PRODUCT_POOL;
+    const listings = live.map((p) => toListing(p, catToPref));
+    const rankOf = ranking?.rankOf;
+    if (!rankOf?.size) return listings;
+    // Anything the RPC didn't rank (it returns at most match_count) sorts after
+    // everything it did, keeping its existing plan-boost order among itself.
+    return listings.sort(
+      (a, b) => (rankOf.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rankOf.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    );
+  }, [live, catToPref, ranking]);
 
   // Filtered product list (preferences + search).
   const filtered = useMemo(() => {

@@ -33,8 +33,12 @@ export const BUYER_CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
 
 export const isBuyerCategoryId = (id: string): boolean => id in BUYER_CATEGORY_LABEL;
 
-// Keyword map used for client-side matching of a live product (its DB category
-// name + product name) to a preference id — drives the For You feed filter.
+// DEAD as of 2026-09-07 — no runtime caller left. It drove the For You feed's
+// category filter until that moved to pref_category_map (matching on
+// categories.id, not on words in a title). Kept only so the heuristic it
+// encoded is on record; do NOT wire it back up. It mis-filed "Mesh Panel
+// Training Tee" (Activewear) as a T-shirt on the "tee" keyword, and dropped any
+// product whose wording contained no keyword at all.
 export const PREF_CAT_KEYWORDS: Record<string, string[]> = {
   tshirts: ["t-shirt", "tee", "tank", "polo", "tops"],
   shirts: ["shirt"],
@@ -47,11 +51,28 @@ export const PREF_CAT_KEYWORDS: Record<string, string[]> = {
   activewear: ["active", "training", "track", "sport", "mesh"],
 };
 
-// Maps a preference id → the real DB `categories.name`(s) it corresponds to, so
-// a buyer's preferences can drive a genuine product query (products.category_id).
-// A preference with no real garment category (co-ords / fabrics have no dedicated
-// DB category yet) maps to nothing and simply contributes no products — callers
-// fall back to the current product's own category so a strip never comes up empty.
+// Maps a preference id → DB `categories.name`(s).
+//
+// SUPERSEDED FOR PRODUCTS — do not use this to resolve products.category_id.
+// The `pref_category_map` TABLE is the single source of truth for that, and it
+// is what buyer_cold_start_embedding() and the For You feed both read.
+//
+// Why: every name below is a LEGACY flat category. The 2026-09-07 taxonomy
+// migrations (20260907130200, 20260907140000) moved all live inventory onto the
+// tree, so measured against the live catalogue 'T-shirts/Tops', 'Shirt',
+// 'Dress', 'Ethnic Wear', 'Trousers', 'Jeans' and 'Kidswear' now hold ZERO live
+// products. 'Activewear' and 'Footwear' are worse than stale — they are
+// ambiguous, matching both a dead legacy row and a live tree child.
+//
+// Still used by preferredVideoCategoryNames() below, which targets
+// `product_videos.category` (a text copy of the tagged product's category name)
+// rather than products.category_id. KNOWN STALENESS, recorded not fixed: a reel
+// tagged to a re-pointed product now carries a tree name, so these legacy names
+// no longer match it either. Fixing the video side means pointing that function
+// at pref_category_map too — separate work, tracked in the changelog.
+//
+// A preference with no real garment category (co-ords / fabrics have no
+// dedicated DB category) maps to nothing and contributes no products.
 export const PREF_TO_DB_CATEGORY_NAMES: Record<string, string[]> = {
   tshirts: ["T-shirts/Tops"],
   shirts: ["Shirt"],
@@ -74,9 +95,12 @@ export const PREF_TO_DB_CATEGORY_NAMES: Record<string, string[]> = {
  * `categories.name`, and UploadVideo refuses to submit without a tagged product.
  * So in practice every real row carries a genuine `categories.name` (the one
  * live row's is "Buttons"), which is exactly the vocabulary the map above
- * already targets. Same taxonomy, reached one step earlier: the video side
- * wants the NAMES, where products.ts's resolvePreferredCategoryIds goes on to
- * trade those names for `categories.id`.
+ * already targeted. Same taxonomy, reached one step earlier: the video side
+ * wants the NAMES, where the products side needs `categories.id`.
+ *
+ * (An earlier version of this comment named a `resolvePreferredCategoryIds` in
+ * products.ts as the products-side counterpart. No such function has ever
+ * existed — the products side went straight to pref_category_map instead.)
  *
  * The two defaults ('Apparel' server-side, 'Fashion' in createProductVideo's
  * fallback) are not `categories.name` values and match no preference. That is

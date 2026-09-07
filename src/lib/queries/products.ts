@@ -33,6 +33,9 @@ export interface ProductCardData {
   fitType: string;
   gender: string;
   categoryName: string | null;
+  /** Real categories.id. Preferred over categoryName for any matching, because
+   *  category names are no longer unique (see PRODUCT_CARD_SELECT). */
+  categoryId: string | null;
   image: string;
   secondaryImage: string;
   verified?: boolean;
@@ -56,13 +59,19 @@ export interface RawProduct {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
   fit_type: string | null; gender: string | null; rating_avg: number; enquiries_count: number;
-  sold_count: number; location: string | null; categories: { name: string } | null;
+  sold_count: number; location: string | null; category_id: string | null;
+  categories: { name: string } | null;
   product_images: RawImage[] | null;
 }
 
 // Shared select for a product row shaped into ProductCardData (see mapProductRow).
+// category_id is selected alongside categories(name) because the buyer-preference
+// filter matches on the ID, not the name: after the taxonomy work two category
+// names ('Activewear', 'Footwear') exist twice — once as a dead legacy top-level
+// row and once as the live tree child — so a name is no longer unique enough to
+// resolve a preference against. See pref_category_map.
 export const PRODUCT_CARD_SELECT =
-  "id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, sold_count, location, categories ( name ), product_images ( url, position )";
+  "id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, sold_count, location, category_id, categories ( name ), product_images ( url, position )";
 
 export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardData {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
@@ -93,6 +102,7 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     fitType: p.fit_type ?? "—",
     gender: p.gender ?? "Unisex",
     categoryName: p.categories?.name ?? null,
+    categoryId: p.category_id ?? null,
     image: imgs[0] ?? PLACEHOLDER,
     secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
     verified: trustSealFromParts(vendor?.is_verified, vendor?.plan_expires_at, vendor?.ad_verified_until),

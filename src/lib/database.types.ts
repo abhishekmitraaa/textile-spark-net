@@ -799,6 +799,29 @@ export type Database = {
           },
         ]
       }
+      pref_category_map: {
+        Row: {
+          category_id: string
+          pref_id: string
+        }
+        Insert: {
+          category_id: string
+          pref_id: string
+        }
+        Update: {
+          category_id?: string
+          pref_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pref_category_map_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -885,6 +908,7 @@ export type Database = {
           category: string
           created_at: string
           duration_seconds: number | null
+          embedding: unknown
           id: string
           likes_count: number
           moq: string | null
@@ -908,6 +932,7 @@ export type Database = {
           category?: string
           created_at?: string
           duration_seconds?: number | null
+          embedding?: unknown
           id?: string
           likes_count?: number
           moq?: string | null
@@ -931,6 +956,7 @@ export type Database = {
           category?: string
           created_at?: string
           duration_seconds?: number | null
+          embedding?: unknown
           id?: string
           likes_count?: number
           moq?: string | null
@@ -2164,6 +2190,15 @@ export type Database = {
         Args: { target: string }
         Returns: undefined
       }
+      build_video_search_text: {
+        Args: { v: Database["public"]["Tables"]["product_videos"]["Row"] }
+        Returns: string
+      }
+      buyer_cold_start_embedding: {
+        Args: { p_buyer_id: string }
+        Returns: unknown
+      }
+      buyer_taste_embedding: { Args: { p_buyer_id: string }; Returns: unknown }
       cache_query_embedding: {
         Args: { p_embedding: string; p_query: string }
         Returns: boolean
@@ -2178,11 +2213,20 @@ export type Database = {
         }[]
       }
       expire_subscriptions: { Args: never; Returns: number }
+      for_you_products: {
+        Args: { match_count?: number; p_buyer_id: string }
+        Returns: {
+          distance: number
+          id: string
+          source: string
+        }[]
+      }
       get_vendor_plan: { Args: { v?: string }; Returns: Json }
       grant_ad_verification: {
         Args: { exp: string; src: string; v: string }
         Returns: undefined
       }
+      halfvec_scale: { Args: { k: number; v: unknown }; Returns: unknown }
       has_query_embedding: { Args: { p_query: string }; Returns: boolean }
       immutable_array_to_string: {
         Args: { arr: string[]; sep: string }
@@ -2224,6 +2268,13 @@ export type Database = {
           rfq_id: string
           score: number
           similarity: number
+        }[]
+      }
+      match_videos: {
+        Args: { match_count?: number; p_video_id: string }
+        Returns: {
+          distance: number
+          id: string
         }[]
       }
       next_invoice_number: { Args: never; Returns: string }
@@ -2309,6 +2360,10 @@ export type Database = {
         Returns: boolean
       }
       set_rfq_embedding: {
+        Args: { p_embedding: string; p_id: string }
+        Returns: boolean
+      }
+      set_video_embedding: {
         Args: { p_embedding: string; p_id: string }
         Returns: boolean
       }
