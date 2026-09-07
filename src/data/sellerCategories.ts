@@ -472,6 +472,22 @@ export const sellerCategories: SellerCategory[] = [
         { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Do Not Bleach", "Tumble Dry Low"], fullWidth: true },
         { id: "colors", label: "Available Colors", type: "text", placeholder: "e.g., 15+ colors available" },
       ]},
+      // Apparel & Home splits tees by gender and had no unisex leaf, so a
+      // genuinely unisex tee had to be filed under a gender it does not claim.
+      // Same field set as Men's T-Shirts — it is the same garment, and the
+      // distinction being captured is sizing/cut intent, not construction.
+      { id: "unisex-tshirts", name: "Unisex T-Shirts", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["100% Cotton", "Cotton Blend", "Polyester", "Tri-Blend", "Organic Cotton", "Bamboo"], required: true },
+        { id: "gsm", label: "GSM", type: "select", options: ["140", "160", "180", "200", "220", "240", "260"] },
+        { id: "neckType", label: "Neck Type", type: "select", options: ["Round Neck", "V-Neck", "Crew Neck", "Henley"], required: true },
+        { id: "sleeveType", label: "Sleeve Type", type: "select", options: ["Half Sleeve", "Full Sleeve", "Sleeveless", "3/4 Sleeve", "Raglan"], required: true },
+        { id: "fit", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Relaxed", "Oversized", "Boxy"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
+        { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Printed", "Tie-Dye", "Color Block", "Graphic"] },
+        { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Do Not Bleach", "Tumble Dry Low"], fullWidth: true },
+        { id: "colors", label: "Available Colors", type: "text", placeholder: "e.g., 15+ colors available" },
+      ]},
       { id: "mens-shirts", name: "Men's Shirts", fields: [
         { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Linen", "Cotton-Linen", "Oxford", "Twill", "Poplin", "Chambray", "Denim"], required: true },
         { id: "collarType", label: "Collar Type", type: "select", options: ["Regular Collar", "Button Down", "Mandarin", "Spread Collar", "Cutaway", "Club Collar"], required: true },
@@ -514,6 +530,22 @@ export const sellerCategories: SellerCategory[] = [
         { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
         { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Party", "Festive", "Beach", "Work", "Gym Wear"], fullWidth: true },
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Printed", "Striped", "Floral", "Embroidered", "Lace"] },
+      ]},
+      // The one obviously missing cell in a matrix the taxonomy already commits
+      // to: Men's Pants/Trousers existed, the women's counterpart did not, so a
+      // women's trouser had nowhere to go but the legacy flat `Trousers` row.
+      // Styles and sizing differ enough from the men's entry to be worth their
+      // own options rather than reusing it wholesale.
+      { id: "womens-pants", name: "Women's Pants/Trousers", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Rayon", "Linen", "Crepe", "Polyester", "Lycra Blend", "Denim"], required: true },
+        { id: "style", label: "Style", type: "select", options: ["Wide-Leg", "Palazzo", "Culottes", "Straight", "Cigarette", "Formal Trousers", "Joggers", "Leggings"], required: true },
+        { id: "fit", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Skinny", "Relaxed", "Flared", "Straight"], required: true },
+        { id: "rise", label: "Rise", type: "select", options: ["Low Rise", "Mid Rise", "High Rise"] },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+        { id: "lengths", label: "Length Options", type: "size-selector", options: pantLengths, fullWidth: true },
+        { id: "closure", label: "Closure", type: "select", options: ["Button & Zip", "Elastic Waist", "Drawstring", "Hook & Eye", "Pull-on"] },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
+        { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Iron Low"], fullWidth: true },
       ]},
       { id: "womens-dresses", name: "Women's Dresses", fields: [
         { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Silk", "Chiffon", "Georgette", "Crepe", "Satin", "Velvet", "Linen"], required: true },
