@@ -135,8 +135,8 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/my-store/business` | `MyBusiness` |
 | `/my-store/business/tools` | `BusinessTools` |
 | `/business-profile` | `BusinessProfile` |
-| `/business-profile/employees` | `BusinessProfileEmployees` |
 | `/business-profile-score` | `BusinessProfileScorePage` |
+| `/kyc` | `Kyc` |
 | `/add-social-links` | `AddSocialLinks` |
 
 ### Insight & reputation

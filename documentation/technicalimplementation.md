@@ -126,8 +126,8 @@ function is missing.
 
 | Domain | Tables |
 |---|---|
-| Identity & roles | `profiles`, `buyer_profiles`, `vendor_profiles`, `vendor_documents`, `admin_role`, `admin_role_values` |
-| Catalogue | `products`, `product_images`, `product_videos` (+`provider`/`bunny_video_id` — see Bunny Stream below), `catalogues`, `categories` |
+| Identity & roles | `profiles`, `buyer_profiles`, `vendor_profiles` (+`recommended_product_ids` — the ordered, curated storefront strip), `vendor_documents`, `admin_role`, `admin_role_values` |
+| Catalogue | `products` (+`unit` — the selling unit for `price_value`), `product_images`, `product_videos` (+`provider`/`bunny_video_id` — see Bunny Stream below), `catalogues`, `categories` |
 | Sourcing | `rfqs`, `quotes`, `leads` (via rfq/quote joins), `recently_viewed` |
 | Saves & follows | `saved_items`, `saved_folders`, `saved_folder_items`, `saved_videos`, `follows` |
 | Video engagement | `video_likes` (per-buyer like rows; `product_videos.likes_count` is the denormalised counter kept in step by an AFTER trigger) |
@@ -431,14 +431,60 @@ branch that reports configuration without spending a token.
 `adPerformance.ts`, `ads.ts`, `callAnalytics.ts`, `calls.ts`, `catalogues.ts`, `chat.ts`,
 `follows.ts`, `forYou.ts`, `notifications.ts`, `payments.ts`, `products.ts`, `profile.ts`,
 `reviews.ts`, `rfqs.ts`, `search.ts`, `subscriptions.ts`, `vendor.ts`,
-`vendorAnalytics.ts`, `vendorDashboard.ts`, `vendorOnboarding.ts`, `vendorStore.ts`,
-`videoEngagement.ts`, `videos.ts`.
+`vendorAnalytics.ts`, `vendorDashboard.ts`, `vendorDocuments.ts`, `vendorOnboarding.ts`,
+`vendorStore.ts`, `videoEngagement.ts`, `videos.ts`.
 
 `search.ts` owns the search read model: `useSearchSuggestions` (debounced autocomplete),
 `useProductSearch` (server-ranked results, hydrated through `fetchCatalogueByIds` so search
 rows and browse rows share one mapping), and `useDebounced`. Facets are computed over the
 returned result set (`SEARCH_MATCH_COUNT = 200`), not over the whole catalogue — a search
 page's facet counts describe the results, which is what a buyer expects.
+
+### Vendor store — the profile score is a contract, not a number (2026-09-08)
+
+`calculateProfileScore()` in `vendorDashboard.ts` returns **`{ score, checks }`**, not a bare
+integer. The thirteen weighted signals are evaluated once by `profileScoreSignals()`; the
+score sums them and `checks` reports each one by key. Three surfaces read it and therefore
+cannot disagree: the dashboard ring, the `/my-store` completion bar, and the
+`/business-profile-score` checklist — whose tiles are keyed to those same signal names, so a
+completed task renders a tick instead of the hardcoded "Missing" every tile used to carry.
+`MyBusiness` derives its "N to add" badge from the same list.
+
+**`DEFAULT_PROFILE_SCORE = 45` is a placeholder for a session with no vendor row, and must
+never reach a signed-in vendor.** `useProfileScoreState()` enforces that: signed out returns
+the placeholder, signed in but still loading returns `isLoading` so the caller renders a
+skeleton, and a loaded vendor returns their real score. Returning the placeholder while
+loading is what made a real vendor see 45% flash on every page load.
+
+**Storefront presentation lives on the profile, not on the product.**
+`vendor_profiles.recommended_product_ids uuid[]` holds the curated, **ordered** subset of live
+products in the "Brand's Recommendations" strip. A `products.display_order` column could not
+express "these four, in this order" without implying something about the other 200. The ids
+are not FK-enforced — a deleted or unpublished product is filtered out on read rather than
+cascading a storefront edit.
+
+**Two writers, one picker.** `/onboarding` and `/business-profile` both write
+`vendor_profiles.category`, so they share
+`src/components/vendor/AddBusinessCategoriesModal.tsx` over
+`src/data/businessCategoryGroups.ts`. Likewise `/reviews` and the Business Tools "Get
+Reviews" tile share `src/components/vendor/ReviewLinkShare.tsx`, which generates a **real**
+QR (the `qrcode` package) for `${origin}/vendor/:id` — the buyer-facing storefront where a
+working review modal already lives. Both pages previously drew a lucide `<QrCode>` *icon* and
+called it a QR code, and both shared a link to `/reviews`, which is the vendor's own
+dashboard.
+
+**KYC is read-only to the vendor and unverifiable by the app.** `vendorDocuments.ts` backs
+`/kyc`; `vendor_documents.verified` is flipped by an admin and by nothing in this codebase, so
+the only states are *not submitted*, *in review* and *verified*. Onboarding's PAN check is a
+**format** check that says "Submitted for review" — it previously showed a green "Verified"
+tick derived from a regex and a 1.2-second timer, which is the app vouching for a document
+nobody had looked at. `saveVendorOnboarding` deletes and rewrites this vendor's rows for the
+doc types it is about to insert, so a retried submit does not grow duplicates (there is no
+unique constraint on `(vendor_id, doc_type)`).
+
+**Known limitation:** KYC scans land in the **public** `product-images` bucket, alongside
+every other vendor asset. A PAN card is not a product photo; moving these to a private bucket
+with signed URLs is a storage-model change and has not been done.
 
 ### Vendor analytics — three modules, one rule (2026-09-07)
 
@@ -708,6 +754,9 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **DO NOT RUN `supabase db push` against this project until the migration history is reconciled (2026-09-05).** This repo has never been linked — `npx supabase migration list` fails with `LegacyProjectNotLinkedError` — and every migration applied this week went in through **Supabase MCP `apply_migration`**, which records the remote history under the *name* passed to it with a fresh version timestamp, not under the local filename. So `20260802130000_notifications.sql` and its siblings are live, but a linked `db push` would not recognise them by version and would try to reapply them. One file has already been deleted for this reason: the local T10.3 fix duplicated the applied `restrict_notifications_update_to_read_column` under different object names, and pushing it would have installed a **second, redundant trigger** rather than replacing the live one. Reconciling means: link, `db pull`, then repair `supabase_migrations.schema_migrations`. It needs an access token and DB password, and has not been done.
 - **Chat-pipeline test fixtures no longer exist (2026-09-05).** `Cosora-Admin/scripts/chat-pipeline-matrix.mjs` and both chat Playwright specs depend on the `chatfx-*` and `rlstest-*` accounts, which were deleted after the test pass (they were logins with a known password in a live database). Re-run `seed-chat-fixtures.sql` **and** `seed-test-admins.sql` before the suite will execute. The scripts are unchanged and still correct; only the rows are gone.
 - **`20260905170000_approve_vendor_content_clears_rejection_reason.sql` is written but NOT applied (2026-09-05).** `approve_vendor_content()`/`approve_vendor_content_bulk()` currently `CREATE OR REPLACE`d only in this file — the Supabase MCP connection was down for the entire session that wrote it (every MCP tool call failed, same disconnect pattern as the T10.3 entry above), and neither repo holds a service-role key or a linked CLI project to apply DDL another way. Confirmed still-live behavior in the interim: approving a video/product does not clear a stale `rejection_reason`, reproduced against the live DB with a throwaway row. Do not assume this migration is active just because the file exists — the exact throwaway-row sequence in the 2026-09-05 changelog entry above is how to confirm it once it is.
+- **`products.colour` is ONE text value, and every writer truncates to it (invariant, 2026-09-08).** The upload taxonomy exposes colour as a multiselect, as free text, and as a single select (`resolveColour()` in `Upload.tsx`), and onboarding's step-8 chips are multi-select — but the column is singular, so the first pick is what lands on the listing. **Both forms say so on screen** rather than accepting four colours and silently storing one. Do not "fix" this by adding a second `colours text[]` column: two colour columns with only one of them read is worse than the truncation. If plural colours are wanted, migrate the readers first.
+- **`npx tsc --noEmit` with no `-p` compiles nothing here and reports 0 falsely (invariant).** The real baseline is `npx tsc --noEmit -p tsconfig.app.json` → **23 errors**, all pre-existing (generated-Supabase-type generics in `vendorDashboard.ts`/`vendorStore.ts`, plus `i18n.ts`, `profile.ts`, `rfqs.ts`, `VendorProfile.tsx`). eslint baseline is **6 errors** (was 8 until 2026-09-08). A run reporting 0 type errors has checked nothing.
+- **New accounts cannot be created for tests (2026-09-08).** `auth.signUp` returns `email rate limit exceeded` on this project (confirmation email is enabled), `.test` addresses are rejected outright as invalid, and writing `auth.users` directly is not available. Only `demo-vendor` and `demo-buyer` have known passwords — the `seed-*@cosora.dev` vendors do not. Any new spec needing a vendor identity has to work within that.
 - **Relaxed TypeScript Config**: `noImplicitAny` and `noUnusedLocals` are disabled; enforce stricter checks before production if needed.
 - **Lovable Integration**: The project uses Lovable's `componentTagger` plugin in dev mode for component metadata.
 - **Port**: Dev server runs on `localhost:8080` (non-standard, configured in vite.config.ts).

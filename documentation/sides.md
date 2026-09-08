@@ -152,8 +152,10 @@ rather than a supplier directory.
   ad-attributed product visits**, and a **button performance** panel that folds Call Now in
   with every other tracked CTA. Each of those panels states plainly when tracking is not
   switched on, rather than rendering an empty chart.
-- **My Store / Business Profile** — storefront, employees, business tools, Profile Score,
-  social links, blogs.
+- **My Store / Business Profile** — storefront (logo, banner, premises photos, categories,
+  featured products, catalogues, videos, listings), business tools, Profile Score, KYC
+  status, social links, blogs. Every figure on these pages is read from the vendor's own
+  rows; an empty vendor renders empty states, never demo content.
 - **Chat** — messaging with buyers, subject to the same moderation pipeline.
 - **Settings** — Business, Notifications (email/push), Language, Security, Help & Legal.
 

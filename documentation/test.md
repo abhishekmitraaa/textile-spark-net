@@ -18,6 +18,8 @@ Last updated: 2026-09-07
 | `admin-chat-moderation.spec.ts` | Cosora-Admin's chat review queue | `rlstest-*` fixtures |
 | `video-closeups-bunny.spec.ts` | Phase 8 Bunny Stream, browser half: the container gate, the moderation queue, real MP4 playback in both apps, approve-to-publish | `demo-*` |
 | `vendor-analytics.spec.ts` | Vendor Analytics / Advertise stats / Quotes performance are counted, not fabricated — asserts every retired fixture string is absent AND that real per-vendor values render; T5 additionally asserts the engagement panels never render nothing | `demo-vendor` (read-only) |
+| `vendor-my-store.spec.ts` | The My Store cluster (`/my-store`, `/my-store/business`, `/business-profile`, `/business-profile-score`, `/kyc`) is read from real rows — every retired demo literal absent, header/counts/score match the vendor row, real QR image, no `#ef4d62`, zero console errors; plus the signed-out registration block | `demo-vendor` (read-only) |
+| `vendor-onboarding-write-path.spec.ts` | The **form-to-database** path: drives the real 9-step `/onboarding` and asserts state, pincode, landmark, category, office photos, the PAN scan's `file_url`, and product `unit`/`sizes`/`colour`/images all landed. Also the logo upload and the unverified-seal branch | `demo-buyer` (**mutating**, self-cleaning) |
 
 - **Run:** `npm run playwright:install` once, then `npm run test:e2e` (or a single file:
   `npx playwright test tests/<spec>.ts`).
@@ -39,6 +41,17 @@ Last updated: 2026-09-07
   `product_videos` *has* `pvideos_delete`, and its `afterAll` removes both the row and the
   asset at Bunny. Do not copy "fixtures only" into a new spec without checking whether its
   table can actually be cleaned up.
+- **Why `vendor-onboarding-write-path.spec.ts` uses `demo-buyer`, and why it has a guard.**
+  Fresh accounts cannot be minted for a test run: `auth.signUp` on this project sends a
+  confirmation email and returns `email rate limit exceeded`, and writing `auth.users`
+  directly is not available. `demo-buyer` is the only usable account with **no
+  `vendor_profiles` row and no products**, so completing registration as it creates a vendor
+  from nothing — exactly the case under test. Its `beforeAll` asserts the row is absent
+  before starting: without that, a leftover row from a previous run would make the
+  assertions measure stale data instead of this run's writes. `afterAll` removes only what
+  the run created and restores `profiles.active_role`. Set `KEEP_TEST_VENDOR=1` to skip the
+  teardown when you need to read an aggregate while the row still exists (the guard will
+  then refuse the next run until you clean up).
 - **Notes:** artifacts land in `test-results/`, which Playwright **wipes at the start of every
   run** — durable evidence for this file goes in `screenshots/` instead.
 
@@ -93,6 +106,51 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-08 (latest) — Vendor "My Store" cluster de-mocked: 11/11 GREEN, through the real UI
+
+`npx playwright test tests/vendor-my-store.spec.ts tests/vendor-onboarding-write-path.spec.ts`
+— **11/11**, dev server on `:8081` (`:8080` was in use by a parallel session).
+Typecheck `tsc -p tsconfig.app.json` **23 errors, the unchanged baseline**; eslint **6
+errors, down from 8** (two pre-existing ones were removed with the code that caused them, and
+none were added).
+
+**Evidence:** `screenshots/vendor-my-store.png`, `vendor-business-profile.png`,
+`vendor-profile-score.png`, `vendor-kyc.png`, `vendor-get-reviews-qr.png`,
+`vendor-onboarding-welcome.png`, `vendor-my-store-new-vendor.png`,
+`vendor-business-profile-new-vendor.png`, `vendor-empty-profile.png`.
+
+- **The write-path spec is the one that matters, and it exists because a direct INSERT proves
+  nothing here.** The bug being fixed was that `/onboarding` *collected* state, pincode,
+  premises photos, a PAN scan, business categories and product unit/sizes/colours and wrote
+  none of them — an INSERT test would have passed against that broken build, because the
+  columns always accepted values. So the spec drives all nine steps of the real form and then
+  reads the database back. It also fetches every stored URL and asserts a `200`: an
+  `office_photos` array full of `blob:` URLs, which is what the form used to produce, would
+  otherwise have looked exactly like success.
+- **Phase 8.6, the before/after count.** Before: 7 vendor rows, 1 onboarded, **0 with pan, 0
+  with state, 0 with postal_code, 0 with office_photos**. After one registration through the
+  real UI: 8 rows, 2 onboarded, **1 / 1 / 1 / 1**, plus `vendor_documents` carrying a
+  non-null `file_url` for the first time and a product with `unit='pieces'`,
+  `sizes=['M','L']`, `colour='Black'` and one `product_images` row.
+- **The signed-out case blocks EARLIER than the master prompt expected, which is the stronger
+  result.** The prompt asked for a block at the final submit. Because premises photos and the
+  PAN scan now upload to storage under the vendor's own id, a signed-out registration cannot
+  get past **step 6** — it is refused at the point of upload rather than after eight more
+  steps of work. The submit-time guard is still there as the backstop and is still the thing
+  that stops the success screen rendering; the spec asserts the success screen never appears
+  at any point.
+- **Two assertions were wrong at first and both were test bugs, not product bugs.** A
+  cluster-wide sweep for `"Rajesh Kumar"` failed on `/business-profile` — it is
+  demo-vendor's **real** `owner_name`, and only `BusinessTools` ever invented it, so that
+  literal is now checked on that page alone. And the score-page assertion read
+  `vendor_profiles.profile_score` *before* loading the page; `fetchVendorDashboard`
+  recomputes and syncs that column on first load, so the read now happens after.
+- **`MyBusiness` renders every row twice** (a mobile list and a desktop grid, one hidden by a
+  breakpoint), so `getByText(...).first()` resolves to the hidden copy. Use `.last()` there.
+- **Restored afterwards, verified not assumed:** `demo-buyer`'s `profiles` row is
+  byte-identical to its pre-run snapshot, with 0 vendor rows / 0 products / 0 documents, and
+  the project is back to 7 `vendor_profiles`. `demo-vendor` was read-only throughout.
 
 ### 2026-09-08 (later) — `engagement_events` applied and verified: 19/19 + 17/17 + 5/5 GREEN
 

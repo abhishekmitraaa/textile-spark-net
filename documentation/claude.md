@@ -229,6 +229,43 @@ undocumented. Deep technical rationale for each lives in
   keyword-only, and the footer says `· keyword match only`. Loading / empty / results stay
   three distinct states — a failed fetch used to render eight placeholder products and pass
   for a populated catalogue.
+- **No fabricated data on a vendor's own storefront, either (2026-09-08).** The same rule as
+  the search surfaces, applied to `/my-store`, `/business-profile` and their siblings. Removed:
+  a `picsum.photos` avatar and the words "business name" in the store header, six **Korean
+  fashion brand logos** (chuu, cherrykoko, brandi, stylenanda, styleonme, hotping) rendered as
+  the vendor's own categories, six invented products under a "Caramel Fashion / 3,538"
+  heading, five invented videos, four invented "recommendations" behind a grid that persisted
+  nothing, two invented catalogue PDFs, a fake PAN (`ABCPR1234D`), a fake turnover
+  (`Rs 2 - 5 Cr`), `"1 Year"` as member-since, `7,333` followers — and an **80/5/0/0/15 star
+  breakdown shown to vendors with no reviews**, which is a fabricated reputation on a person's
+  own profile. An empty vendor now renders empty states with a CTA. Loading renders skeletons,
+  never a placeholder number.
+- **A registration that was not saved must never look like one that was.** `/onboarding`'s
+  submit used to show "Welcome to Cosora" unconditionally — a signed-out vendor completed
+  eight steps and wrote nothing anywhere. A missing session or a failed write now blocks on
+  the final step with the form intact. Corollary: never persist a `blob:` URL. Three of these
+  steps stored `URL.createObjectURL()` results, which are alive only in the tab that made
+  them, so `vendor_documents.file_url` was always null and `office_photos` always empty.
+- **The app never claims to have verified something it cannot verify.** There is no PAN
+  lookup wired to this project, so onboarding does a **format** check and reports "Submitted
+  for review"; `vendor_documents.verified` is flipped by an admin and by nothing in the
+  client. A green "Verified" tick derived from a regex and a `setTimeout` is the app vouching
+  for a document nobody has looked at. Same rule retired the OTP modal's `482931` auto-fill.
+- **A vendor sees exactly the trust seal buyers see.** `/business-profile` gates TrustedSEAL
+  on `trustSealFromParts()` — the same helper `/vendor/:id` and every product card use. It
+  used to render unconditionally, so every vendor believed they were verified, including the
+  ones buyers see no seal for. Unverified vendors get a "Get verified" chip pointing at
+  `/advertisements`, where the seal is actually sold.
+- **A "share this" link must point at the surface the recipient needs.** The vendor review
+  link shared `${origin}/reviews` — the *vendor's own dashboard* — so a buyer who followed it
+  landed on their own empty seller page. It is `${origin}/vendor/:id`, where a working review
+  modal already exists. Relatedly: a `<QrCode>` lucide icon is a *picture* of a QR code and
+  does not scan; if a QR is shown, generate a real one.
+- **Never collect contact details you cannot act on.** The Business Tools "Get Reviews" form
+  gathered real customer names and phone numbers and dropped them behind
+  `toast.success("Review requests sent!")` — there is no SMS pipeline in this repo, so nothing
+  was ever sent and the vendor had no way to know. A tile that says "coming soon" is honest; a
+  tile that fakes a success is not.
 - **Query embeddings never reach the browser.** `search_products` resolves the cached vector
   server-side; the client sends text and gets ids back. Shipping 1536 floats each way for a
   value the browser cannot use was the shape this replaced.
