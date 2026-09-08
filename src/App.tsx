@@ -26,7 +26,6 @@ import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import MyStore from "./pages/MyStore";
 import BusinessProfile from "./pages/BusinessProfile";
-import BusinessProfileEmployees from "./pages/BusinessProfileEmployees";
 import Chat from "./pages/Chat";
 import ChatThread from "./pages/ChatThread";
 import Categories from "./pages/Categories";
@@ -81,6 +80,7 @@ import Reviews from "./pages/Reviews";
 import CompetitorAds from "./pages/CompetitorAds";
 import MyBusiness from "./pages/MyBusiness";
 import BusinessTools from "./pages/BusinessTools";
+import Kyc from "./pages/Kyc";
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
 import AppFeedback from "./pages/AppFeedback";
@@ -275,7 +275,6 @@ const App = () => (
             <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
             <Route path="/business-profile" element={<BusinessProfile />} />
-            <Route path="/business-profile/employees" element={<BusinessProfileEmployees />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/post-requirement" element={<PostRequirement />} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
@@ -292,6 +291,7 @@ const App = () => (
             <Route path="/competitor-ads" element={<CompetitorAds />} />
             <Route path="/my-store/business" element={<MyBusiness />} />
             <Route path="/my-store/business/tools" element={<BusinessTools />} />
+            <Route path="/kyc" element={<Kyc />} />
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
             <Route path="/app-feedback" element={<AppFeedback />} />

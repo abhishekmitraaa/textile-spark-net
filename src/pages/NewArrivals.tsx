@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
-import { useActiveAds, logAdImpression, logAdClick, type ActiveAd } from "@/lib/queries/ads";
+import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
@@ -237,9 +238,17 @@ const NewArrivals = () => {
     });
   }, [brandPicks]);
 
+  // Same goal-aware routing as SponsoredRail — see adDestination(). Both
+  // surfaces render the same ads, so a click had to mean the same thing in both.
   const openAd = (a: ActiveAd) => {
     void logAdClick(a.adId);
-    if (a.productId) navigate(`/product/${a.productId}`);
+    const dest = adDestination(a);
+    if (!dest) return;
+    markNavSource("ad");
+    if (dest.kind === "profile") {
+      void logEngagement({ eventType: "profile_view", vendorId: a.vendorId, adId: a.adId, source: "ad" });
+    }
+    navigate(dest.path);
   };
 
   // ── Recommended Premium Brands: real vendors, ranked paid-plan-first ──

@@ -13,14 +13,6 @@ export interface VendorQuoteSummary {
   totalValue: string;
 }
 
-export interface VendorOnboardingSummary {
-  profileScore: number;
-  emailMissing: boolean;
-  demandSignal: string;
-  locationPrompt: string;
-  locationOptions: Array<"automatic" | "manual">;
-}
-
 export const vendorQuoteSummaryFixture: VendorQuoteSummary = {
   totalSent: 5,
   pending: 1,
@@ -31,22 +23,9 @@ export const vendorQuoteSummaryFixture: VendorQuoteSummary = {
   totalValue: "$85,500",
 };
 
-export const vendorOnboardingSummaryFixture: VendorOnboardingSummary = {
-  profileScore: 20,
-  emailMissing: true,
-  demandSignal: "3,302 inquiries for Fabric Wholesalers in Delhi",
-  locationPrompt: "Choose automatic detection or enter your business location manually.",
-  locationOptions: ["automatic", "manual"],
-};
-
 async function fetchVendorQuoteSummary(): Promise<VendorQuoteSummary> {
   await delay(120);
   return vendorQuoteSummaryFixture;
-}
-
-async function fetchVendorOnboardingSummary(): Promise<VendorOnboardingSummary> {
-  await delay(120);
-  return vendorOnboardingSummaryFixture;
 }
 
 async function fetchVendorBlogFeed() {
@@ -58,14 +37,6 @@ export function useVendorQuoteSummary() {
   return useQuery({
     queryKey: ["vendor", "quote-summary"],
     queryFn: fetchVendorQuoteSummary,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useVendorOnboardingSummary() {
-  return useQuery({
-    queryKey: ["vendor", "onboarding-summary"],
-    queryFn: fetchVendorOnboardingSummary,
     staleTime: 5 * 60 * 1000,
   });
 }

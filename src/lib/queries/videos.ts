@@ -122,6 +122,10 @@ export interface MyVideoRow {
   likes: number;
   createdAt: string;
   durationSeconds: number | null;
+  /** The playable source. Needed so a vendor can actually watch their own
+   *  video back — /business-profile used to show a static thumbnail behind a
+   *  decorative play button that played nothing. */
+  videoUrl: string | null;
   /**
    * The moderator's note from `reject_vendor_content`. Only ever meaningful
    * alongside status === "rejected": approve now nulls it out
@@ -138,14 +142,14 @@ export interface MyVideoRow {
 interface RawMyVideo {
   id: string; brand_line: string; category: string; thumbnail_url: string | null;
   status: string; views_count: number; likes_count: number; created_at: string;
-  duration_seconds: number | null; rejection_reason: string | null;
+  duration_seconds: number | null; rejection_reason: string | null; video_url: string | null;
   products: { name: string } | null;
 }
 
 async function fetchMyVideos(vendorId: string): Promise<MyVideoRow[]> {
   const { data, error } = await supabase
     .from("product_videos")
-    .select("id, brand_line, category, thumbnail_url, status, views_count, likes_count, created_at, duration_seconds, rejection_reason, products ( name )")
+    .select("id, brand_line, category, thumbnail_url, status, views_count, likes_count, created_at, duration_seconds, rejection_reason, video_url, products ( name )")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -156,6 +160,7 @@ async function fetchMyVideos(vendorId: string): Promise<MyVideoRow[]> {
     category: v.category,
     thumbnail: v.thumbnail_url,
     durationSeconds: v.duration_seconds,
+    videoUrl: v.video_url,
     status: (v.status as MyVideoRow["status"]) ?? "under_review",
     rejectionReason: v.rejection_reason,
     views: v.views_count,

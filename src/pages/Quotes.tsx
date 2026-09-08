@@ -8,6 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMySubmittedQuotes } from "@/lib/queries/rfqs";
 import type { MySubmittedQuote } from "@/lib/queries/rfqs";
 import { useCallBuyer } from "@/lib/queries/calls";
+import {
+  useVendorOrderValue, useVendorResponsiveness, formatInrCompact, formatDelay,
+} from "@/lib/queries/vendorAnalytics";
 import { toast } from "sonner";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -49,6 +52,16 @@ import {
 
 type Stats = { total: number; accepted: number; negotiating: number; pending: number };
 
+/** Real performance figures for the metrics rail. Nulls render as an em dash. */
+type Performance = {
+  quotesThisMonth: number;
+  /** 0-100, or null when the vendor has sent no quotes at all. */
+  acceptanceRate: number | null;
+  /** Mean first-reply delay in hours, or null when nothing is measurable yet. */
+  avgResponseHours: number | null;
+  totalOrderValue: number;
+};
+
 const statusConfig = {
   in_negotiation: { label: "In Negotiation", bg: "bg-blue-50",   text: "text-blue-600",   border: "border-blue-200",   icon: MessageSquare },
   accepted:       { label: "Quote Accepted", bg: "bg-green-50",  text: "text-green-600",  border: "border-green-200",  icon: CheckCircle2  },
@@ -65,7 +78,13 @@ const buyerResponseBg = {
 
 // ── Stats + performance. Full-width rows on mobile / tablet, a sticky
 //    metrics rail beside the working column from 1400px up. ──
-function MetricsRail({ stats, onSwitchToRequests }: { stats: Stats; onSwitchToRequests: () => void }) {
+//
+// The performance card used to print four fixtures: "This Month: 8 quotes",
+// "Acceptance Rate 25%", "Avg. Response Time 1.5 days" and "Total Order Value
+// ₹24.5L". All four are counted now, and Total Order Value comes from
+// useVendorOrderValue — the SAME hook the Analytics page reads, so the vendor's
+// single most important retention figure cannot differ between the two screens.
+function MetricsRail({ stats, perf, onSwitchToRequests }: { stats: Stats; perf: Performance; onSwitchToRequests: () => void }) {
   return (
     <div className="space-y-4 lg:space-y-5">
       {/* Stats: 2x2 on mobile, a 4-across strip on tablet, back to 2x2 in the rail */}
@@ -95,23 +114,25 @@ function MetricsRail({ stats, onSwitchToRequests }: { stats: Stats; onSwitchToRe
             <span className="text-sm font-bold text-gray-900">Your Performance</span>
           </div>
           <span className="text-[10px] font-semibold bg-orange-100 text-orange-600 px-2.5 py-1 rounded-full whitespace-nowrap">
-            This Month: 8 quotes
+            This Month: {perf.quotesThisMonth} quote{perf.quotesThisMonth === 1 ? "" : "s"}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-4 mb-3 lg:grid-cols-4 min-[1400px]:grid-cols-2">
           <div>
             <p className="text-xs text-gray-500">Acceptance Rate</p>
-            <p className="text-lg font-bold text-green-600 lg:tabular-nums">25%</p>
+            <p className="text-lg font-bold text-green-600 lg:tabular-nums">
+              {perf.acceptanceRate != null ? `${Math.round(perf.acceptanceRate)}%` : "—"}
+            </p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Avg. Response Time</p>
-            <p className="text-lg font-bold text-gray-900">1.5 days</p>
+            <p className="text-lg font-bold text-gray-900">{formatDelay(perf.avgResponseHours)}</p>
           </div>
           {/* Total Order Value repeats inside the grid on the wide tablet row so
               the metrics read as one strip; the mobile placement stays below. */}
           <div className="hidden lg:block min-[1400px]:hidden">
             <p className="text-xs text-gray-500">Total Order Value</p>
-            <p className="text-lg font-bold text-[#ef4d62]">₹24.5L</p>
+            <p className="text-lg font-bold text-[#ef4d62]">{formatInrCompact(perf.totalOrderValue)}</p>
           </div>
           <div className="hidden lg:flex lg:items-end min-[1400px]:hidden">
             <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
@@ -123,7 +144,7 @@ function MetricsRail({ stats, onSwitchToRequests }: { stats: Stats; onSwitchToRe
         <div className="flex items-center justify-between gap-3 lg:hidden min-[1400px]:flex">
           <div>
             <p className="text-xs text-gray-500">Total Order Value</p>
-            <p className="text-lg font-bold text-[#ef4d62]">₹24.5L</p>
+            <p className="text-lg font-bold text-[#ef4d62]">{formatInrCompact(perf.totalOrderValue)}</p>
           </div>
           <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
             className="flex items-center gap-1.5 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors whitespace-nowrap">
@@ -366,11 +387,27 @@ const Quotes = () => {
   const { data: myQuotes = [] } = useMySubmittedQuotes(user?.id);
   const backToRequests = () => window.scrollTo({ top: 0, behavior: "smooth" });
 
+  const { data: orderValue } = useVendorOrderValue(user?.id);
+  const { data: responsiveness } = useVendorResponsiveness(user?.id);
+
   const stats: Stats = {
     total: myQuotes.length,
     accepted: myQuotes.filter(q => q.status === "accepted").length,
     negotiating: myQuotes.filter(q => q.status === "in_negotiation").length,
     pending: myQuotes.filter(q => q.status === "awaiting").length,
+  };
+
+  // "This month" is the calendar month the vendor is looking at, not a rolling
+  // 30 days — the badge says "This Month".
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+
+  const perf: Performance = {
+    quotesThisMonth: myQuotes.filter(q => new Date(q.submittedDateIso).getTime() >= monthStart.getTime()).length,
+    acceptanceRate: stats.total > 0 ? (stats.accepted / stats.total) * 100 : null,
+    avgResponseHours: responsiveness?.avgHours ?? null,
+    totalOrderValue: orderValue?.total ?? 0,
   };
 
   return (
@@ -423,7 +460,7 @@ const Quotes = () => {
             {/* Stats + performance — inline on mobile, sticky rail on wide desktop */}
             <motion.div variants={section}
               className="min-w-0 min-[1400px]:col-start-2 min-[1400px]:row-start-1 min-[1400px]:row-span-3 min-[1400px]:self-start min-[1400px]:sticky min-[1400px]:top-24">
-              <MetricsRail stats={stats} onSwitchToRequests={backToRequests} />
+              <MetricsRail stats={stats} perf={perf} onSwitchToRequests={backToRequests} />
             </motion.div>
 
             {/* Search, sort, and the submitted-quote cards */}

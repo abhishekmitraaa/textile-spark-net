@@ -5,9 +5,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Star, QrCode, Share2, Link2, Download, X, ChevronDown } from "lucide-react";
+import { Star, Share2, X, ChevronDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { ReviewLinkShare } from "@/components/vendor/ReviewLinkShare";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -80,23 +81,6 @@ const Reviews = () => {
     }
   };
 
-  const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(window.location.origin + "/reviews");
-    toast.success("Review link copied!");
-  };
-
-  const handleShare = async () => {
-    try {
-      if (navigator.share) {
-        await navigator.share({ title: "Rate My Business - Cosora", url: window.location.origin + "/reviews" });
-      } else {
-        await handleCopyLink();
-      }
-    } catch {
-      await handleCopyLink();
-    }
-  };
-
   return (
     <DashboardLayout>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-5 pb-8">
@@ -148,10 +132,9 @@ const Reviews = () => {
           <h2 className="text-base font-bold text-gray-900 mb-3">Rate My Business</h2>
 
           <div className="flex items-center gap-3">
-            {/* Small QR thumbnail */}
-            <div className="w-14 h-14 bg-white border border-gray-200 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-              <QrCode className="h-8 w-8 text-gray-800" />
-            </div>
+            {/* The 56px "QR thumbnail" that used to sit here was the same lucide
+                icon as the modal's — a picture of a QR code presented as this
+                vendor's. The real, scannable one is one tap away. */}
 
             {/* Share button */}
             <motion.button
@@ -343,61 +326,13 @@ const Reviews = () => {
                 </button>
               </div>
 
-              {/* QR card */}
-              <div className="bg-gray-50 rounded-2xl p-5 flex flex-col items-center mb-4 border border-gray-100">
-                <p className="text-xs text-gray-500 mb-3">Please help us do better</p>
-
-                {/* 5 orange stars */}
-                <div className="flex gap-1 mb-4">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-7 w-7 fill-orange-400 text-orange-400" />
-                  ))}
-                </div>
-
-                {/* QR code */}
-                <div className="w-44 h-44 bg-white rounded-xl border-2 border-gray-200 flex items-center justify-center mb-4 shadow-sm">
-                  <QrCode className="h-32 w-32 text-gray-900" />
-                </div>
-
-                {/* Business name */}
-                <p className="text-sm font-semibold text-gray-900">Fearce</p>
-                <p className="text-xs text-gray-500 mt-0.5 mb-3">Delhi</p>
-
-                {/* Copy Link inside card */}
-                <div className="w-full border-t border-gray-200 pt-3 flex items-center justify-center gap-2">
-                  <Link2 className="h-3.5 w-3.5 text-gray-400" />
-                  <span className="text-xs text-gray-500">Copy Link</span>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <div className="space-y-2.5">
-                <Button
-                  variant="outline"
-                  className="w-full h-11 gap-2 border-gray-300 text-gray-700 font-medium"
-                  onClick={handleCopyLink}
-                >
-                  <Link2 className="h-4 w-4" />
-                  Copy Link
-                </Button>
-                <div className="grid grid-cols-2 gap-2.5">
-                  <Button
-                    variant="outline"
-                    className="h-11 gap-2 border-gray-300 text-gray-700 font-medium text-sm"
-                    onClick={() => toast.success("QR code downloaded!")}
-                  >
-                    <Download className="h-4 w-4" />
-                    Download QR Code
-                  </Button>
-                  <Button
-                    className="h-11 gap-2 bg-[#256fef] hover:bg-[#1a5fd4] text-white font-medium text-sm"
-                    onClick={handleShare}
-                  >
-                    <Share2 className="h-4 w-4" />
-                    Share QR Code
-                  </Button>
-                </div>
-              </div>
+              {/* Real, scannable QR + the vendor's real ratings, shared with
+                  the Business Tools "Get Reviews" tile. What was here: a
+                  <QrCode> lucide ICON standing in for a QR code, the literal
+                  business name "Fearce" in "Delhi" regardless of who was
+                  signed in, and a Download button that toasted "QR code
+                  downloaded!" without producing a file. */}
+              <ReviewLinkShare vendorId={user?.id} />
             </motion.div>
           </>
         )}

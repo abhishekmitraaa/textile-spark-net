@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, ChevronRight, Menu, MessageCircle, MapPin, Upload as UploadIcon,
   Check, CheckCircle2, Building2, FileText, Package, FileSignature,
-  X, Crop, RotateCw, Eraser, Info, Mail, AlertCircle, BarChart3, Search, PenLine,
+  X, Info, AlertCircle, Search, PenLine, Tag, Clock, Plus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,15 +19,20 @@ import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { CategorySelector } from "@/components/upload/CategorySelector";
-import { useVendorOnboardingSummary, vendorOnboardingSummaryFixture } from "@/hooks/useVendorData";
+import { AddBusinessCategoriesModal } from "@/components/vendor/AddBusinessCategoriesModal";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
-import { saveVendorOnboarding } from "@/lib/queries/vendorOnboarding";
+import {
+  saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage,
+} from "@/lib/queries/vendorOnboarding";
+import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
 
-const TOTAL_STEPS = 8;
+// 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
+// · 7 documents · 8 product · 9 contract
+const TOTAL_STEPS = 9;
 
 const FABRICS = ["Cotton", "Linen", "Silk", "Polyester", "Wool", "Denim", "Rayon", "Blend"];
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL", "Free Size"];
@@ -61,7 +66,6 @@ export default function Onboarding() {
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [otpCountdown, setOtpCountdown] = useState(27);
-  const [otpAutoFilled, setOtpAutoFilled] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [countryCode, setCountryCode] = useState("+91");
   const [whatsappOptIn, setWhatsappOptIn] = useState(true);
@@ -75,6 +79,8 @@ export default function Onboarding() {
   const [floor, setFloor] = useState("");
   const [area, setArea] = useState("");
   const [city, setCity] = useState("Delhi NCR");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
   const [landmark, setLandmark] = useState("");
   const [addressConfirmed, setAddressConfirmed] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
@@ -83,30 +89,40 @@ export default function Onboarding() {
   const [ownerName, setOwnerName] = useState("");
   const [ownerEmail, setOwnerEmail] = useState("");
   const [country, setCountry] = useState("IN");
-  const [step4Success, setStep4Success] = useState(false);
+  const [ownerSuccess, setOwnerSuccess] = useState(false);
 
-  // Step 5
-  const [businessImages, setBusinessImages] = useState<string[]>([]);
+  // Step 5 — business categories (vendor_profiles.category)
+  const [businessCategories, setBusinessCategories] = useState<string[]>([]);
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+
+  // Step 6 — premises photos. Holds PUBLIC STORAGE URLS, not blob: URLs:
+  // these are uploaded as they are picked so they survive a reload and mean
+  // something to everyone else.
   const [businessImagePickerOpen, setBusinessImagePickerOpen] = useState(false);
   const [businessImageGuidelinesOpen, setBusinessImageGuidelinesOpen] = useState(false);
   const [businessImageUploads, setBusinessImageUploads] = useState<string[]>([]);
+  const [uploadingBusinessImages, setUploadingBusinessImages] = useState(0);
 
-  // Step 6
+  // Step 7 — KYC. `checked` means "the format is well-formed and it has been
+  // queued for review", never "verified": nothing in this app can verify a PAN.
   const [pan, setPan] = useState("");
-  const [panStatus, setPanStatus] = useState<"idle" | "verifying" | "success" | "fail">("idle");
-  const [panNameStatus, setPanNameStatus] = useState<"idle" | "verifying" | "success" | "fail">("idle");
+  const [panStatus, setPanStatus] = useState<"idle" | "invalid" | "submitted">("idle");
+  const [panNameStatus, setPanNameStatus] = useState<"idle" | "invalid" | "submitted">("idle");
   const [cin, setCin] = useState("");
   const [aadhaar, setAadhaar] = useState("");
   const [hasGstin, setHasGstin] = useState(false);
   const [gstin, setGstin] = useState("");
-  const [panFullName, setPanFullName] = useState("Fearce Textiles Pvt Ltd");
+  const [panFullName, setPanFullName] = useState("");
   const [panAddress, setPanAddress] = useState("");
-  const [panDocumentUploads, setPanDocumentUploads] = useState<string[]>([]);
+  const [panDocumentUrl, setPanDocumentUrl] = useState<string | null>(null);
+  const [panDocumentName, setPanDocumentName] = useState("");
+  const [uploadingPanDocument, setUploadingPanDocument] = useState(false);
   const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
-  const [step6Success, setStep6Success] = useState(false);
+  const [documentsSuccess, setDocumentsSuccess] = useState(false);
 
-  // Step 7
+  // Step 8 — first product. Also public storage URLs.
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [uploadingProductImages, setUploadingProductImages] = useState(0);
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("pieces");
@@ -116,22 +132,21 @@ export default function Onboarding() {
   const [gsm, setGsm] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [step7Success, setStep7Success] = useState(false);
+  const [productSuccess, setProductSuccess] = useState(false);
 
-  // Step 8
+  // Step 9
   const [contractStage, setContractStage] = useState<"overview" | "contract">("overview");
-  const [contractName, setContractName] = useState("Anandita");
+  const [contractName, setContractName] = useState("");
   const [manualSignatureDataUrl, setManualSignatureDataUrl] = useState<string | null>(null);
   const [signatureDrawerOpen, setSignatureDrawerOpen] = useState(false);
   const [agreementModalOpen, setAgreementModalOpen] = useState(false);
-  const [signature, setSignature] = useState("");
-  const [editingSig, setEditingSig] = useState(false);
-  const [locationMode, setLocationMode] = useState<"automatic" | "manual" | null>(null);
-  const [manualLocation, setManualLocation] = useState("");
   const [agreed, setAgreed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  // Blocks the success screen when the registration could not be saved. An
+  // 8-step form that shows "Welcome to Cosora" while having written nothing is
+  // worse than an error — the vendor believes they are registered.
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
-  const { data: onboardingSummary } = useVendorOnboardingSummary();
-  const summary = onboardingSummary ?? vendorOnboardingSummaryFixture;
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -160,22 +175,12 @@ export default function Onboarding() {
   }, [otpModalOpen]);
 
   useEffect(() => {
-    if (!otpModalOpen || otpAutoFilled) return;
-    const autoTimer = setTimeout(() => {
-      setOtp("482931");
-      setOtpAutoFilled(true);
-    }, 900);
-    return () => clearTimeout(autoTimer);
-  }, [otpModalOpen, otpAutoFilled]);
-
-  useEffect(() => {
     if (sameContact) setPrimaryContact(mobile);
   }, [sameContact, mobile]);
 
   const startOtpFlow = () => {
     if (!mobile || mobile.length < 10) return toast.error("Enter valid mobile");
     setOtp("");
-    setOtpAutoFilled(false);
     setOtpCountdown(27);
     setOtpModalOpen(true);
     setIsVerifying(true);
@@ -191,27 +196,95 @@ export default function Onboarding() {
 
   const resendOtp = () => {
     setOtp("");
-    setOtpAutoFilled(false);
     setOtpCountdown(27);
     toast.success("OTP resent");
   };
 
-  const verifyPan = () => {
-    if (!pan || pan.length < 10) return setPanStatus("fail");
-    setPanStatus("verifying");
-    setTimeout(() => setPanStatus(/^[A-Z]{5}[0-9]{4}[A-Z]$/.test(pan.toUpperCase()) ? "success" : "fail"), 1200);
+  // ── KYC checks ────────────────────────────────────────────────
+  // These are FORMAT checks and nothing more. There is no PAN lookup service
+  // wired to this app, so the only honest outcomes are "that isn't a PAN" and
+  // "queued for a human to verify". vendor_documents.verified stays false until
+  // an admin flips it; showing a green "Verified" here would be the app
+  // vouching for a document nobody has looked at.
+  const PAN_FORMAT = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+
+  const checkPanFormat = () => setPanStatus(PAN_FORMAT.test(pan.toUpperCase()) ? "submitted" : "invalid");
+
+  const checkPanName = () => {
+    const name = panFullName.trim();
+    // A name has no checkable format beyond "looks like a name" — letters,
+    // spaces and the punctuation Indian entity names actually use.
+    setPanNameStatus(name.length >= 3 && /^[A-Za-z][A-Za-z\s.&'()-]*$/.test(name) ? "submitted" : "invalid");
   };
 
-  const verifyPanName = () => {
-    if (!panFullName.trim()) return setPanNameStatus("fail");
-    setPanNameStatus("verifying");
-    setTimeout(() => setPanNameStatus(panFullName.toLowerCase().includes("fearce") ? "fail" : "success"), 1200);
+  // ── Uploads ───────────────────────────────────────────────────
+  // Every picker here uploads to Supabase storage and keeps the PUBLIC URL.
+  // They used to keep URL.createObjectURL() blobs, which are alive only in the
+  // tab that made them: the vendor saw their photos, the database got nothing,
+  // and a reload lost them.
+  const requireSession = (what: string): boolean => {
+    if (user) return true;
+    toast.error(`Sign in to upload ${what}`, { description: "Your registration is saved to your account." });
+    return false;
   };
 
-  const onPickImages = (e: React.ChangeEvent<HTMLInputElement>, setter: (urls: string[]) => void, current: string[], max: number) => {
+  const handleBusinessImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const urls = files.slice(0, max - current.length).map((f) => URL.createObjectURL(f));
-    setter([...current, ...urls]);
+    e.target.value = ""; // let the same file be re-picked after a failure
+    if (files.length === 0) return;
+    if (!requireSession("business images")) return;
+    setBusinessImageGuidelinesOpen(false);
+    setBusinessImagePickerOpen(false);
+    setUploadingBusinessImages(files.length);
+    try {
+      const urls = await Promise.all(files.map((f) => uploadVendorGalleryImage(user!.id, f)));
+      setBusinessImageUploads((current) => [...current, ...urls]);
+    } catch (err) {
+      toast.error("Couldn't upload business images", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setUploadingBusinessImages(0);
+    }
+  };
+
+  const handlePanDocumentFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!requireSession("your PAN")) return;
+    setUploadingPanDocument(true);
+    try {
+      const url = await uploadKycDocument(user!.id, file);
+      setPanDocumentUrl(url);
+      setPanDocumentName(file.name);
+    } catch (err) {
+      toast.error("Couldn't upload your PAN", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setUploadingPanDocument(false);
+    }
+  };
+
+  const MAX_PRODUCT_IMAGES = 6;
+  const handleProductImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    const files = picked.slice(0, MAX_PRODUCT_IMAGES - productImages.length);
+    if (files.length === 0) return;
+    if (!requireSession("product images")) return;
+    setUploadingProductImages(files.length);
+    try {
+      const urls = await Promise.all(files.map((f) => uploadOnboardingProductImage(user!.id, f)));
+      setProductImages((current) => [...current, ...urls]);
+    } catch (err) {
+      toast.error("Couldn't upload product images", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+    } finally {
+      setUploadingProductImages(0);
+    }
   };
 
   const toggleChip = (val: string, list: string[], setter: (l: string[]) => void) => {
@@ -219,12 +292,12 @@ export default function Onboarding() {
   };
 
   const goNext = () => {
-    if (currentStep === 4 && !step4Success) { setStep4Success(true); return; }
-    if (currentStep === 6 && !step6Success) { setStep6Success(true); return; }
-    if (currentStep === 7 && !step7Success) { setStep7Success(true); return; }
+    if (currentStep === 4 && !ownerSuccess) { setOwnerSuccess(true); return; }
+    if (currentStep === 7 && !documentsSuccess) { setDocumentsSuccess(true); return; }
+    if (currentStep === 8 && !productSuccess) { setProductSuccess(true); return; }
     if (currentStep < TOTAL_STEPS) {
       setCurrentStep((s) => s + 1);
-      setStep4Success(false); setStep6Success(false); setStep7Success(false);
+      setOwnerSuccess(false); setDocumentsSuccess(false); setProductSuccess(false);
     }
   };
   const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
@@ -268,8 +341,15 @@ export default function Onboarding() {
           const data = await res.json();
           const detectedCity = data.city || data.locality || data.principalSubdivision || "";
           const detectedArea = data.locality || data.city || "";
+          const detectedState = data.principalSubdivision || "";
+          const detectedPostcode = (data.postcode || "").replace(/\D/g, "").slice(0, 6);
           if (detectedCity) setCity(detectedCity);
           if (detectedArea) setArea((v) => v || detectedArea);
+          // State and pincode are new required fields; the reverse geocode
+          // already returns both, so filling them here saves the vendor typing
+          // what the browser just told us.
+          if (detectedState) setState((v) => v || detectedState);
+          if (detectedPostcode.length === 6) setPincode((v) => v || detectedPostcode);
           toast.success(detectedCity ? `Location set — ${detectedCity}` : "Location detected");
         } catch {
           toast.error("Couldn't look up your location details");
@@ -291,42 +371,67 @@ export default function Onboarding() {
 
   const submitContract = async () => {
     if (!agreed || !contractName.trim()) return toast.error("Complete the name and agreement to continue");
-    // Persist the whole registration to the DB (vendor_profiles + KYC docs +
-    // the step-7 product). Non-blocking: the welcome screen shows regardless.
-    if (user) {
-      try {
-        await saveVendorOnboarding(user.id, {
-          businessName: businessName || contractName,
-          phone: mobile ? `${countryCode} ${mobile}` : (primaryContact || undefined),
-          whatsapp: whatsappOptIn && mobile ? `${countryCode} ${mobile}` : undefined,
-          website: hasWebsite ? websiteUrl : undefined,
-          addressLine: [building, floor].filter(Boolean).join(", ") || undefined,
-          area: area || undefined,
-          city: city || undefined,
-          landmark: landmark || undefined,
-          ownerName: ownerName || contractName,
-          ownerEmail: ownerEmail || undefined,
-          country: country === "IN" ? "India" : country || undefined,
-          pan: pan || undefined,
-          gstin: hasGstin ? gstin : undefined,
-          cin: cin || undefined,
-          aadhaar: aadhaar || undefined,
-          product: productName
-            ? {
-                name: productName,
-                price: price || undefined,
-                moq: moq || undefined,
-                fabric: fabric || undefined,
-                gsm: gsm || undefined,
-                category,
-              }
-            : undefined,
-        });
-      } catch (err) {
-        toast.error("Couldn't save some registration details", {
-          description: err instanceof Error ? err.message : String(err),
-        });
-      }
+
+    // No session, no registration. This used to be `if (user) { ...save... }`
+    // followed by an unconditional success screen: a signed-out vendor filled
+    // in eight steps, saw "Welcome to Cosora", and had written nothing
+    // anywhere. Block here and keep them on this step instead.
+    if (!user) {
+      const msg = "You're signed out, so this registration can't be saved. Sign in or create an account, then submit again — your answers stay on this page.";
+      setSubmitError(msg);
+      toast.error("Sign in to finish registering", { description: msg });
+      return;
+    }
+
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await saveVendorOnboarding(user.id, {
+        businessName: businessName || contractName,
+        phone: mobile ? `${countryCode} ${mobile}` : (primaryContact || undefined),
+        whatsapp: whatsappOptIn && mobile ? `${countryCode} ${mobile}` : undefined,
+        website: hasWebsite ? websiteUrl : undefined,
+        addressLine: [building, floor].filter(Boolean).join(", ") || undefined,
+        area: area || undefined,
+        city: city || undefined,
+        state: state || undefined,
+        postalCode: pincode || undefined,
+        landmark: landmark || undefined,
+        ownerName: ownerName || contractName,
+        ownerEmail: ownerEmail || undefined,
+        country: country === "IN" ? "India" : country || undefined,
+        pan: pan || undefined,
+        gstin: hasGstin ? gstin : undefined,
+        cin: cin || undefined,
+        aadhaar: aadhaar || undefined,
+        category: businessCategories.length ? businessCategories : undefined,
+        officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
+        panFileUrl: panDocumentUrl ?? undefined,
+        product: productName
+          ? {
+              name: productName,
+              price: price || undefined,
+              unit: unit || undefined,
+              moq: moq || undefined,
+              fabric: fabric || undefined,
+              gsm: gsm || undefined,
+              category,
+              sizes: selectedSizes,
+              colours: selectedColors,
+              images: productImages,
+            }
+          : undefined,
+      });
+    } catch (err) {
+      // Same reasoning as the signed-out case: a write that failed is a
+      // registration that does not exist, so it must not look like one that
+      // succeeded. Everything typed stays on screen and Submit can be retried.
+      const msg = err instanceof Error ? err.message : String(err);
+      setSubmitError(`We couldn't save your registration: ${msg}`);
+      toast.error("Couldn't save your registration", { description: msg });
+      return;
+    } finally {
+      setSubmitting(false);
     }
     setShowWelcome(true);
   };
@@ -349,18 +454,18 @@ export default function Onboarding() {
       label: "Products details",
       helper: "Category, Products.",
       icon: Package,
-      state: currentStep > 6 ? "done" : "locked",
+      state: currentStep > 8 ? "done" : "locked",
     },
     {
       label: "Partner contract",
       helper: "",
       icon: FileSignature,
-      state: currentStep >= 8 ? "active" : "locked",
+      state: currentStep >= TOTAL_STEPS ? "active" : "locked",
     },
   ];
-  const canSubmitContract = contractName.trim().length > 0 && agreed;
+  const canSubmitContract = contractName.trim().length > 0 && agreed && !submitting;
 
-  const contractDisplayName = contractName.trim() || "Anandita";
+  const contractDisplayName = contractName.trim() || "Your full name";
   const syncSignatureCanvasSize = () => {
     const canvas = signatureCanvasRef.current;
     if (!canvas) return;
@@ -448,17 +553,24 @@ export default function Onboarding() {
     otpVerified &&
     (!hasWebsite || websiteUrl.trim().length > 0) &&
     (sameContact || primaryContact.trim().length >= 10);
-  const canAddAddress = area.trim().length > 0;
+  // State and pincode are required, not optional: `state` feeds the location
+  // line buyers see on /vendor/:id and `postal_code` is the only thing that
+  // makes an address deliverable. Both columns existed and were written by
+  // saveVendorOnboarding all along — the form simply never asked.
+  const pincodeValid = /^\d{6}$/.test(pincode);
+  const canAddAddress = area.trim().length > 0 && state.trim().length > 0 && pincodeValid;
   const canSaveOwner =
     ownerName.trim().length > 0 &&
     ownerEmail.trim().length > 0 &&
     country.trim().length > 0;
-  const canUploadBusinessImages = businessImageUploads.length > 0;
+  const canContinueCategories = businessCategories.length > 0;
+  const canUploadBusinessImages = businessImageUploads.length > 0 && uploadingBusinessImages === 0;
   const canSubmitPanDocuments =
     pan.trim().length > 0 &&
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
-    panDocumentUploads.length > 0;
+    panDocumentUrl !== null &&
+    !uploadingPanDocument;
 
   if (showWelcome) {
     return (
@@ -489,7 +601,7 @@ export default function Onboarding() {
     );
   }
 
-  if (currentStep === 8) {
+  if (currentStep === TOTAL_STEPS) {
     if (contractStage === "overview") {
       return (
         <div className="vendor-shell min-h-screen bg-[#ffffff] pb-24">
@@ -773,13 +885,28 @@ export default function Onboarding() {
                 </Label>
               </div>
 
+              {submitError && (
+                <div className="flex items-start gap-2 rounded-2xl border border-[#ef4d62]/40 bg-[#ef4d62]/5 p-4">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#ef4d62]" />
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-[#363636]">Registration not saved</p>
+                    <p className="text-sm text-[#363636]">{submitError}</p>
+                    {!user && (
+                      <Link to="/login" className="inline-block text-sm font-semibold text-[#256fef] underline underline-offset-2">
+                        Go to sign in
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <Button
                 type="button"
                 onClick={submitContract}
                 disabled={!canSubmitContract}
                 className="h-12 w-full rounded-full bg-[#256fef] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Submit
+                {submitting ? "Saving your registration…" : "Submit"}
               </Button>
             </div>
           </div>
@@ -885,143 +1012,12 @@ export default function Onboarding() {
     );
   }
 
-  if (showWelcome) {
-    return (
-      <div className="vendor-shell fixed inset-0 bg-[#256fef] text-white flex items-center justify-center overflow-hidden z-50">
-        {Array.from({ length: 30 }).map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 rounded-sm"
-            style={{
-              backgroundColor: ["#fff", "#ffd700", "#ff6b6b", "#4ade80"][i % 4],
-              left: `${Math.random() * 100}%`,
-            }}
-            initial={{ y: -20, opacity: 1 }}
-            animate={{ y: "100vh", rotate: 360, opacity: 0 }}
-            transition={{ duration: 2 + Math.random() * 2, repeat: Infinity, delay: Math.random() }}
-          />
-        ))}
-        <motion.div initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative z-10 w-full max-w-4xl px-4 sm:px-6">
-          <div className="rounded-[2rem] border border-[#d0d4dc] bg-white p-6 shadow-2xl backdrop-blur-md sm:p-8">
-            <div className="text-center">
-              <img
-                src="/cosoravendorlogo.png"
-                alt="Cosora For Sellers"
-                className="mx-auto mb-4 h-14 w-auto object-contain sm:h-16"
-                draggable={false}
-              />
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">The Good Times Start Now.</h1>
-              <p className="text-lg md:text-xl">Welcome to Cosora 🎉</p>
-              <p className="mt-2 text-sm text-white/80">Your seller profile is live and we are surfacing the next actions that will improve your reach.</p>
-            </div>
-
-            <div className="mt-6 grid gap-3 md:grid-cols-2">
-              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-wide text-white/70">Profile completion score</p>
-                <div className="mt-2 flex items-end justify-between gap-3">
-                  <div>
-                    <p className="text-4xl font-bold">{summary.profileScore}%</p>
-                    <p className="text-sm text-[#363636]">Add email, website, and more product detail to improve trust.</p>
-                  </div>
-                  <div className="rounded-full border border-white/20 px-3 py-1 text-xs font-medium">Needs attention</div>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="h-4 w-4" />
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#363636]">Email ID alert</p>
-                </div>
-                <p className="mt-2 text-sm text-[#363636]">{ownerEmail ? "Email captured during onboarding." : "Email is missing. Add it now to receive buyer notifications and order updates."}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {!ownerEmail ? (
-                    <Button type="button" size="sm" className="h-8 bg-[#256fef] text-white rounded-full font-medium" onClick={() => navigate("/my-store")}> 
-                      <Mail className="mr-2 h-4 w-4" />
-                      Add Email Now
-                    </Button>
-                  ) : (
-                    <div className="rounded-full bg-[#f5f5f5] px-3 py-1 text-xs text-[#363636]">Email added</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4" />
-                  <p className="text-xs font-semibold uppercase tracking-wide text-[#363636]">Demand signal</p>
-                </div>
-                <p className="mt-2 text-sm text-[#363636]">{summary.demandSignal}. This is a strong time to complete the missing profile fields.</p>
-              </div>
-
-              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4" />
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#363636]">Location access</p>
-                  </div>
-                  {locationMode && (
-                    <span className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide">{locationMode}</span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm text-[#363636]">{summary.locationPrompt}</p>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button type="button" size="sm" className="h-8 bg-[#256fef] text-white rounded-full" onClick={() => { setLocationMode("automatic"); toast.success("Location access enabled via automatic popup"); }}>
-                    Automatic
-                  </Button>
-                  <Button type="button" size="sm" variant="outline" className="h-8 border border-[#256fef] text-[#256fef] rounded-full" onClick={() => setLocationMode("manual")}> 
-                    Manual
-                  </Button>
-                </div>
-                {locationMode === "manual" && (
-                  <div className="mt-3 space-y-2">
-                    <Input
-                      value={manualLocation}
-                      onChange={(e) => setManualLocation(e.target.value)}
-                      placeholder="Enter city or locality"
-                      className="bg-background/90 text-foreground placeholder:text-muted-foreground"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 bg-background text-foreground hover:bg-background/90"
-                      onClick={() => toast.success(`Manual location saved${manualLocation ? `: ${manualLocation}` : ""}`)}
-                    >
-                      Save Location
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Button
-                type="button"
-                className="flex-1 bg-background text-foreground hover:bg-background/90"
-                onClick={() => { finishVendorRegistration(); navigate("/seller-home"); }}
-              >
-                Continue to Dashboard
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="flex-1 border border-[#256fef] text-[#256fef] rounded-full"
-                onClick={() => { finishVendorRegistration(); navigate("/my-store"); }}
-              >
-                Finish Profile Details
-              </Button>
-            </div>
-          </div>
-        </motion.div>
-      </div>
-    );
-  }
-
-  if (currentStep === 4 && step4Success) {
+  if (currentStep === 4 && ownerSuccess) {
     return (
       <BusinessInfoSuccessScreen
         text="Business information added"
         onContinue={() => {
-          setStep4Success(false);
+          setOwnerSuccess(false);
           setCurrentStep(5);
         }}
       />
@@ -1123,7 +1119,7 @@ export default function Onboarding() {
       <div className="max-w-2xl mx-auto p-4">
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentStep + "-" + (step4Success ? "s4" : step6Success ? "s6" : step7Success ? "s7" : "main")}
+            key={currentStep + "-" + (ownerSuccess ? "owner" : documentsSuccess ? "docs" : productSuccess ? "product" : "main")}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
@@ -1407,14 +1403,39 @@ export default function Onboarding() {
                       className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-[#363636]">City*</Label>
+                      <Input
+                        value={city}
+                        onChange={(e) => setCity(e.target.value)}
+                        placeholder="City"
+                        className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium text-[#363636]">State*</Label>
+                      <Input
+                        value={state}
+                        onChange={(e) => setState(e.target.value)}
+                        placeholder="State"
+                        className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">City</Label>
+                    <Label className="text-sm font-medium text-[#363636]">Pincode*</Label>
                     <Input
-                      value={city}
-                      onChange={(e) => setCity(e.target.value)}
-                      placeholder="City"
+                      value={pincode}
+                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                      placeholder="6-digit pincode"
+                      inputMode="numeric"
+                      maxLength={6}
                       className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
                     />
+                    {pincode.length > 0 && !pincodeValid && (
+                      <p className="text-xs text-[#ef4d62]">Enter all 6 digits of your pincode.</p>
+                    )}
                   </div>
                   <div className="space-y-1">
                     <Label className="text-sm font-medium text-[#363636]">Add any nearby landmark (optional)</Label>
@@ -1454,7 +1475,7 @@ export default function Onboarding() {
             )}
 
             {/* STEP 4 */}
-            {currentStep === 4 && !step4Success && (
+            {currentStep === 4 && !ownerSuccess && (
               <div className="space-y-6">
                 <div>
                   <h2 className="text-2xl font-bold text-[#363636]">Owner details</h2>
@@ -1505,8 +1526,86 @@ export default function Onboarding() {
               </div>
             )}
 
-            {/* STEP 5 */}
+            {/* STEP 5 — BUSINESS CATEGORY
+                Writes vendor_profiles.category. Without it a finished vendor
+                is invisible to every category search on the platform, which is
+                why this step exists at all: the column was only reachable from
+                /business-profile, after registration, if the vendor happened to
+                find it. Same component as /business-profile — one picker, one
+                list of categories, no drift. */}
             {currentStep === 5 && (
+              <div className="space-y-6">
+                <div className="flex items-start gap-3">
+                  <button type="button" onClick={goPrev} className="mt-1 text-[#363636]" aria-label="Back">
+                    <ArrowLeft className="h-4 w-4" />
+                  </button>
+                  <div className="text-center flex-1">
+                    <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
+                    <p className="text-xs text-[#363636]/70">For Sellers</p>
+                  </div>
+                  <div className="w-4" />
+                </div>
+
+                <div className="space-y-2">
+                  <h2 className="text-lg font-semibold text-[#363636]">What kind of business are you?</h2>
+                  <p className="text-sm font-normal text-[#363636]">
+                    Buyers browse and filter by these categories. Pick every one that describes what you make, trade or provide.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setCategoriesModalOpen(true)}
+                  className="w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                >
+                  <Tag className="mx-auto h-10 w-10 text-[#256fef]" />
+                  <p className="mt-3 font-semibold text-[#256fef]">
+                    {businessCategories.length > 0 ? "Edit business categories" : "Add business categories"}
+                  </p>
+                  <p className="mt-1 text-xs text-[#363636]/70">Manufacturer, wholesaler, retailer, services and more</p>
+                </button>
+
+                {businessCategories.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#363636]/70">
+                      Selected ({businessCategories.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {businessCategories.map((cat) => (
+                        <span key={cat} className="flex items-center gap-1.5 rounded-full bg-[#256fef] px-3 py-1.5 text-xs font-medium text-white">
+                          {cat}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${cat}`}
+                            onClick={() => setBusinessCategories((prev) => prev.filter((c) => c !== cat))}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <Button
+                  onClick={() => setCurrentStep(6)}
+                  disabled={!canContinueCategories}
+                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Next
+                </Button>
+
+                <AddBusinessCategoriesModal
+                  isOpen={categoriesModalOpen}
+                  onClose={() => setCategoriesModalOpen(false)}
+                  categories={businessCategories}
+                  onCategoriesChange={setBusinessCategories}
+                />
+              </div>
+            )}
+
+            {/* STEP 6 — BUSINESS IMAGES */}
+            {currentStep === 6 && (
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
                   <button type="button" onClick={goPrev} className="mt-1 text-[#363636]" aria-label="Back">
@@ -1559,13 +1658,10 @@ export default function Onboarding() {
                         <span className="mt-2 text-sm font-medium">Browse</span>
                       </button>
                     </div>
-                    <div className="mt-4 grid grid-cols-3 gap-2">
-                      {Array.from({ length: 9 }).map((_, index) => (
-                        <button key={index} type="button" className="aspect-square rounded-xl bg-[#eef0f3] border border-[#d0d4dc] relative overflow-hidden">
-                          <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-transparent" />
-                        </button>
-                      ))}
-                    </div>
+                    {/* The nine grey squares that used to sit here were a
+                        drawing of a device photo gallery — not a picker, not
+                        clickable, not the vendor's photos. Removed: the two
+                        buttons above open the real file picker. */}
                     <Button className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold" onClick={() => setBusinessImagePickerOpen(false)}>
                       Done
                     </Button>
@@ -1626,29 +1722,35 @@ export default function Onboarding() {
                   Guidelines to upload business images
                 </button>
 
-                {businessImageUploads.length > 0 && (
+                {(businessImageUploads.length > 0 || uploadingBusinessImages > 0) && (
                   <div className="grid grid-cols-3 gap-2">
                     {businessImageUploads.map((src, i) => (
-                      <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
-                        <img src={src} alt="Business upload" className="h-full w-full object-cover" />
+                      <div key={src} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
+                        <img src={src} alt={`Business photo ${i + 1}`} className="h-full w-full object-cover" />
                         <button
                           type="button"
                           className="absolute right-1 top-1 rounded-full bg-white p-1 shadow"
-                          onClick={() => setBusinessImageUploads((items) => items.filter((_, index) => index !== i))}
+                          aria-label="Remove photo"
+                          onClick={() => setBusinessImageUploads((items) => items.filter((item) => item !== src))}
                         >
                           <X className="h-3 w-3" />
                         </button>
+                      </div>
+                    ))}
+                    {Array.from({ length: uploadingBusinessImages }).map((_, i) => (
+                      <div key={`uploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-xl bg-[#eef0f3]">
+                        <span className="text-[10px] text-[#363636]/60">Uploading…</span>
                       </div>
                     ))}
                   </div>
                 )}
 
                 <Button
-                  onClick={() => setCurrentStep(6)}
+                  onClick={() => setCurrentStep(7)}
                   disabled={!canUploadBusinessImages}
                   className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Next
+                  {uploadingBusinessImages > 0 ? "Uploading…" : "Next"}
                 </Button>
 
                 <input
@@ -1657,21 +1759,13 @@ export default function Onboarding() {
                   accept="image/*"
                   multiple
                   className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    const urls = files.map((file) => URL.createObjectURL(file));
-                    setBusinessImageUploads((current) => [...current, ...urls]);
-                    if (files.length > 0) {
-                      setBusinessImageGuidelinesOpen(false);
-                      setBusinessImagePickerOpen(false);
-                    }
-                  }}
+                  onChange={handleBusinessImageFiles}
                 />
               </div>
             )}
 
-            {/* STEP 6 */}
-            {currentStep === 6 && !step6Success && (
+            {/* STEP 7 — BUSINESS DOCUMENTS */}
+            {currentStep === 7 && !documentsSuccess && (
               <div className="space-y-6 pb-14">
                 <div className="flex items-center justify-between">
                   <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-full text-[#363636]" aria-label="Back">
@@ -1686,74 +1780,88 @@ export default function Onboarding() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">PAN number*</Label>
+                  <Label htmlFor="pan-number" className="text-sm font-medium text-[#363636]">PAN number*</Label>
                   <div className="flex items-center gap-2">
                     <Input
+                      id="pan-number"
                       value={pan}
                       onChange={(e) => setPan(e.target.value.toUpperCase())}
-                      placeholder=""
+                      placeholder="ABCDE1234F"
                       maxLength={10}
                       className={cn(
                         "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
-                        panStatus === "success" && "border-[#14ae5c]",
-                        panStatus === "fail" && "border-red-500",
+                        panStatus === "submitted" && "border-[#256fef]",
+                        panStatus === "invalid" && "border-[#ef4d62]",
                       )}
-                      disabled={panStatus === "verifying"}
                     />
-                    {panStatus === "verifying" ? (
-                      <span className="text-sm text-[#363636]/70">Verifying...</span>
-                    ) : panStatus === "success" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#14ae5c]">
-                        <Check className="h-4 w-4" /> Verified
+                    {panStatus === "submitted" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#256fef]">
+                        <Clock className="h-4 w-4" /> Submitted for review
                       </span>
-                    ) : panStatus === "fail" ? (
+                    ) : panStatus === "invalid" ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
-                        <AlertCircle className="h-4 w-4" /> Verification failed
+                        <AlertCircle className="h-4 w-4" /> Check the format
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={verifyPan}>
-                        Verify
+                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={checkPanFormat}>
+                        Check
                       </Button>
                     )}
                   </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Full name as per PAN*</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      value={panFullName}
-                      onChange={(e) => setPanFullName(e.target.value)}
-                      className={cn(
-                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
-                        panNameStatus === "fail" && "border-red-500",
-                        panNameStatus === "success" && "border-[#14ae5c]",
-                      )}
-                    />
-                    {panNameStatus === "verifying" ? (
-                      <span className="text-sm text-[#363636]/70">Verifying...</span>
-                    ) : panNameStatus === "fail" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
-                        <AlertCircle className="h-4 w-4" /> Verification failed
-                      </span>
-                    ) : panNameStatus === "success" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#14ae5c]">
-                        <Check className="h-4 w-4" /> Verified
-                      </span>
-                    ) : (
-                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={verifyPanName}>
-                        Verify
-                      </Button>
-                    )}
-                  </div>
-                  {panNameStatus === "fail" && (
-                    <p className="text-xs text-[#ef4d62]">We couldn't verify your PAN name. Please enter it exactly as shown on your PAN card.</p>
+                  {panStatus === "invalid" && (
+                    <p className="text-xs text-[#ef4d62]">A PAN is 5 letters, 4 digits, then 1 letter — for example ABCDE1234F.</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Full address of your registered business*</Label>
+                  <Label htmlFor="pan-full-name" className="text-sm font-medium text-[#363636]">Full name as per PAN*</Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="pan-full-name"
+                      value={panFullName}
+                      onChange={(e) => setPanFullName(e.target.value)}
+                      placeholder="Name exactly as printed on the PAN card"
+                      className={cn(
+                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
+                        panNameStatus === "invalid" && "border-[#ef4d62]",
+                        panNameStatus === "submitted" && "border-[#256fef]",
+                      )}
+                    />
+                    {panNameStatus === "invalid" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
+                        <AlertCircle className="h-4 w-4" /> Check the name
+                      </span>
+                    ) : panNameStatus === "submitted" ? (
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#256fef]">
+                        <Clock className="h-4 w-4" /> Submitted for review
+                      </span>
+                    ) : (
+                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={checkPanName}>
+                        Check
+                      </Button>
+                    )}
+                  </div>
+                  {panNameStatus === "invalid" && (
+                    <p className="text-xs text-[#ef4d62]">Enter the name exactly as shown on your PAN card.</p>
+                  )}
+                </div>
+
+                {/* Says out loud what actually happens to these documents.
+                    The form previously rendered a green "Verified" tick from a
+                    regex and a 1.2s timer, which is the app vouching for a
+                    document nobody had looked at. */}
+                <div className="flex items-start gap-2 rounded-2xl border border-[#d0d4dc] bg-[#f5f5f5] p-3">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#256fef]" />
+                  <p className="text-xs leading-5 text-[#363636]">
+                    Cosora checks the format here and queues your documents for review. A member of our team verifies them
+                    against your uploads, usually within 24–48 hours, and your profile is marked verified once that is done.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="pan-address" className="text-sm font-medium text-[#363636]">Full address of your registered business*</Label>
                   <Input
+                    id="pan-address"
                     value={panAddress}
                     onChange={(e) => setPanAddress(e.target.value)}
                     className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
@@ -1763,26 +1871,42 @@ export default function Onboarding() {
                 <div className="space-y-3 rounded-2xl border border-[#d0d4dc] p-4">
                   <button
                     type="button"
-                    className="block w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                    disabled={uploadingPanDocument}
+                    className="block w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center disabled:opacity-60"
                     onClick={() => panDocumentInputRef.current?.click()}
                   >
                     <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
-                    <p className="mt-3 font-semibold text-[#256fef]">Upload your PAN</p>
+                    <p className="mt-3 font-semibold text-[#256fef]">
+                      {uploadingPanDocument ? "Uploading…" : panDocumentUrl ? "Replace your PAN" : "Upload your PAN"}
+                    </p>
                     <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf formats up to 5MB</p>
                   </button>
                   <button type="button" className="text-sm text-[#256fef] underline" onClick={() => setPanGuidelinesOpen(true)}>
                     Guidelines to upload PAN
                   </button>
-                  {panDocumentUploads.length > 0 && (
-                    <div className="grid grid-cols-3 gap-2">
-                      {panDocumentUploads.map((src, i) => (
-                        <div key={i} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
-                          <img src={src} alt="PAN upload" className="h-full w-full object-cover" />
-                          <button type="button" className="absolute right-1 top-1 rounded-full bg-white p-1 shadow" onClick={() => setPanDocumentUploads((items) => items.filter((_, index) => index !== i))}>
-                            <X className="h-3 w-3" />
-                          </button>
+                  {/* One document, one row. The old grid rendered every pick as
+                      an <img> — which paints a broken-image glyph for the PDF
+                      the copy above invites — and none of them were uploaded
+                      anywhere, so vendor_documents.file_url was always null. */}
+                  {panDocumentUrl && (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
+                          <FileText className="h-4 w-4 text-[#256fef]" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-[#363636]">{panDocumentName || "PAN document"}</p>
+                          <p className="text-[10px] text-[#363636]/60">Uploaded · awaiting review</p>
                         </div>
-                      ))}
+                      </div>
+                      <button
+                        type="button"
+                        aria-label="Remove PAN document"
+                        className="shrink-0 rounded-full p-1 text-[#363636]/60 hover:bg-[#f5f5f5]"
+                        onClick={() => { setPanDocumentUrl(null); setPanDocumentName(""); }}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
                   )}
                   <Dialog open={panGuidelinesOpen} onOpenChange={setPanGuidelinesOpen}>
@@ -1841,62 +1965,90 @@ export default function Onboarding() {
                 </div>
 
                 <Button
-                  onClick={() => setStep6Success(true)}
+                  onClick={() => setDocumentsSuccess(true)}
                   disabled={!canSubmitPanDocuments}
                   className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </Button>
 
-                <p className="text-xs text-[#d0d4dc]">Vendor ID: 21935326</p>
+                {/* "Vendor ID: 21935326" was here — a constant, the same for
+                    every vendor, and not any id this system issues. */}
 
                 <input
                   ref={panDocumentInputRef}
                   type="file"
                   accept="image/*,application/pdf"
                   className="hidden"
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files || []);
-                    const urls = files.map((file) => URL.createObjectURL(file));
-                    setPanDocumentUploads((current) => [...current, ...urls]);
-                  }}
+                  onChange={handlePanDocumentFile}
                 />
               </div>
             )}
-            {currentStep === 6 && step6Success && (
-              <BusinessInfoSuccessScreen text="Business documents added" onContinue={() => { setStep6Success(false); setCurrentStep(7); }} />
+            {currentStep === 7 && documentsSuccess && (
+              <BusinessInfoSuccessScreen text="Business documents added" onContinue={() => { setDocumentsSuccess(false); setCurrentStep(8); }} />
             )}
 
-            {/* STEP 7 */}
-            {currentStep === 7 && !step7Success && (
+            {/* STEP 8 — FIRST PRODUCT */}
+            {currentStep === 8 && !productSuccess && (
               <div className="space-y-5">
                 <h2 className="text-2xl font-bold">Add your first product</h2>
                 <div className="space-y-2">
-                  <Label>Product Images (up to 6)</Label>
-                  <label className="block rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] p-6 text-center cursor-pointer hover:bg-[#eef0f3]">
+                  <Label>Product Images (up to {MAX_PRODUCT_IMAGES})</Label>
+                  <label
+                    className={cn(
+                      "block rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] p-6 text-center hover:bg-[#eef0f3]",
+                      productImages.length >= MAX_PRODUCT_IMAGES || uploadingProductImages > 0
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-pointer",
+                    )}
+                  >
                     <UploadIcon className="w-6 h-6 mx-auto text-[#363636] mb-2" />
-                    <p className="text-sm">Click to upload</p>
-                    <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => onPickImages(e, setProductImages, productImages, 6)} />
+                    <p className="text-sm">
+                      {uploadingProductImages > 0
+                        ? "Uploading…"
+                        : productImages.length >= MAX_PRODUCT_IMAGES
+                          ? `${MAX_PRODUCT_IMAGES} images added`
+                          : "Click to upload"}
+                    </p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      disabled={productImages.length >= MAX_PRODUCT_IMAGES || uploadingProductImages > 0}
+                      onChange={handleProductImageFiles}
+                    />
                   </label>
-                  {productImages.length > 0 && (
+                  {(productImages.length > 0 || uploadingProductImages > 0) && (
                     <div className="grid grid-cols-3 gap-2">
                       {productImages.map((src, i) => (
-                        <div key={i} className="relative aspect-square rounded-lg overflow-hidden border group">
-                          <img src={src} alt="" className="w-full h-full object-cover" />
-                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-1">
-                            <button className="p-1.5 bg-background rounded-full" title="Remove BG"><Eraser className="w-3 h-3" /></button>
-                            <button className="p-1.5 bg-background rounded-full" title="Crop"><Crop className="w-3 h-3" /></button>
-                            <button className="p-1.5 bg-background rounded-full" title="Rotate"><RotateCw className="w-3 h-3" /></button>
-                            <button onClick={() => setProductImages(productImages.filter((_, j) => j !== i))} className="p-1.5 bg-background rounded-full"><X className="w-3 h-3" /></button>
-                          </div>
+                        /* The "Remove BG" / "Crop" / "Rotate" buttons that used
+                           to live in this overlay had no handlers at all — three
+                           icons that did nothing on hover. Remove is the one
+                           action that was real, so it is the one that stayed. */
+                        <div key={src} className="relative aspect-square rounded-lg overflow-hidden border group">
+                          <img src={src} alt={`Product image ${i + 1}`} className="w-full h-full object-cover" />
+                          <button
+                            type="button"
+                            aria-label="Remove image"
+                            onClick={() => setProductImages((items) => items.filter((item) => item !== src))}
+                            className="absolute right-1 top-1 rounded-full bg-white p-1.5 shadow"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                      {Array.from({ length: uploadingProductImages }).map((_, i) => (
+                        <div key={`puploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-lg bg-[#eef0f3]">
+                          <span className="text-[10px] text-[#363636]/60">Uploading…</span>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
-                <div className="space-y-2"><Label>Product / Service Name</Label><Input value={productName} onChange={(e) => setProductName(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="product-name">Product / Service Name</Label><Input id="product-name" value={productName} onChange={(e) => setProductName(e.target.value)} /></div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-2 col-span-2"><Label>Price</Label><Input type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+                  <div className="space-y-2 col-span-2"><Label htmlFor="product-price">Price</Label><Input id="product-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
                   <div className="space-y-2">
                     <Label>Unit</Label>
                     <Select value={unit} onValueChange={setUnit}>
@@ -1905,7 +2057,7 @@ export default function Onboarding() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2"><Label>MOQ (Minimum Order Qty)</Label><Input type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="product-moq">MOQ (Minimum Order Qty)</Label><Input id="product-moq" type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></div>
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <CategorySelector selectedCategory={category} onSelectCategory={setCategory} />
@@ -1918,7 +2070,7 @@ export default function Onboarding() {
                       <SelectContent>{FABRICS.map((f) => <SelectItem key={f} value={f}>{f}</SelectItem>)}</SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label>GSM</Label><Input value={gsm} onChange={(e) => setGsm(e.target.value)} /></div>
+                  <div className="space-y-2"><Label htmlFor="product-gsm">GSM</Label><Input id="product-gsm" value={gsm} onChange={(e) => setGsm(e.target.value)} /></div>
                 </div>
                 <div className="space-y-2">
                   <Label>Sizes</Label>
@@ -1935,49 +2087,37 @@ export default function Onboarding() {
                       <button key={c} onClick={() => toggleChip(c, selectedColors, setSelectedColors)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedColors.includes(c) ? "bg-[#256fef] text-white border-[#256fef]" : "bg-white hover:bg-[#256fef]/10 border border-[#d0d4dc]")}>{c}</button>
                     ))}
                   </div>
+                  {/* `products.colour` is a single text column across this
+                      codebase (Upload.tsx truncates the same way and warns the
+                      same way). Say so rather than accepting four picks and
+                      quietly storing one. */}
+                  {selectedColors.length > 1 && (
+                    <p className="text-xs text-[#363636]/70">
+                      A listing carries one colour, so <span className="font-semibold">{selectedColors[0]}</span> will be saved.
+                      Add the others as separate listings from your catalogue later.
+                    </p>
+                  )}
                 </div>
-                <Button onClick={goNext} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Submit</Button>
+                <Button
+                  onClick={goNext}
+                  disabled={uploadingProductImages > 0}
+                  className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Submit
+                </Button>
               </div>
             )}
-            {currentStep === 7 && step7Success && (
+            {currentStep === 8 && productSuccess && (
               <SuccessScreen
                 text="Product details uploaded"
                 onContinue={() => {
-                  setStep7Success(false);
+                  setProductSuccess(false);
                   setContractStage("overview");
                   setManualSignatureDataUrl(null);
                   setSignatureDrawerOpen(false);
-                  setCurrentStep(8);
+                  setCurrentStep(9);
                 }}
               />
-            )}
-
-            {/* STEP 8 */}
-            {currentStep === 8 && (
-              <div className="space-y-5">
-                <h2 className="text-2xl font-bold">Partner Contract</h2>
-                <div className="rounded-xl border bg-white p-6 text-center shadow-sm">
-                  <p className="text-xs uppercase text-[#363636] mb-2">E-Signature</p>
-                  {!editingSig ? (
-                    <p className="text-3xl text-[#256fef]" style={{ fontFamily: "'Dancing Script', cursive" }}>{signature || "Your signature"}</p>
-                  ) : (
-                    <Input value={signature} onChange={(e) => setSignature(e.target.value)} className="text-center text-2xl" style={{ fontFamily: "'Dancing Script', cursive" }} autoFocus onBlur={() => setEditingSig(false)} />
-                  )}
-                  <button onClick={() => setEditingSig(true)} className="text-xs text-[#256fef] underline mt-2">Change Signature</button>
-                </div>
-                <div className="rounded-xl border bg-[#f5f5f5] p-4 max-h-56 overflow-y-auto text-xs text-[#363636] space-y-2">
-                  <p className="font-semibold text-foreground">Cosora Supplier Agreement</p>
-                  <p>By signing below, you agree to all terms of the Cosora Supplier Agreement, including product authenticity, fair trade, on-time fulfillment, accurate listings, and Cosora's commission and payment terms.</p>
-                  <p>You represent that all submitted information is accurate and that you have the legal right to sell the listed products.</p>
-                  <p>Cosora reserves the right to review, suspend, or terminate seller accounts that violate these terms. Disputes shall be resolved per the governing law specified in the full agreement.</p>
-                  <p>Continued use of the platform constitutes acceptance of any updated terms communicated via email or in-app notice.</p>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Checkbox id="agree" checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} />
-                  <Label htmlFor="agree" className="cursor-pointer text-sm">I agree to comply with Cosora's Supplier Agreement</Label>
-                </div>
-                <Button onClick={submitContract} className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0]">Submit</Button>
-              </div>
             )}
           </motion.div>
         </AnimatePresence>
@@ -2029,7 +2169,7 @@ export default function Onboarding() {
         </Dialog>
 
         {/* Nav */}
-        {currentStep > 4 && currentStep < TOTAL_STEPS && !step6Success && !step7Success && (
+        {currentStep > 4 && currentStep < TOTAL_STEPS && !documentsSuccess && !productSuccess && (
           <div className="flex items-center justify-between mt-8">
             <Button variant="outline" onClick={goPrev}><ArrowLeft className="w-4 h-4 mr-1" /> Previous</Button>
             <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>

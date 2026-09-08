@@ -592,15 +592,34 @@ export interface VendorProductRow {
   unit: string;
   image: string;
   status: "active" | "draft" | "pending";
+  /** Denormalised category label off the product row. Drives the real
+   *  "Views by Category" breakdown on Analytics; null when uncategorised. */
+  categoryName: string | null;
   views: number;
   inquiries: number;
   profileScore: number;
   productCode: string;
+  // Card attributes. /business-profile renders this vendor's own storefront
+  // grid from these rows; before, that grid was a six-item demo array.
+  currency: string;
+  moq: string;
+  fabric: string | null;
+  gsm: string | null;
+  fitType: string | null;
+  gender: string | null;
+  location: string | null;
+  soldCount: number;
+  rating: number;
+  reviewsCount: number;
+  createdAt: string;
 }
 
 interface RawMyProduct {
   id: string; name: string; price_value: number | null; status: string;
   enquiries_count: number; views_count: number; description: string | null; fabric: string | null;
+  category_name: string | null; unit: string | null; currency: string | null; moq: string | null;
+  gsm: string | null; fit_type: string | null; gender: string | null; location: string | null;
+  sold_count: number | null; rating_avg: number | null; reviews_count: number | null; created_at: string;
   product_images: RawImage[] | null;
 }
 
@@ -626,7 +645,7 @@ function completeness(p: RawMyProduct): number {
 async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, price_value, status, enquiries_count, views_count, description, fabric, product_images ( url, position )")
+    .select("id, name, price_value, status, enquiries_count, views_count, description, fabric, category_name, unit, currency, moq, gsm, fit_type, gender, location, sold_count, rating_avg, reviews_count, created_at, product_images ( url, position )")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -637,13 +656,27 @@ async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
       id: p.id,
       name: p.name,
       price: p.price_value != null ? String(Math.round(Number(p.price_value))) : "0",
-      unit: "Piece",
+      // Real selling unit now that products.unit exists — this was hardcoded
+      // to "Piece" for every listing because the column did not.
+      unit: p.unit || "Piece",
       image: img,
       status: toUiStatus(p.status),
+      categoryName: p.category_name,
       views: p.views_count ?? 0,
       inquiries: p.enquiries_count,
       profileScore: completeness(p),
       productCode: `CSR-${p.id.slice(0, 4).toUpperCase()}`,
+      currency: p.currency ?? "₹",
+      moq: p.moq ?? "2",
+      fabric: p.fabric,
+      gsm: p.gsm,
+      fitType: p.fit_type,
+      gender: p.gender,
+      location: p.location,
+      soldCount: p.sold_count ?? 0,
+      rating: Number(p.rating_avg ?? 0),
+      reviewsCount: p.reviews_count ?? 0,
+      createdAt: p.created_at,
     };
   });
 }

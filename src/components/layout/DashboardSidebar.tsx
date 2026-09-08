@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { tierStyle, isUnlimited } from "@/lib/plan";
 import { useT } from "@/lib/i18n";
@@ -72,7 +73,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { role } = useUserRole();
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   // Seller-side plan chip in the bottom user area (sourced from the same hook
   // that drives enforcement — not fetched separately).
   const { data: vplan } = useVendorPlan(role === "seller" ? user?.id : undefined);
@@ -91,7 +92,18 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ];
 
-  const handleSignOut = () => {
+  // Same bug as /my-store had: navigating home does not end a session. The
+  // vendor pressed "Sign Out", landed on the marketing page, pressed Back and
+  // was still signed in.
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+    } catch (err) {
+      toast.error("Couldn't sign you out", {
+        description: err instanceof Error ? err.message : String(err),
+      });
+      return;
+    }
     navigate("/");
   };
 

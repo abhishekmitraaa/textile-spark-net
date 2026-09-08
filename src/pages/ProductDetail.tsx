@@ -17,6 +17,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useCallVendor } from "@/lib/queries/calls";
 import { recordView } from "@/lib/recentlyViewedStore";
 import { toast } from "sonner";
+import { logEngagement, consumeNavSource } from "@/lib/queries/engagement";
 import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet";
 import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
 import {
@@ -333,6 +334,13 @@ const ProductDetail = () => {
   const openDirectChat = () => {
     setChatOptionsOpen(false);
     if (row) void recordProductEnquiry(row.id).catch(() => {});
+    // Additive: the button does exactly what it did, and also reports that it
+    // was pressed. Until now `calls` was the only CTA in the app with any
+    // record of being used.
+    void logEngagement({
+      eventType: "cta_click", ctaName: "message",
+      vendorId: product.vendor.id, productId: row?.id ?? null,
+    });
     navigate(`/chats/${product.vendor.id}`);
   };
 
@@ -394,10 +402,26 @@ const ProductDetail = () => {
     });
     // Real DB views_count — atomic +1, once per browser session per product (a
     // refresh in the same session doesn't recount; a new session does).
+    //
+    // The engagement_events row is written alongside it under the SAME dedup
+    // key, not instead of it: views_count is what the buyer feed sorts on and
+    // carries history from before the event log existed, while the event
+    // carries the timestamp, viewer and source that make a trend possible.
+    // Sharing the dedup key matters — two different dedup rules would make the
+    // counter and the event log disagree about the same visit.
     const key = `cosora.viewed.${row.id}`;
     if (!sessionStorage.getItem(key)) {
       sessionStorage.setItem(key, "1");
       void recordProductView(row.id).catch(() => {});
+      // consumeNavSource() is single-use: whichever surface sent the buyer here
+      // left a short-lived marker. 'direct' is the honest answer when nothing
+      // did, not a placeholder.
+      void logEngagement({
+        eventType: "product_view",
+        productId: row.id,
+        vendorId: product.vendor.id,
+        source: consumeNavSource() ?? "direct",
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [row?.id]);
@@ -643,7 +667,16 @@ const ProductDetail = () => {
               <div className="mb-4 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-900">Customer Reviews</h3>
                 {canReview && (
-                  <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">
+                  <button
+                    onClick={() => {
+                      void logEngagement({
+                        eventType: "cta_click", ctaName: "view_reviews",
+                        vendorId: product.vendor.id, productId: row?.id ?? null,
+                      });
+                      setReviewOpen(true);
+                    }}
+                    className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90"
+                  >
                     {myReview ? "Edit your Review" : "Write a Review"}
                   </button>
                 )}

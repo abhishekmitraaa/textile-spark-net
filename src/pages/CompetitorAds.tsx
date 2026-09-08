@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdBenchmarks } from "@/lib/queries/ads";
+import { logEngagement } from "@/lib/queries/engagement";
 import {
   TrendingUp, Eye, Star, Package, Users, BarChart2, Megaphone, ShieldCheck, Info,
 } from "lucide-react";
@@ -146,7 +147,10 @@ const CompetitorAds = () => {
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-700 flex-1">Businesses with more reviews get more views and leads.</p>
                   <Link to="/reviews">
-                    <motion.button whileTap={TAP} transition={TAP_T} className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Ask for Reviews</motion.button>
+                    {/* Additive: the link still does exactly what it did. */}
+                    <motion.button whileTap={TAP} transition={TAP_T}
+                      onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "ask_more_reviews", vendorId: user?.id })}
+                      className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Ask for Reviews</motion.button>
                   </Link>
                 </div>
 
@@ -154,7 +158,9 @@ const CompetitorAds = () => {
                 <div className="bg-orange-50 border border-orange-100 rounded-xl p-3 flex items-center justify-between gap-3">
                   <p className="text-xs text-gray-700 flex-1">More product photos strengthen your listings.</p>
                   <Link to="/products">
-                    <motion.button whileTap={TAP} transition={TAP_T} className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Add Photos</motion.button>
+                    <motion.button whileTap={TAP} transition={TAP_T}
+                      onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "upload_more_photos", vendorId: user?.id })}
+                      className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Add Photos</motion.button>
                   </Link>
                 </div>
               </motion.div>

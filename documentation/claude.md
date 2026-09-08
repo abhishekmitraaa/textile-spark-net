@@ -150,7 +150,60 @@ undocumented. Deep technical rationale for each lives in
 - **Payment amounts are computed server-side, never accepted from the client**, and the
   Razorpay account is in **live mode** — checkouts move real money. Refunds are manual.
 - **Total Order Value is the retention metric.** The cumulative figure of orders won through
-  Cosora is the single strongest reason a vendor stays.
+  Cosora is the single strongest reason a vendor stays. **It is computed in exactly one
+  place** — `useVendorOrderValue` in `src/lib/queries/vendorAnalytics.ts` — and both the
+  Analytics card and the Quotes metrics rail read it, because two screens printing different
+  numbers for a vendor's book is worse than either number being absent. An accepted quote
+  *is* the order (there is no orders table): `quotes.price_per_unit × rfqs.quantity`. An
+  accepted quote whose RFQ has no quantity contributes **zero** and is counted separately as
+  `unpriced`, never guessed at.
+- **A metric is windowed or it is lifetime, and the UI must say which.** Windowed metrics sit
+  on a real per-row timestamp (`quotes.created_at`, `messages.created_at`,
+  `reviews.created_at`, `calls.created_at`) and a date filter genuinely re-scopes them.
+  Lifetime metrics sit on monotonic counters with no event history — `products.views_count`,
+  `products.enquiries_count`, `advertisements.impressions/clicks` — and a date filter cannot
+  touch them: `increment_product_view`'s whole signature is `{ p: uuid }`, so no timestamp
+  and no viewer identity is ever recorded. Every analytics card carries either a
+  `Last <range>` pill or a `Lifetime` pill with the reason. **A filter control that silently
+  does nothing is worse than one that is visibly unavailable.**
+- **Views and enquiries are independent counters and their ratio is not always a rate.**
+  `views_count` and `enquiries_count` were not necessarily incremented over the same period,
+  so `inquiries ÷ views` can exceed 100% — the demo vendor sits at 15,425%. Above 100% the
+  Conversion card shows the two underlying counts and says they are not comparable. A
+  four-figure "conversion rate" would undermine every honest figure beside it.
+- **Missed calls cannot be measured and must never be shown as a number.** `calls` is exactly
+  `(id, buyer_id, vendor_id, direction, product_context, created_at)` — no status, no
+  duration, no answered flag. A row records the **dialer opening** (`tel:` is all a web app
+  can do), not a connected call. Every live row is also `direction = 'outgoing'`, because the
+  insert policy is `buyer_id = auth.uid()` and `useCallBuyer` deliberately does not log — so
+  vendor-facing surfaces map direction to the **vendor's** perspective (a buyer's outgoing
+  call is the vendor's inbound one) rather than printing the raw column.
+- **Ad money is "revenue booked", never cost, CPC, CPM or ROAS.** Cosora ads are flat-rate
+  prepaid placements, not an auction: there is no bid, no per-impression price and no
+  attributed order revenue, so those figures have nothing behind them. The Advertise strip's
+  invented "Avg. Cost/Lead" was deleted rather than renamed; the real figure is **revenue
+  booked ÷ leads**, matching Cosora-Admin's `AdsMonitoring.tsx`. Two schema facts go with it:
+  **`ad_orders.amount` is in paise** (`computeAmountPaise` multiplies by 100), and
+  **`ad_orders` has no `ad_id`** — one order publishes one `advertisements` row per spec
+  item, so per-campaign attribution divides the amount across items and matches on product +
+  nearest start date, reporting anything unmatched rather than hiding it. Campaigns published
+  through the demo path create no `ad_orders` row at all and genuinely booked ₹0.
+- **`advertisements.placement` is a comma-joined CSV, not a single value** (`"openListing,
+  trustedSeal"`). Anything branching on placement must test membership, not equality.
+- **An ad click must honour the campaign goal the vendor paid for.** `SponsoredRail.tsx` and
+  `NewArrivals.tsx` used to `navigate('/product/${a.productId}')` for every ad whatever its
+  placement, so a vendor who bought the "Visit your profile" goal
+  (`GOAL_PLACEMENTS.visitProfile: ["storePromotion", "brandAd"]`) got product traffic
+  instead of storefront traffic, and a profile-goal ad with no `product_id` was a dead card
+  that navigated nowhere at all. **Fixed 2026-09-08**: `adDestination()` in
+  `src/lib/adDestination.ts` routes a storePromotion/brandAd placement to
+  `/vendor/${vendorId}` and everything else to the product, falls back to the storefront
+  when a product-goal ad has no product, and returns null when there is nowhere to go — the
+  caller must then not navigate. It lives in its own dependency-free module so
+  `node scripts/ad-destination-check.mjs` can exercise it without a browser or a session;
+  that matters because `active_ads` currently returns zero rows, so no UI test could reach
+  this branch. **This is buyer-facing navigation, not analytics** — treat a change to it as
+  a product change.
 - **The schema must stay compatible with a future working-capital lending product.** Order
   volume, capacity, reliability, pricing and transaction history are being collected with
   that in mind even though the product does not exist yet.
@@ -220,6 +273,42 @@ undocumented. Deep technical rationale for each lives in
 - **Postgres grants EXECUTE to PUBLIC by default.** `grant ... to service_role` alone does
   not restrict anything; the matching `revoke all ... from public, anon, authenticated` is
   the part that does the work.
+
+## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
+
+`engagement_events` + `log_engagement_event` are **live on the project** (migration
+`20260907170000_engagement_events.sql`). Nothing is left to switch on. What was checked,
+because none of it can be read off the schema:
+
+- `node scripts/engagement-events-check.mjs` — **19/19**, and it writes real rows as real
+  accounts, then deletes them. Covers: direct INSERT refused for anon / authenticated /
+  the owning vendor (there is no INSERT policy at all); `viewer_id` taken from `auth.uid()`
+  inside the function; `session_id` kept only when signed out and dropped when signed in;
+  a **forged `p_vendor_id` ignored** in favour of the product's real owner; the status
+  guard; a bad `event_type` and an unknown product id both returning cleanly; and RLS —
+  the vendor reads their own rows, a buyer reads **nothing, not even events they generated
+  themselves**, anon reads nothing.
+- The **status guard** was proved in a self-rolling-back `DO` block (the demo vendor has no
+  non-live product and a plan trigger refuses creating one — free plan allows 2 listings,
+  they have 6): `product_notlive_dropped=t product_live_written=t cta_on_notlive_kept=t
+  ad_notactive_dropped=t ad_active_written=t`, then `raise` rolled the whole thing back.
+- **End-to-end through the real app**: a buyer searching `polo` and opening a result
+  produced `search_impression ×2 (source=organic_search, query_text=polo)` →
+  `search_click` → `product_view` **with `source=organic_search` preserved across the hard
+  navigation**, which is the thing the 15-second `sessionStorage` marker exists to do.
+  Two impressions for one search because impressions are counted **per vendor**, not per
+  matching product.
+- `src/lib/database.types.ts` was hand-written before access returned. It was diffed
+  token-for-token against `generate_typescript_types` — **171/171 and 24/24 tokens
+  identical**, so no regeneration was needed. Diff it again after any change here.
+
+**The two `security_definer_function_executable` warnings on `log_engagement_event` are
+expected and must not be "fixed".** `get_advisors` flags that `anon` and `authenticated`
+can execute it. That is the entire design: a signed-out buyer's product view has to be
+loggable, and the function is SECURITY DEFINER precisely so no client can INSERT into the
+table directly. Revoking `EXECUTE` from `anon` would silently stop recording signed-out
+traffic. The project already carries 67 of these same warnings for the same reason
+(`increment_product_view`, `ad_impression`, `ad_click` among them). **0 ERROR-level lints.**
 
 ## Product semantic search — what is left to switch it on
 

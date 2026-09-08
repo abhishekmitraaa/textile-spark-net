@@ -1,9 +1,9 @@
 import { useNavigate, Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList } from "lucide-react";
+import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList, Check } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { useProfileScore } from "@/lib/queries/vendorDashboard";
+import { useProfileScoreState, PROFILE_SCORE_WEIGHTS } from "@/lib/queries/vendorDashboard";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -29,22 +29,27 @@ const listItem = {
 // by BusinessProfile, which either scrolls to the section or opens the relevant
 // modal; landing on /my-store (as these all used to) left the vendor to hunt for
 // the field themselves.
+//
+// `key` ties each tile to one of the thirteen scoring signals in
+// vendorDashboard.ts, so its badge is the real state of that signal for this
+// vendor. The badges used to be LITERALS — "Missing", "Trending", "Pending",
+// null — identical for every vendor, so someone who had written their About Us,
+// picked their categories and listed twenty products still saw a red "Missing"
+// on all three, and "12 essential details are still missing" underneath.
 const scoreItems = [
-  { label: "Check your contact details", tag: "Missing", href: "/business-profile?focus=contact-details", Icon: ClipboardList },
-  { label: "Add about us", tag: "Missing", href: "/business-profile?focus=about-us", Icon: Building2 },
-  { label: "Complete product details", tag: "Missing", href: "/upload", Icon: Package },
-  { label: "Add category", tag: "Missing", href: "/business-profile?focus=business-category", Icon: Tag },
-  { label: "Business Picture add 5 hd Photos", tag: "Trending", href: "/business-profile?focus=office-pictures", Icon: Image },
-  { label: "Add Upto 10 Products with Price & Image", tag: "Trending", href: "/upload", Icon: FileText },
-  { label: "Add Email Address", tag: null, href: "/business-profile?focus=contact-details", Icon: Mail },
-  { label: "Get up to 20 Reviews", tag: "Pending", href: "/reviews", Icon: Star },
-  { label: "Add Social Media Channels", tag: null, href: "/add-social-links", Icon: Share2 },
-  { label: "Add Business Website", tag: null, href: "/business-profile?focus=contact-details", Icon: Globe },
-  { label: "Send upto 2 quotations", tag: "Trending", href: "/quotes", Icon: Send },
-  { label: "Add Year of Establishment", tag: null, href: "/business-profile?focus=year-established", Icon: Calendar },
-];
-
-const missingCount = scoreItems.filter((item) => item.tag === "Missing").length;
+  { key: "contactDetails",  label: "Check your contact details", href: "/business-profile?focus=contact-details", Icon: ClipboardList },
+  { key: "aboutUs",         label: "Add about us", href: "/business-profile?focus=about-us", Icon: Building2 },
+  { key: "liveProduct",     label: "Complete product details", href: "/upload", Icon: Package },
+  { key: "category",        label: "Add category", href: "/business-profile?focus=business-category", Icon: Tag },
+  { key: "officePhotos",    label: "Business Picture add 5 hd Photos", href: "/business-profile?focus=office-pictures", Icon: Image },
+  { key: "tenProducts",     label: "Add Upto 10 Products with Price & Image", href: "/upload", Icon: FileText },
+  { key: "email",           label: "Add Email Address", href: "/business-profile?focus=contact-details", Icon: Mail },
+  { key: "reviews",         label: "Get up to 20 Reviews", href: "/reviews", Icon: Star },
+  { key: "social",          label: "Add Social Media Channels", href: "/add-social-links", Icon: Share2 },
+  { key: "website",         label: "Add Business Website", href: "/business-profile?focus=contact-details", Icon: Globe },
+  { key: "twoQuotes",       label: "Send upto 2 quotations", href: "/quotes", Icon: Send },
+  { key: "yearEstablished", label: "Add Year of Establishment", href: "/business-profile?focus=year-established", Icon: Calendar },
+] as const satisfies ReadonlyArray<{ key: keyof typeof PROFILE_SCORE_WEIGHTS; label: string; href: string; Icon: LucideIcon }>;
 
 /**
  * One tile in the completion grid. Extracted so the twelve looped tiles and the
@@ -63,14 +68,15 @@ const ScoreTile = ({
   label,
   href,
   Icon,
-  tag = null,
+  done = false,
   wide = false,
   className = "",
 }: {
   label: string;
   href: string;
   Icon: LucideIcon;
-  tag?: string | null;
+  /** Whether this vendor has satisfied the signal behind the tile. */
+  done?: boolean;
   wide?: boolean;
   className?: string;
 }) => (
@@ -84,21 +90,26 @@ const ScoreTile = ({
           wide ? "lg:min-h-[110px] lg:flex-row lg:gap-3" : "lg:min-h-[150px]"
         }`}
       >
-        {/* Badge */}
-        {tag && (
+        {/* Badge: a green tick for a completed task, "Missing" for one that is
+            genuinely outstanding. */}
+        {done ? (
           <span
-            className={`absolute right-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-bold lg:right-3 lg:top-3 lg:text-[10px] ${
-              tag === "Missing"
-                ? "bg-red-500 text-white"
-                : "bg-foreground text-background"
-            }`}
+            aria-label="Completed"
+            className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white lg:right-3 lg:top-3"
           >
-            {tag}
+            <Check className="h-3 w-3" strokeWidth={3} />
+          </span>
+        ) : (
+          <span className="absolute right-2 top-2 rounded-full bg-red-500 px-2 py-0.5 text-[9px] font-bold text-white lg:right-3 lg:top-3 lg:text-[10px]">
+            Missing
           </span>
         )}
 
         {/* Icon */}
-        <Icon className="h-8 w-8 shrink-0 text-muted-foreground lg:h-9 lg:w-9" strokeWidth={1.5} />
+        <Icon
+          className={`h-8 w-8 shrink-0 lg:h-9 lg:w-9 ${done ? "text-green-600" : "text-muted-foreground"}`}
+          strokeWidth={1.5}
+        />
 
         {/* Label */}
         <p className="text-xs font-medium leading-snug text-foreground lg:text-sm">
@@ -112,7 +123,11 @@ const ScoreTile = ({
 const BusinessProfileScorePage = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const score = useProfileScore();
+  const { score, checks, isLoading } = useProfileScoreState();
+
+  // Derived from the real checks, not from counting literals in the array above.
+  const missingCount = scoreItems.filter((item) => !checks[item.key]).length
+    + (checks.employeeCount ? 0 : 1);
 
   // Rating label + colours track the score so the header never contradicts it.
   const rating =
@@ -155,10 +170,22 @@ const BusinessProfileScorePage = () => {
           variants={section}
           className="space-y-1.5 lg:flex lg:items-center lg:gap-10 lg:space-y-0 lg:rounded-2xl lg:border lg:border-border lg:bg-card lg:p-6"
         >
-          {/* Score + rating label. Reversed at desktop so the number leads. */}
+          {/* Score + rating label. Reversed at desktop so the number leads.
+              While the vendor's own rows are still loading this shows a
+              skeleton: any number here would be invented, which is exactly how
+              a real vendor used to see the DEFAULT_PROFILE_SCORE of 45%. */}
           <div className="flex items-center justify-between lg:shrink-0 lg:flex-col-reverse lg:items-start lg:justify-start lg:gap-1">
-            <span className={`text-sm font-semibold ${rating.text} lg:text-base`}>{rating.label}</span>
-            <span className="text-sm font-bold text-foreground lg:text-5xl lg:leading-none lg:tracking-tight">{score}%</span>
+            {isLoading ? (
+              <>
+                <span className="h-4 w-16 animate-pulse rounded bg-muted lg:h-5" />
+                <span className="h-4 w-12 animate-pulse rounded bg-muted lg:h-12 lg:w-24" />
+              </>
+            ) : (
+              <>
+                <span className={`text-sm font-semibold ${rating.text} lg:text-base`}>{rating.label}</span>
+                <span className="text-sm font-bold text-foreground lg:text-5xl lg:leading-none lg:tracking-tight">{score}%</span>
+              </>
+            )}
           </div>
 
           {/* Bar + copy. Grouped so they can sit beside the score at desktop;
@@ -192,11 +219,11 @@ const BusinessProfileScorePage = () => {
         >
           {scoreItems.map((item) => (
             <ScoreTile
-              key={item.label}
+              key={item.key}
               label={item.label}
               href={item.href}
               Icon={item.Icon}
-              tag={item.tag}
+              done={checks[item.key]}
             />
           ))}
 
@@ -207,6 +234,7 @@ const BusinessProfileScorePage = () => {
             label="Add Number of Employees"
             href="/business-profile?focus=employees"
             Icon={Users}
+            done={checks.employeeCount}
             wide
             className="col-span-2 lg:col-span-3 xl:col-span-4"
           />

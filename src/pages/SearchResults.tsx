@@ -8,6 +8,7 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useBrandFollows, toggleBrandFollow } from "@/lib/brandFollowStore";
 import { useCatalogue } from "@/lib/queries/products";
 import { useProductSearch } from "@/lib/queries/search";
+import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
@@ -141,7 +142,7 @@ function brandsFromProducts(rows: RProduct[]): BrandResult[] {
 // ─────────────────────────────────────────────────────────────
 // Product card
 // ─────────────────────────────────────────────────────────────
-function ProductCard({ p, compact }: { p: RProduct; compact: boolean }) {
+function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; query?: string }) {
   const callVendor = useCallVendor();
   const t = useT();
   const saved = useSaved();
@@ -151,7 +152,22 @@ function ProductCard({ p, compact }: { p: RProduct; compact: boolean }) {
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-      <Link to={`/product/${p.id}`} className="relative aspect-[4/5] block bg-gray-100">
+      <Link
+        to={`/product/${p.id}`}
+        onClick={() => {
+          // Two writes, one tap: the click against the term that produced this
+          // result, and the marker ProductDetail consumes to label the view
+          // 'organic_search' instead of 'direct'.
+          markNavSource("organic_search");
+          if (query?.trim()) {
+            void logEngagement({
+              eventType: "search_click", vendorId: p.vendorId, productId: p.id,
+              queryText: query.trim(), source: "organic_search",
+            });
+          }
+        }}
+        className="relative aspect-[4/5] block bg-gray-100"
+      >
         <img src={p.image} alt={p.name} className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")} />
         <img src={p.secondaryImage} alt="" className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")} />
         {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
@@ -655,6 +671,38 @@ const SearchResults = () => {
     return list;
   }, [catalogue, schema, selections, sort]);
 
+  // ── Search-query performance: one impression per vendor per result set ──
+  //
+  // Per VENDOR, not per product: the panel this feeds answers "did buyers
+  // searching <term> see me", and a vendor with six matching products did not
+  // get six impressions of themselves from one search. Deduped per (query,
+  // vendor) for the life of the mount, the same shape SponsoredRail uses for ad
+  // impressions — re-filtering or re-sorting the SAME result set is not a new
+  // search and must not double-count.
+  //
+  // Only fires for a real typed query. A category browse arrives here with
+  // `?category=`, which is a different intent and is not a search term.
+  const loggedImpressions = useRef<Set<string>>(new Set());
+  const typedQuery = (params.get("q") || "").trim();
+  useEffect(() => {
+    if (!typedQuery || products.length === 0) return;
+    const seen = new Set<string>();
+    for (const p of products) {
+      if (!p.vendorId || seen.has(p.vendorId)) continue;
+      seen.add(p.vendorId);
+      const key = `${typedQuery}::${p.vendorId}`;
+      if (loggedImpressions.current.has(key)) continue;
+      loggedImpressions.current.add(key);
+      void logEngagement({
+        eventType: "search_impression",
+        vendorId: p.vendorId,
+        queryText: typedQuery,
+        source: "organic_search",
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typedQuery, products]);
+
   // Suppliers who actually make what was searched for — grouped straight out of
   // the ranked, facet-filtered product results, so the tab can never disagree
   // with the Product tab beside it.
@@ -690,7 +738,7 @@ const SearchResults = () => {
   const feedNodes: JSX.Element[] = [];
   products.forEach((p, i) => {
     feedNodes.push(
-      <motion.div variants={reduced ? {} : listItem} key={p.id}><ProductCard p={p} compact={cols === 3} /></motion.div>
+      <motion.div variants={reduced ? {} : listItem} key={p.id}><ProductCard p={p} compact={cols === 3} query={query} /></motion.div>
     );
     const n = i + 1;
     if (n >= products.length) return; // never trail the last loaded product

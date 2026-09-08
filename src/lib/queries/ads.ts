@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { logEngagement } from "@/lib/queries/engagement";
 
 // (buyer-facing active-ads + analytics helpers are exported at the bottom)
 
@@ -203,10 +204,26 @@ export function useVendorCategories(vendorId: string | undefined) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────
+// Campaign goal → where a click should land.
+//
+// The decision itself lives in `@/lib/adDestination`, a dependency-free module
+// so it can be exercised by `scripts/ad-destination-check.mjs` without a
+// browser or a session — it is the one branch here that changes real
+// buyer-facing navigation and decides whether a vendor gets the traffic they
+// paid for. Re-exported so call sites import it from the ads module as before.
+// ─────────────────────────────────────────────────────────────
+export { isProfileGoalAd, adDestination, PROFILE_GOAL_PLACEMENTS } from "@/lib/adDestination";
+
+// Counter + event, side by side. The counters stay because the campaigns table
+// and Cosora-Admin read advertisements.impressions/clicks directly; the event
+// adds the timestamp, viewer and source the counter cannot carry.
 export async function logAdImpression(adId: string): Promise<void> {
   await supabase.rpc("ad_impression", { ad: adId });
+  void logEngagement({ eventType: "ad_impression", adId, source: "ad" });
 }
 
 export async function logAdClick(adId: string): Promise<void> {
   await supabase.rpc("ad_click", { ad: adId });
+  void logEngagement({ eventType: "ad_click", adId, source: "ad" });
 }

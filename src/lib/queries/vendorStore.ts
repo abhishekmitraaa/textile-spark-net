@@ -31,6 +31,12 @@ export interface VendorStoreData {
   gstin: string;
   cin: string;
   isVerified: boolean;
+  /** Admin-set verification is only one of the three inputs to the displayed
+   *  trust seal — see trustSealFromParts(). Both of these feed it, and the
+   *  buyer-facing /vendor/:id page computes the seal from the same three, so
+   *  the vendor sees exactly the badge buyers see. */
+  planExpiresAt: string | null;
+  adVerifiedUntil: string | null;
   followers: number;
   ratingAvg: number;
   reviewsCount: number;
@@ -45,6 +51,12 @@ export interface VendorStoreData {
   employeeCount: string;
   /** platform slug -> list of profile URLs, e.g. { instagram: ["https://..."] }. */
   social: Record<string, string[]>;
+  /** Ordered, curated product ids featured in "Brand's Recommendations".
+   *  Order is meaningful — it is the order the vendor dragged them into. */
+  recommendedProductIds: string[];
+  /** ISO timestamp the vendor row was created — drives "Cosora Member Since",
+   *  which was the literal string "1 Year" for every vendor. */
+  createdAt: string;
 }
 
 async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null> {
@@ -74,6 +86,8 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     gstin: data.gstin ?? "",
     cin: data.cin ?? "",
     isVerified: data.is_verified,
+    planExpiresAt: data.plan_expires_at,
+    adVerifiedUntil: data.ad_verified_until,
     followers: data.followers_count,
     ratingAvg: Number(data.rating_avg),
     reviewsCount: data.reviews_count,
@@ -84,6 +98,8 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     yearEstablished: data.year_established,
     employeeCount: data.employee_count ?? "",
     social: (data.social as Record<string, string[]> | null) ?? {},
+    recommendedProductIds: data.recommended_product_ids ?? [],
+    createdAt: data.created_at,
   };
 }
 
@@ -120,6 +136,7 @@ export interface VendorStorePatch {
   yearEstablished?: number | null;
   employeeCount?: string;
   social?: Record<string, string[]>;
+  recommendedProductIds?: string[];
 }
 
 export async function saveVendorProfile(id: string, p: VendorStorePatch): Promise<void> {
@@ -149,6 +166,7 @@ export async function saveVendorProfile(id: string, p: VendorStorePatch): Promis
   if (p.yearEstablished !== undefined) row.year_established = p.yearEstablished;
   if (p.employeeCount !== undefined) row.employee_count = p.employeeCount || null;
   if (p.social !== undefined) row.social = p.social;
+  if (p.recommendedProductIds !== undefined) row.recommended_product_ids = p.recommendedProductIds;
   const { error } = await supabase.from("vendor_profiles").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }

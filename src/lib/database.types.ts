@@ -592,6 +592,77 @@ export type Database = {
           },
         ]
       }
+      engagement_events: {
+        Row: {
+          ad_id: string | null
+          created_at: string
+          cta_name: string | null
+          event_type: string
+          id: string
+          product_id: string | null
+          query_text: string | null
+          session_id: string | null
+          source: string | null
+          vendor_id: string
+          viewer_id: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          created_at?: string
+          cta_name?: string | null
+          event_type: string
+          id?: string
+          product_id?: string | null
+          query_text?: string | null
+          session_id?: string | null
+          source?: string | null
+          vendor_id: string
+          viewer_id?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          created_at?: string
+          cta_name?: string | null
+          event_type?: string
+          id?: string
+          product_id?: string | null
+          query_text?: string | null
+          session_id?: string | null
+          source?: string | null
+          vendor_id?: string
+          viewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "engagement_events_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_events_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_events_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "engagement_events_viewer_id_fkey"
+            columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flag_patterns: {
         Row: {
           active: boolean
@@ -1033,6 +1104,7 @@ export type Database = {
           sizes: string[] | null
           sleeve_type: string | null
           sold_count: number
+          unit: string | null
           status: Database["public"]["Enums"]["product_status"]
           vendor_id: string
           views_count: number
@@ -1072,6 +1144,7 @@ export type Database = {
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
+          unit?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id: string
           views_count?: number
@@ -1111,6 +1184,7 @@ export type Database = {
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
+          unit?: string | null
           status?: Database["public"]["Enums"]["product_status"]
           vendor_id?: string
           views_count?: number
@@ -1944,6 +2018,7 @@ export type Database = {
           profile_score: number
           rating_avg: number
           regional: Json | null
+          recommended_product_ids: string[]
           reviews_count: number
           social: Json | null
           state: string | null
@@ -1986,6 +2061,7 @@ export type Database = {
           profile_score?: number
           rating_avg?: number
           regional?: Json | null
+          recommended_product_ids?: string[]
           reviews_count?: number
           social?: Json | null
           state?: string | null
@@ -2028,6 +2104,7 @@ export type Database = {
           profile_score?: number
           rating_avg?: number
           regional?: Json | null
+          recommended_product_ids?: string[]
           reviews_count?: number
           social?: Json | null
           state?: string | null
@@ -2213,6 +2290,19 @@ export type Database = {
         }[]
       }
       expire_subscriptions: { Args: never; Returns: number }
+      log_engagement_event: {
+        Args: {
+          p_ad_id?: string
+          p_cta_name?: string
+          p_event_type: string
+          p_product_id?: string
+          p_query_text?: string
+          p_session_id?: string
+          p_source?: string
+          p_vendor_id?: string
+        }
+        Returns: undefined
+      }
       for_you_products: {
         Args: { match_count?: number; p_buyer_id: string }
         Returns: {

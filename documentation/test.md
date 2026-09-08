@@ -17,6 +17,7 @@ Last updated: 2026-09-07
 | `chat-pipeline.spec.ts` | Chat + chat-moderation, UI layer (T1–T13's browser half) | `chatfx-*` / `rlstest-*` fixtures |
 | `admin-chat-moderation.spec.ts` | Cosora-Admin's chat review queue | `rlstest-*` fixtures |
 | `video-closeups-bunny.spec.ts` | Phase 8 Bunny Stream, browser half: the container gate, the moderation queue, real MP4 playback in both apps, approve-to-publish | `demo-*` |
+| `vendor-analytics.spec.ts` | Vendor Analytics / Advertise stats / Quotes performance are counted, not fabricated — asserts every retired fixture string is absent AND that real per-vendor values render; T5 additionally asserts the engagement panels never render nothing | `demo-vendor` (read-only) |
 
 - **Run:** `npm run playwright:install` once, then `npm run test:e2e` (or a single file:
   `npx playwright test tests/<spec>.ts`).
@@ -55,6 +56,8 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
 | `search-smoke.mjs` | The rebuilt search surfaces in a real browser (Playwright, standalone — not part of `tests/`). 10 checks: no fabricated data on `/search` or `/search/results`, real autocomplete counts, real product cards, a real result count, a real Brand tab, the honest empty state, and zero console errors. Takes an optional base URL: `node scripts/search-smoke.mjs http://localhost:8080` |
+| `engagement-events-check.mjs` | `engagement_events` security + the status guard, 19 assertions across four real accounts (vendor / buyer / admin / anon). Writes through the real RPC and deletes what it wrote; pauses and restores a real campaign for the ad case. **Contains no always-true assertions** — an early draft "passed" by skipping the two guard cases and was rewritten |
+| `ad-destination-check.mjs` | The ad-click campaign-goal branch (`adDestination`/`isProfileGoalAd`), 17 cases. **The one script here that does not touch the database** — it transpiles the dependency-free `src/lib/adDestination.ts` with esbuild and calls it directly, because `active_ads` currently returns zero rows so no UI test can reach this branch |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -90,6 +93,175 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-08 (later) — `engagement_events` applied and verified: 19/19 + 17/17 + 5/5 GREEN
+
+The MCP reconnected, so everything the earlier entry could not verify was verified. **A real
+bug was found by doing so** — see the changelog entry; the short version is that the event
+log did not repeat the `status` filters the counter RPCs carry, so a vendor previewing their
+own `under_review` listing would have logged a view against themselves that the counter did
+not record. Fixed in the migration before it was applied.
+
+**`node scripts/engagement-events-check.mjs` — 19/19 PASS.** Four real accounts
+(`demo-vendor`, `demo-buyer`, `demo-admin`, anon), real rows through the real RPC, all
+cleaned up.
+
+| Group | Assertions |
+|---|---|
+| No client INSERT | direct `insert()` refused for anon, for an authenticated buyer, **and for the owning vendor** — there is no INSERT policy at all |
+| Viewer identity | a buyer's event records the buyer as `viewer_id`; a signed-out event has `viewer_id` null and **keeps** `session_id`; a signed-in event **drops** `session_id` so a known viewer never gets a second identifier |
+| Attribution | a **forged `p_vendor_id` is ignored** in favour of the product's real owner; `source` is stored as given |
+| Status guard | a `product_view` on a `rejected` product is dropped; an `ad_impression` on a `paused` ad is dropped; **a `cta_click` naming the same non-live product IS recorded** |
+| Failure handling | an `event_type` outside the check constraint returns cleanly; an unknown product id returns cleanly |
+| RLS on read | the vendor reads their own rows and only their own; **a buyer reads nothing — not even events they generated themselves**; anon reads nothing |
+
+**Test-data note.** The guard cases could not use the obvious subjects. The demo vendor's six
+products are all live, a real plan trigger refuses a seventh (*"your free plan allows 2
+listed product(s); you already have 6"*), and `products` RLS is `status = 'live' OR own OR
+admin`, so the vendor cannot even see another vendor's non-live rows. The script therefore
+finds its subject through the **admin** client — whose product it is does not matter, since
+the guard is a property of the function and fires before any vendor attribution. The ad case
+pauses a real campaign and restores it in `finally`.
+
+**Status guard, proved independently in SQL** (self-rolling-back `DO` block, so nothing
+persisted):
+
+```
+product_notlive_dropped=t  product_live_written=t  cta_on_notlive_kept=t
+ad_notactive_dropped=t     ad_active_written=t
+```
+
+Confirmed after rollback: product back to `live`, ad back to `active`, `engagement_events`
+empty, zero probe rows.
+
+**End-to-end through the running app** (buyer session, real browser):
+
+| Step | Event written | Checked |
+|---|---|---|
+| `/search/results?q=polo` | `search_impression` ×2 | `source=organic_search`, `query_text=polo`, `viewer_id` set. **Two, not four** — impressions are per *vendor*, not per matching product |
+| click a result card | `search_click` | `product_id` set, query preserved |
+| land on `/product/:id` | `product_view` | **`source=organic_search` survived the hard navigation** — the 15-second `sessionStorage` marker doing its job |
+
+All four probe rows deleted afterwards. Evidence: `screenshots/e2e-product-view.png`,
+`screenshots/analytics-after-migration.png`.
+
+**Panel state flipped, and the distinction held.** Before applying: "Visit-level tracking is
+not switched on". After: "No tracked activity in the last 7 days" — a genuine empty window,
+which is a different claim. Verified in a browser as the real vendor.
+
+**Types.** `src/lib/database.types.ts` was hand-written before access returned; diffed
+token-for-token against `generate_typescript_types` — **171/171** for the table, **24/24**
+for the function, identical including optionality and FK names. No regeneration needed.
+
+**Advisors.** 72 lints, **0 ERROR**. Two new WARNs name `log_engagement_event`
+(`anon`/`authenticated` may execute a SECURITY DEFINER function) — **expected and must not
+be "fixed"**: signed-out views have to be loggable, and revoking `EXECUTE` from `anon` would
+silently stop recording them. 67 identical warnings already existed. Nothing about
+`engagement_events` RLS is flagged.
+
+**Process note worth keeping.** The first draft of the new script reported
+`SKIPPED — vendor has no non-live product to test with` and **passed** — silently skipping
+the exact behaviour it existed to verify. Two always-true `check(..., true)` calls were
+removed; `grep -cE "check\(.*, true\)"` is now 0. Same failure shape as the
+`bunny-e2e-check.mjs` delete assertion that once passed because 403 looked identical before
+and after.
+
+### 2026-09-08 — Visit-level tracking (Phase 3): routing 17/17, UI 5/5 GREEN, migration NOT applied
+
+**What could not be verified, and why.** The `engagement_events` migration was **not applied**
+— this session had no database access (the Supabase MCP reported "not connected" throughout,
+the CLI is unlinked and there is no access token on the machine). So nothing below exercises
+a real event row. What is verified is that the code is correct against the schema the
+migration defines, and that the app is honest about the table not being there yet.
+
+**`node scripts/ad-destination-check.mjs` — 17/17 PASS.** This is the load-bearing one: the
+ad-click branch decides whether a vendor who paid for "Visit your profile" gets storefront
+traffic, and it cannot be reached from the UI at all today because `active_ads` returns zero
+rows (both of the demo vendor's campaigns ended in July 2026). Cases covered:
+
+| Group | Cases |
+|---|---|
+| `isProfileGoalAd` | null, empty, `openListing`, `storePromotion`, `brandAd`, the two real live CSVs (`openListing,trustedSeal` / `openListing,featuredProduct`), a CSV containing a profile goal, a CSV with whitespace, and `notStorePromotionReally` — which must NOT match, guarding against a substring test sneaking back in |
+| `adDestination` | profile-goal ad routes to `/vendor/:id` **not** `/product/:id` (the bug); `brandAd` inside a CSV likewise; a product-goal ad still routes to the product (unchanged behaviour); a profile-goal ad with **no product** now works where it used to be a dead card; a product-goal ad with no product falls back to the storefront; nothing to open returns null so the caller does not navigate; profile goal with no vendor id falls through to the product |
+
+**`npx playwright test tests/vendor-analytics.spec.ts` — 5/5 PASS** (`demo-vendor`,
+read-only). T1–T4 as in the 2026-09-07 entry, plus:
+
+| Test | What was checked | Result |
+|---|---|---|
+| T5 | Performance Trends and Traffic Sources are present by name (a chart that silently disappears reads as a bug); the page shows either a chart, a real empty-window message, or the not-switched-on notice — never a panel rendering none of the three; the new Search and Actions tabs exist | PASS |
+
+**Evidence:** `screenshots/analytics-views.png` (Traffic Sources back as a real panel showing
+the not-switched-on state; Views by Category rendering this vendor's four real categories at
+42/25/17/17%), `screenshots/analytics-engagement.png`.
+
+**A rendering bug the screenshots caught.** The first evidence capture showed an empty chart
+area above a fully populated Views-by-Category legend — Recharts animates on mount and the
+screenshot was taken mid-draw. The spec now settles before capturing. Worth recording because
+the artefact looked exactly like a broken query and is not one.
+
+**Also fixed after reading the first capture:** the not-switched-on notice was written for
+the trend charts ("a day-by-day trend needs…") but is reused verbatim by Traffic Sources, the
+search-term table and the CTA panel, where that wording is simply wrong. It is generic now.
+
+**Not verified, and stays that way until the migration is applied:** that any event actually
+inserts, that RLS admits the owning vendor and refuses everyone else, that `viewer_id` is
+populated from `auth.uid()`, and that the `PGRST205` → `installed: false` path flips to real
+data. The switch-on checklist is in `documentation/claude.md` under "Visit-level tracking".
+
+**Environment note.** During this session `src/pages/Onboarding.tsx` and
+`src/lib/queries/vendorOnboarding.ts` were modified from outside it (a business-categories
+feature in progress, with new untracked files `src/components/vendor/AddBusinessCategoriesModal.tsx`
+and `src/data/businessCategoryGroups.ts`). `Onboarding.tsx` currently carries 58 type errors
+of its own — `tsc -p tsconfig.app.json` therefore reports far more than the 23-error baseline.
+**None of those are in any file this work touched**, which was confirmed per-file rather than
+assumed, and that in-progress work was left alone.
+
+### 2026-09-07 — Vendor analytics de-mocking (Phases 1–2): 4/4 GREEN
+
+**Spec:** `tests/vendor-analytics.spec.ts`. **Account:** `demo-vendor@cosora.dev`
+(`2222…2222`), session injected via `addInitScript` per the auth convention above.
+**Read-only** — the spec creates, mutates and deletes nothing, so it is safe to re-run
+against the live project. Requires `npm run dev` on `:8080`.
+
+**Why this spec asserts absence.** A fabricated figure renders exactly as convincingly as a
+real one, so "the page shows a number" would have passed against the fixtures this change
+removed. Each test therefore has a negative half (the retired fixture strings must not
+appear) and a positive half (values that can only come from this vendor's rows must).
+
+| Test | What was checked | Result |
+|---|---|---|
+| T1 | `/analytics` contains none of `4.2 / 5`, `24 reviews`, `312 helpful votes`, `Traffic Sources`, `Direct Search`, `Browse Category`, `Cotton Fabrics`, `Premium Cotton Blend`, `Italian Silk Collection`, `Organic Hemp Fabric`; Views-by-Category shows a real taxonomy category; a `Lifetime` scope pill is present | PASS |
+| T2 | Clicking `90 days` moves the Total Order Value card's pill from `Last 7 days` to `Last 90 days` — i.e. the filter genuinely re-scopes a windowed card | PASS |
+| T3 | `/advertisements` contains none of `27.2K`, `Avg. Cost/Lead`, `+23% this month`, `in the last one month`; Missed Calls states "records the dialer opening"; `Revenue Booked / Lead` is present | PASS |
+| T4 | `/quotes` contains none of `₹24.5L`, `1.5 days`, `This Month: 8 quotes`; Total Order Value still renders | PASS |
+
+**Evidence:** `screenshots/analytics-overview.png`, `screenshots/analytics-views.png`,
+`screenshots/advertise-stats.png`, `screenshots/quotes-performance.png`.
+
+**Live data the assertions ran against** (queried as the same vendor under RLS before the
+UI was wired, so the expected values were known independently of the page):
+
+| Figure | Live value |
+|---|---|
+| Conversations / messages | 2 / 2 — 1 thread overdue, 1 awaiting a vendor reply, 0 answered |
+| RFQs / quotes / accepted | 3 / 2 / 0 → Total Order Value ₹0 |
+| Repeat buyers | 2 of 2 |
+| Views by category | Men's T-Shirts 5, Men's Shirts 3, Activewear 2, Women's Dresses 2 |
+| Rated live products | Linen Camp Shirt 4.7 (3), Premium Cotton Polo 4.3 (4), Oversized Crew Tee 4.3 (4) |
+| Vendor reviews | 5 reviews, avg 4.4, 60% five-star |
+| Campaigns / paid ad orders / clicks | 2 / **0** / 86 |
+| Calls to this vendor | 3, all `direction = 'outgoing'` (buyer-placed) |
+
+**Two findings the run surfaced, both fixed before the final pass.** The Conversion KPI was
+rendering **15,425.0%** — `enquiries_count` (1.9K) and `views_count` (12) are independent
+counters, so their ratio is not a rate; above 100% the card now shows both counts and says
+they are not comparable. And the responsiveness line read "average first reply —" when no
+thread had ever been answered; it now says so in words.
+
+**Also verified, not by this spec:** `tsc --noEmit -p tsconfig.app.json` holds at the
+23-error baseline (a bare `tsc --noEmit` compiles nothing in this repo and falsely reports
+0), and `vite build` succeeds.
 
 ### 2026-09-07 — Hybrid product search: DB layer verified, browser layer 10/10 GREEN
 

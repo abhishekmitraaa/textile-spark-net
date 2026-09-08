@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { logEngagement, type CtaName } from "@/lib/queries/engagement";
 import {
   Building2,
   Megaphone,
@@ -51,8 +53,16 @@ const tertiaryActions: QuickActionItem[] = [
   { name: "Video Closeup", icon: Video, href: "/upload-video", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
+// Which quick actions are worth reporting as a CTA. Keyed by the visible name
+// so a new tile is opted IN deliberately rather than silently tracked.
+const TRACKED_ACTIONS: Record<string, CtaName> = {
+  "Add Products": "add_product",
+};
+
 const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: number }) => {
   const Icon = item.icon;
+  const { user } = useAuth();
+  const cta = TRACKED_ACTIONS[item.name];
 
   return (
     <motion.div
@@ -62,6 +72,7 @@ const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: numb
     >
       <Link
         to={item.href}
+        onClick={cta ? () => void logEngagement({ eventType: "cta_click", ctaName: cta, vendorId: user?.id }) : undefined}
         className="group flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:bg-muted/50 sm:p-4"
       >
         <div className="relative">

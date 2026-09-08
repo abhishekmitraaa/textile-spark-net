@@ -26,6 +26,9 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyAds, updateAdStatus, deleteAd, useVendorCategories, type AdRow } from "@/lib/queries/ads";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
+import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
+import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
+import { useLeadFunnelData, funnelForWindow, formatInrCompact } from "@/lib/queries/vendorAnalytics";
 import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, type AdSpec } from "@/lib/queries/payments";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
@@ -36,7 +39,7 @@ import {
   MousePointerClick, ChevronLeft, ChevronRight, X, Plus, Check,
   Building2, ShoppingBag, List, Calendar, Zap, Shield, BadgeCheck,
   Globe, Smartphone, Monitor, Facebook, BarChart3, Award, Radio,
-  Search, Star, Store, Megaphone,
+  Search, Star, Store, Megaphone, Minus,
 } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
@@ -57,14 +60,10 @@ interface AdType {
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-const STATS = [
-  { Icon: Phone,           value: "77",    label: "Phone Calls Received",    subtext: "8 today",                  trend: "down", color: "text-red-600",    bg: "bg-red-50"    },
-  { Icon: Eye,             value: "27.2K", label: "Business Profile Views",  subtext: "+12% this week",            trend: "up",   color: "text-green-600",  bg: "bg-green-50"  },
-  { Icon: Users,           value: "186",   label: "Leads Generated",         subtext: "+23% this month",           trend: "up",   color: "text-purple-600", bg: "bg-purple-50" },
-  { Icon: TrendingUp,      value: "₹3",    label: "Avg. Cost/Lead",          subtext: "avg. per month",            trend: "up",   color: "text-orange-600", bg: "bg-orange-50" },
-  { Icon: PhoneMissed,     value: "17",    label: "Missed Calls",            subtext: "in the last one month",     trend: "down", color: "text-red-600",    bg: "bg-red-50"    },
-  { Icon: MousePointerClick,value: "5K",   label: "Ad Clicks",              subtext: "+12% this week",            trend: "up",   color: "text-green-600",  bg: "bg-green-50"  },
-] as const;
+// The stats strip is windowed to 30 days where the data allows it, matching the
+// "in the last one month" wording it has always carried. Which figures can and
+// cannot be windowed is not a choice — see the StatsGrid comment below.
+const ADS_STATS_WINDOW_DAYS = 30;
 
 const AD_TYPES: AdType[] = [
   { id: "openListing",          name: "Open Listing Ad",             price: "₹22",  period: "/day", Icon: Megaphone,    description: "Boost your visibility in the open marketplace. Your products will be showcased to a wider audience browsing the general listings.", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop" },
@@ -190,26 +189,113 @@ function HeroSection() {
 }
 
 // ── StatsGrid ──
+//
+// Was a six-tile STATS constant of invented numbers ("77 calls", "27.2K views",
+// "186 leads", "₹3 avg. cost/lead", "17 missed calls", "5K ad clicks"). Every
+// tile now counts real rows, and the two that cannot be counted say so instead
+// of showing a figure:
+//
+//   • Missed Calls — `calls` records (buyer_id, vendor_id, direction,
+//     product_context, created_at) and nothing else. A row means the dialer was
+//     opened, not that a call connected, so there is no missed-call signal to
+//     count. Rendered as an em dash with the reason, never as a number.
+//   • Business Profile Views / Ad Clicks — lifetime counters
+//     (products.views_count, advertisements.clicks) with no per-event date, so
+//     they cannot be narrowed to 30 days. Labelled "lifetime".
+//
+// "Avg. Cost/Lead" is gone on purpose and must not come back: Cosora ads are
+// flat-rate prepaid placements, not an auction, so there is no cost per lead to
+// compute. Its replacement is revenue booked over leads across the same window
+// — the same wording Cosora-Admin AdsMonitoring.tsx uses.
 function StatsGrid() {
+  const { user } = useAuth();
+  const { data: myProducts = [] } = useMyProducts(user?.id);
+  const { data: callRows } = useVendorCalls(user?.id);
+  const { data: funnelData } = useLeadFunnelData(user?.id);
+  const { data: adPerf } = useAdPerformance(user?.id);
+
+  const days = ADS_STATS_WINDOW_DAYS;
+  const calls = callAnalyticsForWindow(callRows, days);
+  const funnel = funnelForWindow(funnelData, days);
+  const counters = adCountersTotal(adPerf);
+  const revenueBooked = revenueBookedSince(adPerf, days);
+  const profileViews = myProducts.reduce((sum, p) => sum + p.views, 0);
+  const campaignCount = adPerf?.campaigns.length ?? 0;
+
+  const trendWord = (n: number | null): "up" | "down" | "flat" =>
+    n == null ? "flat" : n > 0 ? "up" : n < 0 ? "down" : "flat";
+
+  const stats: {
+    Icon: React.ElementType; value: string; label: string; subtext: string;
+    trend: "up" | "down" | "flat"; color: string; bg: string; unavailable?: boolean;
+  }[] = [
+    {
+      Icon: Phone, value: String(calls.inbound), label: "Phone Calls Received",
+      subtext: calls.trendPct != null
+        ? `${calls.trendPct >= 0 ? "+" : ""}${calls.trendPct}% vs previous 30 days`
+        : `${calls.today} today · last 30 days`,
+      trend: trendWord(calls.trendPct), color: "text-red-600", bg: "bg-red-50",
+    },
+    {
+      Icon: Eye, value: profileViews.toLocaleString("en-IN"), label: "Business Profile Views",
+      subtext: "lifetime — a view carries no date", trend: "flat",
+      color: "text-green-600", bg: "bg-green-50",
+    },
+    {
+      Icon: Users, value: String(funnel.leads), label: "Leads Generated",
+      subtext: funnel.directLeads > 0
+        ? `${funnel.directLeads} sent to you directly · last 30 days`
+        : "last 30 days",
+      trend: funnel.leads > 0 ? "up" : "flat", color: "text-purple-600", bg: "bg-purple-50",
+    },
+    {
+      Icon: TrendingUp,
+      value: funnel.leads > 0 && revenueBooked > 0 ? formatInrCompact(revenueBooked / funnel.leads) : "—",
+      label: "Revenue Booked / Lead",
+      subtext: revenueBooked > 0
+        ? `${formatInrCompact(revenueBooked)} booked over ${funnel.leads} lead${funnel.leads === 1 ? "" : "s"}`
+        : "no paid ad orders in the last 30 days",
+      trend: "flat", color: "text-orange-600", bg: "bg-orange-50",
+      unavailable: !(funnel.leads > 0 && revenueBooked > 0),
+    },
+    {
+      Icon: PhoneMissed, value: "—", label: "Missed Calls",
+      subtext: MISSED_CALLS_UNAVAILABLE, trend: "flat",
+      color: "text-gray-400", bg: "bg-gray-100", unavailable: true,
+    },
+    {
+      Icon: MousePointerClick, value: counters.clicks.toLocaleString("en-IN"), label: "Ad Clicks",
+      subtext: `lifetime across ${campaignCount} campaign${campaignCount === 1 ? "" : "s"}`,
+      trend: "flat", color: "text-green-600", bg: "bg-green-50",
+    },
+  ];
+
   return (
     // The vendor sidebar eats 256px, so the six-across strip only earns its keep
     // past ~1400px — below that three columns keeps the labels readable.
     <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 lg:grid-cols-3 min-[1400px]:grid-cols-6">
-      {STATS.map((s, i) => (
-        <motion.div key={i} variants={listItem} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow min-[1400px]:p-5">
+      {stats.map((s) => (
+        <motion.div key={s.label} variants={listItem} className="bg-white rounded-xl p-4 border border-gray-200 hover:shadow-md transition-shadow min-[1400px]:p-5">
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-center gap-2">
               <div className={cn("p-2 rounded-lg", s.bg)}>
                 <s.Icon className={cn("w-5 h-5", s.color)} />
               </div>
-              <div className="text-2xl font-bold text-gray-900 lg:tabular-nums">{s.value}</div>
+              <div className={cn("text-2xl font-bold lg:tabular-nums", s.unavailable ? "text-gray-400" : "text-gray-900")}>
+                {s.value}
+              </div>
             </div>
             {s.trend === "up"
               ? <TrendingUp className="w-4 h-4 text-green-500" />
-              : <TrendingDown className="w-4 h-4 text-red-500" />}
+              : s.trend === "down"
+                ? <TrendingDown className="w-4 h-4 text-red-500" />
+                : <Minus className="w-4 h-4 text-gray-300" />}
           </div>
           <div className="text-xs text-gray-600 mb-1">{s.label}</div>
-          <div className={cn("text-xs font-medium", s.trend === "up" ? "text-green-600" : "text-red-600")}>
+          <div className={cn(
+            "text-xs font-medium leading-snug",
+            s.unavailable ? "text-gray-400" : s.trend === "up" ? "text-green-600" : s.trend === "down" ? "text-red-600" : "text-gray-500",
+          )}>
             {s.subtext}
           </div>
         </motion.div>

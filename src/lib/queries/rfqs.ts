@@ -429,6 +429,9 @@ export interface MySubmittedQuote {
   /** Buyer who posted the RFQ. Used to deep-link chat/call from the quote card. */
   buyerId: string; buyerName: string;
   pricePerUnit: number; moq: string; leadTime: string; submittedDate: string; lastUpdated: string;
+  /** Raw `quotes.created_at`. `submittedDate` is already localised for display,
+   *  so anything that needs to compare or window a quote reads this instead. */
+  submittedDateIso: string;
   pcs: string; totalQuotes: number;
   status: "in_negotiation" | "accepted" | "awaiting" | "not_selected";
   buyerResponse?: string; buyerResponseDate?: string; image?: string; rankBadge?: string;
@@ -487,6 +490,7 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
       moq: q.moq != null ? `${q.moq} pcs` : "—",
       leadTime: q.lead_time ?? "—",
       submittedDate: fmtDate(q.created_at),
+      submittedDateIso: q.created_at,
       lastUpdated: fmtDate(q.created_at),
       pcs: rfq?.quantity != null ? `${rfq.quantity} pcs` : "—",
       totalQuotes: quoteCounts.get(q.rfq_id) ?? 0,

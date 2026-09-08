@@ -19,6 +19,14 @@ export interface VendorDashboard {
   enquiries: number;      // sum of enquiries across the vendor's products
   followers: number;
   profileScore: number;
+  /** Per-signal breakdown behind `profileScore`. */
+  profileChecks: ProfileScoreChecks;
+  /** False when this account has no vendor_profiles row at all — the only
+   *  case a placeholder score may stand in for a real one. */
+  hasVendorRow: boolean;
+  /** The exact input the score was computed from, so a "what's missing" panel
+   *  can call profileScoreSignals() on it instead of re-reading the profile. */
+  scoreInput: ProfileScoreInput;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -76,30 +84,64 @@ function hasSocial(social: Record<string, string[]> | null): boolean {
   return Object.values(social).some((urls) => Array.isArray(urls) && urls.some(filled));
 }
 
+/** One scoring signal: what it is worth, whether it is met, and how to fix it. */
+export interface ProfileScoreSignal {
+  key: keyof typeof PROFILE_SCORE_WEIGHTS;
+  label: string;
+  points: number;
+  met: boolean;
+  /** Where the vendor goes to satisfy this signal. */
+  href: string;
+}
+
+/**
+ * Pure: same input, same output, no I/O. The single evaluation of the thirteen
+ * signals — `calculateProfileScore` sums this list rather than re-testing the
+ * conditions, so the dashboard ring and any "what's missing" surface can never
+ * disagree about which signals are met or what they are worth.
+ */
+export function profileScoreSignals(input: ProfileScoreInput): ProfileScoreSignal[] {
+  const w = PROFILE_SCORE_WEIGHTS;
+  return [
+    { key: "contactDetails",  label: "Add a contact phone number",            points: w.contactDetails,  met: filled(input.phone),                       href: "/business-profile" },
+    // A one-word "hi" is not an About Us; require something with a bit of substance.
+    { key: "aboutUs",         label: "Write an About Us section",             points: w.aboutUs,         met: (input.about ?? "").trim().length > 10,    href: "/business-profile" },
+    { key: "liveProduct",     label: "Get your first product live",           points: w.liveProduct,     met: input.productsLive >= 1,                   href: "/products" },
+    { key: "category",        label: "Pick the categories you sell in",       points: w.category,        met: (input.category ?? []).length > 0,         href: "/business-profile" },
+    { key: "officePhotos",    label: "Upload 5 photos of your premises",      points: w.officePhotos,    met: (input.officePhotos ?? []).length >= 5,    href: "/business-profile" },
+    { key: "tenProducts",     label: "List 10 products",                      points: w.tenProducts,     met: input.productsTotal >= 10,                 href: "/products" },
+    { key: "email",           label: "Add a business email",                  points: w.email,           met: filled(input.ownerEmail),                  href: "/business-profile" },
+    { key: "reviews",         label: "Collect 20 buyer reviews",              points: w.reviews,         met: input.reviewsCount >= 20,                  href: "/reviews" },
+    { key: "social",          label: "Link a social profile",                 points: w.social,          met: hasSocial(input.social),                   href: "/business-profile" },
+    { key: "website",         label: "Add your website",                      points: w.website,         met: filled(input.website),                     href: "/business-profile" },
+    { key: "twoQuotes",       label: "Send 2 quotes to buyers",               points: w.twoQuotes,       met: input.quotesSent >= 2,                     href: "/quotes" },
+    { key: "yearEstablished", label: "Add the year you were established",     points: w.yearEstablished, met: input.yearEstablished != null,             href: "/business-profile" },
+    { key: "employeeCount",   label: "Add your team size",                    points: w.employeeCount,   met: filled(input.employeeCount),               href: "/business-profile" },
+  ];
+}
+
+/** Which of the thirteen signals are satisfied, keyed by signal. */
+export type ProfileScoreChecks = Record<keyof typeof PROFILE_SCORE_WEIGHTS, boolean>;
+
+export interface ProfileScoreResult {
+  score: number;
+  checks: ProfileScoreChecks;
+}
+
 /**
  * Pure: same input, same output, no I/O. Kept free of Supabase types on
  * purpose so it can be exercised directly from a test or a REPL.
+ *
+ * Returns the per-signal breakdown alongside the number. The score was always
+ * real, but it travelled as a bare integer — so /business-profile-score, which
+ * needs to know WHICH tasks are done, had no way to ask and rendered a
+ * hardcoded "Missing" tag on every tile including the finished ones.
  */
-export function calculateProfileScore(input: ProfileScoreInput): number {
-  const w = PROFILE_SCORE_WEIGHTS;
-  let total = 0;
-
-  if (filled(input.phone)) total += w.contactDetails;
-  // A one-word "hi" is not an About Us; require something with a bit of substance.
-  if ((input.about ?? "").trim().length > 10) total += w.aboutUs;
-  if (input.productsLive >= 1) total += w.liveProduct;
-  if ((input.category ?? []).length > 0) total += w.category;
-  if ((input.officePhotos ?? []).length >= 5) total += w.officePhotos;
-  if (input.productsTotal >= 10) total += w.tenProducts;
-  if (filled(input.ownerEmail)) total += w.email;
-  if (input.reviewsCount >= 20) total += w.reviews;
-  if (hasSocial(input.social)) total += w.social;
-  if (filled(input.website)) total += w.website;
-  if (input.quotesSent >= 2) total += w.twoQuotes;
-  if (input.yearEstablished != null) total += w.yearEstablished;
-  if (filled(input.employeeCount)) total += w.employeeCount;
-
-  return Math.max(0, Math.min(100, Math.round(total)));
+export function calculateProfileScore(input: ProfileScoreInput): ProfileScoreResult {
+  const signals = profileScoreSignals(input);
+  const total = signals.reduce((s, sig) => s + (sig.met ? sig.points : 0), 0);
+  const checks = Object.fromEntries(signals.map((sig) => [sig.key, sig.met])) as ProfileScoreChecks;
+  return { score: Math.max(0, Math.min(100, Math.round(total))), checks };
 }
 
 async function count(table: string, apply: (q: ReturnType<typeof buildBase>) => ReturnType<typeof buildBase>): Promise<number> {
@@ -141,7 +183,7 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
     .eq("id", vendorId)
     .maybeSingle();
 
-  const profileScore = calculateProfileScore({
+  const scoreInput: ProfileScoreInput = {
     about: vp?.about ?? null,
     phone: vp?.phone ?? null,
     ownerEmail: vp?.owner_email ?? null,
@@ -155,7 +197,8 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
     productsTotal,
     productsLive,
     quotesSent,
-  });
+  };
+  const { score: profileScore, checks: profileChecks } = calculateProfileScore(scoreInput);
 
   // Keep the stored column in sync for anything that reads it directly (admin
   // tooling, the buyer-facing vendor page), but never let that write affect
@@ -185,6 +228,9 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
     enquiries,
     followers: vp?.followers_count ?? 0,
     profileScore,
+    profileChecks,
+    hasVendorRow: Boolean(vp),
+    scoreInput,
   };
 }
 
@@ -196,14 +242,56 @@ export function useVendorDashboard(vendorId: string | undefined) {
   });
 }
 
-// Shown when there's no vendor row yet (demo / buyer-only sessions).
+// Placeholder for a session with NO vendor row — signed out, or a buyer-only
+// account previewing the seller side. It is a demo number and must never stand
+// in for a signed-in vendor's real score: a vendor whose profile scores 12
+// seeing 45 is being told their profile is half-built when it is not.
 export const DEFAULT_PROFILE_SCORE = 45;
 
-// Single source of truth for the "Business Profile Score" — used by both the
-// dashboard card (BusinessProfileScore) and the /business-profile-score detail
-// page, so the two can never show different numbers.
-export function useProfileScore(): number {
+const EMPTY_CHECKS: ProfileScoreChecks = Object.fromEntries(
+  Object.keys(PROFILE_SCORE_WEIGHTS).map((k) => [k, false])
+) as ProfileScoreChecks;
+
+export interface ProfileScoreState {
+  score: number;
+  checks: ProfileScoreChecks;
+  /** True while this vendor's own rows are still in flight — show a skeleton,
+   *  not a number, because any number shown here would be made up. */
+  isLoading: boolean;
+  /** False for a signed-out session or an account with no vendor_profiles row. */
+  hasVendorRow: boolean;
+}
+
+/**
+ * Single source of truth for the "Business Profile Score" — the dashboard card,
+ * the /my-store completion bar and the /business-profile-score checklist all
+ * read this, so they can never disagree about the number or about which tasks
+ * are still outstanding.
+ */
+export function useProfileScoreState(): ProfileScoreState {
   const { user } = useAuth();
-  const { data } = useVendorDashboard(user?.id);
-  return data?.profileScore ?? DEFAULT_PROFILE_SCORE;
+  const { data, isLoading } = useVendorDashboard(user?.id);
+
+  // Signed out: nothing to compute from, so the placeholder is the honest
+  // answer (there is no real score to get wrong).
+  if (!user) {
+    return { score: DEFAULT_PROFILE_SCORE, checks: EMPTY_CHECKS, isLoading: false, hasVendorRow: false };
+  }
+  // Signed in but still loading: 0 with isLoading set, so a caller renders a
+  // skeleton. Returning DEFAULT_PROFILE_SCORE here is what made a real vendor
+  // briefly see 45% on every page load.
+  if (!data) {
+    return { score: 0, checks: EMPTY_CHECKS, isLoading, hasVendorRow: false };
+  }
+  return {
+    score: data.profileScore,
+    checks: data.profileChecks,
+    isLoading: false,
+    hasVendorRow: data.hasVendorRow,
+  };
+}
+
+/** Convenience wrapper for callers that only need the number. */
+export function useProfileScore(): number {
+  return useProfileScoreState().score;
 }

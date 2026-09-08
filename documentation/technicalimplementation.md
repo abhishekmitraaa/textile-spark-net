@@ -136,7 +136,7 @@ function is missing.
 | Ads | `advertisements`, `active_ads` (view), `ad_orders`, `ad_category_benchmarks`, `vendor_ad_verifications` |
 | Subscriptions | `subscription_plans`, `vendor_subscriptions`, `subscription_usage`, `subscription_invoices`, `subscription_payment_orders` |
 | Moderation & safety | `admin_flags`, `account_suspensions`, `notifications` |
-| Telemetry | `calls`, `ad_click`, `ad_impression` |
+| Telemetry | `engagement_events` (visit-level event log — see below), `calls`, `ad_click`, `ad_impression` |
 
 ### Notable functions / RPCs
 
@@ -145,6 +145,7 @@ function is missing.
 `notify`, `account_is_active`, `is_admin`, `is_conversation_member`, `owns_product`,
 `owns_rfq`, `get_vendor_plan`, `expire_subscriptions`, `grant_ad_verification`,
 `increment_product_view`, `increment_product_enquiry`, `increment_video_view`,
+`log_engagement_event` (the only write path into `engagement_events`),
 `sync_video_likes_count` (trigger fn), `next_invoice_number`,
 `reply_to_review`, `user_has_password`.
 
@@ -152,6 +153,91 @@ Enforcement pattern used throughout: **RLS decides who may touch a row; BEFORE t
 decide which state transitions are legal.** Moderation RPCs are `SECURITY DEFINER` and
 carry no `EXECUTE` grant to `PUBLIC`. See Known Constraints below for the invariants that
 must not be undone.
+
+### `engagement_events` — visit-level tracking (migration 20260907170000)
+
+**Filename does not match the recorded version, and that is expected.** `apply_migration`
+over MCP stamps its own timestamp: this file is `20260907170000_engagement_events.sql`
+locally but `supabase_migrations.schema_migrations` records version `20260907191048`, name
+`engagement_events`. The same is true of `20260907180000_vendor_store_unit_and_
+recommendations.sql`, recorded as `20260907182703`. A future `supabase db push` will
+therefore see both as unapplied and try to re-run them — harmless here, because this
+migration is written to be idempotent throughout (`create table if not exists`,
+`drop policy if exists` before each `create policy`, `create or replace function`,
+`create index if not exists`). Keep it that way, or rename the file to the recorded version
+before anyone links the CLI.
+
+**Status: APPLIED 2026-09-08.** Live on the project, verified by
+`scripts/engagement-events-check.mjs` (19/19) plus an end-to-end run through the app. The
+`installed: false` path below is retained deliberately — it is what a fresh branch database
+or a restored-from-before-this-date environment will hit, and it must keep saying "not
+switched on" rather than "no data" there.
+
+```
+id uuid pk · event_type text check(product_view|profile_view|search_impression|
+  search_click|ad_impression|ad_click|cta_click) · vendor_id uuid not null →vendor_profiles
+  · product_id uuid →products · ad_id uuid →advertisements · viewer_id uuid →profiles
+  (null = signed out) · session_id text · source text check(organic_search|category_browse|
+  recommendation|ad|external|direct) · query_text text · cta_name text · created_at timestamptz
+index (vendor_id, created_at desc) · (vendor_id, event_type, created_at desc)
+```
+
+**One table, seven event types — not four tables.** Every panel this feeds is "group this
+vendor's events by `<dimension>` over `<window>`". Four tables would mean four near-identical
+schemas, four RLS policies to keep in step, four `(vendor_id, created_at)` indexes and a
+UNION in every query that spans them — and the queries do span them, because "ad-attributed
+profile views" is an ad event and a profile event at once. The type-specific columns are all
+nullable and cheap.
+
+**RLS: SELECT-only, and there is deliberately no INSERT policy at all.** Writes go
+exclusively through `log_engagement_event`, a `SECURITY DEFINER` function, mirroring
+`increment_product_view`. `viewer_id` is taken from `auth.uid()` *inside* the function and is
+never a parameter — a client that could name the viewer could forge every unique-visitor and
+attribution figure on the page. The vendor is likewise derived server-side from the product
+or ad wherever one is named. `SELECT` is `(vendor_id = auth.uid()) or is_admin()`; a buyer
+cannot read the events they generated, so `viewer_id` never becomes a way to enumerate who
+looked at what. The function swallows every error: this is fire-and-forget telemetry sitting
+in front of a buyer's navigation.
+
+**The counters are NOT replaced.** `products.views_count` and
+`advertisements.impressions/clicks` still run exactly as before — the buyer feed sorts on
+one and the campaigns table reads the others, and they carry history predating this table.
+Each client call site now does both writes side by side, under the *same* dedup key where one
+exists (ProductDetail's `cosora.viewed.<id>` session key), because two different dedup rules
+would make the counter and the event log disagree about the same visit. This is deliberately
+NOT done by editing `increment_product_view` / `ad_impression` / `ad_click`: their bodies are
+not reproduced in this repo's migration history, and `create or replace`-ing a function from
+a guess at its body is how a `status = 'live'` filter silently disappears from production.
+
+**The status guard is why the write path is a function and not an INSERT policy.** The
+counter RPCs are one line each and each carries a filter — `increment_product_view` only
+counts a `status = 'live'` product, `ad_impression`/`ad_click` only an `status = 'active'`
+ad. `log_engagement_event` repeats exactly those filters for the three event types that
+mirror a counter, so the log and the counters can never tell different stories about one
+visit. Without it a vendor previewing their own `under_review` listing would bump no
+counter but would log a `product_view` against themselves, quietly poisoning their own
+analytics with their own page refreshes. The guard is scoped to those three types only: a
+`cta_click` that happens to name a non-live product is still a real button press and is
+still recorded. Proved in a self-rolling-back `DO` block — see `documentation/test.md`.
+
+**Three states, not two.** Before the migration is applied PostgREST answers `PGRST205`.
+`useEngagementWindow` reports `installed: false` for exactly that code and rethrows anything
+else, and the `EventPanel` component renders "not switched on" — distinct from the genuine
+empty-window message. Collapsing them is how a broken page passes for an empty one.
+
+**`source` is resolved by a short-lived marker, not by router state.** The value is known at
+the *origin* (the search page knows the click was a search result) but needed at the
+*destination* (ProductDetail logs the view). Threading it through would mean adding state to
+every `<Link to="/product/...">` in the buyer app. Instead `markNavSource()` writes a
+`sessionStorage` marker and `consumeNavSource()` reads-and-clears it with a **15-second TTL**
+— without the TTL, a stale marker from a search ten minutes ago would relabel a later direct
+visit as organic search, which is worse than the honest `'direct'` default.
+
+**`session_id` is `sessionStorage`, deliberately not `localStorage`.** It is a fallback for
+counting one anonymous browsing session as one visitor, not a durable identifier for a
+person; it dies with the tab, and the server ignores it entirely once `auth.uid()` is
+non-null. Unique visitors are `count(distinct coalesce(viewer_id, session_id))` and are shown
+**alongside** total views, never instead of them, labelled as a lower bound.
 
 ### Storage buckets
 
@@ -342,16 +428,60 @@ branch that reports configuration without spending a token.
 ## Key Modules
 
 ### Data access — `src/lib/queries/`
-`ads.ts`, `calls.ts`, `catalogues.ts`, `chat.ts`, `follows.ts`, `notifications.ts`,
-`payments.ts`, `products.ts`, `profile.ts`, `reviews.ts`, `rfqs.ts`, `search.ts`,
-`subscriptions.ts`, `vendor.ts`, `vendorDashboard.ts`, `vendorOnboarding.ts`,
-`vendorStore.ts`, `videos.ts`.
+`adPerformance.ts`, `ads.ts`, `callAnalytics.ts`, `calls.ts`, `catalogues.ts`, `chat.ts`,
+`follows.ts`, `forYou.ts`, `notifications.ts`, `payments.ts`, `products.ts`, `profile.ts`,
+`reviews.ts`, `rfqs.ts`, `search.ts`, `subscriptions.ts`, `vendor.ts`,
+`vendorAnalytics.ts`, `vendorDashboard.ts`, `vendorOnboarding.ts`, `vendorStore.ts`,
+`videoEngagement.ts`, `videos.ts`.
 
 `search.ts` owns the search read model: `useSearchSuggestions` (debounced autocomplete),
 `useProductSearch` (server-ranked results, hydrated through `fetchCatalogueByIds` so search
 rows and browse rows share one mapping), and `useDebounced`. Facets are computed over the
 returned result set (`SEARCH_MATCH_COUNT = 200`), not over the whole catalogue — a search
 page's facet counts describe the results, which is what a buyer expects.
+
+### Vendor analytics — three modules, one rule (2026-09-07)
+
+`vendorAnalytics.ts`, `callAnalytics.ts` and `adPerformance.ts` are the read model behind
+`/analytics`, the `/advertisements` stats strip and the `/quotes` metrics rail. They exist
+because those three surfaces previously rendered fixtures, and the rule they enforce is
+that **a figure is either counted from a real row or it is not shown**.
+
+**The windowed/lifetime split is the load-bearing idea.** `WINDOW_DAYS`, `inWindow()` and
+`inPriorWindow()` scope anything with a real per-row timestamp; `METRIC_SCOPE_NOTE` is the
+sentence rendered beside anything backed only by a monotonic counter. Nothing may quietly
+sit in between — see "A metric is windowed or it is lifetime" in `documentation/claude.md`.
+
+| Hook / helper | Source rows | Windowed? |
+|---|---|---|
+| `useVendorOrderValue` → `orderValueSince()` | `quotes` (accepted) × `rfqs.quantity` | yes (`quotes.created_at`) |
+| `useVendorResponsiveness` | `conversations` + `messages` | no — measured over all threads |
+| `useLeadFunnelData` → `funnelForWindow()` | `rfqs`, `quotes` | yes |
+| `useRepeatBuyers` | `calls` + `conversations` + directed `rfqs` | no |
+| `useVendorProductRatings` | `products` (live) + `product_reviews` | no |
+| `useVendorCalls` → `callAnalyticsForWindow()` | `calls` | yes (`calls.created_at`) |
+| `useAdPerformance` → `revenueBookedSince()`, `campaignEconomics()` | `ad_orders` (paid) + `advertisements` | revenue yes; impressions/clicks no |
+
+**Response time from three columns.** `messages` has `(conversation_id, sender_id,
+created_at)` and no response-time field or `read_at`. Per conversation, the buyer's first
+message and the vendor's first reply after it give one real first-reply delay. The headline
+is a 24-hour threshold percentage rather than a mean, and a thread opened **more than** 24h
+ago with no reply counts as a miss rather than as missing data; a thread opened inside the
+last 24h is excluded from the percentage but still counted as awaiting a reply. "Awaiting"
+keys off the thread's tail (is the newest message the buyer's?), not its head.
+
+**Per-campaign ad revenue works around a missing foreign key.** `ad_orders` has no `ad_id`
+and its `amount` is in **paise**; one order publishes one `advertisements` row per spec
+item (`razorpay-verify-payment`'s `adRows()`). So each paid order's amount is divided
+evenly across its `spec.items[].productId`, and each item claims the not-yet-claimed
+campaign promoting that product whose `starts_at` is nearest the payment. Anything
+unmatched is reported as `unattributed` so the per-campaign column always reconciles with
+the vendor-wide total. Demo-published campaigns have no `ad_orders` row and book ₹0.
+
+**`profileScoreSignals()` (in `vendorDashboard.ts`) is the single evaluation of the
+thirteen profile-score signals.** `calculateProfileScore` sums that list rather than
+re-testing the conditions, so the dashboard ring and the Analytics gap nudge cannot
+disagree about which signals are met or what each is worth.
 
 ### Client stores — `src/lib/*Store.ts`
 Module-level stores backed by `useSyncExternalStore` + `localStorage`, **not** React

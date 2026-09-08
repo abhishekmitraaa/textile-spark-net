@@ -2,11 +2,14 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Megaphone, Star } from "lucide-react";
-import { useActiveAds, logAdImpression, logAdClick, type ActiveAd } from "@/lib/queries/ads";
+import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 
 // Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (active, promoting
 // a live product) as tappable cards. Impressions are logged once per ad per
-// mount; a tap logs a click and opens the promoted product. See queries/ads.ts.
+// mount; a tap logs a click and opens whatever the campaign's goal actually
+// bought — the storefront for a profile-goal placement, the product otherwise
+// (see adDestination in queries/ads.ts). See queries/ads.ts.
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 
 // `category` (optional) filters serving to ads targeting that category plus
@@ -29,9 +32,23 @@ export default function SponsoredRail({ max = 10, className, category }: { max?:
 
   if (ads.length === 0) return null;
 
+  // Honours the campaign goal the vendor paid for: a storePromotion/brandAd
+  // placement opens the storefront, everything else opens the product. This
+  // used to navigate to `/product/${a.productId}` unconditionally, so a
+  // "Visit your profile" campaign delivered product traffic and a
+  // profile-only ad (no product_id) was a card that did nothing at all.
   const open = (a: ActiveAd) => {
     void logAdClick(a.adId);
-    if (a.productId) navigate(`/product/${a.productId}`);
+    const dest = adDestination(a);
+    if (!dest) return;
+    // The destination logs the view; tell it this arrival was bought.
+    markNavSource("ad");
+    if (dest.kind === "profile") {
+      // Ad-attributed profile views are reported separately from ad-attributed
+      // product views, so the event is logged here where the goal is known.
+      void logEngagement({ eventType: "profile_view", vendorId: a.vendorId, adId: a.adId, source: "ad" });
+    }
+    navigate(dest.path);
   };
 
   return (

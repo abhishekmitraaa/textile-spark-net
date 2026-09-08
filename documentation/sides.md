@@ -131,8 +131,27 @@ rather than a supplier directory.
   and ad geography. Enforced by `enforce_plan_limits`. Invoices are first-class.
   **No Razorpay Subscriptions API and no autopay** — every billing period is a discrete
   order the vendor pays explicitly.
-- **Analytics** — performance, and **Total Order Value** (e.g. ₹24.5 Lakhs), the platform's
-  strongest retention metric.
+- **Analytics** — every figure counted from the vendor's own rows; no chart fixtures remain.
+  Lifetime KPIs (views, inquiries, active products); **Total Order Value**, the platform's
+  strongest retention metric, computed from accepted quotes × RFQ quantity and shared with
+  the Quotes page so the two can never disagree; quote acceptance rate; a **lead-to-order
+  funnel** (requirements → quotes sent → accepted → order value); **buyer responsiveness**
+  ("X% of buyer messages get a first reply within 24 hours", with the threads currently
+  waiting on a reply as a tappable action list); **call analytics** (inbound vs outbound,
+  trend, and what buyers call about, from the `calls` table); **repeat buyers**; a real
+  **views-by-category** split; **best/worst-rated live product**; a **you vs category
+  average** tile reusing the `ad_category_benchmarks` RPC; a **profile-score gap nudge**
+  driven by the same weights as the dashboard ring; and **per-campaign revenue booked ÷
+  leads**. Every card declares whether it is windowed by the 7/30/90/365-day filter or is a
+  lifetime counter that cannot be — see "A metric is windowed or it is lifetime" in
+  `documentation/claude.md`. Backed by `engagement_events` (**live since 2026-09-08**): **Performance Trends**
+  and daily views from real per-event timestamps, a real **Traffic Sources** breakdown,
+  **unique visitors** shown alongside total views, **search terms that found you**
+  (impressions → clicks → click rate, this vendor's own impressions only — never a
+  platform-wide rank claim), **ad-attributed profile visits reported separately from
+  ad-attributed product visits**, and a **button performance** panel that folds Call Now in
+  with every other tracked CTA. Each of those panels states plainly when tracking is not
+  switched on, rather than rendering an empty chart.
 - **My Store / Business Profile** — storefront, employees, business tools, Profile Score,
   social links, blogs.
 - **Chat** — messaging with buyers, subject to the same moderation pipeline.
