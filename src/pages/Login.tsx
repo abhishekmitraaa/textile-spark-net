@@ -1,11 +1,14 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Globe, ChevronDown, X, Loader2 } from "lucide-react";
+import { Globe, ChevronDown, X, Loader2, Eye, EyeOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/supabase";
+import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
+import { Link } from "react-router-dom";
 import { useLang, setLang, langCodeFromName, LANG_OPTIONS } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
@@ -18,23 +21,6 @@ import { useLang, setLang, langCodeFromName, LANG_OPTIONS } from "@/lib/i18n";
 // feature read as broken. Sourced from i18n.ts so it can never drift again.
 const LANGUAGES = LANG_OPTIONS;
 
-const COUNTRY_CODES = [
-  { flag: "🇮🇳", code: "+91",  name: "India" },
-  { flag: "🇨🇳", code: "+86",  name: "China" },
-  { flag: "🇹🇼", code: "+886", name: "Taiwan" },
-  { flag: "🇯🇵", code: "+81",  name: "Japan" },
-  { flag: "🇺🇸", code: "+1",   name: "United States" },
-  { flag: "🇭🇰", code: "+852", name: "Hong Kong" },
-  { flag: "🇦🇺", code: "+61",  name: "Australia" },
-  { flag: "🇨🇦", code: "+1",   name: "Canada" },
-  { flag: "🇻🇳", code: "+84",  name: "Vietnam" },
-  { flag: "🇬🇧", code: "+44",  name: "United Kingdom" },
-  { flag: "🇹🇭", code: "+66",  name: "Thailand" },
-  { flag: "🇦🇷", code: "+54",  name: "Argentina" },
-];
-
-// Mock "already registered" phone numbers — in a real app this is an API call
-const REGISTERED_PHONES = new Set(["9876543210", "9000000001"]);
 
 // ─────────────────────────────────────────────────────────────
 // LANGUAGE SELECTOR MODAL
@@ -83,50 +69,6 @@ function LanguageModal({
 }
 
 // ─────────────────────────────────────────────────────────────
-// COUNTRY CODE MODAL
-// ─────────────────────────────────────────────────────────────
-
-function CountryModal({
-  isOpen, onClose, onSelect,
-}: { isOpen: boolean; onClose: () => void; onSelect: (c: typeof COUNTRY_CODES[0]) => void }) {
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50"
-          onClick={onClose}
-        >
-          <motion.div
-            initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 40, opacity: 0 }}
-            onClick={e => e.stopPropagation()}
-            className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl max-h-[70vh] flex flex-col"
-          >
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="text-base font-bold text-gray-900">Country</h3>
-              <button onClick={onClose}><X className="w-5 h-5 text-gray-400" /></button>
-            </div>
-            <div className="overflow-y-auto py-2">
-              {COUNTRY_CODES.map((c, i) => (
-                <button
-                  key={c.name + i}
-                  onClick={() => { onSelect(c); onClose(); }}
-                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
-                >
-                  <span className="text-lg">{c.flag}</span>
-                  <span className="text-sm text-gray-700 flex-1">{c.name}</span>
-                  <span className="text-sm text-gray-400">({c.code})</span>
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
@@ -135,7 +77,6 @@ const Login = () => {
   const { signInWithGoogle } = useAuth();
   const lang = useLang();
   const [googleLoading, setGoogleLoading] = useState(false);
-  const [phone, setPhone] = useState("");
   // Derived from the active language code so Gujarati doesn't load showing
   // "English" — the old check only special-cased Hindi.
   const [selectedLang, setSelectedLang] = useState(
@@ -143,14 +84,12 @@ const Login = () => {
   );
   // Selecting a language here also switches the whole app's UI language.
   const handleSelectLang = (l: string) => { setSelectedLang(l); setLang(langCodeFromName(l)); };
-  const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
   const [langModalOpen, setLangModalOpen] = useState(false);
-  const [countryModalOpen, setCountryModalOpen] = useState(false);
-  const [checking, setChecking] = useState(false);
-
-  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(e.target.value.replace(/\D/g, "").slice(0, 10));
-  };
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
@@ -165,22 +104,52 @@ const Login = () => {
     }
   };
 
-  const handleSendCode = (e: React.FormEvent) => {
+  /**
+   * Email + password is the real sign-in path.
+   *
+   * What was here before: a `setTimeout(400)` that checked the typed number
+   * against a hardcoded Set of two phone numbers and then either "signed you
+   * in" (navigate to the buyer home, no session) or sent you to an OTP screen
+   * that accepted any six digits. No Supabase call at any point.
+   */
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < 10) return;
+    if (signingIn || !email.trim() || !password) return;
+    setSigningIn(true);
+    setError(null);
 
-    setChecking(true);
+    const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
 
-    // Mock check: "Sign in automatically if already registered"
-    setTimeout(() => {
-      if (REGISTERED_PHONES.has(phone)) {
-        navigate("/home/new-arrivals");
-        return;
-      }
-      navigate("/auth/otp-verify", {
-        state: { phone, countryCode: selectedCountry.code, flag: selectedCountry.flag },
-      });
-    }, 400);
+    if (signInError) {
+      setSigningIn(false);
+      const m = signInError.message.toLowerCase();
+      setError(
+        m.includes("email not confirmed")
+          ? "Confirm your email first — open the link we sent you, then sign in."
+          : m.includes("invalid login")
+            ? "That email and password don't match an account."
+            : signInError.message,
+      );
+      return;
+    }
+
+    // Apply anything the signup form captured but could not write because the
+    // account was unconfirmed at the time. Idempotent and non-blocking.
+    if (data.user) await applyPendingSignupProfile(data.user);
+
+    // Route by the role on the profile, not by a guess.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("active_role, onboarded")
+      .eq("id", data.user.id)
+      .maybeSingle();
+    setSigningIn(false);
+
+    if (!profile?.onboarded) { navigate("/auth/role-selection"); return; }
+    navigate(profile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals");
   };
 
   return (
@@ -210,38 +179,64 @@ const Login = () => {
             <CosoraLogo height={38} />
           </div>
 
-          <form onSubmit={handleSendCode} className="space-y-4">
-            {/* Phone input row */}
-            <div className="flex items-center gap-2 border border-gray-300 rounded-xl px-2 py-1 focus-within:border-[#a4172c] transition-colors">
+          <form onSubmit={handleSignIn} className="space-y-3">
+            <input
+              type="email"
+              autoComplete="email"
+              placeholder="Email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoFocus
+              className="w-full border border-gray-300 rounded-xl px-3 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-[#a4172c] focus:outline-none transition-colors"
+            />
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full border border-gray-300 rounded-xl px-3 py-3 pr-10 text-sm text-gray-900 placeholder-gray-400 focus:border-[#a4172c] focus:outline-none transition-colors"
+              />
               <button
                 type="button"
-                onClick={() => setCountryModalOpen(true)}
-                className="flex items-center gap-1 px-2 py-2.5 shrink-0 border-r border-gray-200"
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <span className="text-base">{selectedCountry.flag}</span>
-                <span className="text-sm text-gray-700">{selectedCountry.code}</span>
-                <ChevronDown className="w-3 h-3 text-gray-400" />
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
-              <input
-                type="tel"
-                inputMode="numeric"
-                placeholder="Phone Number"
-                value={phone}
-                onChange={handlePhoneChange}
-                autoFocus
-                className="flex-1 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:outline-none bg-transparent"
-              />
             </div>
 
-            {/* Send Code button */}
+            {error && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-2.5">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+                <p className="text-xs text-gray-700">{error}</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={phone.length < 10 || checking}
-              className="w-full py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors"
+              disabled={!email.trim() || !password || signingIn}
+              className="w-full py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
-              {checking ? "Checking..." : "Send Code"}
+              {signingIn && <Loader2 className="h-4 w-4 animate-spin" />}
+              {signingIn ? "Signing in…" : "Sign In"}
             </button>
           </form>
+
+          {/* Phone sign-in is NOT wired up, and says so.
+              `supabase.auth.signInWithOtp({ phone })` returns
+              `phone_provider_disabled / "Unsupported phone provider"` on this
+              project — there is no SMS provider configured. A phone field that
+              silently does nothing is the exact class of bug this work removes,
+              so the control is disabled and labelled rather than shipped. */}
+          <div className="mt-3 flex items-center gap-2 rounded-xl border border-dashed border-gray-300 bg-gray-50 px-3 py-2.5">
+            <span className="flex-1 text-xs text-gray-500">
+              Sign in with phone — <span className="font-medium text-gray-600">coming soon</span>
+            </span>
+          </div>
 
           {/* Divider */}
           <div className="flex items-center gap-3 my-5">
@@ -268,8 +263,15 @@ const Login = () => {
             {googleLoading ? "Connecting…" : "Google"}
           </button>
 
+          <p className="mt-5 text-center text-sm text-gray-500">
+            New to Cosora?{" "}
+            <Link to="/register" className="font-semibold text-[#a4172c] hover:underline">
+              Create an account
+            </Link>
+          </p>
+
           {/* Explore as Guest */}
-          <div className="text-center mt-5">
+          <div className="text-center mt-3">
             <button
               onClick={() => navigate("/home/new-arrivals")}
               className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
@@ -285,11 +287,6 @@ const Login = () => {
         onClose={() => setLangModalOpen(false)}
         selected={selectedLang}
         onSelect={handleSelectLang}
-      />
-      <CountryModal
-        isOpen={countryModalOpen}
-        onClose={() => setCountryModalOpen(false)}
-        onSelect={setSelectedCountry}
       />
     </div>
   );

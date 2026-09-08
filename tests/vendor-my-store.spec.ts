@@ -66,7 +66,6 @@ const RETIRED = [
   "SOHO",                                  // demo product brand caption
   "24 Ratings",                            // hardcoded Get Reviews figure
   "Review requests sent!",
-  "Small-batch manufacturers",             // non-persisting capacity block
 ];
 
 const ROUTES = ["/my-store", "/my-store/business", "/business-profile", "/business-profile-score"];
@@ -210,7 +209,7 @@ test("/business-profile-score shows ticks for completed items and the stored sco
   const ticks = await page.locator('[aria-label="Completed"]').count();
   expect(ticks, "completed tasks render a green tick, not Missing").toBeGreaterThan(0);
   const missing = await page.getByText("Missing", { exact: true }).count();
-  expect(missing + ticks, "every tile carries a real state").toBe(13);
+  expect(missing + ticks, "every tile carries a real state").toBe(15);
 
   await page.screenshot({ path: path.join(SHOTS, "vendor-profile-score.png"), fullPage: true });
   expect(errors, "no console errors on /business-profile-score").toEqual([]);
@@ -302,10 +301,9 @@ test("8.2 a signed-out registration cannot reach the success screen", async ({ b
 
   // Step 2
   await page.getByPlaceholder("Business name").fill("Signed Out Looms");
+  // No "Verify" button and no OTP dialog: phone is a plain contact field now.
   await page.getByPlaceholder("Phone number").fill("9876500022");
-  await page.getByRole("button", { name: "Verify", exact: true }).click();
-  await page.locator("input[data-input-otp]").first().fill("123456");
-  await page.getByRole("dialog").getByRole("button", { name: "Verify" }).click();
+  await expect(page.getByRole("button", { name: "Verify", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "Next" }).click();
 
   // Step 3

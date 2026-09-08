@@ -1,5 +1,6 @@
 import { supabase } from "@/lib/supabase";
 import { resolveCategoryId } from "@/lib/queries/products";
+import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 
 // ─────────────────────────────────────────────────────────────
 // Persist the vendor registration (8-step Onboarding) to the DB.
@@ -57,8 +58,15 @@ export interface VendorOnboardingPayload {
   category?: string[];
   /** Public storage URLs of the premises photos (vendor_profiles.office_photos). */
   officePhotos?: string[];
-  /** Public storage URL of the uploaded PAN scan → vendor_documents.file_url. */
+  /** Storage PATH of the uploaded PAN scan (business-docs) → vendor_documents.file_url. */
   panFileUrl?: string;
+  /** The signed supplier agreement. Written in the same call as the profile, so
+   *  a vendor with onboarding_complete = true always has a contract on file. */
+  contract?: {
+    signedName: string;
+    /** business-docs path of the signature PNG, when one was drawn. */
+    signatureUrl?: string;
+  };
   product?: OnboardingProduct;
 }
 
@@ -164,32 +172,95 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
     }
   }
 
+  // The signed supplier agreement. Deliberately inside this function rather
+  // than alongside it: onboarding_complete = true and "no contract on file"
+  // must not be a reachable combination, so the same call that sets the flag
+  // writes the record.
+  if (p.contract?.signedName?.trim()) {
+    const { error: ce } = await supabase.from("vendor_contracts").insert({
+      vendor_id: vendorId,
+      signed_name: p.contract.signedName.trim(),
+      signature_url: p.contract.signatureUrl ?? null,
+      agreement_version: SUPPLIER_AGREEMENT_VERSION,
+    });
+    if (ce) throw ce;
+  }
+
   // Mark the account as an onboarded seller (best-effort; non-blocking).
   await supabase.from("profiles").update({ active_role: "seller", onboarded: true }).eq("id", vendorId);
 }
 
 // ─────────────────────────────────────────────────────────────
-// Uploads for the registration form. Both land in the public `product-images`
-// bucket under the vendor's own folder, matching uploadVendorImage /
-// uploadVendorGalleryImage in vendorStore.ts.
+// Uploads for the registration form.
+//
+// Two buckets, on purpose. Product photos are meant to be seen by buyers and
+// go to the PUBLIC `product-images`. A PAN card is not a product photo: KYC
+// goes to the PRIVATE `business-docs` and is only ever read through a
+// short-lived signed URL.
 // ─────────────────────────────────────────────────────────────
 
 /**
- * The KYC scan (PAN card). Kept under `<vendor>/kyc/` so it is distinguishable
- * from catalogue imagery at a glance in the bucket.
+ * The one bucket a KYC document may ever live in.
  *
- * Honest limitation: `product-images` is a PUBLIC bucket. That is where every
- * other vendor asset in this app lives and moving KYC to a private bucket with
- * signed URLs is a change to the storage model, not to this form — flagged in
- * the report rather than half-done here.
+ * This used to be `product-images`, which is public — a PAN card was fetchable
+ * by anyone who guessed or was given the URL, with no auth at all. Everything
+ * below exists to make that unrepresentable rather than merely fixed.
+ */
+export const KYC_BUCKET = "business-docs";
+
+/**
+ * Cheap invariant, deliberately not a comment. Any function that writes a
+ * `/kyc/` path calls this first, so putting one back in a public bucket fails
+ * loudly at the call site instead of being rediscovered in six months.
+ */
+export function assertKycBucket(bucket: string): void {
+  if (bucket !== KYC_BUCKET) {
+    throw new Error(
+      `KYC documents may only be stored in the private "${KYC_BUCKET}" bucket, not "${bucket}". ` +
+      `A public bucket makes identity documents fetchable without auth.`,
+    );
+  }
+}
+
+/**
+ * The KYC scan (PAN card).
+ *
+ * The `${vendorId}/kyc/...` shape is REQUIRED, not cosmetic: the
+ * `business_docs_owner_select` policy keys on `foldername(name)[1] = auth.uid()`
+ * (OR `is_admin()`), so flattening the path would make every document either
+ * unreadable or readable by the wrong vendor.
+ *
+ * Returns the storage PATH, not a URL. `business-docs` is private, and
+ * `getPublicUrl()` on a private bucket cheerfully returns a string that 400s —
+ * worse than an error, because it looks like it worked. Reads go through
+ * `signedKycUrl()` in queries/vendorDocuments.ts.
  */
 export async function uploadKycDocument(vendorId: string, file: File): Promise<string> {
+  assertKycBucket(KYC_BUCKET);
   const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
   const suffix = Math.random().toString(36).slice(2, 8);
   const path = `${vendorId}/kyc/${Date.now()}-${suffix}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: true });
   if (error) throw error;
-  return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+  return path;
+}
+
+/**
+ * The drawn/typed signature from the contract step, as a PNG.
+ *
+ * Same private bucket as KYC and for the same reason — a signature is identity
+ * material, not marketing collateral. Takes a data: URL because that is what
+ * `canvas.toDataURL()` hands back.
+ */
+export async function uploadSignature(vendorId: string, dataUrl: string): Promise<string> {
+  assertKycBucket(KYC_BUCKET);
+  const blob = await (await fetch(dataUrl)).blob();
+  const path = `${vendorId}/contract/${Date.now()}.png`;
+  const { error } = await supabase.storage
+    .from(KYC_BUCKET)
+    .upload(path, blob, { upsert: true, contentType: "image/png" });
+  if (error) throw error;
+  return path;
 }
 
 /** One image for the step-7 product. Mirrors Upload.tsx's `<vendor>/<key>/<i>` shape. */

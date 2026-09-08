@@ -261,6 +261,51 @@ undocumented. Deep technical rationale for each lives in
   landed on their own empty seller page. It is `${origin}/vendor/:id`, where a working review
   modal already exists. Relatedly: a `<QrCode>` lucide icon is a *picture* of a QR code and
   does not scan; if a QR is shown, generate a real one.
+- **Identity documents go in a PRIVATE bucket, and the code enforces it (2026-09-08).** KYC
+  scans live in `business-docs`, never `product-images`. `assertKycBucket()` runs at the top
+  of every function that touches a `/kyc/` path and throws otherwise; a private bucket has no
+  public URL, so reads are 5-minute signed URLs minted **on demand for the one document being
+  opened**. The `${vendorId}/kyc/…` prefix is load-bearing —
+  `business_docs_owner_select` keys on `foldername(name)[1]`. Never call `getPublicUrl()` on a
+  private bucket: it returns a string that 400s, which reads as success.
+- **A vendor must never be able to mark themselves verified.** `vendor_documents_all` is one
+  `ALL` policy with `vendor_id = auth.uid() OR is_admin()`, which let a vendor `update … set
+  verified = true` on their own KYC from the browser. The `vendor_documents_guard_review`
+  trigger refuses the four review columns to non-admins; `set_vendor_document_verified()` is
+  the only writer. Before adding a self-service column to any table with a permissive `ALL`
+  policy, ask what a client could set it to.
+- **Authorization for a moderation verdict goes INSIDE a SECURITY DEFINER function.** A
+  client UPDATE that RLS denies matches zero rows and returns success. This repo has been
+  bitten by that; `set_vendor_document_verified()` follows `set_account_status()` — same
+  support/super_admin gate, raises on every failure path, and the admin UI's button is gated
+  on the matching section so a disabled control is never the only defence.
+- **A rejection needs a reason, and the person rejected has to see it.** The database refuses
+  `set_vendor_document_verified(..., false, null)`. `/kyc` renders the note the way
+  /upload-video renders a moderator's note on a rejected clip. Approving clears it.
+- **Approving KYC does not grant the trust seal.** The seal has exactly three sources (admin
+  flag, active paid plan, ad purchase) and `sealSources()`/`trustSealFromParts()` enumerate
+  them. KYC status is shown in the admin's verification card as CONTEXT for the human making
+  the call — adding a fourth source silently would make that card stop describing what buyers
+  see.
+- **A signed contract is append-only.** `vendor_contracts` has select and insert policies and
+  **no update or delete for anyone, admins included** — an editable contract is not evidence.
+  It is written inside `saveVendorOnboarding()`, in the same call that sets
+  `onboarding_complete`, so "onboarded but no contract on file" is not a reachable state.
+  `agreement_version` comes from one constant that is rendered AND stored, so the record
+  always names the wording the vendor actually read.
+- **Do not ship an auth control with no provider behind it.** `signInWithOtp({ phone })`
+  returns `phone_provider_disabled` on this project. So phone sign-in is a labelled
+  "coming soon" row, `/auth/otp-verify` is deleted, and onboarding's phone field is a plain
+  contact field — it previously showed a green "Mobile verified" tick after accepting any six
+  digits. Check the provider before building the form.
+- **Email confirmation is ON, so a signup has no session.** `auth.signUp()` returns a user and
+  `session: null`. Register.tsx therefore ends on a "check your email" screen rather than
+  routing to a dashboard the account cannot load. `active_role` is carried in
+  `raw_user_meta_data` and applied by `handle_new_user` **at signup**, because the client has
+  no session to write it with — and a seller confirmed as a buyer is a bug you notice much
+  later. That metadata is client-supplied, so the role is whitelisted to buyer/seller there;
+  `is_admin` is deliberately not settable from it.
+
 - **Never collect contact details you cannot act on.** The Business Tools "Get Reviews" form
   gathered real customer names and phone numbers and dropped them behind
   `toast.success("Review requests sent!")` — there is no SMS pipeline in this repo, so nothing

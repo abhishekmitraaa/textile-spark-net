@@ -1,10 +1,15 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ChevronLeft, Check, Clock, FileText, ExternalLink, ShieldCheck, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Check, Clock, FileText, ExternalLink, ShieldCheck, AlertTriangle, Loader2, XCircle } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyVendorProfile } from "@/lib/queries/vendorStore";
-import { useMyVendorDocuments, DOC_TYPE_LABELS } from "@/lib/queries/vendorDocuments";
+import {
+  useMyVendorDocuments, DOC_TYPE_LABELS, signedKycUrl, isRejected,
+  KYC_URL_TTL_SECONDS, type VendorDocumentRow,
+} from "@/lib/queries/vendorDocuments";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -38,6 +43,46 @@ const listItem = {
 
 const ALL_DOC_TYPES = ["pan", "gst", "cin", "aadhaar"] as const;
 
+/**
+ * "View document" — mints a signed URL for THIS document only, at the moment
+ * it is asked for.
+ *
+ * Deliberately not resolved on mount for every row: `business-docs` is private
+ * and a signed URL is a bearer token for five minutes, so loading the page
+ * should not hand out credentials for documents nobody opened. The trade is one
+ * short spinner on the first click, which is the right way round.
+ */
+function ViewDocumentButton({ doc }: { doc: VendorDocumentRow }) {
+  const [loading, setLoading] = useState(false);
+
+  const open = async () => {
+    if (!doc.fileUrl || loading) return;
+    setLoading(true);
+    const { url, error } = await signedKycUrl(doc.fileUrl, KYC_URL_TTL_SECONDS);
+    setLoading(false);
+    if (!url) {
+      // A missing object or an RLS refusal renders as a message, never as a
+      // broken tab or a dead <img>.
+      toast.error("File unavailable", {
+        description: error ?? "This document could not be opened. Contact support if it persists.",
+      });
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <button
+      onClick={open}
+      disabled={loading}
+      className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+    >
+      {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <ExternalLink className="h-3 w-3" />}
+      {loading ? "Opening…" : "View"}
+    </button>
+  );
+}
+
 const Kyc = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -57,6 +102,7 @@ const Kyc = () => {
   };
 
   const verifiedCount = submitted.filter((d) => d.verified).length;
+  const rejectedCount = submitted.filter(isRejected).length;
 
   return (
     <DashboardLayout>
@@ -82,20 +128,28 @@ const Kyc = () => {
         <motion.div variants={section} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-              store?.isVerified ? "bg-green-50" : "bg-[#256fef]/10"
+              store?.isVerified ? "bg-green-50" : rejectedCount > 0 ? "bg-red-50" : "bg-[#256fef]/10"
             }`}>
-              <ShieldCheck className={`h-5 w-5 ${store?.isVerified ? "text-green-600" : "text-[#256fef]"}`} />
+              <ShieldCheck className={`h-5 w-5 ${
+                store?.isVerified ? "text-green-600" : rejectedCount > 0 ? "text-red-500" : "text-[#256fef]"
+              }`} />
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-gray-900">
-                {store?.isVerified ? "Your business is verified" : "Verification in progress"}
+                {store?.isVerified
+                  ? "Your business is verified"
+                  : rejectedCount > 0
+                    ? "Action needed on your documents"
+                    : "Verification in progress"}
               </p>
               <p className="mt-0.5 text-xs text-gray-500">
                 {store?.isVerified
                   ? "Buyers see the verified badge on your storefront and listings."
                   : submitted.length === 0
                     ? "We don't have any documents from you yet. Add them during seller registration or send them to our team."
-                    : `${verifiedCount} of ${submitted.length} document${submitted.length === 1 ? "" : "s"} verified. Our team reviews submissions within 24–48 hours.`}
+                    : rejectedCount > 0
+                      ? `${rejectedCount} document${rejectedCount === 1 ? " was" : "s were"} rejected. See the reason below and send us a replacement.`
+                      : `${verifiedCount} of ${submitted.length} document${submitted.length === 1 ? "" : "s"} verified. Our team reviews submissions within 24–48 hours.`}
               </p>
             </div>
           </div>
@@ -113,46 +167,59 @@ const Kyc = () => {
             {ALL_DOC_TYPES.map((type) => {
               const doc = byType.get(type);
               const number = numbers[type];
+              const rejected = doc ? isRejected(doc) : false;
               return (
                 <motion.div variants={listItem} key={type}
-                  className="flex items-center justify-between gap-3 border-b border-gray-100 px-4 py-4 last:border-0">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-50">
-                      <FileText className="h-5 w-5 text-gray-500" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900">{DOC_TYPE_LABELS[type] ?? type}</p>
-                      <p className="truncate text-xs text-gray-400">
-                        {number ? number : doc ? "Supplied at registration" : "Not provided"}
-                      </p>
+                  className="border-b border-gray-100 px-4 py-4 last:border-0">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-50">
+                        <FileText className="h-5 w-5 text-gray-500" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900">{DOC_TYPE_LABELS[type] ?? type}</p>
+                        <p className="truncate text-xs text-gray-400">
+                          {number ? number : doc ? "Supplied at registration" : "Not provided"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-2">
+                      {doc?.fileUrl && <ViewDocumentButton doc={doc} />}
+                      {!doc ? (
+                        <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
+                          Not submitted
+                        </span>
+                      ) : doc.verified ? (
+                        <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-600">
+                          <Check className="h-3 w-3" /> Verified
+                        </span>
+                      ) : rejected ? (
+                        <span className="flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold text-red-600">
+                          <XCircle className="h-3 w-3" /> Rejected
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-semibold text-[#256fef]">
+                          <Clock className="h-3 w-3" /> In review
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex shrink-0 items-center gap-2">
-                    {doc?.fileUrl && (
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-[11px] font-semibold text-gray-600 hover:bg-gray-50"
-                      >
-                        View <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                    {!doc ? (
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
-                        Not submitted
-                      </span>
-                    ) : doc.verified ? (
-                      <span className="flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-600">
-                        <Check className="h-3 w-3" /> Verified
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-semibold text-[#256fef]">
-                        <Clock className="h-3 w-3" /> In review
-                      </span>
-                    )}
-                  </div>
+                  {/* The moderator's note, the same way /upload-video surfaces
+                      one on a rejected clip. A vendor rejected without a reason
+                      cannot fix anything. */}
+                  {rejected && (
+                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                      <p className="text-[11px] leading-4 text-gray-700">
+                        <span className="font-semibold">Rejected:</span>{" "}
+                        {doc?.rejectionReason?.trim()
+                          ? doc.rejectionReason
+                          : "No reason was recorded. Contact support and we'll tell you what to re-submit."}
+                      </p>
+                    </div>
+                  )}
                 </motion.div>
               );
             })}

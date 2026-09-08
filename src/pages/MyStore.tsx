@@ -479,12 +479,15 @@ const MyStore = () => {
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </motion.button>
 
-              {/* App Feedback */}
-              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/app-feedback")}
+              {/* Was "App Feedback" → /app-feedback, a page whose Submit only
+                  toasted. Relabelled rather than built: an unread feedback queue
+                  is worse than an honest redirect to a channel that is staffed.
+                  The page and its route are deleted. */}
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/help")}
                 className="w-full bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
                   <MessageSquare className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm font-medium text-gray-900">{t("App Feedback")}</span>
+                  <span className="text-sm font-medium text-gray-900">{t("Contact support")}</span>
                 </div>
                 <ChevronRight className="w-5 h-5 text-gray-400" />
               </motion.button>

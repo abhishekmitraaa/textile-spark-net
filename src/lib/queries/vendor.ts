@@ -52,6 +52,10 @@ export interface VendorProfileData {
   landmark: string | null;
   gstin: string | null;
   pan: string | null;
+  /** Manufacturing capacity bands the vendor declared. Empty = not stated;
+   *  the buyer page renders nothing rather than guessing. */
+  capacity: string[];
+  annualTurnover: string | null;
   products: ProductCardData[];
   videos: VideoCloseUp[];
 }
@@ -66,7 +70,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   const { data: v, error } = await supabase
     .from("vendor_profiles")
     .select(
-      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, phone, whatsapp, website, owner_name, owner_email, address_line, area, postal_code, landmark, gstin, pan",
+      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, phone, whatsapp, website, owner_name, owner_email, address_line, area, postal_code, landmark, gstin, pan, capacity, annual_turnover",
     )
     .eq("id", id)
     .maybeSingle();
@@ -138,6 +142,8 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     landmark: v.landmark,
     gstin: v.gstin,
     pan: v.pan,
+    capacity: v.capacity ?? [],
+    annualTurnover: v.annual_turnover,
     products,
     videos,
   };

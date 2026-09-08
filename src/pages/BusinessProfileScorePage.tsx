@@ -1,6 +1,6 @@
 import { useNavigate, Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList, Check } from "lucide-react";
+import { ArrowLeft, Mail, Star, Globe, Share2, Package, Tag, Image, FileText, Building2, Users, Send, Calendar, ClipboardList, Check, IndianRupee, Factory } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useProfileScoreState, PROFILE_SCORE_WEIGHTS } from "@/lib/queries/vendorDashboard";
@@ -49,6 +49,9 @@ const scoreItems = [
   { key: "website",         label: "Add Business Website", href: "/business-profile?focus=contact-details", Icon: Globe },
   { key: "twoQuotes",       label: "Send upto 2 quotations", href: "/quotes", Icon: Send },
   { key: "yearEstablished", label: "Add Year of Establishment", href: "/business-profile?focus=year-established", Icon: Calendar },
+  { key: "employeeCount",   label: "Add Number of Employees", href: "/business-profile?focus=employees", Icon: Users },
+  { key: "annualTurnover",  label: "Add Annual Turnover", href: "/business-profile?focus=turnover", Icon: IndianRupee },
+  { key: "capacity",        label: "State Production Capacity", href: "/business-profile?focus=detailed-information", Icon: Factory },
 ] as const satisfies ReadonlyArray<{ key: keyof typeof PROFILE_SCORE_WEIGHTS; label: string; href: string; Icon: LucideIcon }>;
 
 /**
@@ -126,8 +129,7 @@ const BusinessProfileScorePage = () => {
   const { score, checks, isLoading } = useProfileScoreState();
 
   // Derived from the real checks, not from counting literals in the array above.
-  const missingCount = scoreItems.filter((item) => !checks[item.key]).length
-    + (checks.employeeCount ? 0 : 1);
+  const missingCount = scoreItems.filter((item) => !checks[item.key]).length;
 
   // Rating label + colours track the score so the header never contradicts it.
   const rating =
@@ -211,8 +213,12 @@ const BusinessProfileScorePage = () => {
           </div>
         </motion.div>
 
-        {/* Task grid: 2 columns on mobile, 3 from 1024px, 4 from 1280px. Twelve
-            items divide evenly by 2, 3 and 4, so no breakpoint ends ragged. */}
+        {/* Task grid: 2 columns on mobile, 3 from 1024px, 4 from 1280px.
+            Fifteen signals now, so the 3-column desktop layout divides evenly
+            (5 rows) while 2 and 4 columns end one short — accepted rather than
+            padded, since a filler tile would be a task that does not exist.
+            The full-width "employees" tile is gone: it existed only to make
+            12 + 1 fill evenly. */}
         <motion.div
           variants={listContainer}
           className="grid grid-cols-2 gap-3 lg:grid-cols-3 lg:gap-4 xl:grid-cols-4"
@@ -227,17 +233,6 @@ const BusinessProfileScorePage = () => {
             />
           ))}
 
-          {/* Twelve tiles fill 6 mobile rows / 3 desktop rows exactly, so this
-              one closes the grid full-width in both layouts and neither ends
-              on a ragged row. */}
-          <ScoreTile
-            label="Add Number of Employees"
-            href="/business-profile?focus=employees"
-            Icon={Users}
-            done={checks.employeeCount}
-            wide
-            className="col-span-2 lg:col-span-3 xl:col-span-4"
-          />
         </motion.div>
 
       </motion.div>

@@ -14,7 +14,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -26,8 +25,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
 import {
-  saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage,
+  saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage, uploadSignature,
 } from "@/lib/queries/vendorOnboarding";
+import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
 
 // 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
@@ -62,11 +62,6 @@ export default function Onboarding() {
   // Step 2
   const [businessName, setBusinessName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpVerified, setOtpVerified] = useState(false);
-  const [otpModalOpen, setOtpModalOpen] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(27);
-  const [isVerifying, setIsVerifying] = useState(false);
   const [countryCode, setCountryCode] = useState("+91");
   const [whatsappOptIn, setWhatsappOptIn] = useState(true);
   const [sameContact, setSameContact] = useState(true);
@@ -78,7 +73,7 @@ export default function Onboarding() {
   const [building, setBuilding] = useState("");
   const [floor, setFloor] = useState("");
   const [area, setArea] = useState("");
-  const [city, setCity] = useState("Delhi NCR");
+  const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
   const [landmark, setLandmark] = useState("");
@@ -166,39 +161,10 @@ export default function Onboarding() {
     return () => window.cancelAnimationFrame(frame);
   }, [signatureDrawerOpen]);
 
-  useEffect(() => {
-    if (!otpModalOpen) return;
-    const interval = setInterval(() => {
-      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [otpModalOpen]);
 
   useEffect(() => {
     if (sameContact) setPrimaryContact(mobile);
   }, [sameContact, mobile]);
-
-  const startOtpFlow = () => {
-    if (!mobile || mobile.length < 10) return toast.error("Enter valid mobile");
-    setOtp("");
-    setOtpCountdown(27);
-    setOtpModalOpen(true);
-    setIsVerifying(true);
-    toast.success("OTP sent");
-  };
-  const confirmOtp = () => {
-    if (otp.length !== 6) return;
-    setOtpVerified(true);
-    setOtpModalOpen(false);
-    setIsVerifying(false);
-    toast.success("Mobile verified");
-  };
-
-  const resendOtp = () => {
-    setOtp("");
-    setOtpCountdown(27);
-    toast.success("OTP resent");
-  };
 
   // ── KYC checks ────────────────────────────────────────────────
   // These are FORMAT checks and nothing more. There is no PAN lookup service
@@ -313,14 +279,10 @@ export default function Onboarding() {
     if (prefill.email) setOwnerEmail((v) => v || prefill.email);
     if (prefill.street) setArea((v) => v || prefill.street);
     const cityGuess = prefill.businessCity || prefill.city;
-    if (cityGuess) setCity((v) => (v && v !== "Delhi NCR" ? v : cityGuess));
+    if (cityGuess) setCity((v) => v || cityGuess);
     if (prefill.phone) {
       const local = prefill.phone.replace(/\D/g, "").slice(-10);
-      if (local.length === 10) {
-        setMobile((v) => v || local);
-        // Phone was already OTP-verified at signup — don't force re-verification.
-        setOtpVerified(true);
-      }
+      if (local.length === 10) setMobile((v) => v || local);
     }
   }, [prefill]);
 
@@ -386,6 +348,13 @@ export default function Onboarding() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      // The drawn signature, if there is one, goes to private storage first —
+      // saveVendorOnboarding stores a path, never a data: URL.
+      let signatureUrl: string | undefined;
+      if (manualSignatureDataUrl) {
+        signatureUrl = await uploadSignature(user.id, manualSignatureDataUrl);
+      }
+
       await saveVendorOnboarding(user.id, {
         businessName: businessName || contractName,
         phone: mobile ? `${countryCode} ${mobile}` : (primaryContact || undefined),
@@ -407,6 +376,7 @@ export default function Onboarding() {
         category: businessCategories.length ? businessCategories : undefined,
         officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
         panFileUrl: panDocumentUrl ?? undefined,
+        contract: { signedName: contractName.trim(), signatureUrl },
         product: productName
           ? {
               name: productName,
@@ -544,13 +514,9 @@ export default function Onboarding() {
     setSignatureDrawerOpen(false);
   };
 
-  const maskedMobile = mobile
-    ? mobile.replace(/(\d{2})\d+(\d{2})/, "$1******$2")
-    : "XXXXXXXXXX";
   const canContinueStep2 =
     businessName.trim().length > 0 &&
     mobile.trim().length >= 10 &&
-    otpVerified &&
     (!hasWebsite || websiteUrl.trim().length > 0) &&
     (sameContact || primaryContact.trim().length >= 10);
   // State and pincode are required, not optional: `state` feeds the location
@@ -558,6 +524,11 @@ export default function Onboarding() {
   // makes an address deliverable. Both columns existed and were written by
   // saveVendorOnboarding all along — the form simply never asked.
   const pincodeValid = /^\d{6}$/.test(pincode);
+  // What the embedded map should actually point at. Pincode first — it is the
+  // most precise thing this form has — then the city/state the vendor typed.
+  const mapQuery = pincodeValid
+    ? [pincode, city, state].filter(Boolean).join(", ")
+    : [city, state].filter((v) => v && v.trim()).join(", ");
   const canAddAddress = area.trim().length > 0 && state.trim().length > 0 && pincodeValid;
   const canSaveOwner =
     ownerName.trim().length > 0 &&
@@ -992,19 +963,12 @@ export default function Onboarding() {
             <DialogHeader>
               <DialogTitle className="text-base font-semibold text-[#363636]">Cosora Supplier Agreement</DialogTitle>
             </DialogHeader>
+            {/* Rendered from the SAME constant whose version is written to
+                vendor_contracts.agreement_version, so the record always names
+                the wording the vendor actually read. */}
             <div className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-[#363636]">
-              <p>
-                By signing below, you agree to all terms of the Cosora Supplier Agreement, including product authenticity, fair trade, on-time fulfillment, accurate listings, and Cosora's commission and payment terms.
-              </p>
-              <p>
-                You represent that all submitted information is accurate and that you have the legal right to sell the listed products.
-              </p>
-              <p>
-                Cosora reserves the right to review, suspend, or terminate seller accounts that violate these terms. Disputes shall be resolved per the governing law specified in the full agreement.
-              </p>
-              <p>
-                Continued use of the platform constitutes acceptance of any updated terms communicated via email or in-app notice.
-              </p>
+              {SUPPLIER_AGREEMENT_CLAUSES.map((clause) => <p key={clause}>{clause}</p>)}
+              <p className="pt-1 text-xs text-[#363636]/60">Version {SUPPLIER_AGREEMENT_VERSION}</p>
             </div>
           </DialogContent>
         </Dialog>
@@ -1229,32 +1193,26 @@ export default function Onboarding() {
                         <SelectItem value="+91">🇮🇳 +91</SelectItem>
                       </SelectContent>
                     </Select>
+                    {/* A plain contact field. There was a "Verify" button here
+                        that opened an OTP modal, accepted ANY six digits and
+                        then showed a green "Verified" tick — while
+                        startOtpFlow toasted "OTP sent" and sent nothing. This
+                        project has no SMS provider (signInWithOtp returns
+                        phone_provider_disabled), so there is nothing to verify
+                        against and the tick was a claim the app could not
+                        support. */}
                     <Input
                       value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
+                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="Phone number"
                       className="h-11 flex-1 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
                       inputMode="numeric"
                       maxLength={10}
-                      disabled={otpVerified}
                     />
-                    {!otpVerified && (
-                      <Button
-                        type="button"
-                        className="h-11 rounded-full bg-[#256fef] px-4 text-white"
-                        onClick={startOtpFlow}
-                        disabled={isVerifying}
-                      >
-                        {isVerifying ? "Verifying..." : "Verify"}
-                      </Button>
-                    )}
-                    {otpVerified && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-[#14ae5c] px-3 py-1 text-xs font-medium text-white">
-                        <CheckCircle2 className="h-3.5 w-3.5" />
-                        Verified
-                      </span>
-                    )}
                   </div>
+                  <p className="text-xs text-[#363636]/70">
+                    Buyers and our support team use this number to reach you.
+                  </p>
                   <div className="flex items-center gap-2">
                     <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
                     <Label htmlFor="wa" className="cursor-pointer text-sm text-[#363636]">Get business updates via WhatsApp</Label>
@@ -1338,12 +1296,26 @@ export default function Onboarding() {
                   </div>
 
                   <div className="relative overflow-hidden rounded-2xl border border-[#d0d4dc]">
-                    <iframe
-                      title="Business location"
-                      className="h-56 w-full"
-                      src="https://maps.google.com/maps?q=Delhi%20NCR&t=&z=13&ie=UTF8&iwloc=&output=embed"
-                      loading="lazy"
-                    />
+                    {/* Follows what the vendor has actually typed. It was
+                        hardcoded to `q=Delhi%20NCR`, so a Surat mill filling in
+                        this form was shown a map of Delhi — the same invented
+                        content removed everywhere else, in the step that
+                        collects the address. No city yet, no map. */}
+                    {mapQuery ? (
+                      <iframe
+                        title="Business location"
+                        className="h-56 w-full"
+                        src={`https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="flex h-56 w-full flex-col items-center justify-center gap-2 bg-[#f5f5f5] px-6 text-center">
+                        <MapPin className="h-6 w-6 text-[#d0d4dc]" />
+                        <p className="text-xs text-[#363636]/60">
+                          Enter your city or pincode below and the map will find you.
+                        </p>
+                      </div>
+                    )}
                     <div className="pointer-events-none absolute inset-0">
                       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         <div className="mb-2 rounded-full bg-white px-3 py-1 text-[10px] font-medium text-[#363636] shadow">
@@ -2122,51 +2094,8 @@ export default function Onboarding() {
           </motion.div>
         </AnimatePresence>
 
-        <Dialog
-          open={otpModalOpen}
-          onOpenChange={(open) => {
-            setOtpModalOpen(open);
-            if (!open) setIsVerifying(false);
-          }}
-        >
-          <DialogContent className="max-w-sm rounded-2xl border border-[#d0d4dc] bg-white p-5">
-            <DialogHeader className="text-left">
-              <DialogTitle className="text-base font-semibold text-[#363636]">Enter verification code</DialogTitle>
-            </DialogHeader>
-            <p className="text-xs text-[#363636]/70">
-              6 digit OTP has been sent to {countryCode} {maskedMobile}
-            </p>
-            <div className="mt-4 flex justify-center">
-              <InputOTP maxLength={6} value={otp} onChange={setOtp} containerClassName="justify-center">
-                <InputOTPGroup className="gap-2">
-                  {[0, 1, 2, 3, 4, 5].map((i) => (
-                    <InputOTPSlot
-                      key={i}
-                      index={i}
-                      className="h-12 w-12 rounded-xl border border-[#d0d4dc] text-base ring-[#256fef]"
-                    />
-                  ))}
-                </InputOTPGroup>
-              </InputOTP>
-            </div>
-            <div className="mt-3 text-xs text-[#363636]/70">
-              {otpCountdown > 0 ? (
-                <span>Resend OTP (in {otpCountdown} seconds)</span>
-              ) : (
-                <button type="button" className="text-[#256fef]" onClick={resendOtp}>
-                  Resend OTP
-                </button>
-              )}
-            </div>
-            <Button
-              onClick={confirmOtp}
-              disabled={otp.length !== 6}
-              className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Verify
-            </Button>
-          </DialogContent>
-        </Dialog>
+        {/* The OTP dialog stood here. It asked for a code nothing had sent
+            and accepted any six digits — see the phone field in step 2. */}
 
         {/* Nav */}
         {currentStep > 4 && currentStep < TOTAL_STEPS && !documentsSuccess && !productSuccess && (

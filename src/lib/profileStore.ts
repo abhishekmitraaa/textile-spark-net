@@ -39,29 +39,29 @@ export interface ProfileData {
   memberSince: string;
 }
 
-export interface SocialLinks {
+export type SocialLinks = {
   facebook: string;
   x: string;
   linkedin: string;
   youtube: string;
   instagram: string;
   other: string;
-}
+};
 
-export interface NotificationSettings {
+export type NotificationSettings = {
   emailNewQuote: boolean;
   emailNewMessages: boolean;
   emailRfqUpdates: boolean;
   emailNewsletter: boolean;
   pushQuote: boolean;
   pushMessages: boolean;
-}
+};
 
-export interface RegionalSettings {
+export type RegionalSettings = {
   currency: string;
   timezone: string;
   language: string;
-}
+};
 
 export interface ProfileState {
   profile: ProfileData;

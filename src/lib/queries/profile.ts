@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/database.types";
+
+type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert"];
+type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
 import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings } from "@/lib/profileStore";
 
 // ─────────────────────────────────────────────────────────────
@@ -129,7 +133,16 @@ export async function saveSetting(
   key: "social" | "notifications" | "regional",
   value: SocialLinks | NotificationSettings | RegionalSettings
 ): Promise<void> {
-  const { error } = await supabase.from("buyer_profiles").upsert({ id: userId, [key]: value }, { onConflict: "id" });
+  // Same reason as saveVendorSetting: a computed key widens to an index
+  // signature, which the builder cannot match against real columns. Building
+  // the row per branch keeps it type-checked.
+  const row: BuyerProfileInsert =
+    key === "social"
+      ? { id: userId, social: value as SocialLinks }
+      : key === "notifications"
+        ? { id: userId, notifications: value as NotificationSettings }
+        : { id: userId, regional: value as RegionalSettings };
+  const { error } = await supabase.from("buyer_profiles").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }
 
@@ -138,7 +151,7 @@ export async function saveAccountInfo(
   userId: string,
   input: { name?: string; email?: string; businessName?: string }
 ): Promise<void> {
-  const profilePatch: Record<string, string> = {};
+  const profilePatch: ProfileUpdate = {};
   if (input.name) profilePatch.full_name = input.name;
   if (input.email) profilePatch.email = input.email;
   if (Object.keys(profilePatch).length) {

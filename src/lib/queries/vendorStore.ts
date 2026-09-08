@@ -1,5 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import type { Database } from "@/lib/database.types";
+
+/** The exact shape `vendor_profiles.upsert()` accepts. */
+type VendorProfileInsert = Database["public"]["Tables"]["vendor_profiles"]["Insert"];
 
 // ─────────────────────────────────────────────────────────────
 // The vendor's OWN store profile (vendor_profiles row) — read + write.
@@ -49,6 +53,10 @@ export interface VendorStoreData {
   yearEstablished: number | null;
   /** Free-text bucket, e.g. "250 - 500". Not a number: the UI offers ranges. */
   employeeCount: string;
+  /** Turnover band, e.g. "Rs 1 - 5 Cr". Same range-picker shape as employeeCount. */
+  annualTurnover: string;
+  /** Manufacturing capacity bands. Empty means unset — never a default of ["Medium"]. */
+  capacity: string[];
   /** platform slug -> list of profile URLs, e.g. { instagram: ["https://..."] }. */
   social: Record<string, string[]>;
   /** Ordered, curated product ids featured in "Brand's Recommendations".
@@ -97,6 +105,8 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     officePhotos: data.office_photos ?? [],
     yearEstablished: data.year_established,
     employeeCount: data.employee_count ?? "",
+    annualTurnover: data.annual_turnover ?? "",
+    capacity: data.capacity ?? [],
     social: (data.social as Record<string, string[]> | null) ?? {},
     recommendedProductIds: data.recommended_product_ids ?? [],
     createdAt: data.created_at,
@@ -135,12 +145,14 @@ export interface VendorStorePatch {
   officePhotos?: string[];
   yearEstablished?: number | null;
   employeeCount?: string;
+  annualTurnover?: string;
+  capacity?: string[];
   social?: Record<string, string[]>;
   recommendedProductIds?: string[];
 }
 
 export async function saveVendorProfile(id: string, p: VendorStorePatch): Promise<void> {
-  const row: Record<string, unknown> = { id };
+  const row: VendorProfileInsert = { id };
   if (p.brandName !== undefined) row.brand_name = p.brandName || null;
   if (p.about !== undefined) row.about = p.about || null;
   if (p.city !== undefined) row.city = p.city || null;
@@ -165,6 +177,8 @@ export async function saveVendorProfile(id: string, p: VendorStorePatch): Promis
   if (p.officePhotos !== undefined) row.office_photos = p.officePhotos;
   if (p.yearEstablished !== undefined) row.year_established = p.yearEstablished;
   if (p.employeeCount !== undefined) row.employee_count = p.employeeCount || null;
+  if (p.annualTurnover !== undefined) row.annual_turnover = p.annualTurnover || null;
+  if (p.capacity !== undefined) row.capacity = p.capacity;
   if (p.social !== undefined) row.social = p.social;
   if (p.recommendedProductIds !== undefined) row.recommended_product_ids = p.recommendedProductIds;
   const { error } = await supabase.from("vendor_profiles").upsert(row, { onConflict: "id" });
@@ -208,7 +222,7 @@ export async function uploadVendorGalleryImage(id: string, file: File): Promise<
 // reflects that — it lets a vendor choose what they'd like to be notified about.
 // ─────────────────────────────────────────────────────────────
 
-export interface VendorNotificationSettings {
+export type VendorNotificationSettings = {
   emailNewRfq: boolean;
   emailNewMessage: boolean;
   emailAdStatus: boolean;
@@ -218,11 +232,11 @@ export interface VendorNotificationSettings {
   pushNewRfq: boolean;
   pushNewMessage: boolean;
   pushNewLead: boolean;
-}
+};
 
-export interface VendorRegionalSettings {
+export type VendorRegionalSettings = {
   language: "en" | "hi" | "gu";
-}
+};
 
 export const DEFAULT_VENDOR_NOTIFICATIONS: VendorNotificationSettings = {
   emailNewRfq: true,
@@ -266,6 +280,13 @@ export async function saveVendorSetting(
   key: "notifications" | "regional",
   value: VendorNotificationSettings | VendorRegionalSettings
 ): Promise<void> {
-  const { error } = await supabase.from("vendor_profiles").upsert({ id, [key]: value }, { onConflict: "id" });
+  // The computed key is one of two literal column names, but TS widens
+  // `{ [key]: value }` to an index signature and the builder rejects that.
+  // Building the row explicitly keeps it checked against the real columns.
+  const row: VendorProfileInsert =
+    key === "notifications"
+      ? { id, notifications: value as VendorNotificationSettings }
+      : { id, regional: value as VendorRegionalSettings };
+  const { error } = await supabase.from("vendor_profiles").upsert(row, { onConflict: "id" });
   if (error) throw error;
 }

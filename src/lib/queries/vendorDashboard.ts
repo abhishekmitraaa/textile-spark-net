@@ -39,20 +39,33 @@ export interface VendorDashboard {
 // weight listed here. Tune the numbers freely, but keep the total at 100.
 // ─────────────────────────────────────────────────────────────
 
+// REWEIGHTED 2026-09-08 when annualTurnover and capacity were added as signals.
+// The eight points they needed were taken from the six heaviest existing
+// signals rather than by shaving every weight, so no signal moved by more than
+// two points and the ordering of what matters is unchanged:
+//
+//   contactDetails 9->8   aboutUs 9->8    officePhotos 8->7   email 8->7
+//   tenProducts   12->10  reviews 11->9   (everything else unchanged)
+//   + annualTurnover 4    + capacity 4
+//
+// Total is still exactly 100. Keep it that way — a score out of anything other
+// than 100 silently changes what every stored profile_score meant.
 export const PROFILE_SCORE_WEIGHTS = {
-  contactDetails: 9,
-  aboutUs: 9,
+  contactDetails: 8,
+  aboutUs: 8,
   liveProduct: 7,
   category: 7,
-  officePhotos: 8,
-  tenProducts: 12,
-  email: 8,
-  reviews: 11,
+  officePhotos: 7,
+  tenProducts: 10,
+  email: 7,
+  reviews: 9,
   social: 6,
   website: 7,
   twoQuotes: 7,
   yearEstablished: 5,
   employeeCount: 4,
+  annualTurnover: 4,
+  capacity: 4,
 } as const;
 
 /**
@@ -68,6 +81,8 @@ export interface ProfileScoreInput {
   officePhotos: string[] | null;
   yearEstablished: number | null;
   employeeCount: string | null;
+  annualTurnover: string | null;
+  capacity: string[] | null;
   social: Record<string, string[]> | null;
   reviewsCount: number;
   productsTotal: number;
@@ -116,7 +131,9 @@ export function profileScoreSignals(input: ProfileScoreInput): ProfileScoreSigna
     { key: "website",         label: "Add your website",                      points: w.website,         met: filled(input.website),                     href: "/business-profile" },
     { key: "twoQuotes",       label: "Send 2 quotes to buyers",               points: w.twoQuotes,       met: input.quotesSent >= 2,                     href: "/quotes" },
     { key: "yearEstablished", label: "Add the year you were established",     points: w.yearEstablished, met: input.yearEstablished != null,             href: "/business-profile" },
-    { key: "employeeCount",   label: "Add your team size",                    points: w.employeeCount,   met: filled(input.employeeCount),               href: "/business-profile" },
+    { key: "employeeCount",   label: "Add your team size",                    points: w.employeeCount,   met: filled(input.employeeCount),               href: "/business-profile?focus=employees" },
+    { key: "annualTurnover",  label: "Add your annual turnover",             points: w.annualTurnover,  met: filled(input.annualTurnover),              href: "/business-profile?focus=turnover" },
+    { key: "capacity",        label: "State your production capacity",       points: w.capacity,        met: (input.capacity ?? []).length > 0,         href: "/business-profile?focus=detailed-information" },
   ];
 }
 
@@ -144,12 +161,28 @@ export function calculateProfileScore(input: ProfileScoreInput): ProfileScoreRes
   return { score: Math.max(0, Math.min(100, Math.round(total))), checks };
 }
 
-async function count(table: string, apply: (q: ReturnType<typeof buildBase>) => ReturnType<typeof buildBase>): Promise<number> {
+/**
+ * Head-only `count(*)` against one table with some filters applied.
+ *
+ * `table` is a union of the real table names rather than `string`, and the
+ * builder is generic in it. With a bare `string`, `supabase.from(table)` had to
+ * describe EVERY table at once, so the filter columns intersected to `never`
+ * and each `.eq("vendor_id", …)` was a type error — eleven of them, which was
+ * roughly half the repo's entire typecheck baseline. Narrowing the parameter
+ * makes the calls below check properly instead of being silenced.
+ */
+type CountableTable = "products" | "product_videos" | "rfqs" | "quotes";
+
+function buildBase<T extends CountableTable>(table: T) {
+  return supabase.from(table).select("*", { count: "exact", head: true });
+}
+
+async function count<T extends CountableTable>(
+  table: T,
+  apply: (q: ReturnType<typeof buildBase<T>>) => PromiseLike<{ count: number | null }>,
+): Promise<number> {
   const { count: n } = await apply(buildBase(table));
   return n ?? 0;
-}
-function buildBase(table: string) {
-  return supabase.from(table).select("*", { count: "exact", head: true });
 }
 
 async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> {
@@ -178,7 +211,7 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
   const { data: vp } = await supabase
     .from("vendor_profiles")
     .select(
-      "followers_count, profile_score, about, phone, owner_email, website, category, office_photos, year_established, employee_count, social, reviews_count"
+      "followers_count, profile_score, about, phone, owner_email, website, category, office_photos, year_established, employee_count, annual_turnover, capacity, social, reviews_count"
     )
     .eq("id", vendorId)
     .maybeSingle();
@@ -192,6 +225,8 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
     officePhotos: vp?.office_photos ?? null,
     yearEstablished: vp?.year_established ?? null,
     employeeCount: vp?.employee_count ?? null,
+    annualTurnover: vp?.annual_turnover ?? null,
+    capacity: vp?.capacity ?? null,
     social: (vp?.social as Record<string, string[]> | null) ?? null,
     reviewsCount: vp?.reviews_count ?? 0,
     productsTotal,

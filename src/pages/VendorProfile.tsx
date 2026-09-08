@@ -14,6 +14,7 @@ import { useCallVendor, useContactGate } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
+import type { Gender as SavedGender } from "@/lib/listingProducts";
 import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
   Bookmark, BookmarkCheck, Star, ChevronDown, Users, Mail, Globe,
@@ -89,7 +90,6 @@ const capacityOptions = [
   { key: "Export-grade", desc: "Export-grade manufacturers (international compliance)" },
 ];
 // Which tiers this vendor operates at (read-only for buyers)
-const vendorCapacity = ["Medium", "Export-grade"];
 
 const detailRows = [
   { label: "Business Type", value: "Apparel Manufacturer" },
@@ -115,7 +115,12 @@ const ratingBreakdown = [
   { stars: 1, percent: 15 },
 ];
 
-type Gender = "Men" | "Women" | "Unisex";
+// The vocabulary of this page's GENDER filter dropdown — capitalised because
+// that is what it displays. Deliberately NOT called `Gender`: the saved-items
+// store has its own lowercase `Gender` union, and two types with one name is
+// exactly how a "Unisex" ended up being asserted into a union containing
+// "unisex". Convert at the boundary (see toSavePayload).
+type GenderFilter = "Men" | "Women" | "Unisex";
 
 // ─────────────────────────────────────────────────────────────
 // MAIN
@@ -132,7 +137,7 @@ const VendorProfile = () => {
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
   const [productSearch, setProductSearch] = useState("");
-  const [genderFilter, setGenderFilter] = useState<"" | Gender>("");
+  const [genderFilter, setGenderFilter] = useState<"" | GenderFilter>("");
   const [sortKey, setSortKey] = useState<"" | "sold" | "rating">("");
   const [stuck, setStuck] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
@@ -231,13 +236,35 @@ const VendorProfile = () => {
         fit: p.fitType,
         rating: p.rating,
         reviews: p.enquiries,
-        gender: (p.gender as Gender),
+        gender: (p.gender as GenderFilter),
         latest: false,
         image: p.image,
       })),
     [vendor],
   );
   const recommendationsList = useMemo(() => vpProducts.slice(0, 6), [vpProducts]);
+
+  /**
+   * What to hand `openSaveModal`.
+   *
+   * The card view-model above carries `reviews: p.enquiries` — a COMPACT
+   * DISPLAY STRING of the enquiry count ("1.6k"), not a review count and not a
+   * number. `SavedProduct.reviews` is a numeric review count, so spreading the
+   * card straight in was a type error and would have saved an enquiry figure
+   * under a reviews label. This drops it and lets savedStore default it to 0,
+   * because a vendor-page card genuinely does not carry a review count.
+   */
+  const toSavePayload = (product: (typeof vpProducts)[number]) => {
+    const { reviews: _formattedEnquiries, gender, ...rest } = product;
+    return {
+      ...rest,
+      // Capitalised filter vocabulary → the lowercase union savedStore stores,
+      // the same normalisation savedStore does at its other entry point.
+      gender: gender.toLowerCase() as SavedGender,
+      moq: `MOQ: ${product.moq}`,
+      manufacturer: brandName,
+    };
+  };
   // Videos are this vendor's own or nothing — the section below hides itself on
   // an empty list. The old demo fallback was a correctness bug, not just a
   // cosmetic one: a real vendor with no videos rendered seven OTHER brands'
@@ -526,27 +553,34 @@ const VendorProfile = () => {
                     ))}
                   </div>
 
-                  {/* Capacity — only if manufacturer (read-only) */}
-                  <div>
-                    <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-0.5">
-                      <Factory className="w-4 h-4 text-[#ef4d62]" /> Capacity
-                    </p>
-                    <p className="text-xs text-gray-400 mb-3">Manufacturing scale this vendor operates at</p>
-                    <div className="space-y-2">
-                      {capacityOptions.map((opt) => {
-                        const on = vendorCapacity.includes(opt.key);
-                        return (
-                          <div key={opt.key}
-                            className={cn("flex items-start gap-3 rounded-xl border px-3 py-2.5", on ? "border-[#ef4d62]/40 bg-[#ef4d62]/5" : "border-gray-100 bg-gray-50/50")}>
-                            <span className={cn("mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full", on ? "bg-[#ef4d62]" : "bg-gray-200")}>
-                              {on && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />}
-                            </span>
-                            <span className={cn("text-xs leading-relaxed", on ? "font-medium text-gray-800" : "text-gray-400")}>{opt.desc}</span>
-                          </div>
-                        );
-                      })}
+                  {/* Capacity — the vendor's REAL declared bands
+                      (vendor_profiles.capacity). This was
+                      `["Medium", "Export-grade"]`, a module-scope constant, so
+                      every vendor on the platform advertised the same two.
+                      A vendor who has not declared any renders nothing at all
+                      rather than a row of empty checkboxes implying they
+                      cannot do any of it. */}
+                  {vendor.capacity.length > 0 && (
+                    <div>
+                      <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-0.5">
+                        <Factory className="w-4 h-4 text-[#ef4d62]" /> Capacity
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">Manufacturing scale this vendor operates at</p>
+                      <div className="space-y-2">
+                        {capacityOptions
+                          .filter((opt) => vendor.capacity.includes(opt.key))
+                          .map((opt) => (
+                            <div key={opt.key}
+                              className="flex items-start gap-3 rounded-xl border border-[#ef4d62]/40 bg-[#ef4d62]/5 px-3 py-2.5">
+                              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#ef4d62]">
+                                <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+                              </span>
+                              <span className="text-xs leading-relaxed font-medium text-gray-800">{opt.desc}</span>
+                            </div>
+                          ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Sells */}
                   <div>
@@ -629,7 +663,7 @@ const VendorProfile = () => {
                 <motion.div variants={listItem} key={product.id} className="rounded-xl border border-gray-200 overflow-hidden bg-white">
                   <div className="relative aspect-[3/4] bg-gray-100">
                     <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
-                    <button onClick={() => openSaveModal({ ...product, moq: `MOQ: ${product.moq}`, manufacturer: brandName })}
+                    <button onClick={() => openSaveModal(toSavePayload(product))}
                       aria-label="Save" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm">
                       {isSaved ? <BookmarkCheck className="h-3 w-3 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="h-3 w-3 text-gray-500" />}
                     </button>
@@ -759,7 +793,7 @@ const VendorProfile = () => {
           {/* Filter row */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
             <div className="relative">
-              <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as "" | Gender)}
+              <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as "" | GenderFilter)}
                 className="appearance-none rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none pr-6">
                 <option value="">GENDER</option>
                 <option value="Men">Men</option><option value="Women">Women</option><option value="Unisex">Unisex</option>
@@ -799,7 +833,7 @@ const VendorProfile = () => {
                 <div key={product.id} className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col">
                   <div className="relative aspect-[3/4] bg-gray-100 shrink-0">
                     <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
-                    <button onClick={() => openSaveModal({ ...product, moq: `MOQ: ${product.moq}`, manufacturer: brandName, location: product.location })}
+                    <button onClick={() => openSaveModal({ ...toSavePayload(product), location: product.location })}
                       aria-label="Save" className={cn("absolute top-2 right-2 flex items-center justify-center rounded-full bg-white/90 shadow", gridCols === 2 ? "h-7 w-7" : "h-6 w-6")}>
                       {isSaved ? <BookmarkCheck className={cn("text-[#ef4d62] fill-[#ef4d62]/15", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} /> : <Bookmark className={cn("text-gray-500", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} />}
                     </button>

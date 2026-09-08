@@ -73,6 +73,24 @@ import {
 //   CATEGORY_GROUPS        moved to src/data/businessCategoryGroups.ts so
 //                          /onboarding writes the same list.
 
+// Turnover bands, same shape and same picker pattern as employeeOptions. Text,
+// not a number: the vendor is asked for a range, so storing a figure would
+// imply a precision nobody supplied.
+const annualTurnoverOptions = [
+  "Under Rs 50 Lakh", "Rs 50 Lakh - 1 Cr", "Rs 1 - 5 Cr",
+  "Rs 5 - 25 Cr", "Rs 25 - 100 Cr", "Over Rs 100 Cr",
+];
+
+// The four bands the page has always listed. They now persist to
+// vendor_profiles.capacity and are shown to buyers on /vendor/:id — a capacity
+// only the vendor can see answers nobody's question.
+const capacityOptions = [
+  { key: "Small-batch",  desc: "Small-batch manufacturers (10–200 pcs per design)" },
+  { key: "Medium",       desc: "Medium-scale manufacturers (200–5,000 pcs)" },
+  { key: "Large",        desc: "Large-scale mass manufacturers (5,000–1 lakh+)" },
+  { key: "Export-grade", desc: "Export-grade manufacturers (international compliance)" },
+];
+
 const employeeOptions = [
   "Less than 10", "10 - 100", "100 - 500",
   "500 - 1,000", "1,000 - 2,000", "2,000 - 5,000",
@@ -100,6 +118,46 @@ function NumberOfEmployeesModal({ isOpen, onClose, selected, onSelect }: { isOpe
           </div>
           <div className="divide-y divide-gray-100 px-4 pb-4">
             {employeeOptions.map(opt => (
+              <button key={opt} onClick={() => { onSelect(opt); onClose(); }}
+                className="flex items-center justify-between w-full py-4 text-left">
+                <span className="text-sm text-gray-800">{opt}</span>
+                <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${selected === opt ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
+                  {selected === opt && <span className="w-2 h-2 rounded-full bg-white" />}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="px-4 pb-4">
+            <button onClick={onClose} className="w-full py-3 bg-blue-600 text-white font-bold rounded-xl">Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Single-choice range picker. Same chrome as NumberOfEmployeesModal above. */
+function RangePickerModal({
+  isOpen, onClose, title, hint, options, selected, onSelect,
+}: {
+  isOpen: boolean; onClose: () => void; title: string; hint: string;
+  options: string[]; selected: string; onSelect: (v: string) => void;
+}) {
+  if (!isOpen) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
+      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
+          <h3 className="text-base font-bold text-gray-900">{title}</h3>
+        </div>
+        <div className="overflow-y-auto flex-1">
+          <div className="mx-4 mt-4 mb-2 flex items-center gap-2 bg-blue-50 rounded-lg px-3 py-2">
+            <AlertTriangle className="w-4 h-4 text-blue-500 shrink-0" />
+            <p className="text-xs text-blue-700">{hint}</p>
+          </div>
+          <div className="divide-y divide-gray-100 px-4 pb-4">
+            {options.map(opt => (
               <button key={opt} onClick={() => { onSelect(opt); onClose(); }}
                 className="flex items-center justify-between w-full py-4 text-left">
                 <span className="text-sm text-gray-800">{opt}</span>
@@ -333,6 +391,9 @@ const BusinessProfile = () => {
   const [showContactModal, setShowContactModal]       = useState(false);
   const [showYearModal, setShowYearModal]             = useState(false);
   const [showRecommendPicker, setShowRecommendPicker] = useState(false);
+  const [showTurnoverModal, setShowTurnoverModal] = useState(false);
+  const [annualTurnover, setAnnualTurnover] = useState("");
+  const [capacity, setCapacity] = useState<string[]>([]);
   const [highlight, setHighlight]                     = useState<string | null>(null);
   const [employeeCount, setEmployeeCount]   = useState("");
   const [productSearch, setProductSearch]   = useState("");
@@ -388,6 +449,8 @@ const BusinessProfile = () => {
     hydratedRef.current = true;
     setBusinessCategories(store.category ?? []);
     setEmployeeCount(store.employeeCount ?? "");
+    setAnnualTurnover(store.annualTurnover ?? "");
+    setCapacity(store.capacity ?? []);
     setRecommendIds(store.recommendedProductIds ?? []);
   }, [store]);
 
@@ -405,6 +468,22 @@ const BusinessProfile = () => {
     const previous = employeeCount;
     setEmployeeCount(value);
     if (!(await persist({ employeeCount: value }, "Employee count updated"))) setEmployeeCount(previous);
+  };
+
+  const handleTurnoverSelect = async (value: string) => {
+    const previous = annualTurnover;
+    setAnnualTurnover(value);
+    if (!(await persist({ annualTurnover: value }, "Annual turnover updated"))) setAnnualTurnover(previous);
+  };
+
+  // Capacity persists on every toggle, optimistic with rollback — the same
+  // shape as categories. It used to be local state seeded to ["Medium"], so
+  // every profile silently claimed a capacity the vendor never picked.
+  const toggleCapacity = async (key: string) => {
+    const previous = capacity;
+    const next = capacity.includes(key) ? capacity.filter((k) => k !== key) : [...capacity, key];
+    setCapacity(next);
+    if (!(await persist({ capacity: next }, "Capacity updated"))) setCapacity(previous);
   };
 
   // ── Office photos ─────────────────────────────────────────────
@@ -444,6 +523,7 @@ const BusinessProfile = () => {
     "business-category": () => setShowCategoriesModal(true),
     employees: () => setShowEmployeesModal(true),
     "year-established": () => setShowYearModal(true),
+    turnover: () => setShowTurnoverModal(true),
   };
   const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information"];
 
@@ -592,12 +672,10 @@ const BusinessProfile = () => {
     // GST is shown to buyers on /vendor/:id.
     { label: "GSTIN",                  value: store?.gstin?.trim() || "Not provided" },
     { label: "CIN",                    value: store?.cin?.trim() || "Not provided" },
-    // "Annual Turnover" was the literal "Rs 2 - 5 Cr" here, with no column
-    // behind it and nowhere to enter one. Removed rather than left fabricated;
-    // whether to add an annual_turnover column with a range picker (same shape
-    // as employeeOptions) or drop the field for good is a product decision,
-    // flagged in the report rather than made here.
-  ], [employeeCount, vendorTypeLabel, memberSince, navigate, store?.ownerName, store?.pan, store?.gstin, store?.cin, store?.yearEstablished]);
+    // Was the literal "Rs 2 - 5 Cr" with no column behind it. Now a real
+    // column with a range picker, empty until the vendor sets one.
+    { label: "Annual Turnover",        value: annualTurnover || "Add turnover range", clickable: true, onClick: () => setShowTurnoverModal(true) },
+  ], [employeeCount, annualTurnover, vendorTypeLabel, memberSince, navigate, store?.ownerName, store?.pan, store?.gstin, store?.cin, store?.yearEstablished]);
 
   const reduced = useReducedMotion();
 
@@ -950,16 +1028,31 @@ const BusinessProfile = () => {
                 ))}
               </div>
 
-              {/* A "Capacity" block sat here — four radio-style options
-                  (Small-batch / Medium / Large / Export-grade) in local
-                  useState, defaulting to ["Medium"] for every vendor. There is
-                  no capacity column, so nothing it recorded ever left the page,
-                  and every vendor's profile silently claimed "Medium-scale".
-                  Removed rather than left non-persisting; whether to add a
-                  capacity text[] column and persist it is a product decision
-                  (the positioning treats small-batch/MOQ flexibility as a
-                  differentiator, so it probably should be) — flagged in the
-                  report rather than made here. */}
+              {/* Capacity — now persisted to vendor_profiles.capacity and shown
+                  to buyers on /vendor/:id. It used to be local useState seeded
+                  to ["Medium"], so it recorded nothing and every profile
+                  silently claimed to be a medium-scale manufacturer. An unset
+                  capacity is EMPTY, not Medium. */}
+              <div>
+                <p className="text-sm font-bold text-gray-900 mb-0.5">Capacity</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  Buyers see this on your storefront. Pick every band you can produce at.
+                </p>
+                <div className="space-y-2">
+                  {capacityOptions.map(opt => {
+                    const isSel = capacity.includes(opt.key);
+                    return (
+                      <button key={opt.key} onClick={() => toggleCapacity(opt.key)}
+                        className={`flex w-full items-start gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors ${isSel ? "border-blue-500 bg-blue-50" : "border-gray-200 bg-white"}`}>
+                        <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-colors ${isSel ? "border-blue-600 bg-blue-600" : "border-gray-300"}`}>
+                          {isSel && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+                        </span>
+                        <span className={`text-xs leading-relaxed ${isSel ? "font-medium text-blue-700" : "text-gray-500"}`}>{opt.desc}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
 
               {/* Catalogue — real rows from `catalogues`, replacing a dropzone
                   with no <input> and no handler, and two invented PDFs
@@ -1574,6 +1667,16 @@ const BusinessProfile = () => {
         onClose={() => setShowEmployeesModal(false)}
         selected={employeeCount}
         onSelect={handleEmployeeSelect}
+      />
+
+      <RangePickerModal
+        isOpen={showTurnoverModal}
+        onClose={() => setShowTurnoverModal(false)}
+        title="Annual Turnover"
+        hint="Buyers use this to gauge whether you can take their order volume."
+        options={annualTurnoverOptions}
+        selected={annualTurnover}
+        onSelect={handleTurnoverSelect}
       />
 
       <EditAboutModal

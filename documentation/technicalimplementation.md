@@ -126,7 +126,7 @@ function is missing.
 
 | Domain | Tables |
 |---|---|
-| Identity & roles | `profiles`, `buyer_profiles`, `vendor_profiles` (+`recommended_product_ids` — the ordered, curated storefront strip), `vendor_documents`, `admin_role`, `admin_role_values` |
+| Identity & roles | `profiles`, `buyer_profiles`, `vendor_profiles` (+`recommended_product_ids` — the ordered, curated storefront strip; +`annual_turnover`, `capacity`), `vendor_documents` (+`rejection_reason`, `reviewed_at`, `reviewed_by`), `vendor_contracts` (append-only signed supplier agreements), `admin_role`, `admin_role_values` |
 | Catalogue | `products` (+`unit` — the selling unit for `price_value`), `product_images`, `product_videos` (+`provider`/`bunny_video_id` — see Bunny Stream below), `catalogues`, `categories` |
 | Sourcing | `rfqs`, `quotes`, `leads` (via rfq/quote joins), `recently_viewed` |
 | Saves & follows | `saved_items`, `saved_folders`, `saved_folder_items`, `saved_videos`, `follows` |
@@ -482,9 +482,34 @@ nobody had looked at. `saveVendorOnboarding` deletes and rewrites this vendor's 
 doc types it is about to insert, so a retried submit does not grow duplicates (there is no
 unique constraint on `(vendor_id, doc_type)`).
 
-**Known limitation:** KYC scans land in the **public** `product-images` bucket, alongside
-every other vendor asset. A PAN card is not a product photo; moving these to a private bucket
-with signed URLs is a storage-model change and has not been done.
+**KYC documents are private, and the code makes that hard to undo (2026-09-08).** They were
+in the PUBLIC `product-images` bucket, with `getPublicUrl()` stored in
+`vendor_documents.file_url` — a PAN card fetchable by anyone with the URL, no auth at all
+(confirmed live: an unauthenticated GET returned `200`). Now:
+
+- `uploadKycDocument()` writes to the private **`business-docs`** bucket and returns a
+  **storage path**, not a URL. `getPublicUrl()` on a private bucket returns a string that
+  400s, which is worse than an error because it looks like it worked.
+- The `${vendorId}/kyc/…` path shape is **required**, not cosmetic:
+  `business_docs_owner_select` is `foldername(name)[1] = auth.uid() OR is_admin()`, so
+  flattening the path breaks ownership.
+- Reads go through `signedKycUrl()` (5-minute TTL), resolved **on demand for the one document
+  being opened** — never eagerly for a list, because a signed URL is a bearer token.
+- `assertKycBucket()` is called at the top of every function that touches a `/kyc/` path, so
+  putting one back in a public bucket throws at the call site.
+- `scripts/migrate-kyc-to-private-bucket.mjs` moved the three already-exposed objects
+  (copy → verify → repoint the row → delete) and proves the negative afterwards.
+
+**A vendor could mark their own KYC verified, and now cannot (2026-09-08).**
+`vendor_documents_all` is a single `ALL` policy with `(vendor_id = auth.uid()) OR is_admin()`
+on both USING and WITH CHECK, so `update vendor_documents set verified = true` from the
+client worked — proved against the live project before it was fixed. The anon key ships in
+the bundle, so this was a one-line self-service trust badge. The policy is unchanged (a
+vendor must still read/insert/delete their own rows); a `before insert or update` trigger
+(`vendor_documents_guard_review`) now refuses the four review columns to non-admins, and
+`set_vendor_document_verified()` — SECURITY DEFINER, gated to support/super_admin like
+`set_account_status()` — is the only way to set them. It requires a reason to reject,
+clears the reason on approve, and notifies the vendor.
 
 ### Vendor analytics — three modules, one rule (2026-09-07)
 

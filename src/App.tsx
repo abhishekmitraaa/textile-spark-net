@@ -47,7 +47,6 @@ import CosoraStudio from "./pages/CosoraStudio";
 import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
-import OtpVerify from "./pages/OtpVerify";
 import RoleSelection from "./pages/RoleSelection";
 import SubRole from "./pages/SubRole";
 import AccountInfo from "./pages/AccountInfo";
@@ -83,7 +82,6 @@ import BusinessTools from "./pages/BusinessTools";
 import Kyc from "./pages/Kyc";
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
-import AppFeedback from "./pages/AppFeedback";
 import About from "./pages/About";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
@@ -216,7 +214,6 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/login" element={<Login />} />
-            <Route path="/auth/otp-verify" element={<OtpVerify />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/role-selection" element={<RoleSelection />} />
             <Route path="/auth/sub-role" element={<SubRole />} />
@@ -294,7 +291,6 @@ const App = () => (
             <Route path="/kyc" element={<Kyc />} />
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ReportFraud />} />
-            <Route path="/app-feedback" element={<AppFeedback />} />
             <Route path="/about" element={<About />} />
             <Route path="/seller/blogs" element={<VendorBlogs />} />
             <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />

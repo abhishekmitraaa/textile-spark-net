@@ -2,9 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ChevronLeft, ChevronRight, Tag, MessageSquare, Star, HelpCircle, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, MessageSquare, Star, X } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVendorReviews } from "@/lib/queries/reviews";
 import { ReviewLinkShare } from "@/components/vendor/ReviewLinkShare";
@@ -43,11 +42,8 @@ const listItem = {
 //    repo, so no request was ever sent and the vendor had no way to know. It
 //    now shares the vendor's real review link and a real QR code.
 //
-//  • "Add Offers" and "Reply to Questions" still say "coming soon". There is
-//    no offers table and no questions table, and whether to build them (with
-//    the buyer-side surface each would need) or drop the tiles is a product
-//    call — flagged for a decision rather than made here. They are honest
-//    about being unavailable: neither fabricates a success.
+//  • "Add Offers" and "Reply to Questions" are GONE. Both toasted "coming
+//    soon" over a table that does not exist. See the note on `tools` below.
 // ─────────────────────────────────────────────────────────────
 
 function GetReviewsModal({ isOpen, onClose, vendorId }: { isOpen: boolean; onClose: () => void; vendorId: string | undefined }) {
@@ -80,15 +76,22 @@ const BusinessTools = () => {
   // "18 Pending" for everyone, counting nothing.
   const awaitingReply = (reviewData?.reviews ?? []).filter((r) => !r.replyBody).length;
 
+  // Two tiles were removed here rather than left saying "coming soon":
+  //
+  //   Add Offers          — no offers table, no buyer-side surface. A real
+  //                         version needs vendor CRUD and expiry rules, which
+  //                         is a feature, not a fix. DEFERRED.
+  //   Reply to Questions  — same shape, and the higher-value of the two:
+  //                         buyer questions on a listing feed straight into
+  //                         leads. DEFERRED, and worth roadmapping properly.
+  //
+  // A tile that toasts "coming soon" is a control that does nothing, which is
+  // the thing this whole effort is removing. When either ships, it comes back
+  // with a table behind it.
   const tools = [
     {
-      icon: Tag, title: "Add Offers", subtitle: "Not available yet",
-      badge: null as string | null, iconBg: "bg-amber-50", iconColor: "text-amber-600",
-      action: () => toast.info("Offers aren't available yet", { description: "We'll let you know when this is ready." }),
-    },
-    {
       icon: MessageSquare, title: "Reply to Reviews", subtitle: "Answer buyers on your storefront",
-      badge: awaitingReply > 0 ? `${awaitingReply} to reply` : null,
+      badge: awaitingReply > 0 ? `${awaitingReply} to reply` : (null as string | null),
       iconBg: "bg-green-50", iconColor: "text-green-600",
       action: () => navigate("/reviews"),
     },
@@ -96,11 +99,6 @@ const BusinessTools = () => {
       icon: Star, title: "Get Reviews", subtitle: "Share your review link and QR code",
       badge: null, iconBg: "bg-blue-50", iconColor: "text-blue-600",
       action: () => setGetReviewsOpen(true),
-    },
-    {
-      icon: HelpCircle, title: "Reply to Questions", subtitle: "Not available yet",
-      badge: null, iconBg: "bg-teal-50", iconColor: "text-teal-600",
-      action: () => toast.info("Buyer questions aren't available yet", { description: "We'll let you know when this is ready." }),
     },
   ];
 

@@ -139,15 +139,10 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   // OTP-verified at signup, so the Verify button is only present when it isn't.
   await expect(page.getByRole("heading", { name: "Business Details", exact: true })).toBeVisible();
   await page.getByPlaceholder("Business name").fill(FORM.businessName);
-  const verify = page.getByRole("button", { name: "Verify", exact: true });
-  if (await verify.count()) {
-    await page.getByPlaceholder("Phone number").fill("9876500011");
-    await verify.first().click();
-    await expect(page.getByText("Enter verification code")).toBeVisible();
-    // 1.8: the modal no longer auto-fills 482931 after 900ms — the code is typed.
-    await page.locator("input[data-input-otp]").first().fill("123456");
-    await page.getByRole("dialog").getByRole("button", { name: "Verify" }).click();
-  }
+  // Phone is a plain contact field — the "Verify" button and the OTP dialog are
+  // gone, because this project has no SMS provider to verify against.
+  await expect(page.getByRole("button", { name: "Verify", exact: true })).toHaveCount(0);
+  await page.getByPlaceholder("Phone number").fill("9876500011");
   await page.getByRole("button", { name: "Yes", exact: true }).click();
   await page.getByPlaceholder("https://yourwebsite.com").fill(FORM.website);
   await page.getByRole("button", { name: "Next" }).click();

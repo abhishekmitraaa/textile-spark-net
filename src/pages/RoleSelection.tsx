@@ -5,6 +5,7 @@ import { ShoppingCart, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 // Gradients and proportions follow the Canva reference: the coloured panel is
 // the dominant element of each card (a near-square block filling the card's
@@ -35,15 +36,35 @@ const RoleSelection = () => {
 
   const handleContinue = async () => {
     if (!selected || saving) return;
-    // For a signed-in (e.g. Google) user, persist the role now so future
-    // sign-ins skip this screen and land on their side directly.
-    if (session) {
-      setSaving(true);
-      try { await chooseRole(selected as "buyer" | "seller"); } catch { /* non-blocking */ }
-      setSaving(false);
+
+    // Every route that *navigates* here now has a session — AuthCallback checks
+    // for one first, and Login only comes here after a successful sign-in. What
+    // remains is someone typing the URL directly, and for them the old `if
+    // (session)` guard silently skipped the write and carried on to /seller, so
+    // the choice was never recorded anywhere. Send them to sign in instead of
+    // pretending it was.
+    if (!session) {
+      toast.error("Sign in to choose your role", {
+        description: "We need an account to attach this to.",
+      });
+      navigate("/auth/login");
+      return;
     }
+
+    setSaving(true);
+    try {
+      await chooseRole(selected as "buyer" | "seller");
+    } catch (e) {
+      setSaving(false);
+      toast.error("Couldn't save your role", {
+        description: e instanceof Error ? e.message : String(e),
+      });
+      return;
+    }
+    setSaving(false);
+
     if (selected === "buyer") navigate("/auth/sub-role");
-    else navigate("/seller");
+    else navigate("/onboarding");
   };
 
   return (

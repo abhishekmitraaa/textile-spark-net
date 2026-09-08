@@ -19,6 +19,7 @@ Last updated: 2026-09-07
 | `video-closeups-bunny.spec.ts` | Phase 8 Bunny Stream, browser half: the container gate, the moderation queue, real MP4 playback in both apps, approve-to-publish | `demo-*` |
 | `vendor-analytics.spec.ts` | Vendor Analytics / Advertise stats / Quotes performance are counted, not fabricated — asserts every retired fixture string is absent AND that real per-vendor values render; T5 additionally asserts the engagement panels never render nothing | `demo-vendor` (read-only) |
 | `vendor-my-store.spec.ts` | The My Store cluster (`/my-store`, `/my-store/business`, `/business-profile`, `/business-profile-score`, `/kyc`) is read from real rows — every retired demo literal absent, header/counts/score match the vendor row, real QR image, no `#ef4d62`, zero console errors; plus the signed-out registration block | `demo-vendor` (read-only) |
+| `vendor-signup.spec.ts` | Registration through the real `Register.tsx`: the seller branch reaches step 2 (it used to skip it), signup creates a real account, the "check your email" screen appears, an unconfirmed account is refused a session, and `/auth/login` offers email+password with no fake phone check | creates a throwaway `zz-test-vendor-*@cosora.in` |
 | `vendor-onboarding-write-path.spec.ts` | The **form-to-database** path: drives the real 9-step `/onboarding` and asserts state, pincode, landmark, category, office photos, the PAN scan's `file_url`, and product `unit`/`sizes`/`colour`/images all landed. Also the logo upload and the unverified-seal branch | `demo-buyer` (**mutating**, self-cleaning) |
 
 - **Run:** `npm run playwright:install` once, then `npm run test:e2e` (or a single file:
@@ -107,7 +108,53 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-09-08 (latest) — Vendor "My Store" cluster de-mocked: 11/11 GREEN, through the real UI
+### 2026-09-08 (trust & auth) — KYC out of the public bucket, a privilege escalation closed, typecheck 23 → 0
+
+**Security, verified against the live project — these are the ones that matter.**
+
+| Check | Before | After |
+|---|---|---|
+| Unauthenticated GET of a KYC document's public URL | **HTTP 200, 70 bytes** | **HTTP 400** |
+| Owner signs their own KYC path (`business-docs`) | n/a | 200 |
+| Same signed URL after its 5-minute TTL | n/a | 400 |
+| A DIFFERENT vendor signs that path | n/a | refused — "Object not found" |
+| anon signs that path | n/a | refused |
+| Objects under `product-images` matching `%/kyc/%` | 3 | **0** |
+
+- **`update vendor_documents set verified = true` from a vendor's own browser SUCCEEDED.**
+  Proved before the fix was written, with a throwaway row on `demo-vendor`. The anon key ships
+  in the bundle, so this was a one-line self-service trust badge. After the guard trigger and
+  the `set_vendor_document_verified()` RPC: 8/8 — vendor insert forced to `verified = false`,
+  insert with `verified: true` forced to false, self-verify UPDATE **refused with a message**
+  (not silently no-oped), a non-admin calling the RPC refused, reject-without-reason refused,
+  approve clears the reason and stamps `reviewed_at`/`reviewed_by`, an unknown doc id raises.
+- **Admin KYC end to end, 8/8**, all at the database layer rather than through the UI: vendor
+  uploads to `business-docs` → the row carries a PATH → the admin selects another vendor's row
+  → opens the scan through a signed URL (200) → rejects with a reason → **the vendor reads that
+  reason back** → the admin approves → `verified` flips and the reason clears → both verdicts
+  wrote a `notifications` row (confirmed in SQL; the first client-side count returned `null`
+  because the probe filtered on `type` when the column is `kind` — the test was wrong, not the
+  code).
+- **Auth facts settled by probe, not assumption.** `signInWithOtp({ phone })` →
+  `phone_provider_disabled / "Unsupported phone provider"`, which decided three separate items
+  (Login's phone control, `/auth/otp-verify`, onboarding step 2). `auth.signUp()` returns a
+  user with `session: null` → email confirmation is ON, which is why Register ends on a
+  "check your email" screen. A real signup produced a `profiles` row with `full_name`, `phone`
+  and **`active_role = 'seller'`** — the `handle_new_user` change working.
+- **Typecheck 23 → 0.** `npm run typecheck` was added because `tsc --noEmit` with no `-p`
+  compiles nothing and reports a false 0. One loose parameter (`count(table: string)` in
+  vendorDashboard) accounted for **eleven** of the 23. Two of the remaining fixes were real
+  bugs: a formatted enquiry string being stored as a numeric review count, and — only visible
+  once that stopped masking it — a capitalised `"Unisex"` asserted into a lowercase union.
+- **Specs:** `vendor-my-store.spec.ts` 8/8, `vendor-signup.spec.ts` 2/3 (the third is gated on
+  the mail rate limit, below). eslint **5 errors**, down from 6 with the OtpVerify deletion.
+- **Blocked, and stated rather than papered over:** the full 9-step onboarding run for a
+  brand-new vendor (Phase 4) needs a confirmed account. Email confirmation is on, the
+  throwaway address has no mailbox, and Supabase's built-in SMTP rate-limits signups — the
+  form surfaced exactly that error, live, which is itself evidence the error handling works.
+  It needs a human to confirm the user in the dashboard once.
+
+### 2026-09-08 (my-store pass) — Vendor "My Store" cluster de-mocked: 11/11 GREEN, through the real UI
 
 `npx playwright test tests/vendor-my-store.spec.ts tests/vendor-onboarding-write-path.spec.ts`
 — **11/11**, dev server on `:8081` (`:8080` was in use by a parallel session).

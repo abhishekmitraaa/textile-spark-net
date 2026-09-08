@@ -5,7 +5,10 @@
 export type RfqStatus = "active" | "closed";
 export type QuoteStatus = "pending" | "shortlisted" | "accepted" | "rejected";
 
-export interface SizeQty { size: string; quantity: number }
+// A `type`, not an `interface`: this is written straight into the
+// `rfqs.sizes_breakdown` jsonb column, and an interface has no implicit index
+// signature so it is not assignable to supabase's Json.
+export type SizeQty = { size: string; quantity: number };
 
 /**
  * The extra detail a product-page quote request captures, which an open
