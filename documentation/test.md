@@ -80,6 +80,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
 | `search-smoke.mjs` | The rebuilt search surfaces in a real browser (Playwright, standalone — not part of `tests/`). 10 checks: no fabricated data on `/search` or `/search/results`, real autocomplete counts, real product cards, a real result count, a real Brand tab, the honest empty state, and zero console errors. Takes an optional base URL: `node scripts/search-smoke.mjs http://localhost:8080` |
+| `vendor-buyer-geography-check.mjs` | `vendor_buyer_geography` privacy + correctness, 19 assertions. Asserts `buyer_profiles` RLS is **unchanged** (the vendor still reads zero foreign rows), k-anonymity in **both** directions (1 viewer suppressed, 3 viewers named — the positive case matters, without it a function returning nothing would pass), totals reconciling, `ad_impression` exclusion, and the buyer/anon/admin guard matrix. Writes real rows and restores the buyer's original city in `finally` |
 | `engagement-events-check.mjs` | `engagement_events` security + the status guard, 19 assertions across four real accounts (vendor / buyer / admin / anon). Writes through the real RPC and deletes what it wrote; pauses and restores a real campaign for the ad case. **Contains no always-true assertions** — an early draft "passed" by skipping the two guard cases and was rewritten |
 | `ad-destination-check.mjs` | The ad-click campaign-goal branch (`adDestination`/`isProfileGoalAd`), 17 cases. **The one script here that does not touch the database** — it transpiles the dependency-free `src/lib/adDestination.ts` with esbuild and calls it directly, because `active_ads` currently returns zero rows so no UI test can reach this branch |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
@@ -316,6 +317,52 @@ none were added).
 - **Restored afterwards, verified not assumed:** `demo-buyer`'s `profiles` row is
   byte-identical to its pre-run snapshot, with 0 vendor rows / 0 products / 0 documents, and
   the project is back to 7 `vendor_profiles`. `demo-vendor` was read-only throughout.
+
+### 2026-09-09 — Buyer geography (Phase 3.8): 19/19 GREEN
+
+**`node scripts/vendor-buyer-geography-check.mjs` — 19/19 PASS.** Four real accounts, real
+rows through the real RPC, everything restored in `finally` (including the demo buyer's
+original `Mumbai / Maharashtra`).
+
+| Group | Assertions |
+|---|---|
+| Phase 0 columns | a buyer can read their own `buyer_profiles` row; a buyer can persist `city`/`state`/`postal_code` — the write path that did not exist before this change |
+| RLS unchanged | the vendor reading the buyer's row gets **nothing**; scanning `buyer_profiles` returns no foreign row at all |
+| Coverage | qualifying visits are counted, and counted as located |
+| k-anonymity — suppress | a city with 1 distinct viewer is **not named**; its visits still appear in `other`; no state is named off a single viewer; `named + other == events_with_location` |
+| k-anonymity — **admit** | three distinct viewers in one city **IS** named, with correct counts, and its state too |
+| Event filter | an `ad_impression` does not change the geography totals |
+| Guard matrix | a buyer asking for the vendor's geography gets null; an anonymous caller is refused; an admin can read it |
+| Reference point | `home_location` matches `vendor_profiles` |
+
+**Why the positive k-anonymity case is called out separately.** Every other threshold
+assertion is a *suppression* check, and a function that returned an empty list for everything
+would pass all of them. 3b is the one that proves the feature works at all. It was added after
+noticing the suite could not distinguish "correctly private" from "completely broken" — the
+same failure shape already recorded for `bunny-e2e-check.mjs` and for the first draft of
+`engagement-events-check.mjs`.
+
+**Auth hole found during development, now asserted against.** Called as service_role (no JWT)
+with an explicit `v`, the function returned a **full result** — `not (vid = auth.uid() or
+is_admin())` is NULL when `auth.uid()` is NULL, and `if NULL then` does not fire. Fixed with
+`coalesce(...)` on both operands and re-verified to return null. See the Postgres-facts entry
+in `claude.md`; `ad_category_benchmarks` still has the same shape and is flagged there.
+
+**Test bug found and fixed**: the `ad_impression` assertion compared against a baseline taken
+before a later step inserted three more events, reporting `3 -> 6` and blaming the ad
+impression for rows the script had created itself. Baseline is now re-read immediately before
+the assertion. Recorded because the failure message pointed at the wrong component.
+
+**Browser pass**, both states, `screenshots/geo-empty.png` and `screenshots/geo-populated.png`:
+
+| State | Rendered |
+|---|---|
+| No qualifying events | "No buyer visits in the last 7 days yet. Product views, storefront visits and search clicks all count towards this." |
+| 3 viewers in one city | "Based on 3 of 3 recent visits with a known location." · "You are registered in Tirupur" · BY STATE "Uttar Pradesh — 3 visits · 3 buyers" · BY CITY "Kanpur, Uttar Pradesh — 3 · 3 buyers" |
+
+All probe rows and location edits reverted afterwards; `engagement_events` back to 0 rows,
+`buyer_profiles` back to a single `Mumbai / Maharashtra`, and `buyer_profiles` still carries
+exactly its one original policy (`bprofiles_all:ALL`).
 
 ### 2026-09-08 (later) — `engagement_events` applied and verified: 19/19 + 17/17 + 5/5 GREEN
 

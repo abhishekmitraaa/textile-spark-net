@@ -153,7 +153,11 @@ rather than a supplier directory.
   driven by the same weights as the dashboard ring; and **per-campaign revenue booked ÷
   leads**. Every card declares whether it is windowed by the 7/30/90/365-day filter or is a
   lifetime counter that cannot be — see "A metric is windowed or it is lifetime" in
-  `documentation/claude.md`. Backed by `engagement_events` (**live since 2026-09-08**): **Performance Trends**
+  `documentation/claude.md`. **Where your buyers are** (2026-09-09) — a ranked state/city breakdown of buyer demand from
+  `vendor_buyer_geography`, with the vendor's own registered city marked distinctly, an always-on
+  coverage line ("Based on N of M recent visits with a known location"), and places backed by
+  fewer than 3 distinct buyers collapsed into an unnamed group so no individual buyer is
+  identifiable. Backed by `engagement_events` (**live since 2026-09-08**): **Performance Trends**
   and daily views from real per-event timestamps, a real **Traffic Sources** breakdown,
   **unique visitors** shown alongside total views, **search terms that found you**
   (impressions → clicks → click rate, this vendor's own impressions only — never a

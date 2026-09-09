@@ -149,7 +149,14 @@ export async function saveSetting(
 // Lighter save for the signup Account-Information step (name/email/business only).
 export async function saveAccountInfo(
   userId: string,
-  input: { name?: string; email?: string; businessName?: string }
+  input: {
+    name?: string; email?: string; businessName?: string;
+    /** Six-digit pincode, typed or reverse-geocoded. */
+    postalCode?: string | null;
+    /** Only ever set on the geolocation path — see the note below. */
+    city?: string | null;
+    state?: string | null;
+  }
 ): Promise<void> {
   const profilePatch: ProfileUpdate = {};
   if (input.name) profilePatch.full_name = input.name;
@@ -158,9 +165,35 @@ export async function saveAccountInfo(
     const { error } = await supabase.from("profiles").update(profilePatch).eq("id", userId);
     if (error) throw error;
   }
-  const { error } = await supabase
-    .from("buyer_profiles")
-    .upsert({ id: userId, display_name: input.name ?? null, company: input.businessName ?? null }, { onConflict: "id" });
+
+  // Location is written here because it was previously COLLECTED AND DROPPED.
+  // AccountInfo.tsx asks for a pincode, and on the "use my location" path it
+  // reverse-geocodes a city and state out of BigDataCloud too — then used them
+  // for a toast message and threw them away, so `buyer_profiles.city/state/
+  // postal_code` stayed null for every account created through onboarding.
+  // That is what made vendor buyer-geography unbuildable.
+  //
+  // Column choice mirrors saveProfileFull: `city` is the person's own city,
+  // `business_city` is their company's address and is NOT touched here — the
+  // geolocation reading is where the human is standing, not where their firm is
+  // registered, and conflating the two would corrupt a field the full profile
+  // form owns.
+  //
+  // ASYMMETRY IS DELIBERATE. city/state are written ONLY when the geolocation
+  // path resolved them. A bare typed pincode persists postal_code alone: there
+  // is no pincode→city table in this project, and guessing one would put a
+  // fabricated city on a vendor's map, which is the exact failure mode the rest
+  // of this page's analytics work exists to remove.
+  const buyerPatch: BuyerProfileInsert = {
+    id: userId,
+    display_name: input.name ?? null,
+    company: input.businessName ?? null,
+  };
+  if (input.postalCode) buyerPatch.postal_code = input.postalCode;
+  if (input.city) buyerPatch.city = input.city;
+  if (input.state) buyerPatch.state = input.state;
+
+  const { error } = await supabase.from("buyer_profiles").upsert(buyerPatch, { onConflict: "id" });
   if (error) throw error;
 }
 

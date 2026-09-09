@@ -144,6 +144,7 @@ function is missing.
 `resolve_conversation_review`, `submit_report`, `set_account_status`, `regex_probe`,
 `notify`, `account_is_active`, `is_admin`, `is_conversation_member`, `owns_product`,
 `owns_rfq`, `get_vendor_plan`, `expire_subscriptions`, `grant_ad_verification`,
+`vendor_buyer_geography` (aggregate-only buyer geography; see below),
 `increment_product_view`, `increment_product_enquiry`, `increment_video_view`,
 `log_engagement_event` (the only write path into `engagement_events`),
 `sync_video_likes_count` (trigger fn), `next_invoice_number`,
@@ -238,6 +239,45 @@ counting one anonymous browsing session as one visitor, not a durable identifier
 person; it dies with the tab, and the server ignores it entirely once `auth.uid()` is
 non-null. Unique visitors are `count(distinct coalesce(viewer_id, session_id))` and are shown
 **alongside** total views, never instead of them, labelled as a lower bound.
+
+### `vendor_buyer_geography` — buyer geography without exposing buyers (2026-09-09)
+
+Signature `(v uuid default auth.uid(), p_days int default 30) returns jsonb`, STABLE
+SECURITY DEFINER, `search_path = public` — deliberately the same shape as
+`ad_category_benchmarks`, this project's established pattern for "let a vendor see an
+aggregate over rows they cannot read individually".
+
+**`buyer_profiles` RLS is UNCHANGED, and that is the design.** The vendor needs counts per
+city and must never gain read access to buyer rows; widening that policy even to "buyers who
+viewed my products" would hand every vendor a queryable list of their buyers' home cities
+joined to names and companies. The join happens inside the function and only tallies come
+back. `scripts/vendor-buyer-geography-check.mjs` asserts the vendor still reads zero foreign
+`buyer_profiles` rows, so a future change that "fixes" the card by loosening a policy fails
+the suite.
+
+**k-anonymity: `min_viewers = 3`.** Any city or state backed by fewer than three *distinct*
+`viewer_id`s is folded into an unnamed `other` bucket that still carries the counts, so totals
+reconcile (`named + other == events_with_location`, asserted). States are aggregated
+server-side rather than rolled up from the censored city list: a state with five viewers
+spread over three small cities is safe to name even though none of its cities is, and rolling
+up would discard that for no privacy gain.
+
+**Only buyer-initiated events count** — `product_view`, `profile_view`, `search_click`.
+`ad_impression` is excluded because an impression is the platform choosing to render
+something, not a buyer expressing interest; counting it would let ad spend inflate a map
+meant to answer "where is demand".
+
+**Grants are tighter than the function it was modelled on**: `revoke ... from public, anon`
+then `grant execute ... to authenticated`. An anonymous caller has no vendor identity to be
+granted one. See the NULL-guard entry in `claude.md` for why the self/admin check also had to
+`coalesce`.
+
+**No map ships yet, and the reason is a dependency fact.** The spec assumed MapLibre GL JS was
+already available "so no new dependency" — that is true of **Cosora-Admin, a separate repo**.
+`maplibre-gl` is not in this project's `package.json` and is not installed. The card renders a
+ranked state/city list plus the coverage line; `states` is already shaped for a choropleth, so
+adding the map is additive. Adding the dependency needs a decision about ~800 KB on a bundle
+already at 745 KB gzipped and a runtime tile-provider dependency.
 
 ### Storage buckets
 

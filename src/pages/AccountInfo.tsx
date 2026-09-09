@@ -20,6 +20,10 @@ const AccountInfo = () => {
   });
   const [useLocation, setUseLocation] = useState(false);
   const [locLoading, setLocLoading] = useState(false);
+  // The city/state BigDataCloud resolved, held so they can be SAVED rather than
+  // just announced in a toast. Null on the manual-pincode path: a bare pincode
+  // is not a city, and this project has no gazetteer to turn one into a city.
+  const [geoPlace, setGeoPlace] = useState<{ city: string | null; state: string | null } | null>(null);
 
   // Prefill name + email from the signed-in (e.g. Google) account, without
   // clobbering anything the user has already typed.
@@ -54,8 +58,14 @@ const AccountInfo = () => {
           );
           const data = await res.json();
           const pin = String(data.postcode ?? "").replace(/\D/g, "").slice(0, 6);
-          const place = data.city || data.locality || data.principalSubdivision || "your area";
+          const city = (data.city || data.locality || "").trim() || null;
+          const state = (data.principalSubdivision || "").trim() || null;
+          const place = city || state || "your area";
           setForm(prev => ({ ...prev, pincode: pin }));
+          // Kept even when no pincode came back — a city/state with no postcode
+          // is still a real, usable location, and discarding it is what this
+          // change exists to stop.
+          setGeoPlace(city || state ? { city, state } : null);
           if (pin) {
             setUseLocation(true);
             toast.success(`Location set — ${place} (${pin})`);
@@ -130,6 +140,13 @@ const AccountInfo = () => {
           {/* Location */}
           <div>
             <label className="text-sm font-semibold text-gray-800 mb-1.5 block">Select Your Location</label>
+            {/* Said plainly because this is now actually stored and actually
+                shown to someone. Sellers see aggregate counts by city/state and
+                never an individual buyer — enforced in vendor_buyer_geography,
+                which collapses any place with fewer than 3 distinct viewers. */}
+            <p className="text-xs text-gray-500 -mt-1 mb-2 leading-snug">
+              Sellers see which cities their buyer interest comes from — as counts only, never your name or exact address.
+            </p>
             <div className="flex items-center gap-3">
               <button
                 type="button"
@@ -152,7 +169,14 @@ const AccountInfo = () => {
                 placeholder="Enter Pincode"
                 value={form.pincode}
                 disabled={useLocation}
-                onChange={e => { setUseLocation(false); update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6)); }}
+                onChange={e => {
+                  setUseLocation(false);
+                  // They are overriding the detected location, so the detected
+                  // city/state no longer describe this pincode. Drop them
+                  // rather than pairing a typed pincode with a stale city.
+                  setGeoPlace(null);
+                  update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6));
+                }}
                 className="flex-1 px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
@@ -178,7 +202,14 @@ const AccountInfo = () => {
             if (session?.user) {
               setSaving(true);
               try {
-                await saveAccountInfo(session.user.id, { name: form.name, email: form.email, businessName: form.businessName });
+                await saveAccountInfo(session.user.id, {
+                  name: form.name,
+                  email: form.email,
+                  businessName: form.businessName,
+                  postalCode: form.pincode || null,
+                  city: geoPlace?.city ?? null,
+                  state: geoPlace?.state ?? null,
+                });
                 await refreshProfile();
               } catch (e) {
                 setSaving(false);

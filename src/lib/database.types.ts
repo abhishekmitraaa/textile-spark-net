@@ -2519,6 +2519,10 @@ export type Database = {
         Returns: undefined
       }
       user_has_password: { Args: { target_email: string }; Returns: boolean }
+      vendor_buyer_geography: {
+        Args: { p_days?: number; v?: string }
+        Returns: Json
+      }
     }
     Enums: {
       account_status_type: "active" | "suspended"

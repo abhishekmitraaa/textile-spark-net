@@ -211,6 +211,29 @@ undocumented. Deep technical rationale for each lives in
   that matters because `active_ads` currently returns zero rows, so no UI test could reach
   this branch. **This is buyer-facing navigation, not analytics** — treat a change to it as
   a product change.
+- **Buyer location was collected and thrown away for the entire life of the product.**
+  `AccountInfo.tsx` asks every new buyer for a pincode, and on the "use my location" path it
+  reverse-geocodes a city and state out of BigDataCloud too — then used them for a toast and
+  discarded all three, because `saveAccountInfo()` never accepted or wrote them. So
+  `buyer_profiles.city/state/postal_code` stayed null for every account created through
+  onboarding. **Fixed 2026-09-09.** Two consequences that are permanent: every pre-existing
+  buyer has no location and it **cannot be recovered after the fact** — do not backfill a
+  guess — and the geography feature therefore has to state its own coverage rather than imply
+  completeness.
+- **A bare pincode is not a city, and must not be turned into one by guessing.** The
+  geolocation path stores city + state + postal_code together because all three were really
+  resolved; the manual path stores **only** postal_code. There is no pincode gazetteer in this
+  project, and inventing a city from a pincode would put a fabricated place on a vendor's map —
+  the exact failure the analytics work exists to remove. A pincode→city lookup is a separate
+  project with a real data source, not a helper function.
+- **A vendor sees where their buyers are only as counts, and only above a threshold.**
+  `vendor_buyer_geography` is SECURITY DEFINER and does the `engagement_events → buyer_profiles`
+  join server-side; **`buyer_profiles` RLS is unchanged and must stay that way.** Any place
+  backed by fewer than **3 distinct viewer_ids** is folded into an unnamed `other` bucket —
+  a vendor with two regular buyers in one small town could otherwise identify both from a map
+  with a "2" on it. Only buyer-*initiated* events count (`product_view`, `profile_view`,
+  `search_click`); `ad_impression` is excluded so ad spend cannot inflate a demand map. The
+  threshold is a privacy guarantee, not a display preference — changing it is a policy decision.
 - **The schema must stay compatible with a future working-capital lending product.** Order
   volume, capacity, reliability, pricing and transaction history are being collected with
   that in mind even though the product does not exist yet.
@@ -417,6 +440,19 @@ undocumented. Deep technical rationale for each lives in
 - **A SECURITY DEFINER function pinned to `search_path = public` cannot resolve pgvector's
   `<=>` operator at all.** Every function touching embeddings needs
   `set search_path = public, extensions`.
+- **`if not (<nullable expr>) then ... end if;` DOES NOT FIRE when the expression is NULL,
+  which turns a self/admin guard into no guard at all.** The `ad_category_benchmarks` pattern
+  `if not (vid = auth.uid() or public.is_admin()) then return null; end if;` looks airtight and
+  is not: with no JWT, `auth.uid()` is NULL, so `vid = auth.uid()` is NULL,
+  `NULL or false` is NULL, `not NULL` is NULL, and `if NULL then` is skipped — the function
+  falls through and returns real data to an unauthenticated caller. **Verified against this
+  database**: `vendor_buyer_geography` returned a full result when called with an explicit `v`
+  and no JWT, until the test became
+  `if not (coalesce(vid = auth.uid(), false) or coalesce(public.is_admin(), false))`.
+  **`ad_category_benchmarks` still has the original shape and still carries its default PUBLIC
+  execute grant** — low impact (its output is anonymised peer aggregates) but it is the same
+  hole, left alone here rather than changed underneath `CompetitorAds.tsx`. Any new
+  self-guarded function must coalesce.
 - **Postgres grants EXECUTE to PUBLIC by default.** `grant ... to service_role` alone does
   not restrict anything; the matching `revoke all ... from public, anon, authenticated` is
   the part that does the work.
@@ -630,6 +666,7 @@ Depth — schema, invariants, integrations, tech debt — lives in
 - Technical depth: `documentation/technicalimplementation.md`
 - Routes/pages: `documentation/sitemap.md`
 - Buyer/Vendor/Admin feature detail: `documentation/sides.md`
+- Security flags & gaps: `documentation/securityflags.md`
 - Razorpay runbook: `supabase/RAZORPAY.md`
 
 ## Documentation Protocol — follow every session, unprompted
@@ -653,6 +690,21 @@ Depth — schema, invariants, integrations, tech debt — lives in
    the matching section of `documentation/sides.md`.
 8. Treat updating these files as PART OF finishing a task, not a separate step you
    might skip. A task is not done until its docs reflect it.
+9. The moment you notice, suspect, or discover a security flag, vulnerability,
+   misconfiguration, exposed secret, missing auth/permission check, unsafe input
+   handling, insecure dependency, or any other security gap — whether in existing
+   code you're reading, new code you're writing, a dependency, or infra/config —
+   log it to `documentation/securityflags.md` immediately, in the same turn you find
+   it. Do this even if:
+     - the task you were asked to do is unrelated to security
+     - you aren't asked to fix it, or don't fix it in this turn
+     - you're not fully certain it's exploitable — log it as a suspected gap and
+       note your uncertainty rather than staying silent
+   Never paste the actual secret/credential/exploit value into the log — describe
+   it and its location only, per the warning at the top of that file. If you do fix
+   it in the same turn, also add the normal `changelog.md` entry and cross-reference
+   it from the `securityflags.md` entry. Update the "Open Flags" table (add on
+   discovery, move to Fixed/Accepted/Monitoring as status changes).
 
 ### How the automation actually works (`.claude/settings.json`)
 

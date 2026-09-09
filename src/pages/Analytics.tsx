@@ -16,6 +16,7 @@ import {
 } from "@/lib/queries/vendorAnalytics";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, campaignEconomics, REVENUE_PER_LEAD_LABEL } from "@/lib/queries/adPerformance";
+import { useBuyerGeography, coverageSentence, coveragePct } from "@/lib/queries/buyerGeography";
 import {
   useEngagementWindow, dailySeries, trafficSources, visitorCounts,
   queryPerformance, adAttribution, ctaPerformance, logEngagement,
@@ -28,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Eye, MessageSquare, Target, Package, ArrowUpRight, ArrowDownRight,
   Activity, BarChart3, Sparkles, Star, Wallet, CheckCircle2, Clock,
-  Phone, PhoneIncoming, Users, Megaphone, Info, ChevronRight, Minus,
+  Phone, PhoneIncoming, Users, Megaphone, Info, ChevronRight, Minus, MapPin, Home,
   Search, MousePointerClick, UserCircle,
 } from "lucide-react";
 import {
@@ -170,6 +171,156 @@ function EventPanel({
           <p className="px-2 text-sm text-muted-foreground">{NO_EVENTS_IN_WINDOW(range)}</p>
         )}
       </CardContent>
+    </Card>
+  );
+}
+
+// ── 3.8 Where your buyers are ────────────────────────────────────────────
+//
+// NO MAP YET, AND THAT IS A DELIBERATE STOP RATHER THAN AN OVERSIGHT.
+// The spec called for MapLibre GL JS "so no new dependency" — true of
+// Cosora-Admin, which is a SEPARATE REPO. `maplibre-gl` is not in this
+// project's package.json and is not installed. Adding it here would mean
+// editing package.json/package-lock.json, which a concurrent session is
+// actively changing, plus ~800 KB on a bundle already at 745 KB gzipped and a
+// runtime tile-provider dependency on a page that otherwise needs no network
+// beyond Supabase. The alternative — hand-drawing Indian state boundaries as
+// inline SVG — would mean inventing geography, which is the exact class of
+// fabrication the rest of this page was built to remove.
+//
+// So this ships the half that is genuinely useful and genuinely honest: the
+// ranked list plus the coverage line. The data shape below is already what a
+// choropleth needs (`states`, each with a name and a count), so the map is an
+// additive change to this component, not a rewrite.
+function BuyerGeographyCard({ vendorId, days, rangeLabel }: { vendorId: string | undefined; days: number; rangeLabel: string }) {
+  const { data: geo, isPending } = useBuyerGeography(vendorId, days);
+  const coverage = coverageSentence(geo);
+  const pct = coveragePct(geo);
+
+  const body = () => {
+    if (isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
+    // A refusal is not an empty result. Kept distinct on purpose.
+    if (!geo || geo.denied) {
+      return <p className="text-sm text-muted-foreground">This breakdown is only visible to the vendor it describes.</p>;
+    }
+    // Genuinely empty: nobody visited in this window.
+    if (!geo.hasData) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          No buyer visits in the last {rangeLabel} yet. Product views, storefront visits and search
+          clicks all count towards this.
+        </p>
+      );
+    }
+    // Visits happened, but not one of them carried a location. Different
+    // statement from "no visits", and said differently.
+    if (geo.coverage.eventsWithLocation === 0) {
+      return (
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            {geo.coverage.totalEvents} buyer visit{geo.coverage.totalEvents === 1 ? "" : "s"} in the last {rangeLabel},
+            but none of those buyers has a saved location yet — so there is nothing to place on a map.
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Buyers who signed up before location was stored have none on file, and it cannot be recovered
+            after the fact. This fills in as new buyers complete their profile.
+          </p>
+        </div>
+      );
+    }
+
+    const maxEvents = Math.max(...geo.states.map((x) => x.events), ...geo.cities.map((x) => x.events), 1);
+
+    return (
+      <div className="space-y-4">
+        {/* Vendor's own registered location, marked distinctly from demand. */}
+        {geo.homeLocation?.city || geo.homeLocation?.state ? (
+          <div className="flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/5 px-3 py-2">
+            <Home className="h-3.5 w-3.5 shrink-0 text-accent" />
+            <p className="text-xs text-foreground">
+              You are registered in{" "}
+              <span className="font-semibold">
+                {[geo.homeLocation.city, geo.homeLocation.state].filter(Boolean).join(", ")}
+              </span>
+            </p>
+          </div>
+        ) : null}
+
+        {geo.states.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">By state</p>
+            <div className="space-y-2">
+              {geo.states.map((st) => (
+                <div key={st.state}>
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className="truncate text-sm text-foreground">{st.state}</p>
+                    <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                      {st.events} visit{st.events === 1 ? "" : "s"} · {st.viewers} buyer{st.viewers === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-accent" style={{ width: `${(st.events / maxEvents) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {geo.cities.length > 0 && (
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">By city</p>
+            <div className="space-y-1.5">
+              {geo.cities.map((c) => (
+                <div key={`${c.city}-${c.state ?? ""}`} className="flex items-baseline justify-between gap-2 rounded-lg bg-muted/30 px-2.5 py-1.5">
+                  <p className="min-w-0 truncate text-sm text-foreground">
+                    {c.city}
+                    {c.state && <span className="text-muted-foreground">, {c.state}</span>}
+                  </p>
+                  <p className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                    {c.events} · {c.viewers} buyer{c.viewers === 1 ? "" : "s"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Suppressed places. Shown, never silently dropped, so the totals add up. */}
+        {geo.other.places > 0 && (
+          <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-muted-foreground">
+            <Info className="mt-0.5 h-3 w-3 shrink-0" />
+            {geo.other.events} visit{geo.other.events === 1 ? "" : "s"} from {geo.other.places} other
+            place{geo.other.places === 1 ? "" : "s"} are grouped together — a place is only named once at
+            least {geo.minViewers} different buyers there have visited, so no individual buyer can be
+            identified from this.
+          </p>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <Card className="rounded-xl">
+      <CardHeader className="pb-2 pt-4 px-4">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-1.5 text-base">
+            <MapPin className="h-4 w-4 text-muted-foreground" /> Where your buyers are
+          </CardTitle>
+          <ScopePill window={rangeLabel as never} />
+        </div>
+        {/* Always rendered when there is any traffic — a caveat that only shows
+            up when the news is bad trains the reader to ignore it. */}
+        {coverage && (
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+            {coverage}
+            {pct != null && pct < 50 && (
+              <span className="text-orange-600"> That is {pct}% of recent visits — treat this as a partial picture.</span>
+            )}
+          </p>
+        )}
+      </CardHeader>
+      <CardContent className="px-4 pb-4">{body()}</CardContent>
     </Card>
   );
 }
@@ -696,6 +847,9 @@ const Analytics = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* 3.8 Where your buyers are */}
+            <BuyerGeographyCard vendorId={user?.id} days={days} rangeLabel={activeTime} />
 
             {/* 2.7 Profile-score gap nudge — same weights as the dashboard ring */}
             {scoreGaps.length > 0 && (
