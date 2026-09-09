@@ -914,8 +914,17 @@ export default function Onboarding() {
             </DrawerHeader>
             <div className="px-4 pb-4">
               <div className="rounded-2xl border border-[#d0d4dc] bg-white p-3">
+                {/* data-vaul-no-drag is load-bearing, not a hint. This canvas
+                    lives inside a vaul Drawer, which reads a pointer drag
+                    across its content as swipe-to-dismiss. `touch-none` stops
+                    that for a finger; the browser ignores touch-action for a
+                    MOUSE, so on desktop the first stroke dismissed the drawer —
+                    and onOpenChange nulls manualSignatureDataUrl when it closes
+                    unsaved, so the signature was discarded with no error. A
+                    desktop vendor could not draw a signature at all. */}
                 <canvas
                   ref={signatureCanvasRef}
+                  data-vaul-no-drag
                   width={320}
                   height={220}
                   className="h-56 w-full touch-none rounded-xl bg-white"

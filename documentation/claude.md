@@ -1,6 +1,6 @@
 # Cosora — Project Memory (read this first, every session)
 
-Last updated: 2026-09-07
+Last updated: 2026-09-09
 
 ## What Cosora Is
 
@@ -37,6 +37,13 @@ Rules decided before or outside of Claude Code sessions.
   OAuth is a secondary option. A vendor-first user lands on the vendor dashboard after
   login; a buyer-first user lands on the buyer homepage. Vendor → Buyer is a direct toggle;
   **Buyer → Vendor requires completing full vendor onboarding first.**
+  > **This is the product INTENT and is not what ships today (as of 2026-09-08).** No SMS
+  > provider is configured — `signInWithOtp({ phone })` returns `phone_provider_disabled` —
+  > so live auth is **email + password with email confirmation ON**, and the phone control
+  > is a labelled "coming soon" row. `/auth/otp-verify` was deleted because it accepted any
+  > six digits and then hardcoded `setRole("buyer")`. The routing and toggle rules above are
+  > unchanged and still hold. Restoring OTP means configuring a provider first, not
+  > rebuilding the form.
 - **"Video Closeups", never "Reels"** — product videos in the buyer feed are called Video
   Closeups. Deliberate brand/product naming decision.
 - **Audio-first matters** — many Indian manufacturers are more comfortable speaking than
@@ -293,6 +300,23 @@ undocumented. Deep technical rationale for each lives in
   `onboarding_complete`, so "onboarded but no contract on file" is not a reachable state.
   `agreement_version` comes from one constant that is rendered AND stored, so the record
   always names the wording the vendor actually read.
+- **RLS policies are not the whole story — check the foreign keys too.** `vendor_contracts`
+  had no UPDATE or DELETE policy for anyone and was still destroyable: its `vendor_id` FK was
+  `ON DELETE CASCADE` to `vendor_profiles`, whose `FOR ALL` policy let a vendor delete their
+  own row, so a vendor could erase their own signed agreement from the browser. Now
+  `ON DELETE RESTRICT` **and** an admin-only `vprofiles_delete`; both are load-bearing and
+  neither may be relaxed alone. Before trusting "no delete policy" to protect a table, ask
+  what cascades into it. Same lesson as the `vendor_documents` self-verify hole: an integrity
+  guarantee is only as strong as the paths nobody checked.
+- **One signature per (vendor, agreement version).** A retried onboarding submit used to sign a
+  second permanent contract that nothing could remove. `trg_vendor_contracts_one_per_version`
+  skips the duplicate. It is a trigger and not a UNIQUE constraint because one vendor
+  deliberately retains two historical rows as the record of that bug — see
+  `technicalimplementation.md` before "fixing" it into a constraint.
+- **Deleting a row does not delete its storage object, and nothing cascades.** Every KYC
+  re-submission used to strand the previous identity scan in the private bucket, referenced by
+  nothing. Any code path — product OR test — that replaces a row holding a storage path must
+  read the path first, delete the row, then remove the object, in that order.
 - **Do not ship an auth control with no provider behind it.** `signInWithOtp({ phone })`
   returns `phone_provider_disabled` on this project. So phone sign-in is a labelled
   "coming soon" row, `/auth/otp-verify` is deleted, and onboarding's phone field is a plain
@@ -306,6 +330,47 @@ undocumented. Deep technical rationale for each lives in
   later. That metadata is client-supplied, so the role is whitelisted to buyer/seller there;
   `is_admin` is deliberately not settable from it.
 
+- **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
+  `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
+  The brand name (seller) or company (buyer) typed at signup lives only in
+  `raw_user_meta_data` until `applyPendingSignupProfile()` moves it, and that write needs a
+  session, which a confirmation-gated signup does not have until the link is clicked.
+  `AuthCallback.tsx` is where that session first exists, so it must call it — and for the
+  whole of the trust-and-auth pass it did not, so every user who confirmed by email
+  silently lost the name. `applyPendingSignupProfile` now has three call sites
+  (Register, Login, AuthCallback) and is awaited before the redirect. **A signup fix is
+  proved by the column, not by where the page redirected to.**
+- **One profile score: one formula, one input shaper, one writer.**
+  `calculateProfileScore()` is the formula; `profileScoreInputFrom()` is the only
+  snake_case→camelCase mapping; `PROFILE_SCORE_COLUMNS` is the only select list; and
+  `syncProfileScore(vendorId)` is the only thing outside the dashboard that writes the
+  column. `saveVendorOnboarding()` used to carry a SECOND formula (nine unweighted checks
+  against the in-memory payload, versus fifteen weighted signals against the rows) — same
+  column, two authors, whichever ran last won, so a vendor finished onboarding on one
+  number and watched it change on their first dashboard load. `syncProfileScore` must be
+  called AFTER every other write in a flow: it scores rows, not intentions.
+- **`cin` and `aadhaar` are collected in the payload and unreachable in the UI.**
+  Both are in `VendorOnboardingPayload`, both create a `vendor_documents` row in
+  `saveVendorOnboarding()` — and `setCin`/`setAadhaar` have no call site anywhere in
+  `Onboarding.tsx`. There is no input for either, so `vendor_profiles.cin` is always null
+  and those documents can never exist, while step 1's "documents required for registration"
+  dialog still asks vendors to have them ready. Only PAN and GST are reachable.
+- **A test that uploads to storage must delete the OBJECTS, not just the rows.**
+  `vendor-onboarding-write-path.spec.ts` deleted its `vendor_documents` rows and left the
+  files, so every run leaked an identity scan into the private `business-docs` bucket —
+  referenced by nothing and, after the fact, indistinguishable from a real vendor's KYC.
+  Storage is not covered by a row delete and there is no cascade.
+- **A `<canvas>` inside a vaul `Drawer` needs `data-vaul-no-drag`.** vaul reads a pointer
+  drag across drawer content as swipe-to-dismiss. `touch-action: none` defends the touch
+  path only — browsers ignore touch-action for a mouse — and Onboarding's `onOpenChange`
+  nulls the signature when the drawer closes unsaved, so a dismissed drawer discards the
+  drawing with no error at all.
+- **Supabase's built-in SMTP rate-limits signups, and that is a production blocker.**
+  `auth.signUp()` starts returning "email rate limit exceeded" after a handful of attempts
+  per hour on this project — reproduced twice, and it is why `tests/vendor-signup.spec.ts`
+  fails intermittently with no code defect behind it. Register.tsx surfaces it honestly,
+  but a burst of genuine signups will be rejected until custom SMTP is configured in
+  Supabase Auth. Nothing in the codebase can fix this.
 - **Never collect contact details you cannot act on.** The Business Tools "Get Reviews" form
   gathered real customer names and phone numbers and dropped them behind
   `toast.success("Review requests sent!")` — there is no SMS pipeline in this repo, so nothing

@@ -162,6 +162,59 @@ export function calculateProfileScore(input: ProfileScoreInput): ProfileScoreRes
 }
 
 /**
+ * The `vendor_profiles` columns the score reads. One list, so a new signal
+ * cannot be added to the weights above and then silently score as `false`
+ * everywhere because one call site forgot to select its column.
+ */
+export const PROFILE_SCORE_COLUMNS =
+  "about, phone, owner_email, website, category, office_photos, year_established, employee_count, annual_turnover, capacity, social, reviews_count";
+
+/** The shape `PROFILE_SCORE_COLUMNS` returns. */
+export interface ProfileScoreRow {
+  about: string | null;
+  phone: string | null;
+  owner_email: string | null;
+  website: string | null;
+  category: string[] | null;
+  office_photos: string[] | null;
+  year_established: number | null;
+  employee_count: string | null;
+  annual_turnover: string | null;
+  capacity: string[] | null;
+  social: unknown;
+  reviews_count: number | null;
+}
+
+/**
+ * snake_case row + the three cross-table counts → the scorer's input.
+ *
+ * Pure, and deliberately the ONLY place that mapping is written. The score has
+ * one formula (`calculateProfileScore`) and one way of being fed; a second
+ * shaper is how two surfaces start disagreeing about a vendor's score without
+ * either of them containing a wrong number.
+ */
+export function profileScoreInputFrom(
+  vp: ProfileScoreRow | null,
+  counts: { productsTotal: number; productsLive: number; quotesSent: number },
+): ProfileScoreInput {
+  return {
+    about: vp?.about ?? null,
+    phone: vp?.phone ?? null,
+    ownerEmail: vp?.owner_email ?? null,
+    website: vp?.website ?? null,
+    category: vp?.category ?? null,
+    officePhotos: vp?.office_photos ?? null,
+    yearEstablished: vp?.year_established ?? null,
+    employeeCount: vp?.employee_count ?? null,
+    annualTurnover: vp?.annual_turnover ?? null,
+    capacity: vp?.capacity ?? null,
+    social: (vp?.social as Record<string, string[]> | null) ?? null,
+    reviewsCount: vp?.reviews_count ?? 0,
+    ...counts,
+  };
+}
+
+/**
  * Head-only `count(*)` against one table with some filters applied.
  *
  * `table` is a union of the real table names rather than `string`, and the
@@ -183,6 +236,42 @@ async function count<T extends CountableTable>(
 ): Promise<number> {
   const { count: n } = await apply(buildBase(table));
   return n ?? 0;
+}
+
+/**
+ * Recompute `vendor_profiles.profile_score` from what is actually in the
+ * database and store it. Returns the score written.
+ *
+ * This exists so a write path that is not the dashboard — onboarding submit is
+ * the only one today — can persist a score without inventing a second formula.
+ * `saveVendorOnboarding` used to carry its own `computeProfileScore()`: nine
+ * unweighted booleans against the in-memory payload, versus the fifteen
+ * weighted signals every screen reads. Same column, two authors, whichever ran
+ * last won — so a vendor finished onboarding on one number and watched it
+ * change on their first dashboard load, with nothing to explain the drop.
+ *
+ * Call it AFTER every other write in a flow: it scores rows, not intentions,
+ * so products inserted later in the same submit have to already be there.
+ */
+export async function syncProfileScore(vendorId: string): Promise<number> {
+  const [productsTotal, productsLive, quotesSent] = await Promise.all([
+    count("products", (q) => q.eq("vendor_id", vendorId)),
+    count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "live")),
+    count("quotes", (q) => q.eq("vendor_id", vendorId)),
+  ]);
+  const { data: vp, error: se } = await supabase
+    .from("vendor_profiles")
+    .select(PROFILE_SCORE_COLUMNS)
+    .eq("id", vendorId)
+    .maybeSingle();
+  if (se) throw se;
+
+  const { score } = calculateProfileScore(
+    profileScoreInputFrom(vp as ProfileScoreRow | null, { productsTotal, productsLive, quotesSent }),
+  );
+  const { error } = await supabase.from("vendor_profiles").update({ profile_score: score }).eq("id", vendorId);
+  if (error) throw error;
+  return score;
 }
 
 async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> {
@@ -210,29 +299,15 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
 
   const { data: vp } = await supabase
     .from("vendor_profiles")
-    .select(
-      "followers_count, profile_score, about, phone, owner_email, website, category, office_photos, year_established, employee_count, annual_turnover, capacity, social, reviews_count"
-    )
+    .select(`followers_count, profile_score, ${PROFILE_SCORE_COLUMNS}`)
     .eq("id", vendorId)
     .maybeSingle();
 
-  const scoreInput: ProfileScoreInput = {
-    about: vp?.about ?? null,
-    phone: vp?.phone ?? null,
-    ownerEmail: vp?.owner_email ?? null,
-    website: vp?.website ?? null,
-    category: vp?.category ?? null,
-    officePhotos: vp?.office_photos ?? null,
-    yearEstablished: vp?.year_established ?? null,
-    employeeCount: vp?.employee_count ?? null,
-    annualTurnover: vp?.annual_turnover ?? null,
-    capacity: vp?.capacity ?? null,
-    social: (vp?.social as Record<string, string[]> | null) ?? null,
-    reviewsCount: vp?.reviews_count ?? 0,
+  const scoreInput = profileScoreInputFrom(vp as ProfileScoreRow | null, {
     productsTotal,
     productsLive,
     quotesSent,
-  };
+  });
   const { score: profileScore, checks: profileChecks } = calculateProfileScore(scoreInput);
 
   // Keep the stored column in sync for anything that reads it directly (admin

@@ -2,7 +2,7 @@
 
 Updated automatically whenever a side's scope, features, or flows change.
 
-Last updated: 2026-09-05
+Last updated: 2026-09-09
 
 Cosora is fundamentally a three-sided marketplace. **Key mechanic:** the same person can be
 both a buyer and a vendor and toggles between the two experiences inside one unified web
@@ -71,7 +71,9 @@ the demand side of India's fashion and textile supply chain.
   notifications, help & support chat.
 
 ### User journey
-1. Register (phone OTP) → select role → select sourcing interests.
+1. Register with **email + password** (not phone OTP — no SMS provider is configured), confirm
+   by email, then select role → select sourcing interests. The company name typed at signup is
+   written to the buyer profile by `/auth/callback`, on the first sign-in that has a session.
 2. Land on the discovery feed; browse, search, save, follow.
 3. Post a requirement — Quick RFQ or the detailed per-category form.
 4. Receive quotes from multiple vendors in My Quotes.
@@ -114,7 +116,14 @@ rather than a supplier directory.
 - **No record of what the platform is worth to them.** Total Order Value is the answer.
 
 ### Features
-- **Onboarding** — multi-step: business details, documents, products, contract.
+- **Onboarding** — 9 steps: business details, address, owner, business category, premises
+  photos, PAN + GSTIN, first product, and the supplier agreement with a signature. Completing
+  it writes `vendor_profiles`, `vendor_documents`, the product and its images, and a
+  `vendor_contracts` row in one call, so "onboarded with no contract on file" is unreachable.
+  **Known gaps:** CIN and Aadhaar are wired through the payload but have no input anywhere in
+  the form (only PAN and GST are reachable), a retried submit signs a second undeletable
+  contract, and there is no vendor-facing way to re-upload a rejected KYC document —
+  onboarding is the only upload path and it sits behind `onboarding_complete`.
 - **Catalogue** — products (fabric type, GSM, MOQ, sizes, customization, certifications),
   catalogues, and Video Closeups. **Everything goes through admin moderation before going
   live (24–48 h)** — products and videos both default to `under_review`. A **rejected
@@ -160,12 +169,17 @@ rather than a supplier directory.
 - **Settings** — Business, Notifications (email/push), Language, Security, Help & Legal.
 
 ### User journey
-1. Register (phone OTP) → complete multi-step vendor onboarding.
-2. Land on the vendor dashboard.
-3. List products / catalogues / videos → they sit in `under_review` until admin approves.
-4. Receive leads and quote requests; respond with quotes.
-5. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
-6. Negotiate in chat, win orders, watch Total Order Value grow.
+1. Register with **email + password** (phone OTP is gone — no SMS provider is configured, so
+   the phone control is a labelled "coming soon" row). Email confirmation is **ON**, so
+   signup returns no session and ends on a "check your email" screen; the confirmation link
+   lands on `/auth/callback`, which is where the brand name typed at signup is finally
+   written to `vendor_profiles` — that page has to finish the signup, not just redirect.
+2. Complete the 9-step vendor onboarding, ending on the supplier agreement and a signature.
+3. Land on the vendor dashboard.
+4. List products / catalogues / videos → they sit in `under_review` until admin approves.
+5. Receive leads and quote requests; respond with quotes.
+6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
+7. Negotiate in chat, win orders, watch Total Order Value grow.
 
 ### Constraints that shape the vendor UI
 - Every vendor page must wrap in `DashboardLayout`.

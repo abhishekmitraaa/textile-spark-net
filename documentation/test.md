@@ -2,7 +2,7 @@
 
 Updated automatically whenever a test is written or run.
 
-Last updated: 2026-09-07
+Last updated: 2026-09-09
 
 ---
 
@@ -21,6 +21,16 @@ Last updated: 2026-09-07
 | `vendor-my-store.spec.ts` | The My Store cluster (`/my-store`, `/my-store/business`, `/business-profile`, `/business-profile-score`, `/kyc`) is read from real rows — every retired demo literal absent, header/counts/score match the vendor row, real QR image, no `#ef4d62`, zero console errors; plus the signed-out registration block | `demo-vendor` (read-only) |
 | `vendor-signup.spec.ts` | Registration through the real `Register.tsx`: the seller branch reaches step 2 (it used to skip it), signup creates a real account, the "check your email" screen appears, an unconfirmed account is refused a session, and `/auth/login` offers email+password with no fake phone check | creates a throwaway `zz-test-vendor-*@cosora.in` |
 | `vendor-onboarding-write-path.spec.ts` | The **form-to-database** path: drives the real 9-step `/onboarding` and asserts state, pincode, landmark, category, office photos, the PAN scan's `file_url`, and product `unit`/`sizes`/`colour`/images all landed. Also the logo upload and the unverified-seal branch | `demo-buyer` (**mutating**, self-cleaning) |
+| `mp4-phase1-register.spec.ts` | Part 1 of the signup proof: `/register` creates a real account and stops honestly at "Confirm your email". Does **not** confirm it — no inbox for the throwaway domain | creates `zz-mp4-vendor@cosora.in` |
+| `mp4-phase2-callback-onboarding.spec.ts` | Part 2: `/auth/callback` writes the signup brand name to `vendor_profiles` (session injected directly, never via `/login`, whose own call would prove the wrong site); then the full 9-step onboarding with a **drawn** signature, asserting every column, the signed-URL read of the private KYC path, and the `vendor_contracts` row; then that the score stored at submit equals the score `/business-profile-score` displays | `zz-mp4-vendor@cosora.in` (**left in place** — it is the evidence) |
+| `mp4-phase5-kyc-review.spec.ts` | The vendor-facing half of the KYC review loop: a rejected vendor sees the reason on `/kyc` and opens the scan through a freshly minted signed URL | `zz-mp4-vendor@cosora.in` (read-only) |
+| `mp5-phase4-confirmation-link.spec.ts` | The signup brand name reaching the database via the CONFIRMATION-LINK landing URL — a cold browser context with asserted-empty `localStorage`, navigated to `/auth/callback#access_token=…`, so Login.tsx cannot mask the bug | creates `zz-mp5-link@cosora.in` |
+
+**Three of these are one-shot by nature and `test.skip()` rather than fail once their
+precondition is consumed** — a signup-metadata write proves itself once, onboarding cannot
+be re-run without signing a second undeletable contract, and the `/kyc` spec reads a review
+state only an admin session can create. A red test there would mean "already proved", which
+is not what red is for; each skip message says how to re-arm it.
 
 - **Run:** `npm run playwright:install` once, then `npm run test:e2e` (or a single file:
   `npx playwright test tests/<spec>.ts`).
@@ -107,6 +117,114 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-09 (contract integrity) — a vendor could delete their own signed agreement
+
+| Assertion (`scripts/vendor-contract-integrity-check.mjs`) | Result |
+|---|---|
+| Vendor deletes own `vendor_profiles` row → row survives | **PASS** |
+| …and their signed contracts survive | **PASS** — 2 → 2 (was 1 → 0 before the fix) |
+| Vendor UPDATE / SELECT on own profile still work | **PASS** |
+| Vendor can still read own contracts | **PASS** — 2 rows |
+| Duplicate signature for an already-signed version | **PASS** — 2 → 2, refused |
+
+**6/6.** Every assertion reads the row back; none trusts the return value, because an
+RLS-denied DELETE matches zero rows and returns success.
+
+| Other checks | Before | After |
+|---|---|---|
+| `vendor_contracts_vendor_id_fkey` `confdeltype` | `c` (cascade) | **`r` (restrict)** |
+| Orphaned objects in `business-docs` | **12** | **0** |
+| …after two further full onboarding runs | — | **0** |
+| demo-buyer contracts after onboarding **twice** | (would have been 2) | **1** |
+| Preserved evidence on `9ddda61f-…` | 2 | **2** (untouched) |
+
+**Phase 4, on the confirmation-link path this time.** New account `zz-mp5-link@cosora.in`
+(`28ada0e2-…`). A completely cold browser context — asserted empty `localStorage`, no injected
+session, Login.tsx never loaded — navigated to
+`/auth/callback#access_token=…&refresh_token=…&type=signup`, the exact URL shape Supabase's
+`/auth/v1/verify` redirects to under `detectSessionInUrl` + implicit flow:
+
+```
+before: metadata.brand_name=Kesar Textiles  vendor_profiles.brand_name=(no row)
+after:  vendor_profiles.brand_name=Kesar Textiles  landed on /auth/role-selection
+```
+
+**Phase 5, on a second fresh vendor** (`28ada0e2-…`): stored at submit **29** · displayed **29**
+· after dashboard recompute **29**. Corroborating the earlier run: the deleted nine-check
+formula was `filled/9 × 100` over checks this vendor satisfied completely and would have
+written **100** — 29 is only producible by `calculateProfileScore`.
+
+typecheck **0** · eslint **5 errors / 17 warnings** (unchanged, all pre-existing).
+
+### 2026-09-09 (prove the write path) — a vendor actually completed registration, and the counts moved
+
+**The claim two previous passes made and never demonstrated.** Throwaway vendor
+`zz-mp4-vendor@cosora.in` / `9ddda61f-d778-41a5-b568-39fd9f3eb37a`, created through the real
+`/register` form, confirmed out of band, driven through all nine onboarding steps with a
+**drawn** signature. **Left in the database deliberately — it is the evidence.**
+
+| `vendor_profiles` | before | after |
+|---|---|---|
+| total | 7 | **8** |
+| onboarding_complete | 1 | **2** |
+| with PAN / GSTIN / state / pincode / office photos | 0 / 0 / 0 / 0 / 0 | **1 / 1 / 1 / 1 / 1** |
+| `vendor_contracts` rows in the whole project | **0** | **1** (then 2 — see below) |
+
+Row-level results: `brand_name=Meridian Weaves Pvt Ltd`, `pan=AFZPK7190K`,
+`gstin=24AFZPK7190K1ZT`, `state=Gujarat`, `postal_code=394221`, 2 office photos,
+`onboarding_complete=true`, one `under_review` product with an image, a `vendor_documents`
+PAN row whose `file_url` is a **private storage path** (`9ddda61f…/kyc/…png`, not a URL)
+that resolves only through a minted signed URL, and a `vendor_contracts` row at
+`agreement_version = 2026-09-v1` with an uploaded signature PNG.
+
+**The AuthCallback fix, proved at the column and not the redirect.** Before: a real signup
+left `raw_user_meta_data.brand_name = "Meridian Weaves"` and **zero** `vendor_profiles`
+rows. After: hitting `/auth/callback` with a session injected straight into `localStorage`
+— deliberately never through `/login`, whose own `applyPendingSignupProfile()` call would
+have proved the wrong site — produced `vendor_profiles.brand_name = "Meridian Weaves"`.
+
+**Profile score, one formula.** Stored at onboarding submit **29** · displayed on
+`/business-profile-score` **29** · after the dashboard's own recompute **29**. The
+recompute is now a no-op rather than a silent correction.
+
+**KYC review round-trip, against the real `set_vendor_document_verified()`** (sessions
+impersonated at the DB layer; the admin panel's own buttons were NOT clicked — no admin
+credentials are available in this environment, and probing for one was correctly blocked):
+
+| Assertion | Result |
+|---|---|
+| Vendor (non-admin) calls the RPC on their own document | **refused, row untouched** |
+| Rejection with a blank reason | **refused** |
+| Rejection with a reason | stored, `reviewed_by` stamped |
+| The vendor sees it on `/kyc` | "Rejected" + the reason rendered |
+| The scan opens from `/kyc` | fresh signed URL, `/object/sign/business-docs/…token=`, HTTP 200 |
+| Approve | `verified=true`, `rejection_reason` cleared |
+| Unknown document id | **raises**, does not silently no-op |
+| `kyc_approved` / `kyc_rejected` notifications | both fired |
+| `vendor_profiles.is_verified` after approval | **still false** — KYC does not grant the seal |
+
+**Suite:** typecheck **0**; eslint **5 errors / 17 warnings** (all pre-existing);
+Playwright **27 passed, 3 failed, 3 skipped, 7 did not run**. The 3 failures are all
+pre-existing and unrelated: `admin-chat-moderation` and `chat-pipeline` both fail at
+`login failed for rlstest-support@cosora.test: Invalid login credentials` (fixture accounts
+deleted, already logged as tech debt), and `new-arrivals` waits for `[role="tab"]` on a page
+whose markup contains **zero** tab elements — the page was rewritten and the spec never was.
+The 3 skips are the one-shot MP4 specs declining to re-prove themselves.
+
+**Fixed while measuring:** `vendor-onboarding-write-path.spec.ts` had been failing since the
+private-bucket change with `TypeError: Failed to parse URL from 11111111-…/kyc/….png` — it
+still `fetch`ed `file_url`, which stopped being a URL — and its teardown deleted rows but not
+storage objects, leaking one identity scan per run. Both fixed; a verification re-run left the
+orphan count unchanged, so the leak is closed.
+
+**Found, not anticipated, NOT fixed:** deleting a `vendor_profiles` row through an
+RLS-enforced anon client took its `vendor_contracts` count from 1 to 0 —
+`vendor_contracts.vendor_id` is `ON DELETE CASCADE` and `vprofiles_write` lets a vendor
+delete their own profile, so the "append-only, no delete for anyone" guarantee is bypassable
+from the browser. And re-running onboarding inserted a **second** permanent contract row
+(observed live: 2 rows for one vendor, same version), because `saveVendorOnboarding` dedups
+`vendor_documents` and not contracts.
 
 ### 2026-09-08 (trust & auth) — KYC out of the public bucket, a privilege escalation closed, typecheck 23 → 0
 

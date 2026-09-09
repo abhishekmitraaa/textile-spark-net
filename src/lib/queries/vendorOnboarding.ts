@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { resolveCategoryId } from "@/lib/queries/products";
 import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
+import { syncProfileScore } from "@/lib/queries/vendorDashboard";
 
 // ─────────────────────────────────────────────────────────────
 // Persist the vendor registration (8-step Onboarding) to the DB.
@@ -70,19 +71,7 @@ export interface VendorOnboardingPayload {
   product?: OnboardingProduct;
 }
 
-// A rough completeness score (0–100) shown on the vendor dashboard.
-function computeProfileScore(p: VendorOnboardingPayload): number {
-  const checks = [
-    !!p.businessName, !!p.phone, !!p.website, !!(p.addressLine || p.area || p.city),
-    !!p.ownerName, !!p.ownerEmail, !!p.pan, !!p.gstin, !!p.product?.name,
-  ];
-  const filled = checks.filter(Boolean).length;
-  return Math.round((filled / checks.length) * 100);
-}
-
 export async function saveVendorOnboarding(vendorId: string, p: VendorOnboardingPayload): Promise<void> {
-  const profile_score = computeProfileScore(p);
-
   const { error: pe } = await supabase.from("vendor_profiles").upsert(
     {
       id: vendorId,
@@ -108,7 +97,6 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
       ...(p.category ? { category: p.category } : {}),
       ...(p.officePhotos ? { office_photos: p.officePhotos } : {}),
       onboarding_complete: true,
-      profile_score,
     },
     { onConflict: "id" }
   );
@@ -126,6 +114,20 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
     ].filter(Boolean) as { doc_type: string; file_url: string | null }[]
   ).map((d) => ({ vendor_id: vendorId, ...d }));
   if (docs.length) {
+    const docTypes = docs.map((d) => d.doc_type);
+
+    // Read the storage paths of the rows about to be replaced, BEFORE deleting
+    // them — once the row is gone there is nothing left pointing at the object.
+    // Storage is not covered by a row delete and there is no cascade, so every
+    // re-submission used to strand the previous identity scan in the private
+    // bucket, referenced by nothing and afterwards indistinguishable from a
+    // real vendor's KYC.
+    const { data: superseded } = await supabase
+      .from("vendor_documents")
+      .select("file_url")
+      .eq("vendor_id", vendorId)
+      .in("doc_type", docTypes);
+
     // Onboarding can legitimately be submitted twice (a failed product insert,
     // a retried submit). There is no unique constraint on (vendor_id,
     // doc_type), so clear this vendor's rows for exactly the types being
@@ -134,10 +136,25 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
       .from("vendor_documents")
       .delete()
       .eq("vendor_id", vendorId)
-      .in("doc_type", docs.map((d) => d.doc_type));
+      .in("doc_type", docTypes);
     if (dde) throw dde;
     const { error: de } = await supabase.from("vendor_documents").insert(docs);
     if (de) throw de;
+
+    // Only now remove the old objects. This ORDER is deliberate: the row goes
+    // first, so a failed storage delete leaves a harmless orphan rather than a
+    // live row pointing at a file that no longer exists. Legacy rows may still
+    // hold a full public URL from before KYC moved to the private bucket —
+    // those are not paths in `business-docs` and are skipped rather than
+    // guessed at. Best-effort: a vendor's registration must not fail because a
+    // superseded file could not be tidied up.
+    const stale = (superseded ?? [])
+      .map((d) => d.file_url)
+      .filter((u): u is string => !!u && !u.startsWith("http") && !docs.some((d) => d.file_url === u));
+    if (stale.length) {
+      const { error: se } = await supabase.storage.from(KYC_BUCKET).remove(stale);
+      if (se) console.warn("[vendorOnboarding] superseded KYC objects not removed:", se.message);
+    }
   }
 
   // The step-7 product becomes a real listing (buyers see it once approved).
@@ -177,17 +194,56 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
   // must not be a reachable combination, so the same call that sets the flag
   // writes the record.
   if (p.contract?.signedName?.trim()) {
-    const { error: ce } = await supabase.from("vendor_contracts").insert({
-      vendor_id: vendorId,
-      signed_name: p.contract.signedName.trim(),
-      signature_url: p.contract.signatureUrl ?? null,
-      agreement_version: SUPPLIER_AGREEMENT_VERSION,
-    });
-    if (ce) throw ce;
+    // One signature per (vendor, agreement version). A retried submit against
+    // the SAME agreement text is a no-op, not a second signature: the table has
+    // no UPDATE or DELETE policy for anyone, so a duplicate written here could
+    // never be removed by any means. A re-sign after SUPPLIER_AGREEMENT_VERSION
+    // changes is a different version and still inserts — that is a genuinely new
+    // signature event.
+    //
+    // `trg_vendor_contracts_one_per_version` enforces this in the database and
+    // is the real guarantee; this check just means the normal retry path never
+    // depends on the trigger firing. It is not an `.upsert(onConflict:…)`
+    // because there is no unique index to conflict on — the historical
+    // duplicate this bug produced is deliberately preserved, and a UNIQUE
+    // constraint cannot be created over it.
+    const { data: alreadySigned, error: cse } = await supabase
+      .from("vendor_contracts")
+      .select("id")
+      .eq("vendor_id", vendorId)
+      .eq("agreement_version", SUPPLIER_AGREEMENT_VERSION)
+      .limit(1)
+      .maybeSingle();
+    if (cse) throw cse;
+
+    if (!alreadySigned) {
+      const { error: ce } = await supabase.from("vendor_contracts").insert({
+        vendor_id: vendorId,
+        signed_name: p.contract.signedName.trim(),
+        signature_url: p.contract.signatureUrl ?? null,
+        agreement_version: SUPPLIER_AGREEMENT_VERSION,
+      });
+      if (ce) throw ce;
+    }
   }
 
   // Mark the account as an onboarded seller (best-effort; non-blocking).
   await supabase.from("profiles").update({ active_role: "seller", onboarded: true }).eq("id", vendorId);
+
+  // Score the rows that now exist, using the same function every screen reads.
+  // LAST, on purpose: `syncProfileScore` counts products, so the step-7 listing
+  // has to be inserted before it runs.
+  //
+  // Non-blocking, matching the `profiles` update above and the dashboard's own
+  // write-back: the vendor has a completed registration either way, the next
+  // dashboard load recomputes this column regardless, and failing a submit that
+  // already persisted everything real — over a derived integer — would be the
+  // worse outcome. It warns rather than passing silently.
+  try {
+    await syncProfileScore(vendorId);
+  } catch (e) {
+    console.warn("[vendorOnboarding] profile_score sync failed:", e);
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

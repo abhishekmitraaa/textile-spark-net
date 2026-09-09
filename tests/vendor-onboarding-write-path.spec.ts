@@ -93,6 +93,13 @@ function watchConsole(page: Page): string[] {
   return errors;
 }
 
+/**
+ * Storage paths this run uploaded, recorded as they are created. Storage is not
+ * covered by a row delete and there is no cascade, so anything not removed here
+ * stays in the private bucket referenced by nothing.
+ */
+const uploadedKycPaths: string[] = [];
+
 /** Removes exactly what this run creates. */
 async function cleanup() {
   // Escape hatch for the Phase 8.6 count check, which has to read the aggregate
@@ -102,23 +109,78 @@ async function cleanup() {
     return;
   }
   const db = await signedInDb();
+
+  // Any KYC path still on a row, PLUS the ones recorded when they were uploaded.
+  // Both halves are needed: test 8.7 deliberately strips this vendor back to a
+  // bare row, so by the time teardown runs the vendor_documents rows naming
+  // these objects are already gone — reading the rows alone silently misses
+  // them and leaks the scan. Recording at creation time is what makes cleanup
+  // survive a test that deletes rows before teardown.
+  const { data: docRows } = await db.from("vendor_documents").select("file_url").eq("vendor_id", VENDOR_ID);
+  const kycPaths = [
+    ...uploadedKycPaths,
+    ...(docRows ?? []).map((d) => d.file_url as string | null),
+  ].filter((u): u is string => !!u && !u.startsWith("http"));
+
   const { data: products } = await db.from("products").select("id").eq("vendor_id", VENDOR_ID);
   for (const p of products ?? []) await db.from("product_images").delete().eq("product_id", p.id);
   await db.from("products").delete().eq("vendor_id", VENDOR_ID);
   await db.from("vendor_documents").delete().eq("vendor_id", VENDOR_ID);
-  await db.from("vendor_profiles").delete().eq("id", VENDOR_ID);
+
+  // The vendor_profiles row is BLANKED, not deleted.
+  //
+  // It used to be deleted, and that stopped being possible on purpose: a client
+  // can no longer DELETE vendor_profiles at all (vprofiles_delete is admin-only),
+  // and vendor_contracts.vendor_id is now ON DELETE RESTRICT so even an admin
+  // cannot delete a vendor who has signed anything. Both changes exist because
+  // the old cascade let a vendor destroy their own signed contract.
+  //
+  // A DELETE denied by RLS matches zero rows and RETURNS SUCCESS, so leaving the
+  // old call here would have "passed" forever while cleaning nothing. Resetting
+  // the row to its pre-onboarding state is the equivalent teardown that the new
+  // rules actually permit.
+  await db.from("vendor_profiles").update({
+    brand_name: null, phone: null, whatsapp: null, website: null,
+    address_line: null, area: null, city: null, state: null, postal_code: null,
+    landmark: null, owner_name: null, owner_email: null,
+    pan: null, gstin: null, cin: null,
+    category: [], office_photos: [], logo_url: null, banner_url: null,
+    about: null, year_established: null, employee_count: null,
+    annual_turnover: null, capacity: [], social: {},
+    onboarding_complete: false, profile_score: 0,
+  }).eq("id", VENDOR_ID);
   await db.from("profiles").update({ active_role: ORIGINAL_ACTIVE_ROLE }).eq("id", VENDOR_ID);
+
+  if (kycPaths.length) await db.storage.from("business-docs").remove(kycPaths);
+
+  // NOTE: vendor_contracts is deliberately append-only — no delete policy for
+  // anyone, admins included — so a contract this run signed CANNOT be removed
+  // and will accumulate one row per run. That is a real product gap, not a
+  // teardown oversight: saveVendorOnboarding() dedups vendor_documents but not
+  // contracts, so a retried submit leaves a second permanent signature.
 }
 
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
   mkdirSync(SHOTS, { recursive: true });
-  // Guard: this account must start with no vendor identity, or the assertions
+  // Guard: this account must start with no vendor IDENTITY, or the assertions
   // below would be measuring somebody else's data.
+  //
+  // "No identity" used to mean "no vendor_profiles row". It now means "a row
+  // that has not completed onboarding", because the row can no longer be
+  // deleted by anyone once a contract references it — see cleanup(). A blanked
+  // row and an absent row are equivalent for everything this spec asserts.
   const db = await signedInDb();
-  const { data } = await db.from("vendor_profiles").select("id").eq("id", VENDOR_ID).maybeSingle();
-  expect(data, `${EMAIL} must have no vendor_profiles row before this run`).toBeNull();
+  const { data } = await db
+    .from("vendor_profiles")
+    .select("onboarding_complete, brand_name")
+    .eq("id", VENDOR_ID)
+    .maybeSingle();
+  expect(
+    data?.onboarding_complete ?? false,
+    `${EMAIL} must not be a completed vendor before this run (found brand_name=${data?.brand_name})`,
+  ).toBe(false);
 });
 
 test.afterAll(async () => { await cleanup(); });
@@ -249,7 +311,15 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   expect(pan, "PAN document row exists").toBeTruthy();
   expect(pan!.file_url, "PAN scan uploaded — file_url was always null").toBeTruthy();
   expect(pan!.verified, "verification is an admin action, never self-awarded").toBe(false);
-  expect((await fetch(pan!.file_url as string)).ok, "PAN scan resolves").toBe(true);
+  // file_url is a PRIVATE storage PATH, not a URL. This assertion used to be a
+  // bare fetch() of the column, which was correct while KYC lived in the public
+  // product-images bucket and has thrown "Failed to parse URL" ever since that
+  // moved to business-docs. A private object has exactly one read path.
+  expect(pan!.file_url as string, "a storage path, not a public URL").not.toMatch(/^https?:\/\//);
+  uploadedKycPaths.push(pan!.file_url as string);
+  const { data: panSigned } = await db.storage.from("business-docs").createSignedUrl(pan!.file_url as string, 300);
+  expect(panSigned?.signedUrl, "a signed URL can be minted for the owner").toBeTruthy();
+  expect((await fetch(panSigned!.signedUrl)).ok, "PAN scan resolves through the signed URL").toBe(true);
 
   const { data: products } = await db.from("products").select("*").eq("vendor_id", VENDOR_ID);
   expect(products?.length, "step-8 product created").toBe(1);
