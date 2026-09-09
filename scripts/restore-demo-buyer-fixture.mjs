@@ -60,7 +60,23 @@ const { data: products } = await db.from("products").select("id").eq("vendor_id"
 for (const p of products ?? []) await db.from("product_images").delete().eq("product_id", p.id);
 await db.from("products").delete().eq("vendor_id", VENDOR_ID);
 await db.from("vendor_documents").delete().eq("vendor_id", VENDOR_ID);
-await db.from("vendor_profiles").delete().eq("id", VENDOR_ID);
+
+// BLANK the vendor_profiles row, do not DELETE it.
+//
+// This script used to delete it. That silently stopped working when DELETE on
+// vendor_profiles became admin-only and vendor_contracts.vendor_id became
+// ON DELETE RESTRICT — and because a DELETE that RLS denies matches zero rows
+// and RETURNS SUCCESS, the old call kept "working" while cleaning nothing.
+await db.from("vendor_profiles").update({
+  brand_name: null, phone: null, whatsapp: null, website: null,
+  address_line: null, area: null, city: null, state: null, postal_code: null,
+  landmark: null, owner_name: null, owner_email: null,
+  pan: null, gstin: null, cin: null,
+  category: [], office_photos: [], logo_url: null, banner_url: null,
+  about: null, year_established: null, employee_count: null,
+  annual_turnover: null, capacity: [], social: {},
+  onboarding_complete: false, profile_score: 0,
+}).eq("id", VENDOR_ID);
 await db.from("profiles").update({ active_role: "buyer" }).eq("id", VENDOR_ID);
 
 if (kycPaths.length) {
@@ -69,7 +85,7 @@ if (kycPaths.length) {
 }
 
 const [vp, docs, prods, prof, contracts] = await Promise.all([
-  db.from("vendor_profiles").select("id", { count: "exact", head: true }).eq("id", VENDOR_ID),
+  db.from("vendor_profiles").select("onboarding_complete").eq("id", VENDOR_ID).maybeSingle(),
   db.from("vendor_documents").select("id", { count: "exact", head: true }).eq("vendor_id", VENDOR_ID),
   db.from("products").select("id", { count: "exact", head: true }).eq("vendor_id", VENDOR_ID),
   db.from("profiles").select("active_role").eq("id", VENDOR_ID).maybeSingle(),
@@ -77,7 +93,7 @@ const [vp, docs, prods, prof, contracts] = await Promise.all([
 ]);
 
 console.log({
-  vendor_profiles: vp.count,
+  vendor_profiles_onboarding_complete: vp.data?.onboarding_complete ?? "(no row)",
   vendor_documents: docs.count,
   products: prods.count,
   active_role: prof.data?.active_role,

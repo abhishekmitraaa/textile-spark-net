@@ -61,6 +61,10 @@ export interface VendorOnboardingPayload {
   officePhotos?: string[];
   /** Storage PATH of the uploaded PAN scan (business-docs) → vendor_documents.file_url. */
   panFileUrl?: string;
+  /** Storage PATH of the uploaded GST certificate (business-docs). */
+  gstFileUrl?: string;
+  /** Storage PATH of the uploaded incorporation certificate (business-docs). */
+  cinFileUrl?: string;
   /** The signed supplier agreement. Written in the same call as the profile, so
    *  a vendor with onboarding_complete = true always has a contract on file. */
   contract?: {
@@ -107,9 +111,19 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
   // app has no way to verify a PAN and must not claim it did.
   const docs = (
     [
+      // Each type carries the scan the vendor actually uploaded. gst and cin
+      // used to hardcode `file_url: null`, so an admin was asked to rule on a
+      // number the vendor typed with nothing to look at.
+      //
+      // `aadhaar` stays null-only and has no upload control on purpose: nothing
+      // in the form collects an Aadhaar number either. Retaining Aadhaar numbers
+      // or images is constrained by the Aadhaar Act 2016 / UIDAI rules for
+      // entities that are not an authorised KUA/AUA, so collecting it is a
+      // compliance decision rather than a form field. The payload key and the
+      // doc_type are kept so nothing that reads them breaks.
       p.pan ? { doc_type: "pan", file_url: p.panFileUrl ?? null } : null,
-      p.gstin ? { doc_type: "gst", file_url: null } : null,
-      p.cin ? { doc_type: "cin", file_url: null } : null,
+      p.gstin ? { doc_type: "gst", file_url: p.gstFileUrl ?? null } : null,
+      p.cin ? { doc_type: "cin", file_url: p.cinFileUrl ?? null } : null,
       p.aadhaar ? { doc_type: "aadhaar", file_url: null } : null,
     ].filter(Boolean) as { doc_type: string; file_url: string | null }[]
   ).map((d) => ({ vendor_id: vendorId, ...d }));

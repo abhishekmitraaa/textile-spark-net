@@ -57,6 +57,8 @@ const FORM = {
   category: "Garment Manufacturer",
   pan: "ABCDE1234F",
   panAddress: "Unit 4, Ring Road, Surat 395002",
+  gstin: "24ABCDE1234F1Z5",
+  cin: "U17110GJ2019PTC109876",
   product: { name: "Playwright Cotton Tee", price: "249", moq: "50", gsm: "180" },
 };
 
@@ -252,8 +254,28 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   await page.locator("#pan-full-name").fill(FORM.businessName);
   await page.getByRole("button", { name: "Check" }).first().click();
   await page.locator("#pan-address").fill(FORM.panAddress);
-  await page.locator('input[accept="image/*,application/pdf"]').setInputFiles(file("pan-card.png"));
+  // Three hidden file inputs share this accept string (PAN, GST, CIN); nth(0)
+  // is PAN, in DOM order.
+  const kycInputs = page.locator('input[accept="image/*,application/pdf"]');
+  await kycInputs.nth(0).setInputFiles(file("pan-card.png"));
   await expect(page.getByText("Uploaded · awaiting review")).toBeVisible({ timeout: 40_000 });
+
+  // GST — the number AND the certificate. `file_url` used to be hardcoded null
+  // for this type, so an admin ruled on a string the vendor typed.
+  await page.getByRole("radio").first().check();
+  await page.getByPlaceholder("GSTIN").fill(FORM.gstin);
+  await kycInputs.nth(1).setInputFiles(file("gst-certificate.png"));
+
+  // CIN — optional, and only offered once a number is entered, because a
+  // proprietorship has no CIN and this form has no entity-type field.
+  await expect(page.locator("#cin-number")).toBeVisible();
+  await page.locator("#cin-number").fill(FORM.cin);
+  await kycInputs.nth(2).setInputFiles(file("incorporation-certificate.png"));
+  await expect(page.getByText("Uploaded · awaiting review")).toHaveCount(3, { timeout: 40_000 });
+
+  // Aadhaar is deliberately absent from this step and from the step-1 checklist.
+  await expect(page.getByText(/aadhaar/i)).toHaveCount(0);
+
   await page.getByRole("button", { name: "Next" }).click();
 
   // Step 8 — first product, including unit / sizes / colours.
@@ -321,6 +343,27 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   expect(panSigned?.signedUrl, "a signed URL can be minted for the owner").toBeTruthy();
   expect((await fetch(panSigned!.signedUrl)).ok, "PAN scan resolves through the signed URL").toBe(true);
 
+  // GST and CIN now carry real scans. Both rows used to be written with
+  // file_url: null unconditionally, so an admin was asked to approve or reject
+  // a number the vendor typed with nothing to open.
+  expect(vp!.gstin, "GSTIN persisted").toBe(FORM.gstin);
+  expect(vp!.cin, "CIN persisted — the field had no input at all before").toBe(FORM.cin);
+  for (const type of ["gst", "cin"]) {
+    const doc = (docs ?? []).find((d) => d.doc_type === type);
+    expect(doc, `${type} document row exists`).toBeTruthy();
+    expect(doc!.file_url, `${type} scan uploaded — was hardcoded null`).toBeTruthy();
+    expect(doc!.file_url as string, `${type} is a storage path`).not.toMatch(/^https?:\/\//);
+    expect(doc!.verified, `${type} is not self-verified`).toBe(false);
+    uploadedKycPaths.push(doc!.file_url as string);
+    const { data: signed } = await db.storage.from("business-docs").createSignedUrl(doc!.file_url as string, 300);
+    expect(signed?.signedUrl, `${type} can be signed`).toBeTruthy();
+    expect((await fetch(signed!.signedUrl)).ok, `${type} resolves through the signed URL`).toBe(true);
+  }
+
+  // Aadhaar must NOT exist: nothing in the form collects it, and the step-1
+  // checklist no longer asks for it.
+  expect((docs ?? []).some((d) => d.doc_type === "aadhaar"), "no aadhaar row").toBe(false);
+
   const { data: products } = await db.from("products").select("*").eq("vendor_id", VENDOR_ID);
   expect(products?.length, "step-8 product created").toBe(1);
   const product = products![0];
@@ -373,7 +416,10 @@ test("8.3–8.4 the new vendor's pages show their own data, unverified", async (
 
   await expect(page.getByText(FORM.landmark)).toBeVisible();     // 4.5 landmark in the address
   await expect(page.getByText(FORM.category).first()).toBeVisible(); // 5.2 real categories
-  await expect(page.getByText(FORM.pan)).toBeVisible();          // 4.4 real PAN, no fallback
+  // `exact` matters: a real GSTIN EMBEDS the PAN (state code + PAN + entity
+  // code + Z + checksum), so a substring match resolves to both fields.
+  await expect(page.getByText(FORM.pan, { exact: true })).toBeVisible();   // 4.4 real PAN, no fallback
+  await expect(page.getByText(FORM.gstin, { exact: true })).toBeVisible(); // and the real GSTIN beside it
   await expect(page.getByText(FORM.product.name).first()).toBeVisible(); // 5.5 real product
   await page.screenshot({ path: path.join(SHOTS, "vendor-business-profile-new-vendor.png"), fullPage: true });
 

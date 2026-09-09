@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
@@ -218,6 +218,7 @@ function ProductCard({ product }: { product: Product }) {
 const NewArrivals = () => {
   const t = useT();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const callVendor = useCallVendor();
   const { profile } = useAuth();
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
@@ -384,21 +385,36 @@ const NewArrivals = () => {
     <BuyerShell>
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pt-3">
         {/* ── Home tabs ── */}
-        <div className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide">
-          {HOME_TABS.map(tab => (
-            <Link
-              key={tab.href}
-              to={tab.href}
-              className={cn(
-                "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/new-arrivals"
-                  ? "text-[#ef4d62] border-[#ef4d62]"
-                  : "text-gray-400 border-transparent hover:text-gray-600"
-              )}
-            >
-              {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
-            </Link>
-          ))}
+        {/* A tablist, and now labelled as one. These were plain links: a
+            screen reader got five destinations with no indication of which one
+            the user was on, and the active style was hardcoded to
+            /home/new-arrivals rather than derived from the route — correct only
+            because this strip happens to render on that page. */}
+        <div
+          role="tablist"
+          aria-label="Buyer home"
+          className="flex justify-start lg:justify-center gap-4 lg:gap-7 overflow-x-auto pb-2 mb-3 border-b border-gray-100 scrollbar-hide"
+        >
+          {HOME_TABS.map(tab => {
+            const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
+            return (
+              <Link
+                key={tab.href}
+                to={tab.href}
+                role="tab"
+                aria-selected={isActive}
+                aria-current={isActive ? "page" : undefined}
+                className={cn(
+                  "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
+                  isActive
+                    ? "text-[#ef4d62] border-[#ef4d62]"
+                    : "text-gray-400 border-transparent hover:text-gray-600"
+                )}
+              >
+                {isActive && "✦ "}{t(tab.label)}
+              </Link>
+            );
+          })}
         </div>
       </div>
 

@@ -120,10 +120,13 @@ rather than a supplier directory.
   photos, PAN + GSTIN, first product, and the supplier agreement with a signature. Completing
   it writes `vendor_profiles`, `vendor_documents`, the product and its images, and a
   `vendor_contracts` row in one call, so "onboarded with no contract on file" is unreachable.
-  **Known gaps:** CIN and Aadhaar are wired through the payload but have no input anywhere in
-  the form (only PAN and GST are reachable), a retried submit signs a second undeletable
-  contract, and there is no vendor-facing way to re-upload a rejected KYC document —
-  onboarding is the only upload path and it sits behind `onboarding_complete`.
+  PAN, GST and CIN each have a number field **and** a document upload into the private
+  `business-docs` bucket; GST and CIN are optional (not every vendor is registered for GST,
+  and only MCA-registered companies and LLPs have a CIN). **Aadhaar is deliberately not
+  collected** — see the Aadhaar rule in `claude.md`.
+  **Known gap:** there is no vendor-facing way to re-upload a rejected KYC document —
+  onboarding is the only upload path and it sits behind `onboarding_complete`, so a rejected
+  vendor is told to contact support.
 - **Catalogue** — products (fabric type, GSM, MOQ, sizes, customization, certifications),
   catalogues, and Video Closeups. **Everything goes through admin moderation before going
   live (24–48 h)** — products and videos both default to `under_review`. A **rejected

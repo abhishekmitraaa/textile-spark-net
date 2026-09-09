@@ -65,7 +65,20 @@ export async function applyPendingSignupProfile(user: User): Promise<void> {
         businessName: brandName,
       });
     }
-  } catch {
-    // Non-blocking on purpose — see the docblock.
+  } catch (err) {
+    // STILL non-blocking on purpose — see the docblock. A failed write here must
+    // never stop someone signing in, and the same values are re-collected in
+    // onboarding (seller) or editable in My Profile (buyer).
+    //
+    // But it is no longer SILENT. This runs on all three sign-in paths now
+    // (Register, Login, AuthCallback), including the confirmation link that
+    // most real users arrive by, so a persistent failure would lose every new
+    // vendor's brand name with nothing anywhere to show for it. The id and role
+    // are logged because "it failed" is not actionable — which account, and
+    // which of the two write paths, is.
+    console.error(
+      `[signupProfile] failed to apply pending signup profile for ${user.id} (role=${role}):`,
+      err,
+    );
   }
 }

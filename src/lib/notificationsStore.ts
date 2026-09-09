@@ -268,18 +268,34 @@ export function devOnlySampleNotifications(): VendorNotification[] {
  * never an exhaustive Record. A kind shipped by a newer migration than this
  * bundle renders as a neutral system notice instead of throwing.
  */
-const KIND_META: Record<string, { type: NotifType; tone: NotifTone; group: NotifGroup; actionLabel: string }> = {
+const KIND_META: Record<string, {
+  type: NotifType;
+  tone: NotifTone;
+  group: NotifGroup;
+  actionLabel: string;
+  /** Where this kind sends the vendor, when it is not a chat notification. */
+  href?: string;
+}> = {
   account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support" },
   account_reinstated:  { type: "system",  tone: "positive", group: "updates", actionLabel: "Go to dashboard" },
   chat_locked:         { type: "message", tone: "warning",  group: "updates", actionLabel: "Open chat" },
   chat_resumed:        { type: "message", tone: "positive", group: "updates", actionLabel: "Open chat" },
+  // KYC verdicts, written by set_vendor_document_verified(). `system` is the
+  // documented type for "profile score, verification, subscription, policy".
+  // A rejection carries the reviewer's reason in `body` and is the one the
+  // vendor has to act on, so it is a warning that links to the document list;
+  // an approval is positive and goes to the same place to show the new status.
+  kyc_approved:        { type: "system",  tone: "positive", group: "updates", actionLabel: "View KYC",   href: "/kyc" },
+  kyc_rejected:        { type: "system",  tone: "warning",  group: "updates", actionLabel: "Re-check KYC", href: "/kyc" },
 };
 
-const FALLBACK_META = {
-  type: "system" as NotifType,
-  tone: "neutral" as NotifTone,
-  group: "updates" as NotifGroup,
+const FALLBACK_META: (typeof KIND_META)[string] = {
+  type: "system",
+  tone: "neutral",
+  group: "updates",
   actionLabel: "View",
+  // No href: an unknown kind has no known destination, so it falls through to
+  // the conversation_id rule like every kind did before.
 };
 
 /** Shape of one row from `notifications`. Structural, to avoid a circular import. */
@@ -304,10 +320,14 @@ export function toVendorNotification(row: RawNotification): VendorNotification {
     body: row.body ?? "",
     createdAt: row.created_at,
     read: row.read,
+    // Kind-specific destination first (KYC verdicts go to /kyc). Otherwise
     // conversation_id is the OTHER end of the link: /chat is the hub, and the
     // thread route keys on the other participant rather than the conversation,
     // so a row without one lands on the hub instead of a broken deep link.
-    href: row.conversation_id ? "/chat" : "/notifications",
+    // Falling all the way through to /notifications means "the page you are
+    // already on" — fine as a last resort, useless as a destination, which is
+    // why a kind that has somewhere real to go must say so above.
+    href: meta.href ?? (row.conversation_id ? "/chat" : "/notifications"),
     actionLabel: meta.actionLabel,
   };
 }

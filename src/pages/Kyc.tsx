@@ -41,7 +41,17 @@ const listItem = {
 // "Verified" means an admin actually verified it.
 // ─────────────────────────────────────────────────────────────
 
-const ALL_DOC_TYPES = ["pan", "gst", "cin", "aadhaar"] as const;
+/**
+ * The document types onboarding can actually collect.
+ *
+ * `aadhaar` is deliberately NOT here. Nothing in the app collects one — see the
+ * Aadhaar note in saveVendorOnboarding() — so listing it produced a permanent
+ * "Not provided" row inviting the vendor to supply something no field accepts,
+ * which is the same broken promise the step-1 "documents required" dialog used
+ * to make. A legacy aadhaar row, if one exists, still renders: the list below
+ * is this set PLUS any other type the vendor actually has on file.
+ */
+const COLLECTED_DOC_TYPES = ["pan", "gst", "cin"] as const;
 
 /**
  * "View document" — mints a signed URL for THIS document only, at the moment
@@ -164,7 +174,14 @@ const Kyc = () => {
           </motion.div>
         ) : (
           <motion.div variants={listContainer} className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            {ALL_DOC_TYPES.map((type) => {
+            {/* Collected types always shown (so a missing PAN reads as an
+                action), plus any other type this vendor genuinely has on file. */}
+            {[
+              ...COLLECTED_DOC_TYPES,
+              ...[...byType.keys()].filter(
+                (t) => !(COLLECTED_DOC_TYPES as readonly string[]).includes(t),
+              ),
+            ].map((type) => {
               const doc = byType.get(type);
               const number = numbers[type];
               const rejected = doc ? isRejected(doc) : false;

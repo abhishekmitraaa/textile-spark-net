@@ -46,6 +46,64 @@ const onboardingMenuLinks = [
   { label: "Report Fraud", href: "/report-fraud" },
 ];
 
+/**
+ * The upload control shared by every KYC document except PAN, whose block also
+ * carries the guidelines dialog and a larger dropzone.
+ *
+ * One row per document, never an <img> grid: these accept PDFs, and rendering a
+ * PDF as an image paints a broken-image glyph. Says "awaiting review" rather
+ * than anything resembling a verdict — this app cannot verify a document and
+ * must not imply it has.
+ */
+function KycDocumentUpload({
+  label, url, name, uploading, onPick, onRemove,
+}: {
+  label: string;
+  url: string | null;
+  name: string;
+  uploading: boolean;
+  onPick: () => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <button
+        type="button"
+        disabled={uploading}
+        onClick={onPick}
+        className="block w-full rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-5 text-center disabled:opacity-60"
+      >
+        <UploadIcon className="mx-auto h-6 w-6 text-[#256fef]" />
+        <p className="mt-2 text-sm font-semibold text-[#256fef]">
+          {uploading ? "Uploading…" : url ? `Replace ${label}` : `Upload ${label}`}
+        </p>
+        <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf — optional</p>
+      </button>
+      {url && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
+              <FileText className="h-4 w-4 text-[#256fef]" />
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-xs font-semibold text-[#363636]">{name || label}</p>
+              <p className="text-[10px] text-[#363636]/60">Uploaded · awaiting review</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label={`Remove ${label}`}
+            className="shrink-0 rounded-full p-1 text-[#363636]/60 hover:bg-[#f5f5f5]"
+            onClick={onRemove}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Onboarding() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -111,6 +169,15 @@ export default function Onboarding() {
   const [panAddress, setPanAddress] = useState("");
   const [panDocumentUrl, setPanDocumentUrl] = useState<string | null>(null);
   const [panDocumentName, setPanDocumentName] = useState("");
+  // GST certificate and certificate of incorporation. These used to be numbers
+  // with no document behind them — vendor_documents wrote file_url: null for
+  // both, so an admin approved or rejected a string the vendor typed.
+  const [gstDocumentUrl, setGstDocumentUrl] = useState<string | null>(null);
+  const [gstDocumentName, setGstDocumentName] = useState("");
+  const [uploadingGstDocument, setUploadingGstDocument] = useState(false);
+  const [cinDocumentUrl, setCinDocumentUrl] = useState<string | null>(null);
+  const [cinDocumentName, setCinDocumentName] = useState("");
+  const [uploadingCinDocument, setUploadingCinDocument] = useState(false);
   const [uploadingPanDocument, setUploadingPanDocument] = useState(false);
   const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
   const [documentsSuccess, setDocumentsSuccess] = useState(false);
@@ -144,6 +211,8 @@ export default function Onboarding() {
   const [showWelcome, setShowWelcome] = useState(false);
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const gstDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const cinDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const signatureStrokeRef = useRef<{ x: number; y: number }[][]>([]);
   const signatureIsDrawingRef = useRef(false);
@@ -214,24 +283,48 @@ export default function Onboarding() {
     }
   };
 
-  const handlePanDocumentFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  /**
+   * One KYC upload handler for all document types.
+   *
+   * Every scan goes through `uploadKycDocument()`, which enforces the
+   * `business-docs` bucket and the `${vendorId}/kyc/…` path shape that
+   * `business_docs_owner_select` keys on. Written once rather than copied per
+   * document type so a new document cannot quietly acquire a different bucket
+   * or path.
+   */
+  const makeKycUploadHandler = (
+    label: string,
+    setUrl: (v: string | null) => void,
+    setName: (v: string) => void,
+    setUploading: (v: boolean) => void,
+  ) => async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!requireSession("your PAN")) return;
-    setUploadingPanDocument(true);
+    if (!requireSession(label)) return;
+    setUploading(true);
     try {
       const url = await uploadKycDocument(user!.id, file);
-      setPanDocumentUrl(url);
-      setPanDocumentName(file.name);
+      setUrl(url);
+      setName(file.name);
     } catch (err) {
-      toast.error("Couldn't upload your PAN", {
+      toast.error(`Couldn't upload ${label}`, {
         description: err instanceof Error ? err.message : String(err),
       });
     } finally {
-      setUploadingPanDocument(false);
+      setUploading(false);
     }
   };
+
+  const handlePanDocumentFile = makeKycUploadHandler(
+    "your PAN", setPanDocumentUrl, setPanDocumentName, setUploadingPanDocument,
+  );
+  const handleGstDocumentFile = makeKycUploadHandler(
+    "your GST certificate", setGstDocumentUrl, setGstDocumentName, setUploadingGstDocument,
+  );
+  const handleCinDocumentFile = makeKycUploadHandler(
+    "your incorporation certificate", setCinDocumentUrl, setCinDocumentName, setUploadingCinDocument,
+  );
 
   const MAX_PRODUCT_IMAGES = 6;
   const handleProductImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -376,6 +469,8 @@ export default function Onboarding() {
         category: businessCategories.length ? businessCategories : undefined,
         officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
         panFileUrl: panDocumentUrl ?? undefined,
+        gstFileUrl: gstDocumentUrl ?? undefined,
+        cinFileUrl: cinDocumentUrl ?? undefined,
         contract: { signedName: contractName.trim(), signatureUrl },
         product: productName
           ? {
@@ -541,7 +636,13 @@ export default function Onboarding() {
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
     panDocumentUrl !== null &&
-    !uploadingPanDocument;
+    !uploadingPanDocument &&
+    // GST and CIN are OPTIONAL — not every vendor is registered for GST and
+    // only incorporated entities have a CIN (there is no entity-type field in
+    // this form to infer it from). But a half-finished upload must not be
+    // submitted, so block only while one is in flight.
+    !uploadingGstDocument &&
+    !uploadingCinDocument;
 
   if (showWelcome) {
     return (
@@ -1149,11 +1250,14 @@ export default function Onboarding() {
                         </DialogTitle>
                       </DialogHeader>
                       <div className="mt-4 space-y-3 text-sm text-[#363636]">
+                        {/* This list must name only what the form can actually
+                            take. It used to ask for an Aadhaar card that no
+                            field anywhere collects — see the Aadhaar note in
+                            saveVendorOnboarding() for why it is not collected. */}
                         {[
                           "PAN card",
-                          "CIN details",
-                          "Aadhaar card",
-                          "GST number, if applicable",
+                          "GST certificate and GSTIN, if registered",
+                          "Certificate of incorporation and CIN, if incorporated",
                           "Primary information",
                         ].map((item) => (
                           <div key={item} className="flex items-center gap-2">
@@ -1936,11 +2040,50 @@ export default function Onboarding() {
                     </Label>
                   </div>
                   {hasGstin && (
-                    <Input
-                      value={gstin}
-                      onChange={(e) => setGstin(e.target.value)}
-                      placeholder="GSTIN"
-                      className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    <>
+                      <Input
+                        value={gstin}
+                        onChange={(e) => setGstin(e.target.value)}
+                        placeholder="GSTIN"
+                        className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      />
+                      <KycDocumentUpload
+                        label="GST certificate"
+                        url={gstDocumentUrl}
+                        name={gstDocumentName}
+                        uploading={uploadingGstDocument}
+                        onPick={() => gstDocumentInputRef.current?.click()}
+                        onRemove={() => { setGstDocumentUrl(null); setGstDocumentName(""); }}
+                      />
+                    </>
+                  )}
+                </div>
+
+                {/* CIN — optional, because only incorporated entities have one.
+                    A sole proprietorship or partnership has no CIN, and this
+                    form has no entity-type field to infer it from, so it is
+                    never required and never blocks submit. */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-[#363636]">Certificate of incorporation (if applicable)</h4>
+                  <p className="text-xs text-[#363636]/70">
+                    Only companies and LLPs registered with the MCA have a CIN. Leave this blank if
+                    you trade as a proprietorship or partnership.
+                  </p>
+                  <Input
+                    id="cin-number"
+                    value={cin}
+                    onChange={(e) => setCin(e.target.value.toUpperCase())}
+                    placeholder="CIN (optional)"
+                    className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  />
+                  {cin.trim().length > 0 && (
+                    <KycDocumentUpload
+                      label="incorporation certificate"
+                      url={cinDocumentUrl}
+                      name={cinDocumentName}
+                      uploading={uploadingCinDocument}
+                      onPick={() => cinDocumentInputRef.current?.click()}
+                      onRemove={() => { setCinDocumentUrl(null); setCinDocumentName(""); }}
                     />
                   )}
                 </div>
@@ -1962,6 +2105,20 @@ export default function Onboarding() {
                   accept="image/*,application/pdf"
                   className="hidden"
                   onChange={handlePanDocumentFile}
+                />
+                <input
+                  ref={gstDocumentInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleGstDocumentFile}
+                />
+                <input
+                  ref={cinDocumentInputRef}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  className="hidden"
+                  onChange={handleCinDocumentFile}
                 />
               </div>
             )}

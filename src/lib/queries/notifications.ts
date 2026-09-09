@@ -31,7 +31,12 @@ export type NotificationKind =
   | "account_suspended"
   | "account_reinstated"
   | "chat_locked"
-  | "chat_resumed";
+  | "chat_resumed"
+  // Written by set_vendor_document_verified(), the only thing that may flip
+  // vendor_documents.verified. Both are real and observed in production data —
+  // this is not UI groundwork for something unwired.
+  | "kyc_approved"
+  | "kyc_rejected";
 
 export interface NotificationRow {
   id: string;
