@@ -426,9 +426,60 @@ is why this is a queue and not an inline call. A message is archived **only afte
 is written, so failure is the retry.
 
 `pgmq` is not exposed to PostgREST (only `public` and `graphql_public` are), so the worker
-reaches the queue through three SECURITY DEFINER wrappers — `embedding_jobs_read`,
-`embedding_jobs_archive`, `set_product_embedding` — rather than widening the exposed schema
-list and putting the whole queue API on the wire for every key.
+reaches the queue through four SECURITY DEFINER wrappers — `embedding_jobs_read`,
+`embedding_jobs_archive`, `embedding_jobs_set_vt`, `set_product_embedding` — rather than
+widening the exposed schema list and putting the whole queue API on the wire for every key.
+
+#### Throughput (rewritten 2026-09-10)
+The cron dispatches `ceil(waiting / 20)` concurrent `net.http_post` calls per tick, capped
+at 10. Before this it fired exactly one, which — with `BATCH = 20` per invocation — pinned
+throughput at **20 jobs/minute regardless of backlog**, measured: 300 jobs drained at
+exactly 20/tick, no faster with 300 waiting than with 20. That was 25 minutes before a
+500-listing bulk import became searchable. It is now ~2.5 minutes; a 200-job burst drains
+in **one tick / 25 seconds**.
+
+This is safe because `pgmq.read()` sets the visibility timeout in the same statement that
+returns the rows, so concurrent invocations get disjoint message sets — demonstrated on this
+database (30 queued, two reads claimed 20 and 10, **overlap 0**). `VT_SECONDS = 90` exceeds
+the 60-second tick, which is what makes it hold across ticks as well as within one.
+
+The cap of 10 exists because these are real concurrent OpenAI calls; uncapped, a large
+backlog converts a throughput problem into a rate-limit problem. Raise it only after
+checking the account's actual rate limits.
+
+#### Failure handling
+A batch that OpenAI rejects leaves **every** message queued — that is what made the 3-day
+billing outage self-healing. Added 2026-09-10: exponential backoff (90 s → 1 h, keyed on
+`read_ct`) on 429/5xx so a rate-limited account is not hammered at a fixed cadence; a non-429
+4xx deliberately does **not** back off, since waiting cannot fix a malformed request. Jobs
+are dead-lettered to the pgmq archive after `MAX_ATTEMPTS = 5` deliveries, and input text is
+truncated to 30,000 characters. Both guard the same latent failure: `search_text`
+concatenates `products.description`, the table has **no length constraint**, and one
+oversized row would 400 the whole batch of 20 — failing 19 innocent jobs on every retry,
+permanently.
+
+#### Vendor catalogue recompute — asynchronous since 2026-09-10
+`recompute_vendor_catalog_embedding` used to run **inside** the product write trigger.
+Measured at ~1,000 live listings it cost **0.45–1.4 s per write**, in the vendor's own
+transaction, and was O(N²) across a bulk import. It now enqueues into
+`vendor_catalog_recompute_queue` — a table keyed on `vendor_id`, so repeated writes for one
+vendor collapse to a single pending row (that dedupe is why it is a table and not pgmq) —
+drained by the `vendor-catalog-recompute` cron. Product writes are now **5–8 ms**.
+
+The trade is that `catalog_embedding` is eventually consistent by up to one tick. That is
+acceptable because it feeds **only** RFQ↔vendor matching; a vendor's own listings still
+appear in buyer search immediately, via `products.embedding` on a different path.
+
+#### Observability
+- `embedding_pipeline_health()` — point-in-time verdict, service_role only.
+- `embedding-health-log` cron (*/10) → `embedding_pipeline_health_log`, 90-day history, and
+  notifies admins **on transition** into a bad state only.
+- `embedding-health-alarm` cron (5-55/10) → RAISEs when unhealthy, so it surfaces in
+  `cron.job_run_details`. Split from the logger because pg_cron runs each job in one
+  transaction and a RAISE would roll back the log row it just wrote.
+- `embedding_usage_daily` view — jobs/day/source, chars, a crude `est_usd` (~4 chars/token,
+  for spotting a 10× jump, **not** an invoice) and avg/max queue lag. Needs no new logging:
+  pgmq's archive already retains `enqueued_at` and `archived_at`.
 
 `set_product_embedding` writes `embedding`, which is **not** in the enqueue trigger's column
 list. That is load-bearing: without it every successful embedding would enqueue another one,

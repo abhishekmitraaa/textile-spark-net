@@ -2,7 +2,7 @@
 
 Updated automatically whenever a side's scope, features, or flows change.
 
-Last updated: 2026-09-09
+Last updated: 2026-09-10
 
 Cosora is fundamentally a three-sided marketplace. **Key mechanic:** the same person can be
 both a buyer and a vendor and toggles between the two experiences inside one unified web
@@ -51,8 +51,10 @@ the demand side of India's fashion and textile supply chain.
   live-listing counts, real listings with enquiry counts, and real vendor storefronts with
   real follower counts. The Brand tab is grouped out of the ranked results, so it can never
   disagree with the Product tab. When a query has no cached embedding the results are
-  keyword-only and the footer says so. *(Semantic half activates once OpenAI billing is on —
-  see the runbook in `claude.md`.)*
+  keyword-only and the footer says so. *(The semantic half is **live** — billing was enabled
+  2026-09-09 and every listing carries a real embedding. A query with no match now returns
+  zero results rather than the whole catalogue; `embed-query` is rate limited on cache
+  misses only.)*
 - **RFQs** — **Quick RFQ** (image + quantity, designed for under 30 seconds) or a
   **detailed requirement** via a schema-driven, per-category form.
 - **My Quotes** — receive quotes from multiple vendors, compare, accept/reject/negotiate.
@@ -87,6 +89,25 @@ the demand side of India's fashion and textile supply chain.
   tagged product's real review data.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
+- **For You** still renders a hardcoded "Related To Recent Views" ad strip
+  (`RECENT_VIEW_ADS` — 4 invented products navigating to dead `/product/rv*` routes). It is
+  the last fabricated data on the page and needs wiring to the real `active_ads` RPC with
+  `ad_impression` / `ad_click` tracking, which is separate work from the mock-catalogue
+  removal below.
+
+### Fixed 2026-09-10 (Master Prompt 6)
+- **For You no longer fabricates a catalogue.** `PRODUCT_POOL` — 48 invented products with
+  fake manufacturers and invented enquiry counts — rendered whenever the catalogue was
+  loading **or empty**, and `!live.length` is indistinguishable from a *failed fetch*, so an
+  outage showed buyers a full page of plausible fake suppliers they could tap through to
+  dead routes. Loading / empty / populated are now three distinct states, and the empty
+  state distinguishes an empty catalogue ("No listings yet" → post a requirement) from an
+  over-narrow filter ("No matches found" → reset preferences).
+- **Reel personalisation actually works now.** Preference-based ranking in Video Closeups
+  and New Arrivals resolved buyer preferences against hardcoded pre-taxonomy category names;
+  measured, **8 of the 9 preferences matched zero live categories**, so the feature was
+  silently inert for everyone except buyers interested in Activewear. It now resolves
+  through `pref_category_map`, the same source the For You ordering already used.
 
 ---
 

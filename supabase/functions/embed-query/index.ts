@@ -13,11 +13,24 @@
 // Required secret:   OPENAI_API_KEY
 // Platform-provided: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
 //
-// Cost exposure, stated plainly: a caller holding the public anon key can force
-// an OpenAI call per NOVEL query (repeat queries are served from cache and cost
-// nothing). At text-embedding-3-small pricing that is ~$0.00002 each. The length
-// caps below bound the per-call size; there is no rate limit yet, so watch spend
-// if the marketplace is ever scraped.
+// Cost exposure: a caller holding the public anon key can force an OpenAI call
+// per NOVEL query (repeat queries are served from cache and cost nothing). At
+// text-embedding-3-small pricing that is ~$0.00002 each. The length caps below
+// bound the per-call size.
+//
+// Rate limited as of 2026-09-10. The limit is applied ONLY on a cache MISS,
+// deliberately: a cached lookup is one indexed read and costs nothing, so
+// throttling it would penalise exactly the heavy legitimate users the cache was
+// built for, while saving no money. Only the billable path is metered.
+//
+// Two budgets are checked, per embed_query_rate_check(): per-IP, and GLOBAL. The
+// global one is the one that matters — a scraper rotating IP addresses defeats
+// per-IP limiting entirely, so per-IP alone would still have left the bill
+// unbounded.
+//
+// Over budget returns 200 with ok:false, matching the not_configured convention
+// below: the caller degrades to keyword search rather than seeing an error.
+// Search still works throttled, it just stops being semantic for novel phrases.
 
 const MODEL = "text-embedding-3-small";
 const DIMS = 1536;
@@ -88,6 +101,22 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // Same convention as bunny-upload-url / image-search: an unconfigured provider
   // returns 200 so the caller degrades to keyword search rather than erroring.
   if (!apiKey) return json({ error: "not_configured" }, 200);
+
+  // Cache miss confirmed — from here on the call costs money, so meter it.
+  // x-forwarded-for is a client-supplied header and therefore spoofable; the
+  // leftmost entry is the claimed origin. It is used anyway because the GLOBAL
+  // budget, which is not spoofable, is what actually bounds spend. Per-IP is
+  // the courtesy layer that stops one honest runaway client, not the defence.
+  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim();
+  try {
+    const allowed = await rpc<boolean>("embed_query_rate_check", { p_ip: ip });
+    if (!allowed) return json({ ok: false, error: "rate_limited" }, 200);
+  } catch {
+    // Fail OPEN. The rate limiter is a cost guard, not an authorisation gate,
+    // and a limiter outage must not take semantic search down with it — the
+    // worst case of failing open is a bounded amount of extra spend during an
+    // incident, versus degrading every buyer's search to keyword-only.
+  }
 
   try {
     const resp = await fetch("https://api.openai.com/v1/embeddings", {

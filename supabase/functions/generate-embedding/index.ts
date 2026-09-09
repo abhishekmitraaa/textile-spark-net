@@ -29,10 +29,46 @@ const MODEL = "text-embedding-3-small";
 const DIMS = 1536;
 // Messages per invocation. One OpenAI call carries the whole batch, so this is
 // bounded by request size, not by API round-trips.
+//
+// This is NOT the throughput ceiling any more. The cron dispatcher fires
+// ceil(waiting / BATCH) concurrent invocations (capped at 10), so a backlog is
+// drained by several workers in parallel rather than 20 jobs per minute. See
+// the embedding_worker_adaptive_dispatch migration; pgmq's visibility timeout
+// is what keeps those concurrent readers from claiming the same message, and
+// that was demonstrated rather than assumed.
 const BATCH = 20;
 // Longer than any plausible embed+write cycle, so two overlapping cron ticks
 // can't both claim the same message.
 const VT_SECONDS = 90;
+
+// text-embedding-3-small accepts 8192 tokens. 30k characters is a conservative
+// floor for that (English averages well under 4 chars/token, and this is a
+// safety valve, not a budget to spend).
+//
+// This matters because products.search_text concatenates products.description,
+// which has NO length constraint — checked, the table carries no CHECK
+// constraints at all. Live data maxes out at 97 characters today, so nothing
+// is close. But ONE vendor pasting a 40k-character description would 400 the
+// entire OpenAI call, and that call carries the whole batch of 20 — so a single
+// oversized row would fail 19 innocent jobs alongside it, on every retry,
+// forever. Truncating is lossless in practice: no useful embedding signal lives
+// in the 30,001st character of a product description.
+const MAX_CHARS = 30_000;
+
+// After this many delivery attempts a message is archived instead of retried.
+// pgmq has always tracked read_ct and nothing has ever looked at it, so a job
+// that can never succeed — a malformed row, a text OpenAI rejects for a reason
+// truncation doesn't fix — recycled indefinitely and took a slot in every batch
+// it landed in. Archiving is the right disposal: pgmq's archive table is the
+// dead-letter queue, the message is preserved for inspection rather than
+// dropped, and the row simply keeps embedding = null, which the health check
+// already reports as `products_missing`.
+const MAX_ATTEMPTS = 5;
+
+// Backoff for a rate-limited or failing OpenAI: 90s, 3m, 6m, 12m, capped at 1h.
+// Applied to each message in the failed batch, keyed on its own read_ct.
+const backoffSeconds = (readCt: number): number =>
+  Math.min(VT_SECONDS * Math.pow(2, Math.max(readCt - 1, 0)), 3600);
 
 // Queue `table` value -> the service-role RPC that writes the vector back.
 // Adding another embeddable table is one line here plus a set_<table>_embedding
@@ -139,14 +175,26 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!jobs?.length) return json({ processed: 0, archived: 0, queue_empty: true });
 
   // A job naming a table this worker doesn't handle can never succeed, so it is
-  // archived rather than left to cycle forever. Same for a job with no text.
-  const usable: { msg_id: number; id: string; text: string; writer: string }[] = [];
+  // archived rather than left to cycle forever. Same for a job with no text,
+  // and for one that has already burned through MAX_ATTEMPTS deliveries.
+  const usable: { msg_id: number; id: string; text: string; writer: string; read_ct: number }[] = [];
   const unprocessable: number[] = [];
+  const exhausted: { msg_id: number; id?: string; read_ct: number }[] = [];
   for (const j of jobs) {
     const m = j.message;
     const writer = m?.table ? WRITERS[m.table] : undefined;
-    if (writer && typeof m?.id === "string" && m.text?.trim()) {
-      usable.push({ msg_id: j.msg_id, id: m.id, text: m.text.trim(), writer });
+    if (j.read_ct > MAX_ATTEMPTS) {
+      // Poison message. Dead-letter it so it stops occupying a slot in every
+      // batch and stops failing the 19 jobs it is batched with.
+      exhausted.push({ msg_id: j.msg_id, id: m?.id, read_ct: j.read_ct });
+    } else if (writer && typeof m?.id === "string" && m.text?.trim()) {
+      usable.push({
+        msg_id: j.msg_id,
+        id: m.id,
+        text: m.text.trim().slice(0, MAX_CHARS),
+        writer,
+        read_ct: j.read_ct,
+      });
     } else {
       unprocessable.push(j.msg_id);
     }
@@ -162,8 +210,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
       });
       if (!resp.ok) {
         // Leave every message in-queue; the visibility timeout retries them.
+        // On a rate limit or a server-side fault, push those retries out
+        // exponentially instead of coming straight back in 90 seconds — a
+        // fixed-cadence retry against a 429 is what keeps an account limited.
+        // A 4xx that is NOT 429 is a request problem that waiting cannot fix,
+        // so those keep the default timeout and burn through MAX_ATTEMPTS
+        // instead of being backed off into invisibility.
+        const detail = (await resp.text()).slice(0, 300);
+        const shouldBackOff = resp.status === 429 || resp.status >= 500;
+        if (shouldBackOff) {
+          await Promise.all(
+            usable.map((u) =>
+              rpc("embedding_jobs_set_vt", {
+                p_msg_id: u.msg_id,
+                p_vt: backoffSeconds(u.read_ct),
+              }).catch(() => {/* default VT still applies; next tick retries */}),
+            ),
+          );
+        }
         return json(
-          { error: "embed_failed", status: resp.status, detail: (await resp.text()).slice(0, 300), retrying: usable.length },
+          {
+            error: "embed_failed",
+            status: resp.status,
+            detail,
+            retrying: usable.length,
+            backed_off: shouldBackOff,
+            next_retry_seconds: shouldBackOff
+              ? Math.max(...usable.map((u) => backoffSeconds(u.read_ct)))
+              : VT_SECONDS,
+          },
           200,
         );
       }
@@ -211,10 +286,23 @@ Deno.serve(async (req: Request): Promise<Response> => {
     } catch { /* leave it; next tick retries */ }
   }
 
+  for (const e of exhausted) {
+    try {
+      await rpc("embedding_jobs_archive", { p_msg_id: e.msg_id });
+      archived++;
+    } catch { /* leave it; next tick retries */ }
+  }
+
   return json({
     processed: usable.length,
     archived,
     unprocessable: unprocessable.length,
+    // Surfaced separately from `unprocessable` because they mean different
+    // things: unprocessable is a malformed job, exhausted is a job that looked
+    // fine and kept failing. A non-zero count here is a signal to go and look
+    // at the archive table, not routine.
+    exhausted: exhausted.length,
+    exhausted_ids: exhausted.map((e) => e.id).filter(Boolean),
     failed,
   });
 });

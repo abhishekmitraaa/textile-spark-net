@@ -494,6 +494,48 @@ undocumented. Deep technical rationale for each lives in
 - **Postgres grants EXECUTE to PUBLIC by default.** `grant ... to service_role` alone does
   not restrict anything; the matching `revoke all ... from public, anon, authenticated` is
   the part that does the work.
+- **On Supabase there are TWO independent grants exposing a function, and revoking one
+  proves nothing.** Three migrations in this project "hardened" functions with
+  `revoke execute ... from public` and **all three were no-ops from the day they were
+  written** — `reject_vendor_content` stayed `anon`-callable for over a month. The cause is
+  NOT drop-and-recreate wiping grants (no migration ever dropped them; `20260801102505`
+  used `ALTER FUNCTION ... RENAME` specifically to preserve the ACL). It is that Supabase
+  registers `ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT EXECUTE ON FUNCTIONS TO anon,
+  authenticated, service_role` in `pg_default_acl` for **both** the `postgres` and
+  `supabase_admin` grantors, so every function born in `public` carries explicit per-role
+  grants that revoking the PUBLIC pseudo-role never touches. Read the ACL to tell them
+  apart — a leading `=X/postgres` with an **empty grantee** is PUBLIC; `anon=X/postgres` is
+  the named role. `set_account_status` had the exact inverse shape (PUBLIC only, no `anon`
+  grant), so for that one `from anon` was the no-op. **Revoke both, then confirm with
+  `has_function_privilege('anon', oid, 'EXECUTE')`.** A revoke that runs without error is
+  not evidence of anything.
+- **A single-row CTE can be re-executed once per outer row, turning O(1) into O(N x M).**
+  `match_vendor_rfqs` held the vendor's category set in a `with v as (...)` CTE and scored
+  each open RFQ against it. Postgres inlined the CTE and pulled its correlated subquery into
+  the nested loop: `SubPlan 1 -> Aggregate (loops=2003)`, ~2.07M product row reads for one
+  call, **98% of the query's buffers**, 1,991 ms. `with v as materialized (...)` fixed it —
+  loops 2003 -> 1, **52x faster**. Where a CTE holds one constant row that every outer row
+  reuses, MATERIALIZED is a correctness-of-plan requirement, not a style preference. Nothing
+  in the source hints at this; only `EXPLAIN (ANALYZE, BUFFERS)` shows the `loops=` count.
+- **pgvector's HNSW index is only used when the query vector is a constant or parameter at
+  execution time.** Ordering by a vector that arrives from a JOINED table produces a
+  `Seq Scan` + join filter (measured: 2,039 ms over 10k rows), while the identical query
+  with the vector as a literal gets `Index Scan using products_embedding_idx` (2.5 ms warm).
+  A function PARAMETER behaves like the literal, which is why the real RPCs are fine — but
+  it makes any ad-hoc benchmark that joins to a vectors table measure the wrong thing.
+  A scalar subquery (`(select embedding from cur)`) resolves as an InitPlan and **does**
+  keep the index; extra `ORDER BY` tiebreakers after the `<=>` are fine too, handled by an
+  Incremental Sort. Both verified on this database at 10k products / 2.5k videos.
+- **pg_cron runs each job in ONE transaction, so a job that RAISEs rolls back its own
+  logging.** Recording health history and raising an alarm therefore cannot live in the same
+  job — `embedding-health-log` (records, never raises) and `embedding-health-alarm` (raises,
+  writes nothing) are split for exactly this reason, not for tidiness.
+- **`pgmq.read()` sets the visibility timeout in the same statement that returns the rows**,
+  so concurrent readers get disjoint sets and can safely be run in parallel. Demonstrated on
+  this database: with 30 messages queued, two successive `embedding_jobs_read(20, 90)` calls
+  returned 20 and 10 with **overlap 0**. This is what makes the adaptive dispatcher (several
+  concurrent worker invocations per tick) safe. It holds across ticks only because
+  `VT_SECONDS` (90) exceeds the tick interval (60).
 
 ## Visit-level tracking — APPLIED 2026-09-08, and how it was verified
 

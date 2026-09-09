@@ -119,6 +119,99 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-10 (Master Prompt 6) — first load/scale pass: 2 severe defects invisible at production volume
+
+**Why this run is different.** Master Prompt 5 proved the stack *correct* on real
+embeddings. Everything was still only ever measured at 33 products / 10 vendors / 4 RFQs /
+**1 video**. This run built synthetic volume — **10,033 products, 2,501 videos, 2,004 RFQs,
+510 vendors** — ran `EXPLAIN (ANALYZE, BUFFERS)` against every matching function, and then
+deleted every synthetic row and verified the deletion. Random `halfvec(1536)` vectors were
+generated directly rather than paying OpenAI at test scale; the handful of correctness
+checks that needed real vectors reused the 17 already-cached query embeddings.
+
+#### Part 1 — the four known gaps
+
+| Check | Method | Result |
+|---|---|---|
+| `reject_vendor_content` anon-executable | read `proacl`, then created a throwaway function and ran the identical `revoke ... from public` against it | **Reproduced**: ACL byte-identical before and after. The revoke was a **no-op from the day it was written**, not a regression. Cause is Supabase's `pg_default_acl` per-role grants, not DROP+CREATE |
+| Project-wide grant audit | `has_function_privilege` over all 67 SECURITY DEFINER functions | anon-executable **35 -> 30**; all 5 admin verbs now `anon:false, authenticated:true` |
+| `ForYou.tsx` mock data | Playwright, past the onboarding gate | **4/4** — 26 real products, honest count line, 0 fabricated suppliers, no console errors |
+| `preferredVideoCategoryNames()` staleness | joined `pref_category_map` to `categories` and diffed against the hardcoded table | **8 of 9 preferences mapped to zero live categories**; only `activewear` matched, by naming coincidence |
+| RFQ category backfill | 3 of 4 assigned by hand; queue depth checked before/after | **0 OpenAI calls** (depth 0 -> 0). `Fleece Hoodies` now ranks 2 category-matched vendors above a higher-similarity one |
+| HNSW index migration replayability | read the file against how migration runners wrap statements | `CREATE INDEX CONCURRENTLY` would have **aborted a fresh rebuild** (`25001`); also unregistered in `schema_migrations` |
+
+#### Part 2 — scale hardening
+
+**Warm latencies at 10,033 products / 2,501 videos / 2,004 RFQs / 510 vendors:**
+
+| Function | Before | After | Plan |
+|---|---|---|---|
+| `search_products` (real cached embeddings) | — | **6.8-18.4 ms** | `Index Scan using products_embedding_idx` |
+| `match_videos` | — | **1.3 ms** (2.14 ms in-plan) | `Index Scan using product_videos_embedding_idx` |
+| `related_products` | — | **3.1 ms** | HNSW |
+| `for_you_products` (200 rows) | — | **4.9 ms** | — |
+| `match_rfq_vendors` | 16.9 ms | **9.0 ms** | direct category lookup + new partial index |
+| `match_vendor_rfqs` | **1,599 ms** | **38.2 ms** | `with v as materialized` |
+| product INSERT, vendor w/ ~1,000 listings | 453-1,365 ms of sync recompute | **5.2-8.4 ms** | recompute moved to cron queue |
+| 200-job queue burst | 10 ticks / **10 min** | **1 tick / 25 s** | `ceil(waiting/20)` concurrent dispatch |
+
+**The two severe defects, and why neither was visible before:**
+
+1. **`match_vendor_rfqs` — 1,599 ms.** `EXPLAIN (ANALYZE, BUFFERS)` showed
+   `SubPlan 1 -> Aggregate (loops=2003)`: the single-row `v` CTE was inlined and its
+   correlated subquery re-run **once per candidate RFQ** — ~2.07M product row reads,
+   **1,135,701 of 1,155,858 buffers (98%)**. At 4 RFQs and 33 products that is 4 loops over
+   3 rows: invisible. Fix: `with v as materialized`. loops 2003 -> 1, buffers -> 20,724.
+2. **`recompute_vendor_catalog_embedding` — 0.45-1.4 s inside every product write.**
+   Measured at 1,044 / 1,032 / 1,021 live listings: **1,364.7 / 1,096.4 / 453.0 ms**,
+   synchronous, in the vendor's own transaction; O(N²) on bulk import (~8 min for a
+   500-listing import). Its own migration comment had predicted exactly this trigger
+   condition. Moved to a `vendor_id`-keyed queue table + cron. **Dedupe proven: 6 product
+   writes for one vendor collapsed to 1 pending row.**
+
+**Behaviours demonstrated rather than assumed** (this prompt's ground rule):
+
+| Claim | How it was proven |
+|---|---|
+| pgmq VT prevents double-processing under concurrency | 30 queued, two successive `embedding_jobs_read(20,90)` -> claimed 20 and 10, **overlap 0** |
+| Adaptive dispatch actually parallelises | 200 jobs queued 20:16:52, queue **0 by 20:17:17** — one tick |
+| Old dispatch really was capped at 20/tick | 300 jobs enqueued 19:48:13, drained ~20:03 at exactly 20/tick, no faster with 300 waiting |
+| Per-IP rate limit cuts off | 30 allowed, **31st refused**, different IP unaffected |
+| Global rate limit defeats IP rotation | global budget 5 -> five distinct IPs pass, **6th call from a brand-new IP refused** |
+| `match_videos`' own comment about HNSW usability | plan at 2,501 videos: `Index Scan using product_videos_embedding_idx` + Incremental Sort, **2.14 ms** |
+| `match_rfq_vendors` category rewrite is equivalent | old vs new form: same 10 vendors, **0 rows** in an `EXCEPT` in **both** directions |
+| MP5's `max_distance = 0.80` still holds 300x up | `zzzznotathing` -> **0 rows** at 10,033 products |
+| Queue-lag improvement, independently | `embedding_usage_daily` view: old-dispatch burst **avg 467 s**, new-dispatch burst **avg 8.1 s** |
+
+**Two honest caveats on the numbers.** (1) Random 1536-dim vectors are the *pathological
+worst case* for HNSW — measured avg cosine distance **0.9989**, only 20 of 10,000 rows under
+the 0.80 threshold — so synthetic-vector timings **overstate** cost. The real-embedding
+`search_products` figures are the trustworthy ones. (2) Every function shows a large
+first-call cost (~100-700 ms) falling to single-digit ms on repeat with an **identical plan
+and zero disk reads** — process/cache warm-up, not I/O. Most queries are warm at 10k
+concurrent users, but the cold path is real and unmeasured under true concurrency.
+
+**Latent defect found by reading, not by load:** `products.search_text` concatenates
+`description`, and `products` carries **no CHECK constraints at all** — so one >32k-char
+description would 400 the whole OpenAI call, which carries the whole batch of 20, failing 19
+innocent jobs on every retry forever. Live max is 97 chars. Fixed at both ends: truncate to
+30,000 chars, and dead-letter after 5 deliveries using pgmq's `read_ct` (tracked since day
+one, never read until now).
+
+**Cleanup verified:** back to exactly **33 products / 1 video / 4 RFQs / 10 vendors**, with
+`0` synthetic rows in every table, `0` synthetic `auth.users`, `0` scaffold tables. Vendor
+`catalog_embedding`s recomputed from the real catalogue only (synthetic listings had been
+averaged in), and real RFQ matching re-verified to reproduce the Part 1d numbers exactly
+(`Fleece Hoodies` -> Delhi Fashion Hub 0.416/true/0.591).
+
+**Suite results:** `tsc -p tsconfig.app.json` **0 errors**; eslint unchanged from baseline
+(3 pre-existing errors in `command.tsx` / `textarea.tsx` / `payments.ts`, none in touched
+files); `vite build` green; `scripts/search-smoke.mjs` **10/10**; ForYou browser check
+**4/4**; `get_advisors(security)` + `get_advisors(performance)` introduced nothing beyond
+two INFO "unused index" notes on indexes created minutes earlier; all 10 new
+functions/tables confirmed `anon:false, authenticated:false`; `embedding_pipeline_health()`
+**OK / pipeline healthy**.
+
 ### 2026-09-09 (Master Prompt 5) — first regression pass against REAL embeddings: 3 bugs found
 
 **Why this run is different.** Every earlier verification of the vector system ran while
