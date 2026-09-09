@@ -110,6 +110,76 @@ export function usePrefCategoryMap() {
 }
 
 /**
+ * The same map, resolved one step further into `categories.name`.
+ *
+ * The products side matches on `products.category_id`, so it wants ids. The
+ * VIDEO side matches on `product_videos.category`, which is plain text holding
+ * a copy of the tagged product's category NAME — so it wants names, and the
+ * lookup has to go pref_id → categories.id → categories.name.
+ *
+ * This replaces the hardcoded PREF_TO_DB_CATEGORY_NAMES table, which pointed at
+ * pre-2026-09-07 flat category names. Measured against the live taxonomy, that
+ * table had essentially no overlap left with reality:
+ *
+ *   tshirts     "T-shirts/Tops"        →  Men's T-Shirts, Unisex T-Shirts, Women's Tops
+ *   shirts      "Shirt"                →  Men's Shirts
+ *   dresses     "Dress", "Ethnic Wear" →  Women's Dresses, Women's Ethnic Wear
+ *   bottomwear  "Trousers", "Jeans"    →  Men's Jeans, Men's/Women's Pants/Trousers
+ *   kidswear    "Kidswear"             →  Kids Wear
+ *   accessories "Accessories",         →  Bags, Belts, Caps & Hats, Footwear, Gloves,
+ *               "Footwear"                Jewellery, Scarves & Stoles, Socks,
+ *                                         Sunglasses, Watches
+ *
+ * Every left-hand name matched zero live rows. Only `activewear` -> "Activewear"
+ * survived the retaxonomy, and only by coincidence of naming. So preference-based
+ * reel ranking was silently a no-op for eight of the nine preferences.
+ *
+ * One round trip via an embedded select rather than two, and cached as long as
+ * the id map next to it — both are reference data that only a migration changes.
+ */
+export async function fetchPrefCategoryNames(): Promise<PrefCategoryMap> {
+  const { data, error } = await supabase
+    .from("pref_category_map")
+    .select("pref_id, categories(name)");
+  if (error) throw error;
+  const out: PrefCategoryMap = {};
+  for (const r of data ?? []) {
+    // PostgREST types a to-one embed as possibly-array; narrow without asserting.
+    const cat = r.categories as { name: string } | { name: string }[] | null;
+    const name = Array.isArray(cat) ? cat[0]?.name : cat?.name;
+    if (name) (out[r.pref_id] ??= []).push(name);
+  }
+  return out;
+}
+
+export function usePrefCategoryNames() {
+  return useQuery({
+    queryKey: ["pref_category_map", "names"],
+    queryFn: fetchPrefCategoryNames,
+    staleTime: 60 * 60_000,
+    gcTime: 24 * 60 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * The buyer's stored preferences expressed in the vocabulary
+ * `product_videos.category` actually stores.
+ *
+ * Returns [] while the map is still loading, which the callers already handle —
+ * an empty interest set means rankVideoCloseUps falls back to its default order
+ * rather than showing nothing, so a slow reference fetch degrades to
+ * "unpersonalised", never to "empty reel".
+ */
+export function usePreferredVideoCategoryNames(prefIds: string[]): string[] {
+  const { data: map } = usePrefCategoryNames();
+  if (!map) return [];
+  const names = new Set<string>();
+  for (const id of prefIds) for (const n of map[id] ?? []) names.add(n);
+  return Array.from(names);
+}
+
+/**
  * Invert the map: categories.id → the preference id that covers it.
  *
  * Built once per render rather than scanned per product. No category is covered

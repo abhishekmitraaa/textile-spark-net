@@ -85,7 +85,7 @@ const BASE_PRODUCTS: Product[] = [
 // absent or fails to load, so removing these is also safe.
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { usePreferences } from "@/lib/preferencesStore";
-import { preferredVideoCategoryNames } from "@/lib/buyerCategories";
+import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
@@ -287,13 +287,14 @@ const NewArrivals = () => {
   // Recomputed only when either actually changes. See rankVideoCloseUps for
   // what this feeds into.
   const { categories: preferredIds } = usePreferences();
+  const preferredNames = usePreferredVideoCategoryNames(preferredIds);
   const interestedCategories = useMemo(() => {
-    const cats = new Set<string>(preferredVideoCategoryNames(preferredIds));
+    const cats = new Set<string>(preferredNames);
     for (const video of videoCatalogue) {
       if (bookmarkedVideoIds.has(video.id)) cats.add(video.category);
     }
     return cats;
-  }, [bookmarkedVideoIds, videoCatalogue, preferredIds]);
+  }, [bookmarkedVideoIds, videoCatalogue, preferredNames]);
 
   const rankedVideoCloseUps = useMemo(
     () => rankVideoCloseUps(videoCatalogue, interestedCategories),

@@ -3,20 +3,43 @@
 -- It was deferred correctly — building HNSW over an all-NULL column indexes
 -- nothing — and then never revisited, because the backfill itself did not run
 -- until 2026-09-09 (the Vault secret was missing; see the embedding-worker
--- health check migration). Now that all 33 rows carry real vectors, the index
--- has something to build over.
+-- health check migration). Now that every product row carries a real vector,
+-- the index has something to build over.
 --
 -- rfqs, product_videos and vendor_profiles.catalog_embedding already had theirs;
 -- products was the one table doing a sequential scan on every vector search.
 --
--- Applied with CONCURRENTLY, which the MCP `execute_sql` path allows because it
--- does not wrap statements in a transaction block. `apply_migration` DOES wrap,
--- so re-running this file through the CLI/migration runner will fail on the
--- CONCURRENTLY keyword — drop it there and accept the brief write lock on
--- products (trivial at this row count, not trivial later).
+-- ── Why this file no longer says CONCURRENTLY (Master Prompt 6, item 1e) ────
+-- The live index WAS built with CONCURRENTLY, through the MCP `execute_sql`
+-- path, which does not wrap statements in a transaction block. This file was
+-- then written to match that statement verbatim — and that made it a file that
+-- could never be replayed. Every migration runner (the Supabase CLI's
+-- `db push`, and MCP `apply_migration`) wraps each migration in a transaction,
+-- and `CREATE INDEX CONCURRENTLY` is rejected outright inside one:
 --
--- Verified after creation: indisvalid = true, indisready = true, 144 kB.
--- A CONCURRENTLY build that fails leaves an INVALID index behind that silently
--- never gets used, so that check is the point, not a formality.
-create index concurrently if not exists products_embedding_idx
+--   25001: CREATE INDEX CONCURRENTLY cannot run inside a transaction block
+--
+-- So a fresh database rebuilt from migration history would have aborted here
+-- rather than reproducing live state — the opposite of what the file was for.
+-- It was also never registered in supabase_migrations.schema_migrations, so on
+-- this database it sat as an un-replayed file waiting to break the next push.
+--
+-- CONCURRENTLY is dropped. It buys nothing on the path that actually replays
+-- this file: a rebuild runs against an empty or freshly-seeded products table,
+-- where the brief ACCESS EXCLUSIVE lock a plain CREATE INDEX takes costs
+-- nothing. It matters only when adding an index to a large LIVE table, which is
+-- the one-time operation already performed out-of-band on 2026-09-09.
+--
+-- If this index ever has to be rebuilt against live production traffic, do it
+-- out-of-band with CONCURRENTLY rather than through the migration runner, and
+-- check indisvalid afterwards — a CONCURRENTLY build that fails leaves an
+-- INVALID index behind that is silently never used, which is the failure this
+-- whole system already got bitten by once.
+--
+-- IF NOT EXISTS makes this a no-op wherever the index is already present, so it
+-- is safe to replay against this database.
+--
+-- Live state verified 2026-09-10: indisvalid = true, indisready = true, 152 kB,
+-- default HNSW parameters (m = 16, ef_construction = 64).
+create index if not exists products_embedding_idx
   on public.products using hnsw (embedding extensions.halfvec_cosine_ops);

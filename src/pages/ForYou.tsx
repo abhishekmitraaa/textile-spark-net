@@ -62,23 +62,24 @@ const HOME_TABS = [
 const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 const LOCATION_LABEL = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.label]));
 
-const MANUFACTURERS = ["Artisan Weaves Co.", "SilkThread Mills", "Tiruppur Knitworks", "Loom & Co.", "Verde Textiles"];
 const FILTERABLE_LOCATIONS = LOCATIONS.filter((l) => l.id !== "nopreference");
 
-// Build a deterministic product pool spread across every category + location so
-// preference filtering always has something to show. Used only as a fallback
-// while the real catalogue loads (or if it's empty).
-const PRODUCT_POOL: ListingProduct[] = Array.from({ length: 48 }, (_, i) => {
-  const cat = CATEGORIES[i % CATEGORIES.length];
-  const loc = FILTERABLE_LOCATIONS[i % FILTERABLE_LOCATIONS.length];
-  return makeListingProduct(`foryou-${i}`, {
-    manufacturer: MANUFACTURERS[i % MANUFACTURERS.length],
-    location: `${loc.label}, IND`,
-    category: cat.id,
-    locationId: loc.id,
-    enquiries: i % 2 === 0 ? "5.6k" : "1.6k",
-  });
-});
+// REMOVED 2026-09-10 (Master Prompt 6, item 1b): PRODUCT_POOL — 48 fabricated
+// products (deterministic names, fake manufacturers "Artisan Weaves Co." /
+// "SilkThread Mills" / …, invented "5.6k enquiries") rendered whenever the real
+// catalogue was loading or empty.
+//
+// This is the same "no mock data in production" violation removed from
+// SearchResults.tsx in Master Prompt 1; ForYou was the one place it was
+// deferred. It is worse here than it looks: `pool` fell back to it on
+// `!live.length`, which is indistinguishable from a FAILED fetch, so a
+// catalogue outage rendered a full page of plausible-looking fake suppliers
+// with real-looking enquiry counts. A buyer could tap one and land on a dead
+// product route.
+//
+// Loading, empty and populated are now three distinct rendered states, matching
+// the rule SearchResults.tsx already follows: a spinner is not an empty
+// catalogue, and an empty catalogue is not a failure.
 
 // Map DB locations → preference location ids, so real products flow through the
 // exact same preference-filter logic. Locations are still matched by keyword;
@@ -266,9 +267,9 @@ const ForYou = () => {
 
   const activeLocations = prefs.locations.filter((l) => l !== "nopreference");
 
-  // Real catalogue mapped into the listing shape; fall back to the seeded pool
-  // only while it loads / if it's empty.
-  const { data: live } = useLiveProducts();
+  // Real catalogue mapped into the listing shape. No fallback pool — an empty
+  // catalogue renders empty (see the note where PRODUCT_POOL used to be).
+  const { data: live, isLoading: catalogueLoading } = useLiveProducts();
 
   // Personalised ORDER for this buyer, straight from the database:
   // taste vector → onboarding-preference centroid → global popularity. The RPC
@@ -282,8 +283,8 @@ const ForYou = () => {
   const { data: prefMap } = usePrefCategoryMap();
   const catToPref = useMemo(() => categoryToPrefId(prefMap ?? {}), [prefMap]);
 
-  const pool = useMemo(() => {
-    if (!live || !live.length) return PRODUCT_POOL;
+  const pool = useMemo<ListingProduct[]>(() => {
+    if (!live || !live.length) return [];
     const listings = live.map((p) => toListing(p, catToPref));
     const rankOf = ranking?.rankOf;
     if (!rankOf?.size) return listings;
@@ -500,22 +501,62 @@ const ForYou = () => {
               ))}
             </div>
           )}
-          <p className="text-xs text-gray-500 lg:ml-auto lg:shrink-0">{filtered.length} products for you</p>
+          {/* A count is a claim about the catalogue. While it is still loading
+              we don't have one, and "0 products for you" would be a wrong
+              answer rather than a pending one. */}
+          <p className="text-xs text-gray-500 lg:ml-auto lg:shrink-0">
+            {catalogueLoading ? "Loading your feed…" : `${filtered.length} products for you`}
+          </p>
         </div>
 
-        {/* Empty state */}
-        {filtered.length === 0 ? (
+        {/* Loading / empty / results are three distinct states — the project
+            rule, same as SearchResults.tsx. Until 2026-09-10 the loading and
+            empty branches were both unreachable here, because the pool fell
+            back to 48 fabricated products in exactly those cases. */}
+        {catalogueLoading ? (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4" aria-busy="true" aria-label="Loading products">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-gray-100 overflow-hidden">
+                <div className="aspect-[4/5] bg-gray-100 animate-pulse" />
+                <div className="p-2 space-y-1.5">
+                  <div className="h-2.5 w-3/4 bg-gray-100 rounded animate-pulse" />
+                  <div className="h-2 w-1/2 bg-gray-100 rounded animate-pulse" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="mt-4 rounded-2xl border border-gray-200 bg-white lg:max-w-xl lg:mx-auto">
             <div className="flex flex-col items-center justify-center py-14 px-6 text-center">
               <Sparkles className="w-12 h-12 text-gray-300 mb-3" />
-              <h3 className="text-lg font-bold text-gray-900">No matches found</h3>
-              <p className="text-sm text-gray-500 mt-1 mb-4">Try adjusting your preferences or search</p>
-              <button
-                onClick={() => { setSearch(""); resetFilters(); }}
-                className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
-              >
-                Reset preferences
-              </button>
+              {/* An empty CATALOGUE and an over-narrow FILTER are different
+                  problems, and "reset your preferences" is useless advice for
+                  the first one. */}
+              {pool.length === 0 ? (
+                <>
+                  <h3 className="text-lg font-bold text-gray-900">No listings yet</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">
+                    There's nothing live in the catalogue right now. Post a requirement and let suppliers come to you.
+                  </p>
+                  <button
+                    onClick={() => setQuickRfqOpen(true)}
+                    className="px-4 py-2.5 rounded-xl bg-[#ef4d62] text-white text-sm font-bold"
+                  >
+                    Post a requirement
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h3 className="text-lg font-bold text-gray-900">No matches found</h3>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Try adjusting your preferences or search</p>
+                  <button
+                    onClick={() => { setSearch(""); resetFilters(); }}
+                    className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
+                  >
+                    Reset preferences
+                  </button>
+                </>
+              )}
             </div>
           </div>
         ) : (

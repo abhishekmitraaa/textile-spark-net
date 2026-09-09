@@ -5,7 +5,7 @@ import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { useVideoCloseUps } from "@/lib/queries/videos";
 import { usePreferences } from "@/lib/preferencesStore";
-import { preferredVideoCategoryNames } from "@/lib/buyerCategories";
+import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 
 // ─────────────────────────────────────────────────────────────
 // /video-closeups — dedicated route
@@ -38,16 +38,20 @@ export default function VideoCloseUpsPage() {
   // after they have bookmarked something — the previous behaviour ignored a
   // signal the account had been carrying all along.
   const { categories: preferredIds } = usePreferences();
+  // Resolved through pref_category_map against the live taxonomy, not the old
+  // hardcoded legacy-name table — which matched zero live categories for eight
+  // of the nine preferences after the 2026-09-07 retaxonomy.
+  const preferredNames = usePreferredVideoCategoryNames(preferredIds);
 
   // Same in-session interest signal NewArrivals.tsx uses, now folded on top of
   // the stored one. Order matters only for readability — it's a Set union.
   const interestedCategories = useMemo(() => {
-    const cats = new Set<string>(preferredVideoCategoryNames(preferredIds));
+    const cats = new Set<string>(preferredNames);
     for (const video of catalogue) {
       if (bookmarkedVideoIds.has(video.id)) cats.add(video.category);
     }
     return cats;
-  }, [bookmarkedVideoIds, catalogue, preferredIds]);
+  }, [bookmarkedVideoIds, catalogue, preferredNames]);
 
   const rankedVideoCloseUps = useMemo(
     () => rankVideoCloseUps(catalogue, interestedCategories),
