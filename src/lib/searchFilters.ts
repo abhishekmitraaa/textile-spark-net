@@ -80,7 +80,11 @@ const GSM: Facet = { id: "gsm", label: "GSM (fabric weight)", field: "gsm", opti
 const MOQ: Facet = { id: "moq", label: "Minimum Order (MOQ)", field: "moq", options: MOQ_BUCKETS };
 const RATING: Facet = { id: "rating", label: "Vendor Rating", field: "rating", multi: false, options: RATING_OPTIONS };
 const VERIFIED: Facet = { id: "verified", label: "Vendor", field: "verified", options: ["TrustedSEAL Verified"] };
-const gender = (options = ["Men", "Women", "Boys", "Girls"]): Facet => ({ id: "gender", label: "Gender / Age", field: "gender", options });
+// Options are compared to products.gender exactly, so they mirror the column's
+// real vocabulary. "Boys"/"Girls" were offered here and match nothing; "Unisex"
+// was omitted and so its listings were unreachable through this facet AND
+// silently dropped whenever any gender was selected. See GENDER_TOKENS below.
+const gender = (options = ["Men", "Women", "Kids", "Unisex"]): Facet => ({ id: "gender", label: "Gender / Age", field: "gender", options });
 const fabric = (options: string[]): Facet => ({ id: "fabric", label: "Fabric", field: "fabric", options });
 const fit: Facet = { id: "fit", label: "Fit", field: "fit", options: ["Slim", "Regular", "Relaxed", "Oversized"] };
 
@@ -226,7 +230,7 @@ const DOMAINS: Domain[] = [
   {
     id: "innerwear", categoryId: "womenswear",
     keywords: ["bra", "panty", "panties", "innerwear", "lingerie", "brief", "vest", "shapewear", "camisole"],
-    build: () => [gender(["Men", "Women", "Boys", "Girls"]), fabric(["Cotton", "Modal", "Nylon", "Lace", "Microfiber"]),
+    build: () => [gender(["Men", "Women", "Kids", "Unisex"]), fabric(["Cotton", "Modal", "Nylon", "Lace", "Microfiber"]),
       type("Type", ["T-shirt Bra", "Padded", "Non-Padded", "Sports", "Brief", "Boxer", "Vest"]),
       { id: "size", label: "Size", options: ["S", "M", "L", "XL", "XXL"] },
       { id: "pack", label: "Pack Size", options: ["Single", "Pack of 2", "Pack of 3", "Pack of 5"] },
@@ -332,7 +336,7 @@ const DOMAINS: Domain[] = [
   {
     id: "dress", categoryId: "womenswear",
     keywords: ["dress", "frock", "gown", "jumpsuit", "playsuit", "maxi", "midi", "bodycon"],
-    build: () => [gender(["Women", "Girls"]),
+    build: () => [gender(["Women", "Kids"]),
       fabric(["Cotton", "Rayon", "Satin", "Georgette", "Linen", "Crepe"]),
       length(["Mini", "Knee Length", "Midi", "Maxi"]),
       occasion(["womens-dresses"]),
@@ -342,7 +346,7 @@ const DOMAINS: Domain[] = [
   {
     id: "skirt", categoryId: "womenswear",
     keywords: ["skirt", "skort"],
-    build: () => [gender(["Women", "Girls"]),
+    build: () => [gender(["Women", "Kids"]),
       fabric(APPAREL_FABRICS),
       length(["Mini", "Knee Length", "Midi", "Maxi"]),
       pattern(["womens-dresses"]),
@@ -370,10 +374,20 @@ const DEFAULT_DOMAIN: Domain = {
 };
 
 // ── Gender detection ──
+// These strings are matched against products.gender EXACTLY (see matchFacet), so
+// they must be the vocabulary the column actually stores: Men / Women / Kids /
+// Unisex. They previously were not, and it silently broke search:
+//   * "kids"/"child"/"baby" pre-scoped to "Boys", a value no row has ever
+//     carried, so every kids query returned ZERO results while a matching
+//     product sat right there in the catalogue.
+//   * "boys"/"girls" resolved to Men/Women, which returned adult listings for a
+//     childrenswear query.
+// Confirmed against live data on 2026-09-09: gender is Men 11 / Women 10 /
+// Unisex 4 / Kids 1. Nothing is "Boys" or "Girls".
 const GENDER_TOKENS: [RegExp, string][] = [
-  [/\b(men|man|mens|male|gents|boys?)\b/, "Men"],
-  [/\b(women|woman|womens|female|ladies|girls?)\b/, "Women"],
-  [/\b(kid|kids|child|children|baby)\b/, "Boys"],
+  [/\b(men|man|mens|male|gents)\b/, "Men"],
+  [/\b(women|woman|womens|female|ladies)\b/, "Women"],
+  [/\b(kid|kids|child|children|baby|boys?|girls?)\b/, "Kids"],
 ];
 function detectGender(q: string): string | null {
   for (const [re, g] of GENDER_TOKENS) if (re.test(q)) return g;

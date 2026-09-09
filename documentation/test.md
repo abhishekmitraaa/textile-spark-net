@@ -119,6 +119,159 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-09 (Master Prompt 5) — first regression pass against REAL embeddings: 3 bugs found
+
+**Why this run is different.** Every earlier verification of the vector system ran while
+`products.embedding` was 100% NULL — the worker's Vault secret did not exist, so the
+pipeline had never fired once in three days. The secret was added today and the backfill
+drained in ~2 minutes. This is the first measurement against real vectors.
+
+**Phase 1 — product search.** 26/26 live products embedded, 0 missing. Warmed the query
+cache through the real browser flow (`scripts/search-relevance-check.mjs`, 10 phrases,
+1 OpenAI call each): **warm-then-retry 10/10** — cold load makes 2 `search_products` calls
+(`embedding_used` false→true) with an `embed-query` warm between, warm load makes 1 call
+reporting true. Relevance hand-check (top-5 per phrase, read from SQL once the cache was
+warm):
+
+| query | top results |
+|---|---|
+| `cotton t-shirt` | Premium Cotton Polo T-Shirt, Oversized Graphic Tee, Premium Cotton Polo |
+| `linen shirt` | Linen Camp Collar Shirt, Linen Camp Shirt |
+| `kurta` | Hand-Embroidered Kurta, Women's Casual Kurta Set, Chikankari Anarkali |
+| `gym clothing` | Mesh Training Tee, Mesh Panel Training Tee, Cotton Track Pants |
+| `wedding outfit` | Chikankari Anarkali, Hand-Embroidered Kurta, Gauze Co-ord Set |
+| `hand embroidered` | Hand-Embroidered Kurta, Chikankari Anarkali |
+| `summer beachwear` | Linen Camp Shirt, Block-Print Sundress, Kids Cotton Shorts |
+| `office wear` | Formal Blazer - Navy |
+
+`gym clothing` and `wedding outfit` share **zero** keywords with their results and returned
+nothing at all before today — that is the semantic half working.
+
+**BUG 1 — kids search returned 0 results.** `searchFilters.ts` pre-scoped kids/child/baby
+to gender `"Boys"`; live `products.gender` is Men 11 / Women 10 / Unisex 4 / Kids 1.
+Fixed. Measured after: `kids clothing`, `kids wear`, `baby`, `boys t-shirt`, `girls dress`
+all **0 → 1 result**.
+
+**BUG 2 — no zero-result search existed.** `search_products('zzzznotathing')` returned
+**26 results (the whole catalogue)**. Measured cosine distances to pick a cutoff rather
+than guessing: real queries' nearest neighbour 0.3049–0.5152, gibberish 0.8301. Set
+`max_distance = 0.80`. After: gibberish 26 → **0**, `kurta` 26 → 25, others unchanged.
+
+**Self-inflicted outage, caught and fixed in ~2 minutes.** Adding the parameter created a
+second `match_products` overload; the 3-arg call became ambiguous and **all search failed**
+with `42725 ... is not unique`. Dropped the old signature; migration now leads with the drop.
+
+**Cascade proven end to end for the first time.** `Belts` → `Belts & Buckles`:
+`category_name` re-synced, `search_text` regenerated, job enqueued, cron drained it,
+**embedding hash changed**. Renamed back; state restored.
+
+**Phase 2.** 4/4 RFQs embedded. `match_rfq_vendors` on real data: `Fabrics — Linen` →
+**Mumbai Linen House** (0.546) top; `Premium Cotton T-Shirts` → **Tirupur Textiles**
+(0.618) top; junk-titled RFQ correctly scores ≤0.177. The `PostRequirement.tsx` taxonomy
+fix was **already implemented** by a prior session — the 4 null-category RFQs all date from
+July and predate it. Proved it works: inserted an open-pool RFQ with a real `category_id`,
+`match_vendor_rfqs` returned **`category_match: true`** (first ever). Row deleted; the
+orphan queue job self-cleaned via the worker's deleted-row path.
+
+**Phase 3.** `match_videos` returns the correct shape and runs clean; **0 neighbours
+because there is exactly 1 live video and it excludes itself.** Correct behaviour —
+ranking quality is genuinely unobservable and no test videos were manufactured.
+
+**Phase 4.** `for_you_products` across all 7 buyers: Demo Buyer (0 prefs, 6 views) →
+`taste`; Abhishek (3 prefs, 8 views) → `taste`; Nevu Roby (1 pref, 1 view) → `taste`;
+four buyers with 0/0 → `popularity`. Every buyer landed where their real state says.
+`preferredVideoCategoryNames()` staleness measured as **zero impact** — the only live
+video is `Buttons`, which no preference maps to under the correct `pref_category_map`
+either (`prefs_mapping_to_buttons = 0`).
+
+**Phase 5.** All batch tables have RLS + policies. `engagement_events`: 119 real rows,
+live in the frontend. `log_engagement_event` verified sound — `viewer_id` from
+`auth.uid()` inside the function (unforgeable), vendor derived server-side, status guards
+mirror the counter RPCs. `vendor_store_unit_and_recommendations` has **zero** embedding
+references — no overlap with the matching system. No correctness or security bugs.
+
+**Phase 6.** Both edge functions probed live via `pg_net` (so the service-role key never
+left the database): `generate-embedding` → `has_openai_key/has_service_key/supabase_url_set`
+all true; `embed-query` → `has_openai_key` true. **The incident's root cause:** the worker
+reported `succeeded` 3,960 times over a dead pipeline because a false `WHERE` returns zero
+rows and succeeds. Worker now RAISES when it has work it cannot do; added
+`embedding_pipeline_health()` (service_role only), currently `OK / pipeline healthy`.
+Rewritten cron verified not broken by enqueuing a real job and watching it drain.
+
+**Grants re-verified through the real REST path with the anon key:** `search_products` and
+`search_suggestions` work; `match_products` and `embedding_pipeline_health` both answer
+`42501 permission denied`.
+
+**Build/lint:** `tsc -p tsconfig.app.json` **0 errors** (the old 23-error baseline was
+cleared by intervening sessions — that note is stale); eslint clean; `vite build` green;
+`scripts/search-smoke.mjs` **10/10** (its autocomplete wait was raised 1200→3000ms after a
+timing flake — not a product issue).
+
+### 2026-09-09 (vendor backlog) — GST/CIN documents, KYC notifications, and a red test that was the page's fault
+
+**GST and CIN now carry real scans** (`vendor_documents.file_url` was hardcoded `null` for
+both). Driven through the real 9-step form on `demo-buyer`, read back with
+`KEEP_TEST_VENDOR=1`:
+
+| doc_type | file_url | verified |
+|---|---|---|
+| `pan` | `11111111-…/kyc/1788952220821-n6spwq.png` | false |
+| `gst` | `11111111-…/kyc/1788952221778-qz2wlz.png` | false |
+| `cin` | `11111111-…/kyc/1788952221838-l2r8zy.png` | false |
+
+`vendor_profiles`: `pan=ABCDE1234F`, `gstin=24ABCDE1234F1Z5`, **`cin=U17110GJ2019PTC109876`**
+— the CIN column had never been populated by any code path before, because no input existed.
+Each scan resolves through a minted signed URL, and **no `aadhaar` row is created**, because
+nothing collects one. Fixture restored afterwards (3 storage objects removed, 0 orphans).
+
+*Test-data note:* the spec's GSTIN deliberately embeds the PAN, as a real GSTIN does
+(state code + PAN + entity code + Z + checksum). That broke a substring assertion —
+`getByText(FORM.pan)` matched both fields — which is the data being realistic, not wrong.
+Both are now asserted with `exact: true`.
+
+**KYC notifications are wired end to end, not groundwork.** `set_vendor_document_verified()`
+writes both kinds and the rows exist in production:
+
+| kind | title | conversation_id |
+|---|---|---|
+| `kyc_rejected` | Your PAN document needs attention | null |
+| `kyc_approved` | Your PAN document was verified | null |
+
+The null `conversation_id` is exactly why `href` used to resolve to `/notifications` — the
+page the vendor is already on. Both kinds now link to `/kyc`.
+
+**Admin contract panel** — the read path proved through RLS as `demo-admin` (super_admin),
+which is the query `VendorContractPanel` issues: both of the throwaway vendor's rows returned,
+including the same-version duplicate the panel warns about. **The panel itself has not been
+rendered in a browser** — see Phase 7 below.
+
+**`new-arrivals.spec.ts`: red → green, and the page was what was wrong.** It waited on
+`[role="tab"]`, which read as a stale selector. It was written against
+`components/buyer/BuyerHomeTabs.tsx` — correct roles, correct labels, **imported by nothing**.
+The strip that renders is inline in `NewArrivals.tsx`: five plain links, no tablist, no
+`aria-selected`, and an active state hardcoded to `/home/new-arrivals` rather than derived
+from the route. Fixed in the page; the spec now also asserts exactly one selected tab.
+
+**Still not closed: the admin KYC panel has never been clicked by a real admin.**
+`demo-admin@cosora.dev` is a super_admin but its password is not available in this
+environment, the `rlstest-*` fixtures were deleted, and probing for a password was correctly
+blocked. Unchanged from Master Prompt 4; it needs real credentials, not more code.
+
+typecheck **0** (both repos) · eslint **5 errors / 17 warnings** (unchanged) · Playwright
+**22 passed, 3 failed, 5 skipped, 12 did not run**. `new-arrivals` has moved out of the
+failure list. The three failures are all environmental, none from this work:
+
+- `admin-chat-moderation` and `chat-pipeline` — `rlstest-*` fixtures deleted (long-standing).
+- **`video-closeups-bunny` T8.1 — NEW, and not a code regression.** Its `beforeAll` uploads a
+  real clip and waits for Bunny to encode it; it now fails with
+  `Bunny never finished encoding … (status=2)` — status 2 is "processing". **Reproduced twice**,
+  so it is not a flake: Bunny is not finishing a short 478×850 clip inside
+  `ENCODE_TIMEOUT_MS = 6 min` (polled every 10s), which is generous. Nothing in this pass
+  touches video upload, Bunny or moderation. Check the Bunny library/account before
+  suspecting the app; if encoding is legitimately slower now, the timeout is the thing to
+  raise. Because the failure is in `beforeAll`, T8.1b–T8.5 never run — the whole Bunny suite
+  is currently blocked behind it.
+
 ### 2026-09-09 (contract integrity) — a vendor could delete their own signed agreement
 
 | Assertion (`scripts/vendor-contract-integrity-check.mjs`) | Result |

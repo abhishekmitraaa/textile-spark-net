@@ -1,0 +1,22 @@
+-- The ANN index Master Prompt 1 deferred until after the backfill (Phase 1 fix).
+--
+-- It was deferred correctly — building HNSW over an all-NULL column indexes
+-- nothing — and then never revisited, because the backfill itself did not run
+-- until 2026-09-09 (the Vault secret was missing; see the embedding-worker
+-- health check migration). Now that all 33 rows carry real vectors, the index
+-- has something to build over.
+--
+-- rfqs, product_videos and vendor_profiles.catalog_embedding already had theirs;
+-- products was the one table doing a sequential scan on every vector search.
+--
+-- Applied with CONCURRENTLY, which the MCP `execute_sql` path allows because it
+-- does not wrap statements in a transaction block. `apply_migration` DOES wrap,
+-- so re-running this file through the CLI/migration runner will fail on the
+-- CONCURRENTLY keyword — drop it there and accept the brief write lock on
+-- products (trivial at this row count, not trivial later).
+--
+-- Verified after creation: indisvalid = true, indisready = true, 144 kB.
+-- A CONCURRENTLY build that fails leaves an INVALID index behind that silently
+-- never gets used, so that check is the point, not a formality.
+create index concurrently if not exists products_embedding_idx
+  on public.products using hnsw (embedding extensions.halfvec_cosine_ops);

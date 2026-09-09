@@ -34,7 +34,9 @@ try {
   const input = page.locator('input[placeholder="Search for items or brands"]');
   await input.click();
   await input.fill("shirt");
-  await page.waitForTimeout(1200);
+  // 200ms debounce + an RPC round-trip. 1200ms was marginal and flaked once the
+  // database had real work to do; this is not a product timing requirement.
+  await page.waitForTimeout(3000);
   const dropText = await page.locator("body").innerText();
   check("autocomplete shows real listing counts", /listing/i.test(dropText),
     dropText.match(/.{0,40}listing.{0,20}/i)?.[0] ?? "");

@@ -372,12 +372,24 @@ undocumented. Deep technical rationale for each lives in
   column, two authors, whichever ran last won, so a vendor finished onboarding on one
   number and watched it change on their first dashboard load. `syncProfileScore` must be
   called AFTER every other write in a flow: it scores rows, not intentions.
-- **`cin` and `aadhaar` are collected in the payload and unreachable in the UI.**
-  Both are in `VendorOnboardingPayload`, both create a `vendor_documents` row in
-  `saveVendorOnboarding()` — and `setCin`/`setAadhaar` have no call site anywhere in
-  `Onboarding.tsx`. There is no input for either, so `vendor_profiles.cin` is always null
-  and those documents can never exist, while step 1's "documents required for registration"
-  dialog still asks vendors to have them ready. Only PAN and GST are reachable.
+- **Aadhaar is deliberately NOT collected, and the app must not ask for it (2026-09-09).**
+  Retaining Aadhaar numbers or images is constrained by the Aadhaar Act 2016 and UIDAI rules
+  for any entity that is not an authorised KUA/AUA, and PAN already identifies the business
+  for B2B verification. The payload key, the `vendor_profiles` column and the `aadhaar`
+  `doc_type` all still exist so nothing that reads them breaks — but there is no input, no
+  upload, and the step-1 "documents required" checklist no longer promises one. **Building
+  the capture is a compliance decision, not a form-field decision.** CIN, by contrast, IS
+  collected — optional, with its own upload, because only companies and LLPs registered with
+  the MCA have one and **there is no entity-type field anywhere in the form** to tell a
+  proprietorship apart. Every KYC document type now uploads through one
+  `makeKycUploadHandler` factory, so a new type cannot acquire a different bucket or path.
+- **A typed signature legitimately has no image, and surfaces must say so.** Onboarding lets
+  a vendor draw a signature or accept the auto-generated cursive rendering of their typed
+  name; only the drawn one produces a file, so `vendor_contracts.signature_url` is null for
+  the typed case. That is complete evidence — `signed_name` + `agreement_version` +
+  timestamp + the affirmative act — and the admin panel renders "typed — no image on file".
+  **Do not "fix" this by rendering the typed name to a canvas and storing it:** that
+  manufactures something that looks like a signature the vendor never made.
 - **A test that uploads to storage must delete the OBJECTS, not just the rows.**
   `vendor-onboarding-write-path.spec.ts` deleted its `vendor_documents` rows and left the
   files, so every run leaked an identity scan into the private `business-docs` bucket —
@@ -453,6 +465,32 @@ undocumented. Deep technical rationale for each lives in
   execute grant** — low impact (its output is anonymised peer aggregates) but it is the same
   hole, left alone here rather than changed underneath `CompetitorAds.tsx`. Any new
   self-guarded function must coalesce.
+- **`create or replace function` with an ADDED parameter does not replace — it OVERLOADS.**
+  Adding `max_distance` to `match_products` left the old 4-arg version in place; both
+  accepted the 3-arg call `search_products` makes, Postgres raised
+  `42725: function ... is not unique`, and **all search failed in production**. Any
+  migration that changes a function's parameter list must `drop function` the old
+  signature explicitly, and that drop must be in the migration file or a fresh deploy
+  recreates the ambiguity. Dropping also discards grants, so re-assert them after.
+- **A SQL statement that does nothing still SUCCEEDS — that is how a cron job lies.**
+  The embedding worker was `select net.http_post(...) where exists (<vault secret>)`.
+  With the secret absent the WHERE was false, zero rows came back, and pg_cron recorded
+  `status = 'succeeded'` **3,960 times over three days while nothing was embedded**. A
+  scheduled job whose work is conditional must RAISE when it cannot do work it has
+  (see `20260909130000`), or the outage is invisible. Never treat a green
+  `cron.job_run_details` as evidence that a pipeline ran.
+- **Vector search always has a nearest neighbour, so it never returns "no results".**
+  Without a distance cutoff every query — including gibberish — returned the entire live
+  catalogue presented as matches. `match_products.max_distance` (0.80) exists for this.
+  It is calibrated against real measured distances (real queries' nearest 0.30-0.52,
+  gibberish 0.83) on a **26-product** catalogue; re-measure as the catalogue grows. The
+  FTS branch is deliberately not thresholded.
+- **Facet option strings are compared to column values EXACTLY.** `searchFilters.ts`
+  offered gender `Boys`/`Girls` and pre-scoped kids queries to `Boys`, but
+  `products.gender` only ever holds Men / Women / Kids / Unisex — so **every kids, child
+  and baby search returned zero results**, and the 4 Unisex listings were unreachable.
+  Any facet vocabulary must be checked against `select distinct <col>` on live data, not
+  against what the UI copy suggests.
 - **Postgres grants EXECUTE to PUBLIC by default.** `grant ... to service_role` alone does
   not restrict anything; the matching `revoke all ... from public, anon, authenticated` is
   the part that does the work.
