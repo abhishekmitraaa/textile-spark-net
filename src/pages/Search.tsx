@@ -193,6 +193,46 @@ const Search = () => {
       r.readAsDataURL(file);
     });
 
+  // A phone camera hands us a 3–12 MB, 4000px+ original, and it used to go up
+  // as-is — slow on a mobile connection, and pointless: the vision call runs at
+  // detail:"low", so OpenAI downsamples to 512px on arrival anyway. Downscale to
+  // a 1024px longest edge and re-encode as JPEG before sending. Never upscale,
+  // and pass an already-small image through byte-for-byte rather than
+  // recompressing it into worse quality. If the browser can't decode the file
+  // (e.g. HEIC outside Safari) the original bytes go up — exactly the old
+  // behaviour, so this can never make a working upload fail.
+  const UPLOAD_MAX_EDGE = 1024;
+  const UPLOAD_JPEG_QUALITY = 0.8;
+  const compressForUpload = (dataUrl: string, mimeType: string) =>
+    new Promise<{ image: string; mimeType: string }>((resolve) => {
+      const passThrough = () => resolve({ image: dataUrl, mimeType });
+      const img = new Image();
+      img.onerror = passThrough;
+      img.onload = () => {
+        // naturalWidth/Height and drawImage both honour EXIF orientation in
+        // current browsers, so a portrait phone photo stays upright.
+        const longest = Math.max(img.naturalWidth, img.naturalHeight);
+        if (!longest || longest <= UPLOAD_MAX_EDGE) { passThrough(); return; }
+        const scale = UPLOAD_MAX_EDGE / longest;
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { passThrough(); return; }
+        // JPEG has no alpha channel — paint white first so a transparent PNG
+        // doesn't arrive as a black rectangle.
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        try {
+          resolve({ image: canvas.toDataURL("image/jpeg", UPLOAD_JPEG_QUALITY), mimeType: "image/jpeg" });
+        } catch {
+          passThrough();
+        }
+      };
+      img.src = dataUrl;
+    });
+
   const handleImageFile = async (file?: File | null) => {
     if (!file) return;
     if (!file.type.startsWith("image/")) { toast.error("Please choose an image file"); return; }
@@ -201,7 +241,8 @@ const Search = () => {
     setImagePreview(dataUrl);
     setAnalyzing(true);
     try {
-      const { data, error } = await supabase.functions.invoke("image-search", { body: { image: dataUrl, mimeType: file.type } });
+      const upload = await compressForUpload(dataUrl, file.type);
+      const { data, error } = await supabase.functions.invoke("image-search", { body: upload });
       if (error) throw error;
       setAnalyzing(false);
       setImagePreview(null);
