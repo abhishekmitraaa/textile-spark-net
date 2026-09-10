@@ -11,6 +11,8 @@ import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForYouRanking, usePrefCategoryMap, categoryToPrefId } from "@/lib/queries/forYou";
+import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { BUYER_CATEGORIES as CATEGORIES } from "@/lib/buyerCategories";
 import {
   usePreferences,
@@ -126,13 +128,16 @@ function toListing(p: ProductCardData, catToPref: Map<string, string>): ListingP
   });
 }
 
-// "Related To Recent Views" ad products (name + price overlay style).
-const RECENT_VIEW_ADS = [
-  { id: "rv1", name: "Candy Knit Cardigan", price: "$22.30", image: img("rv-cardigan", 400, 400) },
-  { id: "rv2", name: "Candy Knit Cardigan", price: "$22.30", image: img("rv-cardigan-2", 400, 400) },
-  { id: "rv3", name: "Maxi High-Waist Pin-Tuck", price: "$53.68", image: img("rv-maxi", 400, 400) },
-  { id: "rv4", name: "Macaron Knit Hoodie Zip", price: "$24.40", image: img("rv-hoodie", 400, 400) },
-];
+// REMOVED 2026-09-10 (Master Prompt 7, item 1a): RECENT_VIEW_ADS — four invented
+// products ("Candy Knit Cardigan", "$22.30", placeholder images) whose buttons
+// navigated to `/product/rv1`..`/product/rv4`, routes that have never existed.
+// Every tap was a dead end, and the block was labelled "AD" while carrying no
+// real campaign, so it also misrepresented paid inventory that nobody had
+// bought. This was the last fabricated data on the page after Master Prompt 6
+// removed PRODUCT_POOL.
+//
+// Replaced by RecentViewsAd below, which reads the same active_ads RPC that
+// SponsoredRail.tsx uses and renders nothing at all when there is no inventory.
 
 // Full-width insert blocks land after a product count that's a multiple of BOTH
 // the mobile (2) and desktop (4) grid columns — lcm = 4 — so the product row
@@ -145,8 +150,54 @@ const PRODUCTS_PER_RECENT_VIEW = 16; // 8 mobile rows / 4 desktop rows
 // Related To Recent Views ad block (inserted every 7 rows)
 // ─────────────────────────────────────────────────────────────
 
-function RecentViewsAd() {
+// Real ad inventory, or nothing. Deliberately mirrors SponsoredRail.tsx rather
+// than reimplementing the routing: same active_ads RPC, same adDestination()
+// goal handling, same impression/click RPCs, same nav-source attribution. The
+// only differences are the placement label and the grid layout.
+//
+// `if (ads.length === 0) return null` is the load-bearing line, and it is a
+// deliberate product decision (Master Prompt 7, item 1b): there is no live ad
+// inventory on this project today — all three `advertisements` rows are
+// status='active' but expired in July 2026, so `active_ads()` correctly returns
+// zero — and a placeholder shown "so the block has something in it" is worse
+// than no block. It fabricates demand that was never sold, and every tap is a
+// dead end. The section simply does not render until a vendor buys a campaign.
+// `ads` is passed in rather than fetched here so the FEED can decide not to
+// emit the slot at all. Returning null from inside a grid cell still leaves an
+// empty cell that consumes a `gap` row, which reads as an unexplained blank
+// band in the middle of the feed.
+function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
   const navigate = useNavigate();
+  const logged = useRef<Set<string>>(new Set());
+
+  // Impressions fire once per ad per mount, matching SponsoredRail. Vendors are
+  // billed against these, so a re-render must not inflate them.
+  useEffect(() => {
+    ads.forEach((a) => {
+      if (!logged.current.has(a.adId)) {
+        logged.current.add(a.adId);
+        void logAdImpression(a.adId);
+      }
+    });
+  }, [ads]);
+
+  if (ads.length === 0) return null;
+
+  // Honours the campaign goal the vendor paid for — storePromotion/brandAd open
+  // the storefront, everything else opens the product — via the shared
+  // adDestination() module. A hardcoded `/product/${id}` here would reintroduce
+  // exactly the bug that module was written to fix.
+  const open = (a: ActiveAd) => {
+    void logAdClick(a.adId);
+    const dest = adDestination(a);
+    if (!dest) return;
+    markNavSource("ad");
+    if (dest.kind === "profile") {
+      void logEngagement({ eventType: "profile_view", vendorId: a.vendorId, adId: a.adId, source: "ad" });
+    }
+    navigate(dest.path);
+  };
+
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-3 lg:p-4">
       <div className="flex items-center justify-between mb-2.5 lg:mb-3">
@@ -154,17 +205,24 @@ function RecentViewsAd() {
         <span className="text-[9px] lg:text-[10px] font-semibold text-gray-300 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-5">
-        {RECENT_VIEW_ADS.map((p) => (
+        {ads.map((a) => (
           <button
-            key={p.id}
-            onClick={() => navigate(`/product/${p.id}`)}
+            key={a.adId}
+            onClick={() => open(a)}
             className="relative aspect-[4/5] rounded-xl lg:rounded-2xl overflow-hidden bg-gray-100 text-left"
           >
-            <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
+            {a.imageUrl && (
+              <img
+                src={a.imageUrl}
+                alt={a.productName ?? a.title}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            )}
             <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 py-0.5 rounded">COSORA</div>
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 lg:p-3">
-              <p className="text-[11px] lg:text-sm font-semibold text-white truncate">{p.name}</p>
-              <p className="text-[11px] lg:text-sm font-bold text-white">{p.price}</p>
+              <p className="text-[11px] lg:text-sm font-semibold text-white truncate">{a.productName ?? a.title}</p>
+              {a.price && <p className="text-[11px] lg:text-sm font-bold text-white">{a.price}</p>}
             </div>
           </button>
         ))}
@@ -283,6 +341,13 @@ const ForYou = () => {
   const { data: prefMap } = usePrefCategoryMap();
   const catToPref = useMemo(() => categoryToPrefId(prefMap ?? {}), [prefMap]);
 
+  // Real ad inventory for the in-feed "Related To Recent Views" slot. Fetched
+  // here rather than inside the block so the feed can skip emitting the slot
+  // entirely when there is nothing to serve — see feedItems below. Untargeted
+  // (null category) because this placement sits in a mixed feed with no single
+  // category context to target on.
+  const { data: recentAds = [] } = useActiveAds(4, null);
+
   const pool = useMemo<ListingProduct[]>(() => {
     if (!live || !live.length) return [];
     const listings = live.map((p) => toListing(p, catToPref));
@@ -318,10 +383,13 @@ const ForYou = () => {
       items.push({ kind: "product", product });
       const productsDone = i + 1;
       if (productsDone % PRODUCTS_PER_REQUIREMENT_BOX === 0) items.push({ kind: "requirement" });
-      else if (productsDone % PRODUCTS_PER_RECENT_VIEW === 0) items.push({ kind: "recent" });
+      // Only reserve the ad slot when there is real inventory to fill it. With
+      // no live campaigns the block is not rendered empty — it is not emitted,
+      // so the feed has no unexplained gap where an ad would have gone.
+      else if (recentAds.length > 0 && productsDone % PRODUCTS_PER_RECENT_VIEW === 0) items.push({ kind: "recent" });
     });
     return items;
-  }, [visible]);
+  }, [visible, recentAds.length]);
 
   // Infinite scroll.
   useEffect(() => {
@@ -338,7 +406,22 @@ const ForYou = () => {
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [loadingMore, visible.length, filtered.length]);
+    // `prefs.hasCompleted` is load-bearing in this dep list, not decoration.
+    //
+    // The onboarding gate below is an EARLY RETURN, so while it is showing the
+    // sentinel div is not in the DOM and `loadMoreRef.current` is null — this
+    // effect attaches nothing and bails. When the buyer taps "Skip for now" the
+    // feed mounts and the sentinel appears, but by then the catalogue has
+    // usually already loaded, so `visible.length` and `filtered.length` are
+    // UNCHANGED and the effect never re-runs. The observer was therefore never
+    // attached at all for anyone who completed onboarding in-session: the feed
+    // showed the first 8 products of 26 and "Scroll for more" never loaded
+    // more, for the rest of that session.
+    //
+    // Found by instrumenting the callback and getting ZERO invocations while a
+    // hand-attached IntersectionObserver on the same node fired normally —
+    // which ruled out the observer and pointed at the attach step.
+  }, [loadingMore, visible.length, filtered.length, prefs.hasCompleted]);
 
   // Reset paging when filters/search change.
   useEffect(() => { setBatches(1); }, [prefs.categories, prefs.locations, search]);
@@ -567,7 +650,7 @@ const ForYou = () => {
                   return <div key={`req-${idx}`} className="col-span-full lg:max-w-4xl lg:mx-auto"><SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} /></div>;
                 }
                 if (item.kind === "recent") {
-                  return <div key={`rv-${idx}`} className="col-span-full"><RecentViewsAd /></div>;
+                  return <div key={`rv-${idx}`} className="col-span-full"><RecentViewsAd ads={recentAds} /></div>;
                 }
                 return <ListingProductCard key={item.product.id} product={item.product} />;
               })}
