@@ -747,6 +747,7 @@ Depth — schema, invariants, integrations, tech debt — lives in
 - Routes/pages: `documentation/sitemap.md`
 - Buyer/Vendor/Admin feature detail: `documentation/sides.md`
 - Security flags & gaps: `documentation/securityflags.md`
+- ToDo list: `documentation/ToDo.md`
 - Razorpay runbook: `supabase/RAZORPAY.md`
 
 ## Documentation Protocol — follow every session, unprompted
@@ -785,6 +786,21 @@ Depth — schema, invariants, integrations, tech debt — lives in
    it in the same turn, also add the normal `changelog.md` entry and cross-reference
    it from the `securityflags.md` entry. Update the "Open Flags" table (add on
    discovery, move to Fixed/Accepted/Monitoring as status changes).
+10. Whenever, during any session, you are asked to add something to the todo list —
+    by any phrasing that clearly means "note this for later" (e.g. "add to todo",
+    "todo:", "remind me to...", "let's do this later", "park this") — append a full
+    entry to `documentation/ToDo.md` in that same turn, without asking the user to
+    supply the context or reference themselves. Write:
+      - Task: a clear, standalone description — someone reading only this line
+        should understand what to do.
+      - Context: capture what was being discussed or built when this came up, why
+        it matters, and anything (a file, a decision, a dependency, a constraint)
+        needed to act on it later without re-reading the original conversation.
+      - Reference: the date and a short pointer to what this session was working
+        on, so Andy can place it in time even without a clickable chat link.
+    Keep it under "## Open". When a todo item is later completed, move its entry to
+    "## Completed", add the completion date, and add a one-line note of how/where it
+    was done if that's known — never just delete a finished item.
 
 ### How the automation actually works (`.claude/settings.json`)
 
