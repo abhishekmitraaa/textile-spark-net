@@ -35,11 +35,14 @@ import {
 } from "lucide-react";
 import {
   useRecentlyViewed,
+  useRecentlyViewedHydrating,
+  useRecentlyViewedOwner,
   removeRecent,
   clearRecent,
   relativeTime,
   type RecentProduct,
 } from "@/lib/recentlyViewedStore";
+import { useAuth } from "@/contexts/AuthContext";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
 import type { Gender } from "@/lib/listingProducts";
@@ -136,6 +139,28 @@ const RecentlyViewed = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const recent = useRecentlyViewed();
+  const hydrating = useRecentlyViewedHydrating();
+  const syncedFor = useRecentlyViewedOwner();
+  const { user, loading: authLoading } = useAuth();
+
+  // Loading, empty and populated are three distinct states — the project rule,
+  // as on SearchResults and ForYou. Until 2026-09-10 the empty state was
+  // unreachable for exactly the people most likely to see it (first-time
+  // visitors), because the store filled any empty history with six fabricated
+  // products; with those gone, "not loaded yet" has to be told apart from
+  // "nothing here" or a signed-in buyer's real history would flash up as
+  // "No recently viewed products" while it is still being fetched.
+  //
+  //   * Signed in → the DB is authoritative, so show loading until the store
+  //     holds THIS user's rows: StoreSync has not handed it the user yet (one
+  //     render, its effect runs after this page's first commit), or the fetch
+  //     is in flight. The local list is not shown in the meantime — it is not
+  //     this account's history.
+  //   * Auth still restoring the session and nothing local to show → we do not
+  //     yet know whose history this is, so do not claim it is empty.
+  const signedInPending = Boolean(user) && (syncedFor !== user?.id || hydrating);
+  const loading = signedInPending || (authLoading && recent.length === 0);
+  const hasItems = !loading && recent.length > 0;
 
   const [gender, setGender] = useState<GenderFilter>("all");
   const [sort, setSort] = useState<SortKey>("recent");
@@ -165,10 +190,14 @@ const RecentlyViewed = () => {
           </button>
           <div className="flex-1 min-w-0">
             <h1 className="text-lg font-bold text-gray-900">Recently Viewed</h1>
-            <p className="text-xs text-gray-500">{recent.length} product{recent.length === 1 ? "" : "s"}</p>
+            {/* A count is a claim about the history; while it is loading we do
+                not have one, and "0 products" would be a wrong answer. */}
+            <p className="text-xs text-gray-500">
+              {loading ? "Loading…" : `${recent.length} product${recent.length === 1 ? "" : "s"}`}
+            </p>
           </div>
 
-          {recent.length > 0 && (
+          {hasItems && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <button aria-label="Clear viewing history" className="p-1.5 text-[#ef4d62] hover:bg-[#ef4d62]/10 rounded-lg transition-colors">
@@ -197,7 +226,7 @@ const RecentlyViewed = () => {
         </div>
 
         {/* Gender / Sort / Filter */}
-        {recent.length > 0 && (
+        {hasItems && (
           <div className="grid grid-cols-3 border-y border-gray-200 divide-x divide-gray-200 mb-4">
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
@@ -239,7 +268,22 @@ const RecentlyViewed = () => {
         )}
 
         {/* Items */}
-        {recent.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3" aria-busy="true" aria-label="Loading recently viewed products">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="flex gap-3">
+                  <div className="w-24 h-28 shrink-0 rounded-lg bg-gray-100 animate-pulse" />
+                  <div className="flex-1 space-y-2 pt-1">
+                    <div className="h-3 w-3/4 rounded bg-gray-100 animate-pulse" />
+                    <div className="h-2.5 w-1/2 rounded bg-gray-100 animate-pulse" />
+                    <div className="h-2.5 w-1/3 rounded bg-gray-100 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : recent.length === 0 ? (
           <motion.div
             initial={reduced ? false : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

@@ -1,16 +1,24 @@
 import { useSyncExternalStore } from "react";
-import { img, makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
+import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
 import { supabase } from "@/lib/supabase";
 import { fetchProductCardsByIds } from "@/lib/queries/products";
 
 // ─────────────────────────────────────────────────────────────
 // Recently Viewed store.
 //
-// A module-level list of the products the buyer has opened, newest first,
-// backed by localStorage. ProductDetail calls recordView() on mount; the
-// Recently Viewed page reads it via useRecentlyViewed(). Per-item delete is
-// instant (removeRecent); the header trash clears everything (clearRecent,
-// behind a confirm dialog).
+// A module-level list of the products the buyer has opened, newest first.
+// ProductDetail calls recordView() on mount; the Recently Viewed page reads it
+// via useRecentlyViewed(). Per-item delete is instant (removeRecent); the
+// header trash clears everything (clearRecent, behind a confirm dialog).
+//
+// Two backings, and which one is authoritative depends on who is looking:
+//   * Signed in  → the `recently_viewed` table is the source of truth. The
+//     local list is replaced by the DB rows on sign-in and is not written to
+//     localStorage while signed in (see commit()).
+//   * Signed out → localStorage, and only localStorage.
+//
+// There is NO seed. An empty history is an empty list, rendered as the page's
+// real empty state. See the note where SEED used to be.
 // ─────────────────────────────────────────────────────────────
 
 export interface RecentProduct extends ListingProduct {
@@ -22,8 +30,11 @@ export interface RecentProduct extends ListingProduct {
 const STORAGE_KEY = "cosora.recentlyViewed.v1";
 const MAX_ITEMS = 40;
 
-const HOUR = 3_600_000;
-const DAY = 24 * HOUR;
+// Declared before load() runs at module init below — `const` is in the temporal
+// dead zone until its line executes, so load() calling isUuid() would throw if
+// these still sat further down the file where the DB-sync section begins.
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (s: string) => UUID_RE.test(s);
 
 /** Human-friendly "time since" label ("2 hours ago", "Yesterday", …). */
 export function relativeTime(ts: number): string {
@@ -42,48 +53,58 @@ export function relativeTime(ts: number): string {
   return `${mo} month${mo > 1 ? "s" : ""} ago`;
 }
 
-// ── Seed data (matches the reference; 6 products) ──
-function seed(
-  id: string, name: string, manufacturer: string, location: string,
-  priceValue: number, moq: string, rating: number, reviews: number,
-  verified: boolean, gender: Gender, seedImg: string, ago: number
-): RecentProduct {
-  return {
-    ...makeListingProduct(id, {
-      name, manufacturer, vendorId: `v-${id}`, location,
-      price: `₹${priceValue}`, priceValue, moq, rating, gender,
-      image: img(seedImg), secondaryImage: img(`${seedImg}-b`),
-    }),
-    reviews,
-    verified,
-    viewedAt: Date.now() - ago,
-  };
-}
-
-const SEED: RecentProduct[] = [
-  seed("rv1", "Premium Cotton Polo T-Shirt", "Tirupur Textiles", "Tirupur, Tamil Nadu", 320, "MOQ: 100 pieces", 4.8, 156, true, "men", "rv-polo", 2 * HOUR),
-  seed("rv2", "Women's Casual Kurta Set", "Delhi Fashion Hub", "Delhi NCR", 850, "MOQ: 50 sets", 4.6, 89, true, "women", "rv-kurta", 5 * HOUR),
-  seed("rv3", "Kids Cotton Shorts", "Gujarat Garments", "Ahmedabad, Gujarat", 180, "MOQ: 200 pieces", 4.3, 45, false, "kids", "rv-shorts", DAY + 2 * HOUR),
-  seed("rv4", "Denim Jeans - Slim Fit", "Mumbai Denim Co.", "Mumbai, Maharashtra", 650, "MOQ: 75 pieces", 4.7, 203, true, "men", "rv-denim", DAY + 4 * HOUR),
-  seed("rv5", "Formal Cotton Shirt", "Bangalore Apparel", "Bangalore, Karnataka", 420, "MOQ: 100 pieces", 4.5, 78, true, "men", "rv-shirt", 2 * DAY),
-  seed("rv6", "Sports Track Pants", "Active Wear India", "Ludhiana, Punjab", 380, "MOQ: 150 pieces", 4.2, 34, false, "unisex", "rv-track", 3 * DAY),
-];
+// REMOVED 2026-09-10 (Master Prompt 8): SEED and seed() — six invented products
+// (rv1..rv6: "Premium Cotton Polo T-Shirt / Tirupur Textiles", "Kids Cotton
+// Shorts / Gujarat Garments", …) returned by load() whenever localStorage was
+// empty. Every first-time visitor, cleared browser and signed-out session saw
+// six products they had never viewed, indistinguishable from real history, and
+// every one linked to /product/rv1../product/rv6 — routes that have never
+// existed. Their Chat and CALL NOW buttons targeted vendor ids "v-rv1".."v-rv6",
+// which do not exist either. Same class of bug as the ForYou ad strip removed in
+// Master Prompt 7.
+//
+// It was also worse than "shown on a fresh browser": recordView() builds the new
+// list as [thisView, ...items], and on a first visit `items` WAS the seed — so a
+// signed-out buyer's first real product view persisted all six fakes into
+// localStorage alongside it, where they stayed after any fix to load() alone.
+// load() now drops them (see below).
 
 function load(): RecentProduct[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as RecentProduct[];
-      if (Array.isArray(parsed)) return parsed;
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as RecentProduct[];
+    if (!Array.isArray(parsed)) return [];
+    // Only a real product can reach recordView(): ProductDetail records a view
+    // only once its DB row has loaded, so every legitimate entry carries a UUID.
+    // Anything else is a seed row an older build persisted (see above) and can
+    // never resolve to a real product page — drop it, and rewrite storage so it
+    // stays dropped.
+    const real = parsed.filter((p) => typeof p?.id === "string" && isUuid(p.id));
+    if (real.length !== parsed.length) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(real));
+      } catch {
+        /* storage unavailable — still filtered in memory */
+      }
     }
+    return real;
   } catch {
-    /* ignore */
+    return [];
   }
-  return SEED;
 }
 
+let userId: string | null = null;
+// True while a signed-in buyer's history is being fetched from the DB. The page
+// reads it so an in-flight fetch renders as loading, not as "no history" — a
+// spinner is not an empty list.
+let hydrating = false;
 let items: RecentProduct[] = load();
 const listeners = new Set<() => void>();
+
+function emit() {
+  listeners.forEach((l) => l());
+}
 
 function commit(next: RecentProduct[], persist = true) {
   items = next;
@@ -95,7 +116,7 @@ function commit(next: RecentProduct[], persist = true) {
       /* storage unavailable */
     }
   }
-  listeners.forEach((l) => l());
+  emit();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -103,17 +124,17 @@ function commit(next: RecentProduct[], persist = true) {
 // and hydrate into rich RecentProduct rows via the products catalogue.
 // ─────────────────────────────────────────────────────────────
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const isUuid = (s: string) => UUID_RE.test(s);
-let userId: string | null = null;
-
 async function hydrateRecent(uidValue: string): Promise<RecentProduct[]> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("recently_viewed")
     .select("product_id, viewed_at")
     .eq("buyer_id", uidValue)
     .order("viewed_at", { ascending: false })
     .limit(MAX_ITEMS);
+  // Throw rather than fall through to []: a failed fetch is not an empty
+  // history, and treating it as one would wipe the list and show the buyer
+  // "No recently viewed products" for history they do have.
+  if (error) throw error;
   const rows = data ?? [];
   const cards = await fetchProductCardsByIds(rows.map((r) => r.product_id));
   const out: RecentProduct[] = [];
@@ -136,15 +157,23 @@ export async function setRecentUser(nextUserId: string | null) {
   if (nextUserId === userId) return;
   userId = nextUserId;
   if (!nextUserId) {
+    hydrating = false;
     commit(load(), false);
     return;
   }
+  hydrating = true;
+  emit();
+  let rows: RecentProduct[] | null = null;
   try {
-    const rows = await hydrateRecent(nextUserId);
-    if (userId === nextUserId) commit(rows, false);
+    rows = await hydrateRecent(nextUserId);
   } catch {
-    /* keep current state on failure */
+    /* keep current state on failure — never show a failed fetch as empty */
   }
+  // A newer auth change (sign-out, account switch) superseded this fetch.
+  if (userId !== nextUserId) return;
+  hydrating = false;
+  if (rows) commit(rows, false);
+  else emit();
 }
 
 // Normalize any product-ish object to a full RecentProduct, preserving known
@@ -195,7 +224,7 @@ export function clearRecent() {
   if (userId) void supabase.from("recently_viewed").delete().eq("buyer_id", userId).then(() => {});
 }
 
-// ── Hook ──
+// ── Hooks ──
 function subscribe(cb: () => void) {
   listeners.add(cb);
   return () => listeners.delete(cb);
@@ -203,4 +232,19 @@ function subscribe(cb: () => void) {
 
 export function useRecentlyViewed(): RecentProduct[] {
   return useSyncExternalStore(subscribe, () => items, () => items);
+}
+
+/** True while a signed-in buyer's history is being fetched from the DB. */
+export function useRecentlyViewedHydrating(): boolean {
+  return useSyncExternalStore(subscribe, () => hydrating, () => hydrating);
+}
+
+/**
+ * Whose history the store currently holds (null = the signed-out local list).
+ * Lets the page tell "signed in, but StoreSync has not handed the store this
+ * user yet" — one render, since StoreSync's effect runs after the page's first
+ * commit — apart from a genuinely empty history.
+ */
+export function useRecentlyViewedOwner(): string | null {
+  return useSyncExternalStore(subscribe, () => userId, () => userId);
 }
