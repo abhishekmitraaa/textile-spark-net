@@ -481,6 +481,33 @@ appear in buyer search immediately, via `products.embedding` on a different path
   for spotting a 10× jump, **not** an invoice) and avg/max queue lag. Needs no new logging:
   pgmq's archive already retains `enqueued_at` and `archived_at`.
 
+#### Where the alert actually surfaces (2026-09-10)
+Three places, in increasing order of how hard they are to miss:
+
+1. **`cron.job_run_details`** — `embedding-health-alarm` RAISEs, so a bad state is a failed
+   run. Requires someone to look.
+2. **In-app notifications** — a transition into a non-OK state writes one `kind='system'`
+   row per `profiles.is_admin`. These render in the BUYER/vendor app's `/notifications`
+   (it filters no `kind` and falls back gracefully on unknown ones) and, since 2026-09-10,
+   on **Cosora-Admin's System Health page**, which reads
+   `admin_embedding_pipeline_health()` — a SECURITY DEFINER RPC gated on
+   `super_admin`/`vendor_ops`. The log table itself stays service_role-only with RLS on and
+   no policies; it is deliberately not widened to `authenticated` to make that page
+   possible.
+3. **An outbound webhook, opt-in.** `notify_embedding_alert_webhook()` POSTs via pg_net to
+   the Vault secret `embedding_alert_webhook_url`, **CRITICAL only**. This project has no
+   email sender, Slack app or webhook integration, so this is the cheapest path out of the
+   app: it is completely inert while the secret does not exist (no call, no error), and an
+   admin can point it at any URL that accepts a JSON POST — Slack incoming webhook, Discord,
+   PagerDuty Events v2, an internal receiver — **without a redeploy**.
+
+   WARN deliberately stays in-app. WARN is what a transient backlog produces, and paging on
+   it is how an alert channel gets muted — the same reasoning behind notifying on the
+   transition rather than on every 10-minute sample.
+
+**Nobody is paged.** All three surfaces are pull, or push into a channel that must first be
+configured. Closing that properly needs an on-call integration this project does not have.
+
 `set_product_embedding` writes `embedding`, which is **not** in the enqueue trigger's column
 list. That is load-bearing: without it every successful embedding would enqueue another one,
 forever.

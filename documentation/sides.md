@@ -89,11 +89,28 @@ the demand side of India's fashion and textile supply chain.
   tagged product's real review data.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
-- **For You** still renders a hardcoded "Related To Recent Views" ad strip
-  (`RECENT_VIEW_ADS` — 4 invented products navigating to dead `/product/rv*` routes). It is
-  the last fabricated data on the page and needs wiring to the real `active_ads` RPC with
-  `ad_impression` / `ad_click` tracking, which is separate work from the mock-catalogue
-  removal below.
+- **Recently Viewed still seeds 6 fabricated products.** `recentlyViewedStore.ts` returns a
+  hardcoded `SEED` (`rv1`..`rv6` — "Premium Cotton Polo T-Shirt / Tirupur Textiles", "Kids
+  Cotton Shorts / Gujarat Garments") **ungated in production** whenever localStorage is
+  empty, so every new visitor sees six products they never viewed, from vendors that mostly
+  do not exist, linking to the same dead `/product/rv*` routes removed from the For You ad
+  strip on 2026-09-10. Same "no mock data in production" violation, different feature: it
+  needs its own empty state for the Recently Viewed rail and page.
+
+### Fixed 2026-09-10 (Master Prompt 7)
+- **The For You ad strip is real inventory or nothing.** "Related To Recent Views" was four
+  invented products whose taps went to `/product/rv1`..`rv4` — routes that have never
+  existed — under an "AD" label, so it was both a dead end and a misrepresentation of paid
+  inventory nobody had bought. It now reads the same `active_ads` RPC as `SponsoredRail`,
+  routes through the shared `adDestination()` so a "Visit your profile" campaign opens the
+  storefront it paid for, and logs real `ad_impression`/`ad_click`. **There is no live ad
+  inventory today** (all three campaigns expired July 2026), so the block is not rendered at
+  all — not as a placeholder, and not as an empty cell that would leave a blank band.
+- **The For You feed showed only 8 of 26 products, for everyone.** Infinite scroll never
+  attached its observer for anyone who completed onboarding in-session: the onboarding gate
+  is an early return, so the scroll sentinel was not in the DOM when the effect ran, and
+  nothing in its dependencies changed when the feed later mounted. "Scroll for more" never
+  loaded more. Fixed; the full catalogue now pages in.
 
 ### Fixed 2026-09-10 (Master Prompt 6)
 - **For You no longer fabricates a catalogue.** `PRODUCT_POOL` — 48 invented products with
