@@ -704,6 +704,30 @@ context. Each exposes a `useX()` hook plus mutation functions: `savedStore`,
 `followingStore`, `brandFollowStore`, `preferencesStore`, `profileStore`,
 `recentlyViewedStore`, `notificationsStore`, `quotesStore`, `callStore`.
 
+**Recently Viewed has two backings, and says which one is authoritative** (2026-09-10).
+Signed in → the `recently_viewed` table: StoreSync calls `setRecentUser(uid)`, the store is
+replaced with the DB rows (hydrated into cards via `fetchProductCardsByIds`, which reads
+through RLS, so a withdrawn listing drops out instead of rendering as a dead link), and
+nothing is written to localStorage while signed in. Signed out → localStorage only. The
+store carries **no seed** — the six `rv1`..`rv6` products it used to return for an empty
+history were removed — and three details keep it honest:
+
+- `load()` drops any stored row whose id is not a UUID and rewrites storage. Every real view
+  has one (ProductDetail records only after its DB row loads), so a non-UUID row is a
+  leftover from the removed seed, which older builds *persisted*: `recordView()` prepends to
+  `items`, and on a first visit `items` was the seed.
+- `hydrateRecent()` throws on a query error instead of treating it as `[]` — a failed fetch
+  is not an empty history.
+- `useRecentlyViewedHydrating()` / `useRecentlyViewedOwner()` let the page render loading,
+  empty and populated as three distinct states. "Owner" closes a one-render gap: StoreSync's
+  effect runs after the page's first commit, so for one frame a signed-in user's store
+  still holds the signed-out list.
+
+Verified by `scripts/recently-viewed-check.mjs` against the real app and DB with a real
+login — fresh browser, legacy seeded storage, signed-out view, and signed-in DB history,
+including a 10 ms poll from first paint proving the empty state never flashes while the
+history loads.
+
 ### Shared helpers
 `src/lib/listingProducts.ts` (`ListingProduct` type + `img()` / `makeListingProduct()`,
 kept JSX-free for fast refresh), `src/lib/plan.ts`, `src/lib/searchFilters.ts`,
@@ -713,6 +737,12 @@ kept JSX-free for fast refresh), `src/lib/plan.ts`, `src/lib/searchFilters.ts`,
 `chatData.ts`, `freelancersData.ts`, `serviceVendorsData.ts`, `quotesData.ts`,
 `buyerCategories.ts`. Service vendors, freelancers and photographers have **no `profiles`
 row** — which is why `service_reviews.service_id` is `text` with no FK.
+
+Still reaching production (both tracked in `sides.md` → Known gaps): `followingStore.ts`'s
+`SEED` — seven invented brands, served to every signed-out visitor by `useFollowing()`'s
+signed-out fallback — and `VendorChatModal.tsx`'s two scripted messages. By contrast
+`notificationsStore.ts`'s `SEED` is safe: it returns `import.meta.env.DEV ? SEED : []`,
+which Vite replaces statically, so it is tree-shaken out of production builds.
 
 ### Animation system
 

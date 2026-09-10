@@ -89,13 +89,31 @@ the demand side of India's fashion and textile supply chain.
   tagged product's real review data.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
-- **Recently Viewed still seeds 6 fabricated products.** `recentlyViewedStore.ts` returns a
-  hardcoded `SEED` (`rv1`..`rv6` — "Premium Cotton Polo T-Shirt / Tirupur Textiles", "Kids
-  Cotton Shorts / Gujarat Garments") **ungated in production** whenever localStorage is
-  empty, so every new visitor sees six products they never viewed, from vendors that mostly
-  do not exist, linking to the same dead `/product/rv*` routes removed from the For You ad
-  strip on 2026-09-10. Same "no mock data in production" violation, different feature: it
-  needs its own empty state for the Recently Viewed rail and page.
+- **Following shows seven fabricated brands to every signed-out visitor.** `followingStore.ts`
+  `load()` returns a hardcoded `SEED` ("prezel", "Maison Lyra", "LUNE" selling "Mickey Mouse
+  Chuck" at "$8.36", …) whenever localStorage is empty, and `useFollowing()`
+  (`queries/follows.ts`) deliberately falls back to that store when signed out — so it reaches
+  Following, Following → View all, the vendor page's follow state and the new-brands carousel.
+  It is worse than the Recently Viewed seed was: `load()` also treats an *empty* array as
+  missing, so a visitor who unfollows every brand gets all seven back on the next load.
+  Signed-in buyers are unaffected (DB-backed via `follows`). Same fix shape as Recently
+  Viewed: an empty list, a real empty state, and dropping non-UUID ids from storage.
+- **My Quotes' vendor chat opens with a scripted conversation.** `VendorChatModal.tsx` seeds
+  two hardcoded messages ("Hello! Thank you for your interest in our quote…" / "Hi! I wanted
+  to discuss the MOQ…") on every open, rendered from `MyQuotes.tsx`. The buyer's half of that
+  exchange is words they never typed.
+
+### Fixed 2026-09-10 (Master Prompt 8)
+- **Recently Viewed shows real history or an honest empty state.** It used to fill any empty
+  history with six invented products (`rv1`..`rv6`) whose cards, Chat and CALL NOW buttons
+  all pointed at products and vendors that do not exist — seen by every first-time visitor
+  and every signed-out session. Worse, a signed-out buyer's first real product view saved all
+  six fakes into the browser alongside it, so they outlived any fix that only stopped showing
+  them on an empty browser. Now an empty history is empty; browsers that already stored the
+  fakes have them dropped on the next load; and signed-in buyers see their database-backed
+  history with a loading state while it fetches — never a false "No recently viewed
+  products". A product that has since been withdrawn is left out rather than shown as a dead
+  link.
 
 ### Fixed 2026-09-10 (Master Prompt 7)
 - **The For You ad strip is real inventory or nothing.** "Related To Recent Views" was four
