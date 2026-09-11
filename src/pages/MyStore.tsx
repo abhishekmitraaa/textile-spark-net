@@ -344,7 +344,7 @@ const MyStore = () => {
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
                         <div className="flex items-center gap-1 bg-[#ebe6ff] px-2 py-1 rounded-full">
-                          <span>{store.ratingAvg.toFixed(1)}</span>
+                          <span>{store.reviewsCount > 0 ? store.ratingAvg.toFixed(1) : "–"}</span>
                           <Star className="w-3 h-3 text-[#3925b3] fill-[#3925b3]" />
                         </div>
                         <span>{t("Ratings")}</span>

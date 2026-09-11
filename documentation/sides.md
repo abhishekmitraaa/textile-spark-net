@@ -106,6 +106,18 @@ the demand side of India's fashion and textile supply chain.
   two hardcoded messages ("Hello! Thank you for your interest in our quote…" / "Hi! I wanted
   to discuss the MOQ…") on every open, rendered from `MyQuotes.tsx`. The buyer's half of that
   exchange is words they never typed.
+- **A vendor's public page invents what the vendor left blank.** On `/vendor/:id`, an empty
+  owner name, phone, email, website, address, GSTIN or PAN is replaced by a hardcoded demo
+  value ("Mr. K.S. Tomar", a Gwalior address, a GSTIN that is no one's), and so are the
+  About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
+  decision (Master Prompt 8).
+
+### Fixed 2026-09-11 (Master Prompt 8)
+- **Vendor profile pages render again.** Every `/vendor/:id` was blank on the live site
+  (a TypeError on `vendor.capacity` before the profile loaded), since 2026-09-09.
+- **Vendor ratings are real.** Four seeded vendors claimed 147–4,800 reviews with none in
+  `reviews`; all now show their true count, "No reviews yet" when it is zero, and no vendor
+  can set its own number.
 
 ### Fixed 2026-09-11 (Master Prompt 7, buyer-trust thread)
 - **Product pages show the product.** `/product/:id` used to layer each real listing over a

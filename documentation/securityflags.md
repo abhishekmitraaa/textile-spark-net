@@ -12,11 +12,14 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-11 | Public vendor profile fills a vendor's empty identity and contact fields with invented values (GSTIN, PAN, owner, phone, email, address) | Medium | `src/pages/VendorProfile.tsx` (`detailRows`, `contactRows`, `contactAddress`, `aboutText`, `bannerSrc`) | Open — logged only, on Mitra's decision (Master Prompt 8) |
+| 2026-09-11 | Product-level `rating_avg` / `reviews_count` / `sold_count` are vendor-writable and have no real source | Low | `products` (`products_update` admits `vendor_id = auth.uid()`; no guard on these columns) | Open — cards keep showing them on Mitra's decision; guard them when they are computed from something real |
 | 2026-09-11 | embed-query's per-IP key parses `x-forwarded-for` identically but was never probed | Low | `supabase/functions/embed-query/index.ts` (`.split(",")[0]`) | Open — confirm next time that file is touched |
 
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-11 | A vendor could set its own review count and star rating | Medium | `vendor_profiles` (`vprofiles_update` + `enforce_vendor_profile_admin_fields()`) | Fixed 2026-09-11 (Master Prompt 8, Phase 2) — signed-in writes to both columns refused; `sync_vendor_rating()` is the only writer |
 | 2026-09-11 | Super-admin demo credential shipped in the production JS bundle and committed to a public repo | Critical | `src/contexts/AuthContext.tsx` (`DEMO_ACCOUNTS`); 16 other tracked files in `scripts/` and `tests/`; more in Cosora-Admin | Fixed 2026-09-11 (Master Prompt 8, Phase 1) — rotated, sessions revoked, old password refused; literal out of every build; all test credentials read from env |
 | 2026-09-11 | Unverified claim that image-search's per-IP key cannot be spoofed via `x-forwarded-for` | Low | `supabase/functions/image-search/index.ts` | Closed 2026-09-11 — tested on this deployment; no bypass; comment made precise, parsing unchanged |
 | 2026-09-10 | image-search has no rate limit | Medium | `supabase/functions/image-search/index.ts` | Fixed 2026-09-10 |
@@ -84,6 +87,55 @@ in the next one.
 - Status: Fixed 2026-09-11
 - Related changelog entries: 2026-09-11 (Master Prompt 7, buyer-trust thread · security finding);
   2026-09-11 (Master Prompt 8 · Phase 1)
+
+### 2026-09-11 — A vendor could set its own review count and star rating — Severity: Medium
+- What was found: `vendor_profiles.reviews_count` and `rating_avg` are what buyers see as a
+  supplier's reputation (vendor page, New Arrivals tiles, RFQ vendor cards). `vprofiles_update`
+  admits `id = auth.uid()`, and `enforce_vendor_profile_admin_fields()` guarded only
+  `is_verified`, so a vendor could write both numbers directly.
+- Where: `vendor_profiles` RLS + `enforce_vendor_profile_admin_fields()`.
+- How it was discovered: Master Prompt 8, Phase 2, while making the vendor aggregates truthful.
+  Proven, not inferred: signed in as demo-vendor through the anon key, an update setting its
+  own `reviews_count` 5 → 10004 and `rating_avg` → 5 was ACCEPTED; reverted immediately.
+- Risk / impact: any vendor could claim thousands of reviews and a 5.0 rating.
+- Fix applied: migration `20260911120000_vendor_review_aggregates_truthful.sql`. The trigger
+  forces both to 0 on a signed-in INSERT and raises `42501` on a signed-in UPDATE that changes
+  either. `sync_vendor_rating()` is SECURITY DEFINER, so it runs as the owner and stays the
+  only writer. Verified after applying: the vendor's self-write → `REFUSED 42501`; a
+  super_admin's write → `REFUSED 42501`; an ordinary vendor profile update → ok; a buyer
+  editing their own review still moves the aggregate (4.4 → 3.8 → 4.4 on revert).
+- Status: Fixed 2026-09-11
+- Related changelog entry: 2026-09-11 (Master Prompt 8 · Phase 2)
+
+### 2026-09-11 — Product-level counters are vendor-writable and have no real source — Severity: Low
+- What was found: `products.rating_avg`, `reviews_count` and `sold_count` have no writer and
+  no source (`reviews` has no `product_id`; there is no orders table), and `products_update`
+  admits `vendor_id = auth.uid()` with no guard on these columns.
+- Where: `products` RLS; read by `src/lib/queries/products.ts` for listing cards.
+- How it was discovered: Master Prompt 8, Phase 2, next to the vendor-level fix above.
+- Risk / impact: the cards already show seeded values (Mitra chose to keep them for now),
+  and a vendor could also raise its own. Guarding them before they are computed from
+  something real would only freeze the seed values.
+- Fix applied: none — deliberately, on Mitra's decision about the cards.
+- Status: Open
+- Related changelog entry: 2026-09-11 (Master Prompt 8 · Phase 2)
+
+### 2026-09-11 — Public vendor profile invents a vendor's missing identity and contact details — Severity: Medium
+- What was found: on `/vendor/:id`, every empty field on a REAL vendor falls back to a
+  hardcoded demo value. The fallbacks cover the Company MD / owner name, phone, email,
+  website and a Gwalior street address in the contact card, plus a GSTIN and PAN in "Detailed
+  information", an About paragraph and a stock banner. A buyer can call a phone number, or
+  trust a GSTIN, that belongs to no one on the platform.
+- Where: `src/pages/VendorProfile.tsx` — `detailRows`, `detailRowsResolved`, `contactRows`,
+  `contactAddress`, `aboutText`, `websiteValue`, `bannerSrc`.
+- How it was discovered: Master Prompt 8, Phase 2, while removing the same page's invented
+  rating fallback.
+- Risk / impact: misattributed contact details and fabricated tax identifiers on a real
+  business's public page.
+- Fix applied: none — Mitra chose to log it for a later round. The fix is to render "Not
+  provided" or omit the row, as `/product/:id` already does.
+- Status: Open
+- Related changelog entry: 2026-09-11 (Master Prompt 8 · Phase 2)
 
 ### YYYY-MM-DD — <short title> — Severity: Critical / High / Medium / Low
 - What was found:

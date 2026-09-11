@@ -662,10 +662,18 @@ const NewArrivals = () => {
                 <div className="absolute bottom-2 lg:bottom-4 left-2 lg:left-4 right-2">
                   <p className="text-xs lg:text-base font-bold text-white truncate">{v.brandName}</p>
                   {v.city && <p className="text-[10px] lg:text-xs text-white/80 truncate">{v.city}</p>}
+                  {/* A star only for a vendor with real reviews: rating_avg is 0
+                      until one exists, and "★ 0.0" reads as a bad rating rather
+                      than none. Master Prompt 8, Phase 2. */}
                   <p className="inline-flex items-center gap-0.5 text-xs lg:text-base font-bold text-white">
-                    <Star className="w-2.5 lg:w-3.5 h-2.5 lg:h-3.5 text-yellow-400 fill-yellow-400" />
-                    {v.ratingAvg.toFixed(1)}
-                    <span className="font-normal text-[10px] lg:text-xs text-white/70"> · {v.liveProducts} products</span>
+                    {v.reviewsCount > 0 && (
+                      <>
+                        <Star className="w-2.5 lg:w-3.5 h-2.5 lg:h-3.5 text-yellow-400 fill-yellow-400" />
+                        {v.ratingAvg.toFixed(1)}
+                        <span className="font-normal text-[10px] lg:text-xs text-white/70">&nbsp;·&nbsp;</span>
+                      </>
+                    )}
+                    <span className="font-normal text-[10px] lg:text-xs text-white/70">{v.liveProducts} products</span>
                   </p>
                 </div>
               </Link>

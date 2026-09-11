@@ -107,14 +107,6 @@ const sells = [
   "Hospital Uniforms", "Men's Sweaters", "Corporate Wear", "Private Label Manufacturing",
 ];
 
-const ratingBreakdown = [
-  { stars: 5, percent: 90 },
-  { stars: 4, percent: 5 },
-  { stars: 3, percent: 0 },
-  { stars: 2, percent: 0 },
-  { stars: 1, percent: 15 },
-];
-
 // The vocabulary of this page's GENDER filter dropdown — capitalised because
 // that is what it displays. Deliberately NOT called `Gender`: the saved-items
 // store has its own lowercase `Gender` union, and two types with one name is
@@ -203,14 +195,16 @@ const VendorProfile = () => {
     : detailRows;
   const websiteValue = vendor?.website || "www.caramel.in";
 
-  // Real reviews. Until a vendor has any, fall back to the vendor_profiles
-  // aggregate + demo breakdown so the section still looks alive.
+  // Real reviews only (Master Prompt 8, Phase 2). A vendor with none shows
+  // none. This used to fall back to the vendor_profiles aggregate — seed data
+  // on four vendors, 4,800 "reviews" against 0 rows — then to 4.5 / 26 and a
+  // made-up 90/5/0/0/15 breakdown, "so the section still looks alive".
   const hasRealReviews = (reviewData?.count ?? 0) > 0;
-  const reviewAvg = hasRealReviews ? reviewData!.avg : vendor?.ratingAvg ?? 4.5;
-  const reviewCount = hasRealReviews ? reviewData!.count : vendor?.reviewsCount ?? 26;
+  const reviewAvg = hasRealReviews ? reviewData!.avg : 0;
+  const reviewCount = hasRealReviews ? reviewData!.count : 0;
   const reviewBreakdown = hasRealReviews
     ? reviewData!.breakdown.map((b) => ({ stars: b.stars, percent: b.percent }))
-    : ratingBreakdown;
+    : [];
   const reviewList = reviewData?.reviews ?? [];
   const visibleReviews = showAllReviews ? reviewList : reviewList.slice(0, 3);
   // Reviews can only be written against a real vendor_profiles row. Mock/demo
@@ -461,7 +455,7 @@ const VendorProfile = () => {
 
           <div className="flex items-center gap-4 mb-5">
             <div className="text-center">
-              <span className="text-4xl font-extrabold text-gray-900">{reviewAvg.toFixed(1)}</span>
+              <span className="text-4xl font-extrabold text-gray-900">{hasRealReviews ? reviewAvg.toFixed(1) : "–"}</span>
               <span className="text-base text-gray-400">/5</span>
             </div>
             <div>
@@ -470,7 +464,11 @@ const VendorProfile = () => {
                   <Star key={i} className={cn("h-5 w-5", i <= Math.round(reviewAvg) ? "text-yellow-400 fill-yellow-400" : "text-gray-200 fill-gray-200")} />
                 ))}
               </div>
-              <p className="text-xs text-gray-400">Reviewed by {reviewCount.toLocaleString("en-IN")} {reviewCount === 1 ? "User" : "Users"}</p>
+              <p className="text-xs text-gray-400">
+                {hasRealReviews
+                  ? `Reviewed by ${reviewCount.toLocaleString("en-IN")} ${reviewCount === 1 ? "User" : "Users"}`
+                  : "No reviews yet"}
+              </p>
             </div>
           </div>
 

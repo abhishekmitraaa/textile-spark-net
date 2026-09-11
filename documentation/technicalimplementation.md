@@ -842,6 +842,12 @@ media and specs whenever the vendor left them empty — rendered as fiction on r
   `reviews_count` are not read here: they are correct where real reviews exist but hold
   never-reset seed values elsewhere (23 of 26 live listings; one vendor claims 4,800 reviews with
   none). Every listing card elsewhere in the app still reads them — known, not fixed in this pass.
+  **Update, Master Prompt 8 (2026-09-11):** the vendor half is now truthful. Migration
+  `20260911120000_vendor_review_aggregates_truthful.sql` recomputed `vendor_profiles.rating_avg` /
+  `reviews_count` from `reviews` (4,800 → 0 for that vendor), and `enforce_vendor_profile_admin_fields()`
+  now refuses any signed-in write to them, so `sync_vendor_rating()` (AFTER INSERT/UPDATE/DELETE on
+  `reviews`, SECURITY DEFINER) is their only writer. The product half is unchanged by decision: the
+  cards still read the seeded `products` columns.
 - **Four distinct states.** Loading (spinner), error (`ProductLoadError`, with Retry), not-found
   (`ProductNotFound`, identical for missing and RLS-blocked ids), and the product. A malformed id
   is caught by `UUID_RE` before any request, because PostgREST answers a non-uuid with an error

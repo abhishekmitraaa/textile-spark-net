@@ -76,6 +76,13 @@ Rules decided before or outside of Claude Code sessions.
   `vite.config.ts`'s `__DEMO_PASSWORDS__`, which is `null` in every build. A new fixture
   seed takes its password from `current_setting(...)`, never a literal. After any change
   near auth, build and `grep -rlF` each value over `dist/`: the answer must be 0.
+- **A reputation number has one writer, and no fallback** (Master Prompt 8, 2026-09-11).
+  `vendor_profiles.rating_avg` / `reviews_count` are written only by `sync_vendor_rating()`
+  on `reviews`; `enforce_vendor_profile_admin_fields()` refuses anyone signed in, admins
+  included. A surface with no real reviews shows none: "–" and "No reviews yet", never
+  4.5, never a seeded aggregate, never a demo breakdown. Product-level `rating_avg` /
+  `reviews_count` / `sold_count` are still seed values on the cards (Mitra's call); do
+  not add a new reader of them.
 
 ## Business Rules — Discovered/Decided During Development
 

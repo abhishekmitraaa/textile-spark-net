@@ -120,6 +120,33 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 — Master Prompt 8, Phase 2: vendor review aggregates (DB 10/10, guard 3/3, UI 3/3) + vendor page crash
+
+**DB, after the migration** — per vendor, shown vs a live `count(*)` / `avg` over `reviews`:
+`count_matches = true` on all 10 `vendor_profiles` rows. Lucknow Chikankari Co. 0 / 0 (was 4,800 / 4.7),
+Delhi Fashion Hub 0 (was 318), Jaipur Weaves 0 (was 192), Mumbai Linen House 0 (was 147), Demo Textiles
+Co. 5 / 4.4, Tirupur Textiles 4 / 4.8 (live avg 4.75; the column keeps one decimal).
+
+**Guard** (anon key, real sign-ins):
+
+| Case | Before the migration | After |
+|---|---|---|
+| demo-vendor sets its own `reviews_count` 5 → 10004, `rating_avg` → 5 | ACCEPTED (reverted) | `REFUSED 42501 rating_avg and reviews_count are computed from reviews and cannot be set directly` |
+| demo-admin (super_admin) sets a vendor's `reviews_count` | not tried | `REFUSED 42501` |
+| demo-vendor ordinary profile update (`about`, same value) | — | ok, 1 row |
+| demo-buyer edits own review 4 → 1, then back | — | aggregate 4.4 → 3.8 → 4.4: `sync_vendor_rating()` still writes |
+
+**UI** (Playwright against the dev server): Lucknow → `Reviews and Ratings –/5 No reviews yet`, "4,800"
+absent from the page; Demo Textiles → `4.4/5 Reviewed by 5 Users 5 Star 60% 4 Star 20% 3 Star 20% 2 Star 0%
+1 Star 0%`; `/home/new-arrivals` → 36 vendor links, none containing "0.0". 0 page errors.
+
+**Crash found on the way.** The first UI run timed out: `/vendor/:id` rendered an empty body. Page errors:
+`TypeError: Cannot read properties of undefined (reading 'capacity')` in `VendorProfile`, reproduced on
+the live deployment too (body text length 0). Not caused by this session's diff (0 changed lines mention
+`capacity`); introduced by `2279630`. Fixed with a `vendor &&` guard; the UI results above are after it.
+
+`npm run typecheck` → 0 errors. `npx eslint .` → `✖ 22 problems (5 errors, 17 warnings)`.
+
 ### 2026-09-11 — Master Prompt 8, Phase 1: credential rotation, bundle grep, env-credential specs 12/13
 
 **Rotation, proven by password grant** (`POST /auth/v1/token?grant_type=password`, anon key; token
