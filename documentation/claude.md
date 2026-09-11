@@ -347,6 +347,12 @@ undocumented. Deep technical rationale for each lives in
   id, then remove their storage objects. One active document per type, no stranded scan, and
   never a moment with no row. The rejection is kept in the `kyc_rejected` notification, not
   in a dead row.
+- **An identity document is uploaded when it is submitted, not when it is picked**
+  (Master Prompt 8, 2026-09-11). `/onboarding` is reachable by buyers on purpose, so a
+  pick-time upload put a PAN scan under an account with no vendor profile the moment a
+  buyer chose a file, and abandoning left it there. Onboarding holds `File` objects and
+  uploads at submit; a failed submit calls `discardUnreferencedKycUploads()`. Any new
+  identity-document input follows the same rule.
 - **Authorization for a moderation verdict goes INSIDE a SECURITY DEFINER function.** A
   client UPDATE that RLS denies matches zero rows and returns success. This repo has been
   bitten by that; `set_vendor_document_verified()` follows `set_account_status()` — same

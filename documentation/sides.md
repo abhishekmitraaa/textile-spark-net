@@ -210,7 +210,8 @@ rather than a supplier directory.
   PAN, GST and CIN each have a number field **and** a document upload into the private
   `business-docs` bucket; GST and CIN are optional (not every vendor is registered for GST,
   and only MCA-registered companies and LLPs have a CIN). **Aadhaar is deliberately not
-  collected** — see the Aadhaar rule in `claude.md`.
+  collected** — see the Aadhaar rule in `claude.md`. Scans are attached during onboarding
+  and uploaded only when the registration is submitted, so abandoning it stores nothing.
   A **rejected** document can be replaced on `/kyc` (2026-09-11): the new scan goes back
   into the admin's queue as "awaiting review", and the rejected one is removed. Adding a
   document type the vendor never submitted still goes through support.

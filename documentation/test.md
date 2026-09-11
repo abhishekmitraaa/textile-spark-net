@@ -121,6 +121,17 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 — Master Prompt 8, Phase 4: KYC uploads at submit — onboarding write-path 3/3
+
+`npx playwright test tests/vendor-onboarding-write-path.spec.ts` → **3 passed** (8.1, 8.3–8.4, 8.7).
+New in 8.1: with PAN, GST and CIN attached (rows read "Attached · uploaded when you submit") and
+BEFORE submit, `storage.from("business-docs").list("<demo-buyer>/kyc")` → **0 objects**. After submit the
+existing assertions pass: PAN, GST and CIN `file_url` are private storage paths whose signed URLs resolve.
+Before the run, a SQL sweep found no existing orphans: every `business-docs/*/kyc` object belonged to a
+vendor profile and was referenced by a row. Afterwards `restore-demo-buyer-fixture.mjs` →
+`onboarding_complete: false, vendor_documents: 0, products: 0, active_role: 'buyer'`; the run's
+`product-images` leftovers (the spec's known teardown gap) were removed as demo-buyer.
+
 ### 2026-09-11 — Master Prompt 8, Phase 3: KYC re-upload 1/1, /kyc 1/1, onboarding write-path 3/3
 
 `npx playwright test tests/mp8-kyc-reupload.spec.ts tests/vendor-my-store.spec.ts -g "P3 a rejected PAN|/kyc reads vendor_documents"`

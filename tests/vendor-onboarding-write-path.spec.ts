@@ -260,7 +260,7 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   // is PAN, in DOM order.
   const kycInputs = page.locator('input[accept="image/*,application/pdf"]');
   await kycInputs.nth(0).setInputFiles(file("pan-card.png"));
-  await expect(page.getByText("Uploaded · awaiting review")).toBeVisible({ timeout: 40_000 });
+  await expect(page.getByText("Attached · uploaded when you submit")).toBeVisible();
 
   // GST — the number AND the certificate. `file_url` used to be hardcoded null
   // for this type, so an admin ruled on a string the vendor typed.
@@ -273,7 +273,15 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   await expect(page.locator("#cin-number")).toBeVisible();
   await page.locator("#cin-number").fill(FORM.cin);
   await kycInputs.nth(2).setInputFiles(file("incorporation-certificate.png"));
-  await expect(page.getByText("Uploaded · awaiting review")).toHaveCount(3, { timeout: 40_000 });
+  await expect(page.getByText("Attached · uploaded when you submit")).toHaveCount(3);
+
+  // Master Prompt 8, Phase 4: attaching a scan uploads NOTHING. Until submit
+  // the three files live only in the page, so a buyer who abandons onboarding
+  // here leaves no identity document in business-docs, with no vendor profile
+  // and no page to find it from. They upload at submit; the file_url
+  // assertions after submit below prove that half.
+  const { data: beforeSubmit } = await (await signedInDb()).storage.from("business-docs").list(`${VENDOR_ID}/kyc`);
+  expect(beforeSubmit ?? [], "no KYC object exists before submit").toHaveLength(0);
 
   // Aadhaar is deliberately absent from this step and from the step-1 checklist.
   await expect(page.getByText(/aadhaar/i)).toHaveCount(0);

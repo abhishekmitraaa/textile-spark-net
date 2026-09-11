@@ -26,6 +26,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
 import {
   saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage, uploadSignature,
+  discardUnreferencedKycUploads,
 } from "@/lib/queries/vendorOnboarding";
 import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
@@ -56,12 +57,11 @@ const onboardingMenuLinks = [
  * must not imply it has.
  */
 function KycDocumentUpload({
-  label, url, name, uploading, onPick, onRemove,
+  label, attached, name, onPick, onRemove,
 }: {
   label: string;
-  url: string | null;
+  attached: boolean;
   name: string;
-  uploading: boolean;
   onPick: () => void;
   onRemove: () => void;
 }) {
@@ -69,17 +69,16 @@ function KycDocumentUpload({
     <div className="space-y-2">
       <button
         type="button"
-        disabled={uploading}
         onClick={onPick}
         className="block w-full rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-5 text-center disabled:opacity-60"
       >
         <UploadIcon className="mx-auto h-6 w-6 text-[#256fef]" />
         <p className="mt-2 text-sm font-semibold text-[#256fef]">
-          {uploading ? "Uploading…" : url ? `Replace ${label}` : `Upload ${label}`}
+          {attached ? `Replace ${label}` : `Upload ${label}`}
         </p>
         <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf — optional</p>
       </button>
-      {url && (
+      {attached && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
@@ -87,7 +86,7 @@ function KycDocumentUpload({
             </span>
             <div className="min-w-0">
               <p className="truncate text-xs font-semibold text-[#363636]">{name || label}</p>
-              <p className="text-[10px] text-[#363636]/60">Uploaded · awaiting review</p>
+              <p className="text-[10px] text-[#363636]/60">Attached · uploaded when you submit</p>
             </div>
           </div>
           <button
@@ -167,18 +166,20 @@ export default function Onboarding() {
   const [gstin, setGstin] = useState("");
   const [panFullName, setPanFullName] = useState("");
   const [panAddress, setPanAddress] = useState("");
-  const [panDocumentUrl, setPanDocumentUrl] = useState<string | null>(null);
+  // KYC scans are held here as File objects and uploaded only when the
+  // registration is submitted (Master Prompt 8, Phase 4). They used to upload
+  // the moment a file was picked, under the user's own id, so a buyer who
+  // abandoned onboarding left an identity document in business-docs with no
+  // vendor profile and no page that could show or delete it.
+  const [panDocumentFile, setPanDocumentFile] = useState<File | null>(null);
   const [panDocumentName, setPanDocumentName] = useState("");
   // GST certificate and certificate of incorporation. These used to be numbers
   // with no document behind them — vendor_documents wrote file_url: null for
   // both, so an admin approved or rejected a string the vendor typed.
-  const [gstDocumentUrl, setGstDocumentUrl] = useState<string | null>(null);
+  const [gstDocumentFile, setGstDocumentFile] = useState<File | null>(null);
   const [gstDocumentName, setGstDocumentName] = useState("");
-  const [uploadingGstDocument, setUploadingGstDocument] = useState(false);
-  const [cinDocumentUrl, setCinDocumentUrl] = useState<string | null>(null);
+  const [cinDocumentFile, setCinDocumentFile] = useState<File | null>(null);
   const [cinDocumentName, setCinDocumentName] = useState("");
-  const [uploadingCinDocument, setUploadingCinDocument] = useState(false);
-  const [uploadingPanDocument, setUploadingPanDocument] = useState(false);
   const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
   const [documentsSuccess, setDocumentsSuccess] = useState(false);
 
@@ -284,47 +285,39 @@ export default function Onboarding() {
   };
 
   /**
-   * One KYC upload handler for all document types.
+   * One KYC file-pick handler for all document types.
    *
-   * Every scan goes through `uploadKycDocument()`, which enforces the
-   * `business-docs` bucket and the `${vendorId}/kyc/…` path shape that
-   * `business_docs_owner_select` keys on. Written once rather than copied per
-   * document type so a new document cannot quietly acquire a different bucket
-   * or path.
+   * Picking only ATTACHES the file, checked against the "jpeg, png or pdf, up to
+   * 5MB" the copy promises. Nothing is uploaded until submit, where every scan
+   * goes through `uploadKycDocument()`: the one function that enforces the
+   * `business-docs` bucket and the `${vendorId}/kyc/…` path that
+   * `business_docs_owner_select` keys on.
    */
-  const makeKycUploadHandler = (
+  const KYC_TYPES = /^(image\/(jpeg|png)|application\/pdf)$/;
+  const MAX_KYC_BYTES = 5 * 1024 * 1024;
+  const makeKycFileHandler = (
     label: string,
-    setUrl: (v: string | null) => void,
+    setFile: (v: File | null) => void,
     setName: (v: string) => void,
-    setUploading: (v: boolean) => void,
-  ) => async (e: React.ChangeEvent<HTMLInputElement>) => {
+  ) => (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!requireSession(label)) return;
-    setUploading(true);
-    try {
-      const url = await uploadKycDocument(user!.id, file);
-      setUrl(url);
-      setName(file.name);
-    } catch (err) {
-      toast.error(`Couldn't upload ${label}`, {
-        description: err instanceof Error ? err.message : String(err),
-      });
-    } finally {
-      setUploading(false);
+    if (!KYC_TYPES.test(file.type)) {
+      toast.error(`Use a JPEG, PNG or PDF for ${label}`, { description: `${file.name} is not one of those formats.` });
+      return;
     }
+    if (file.size > MAX_KYC_BYTES) {
+      toast.error(`That file for ${label} is over 5 MB`, { description: "Scan or export it at a lower resolution and try again." });
+      return;
+    }
+    setFile(file);
+    setName(file.name);
   };
 
-  const handlePanDocumentFile = makeKycUploadHandler(
-    "your PAN", setPanDocumentUrl, setPanDocumentName, setUploadingPanDocument,
-  );
-  const handleGstDocumentFile = makeKycUploadHandler(
-    "your GST certificate", setGstDocumentUrl, setGstDocumentName, setUploadingGstDocument,
-  );
-  const handleCinDocumentFile = makeKycUploadHandler(
-    "your incorporation certificate", setCinDocumentUrl, setCinDocumentName, setUploadingCinDocument,
-  );
+  const handlePanDocumentFile = makeKycFileHandler("your PAN", setPanDocumentFile, setPanDocumentName);
+  const handleGstDocumentFile = makeKycFileHandler("your GST certificate", setGstDocumentFile, setGstDocumentName);
+  const handleCinDocumentFile = makeKycFileHandler("your incorporation certificate", setCinDocumentFile, setCinDocumentName);
 
   const MAX_PRODUCT_IMAGES = 6;
   const handleProductImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -440,6 +433,17 @@ export default function Onboarding() {
 
     setSubmitting(true);
     setSubmitError(null);
+    // KYC scans upload now, at submit (see the state comment above). GST and
+    // CIN only when their number is given: saveVendorOnboarding() writes no row
+    // for a type without a number, so uploading one would be exactly the
+    // orphan this avoids.
+    const kycUploads: string[] = [];
+    const uploadKyc = async (f: File | null): Promise<string | undefined> => {
+      if (!f) return undefined;
+      const path = await uploadKycDocument(user.id, f);
+      kycUploads.push(path);
+      return path;
+    };
     try {
       // The drawn signature, if there is one, goes to private storage first —
       // saveVendorOnboarding stores a path, never a data: URL.
@@ -447,6 +451,10 @@ export default function Onboarding() {
       if (manualSignatureDataUrl) {
         signatureUrl = await uploadSignature(user.id, manualSignatureDataUrl);
       }
+
+      const panFileUrl = await uploadKyc(pan.trim() ? panDocumentFile : null);
+      const gstFileUrl = await uploadKyc(hasGstin && gstin.trim() ? gstDocumentFile : null);
+      const cinFileUrl = await uploadKyc(cin.trim() ? cinDocumentFile : null);
 
       await saveVendorOnboarding(user.id, {
         businessName: businessName || contractName,
@@ -468,9 +476,9 @@ export default function Onboarding() {
         aadhaar: aadhaar || undefined,
         category: businessCategories.length ? businessCategories : undefined,
         officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
-        panFileUrl: panDocumentUrl ?? undefined,
-        gstFileUrl: gstDocumentUrl ?? undefined,
-        cinFileUrl: cinDocumentUrl ?? undefined,
+        panFileUrl,
+        gstFileUrl,
+        cinFileUrl,
         contract: { signedName: contractName.trim(), signatureUrl },
         product: productName
           ? {
@@ -488,6 +496,9 @@ export default function Onboarding() {
           : undefined,
       });
     } catch (err) {
+      // A scan this attempt uploaded that no row points at would be an orphan
+      // identity document. Remove those; a retry uploads afresh.
+      await discardUnreferencedKycUploads(user.id, kycUploads);
       // Same reasoning as the signed-out case: a write that failed is a
       // registration that does not exist, so it must not look like one that
       // succeeded. Everything typed stays on screen and Submit can be retried.
@@ -635,14 +646,11 @@ export default function Onboarding() {
     pan.trim().length > 0 &&
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
-    panDocumentUrl !== null &&
-    !uploadingPanDocument &&
     // GST and CIN are OPTIONAL — not every vendor is registered for GST and
     // only incorporated entities have a CIN (there is no entity-type field in
-    // this form to infer it from). But a half-finished upload must not be
-    // submitted, so block only while one is in flight.
-    !uploadingGstDocument &&
-    !uploadingCinDocument;
+    // this form to infer it from). Nothing uploads on this step any more (files
+    // are attached, then uploaded at submit), so there is no upload to wait on.
+    panDocumentFile !== null;
 
   if (showWelcome) {
     return (
@@ -1956,13 +1964,12 @@ export default function Onboarding() {
                 <div className="space-y-3 rounded-2xl border border-[#d0d4dc] p-4">
                   <button
                     type="button"
-                    disabled={uploadingPanDocument}
                     className="block w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center disabled:opacity-60"
                     onClick={() => panDocumentInputRef.current?.click()}
                   >
                     <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
                     <p className="mt-3 font-semibold text-[#256fef]">
-                      {uploadingPanDocument ? "Uploading…" : panDocumentUrl ? "Replace your PAN" : "Upload your PAN"}
+                      {panDocumentFile ? "Replace your PAN" : "Upload your PAN"}
                     </p>
                     <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf formats up to 5MB</p>
                   </button>
@@ -1973,7 +1980,7 @@ export default function Onboarding() {
                       an <img> — which paints a broken-image glyph for the PDF
                       the copy above invites — and none of them were uploaded
                       anywhere, so vendor_documents.file_url was always null. */}
-                  {panDocumentUrl && (
+                  {panDocumentFile && (
                     <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
@@ -1981,14 +1988,14 @@ export default function Onboarding() {
                         </span>
                         <div className="min-w-0">
                           <p className="truncate text-xs font-semibold text-[#363636]">{panDocumentName || "PAN document"}</p>
-                          <p className="text-[10px] text-[#363636]/60">Uploaded · awaiting review</p>
+                          <p className="text-[10px] text-[#363636]/60">Attached · uploaded when you submit</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         aria-label="Remove PAN document"
                         className="shrink-0 rounded-full p-1 text-[#363636]/60 hover:bg-[#f5f5f5]"
-                        onClick={() => { setPanDocumentUrl(null); setPanDocumentName(""); }}
+                        onClick={() => { setPanDocumentFile(null); setPanDocumentName(""); }}
                       >
                         <X className="h-4 w-4" />
                       </button>
@@ -2049,11 +2056,10 @@ export default function Onboarding() {
                       />
                       <KycDocumentUpload
                         label="GST certificate"
-                        url={gstDocumentUrl}
+                        attached={gstDocumentFile !== null}
                         name={gstDocumentName}
-                        uploading={uploadingGstDocument}
                         onPick={() => gstDocumentInputRef.current?.click()}
-                        onRemove={() => { setGstDocumentUrl(null); setGstDocumentName(""); }}
+                        onRemove={() => { setGstDocumentFile(null); setGstDocumentName(""); }}
                       />
                     </>
                   )}
@@ -2079,11 +2085,10 @@ export default function Onboarding() {
                   {cin.trim().length > 0 && (
                     <KycDocumentUpload
                       label="incorporation certificate"
-                      url={cinDocumentUrl}
+                      attached={cinDocumentFile !== null}
                       name={cinDocumentName}
-                      uploading={uploadingCinDocument}
                       onPick={() => cinDocumentInputRef.current?.click()}
-                      onRemove={() => { setCinDocumentUrl(null); setCinDocumentName(""); }}
+                      onRemove={() => { setCinDocumentFile(null); setCinDocumentName(""); }}
                     />
                   )}
                 </div>

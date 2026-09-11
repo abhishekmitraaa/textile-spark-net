@@ -330,6 +330,30 @@ export async function uploadKycDocument(vendorId: string, file: File): Promise<s
 }
 
 /**
+ * After a FAILED onboarding submit: remove the KYC scans that submit uploaded
+ * but that no `vendor_documents` row points at (Master Prompt 8, Phase 4).
+ *
+ * Only unreferenced ones: saveVendorOnboarding() can fail AFTER it has written
+ * the document rows (for example on the product insert), and removing those
+ * objects would leave live rows pointing at missing files. A referenced upload
+ * is superseded, and removed, by the next successful submit.
+ */
+export async function discardUnreferencedKycUploads(vendorId: string, paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  const { data } = await supabase
+    .from("vendor_documents")
+    .select("file_url")
+    .eq("vendor_id", vendorId)
+    .in("file_url", paths);
+  const referenced = new Set((data ?? []).map((d) => d.file_url as string));
+  const loose = paths.filter((p) => !referenced.has(p));
+  if (loose.length) {
+    const { error } = await supabase.storage.from(KYC_BUCKET).remove(loose);
+    if (error) console.warn("[vendorOnboarding] unreferenced KYC uploads not removed:", error.message);
+  }
+}
+
+/**
  * /kyc: replace a REJECTED document with a new scan (Master Prompt 8, Phase 3).
  *
  * Until this existed a rejected vendor had no way back: /kyc said "contact
