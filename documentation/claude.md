@@ -285,6 +285,11 @@ undocumented. Deep technical rationale for each lives in
   when a real, consenting customer supplied it; rewording an invented quote does not make it
   real. Same rule for imagery: nothing hotlinked from a placeholder service, and an image the
   project does not own is replaced with nothing, not with another placeholder.
+- **Curated is not trending (2026-09-11).** A surface that shows hand-picked content must say so
+  ("curated", "suggested") and must not print numbers that imply measurement — search growth,
+  "top sellers", trend deltas — unless a real data source produces them. `/home/trends` carried
+  invented "↑ 800%" keyword growth and a "Top Brands" list of brands that do not exist; both are
+  gone, and the page is labelled "Curated trend picks" until a real trends job exists.
 - **A registration that was not saved must never look like one that was.** `/onboarding`'s
   submit used to show "Welcome to Cosora" unconditionally — a signed-out vendor completed
   eight steps and wrote nothing anywhere. A missing session or a failed write now blocks on

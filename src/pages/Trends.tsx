@@ -53,149 +53,72 @@ interface CompactProduct {
   secondaryImage: string;
 }
 
-function makeProduct(seed: string, rating: number, enquiries: string): CompactProduct {
-  return {
-    id: seed,
-    vendorId: `v-${seed}`,
-    name: "Product name",
-    manufacturer: "Manufacturer",
-    location: "Bangalore",
-    price: "₹499",
-    moq: "MOQ: 2",
-    soldCount: "800+ sold",
-    enquiries,
-    rating,
-    fabric: "Cotton",
-    gsm: "200",
-    fitType: "Regular",
-    image: img(seed),
-    secondaryImage: img(`${seed}-b`),
-  };
-}
-
-// Six top-selling products for a given brand, seeded so each brand gets distinct imagery.
-function brandProducts(brandId: string): CompactProduct[] {
-  return Array.from({ length: 6 }, (_, i) =>
-    makeProduct(`${brandId}-p${i}`, 4.0 + (i % 3) * 0.1, i % 2 === 0 ? "5.6k" : "1.6k")
-  );
-}
+// makeProduct() and brandProducts() lived here. They generated cards named
+// literally "Product name" with alternating "5.6k"/"1.6k" figures and a fixed
+// "800+ sold", and fed three sections of this page. Deleted — see below.
 
 // ─────────────────────────────────────────────────────────────
 // DATA
 //
-// All "trending" content below (categories, hot keywords, styled trends)
-// is mock data. In production these would be refreshed from a trends job
-// (e.g. Google Trends) on a schedule, not hardcoded — see the inline
-// comments marking each fetch boundary.
+// EDITORIAL, NOT DATA. The categories, looks and suggested searches below are
+// chosen by hand. No trends job exists in this codebase (there is no Google
+// Trends integration, no search-volume log), so nothing on this page may
+// claim to be live, trending or measured — it is labelled "curated". Building
+// a real trends pipeline is logged in documentation/ToDo.md as a future
+// feature. Product cards on this page come ONLY from the real catalogue.
 // ─────────────────────────────────────────────────────────────
-
-interface Brand {
-  id: string;
-  name: string;
-  logo: string;
-  badge?: number;
-}
 
 interface TrendCategory {
   id: string;
   label: string;
   hashtag: string;
   thumb: string;
-  featured: { image: string; sub: string; moq: string; price: string };
-  brands: Brand[];
+  featured: { image: string; sub: string };
 }
 
-// FETCH BOUNDARY: trending categories — keywords fetched from Google Trends.
+// EDITORIAL (no trends job exists — see ToDo.md): trending categories — keywords fetched from Google Trends.
 const CATEGORIES: TrendCategory[] = [
   {
     id: "denim",
     label: "Denim",
     hashtag: "Denim",
     thumb: img("trend-cat-denim", 80, 80),
-    featured: { image: img("trend-feat-denim", 700, 900), sub: "Jeans", moq: "MOQ: 10", price: "$16.22" },
-    brands: [
-      { id: "blessing", name: "BLESSING", logo: img("brand-blessing", 80, 80) },
-      { id: "favor", name: "favor", logo: img("brand-favor", 80, 80) },
-      { id: "imhere", name: "imhere", logo: img("brand-imhere", 80, 80) },
-      { id: "jholic", name: "J.Holic", logo: img("brand-jholic", 80, 80) },
-      { id: "ootj", name: "OOTJ", logo: img("brand-ootj", 80, 80) },
-      { id: "denimly", name: "Denimly", logo: img("brand-denimly", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-denim", 700, 900), sub: "Jeans" },
   },
   {
     id: "long-dress",
     label: "Long Dress",
     hashtag: "LongDress",
     thumb: img("trend-cat-long", 80, 80),
-    featured: { image: img("trend-feat-long", 700, 900), sub: "Maxi Dress", moq: "MOQ: 5", price: "$22.40" },
-    brands: [
-      { id: "aria", name: "ARIA", logo: img("brand-aria", 80, 80) },
-      { id: "lumen", name: "Lumen", logo: img("brand-lumen", 80, 80) },
-      { id: "verde", name: "Verde", logo: img("brand-verde", 80, 80) },
-      { id: "noor", name: "Noor", logo: img("brand-noor", 80, 80) },
-      { id: "elan", name: "Élan", logo: img("brand-elan", 80, 80) },
-      { id: "solstice", name: "Solstice", logo: img("brand-solstice", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-long", 700, 900), sub: "Maxi Dress" },
   },
   {
     id: "short-tee",
     label: "Short-sleeved T-shirt",
     hashtag: "Tshirt",
     thumb: img("trend-cat-tee", 80, 80),
-    featured: { image: img("trend-feat-tee", 700, 900), sub: "T-shirts/Tops", moq: "MOQ: 10", price: "$10.32" },
-    brands: [
-      { id: "force", name: "FORCE", logo: img("brand-force", 80, 80) },
-      { id: "sinsang", name: "Sinsang", logo: img("brand-sinsang", 80, 80) },
-      { id: "theot", name: "THEOT", logo: img("brand-theot", 80, 80) },
-      { id: "kept", name: "Kept", logo: img("brand-kept", 80, 80) },
-      { id: "basiq", name: "BASIQ", logo: img("brand-basiq", 80, 80) },
-      { id: "coreline", name: "Coreline", logo: img("brand-coreline", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-tee", 700, 900), sub: "T-shirts/Tops" },
   },
   {
     id: "pleats",
     label: "Pleats",
     hashtag: "pleats",
     thumb: img("trend-cat-pleats", 80, 80),
-    featured: { image: img("trend-feat-pleats", 700, 900), sub: "Pleated Dress", moq: "MOQ: 5", price: "$18.90" },
-    brands: [
-      { id: "young-pleats", name: "young pleats by...", logo: img("brand-youngpleats", 80, 80) },
-      { id: "sono", name: "SONO", logo: img("brand-sono", 80, 80) },
-      { id: "thirty30", name: "THIRTY 30", logo: img("brand-thirty30", 80, 80), badge: 19 },
-      { id: "hana", name: "Hana", logo: img("brand-hana", 80, 80) },
-      { id: "suho", name: "Suho", logo: img("brand-suho", 80, 80) },
-      { id: "fold", name: "Fold Atelier", logo: img("brand-fold", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-pleats", 700, 900), sub: "Pleated Dress" },
   },
   {
     id: "cargo",
     label: "Cargo",
     hashtag: "Cargo",
     thumb: img("trend-cat-cargo", 80, 80),
-    featured: { image: img("trend-feat-cargo", 700, 900), sub: "Cargo Pants", moq: "MOQ: 8", price: "$14.88" },
-    brands: [
-      { id: "utility", name: "Utility Co.", logo: img("brand-utility", 80, 80) },
-      { id: "drift", name: "Drift", logo: img("brand-drift", 80, 80) },
-      { id: "range", name: "Range", logo: img("brand-range", 80, 80) },
-      { id: "fieldgear", name: "Field Gear", logo: img("brand-fieldgear", 80, 80) },
-      { id: "trailmark", name: "Trailmark", logo: img("brand-trailmark", 80, 80) },
-      { id: "basecamp", name: "Basecamp Co.", logo: img("brand-basecamp", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-cargo", 700, 900), sub: "Cargo Pants" },
   },
   {
     id: "knitwear",
     label: "Knitwear",
     hashtag: "Knitwear",
     thumb: img("trend-cat-knit", 80, 80),
-    featured: { image: img("trend-feat-knit", 700, 900), sub: "Knit Sets", moq: "MOQ: 6", price: "$12.30" },
-    brands: [
-      { id: "wooly", name: "Wooly", logo: img("brand-wooly", 80, 80) },
-      { id: "queens", name: "Queen's Square", logo: img("brand-queens", 80, 80) },
-      { id: "loom", name: "Loom", logo: img("brand-loom", 80, 80) },
-      { id: "purl", name: "Purl & Co.", logo: img("brand-purl", 80, 80) },
-      { id: "cableknit", name: "Cableknit", logo: img("brand-cableknit", 80, 80) },
-      { id: "merino", name: "Merino House", logo: img("brand-merino", 80, 80) },
-    ],
+    featured: { image: img("trend-feat-knit", 700, 900), sub: "Knit Sets" },
   },
 ];
 
@@ -204,65 +127,56 @@ interface StyledTrend {
   image: string;
   title: string;
   tags: string[];
-  moq: string;
-  suggestions: CompactProduct[];
 }
 
-// FETCH BOUNDARY: "Hot Trends, Styled for You" — refreshed via "View More Styles".
+// EDITORIAL (no trends job exists — see ToDo.md): "Hot Trends, Styled for You" — refreshed via "View More Styles".
 const STYLED_TRENDS: StyledTrend[] = [
   {
     id: "st1",
     image: img("styled-tee-gray", 800, 1000),
     title: "T-shirts/Tops",
     tags: ["#Screen printing", "#Gray"],
-    moq: "MOQ: 10",
-    suggestions: brandProducts("styled-1").slice(0, 3),
   },
   {
     id: "st2",
     image: img("styled-dress-floral", 800, 1000),
     title: "Floral Midi Dress",
     tags: ["#Summer", "#Linen"],
-    moq: "MOQ: 5",
-    suggestions: brandProducts("styled-2").slice(0, 3),
   },
   {
     id: "st3",
     image: img("styled-denim-wide", 800, 1000),
     title: "Wide-Leg Denim",
     tags: ["#Vintage wash", "#Relaxed"],
-    moq: "MOQ: 8",
-    suggestions: brandProducts("styled-3").slice(0, 3),
   },
 ];
 
-// FETCH BOUNDARY: "Hot Keywords" — trend deltas fetched from Google Trends.
-const APPAREL_GROUPS = ["Women's Apparel/Simple", "Men's Apparel/Casual", "Kids/Everyday", "Accessories/Trending"];
+// EDITORIAL (no trends job exists — see ToDo.md): "Hot Keywords" — trend deltas fetched from Google Trends.
+const APPAREL_GROUPS = ["Women's Apparel/Simple", "Men's Apparel/Casual", "Kids/Everyday", "Accessories"];
 
 interface HotKeyword {
   label: string;
-  delta?: string;
   thumb: string;
 }
 
 const HOT_KEYWORDS: Record<string, HotKeyword[]> = {
   "Women's Apparel/Simple": [
-    { label: "rugby tee", delta: "↑ 800%", thumb: img("hk-rugby", 80, 80) },
+    { label: "rugby tee", thumb: img("hk-rugby", 80, 80) },
     { label: "V-neck T-shirt", thumb: img("hk-vneck", 80, 80) },
     { label: "pinafore", thumb: img("hk-pinafore", 80, 80) },
-    { label: "boat neck", delta: "↑ 220%", thumb: img("hk-boatneck", 80, 80) },
+    { label: "boat neck", thumb: img("hk-boatneck", 80, 80) },
   ],
   "Men's Apparel/Casual": [
-    { label: "camp collar", delta: "↑ 540%", thumb: img("hk-camp", 80, 80) },
+    { label: "camp collar", thumb: img("hk-camp", 80, 80) },
     { label: "linen shirt", thumb: img("hk-linen", 80, 80) },
-    { label: "oversized tee", delta: "↑ 310%", thumb: img("hk-oversized", 80, 80) },
+    { label: "oversized tee", thumb: img("hk-oversized", 80, 80) },
   ],
   "Kids/Everyday": [
-    { label: "co-ord set", delta: "↑ 400%", thumb: img("hk-coord", 80, 80) },
+    { label: "co-ord set", thumb: img("hk-coord", 80, 80) },
     { label: "dungarees", thumb: img("hk-dungaree", 80, 80) },
   ],
-  "Accessories/Trending": [
-    { label: "bucket hat", delta: "↑ 600%", thumb: img("hk-bucket", 80, 80) },
+  "Accessories": [
+    { label: "bucket hat", thumb: img("hk-bucket", 80, 80) },
     { label: "canvas tote", thumb: img("hk-tote", 80, 80) },
   ],
 };
@@ -353,30 +267,23 @@ const Trends = () => {
   const t = useT();
 
   const [categoryId, setCategoryId] = useState(CATEGORIES[0].id);
-  const [brandId, setBrandId] = useState(CATEGORIES[0].brands[0].id);
   const [styledIndex, setStyledIndex] = useState(0);
   const [styledSpin, setStyledSpin] = useState(false);
   const [apparelGroup, setApparelGroup] = useState(APPAREL_GROUPS[0]);
   const [groupOpen, setGroupOpen] = useState(false);
-  const [hotKeyword, setHotKeyword] = useState(HOT_KEYWORDS[APPAREL_GROUPS[0]][0].label);
   const [feedBatches, setFeedBatches] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
-  const savedState = useSaved();
   const categoryChipsDrag = useDragScroll<HTMLDivElement>();
 
   // Real catalogue, trending-sorted. The product-card grids below render these;
   // the trend chrome (categories / keywords / styled heroes) stays curated.
-  const { data: live } = useLiveProducts();
+  const { data: live, isPending: livePending, isError: liveError, refetch: refetchLive } = useLiveProducts();
   const trending = useMemo(() => (live && live.length ? sortTrending(live) : []), [live]);
   const hasLive = trending.length > 0;
 
   const category = useMemo(() => CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES[0], [categoryId]);
-  const selectedBrand = useMemo(
-    () => category.brands.find((b) => b.id === brandId) ?? category.brands[0],
-    [category, brandId]
-  );
   const styled = STYLED_TRENDS[styledIndex];
   const keywords = HOT_KEYWORDS[apparelGroup] ?? [];
 
@@ -384,13 +291,11 @@ const Trends = () => {
     const next = CATEGORIES.find((c) => c.id === id);
     if (!next) return;
     setCategoryId(id);
-    setBrandId(next.brands[0].id); // reset brand selection to the first brand of the new category
   };
 
   const selectGroup = (group: string) => {
     setApparelGroup(group);
     setGroupOpen(false);
-    setHotKeyword(HOT_KEYWORDS[group]?.[0]?.label ?? "");
   };
 
   const refreshStyles = () => {
@@ -399,16 +304,13 @@ const Trends = () => {
     window.setTimeout(() => setStyledSpin(false), 500);
   };
 
-  // Bottom feed: keyword seeds the imagery so switching Hot Keywords visibly
-  // changes the products. Infinite scroll appends batches.
-  const feedProducts = useMemo(() => {
-    // Real catalogue paginates by batch; fall back to seeded imagery only until it loads.
-    if (hasLive) return trending.slice(0, feedBatches * 6).map(toCompact);
-    const slug = hotKeyword.replace(/\s+/g, "-").toLowerCase();
-    return Array.from({ length: feedBatches }, (_, b) =>
-      Array.from({ length: 4 }, (_, i) => makeProduct(`feed-${slug}-${b}-${i}`, 3.8 + (i % 3) * 0.15, i % 2 === 0 ? "5.6k" : "1.6k"))
-    ).flat();
-  }, [hasLive, trending, hotKeyword, feedBatches]);
+  // Bottom feed: the real catalogue, trending-sorted, paginated by batch. An
+  // empty catalogue is EMPTY — this used to generate cards whenever there was
+  // nothing real to show, including during every initial load.
+  const feedProducts = useMemo(
+    () => trending.slice(0, feedBatches * 6).map(toCompact),
+    [trending, feedBatches],
+  );
 
   // Interleave a Submit Requirement card every 5 rows, different per breakpoint:
   // every 10 products on mobile (2-col) and every 20 on desktop (4-col). Cards at
@@ -433,11 +335,6 @@ const Trends = () => {
       );
     }
   });
-
-  // Reset the feed back to one batch whenever the hot keyword changes.
-  useEffect(() => {
-    setFeedBatches(1);
-  }, [hotKeyword]);
 
   // Infinite scroll observer.
   useEffect(() => {
@@ -487,11 +384,13 @@ const Trends = () => {
 
         {/* ── NEW TREND INSIGHTS ── */}
         <div className="text-center pt-1 lg:pt-2">
-          <h1 className="text-base lg:text-4xl font-extrabold tracking-tight text-gray-900">NEW TREND INSIGHTS</h1>
-          <p className="text-xs lg:text-lg text-gray-500 mt-0.5 lg:mt-2">Discover Trending Arrivals for You</p>
+          {/* Was "NEW TREND INSIGHTS — Discover Trending Arrivals for You". There is
+              no trends pipeline behind this page, so it does not claim one. */}
+          <h1 className="text-base lg:text-4xl font-extrabold tracking-tight text-gray-900">CURATED TREND PICKS</h1>
+          <p className="text-xs lg:text-lg text-gray-500 mt-0.5 lg:mt-2">Editor-picked looks. Tap one to browse real listings on Cosora.</p>
         </div>
 
-        {/* ── Trending category chips (slides horizontally; keywords from Google Trends) ──
+        {/* ── Curated category chips (editorial; no trends data source exists) ──
              Outer div is the actual scroll viewport; inner row gets lg:w-max lg:mx-auto so
              it centers on desktop when it fits (same pattern as the New Arrivals categories
              slider) instead of hugging the left edge. Chips are also sized up for desktop. */}
@@ -538,30 +437,16 @@ const Trends = () => {
             >
               <img src={category.featured.image} alt={category.label} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-              <button
-                onClick={(e) => {
-                  e.preventDefault();
-                  openSaveModal({
-                    id: `featured-${category.id}`,
-                    name: category.featured.sub,
-                    category: category.label,
-                    price: category.featured.price,
-                    moq: category.featured.moq,
-                    image: category.featured.image,
-                  });
-                }}
-                className="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-                aria-label={savedState.products[`featured-${category.id}`] ? "Edit saved folders" : "Save"}
-              >
-                {savedState.products[`featured-${category.id}`] ? <BookmarkCheck className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-4 h-4 text-gray-600" />}
-              </button>
+              {/* No Save button and no price or MOQ: this is a curated image, not
+                  a product. It used to save itself into the buyer's collections as
+                  "featured-denim" at an invented USD price ($16.22). */}
               <div className="absolute bottom-3 left-3 text-white drop-shadow">
                 <p className="text-sm font-bold">{category.featured.sub}</p>
-                <p className="text-xs font-semibold">{category.featured.moq} · {category.featured.price}</p>
+                <p className="text-xs font-semibold">Browse {category.label}</p>
               </div>
             </Link>
 
-            {["More Looks", "Also Trending"].map((label, n) => (
+            {["More Looks", "Explore More"].map((label, n) => (
               <Link
                 key={label}
                 to={`/search/results?q=${encodeURIComponent(category.label)}`}
@@ -586,98 +471,39 @@ const Trends = () => {
           </button>
         </div>
 
-        {/* ── Top Brands for #hashtag — selecting a brand shows its top products ── */}
+        {/* "Top Brands for #hashtag" was here: six invented brand names per
+            category ("BLESSING", "favor", "J.Holic", ...) with picsum logos, none
+            of them a vendor on Cosora. With a live catalogue its grid showed the
+            SAME three real products whichever invented brand was tapped — real
+            listings attributed to brands that do not exist — and "Visit Brand"
+            opened /vendor/blessing, which does not exist either. There is no real
+            per-trend brand data to wire it to, so the section is removed. */}
+
+        {/* ── Curated looks ── */}
         <div>
-          <h2 className="text-sm lg:text-lg font-bold text-gray-900 mb-3">
-            Top Brands for <span className="text-[#ef4d62]">#{category.hashtag}</span>
-          </h2>
+          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-3">Curated looks</h2>
 
-          <div className="flex gap-4 lg:gap-6 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-            {category.brands.map((brand) => {
-              const active = brand.id === brandId;
-              return (
-                <button
-                  key={brand.id}
-                  onClick={() => setBrandId(brand.id)}
-                  className="flex flex-col items-center gap-1.5 lg:gap-2 shrink-0 w-16 lg:w-24"
-                >
-                  <span className="relative">
-                    <span
-                      className={cn(
-                        "block w-14 h-14 lg:w-24 lg:h-24 rounded-full overflow-hidden border-2 transition-colors",
-                        active ? "border-[#ef4d62]" : "border-transparent"
-                      )}
-                    >
-                      <img src={brand.logo} alt={brand.name} className="w-full h-full object-cover" />
-                    </span>
-                    {brand.badge ? (
-                      <span className="absolute -top-1 -right-1 min-w-5 h-5 lg:min-w-6 lg:h-6 px-1 rounded-full bg-[#ef4d62] text-white text-[10px] lg:text-xs font-bold flex items-center justify-center">
-                        {brand.badge}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className={cn("text-[10px] lg:text-sm leading-tight text-center truncate w-full", active ? "font-bold text-gray-900" : "text-gray-600")}>
-                    {brand.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selected brand's top-selling products */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-5 mt-4">
-            {(hasLive ? trending.slice(0, 3).map(toCompact) : brandProducts(selectedBrand.id).slice(0, 3)).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-
-          <button
-            onClick={() => navigate(`/vendor/${selectedBrand.id}`)}
-            className="mt-3 w-full flex items-center justify-center gap-1 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
-          >
-            Visit Brand <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* ── Hot Trends, Styled for You ── */}
-        <div>
-          <h2 className="text-base lg:text-xl font-bold text-gray-900 mb-3">Hot Trends, Styled for You</h2>
-
-          <Link to={`/product/${styled.id}`} className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100">
+          {/* A curated look, not a product. "View Item" used to link to
+              /product/st1 — an id that has never existed — and a Save button
+              stored the look in the buyer's collections with an invented MOQ.
+              It opens a real search for the look instead. */}
+          <Link to={`/search/results?q=${encodeURIComponent(styled.title)}`} className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100">
             <img src={styled.image} alt={styled.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                openSaveModal({
-                  id: styled.id,
-                  name: styled.title,
-                  moq: styled.moq,
-                  image: styled.image,
-                });
-              }}
-              className="absolute top-3 right-3 w-9 h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
-              aria-label={savedState.products[styled.id] ? "Edit saved folders" : "Save"}
-            >
-              {savedState.products[styled.id] ? <BookmarkCheck className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-4 h-4 text-gray-600" />}
-            </button>
             <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
               <p className="text-base font-bold">{styled.title}</p>
               <p className="text-xs font-medium opacity-90">{styled.tags.join("  ")}</p>
-              <p className="text-xs font-semibold mt-0.5">{styled.moq}</p>
               <span className="inline-flex items-center gap-1 text-xs font-semibold mt-1">
-                View Item <ChevronRight className="w-3.5 h-3.5" />
+                Browse similar <ChevronRight className="w-3.5 h-3.5" />
               </span>
             </div>
           </Link>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-5 mt-4">
-            {(hasLive ? trending.slice(3, 6).map(toCompact) : styled.suggestions).map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
+          {/* No product grid under the look. It used to show either three
+              generated products or the catalogue's trending items 4-6, laid out
+              as though they matched this look. Neither was true. */}
 
-          {/* Refreshes just the styled image + suggestions */}
+          {/* Cycles through the curated looks */}
           <button
             onClick={refreshStyles}
             className="mt-3 w-full flex items-center justify-center gap-2 border border-gray-200 rounded-xl py-2.5 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors"
@@ -720,41 +546,62 @@ const Trends = () => {
           <div className="mt-3">
             <div className="flex items-center gap-1.5 mb-2">
               <TrendingUp className="w-4 h-4 text-[#ef4d62]" />
-              <p className="text-sm font-bold text-gray-900">Hot Keywords</p>
+              {/* "Hot Keywords" with "↑ 800%" / "↑ 540%" growth figures sat here.
+                  Nothing measures search growth — the figures were invented. These
+                  are editorial suggestions and are labelled as such. */}
+              <p className="text-sm font-bold text-gray-900">Suggested searches</p>
             </div>
             <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
-              {keywords.map((kw) => {
-                const active = kw.label === hotKeyword;
-                return (
-                  <button
-                    key={kw.label}
-                    onClick={() => setHotKeyword(kw.label)}
-                    className={cn(
-                      "flex items-center gap-2 shrink-0 rounded-full pl-1 pr-3 py-1 border transition-colors",
-                      active ? "bg-gray-900 border-gray-900 text-white" : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
-                    )}
-                  >
-                    <img src={kw.thumb} alt="" className="w-6 h-6 rounded-full object-cover" />
-                    <span className="text-xs font-semibold whitespace-nowrap">{kw.label}</span>
-                    {kw.delta && (
-                      <span className={cn("text-[10px] font-bold whitespace-nowrap", active ? "text-[#ff9bab]" : "text-[#ef4d62]")}>
-                        {kw.delta}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+              {keywords.map((kw) => (
+                // A real search. These used to set local state that only re-seeded
+                // the generated fallback cards — with a live catalogue, tapping a
+                // chip changed nothing on the page.
+                <button
+                  key={kw.label}
+                  onClick={() => navigate(`/search/results?q=${encodeURIComponent(kw.label)}`)}
+                  className="flex items-center gap-2 shrink-0 rounded-full pl-1 pr-3 py-1 border bg-white border-gray-200 text-gray-700 hover:border-gray-300 transition-colors"
+                >
+                  <img src={kw.thumb} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  <span className="text-xs font-semibold whitespace-nowrap">{kw.label}</span>
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Product feed (infinite scroll) — one continuous grid so the
               mobile-only (`lg:hidden`) requirement cards collapse out on desktop. */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
-            {feedNodes}
-          </div>
+          {/* Loading / error / empty / populated stay four distinct states. An
+              empty catalogue used to be filled with generated cards. */}
+          {livePending ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4" aria-label="Loading listings">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="aspect-[4/5] rounded-xl bg-gray-100 animate-pulse" />
+              ))}
+            </div>
+          ) : liveError ? (
+            <div className="mt-6 flex flex-col items-center text-center py-8">
+              <p className="text-sm font-bold text-gray-900">Couldn't load listings</p>
+              <p className="text-xs text-gray-500 mt-1">Check your connection and try again.</p>
+              <button onClick={() => void refetchLive()} className="mt-3 px-4 py-2 rounded-xl bg-[#ef4d62] text-white text-xs font-bold">
+                Retry
+              </button>
+            </div>
+          ) : !hasLive ? (
+            <div className="mt-6 flex flex-col items-center text-center py-8">
+              <p className="text-sm font-bold text-gray-900">No listings to show yet</p>
+              <p className="text-xs text-gray-500 mt-1">When vendors' products go live, they'll appear here.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
+              {feedNodes}
+            </div>
+          )}
 
+          {/* Always mounted: the infinite-scroll observer attaches to it once. */}
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
-            {loadingMore ? "Loading more products..." : "Scroll for more"}
+            {hasLive && (feedProducts.length >= trending.length
+              ? "That's everything listed right now."
+              : loadingMore ? "Loading more products..." : "Scroll for more")}
           </div>
 
           {/* Submit Requirement — same card + Quick RFQ modal as New Arrivals */}

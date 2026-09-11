@@ -115,6 +115,12 @@ the demand side of India's fashion and textile supply chain.
   own row; missing details say "not specified"; ratings are counted from real reviews (a vendor
   whose profile claimed 4,800 reviews with none now shows "No vendor reviews yet"); and a
   missing product and a failed load are different screens.
+- **Trends shows real listings or says there are none.** It used to fill an empty catalogue
+  with generated cards named "Product name", list "Top Brands" that do not exist (tapping one
+  showed the same three real products attributed to that fake brand), put USD prices on curated
+  images, and show invented search-growth figures. The page is now labelled "Curated trend
+  picks", every look and suggested search opens a real search, and the feed is either the real
+  catalogue or an honest empty state.
 
 ### Fixed 2026-09-10 (Master Prompt 8)
 - **Recently Viewed shows real history or an honest empty state.** It used to fill any empty

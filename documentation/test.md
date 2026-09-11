@@ -119,6 +119,27 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 3) — Trends: real listings or an honest empty state: 4/4 GREEN
+
+`tests/mp7-trends-real-or-empty.spec.ts`. The empty and error states are driven by intercepting
+the catalogue request (`**/rest/v1/products?*`), so the result does not depend on the live
+catalogue happening to be empty.
+
+| Case | Result |
+|---|---|
+| P3.a live catalogue: every `/product/` link is a real uuid; no "Product name", "Top Brands", "Visit Brand", "NEW TREND INSIGHTS", "Hot Keywords", "Also Trending", "↑" or USD price | PASS |
+| P3.b "Browse similar" on the curated look links to `/search/results?q=…`; the "rugby tee" chip navigates there | PASS |
+| P3.c products request → `[]`: "No listings to show yet", zero product cards | PASS |
+| P3.d products request → 500: "Couldn't load listings" + Retry, not the empty state, zero product cards | PASS |
+
+The first run failed P3.a on the string "5.6k" — which was a **real** card (a real
+`enquiries_count` of 5,600), not the generator. The residue list was too blunt: the generator's
+fingerprint is its literal "Product name". The same goes for "800+ sold", which also appears on
+real cards because `sold_count` is seeded (see Phase 1). Remaining in `Trends.tsx`: 27 `img(`
+calls (curated imagery, kept by decision); `makeProduct(` / `brandProducts(` only inside the
+comment that records their removal. Screenshots: `screenshots/mp7-trends-live.png`,
+`mp7-trends-empty.png`.
+
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 2) — Landing: no invented testimonial, no hotlinks: 1/1 GREEN
 
 `tests/mp7-landing-no-fabrication.spec.ts` loads `/`, scrolls the whole page so every lazy section

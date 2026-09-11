@@ -723,6 +723,18 @@ media and specs whenever the vendor left them empty — rendered as fiction on r
   is local state only; "Add Fabric", "Download PDF", "Translate", the review "Helpful?" counter
   and the ⋮ menu do nothing.
 
+### Trends — curated chrome, real cards (2026-09-11)
+
+`src/pages/Trends.tsx` is two things on one page, and they obey different rules. The **chrome**
+(category chips, featured images, curated looks, suggested searches) is hand-picked editorial
+content: no trends job exists in this codebase, so nothing on the page may claim to be live,
+trending or measured, and every piece of it links into a real `/search/results?q=…` rather than
+to a product id. The **product cards** come only from `useLiveProducts()`, sorted by
+`sortTrending`, with loading / error / empty / populated as four distinct states — there is no
+generator and no fallback. The invented "Top Brands" section was removed rather than rewired,
+because there is no per-trend brand data to wire it to. The curated imagery is still hotlinked
+from picsum.photos and needs owned replacements.
+
 ### Client stores — `src/lib/*Store.ts`
 Module-level stores backed by `useSyncExternalStore` + `localStorage`, **not** React
 context. Each exposes a `useX()` hook plus mutation functions: `savedStore`,
