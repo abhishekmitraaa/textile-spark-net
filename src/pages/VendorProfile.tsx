@@ -559,8 +559,12 @@ const VendorProfile = () => {
                       every vendor on the platform advertised the same two.
                       A vendor who has not declared any renders nothing at all
                       rather than a row of empty checkboxes implying they
-                      cannot do any of it. */}
-                  {vendor.capacity.length > 0 && (
+                      cannot do any of it.
+                      `vendor &&` first: this block renders before the profile
+                      query resolves, and reading `.capacity` off undefined
+                      blanked the whole page for every vendor (live since
+                      2279630, found 2026-09-11 in Master Prompt 8). */}
+                  {vendor && vendor.capacity.length > 0 && (
                     <div>
                       <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-0.5">
                         <Factory className="w-4 h-4 text-[#ef4d62]" /> Capacity
