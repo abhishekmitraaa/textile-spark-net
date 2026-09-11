@@ -16,6 +16,7 @@ import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCallVendor } from "@/lib/queries/calls";
+import { useFollowing } from "@/lib/queries/follows";
 import { recordView } from "@/lib/recentlyViewedStore";
 import { toast } from "sonner";
 import { logEngagement, consumeNavSource } from "@/lib/queries/engagement";
@@ -23,8 +24,8 @@ import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet"
 import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
-  ChevronDown, BadgeCheck, AlertCircle, ImageOff, Download, Globe, ThumbsUp, ThumbsDown, MoreVertical,
-  CheckCircle2, Play, Package, Plus, X,
+  ChevronDown, BadgeCheck, AlertCircle, ImageOff,
+  CheckCircle2, Play, Package, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
@@ -54,7 +55,7 @@ const COLOR_HEX: Record<string, string> = {
 // === Types ===
 interface MediaItem { type: "image" | "video"; url: string; videoUrl?: string }
 interface Spec { label: string; value: string }
-interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; helpful: number }
+interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[] }
 /**
  * The product page's view model — built ONLY from the database row.
  *
@@ -240,20 +241,15 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 // === Review card ===
+// "Helpful?" (a thumbs up/down tally) and a ⋮ menu used to sit on each review.
+// The tally was component state written nowhere, so it reset on reload and
+// counted nothing; the ⋮ had no handler. Removed rather than stubbed (Master
+// Prompt 8, Phase 6); logged in ToDo.md as possible features.
 function ReviewCard({ review }: { review: Review }) {
-  const [helpfulCount, setHelpfulCount] = useState(review.helpful);
-  const [voted, setVoted] = useState<"up" | "down" | null>(null);
   return (
     <div className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
       <div className="flex items-start justify-between">
         <span className="text-sm font-medium text-gray-900">{review.name}</span>
-        <div className="flex items-center gap-1.5 text-xs text-gray-400">
-          <span>Helpful?</span>
-          <button onClick={() => { if (voted !== "up") { setHelpfulCount((c) => c + 1); setVoted("up"); } }} className={cn("transition-colors", voted === "up" ? "text-[#ef4d62]" : "hover:text-gray-700")}><ThumbsUp className="h-3.5 w-3.5" /></button>
-          <span>{helpfulCount}</span>
-          <button onClick={() => setVoted("down")} className={cn("transition-colors", voted === "down" ? "text-[#ef4d62]" : "hover:text-gray-700")}><ThumbsDown className="h-3.5 w-3.5" /></button>
-          <button className="hover:text-gray-700"><MoreVertical className="h-3.5 w-3.5" /></button>
-        </div>
       </div>
       <div className="mt-1.5 flex items-center gap-2">
         <span className="inline-flex h-5 items-center gap-0.5 rounded bg-gray-900 px-1.5 text-[10px] font-semibold text-white">{review.rating}<Star className="h-2.5 w-2.5 fill-white text-white" /></span>
@@ -357,7 +353,12 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
   const activeColor = selectedColor ?? product?.availableColors[0];
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [isFollowing, setIsFollowing] = useState(false);
+  // Follow is the real follows table (signed out: the local store), exactly as
+  // VendorProfile uses it. It was local useState, so it reset on every reload
+  // and followed no one (Master Prompt 8, Phase 6).
+  const { brands: followedBrands, follow, unfollow } = useFollowing();
+  const isFollowingVendor = (vendorId: string) =>
+    followedBrands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const [specsOpen, setSpecsOpen] = useState(true);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [chatOptionsOpen, setChatOptionsOpen] = useState(false);
@@ -393,7 +394,6 @@ const ProductDetail = () => {
     comment: r.body ?? "",
     sizeBought: r.sizeBought ?? "",
     photos: r.photos,
-    helpful: 0,
   }));
 
   // Real recommendation strips. "You might also like" = the buyer's preferred
@@ -577,9 +577,9 @@ const ProductDetail = () => {
                 <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {product.vendor.location}</div>
               )}
             </div>
-            <button onClick={(e) => { e.stopPropagation(); setIsFollowing((f) => !f); }}
-              className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowing ? "border-gray-200 text-gray-600" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5")}>
-              {isFollowing ? "Following" : "+ Follow"}
+            <button onClick={(e) => { e.stopPropagation(); if (isFollowingVendor(product.vendor.id)) unfollow(product.vendor.id); else follow(product.vendor.id); }}
+              className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowingVendor(product.vendor.id) ? "border-gray-200 text-gray-600" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5")}>
+              {isFollowingVendor(product.vendor.id) ? "Following" : "+ Follow"}
             </button>
           </div>
           {/* "Usually responds within 4 hours" was printed here for every
@@ -667,10 +667,8 @@ const ProductDetail = () => {
                           </div>
                         ))}
                       </div>
-                      <div className="mt-4 flex items-center gap-4 border-t border-gray-100 pt-3">
-                        <button className="inline-flex items-center gap-1 text-xs font-semibold text-[#ef4d62] underline underline-offset-2"><Plus className="h-3 w-3" /> Add Fabric</button>
-                        <button className="inline-flex items-center gap-1 text-xs font-semibold text-[#ef4d62] underline underline-offset-2"><Download className="h-3 w-3" /> Download PDF</button>
-                      </div>
+                      {/* "Add Fabric" and "Download PDF" buttons sat here with no onClick.
+                          Removed, not stubbed (Master Prompt 8, Phase 6); see ToDo.md. */}
                     </div>
                   </motion.div>
                 )}
@@ -692,7 +690,7 @@ const ProductDetail = () => {
             <div className={card}>
               <div className="mb-2.5 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-gray-900">Product Description</h3>
-                <button className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600"><Globe className="h-3 w-3" /> Translate</button>
+                {/* A "Translate" button with no onClick was here (Master Prompt 8, Phase 6). */}
               </div>
               {product.description
                 ? <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>

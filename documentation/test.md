@@ -121,6 +121,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 — Master Prompt 8, Phase 6: product page controls 1/1 + product-detail regression 5/5
+
+`npx playwright test tests/mp8-product-detail-controls.spec.ts tests/mp7-product-detail-real-data.spec.ts`
+→ **6 passed**. P6 (demo-buyer, a live product whose vendor demo-buyer did not follow):
+- "Add Fabric", "Download PDF", "Translate", "Helpful?" → 0 matches each.
+- "+ Follow" → "Following"; `follows` row for (demo-buyer, that vendor) → 1. Reload → still "Following".
+- "Following" → "+ Follow"; the row → 0 (demo-buyer ends as it started). No page errors.
+P1.a–P1.e (Master Prompt 7's real-data checks on the same page) all still pass.
+
 ### 2026-09-11 — Master Prompt 8, Phase 4: KYC uploads at submit — onboarding write-path 3/3
 
 `npx playwright test tests/vendor-onboarding-write-path.spec.ts` → **3 passed** (8.1, 8.3–8.4, 8.7).
