@@ -270,6 +270,15 @@ undocumented. Deep technical rationale for each lives in
   breakdown shown to vendors with no reviews**, which is a fabricated reputation on a person's
   own profile. An empty vendor now renders empty states with a CTA. Loading renders skeletons,
   never a placeholder number.
+- **A product page renders its own row and nothing else (2026-09-11).** `/product/:id` used to
+  spread the real listing over a hardcoded demo product, so every field the row did not set was
+  inherited fiction — GOTS/OEKO-TEX certification and a 4-hour response time on every live
+  listing, four invented named reviewers on any product without reviews. There is no template
+  now, and none may be reintroduced "for fields we don't store yet": a field with no column is
+  not rendered, and an empty one says "not specified". **Never display `rating_avg` or
+  `reviews_count` from `products` or `vendor_profiles` as a rating** — on seeded rows they are
+  fiction (23 of 26 live listings; one vendor claims 4,800 reviews with zero rows). Derive
+  ratings from `product_reviews` / `reviews`. `products.sold_count` has no writer at all.
 - **A registration that was not saved must never look like one that was.** `/onboarding`'s
   submit used to show "Welcome to Cosora" unconditionally — a signed-out vendor completed
   eight steps and wrote nothing anywhere. A missing session or a failed write now blocks on

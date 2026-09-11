@@ -119,6 +119,38 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 1) — `/product/:id` renders only the database row: 5/5 GREEN
+
+`tests/mp7-product-detail-real-data.spec.ts`, signed out, against the live catalogue (26 live
+listings, read with the anon key). The two products were picked because they differ on exactly
+the axes that used to fall through to the mock template:
+
+| Product | `product_reviews` | description | vendor | vendor's `reviews` rows | `vendor_profiles.reviews_count` |
+|---|---|---|---|---|---|
+| Premium Cotton Polo `36f94dd6…` | 4 | yes | Demo Textiles Co. | 5 | 5 (correct) |
+| Chikankari Anarkali `b0000000…0017` | 0 | none | Lucknow Chikankari Co. | 0 | **4,800** |
+
+| Case | Result |
+|---|---|
+| P1.a both render their own name / price / MOQ / vendor / category, and differ from each other | PASS |
+| P1.b Polo: 4 real product reviews; vendor card "(5 reviews)" counted from real rows | PASS |
+| P1.c Anarkali: "No ratings yet", "No vendor reviews yet" (not 4,800), no-description and no-origin states | PASS |
+| P1.d nonexistent uuid → "Product not found", never "Couldn't load" | PASS |
+| P1.e malformed id → "Product not found", never "Couldn't load" | PASS |
+
+Every case also asserts that none of the template's strings appear (the chinos name, "Textile
+Forge", "GOTS", "OEKO-TEX", "TF-MDS-0412", "Usually responds", the four invented reviewer names,
+"100% organic cotton", "/ Piece"), and that there is no picsum image or sample video on the page.
+Screenshots: `screenshots/mp7-product-36f94dd6.png`, `mp7-product-b0000000.png`,
+`mp7-product-no-reviews-tab.png`, `mp7-product-not-found.png`.
+
+**Denormalised review columns, measured (anon key, 2026-09-11):** `products.reviews_count`
+matches the real `product_reviews` count on **3 of 26** live listings; the other 23 are seed
+values with zero rows behind them. Where rows exist the columns agree (4.25 → 4.3, 4.67 → 4.7).
+`products.sold_count` has no writer in either repo's migrations or client code.
+
+typecheck **0** · eslint on the changed files **clean**.
+
 ### 2026-09-10 (Master Prompt 6) — first load/scale pass: 2 severe defects invisible at production volume
 
 **Why this run is different.** Master Prompt 5 proved the stack *correct* on real

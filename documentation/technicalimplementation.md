@@ -698,6 +698,31 @@ integer would be the worse outcome. Verified on a real vendor: stored at submit 
 displayed on `/business-profile-score` **29**, after the dashboard's recompute **29** — the
 recompute is a no-op instead of a silent correction.
 
+### Product detail — rendered from the row, never a template (2026-09-11)
+
+`src/pages/ProductDetail.tsx` builds its view model with `toViewModel(row)` from
+`fetchProductById` (`src/lib/queries/products.ts`) and nothing else. It used to spread the real
+row over a hardcoded "Premium Cotton Chinos" object, so any field the row did not override —
+certifications, response time, product code, reviews, rating breakdown, and the description,
+media and specs whenever the vendor left them empty — rendered as fiction on real listings.
+
+- **No field without a column.** Certifications, vendor response time, product code and sold
+  count are not rendered, because none has a real source. `products.unit` is now selected and
+  shown only when present; MOQ is shown as listed, with the unit appended only to a bare number.
+- **Ratings come from rows.** The product rating is `product_reviews` (count, average and
+  breakdown via `useProductReviews`); the vendor rating is `reviews` via `useVendorReviews`. The
+  denormalised `products.rating_avg` / `reviews_count` and `vendor_profiles.rating_avg` /
+  `reviews_count` are not read here: they are correct where real reviews exist but hold
+  never-reset seed values elsewhere (23 of 26 live listings; one vendor claims 4,800 reviews with
+  none). Every listing card elsewhere in the app still reads them — known, not fixed in this pass.
+- **Four distinct states.** Loading (spinner), error (`ProductLoadError`, with Retry), not-found
+  (`ProductNotFound`, identical for missing and RLS-blocked ids), and the product. A malformed id
+  is caught by `UUID_RE` before any request, because PostgREST answers a non-uuid with an error
+  (22P02) rather than zero rows — without the guard a bad link would read as a load failure.
+- **Known dead affordances, left in place** (reported, not fixed): the vendor card's Follow toggle
+  is local state only; "Add Fabric", "Download PDF", "Translate", the review "Helpful?" counter
+  and the ⋮ menu do nothing.
+
 ### Client stores — `src/lib/*Store.ts`
 Module-level stores backed by `useSyncExternalStore` + `localStorage`, **not** React
 context. Each exposes a `useX()` hook plus mutation functions: `savedStore`,

@@ -83,6 +83,10 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
+- **Listing cards everywhere still show seeded ratings and sales.** Cards on New Arrivals,
+  Search, For You and Trends read `products.rating_avg` and `sold_count`; on 23 of 26 live
+  listings the rating has no reviews behind it, and `sold_count` has no writer (there is no
+  orders table). The product page stopped using them on 2026-09-11; the cards have not.
 - No dedicated buyer Settings page — the sidebar "Settings" link points at `/profile`.
 - Video Closeups: the **Share** button in the reel viewer is still inert, and the reel's
   `rating`/`reviews` fields are stored on `product_videos` rather than derived from the
@@ -102,6 +106,15 @@ the demand side of India's fashion and textile supply chain.
   two hardcoded messages ("Hello! Thank you for your interest in our quote…" / "Hi! I wanted
   to discuss the MOQ…") on every open, rendered from `MyQuotes.tsx`. The buyer's half of that
   exchange is words they never typed.
+
+### Fixed 2026-09-11 (Master Prompt 7, buyer-trust thread)
+- **Product pages show the product.** `/product/:id` used to layer each real listing over a
+  hardcoded demo product, so every live listing claimed GOTS and OEKO-TEX certification, a
+  4-hour vendor response time and the same product code, and any listing without reviews
+  showed four invented named reviewers. Every value on the page now comes from that product's
+  own row; missing details say "not specified"; ratings are counted from real reviews (a vendor
+  whose profile claimed 4,800 reviews with none now shows "No vendor reviews yet"); and a
+  missing product and a failed load are different screens.
 
 ### Fixed 2026-09-10 (Master Prompt 8)
 - **Recently Viewed shows real history or an honest empty state.** It used to fill any empty

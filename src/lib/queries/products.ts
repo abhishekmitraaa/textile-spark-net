@@ -364,6 +364,9 @@ export interface ProductDetail {
   vendorId: string;
   name: string;
   description: string | null;
+  /** Selling unit for `moq`/price ("pieces", "sets"…). Null on every listing
+   *  created before onboarding started collecting it. */
+  unit: string | null;
   priceValue: number | null;
   currency: string;
   moq: string | null;
@@ -396,7 +399,7 @@ export interface ProductDetail {
 }
 
 interface RawDetail extends RawProduct {
-  description: string | null; gender: string | null; colour: string | null;
+  description: string | null; unit: string | null; gender: string | null; colour: string | null;
   reviews_count: number; category_id: string | null; categories: { name: string } | null;
   sizes: string[] | null; customization_available: boolean | null;
   pattern: string[] | null; occasion: string[] | null;
@@ -408,7 +411,7 @@ interface RawDetail extends RawProduct {
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select("id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -431,6 +434,7 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     priceValue: row.price_value,
     currency: row.currency,
     moq: row.moq,
+    unit: row.unit ?? null,
     fabric: row.fabric,
     gsm: row.gsm,
     fitType: row.fit_type,

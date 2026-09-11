@@ -9,8 +9,9 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 import {
   useProductById, recordProductView, recordProductEnquiry,
   useYouMightLike, useVendorOtherProducts, type ProductCardData,
+  type ProductDetail as ProductRow,
 } from "@/lib/queries/products";
-import { useProductReviews, useReviewMutations } from "@/lib/queries/reviews";
+import { useProductReviews, useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { useAuth } from "@/contexts/AuthContext";
@@ -22,7 +23,7 @@ import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet"
 import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
-  ChevronDown, BadgeCheck, Clock, Download, Globe, ThumbsUp, ThumbsDown, MoreVertical,
+  ChevronDown, BadgeCheck, AlertCircle, ImageOff, Download, Globe, ThumbsUp, ThumbsDown, MoreVertical,
   CheckCircle2, Play, Package, Plus, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -54,50 +55,90 @@ const COLOR_HEX: Record<string, string> = {
 interface MediaItem { type: "image" | "video"; url: string; videoUrl?: string }
 interface Spec { label: string; value: string }
 interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; helpful: number }
+/**
+ * The product page's view model — built ONLY from the database row.
+ *
+ * This used to be `{ ...mockChinos, ...realFields }`: a real listing layered
+ * over a hardcoded "Premium Cotton Chinos" template, so every field the row did
+ * not override was inherited fiction. Every live product claimed GOTS and
+ * OEKO-TEX certification, a 4-hour vendor response time and product code
+ * TF-MDS-0412; a product with no reviews showed four invented named reviewers
+ * and a 100-review breakdown; one with no photos showed the chinos and a Google
+ * sample MP4. There is no template now. A field with no real source is null and
+ * the page says "not specified", or the section is not rendered.
+ */
 interface ProductData {
-  id: string; productCode: string; name: string; price: string; priceUnit: string; moq: string;
-  category: string; subCategory: string; media: MediaItem[]; rating: number; soldCount: string; isInAd: boolean;
-  vendor: { id: string; initials: string; name: string; location: string; verified: boolean; rating: number; reviews: number; responseTime: string };
-  availableColors: string[]; availableSizes: string[]; specifications: Spec[]; customizationAvailable: boolean;
-  description: string; manufacturing: { country: string; certifications: string[] };
-  totalReviews: number; ratingBreakdown: Record<number, number>; reviews: Review[];
+  id: string;
+  name: string;
+  /** Formatted, or null when the vendor listed no price — rendered as
+   *  "Price on request", never as "₹0". */
+  price: string | null;
+  unit: string | null;
+  /** MOQ exactly as listed; the unit is appended only to a bare number. */
+  moq: string | null;
+  category: string | null;
+  media: MediaItem[];
+  vendor: { id: string; initials: string; name: string; location: string | null; verified: boolean };
+  availableColors: string[];
+  availableSizes: string[];
+  specifications: Spec[];
+  customizationAvailable: boolean;
+  description: string | null;
+  countryOfOrigin: string | null;
 }
 
-// === Mock data ===
-const PRODUCTS: Record<string, ProductData> = {
-  "1": {
-    id: "1", productCode: "TF-MDS-0412", name: "Premium Cotton Chinos", price: "₹499", priceUnit: "Piece", moq: "500 Pieces",
-    category: "Women's", subCategory: "Midi Dresses",
-    media: [
-      { type: "image", url: "https://picsum.photos/seed/chino-front-cosora/600/800" },
-      { type: "image", url: "https://picsum.photos/seed/chino-side-cosora/600/800" },
-      { type: "video", url: "https://picsum.photos/seed/chino-video-cosora/600/800", videoUrl: "https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4" },
-      { type: "image", url: "https://picsum.photos/seed/chino-detail-cosora/600/800" },
-    ],
-    rating: 4.1, soldCount: "5.6k", isInAd: true,
-    vendor: { id: "tf-india", initials: "TF", name: "Textile Forge India", location: "Surat, Gujarat", verified: true, rating: 4.8, reviews: 124, responseTime: "Usually responds within 4 hours" },
-    availableColors: ["Beige", "Navy", "Olive", "Black"],
-    availableSizes: ["28", "30", "32", "34", "36", "38", "40"],
-    specifications: [
-      { label: "Waist Type", value: "Mid Rise" }, { label: "Length Type", value: "Full Length" },
-      { label: "Fit Type", value: "Slim Fit" }, { label: "Fabric", value: "100% Cotton Twill" },
-      { label: "Pattern", value: "Solid" }, { label: "GSM", value: "280 GSM" },
-      { label: "Occasion", value: "Casual, Semi-Formal" }, { label: "Wash Care", value: "Machine Wash, Do Not Bleach" },
-    ],
-    customizationAvailable: true,
-    description: "Premium quality cotton chinos made with 100% organic cotton. Perfect for casual and semi-formal occasions. Features a comfortable mid-rise waist with a tailored fit that flatters all body types. Bio-washed for extra softness.",
-    manufacturing: { country: "India", certifications: ["GOTS", "OEKO-TEX Standard 100"] },
-    totalReviews: 100, ratingBreakdown: { 5: 60, 4: 25, 3: 8, 2: 5, 1: 2 },
-    reviews: [
-      { id: 1, name: "Vaibhav Tripathi", rating: 5, date: "2 months ago", comment: "Nice", sizeBought: "XXL", photos: [], helpful: 0 },
-      { id: 2, name: "Anubhav Kumar", rating: 5, date: "2 months ago", comment: "Like it", sizeBought: "XXL", photos: ["https://picsum.photos/seed/rev-ph-1/200/200", "https://picsum.photos/seed/rev-ph-2/200/200", "https://picsum.photos/seed/rev-ph-3/200/200"], helpful: 0 },
-      { id: 3, name: "Ramakant", rating: 5, date: "a month ago", comment: "Nice", sizeBought: "L", photos: [], helpful: 0 },
-      { id: 4, name: "Seema", rating: 4, date: "2 months ago", comment: "Comfortable T-shirt, fits as expected. Collar style gives it a different look", sizeBought: "XXL", photos: [], helpful: 0 },
-    ],
-  },
-};
+// A malformed id can never match a row, and PostgREST answers a non-uuid with
+// an ERROR (22P02) rather than an empty result — so without this, a mistyped
+// link would render "couldn't load" instead of "not found".
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const getDefaultProduct = (id: string): ProductData => (PRODUCTS[id] ? PRODUCTS[id] : { ...PRODUCTS["1"], id });
+function toViewModel(row: ProductRow): ProductData {
+  const brand = row.vendor?.brandName?.trim() || null;
+  const moq = row.moq?.trim() || null;
+  // Multi-value attributes are stored as text[]; join for display and skip
+  // empty arrays so a listing that didn't collect one shows no row.
+  const list = (v: string[] | null) => (v && v.length ? v.join(", ") : null);
+  return {
+    id: row.id,
+    name: row.name,
+    price: row.priceValue != null ? `${row.currency}${Math.round(Number(row.priceValue))}` : null,
+    unit: row.unit,
+    // Seeded MOQs already carry their unit ("50 pieces"); demo listings are a
+    // bare number. The old code appended "Pieces" to both — producing
+    // "50 pieces Pieces" — and guessed the unit, since `unit` was never read.
+    moq: moq && /^\d+$/.test(moq) && row.unit ? `${moq} ${row.unit}` : moq,
+    category: row.categoryName,
+    media: row.images.map((url) => ({ type: "image" as const, url })),
+    vendor: {
+      id: row.vendorId,
+      initials: (brand ?? "V").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
+      name: brand ?? "Vendor",
+      location: row.location ?? row.vendor?.city ?? null,
+      // trustSealFromParts() — the same seal buyers see everywhere else.
+      verified: row.vendor?.isVerified ?? false,
+    },
+    // These drive the Request Quotation form, so only what the vendor listed.
+    availableColors: row.colour ? [row.colour] : [],
+    availableSizes: row.sizes ?? [],
+    customizationAvailable: row.customizationAvailable,
+    specifications: [
+      row.fabric && { label: "Fabric", value: row.fabric },
+      row.gsm && { label: "GSM", value: row.gsm },
+      list(row.pattern) && { label: "Pattern", value: list(row.pattern) },
+      row.fitType && { label: "Fit Type", value: row.fitType },
+      row.neckType && { label: "Neck Type", value: row.neckType },
+      row.collarType && { label: "Collar Type", value: row.collarType },
+      row.sleeveType && { label: "Sleeve Type", value: row.sleeveType },
+      list(row.occasion) && { label: "Occasion", value: list(row.occasion) },
+      row.gender && { label: "Gender", value: row.gender },
+      row.colour && { label: "Colour", value: row.colour },
+      list(row.waistSizes) && { label: "Waist Sizes", value: list(row.waistSizes) },
+      list(row.lengths) && { label: "Length Options", value: list(row.lengths) },
+    ].filter(Boolean) as Spec[],
+    description: row.description?.trim() || null,
+    countryOfOrigin: row.countryOfOrigin,
+  };
+}
 
 // === Tiled COSORA watermark overlay ===
 function Watermark() {
@@ -113,7 +154,12 @@ function Watermark() {
 }
 
 // === Media carousel (center-peek, swipeable, video autoplay) ===
-function MediaCarousel({ media, rating, soldCount, isInAd }: { media: MediaItem[]; rating: number; soldCount: string; isInAd: boolean }) {
+// `rating` is null unless the product has real product_reviews rows, and there
+// is no sold-count chip at all: `products.sold_count` has no writer in either
+// repo and there is no orders table, so every value in it is seed data.
+// `hasTrustSeal` is the vendor's real seal (trustSealFromParts) — it was
+// previously named `isInAd`, which described something it never measured.
+function MediaCarousel({ media, rating, hasTrustSeal }: { media: MediaItem[]; rating: number | null; hasTrustSeal: boolean }) {
   const reduced = useReducedMotion();
   const [active, setActive] = useState(0);
   const total = media.length;
@@ -162,14 +208,14 @@ function MediaCarousel({ media, rating, soldCount, isInAd }: { media: MediaItem[
           );
         })}
 
-        {isInAd && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-3 left-3 z-30 h-6 w-auto drop-shadow" />}
+        {hasTrustSeal && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-3 left-3 z-30 h-6 w-auto drop-shadow" />}
 
-        <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
-          <span className="font-semibold">{rating.toFixed(1)}</span>
-          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-          <span className="text-white/60">|</span>
-          <span>{soldCount}</span>
-        </div>
+        {rating != null && (
+          <div className="absolute bottom-3 left-3 z-30 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm">
+            <span className="font-semibold">{rating.toFixed(1)}</span>
+            <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+          </div>
+        )}
       </motion.div>
 
       <div className="flex items-center justify-center gap-1.5 py-3">
@@ -245,6 +291,44 @@ function ProductNotFound() {
   );
 }
 
+// === Load-error state ===
+// Distinct from not-found on purpose: "this product does not exist" and "we
+// could not reach the server" call for different actions, and collapsing them
+// is how a network failure passes for a missing listing. Never falls back to
+// showing some other product — a failed query is an error, not a cue for fiction.
+function ProductLoadError({ onRetry }: { onRetry: () => void }) {
+  return (
+    <div className="max-w-2xl mx-auto px-4 py-20 flex flex-col items-center text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50">
+        <AlertCircle className="h-7 w-7 text-red-500" />
+      </div>
+      <h1 className="mt-5 text-lg font-bold text-gray-900">Couldn't load this product</h1>
+      <p className="mt-1.5 max-w-xs text-sm text-gray-500">
+        Something went wrong while fetching it. Check your connection and try again.
+      </p>
+      <button
+        onClick={onRetry}
+        className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90 active:scale-[0.98]"
+      >
+        Retry
+      </button>
+    </div>
+  );
+}
+
+// === No-photos state ===
+// A listing with no images used to borrow the demo chinos' four photos and a
+// Google sample MP4. Now it says there are none.
+function NoPhotos() {
+  return (
+    <div className="flex h-[380px] sm:h-[460px] lg:h-[520px] flex-col items-center justify-center rounded-2xl bg-gray-100 text-center">
+      <ImageOff className="h-8 w-8 text-gray-400" />
+      <p className="mt-2 text-sm font-medium text-gray-500">No photos yet</p>
+      <p className="mt-0.5 text-xs text-gray-400">The vendor hasn't added images for this product.</p>
+    </div>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────
 // MAIN
 // ─────────────────────────────────────────────────────────────
@@ -255,73 +339,23 @@ const ProductDetail = () => {
   const reduced = useReducedMotion();
   const saved = useSaved();
 
-  // Real product from Supabase (when the id is a real UUID from the live feed).
-  // We merge it over the mock template so sections we don't persist yet
-  // (reviews, brand picks, "you might also like") still render. `row` is null for
-  // BOTH a missing id and an RLS-blocked one (non-live / not the viewer's own) —
-  // maybeSingle() returns 0 rows either way, so the not-found state below can't
-  // reveal which product ids actually exist.
-  const { data: row, isPending, isError } = useProductById(id);
-  const base = getDefaultProduct(id ?? "1");
-  const product: ProductData = row
-    ? {
-        ...base,
-        id: row.id,
-        name: row.name,
-        price: `${row.currency}${Math.round(Number(row.priceValue ?? 0))}`,
-        priceUnit: "Piece",
-        moq: row.moq ? `${row.moq} Pieces` : base.moq,
-        category: row.categoryName ?? base.category,
-        subCategory: "",
-        media: row.images.length ? row.images.map((u) => ({ type: "image" as const, url: u })) : base.media,
-        rating: Number(row.ratingAvg) || base.rating,
-        soldCount: row.soldCount >= 1000 ? `${(row.soldCount / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(row.soldCount),
-        isInAd: row.vendor?.isVerified ?? false,
-        vendor: {
-          id: row.vendorId,
-          initials: (row.vendor?.brandName ?? "Vendor").split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase(),
-          name: row.vendor?.brandName ?? "Vendor",
-          location: row.location ?? row.vendor?.city ?? "India",
-          verified: row.vendor?.isVerified ?? false,
-          rating: Number(row.vendor?.ratingAvg) || base.vendor.rating,
-          reviews: row.vendor?.reviewsCount ?? base.vendor.reviews,
-          responseTime: base.vendor.responseTime,
-        },
-        // Real product attributes only. These drive the Request Quotation form,
-        // so a mock fallback here would offer buyers colours/sizes the vendor
-        // never listed. An empty array renders as "not specified".
-        availableColors: row.colour ? [row.colour] : [],
-        availableSizes: row.sizes ?? [],
-        customizationAvailable: row.customizationAvailable,
-        specifications: (() => {
-          // Multi-value attributes are stored as text[]; join for display and
-          // skip empty arrays so a listing that didn't collect one shows no row
-          // rather than a blank one.
-          const list = (v: string[] | null) => (v && v.length ? v.join(", ") : null);
-          const real = [
-            row.fabric && { label: "Fabric", value: row.fabric },
-            row.gsm && { label: "GSM", value: row.gsm },
-            list(row.pattern) && { label: "Pattern", value: list(row.pattern) },
-            row.fitType && { label: "Fit Type", value: row.fitType },
-            row.neckType && { label: "Neck Type", value: row.neckType },
-            row.collarType && { label: "Collar Type", value: row.collarType },
-            row.sleeveType && { label: "Sleeve Type", value: row.sleeveType },
-            list(row.occasion) && { label: "Occasion", value: list(row.occasion) },
-            row.gender && { label: "Gender", value: row.gender },
-            row.colour && { label: "Colour", value: row.colour },
-            list(row.waistSizes) && { label: "Waist Sizes", value: list(row.waistSizes) },
-            list(row.lengths) && { label: "Length Options", value: list(row.lengths) },
-            row.countryOfOrigin && { label: "Country of Origin", value: row.countryOfOrigin },
-          ].filter(Boolean) as Spec[];
-          return real.length ? real : base.specifications;
-        })(),
-        description: row.description ?? base.description,
-      }
-    : base;
-  const isSaved = Boolean(saved.products[product.id]);
+  // `row` is null for BOTH a missing id and an RLS-blocked one (non-live / not
+  // the viewer's own) — maybeSingle() returns 0 rows either way, so the
+  // not-found state below can't reveal which product ids actually exist.
+  const validId = id && UUID_RE.test(id) ? id : undefined;
+  const { data: row, isPending: rowPending, isError, refetch } = useProductById(validId);
+  // A disabled query (invalid id) reports "pending" forever; that is not loading.
+  const isPending = Boolean(validId) && rowPending;
+  const product = row ? toViewModel(row) : null;
+  const isSaved = product ? Boolean(saved.products[product.id]) : false;
 
   const [tab, setTab] = useState<"details" | "reviews">("details");
-  const [selectedColor, setSelectedColor] = useState(product.availableColors[0]);
+  // Undefined until the buyer picks one; the first REAL colour shows as active.
+  // This used to be seeded from the mock template on the first render — before
+  // the row arrived — and useState never re-reads its initial value, so the
+  // page showed "Beige" selected on products that are not beige.
+  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
+  const activeColor = selectedColor ?? product?.availableColors[0];
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [specsOpen, setSpecsOpen] = useState(true);
@@ -329,32 +363,38 @@ const ProductDetail = () => {
   const [chatOptionsOpen, setChatOptionsOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
 
-  // Unchanged direct-chat path, just moved behind the chooser sheet: still
-  // records the enquiry, still lands on /chats/:vendorId.
-  const openDirectChat = () => {
-    setChatOptionsOpen(false);
-    if (row) void recordProductEnquiry(row.id).catch(() => {});
-    // Additive: the button does exactly what it did, and also reports that it
-    // was pressed. Until now `calls` was the only CTA in the app with any
-    // record of being used.
-    void logEngagement({
-      eventType: "cta_click", ctaName: "message",
-      vendorId: product.vendor.id, productId: row?.id ?? null,
-    });
-    navigate(`/chats/${product.vendor.id}`);
-  };
-
-  // Real product reviews (only queried for a real DB product). Falls back to the
-  // mock template so non-DB demo products still render a populated section.
-  const { data: productReviews } = useProductReviews(row?.id);
+  // Real product reviews — the ONLY source of a product rating on this page.
+  // `products.rating_avg` / `reviews_count` are deliberately not used: on 23 of
+  // the 26 live listings `reviews_count` is seed data with zero product_reviews
+  // rows behind it ("Hand-Embroidered Kurta" claims 480).
+  const {
+    data: productReviews, isPending: reviewsPending, isError: reviewsError,
+  } = useProductReviews(row?.id);
+  // Same rule for the vendor: their rating comes from their `reviews` rows, not
+  // vendor_profiles.rating_avg / reviews_count. "Lucknow Chikankari Co." carries
+  // reviews_count = 4,800 with zero rows in `reviews`.
+  const { data: vendorReviews } = useVendorReviews(row?.vendorId);
   const { submitProductReview } = useReviewMutations();
   const { user } = useAuth();
-  const hasRealReviews = (productReviews?.count ?? 0) > 0;
+  const reviewCount = productReviews?.count ?? 0;
+  const hasReviews = reviewCount > 0;
+  const avgRating = hasReviews ? productReviews!.avg : null;
+  const vendorReviewCount = vendorReviews?.count ?? 0;
   // product_reviews.product_id is a real FK, so only a live DB product can be
-  // reviewed. Hide the CTA on mock/demo products instead of letting the submit
-  // fail after the buyer has typed their review.
+  // reviewed — which, after the guards below, is the only kind rendered.
   const canReview = Boolean(row?.id);
   const myReview = (productReviews?.reviews ?? []).find((r) => r.buyerId && r.buyerId === user?.id);
+  const breakdownPct = (star: number) => productReviews?.breakdown.find((b) => b.stars === star)?.percent ?? 0;
+  const reviewCards: Review[] = (productReviews?.reviews ?? []).map((r, i) => ({
+    id: i,
+    name: r.reviewerName,
+    rating: r.rating,
+    date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    comment: r.body ?? "",
+    sizeBought: r.sizeBought ?? "",
+    photos: r.photos,
+    helpful: 0,
+  }));
 
   // Real recommendation strips. "You might also like" = the buyer's preferred
   // categories (fallback: this product's category); "Brand Picks" = the same
@@ -365,40 +405,17 @@ const ProductDetail = () => {
   const likeProducts: ListingProduct[] = (relatedRaw ?? []).map(cardToListing);
   const brandPickProducts: ListingProduct[] = (brandPicksRaw ?? []).map(cardToListing);
 
-  const mockAvg = parseFloat((product.reviews.reduce((s, r) => s + r.rating, 0) / (product.reviews.length || 1)).toFixed(1));
-  const avgRating = hasRealReviews ? productReviews!.avg : mockAvg;
-  const reviewsTotal = hasRealReviews ? productReviews!.count : product.totalReviews;
-  const breakdownPct = (star: number) =>
-    hasRealReviews
-      ? productReviews!.breakdown.find((b) => b.stars === star)?.percent ?? 0
-      : Math.round(((product.ratingBreakdown[star] ?? 0) / product.totalReviews) * 100);
-  const reviewCards: Review[] = hasRealReviews
-    ? productReviews!.reviews.map((r, i) => ({
-        id: i,
-        name: r.reviewerName,
-        rating: r.rating,
-        date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-        comment: r.body ?? "",
-        sizeBought: r.sizeBought ?? "",
-        photos: r.photos,
-        helpful: 0,
-      }))
-    : product.reviews;
-
-  const saveProduct = () => openSaveModal({
-    id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
-    location: product.vendor.location, price: product.price, moq: product.moq, rating: product.rating,
-    verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
-  });
-
-  // Record view — only for a real, visible product (never a mock/blocked id).
+  // Record view — only for a real, visible product.
   useEffect(() => {
-    if (!row) return;
-    // Local Recently-Viewed list.
+    if (!row || !product) return;
+    // Local Recently-Viewed list. No rating or review count is passed: the only
+    // honest source is product_reviews, which is not loaded yet at this point,
+    // and the denormalised columns on `products` are seed data (see above).
     recordView({
       id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
-      location: product.vendor.location, price: product.price, moq: product.moq, rating: product.rating,
-      reviews: product.totalReviews, verified: product.vendor.verified, image: product.media[0]?.url, category: product.category,
+      location: product.vendor.location ?? undefined, price: product.price ?? undefined,
+      moq: product.moq ?? undefined, verified: product.vendor.verified,
+      image: product.media[0]?.url, category: product.category ?? undefined,
     });
     // Real DB views_count — atomic +1, once per browser session per product (a
     // refresh in the same session doesn't recount; a new session does).
@@ -428,7 +445,7 @@ const ProductDetail = () => {
 
   const card = "rounded-2xl border border-gray-200 bg-white p-4";
 
-  // Still resolving the row: brief spinner (no mock flash).
+  // Still resolving the row: brief spinner.
   if (isPending) {
     return (
       <BuyerShell>
@@ -438,15 +455,48 @@ const ProductDetail = () => {
       </BuyerShell>
     );
   }
-  // Genuine not-found — missing id, RLS-blocked (non-live / not yours), or a
-  // malformed id that errored. All render the exact same state (see ProductNotFound).
-  if (isError || !row) {
+  // A genuine failure — network or server — is NOT a missing product, and is
+  // never papered over with a different listing.
+  if (isError) {
+    return (
+      <BuyerShell>
+        <ProductLoadError onRetry={() => void refetch()} />
+      </BuyerShell>
+    );
+  }
+  // Genuine not-found — missing id, malformed id, or RLS-blocked (non-live /
+  // not yours). All render the exact same state (see ProductNotFound).
+  if (!row || !product) {
     return (
       <BuyerShell>
         <ProductNotFound />
       </BuyerShell>
     );
   }
+
+  // Unchanged direct-chat path, just moved behind the chooser sheet: still
+  // records the enquiry, still lands on /chats/:vendorId.
+  const openDirectChat = () => {
+    setChatOptionsOpen(false);
+    void recordProductEnquiry(row.id).catch(() => {});
+    // Additive: the button does exactly what it did, and also reports that it
+    // was pressed. Until now `calls` was the only CTA in the app with any
+    // record of being used.
+    void logEngagement({
+      eventType: "cta_click", ctaName: "message",
+      vendorId: product.vendor.id, productId: row.id,
+    });
+    navigate(`/chats/${product.vendor.id}`);
+  };
+
+  const saveProduct = () => openSaveModal({
+    id: product.id, vendorId: product.vendor.id, name: product.name, manufacturer: product.vendor.name,
+    location: product.vendor.location ?? undefined, price: product.price ?? undefined,
+    moq: product.moq ?? undefined, verified: product.vendor.verified,
+    // Real review data only; omitted when there is none rather than a seed value.
+    ...(avgRating != null ? { rating: avgRating, reviews: reviewCount } : {}),
+    image: product.media[0]?.url, category: product.category ?? undefined,
+  });
 
   return (
     <BuyerShell>
@@ -457,7 +507,11 @@ const ProductDetail = () => {
 
         {/* Media — sticks alongside the info column on desktop */}
         <motion.div variants={sect} className="lg:sticky lg:top-20">
-          <MediaCarousel media={product.media} rating={product.rating} soldCount={product.soldCount} isInAd={product.isInAd} />
+          {product.media.length > 0 ? (
+            <MediaCarousel media={product.media} rating={avgRating} hasTrustSeal={product.vendor.verified} />
+          ) : (
+            <NoPhotos />
+          )}
         </motion.div>
 
         {/* Product info column */}
@@ -465,7 +519,7 @@ const ProductDetail = () => {
 
         {/* Breadcrumb + header */}
         <motion.div variants={sect}>
-          <p className="text-xs text-gray-400">{product.category} &rsaquo; {product.subCategory}</p>
+          {product.category && <p className="text-xs text-gray-400">{product.category}</p>}
           <div className="mt-1 flex items-start justify-between gap-2">
             <h1 className="flex-1 text-lg font-bold leading-snug text-gray-900 sm:text-xl">{product.name}</h1>
             <div className="flex shrink-0 items-center gap-0.5">
@@ -478,13 +532,22 @@ const ProductDetail = () => {
             </div>
           </div>
           <div className="mt-1.5 flex items-baseline gap-1.5">
-            <span className="text-2xl font-extrabold text-[#ef4d62]">{product.price}</span>
-            <span className="text-sm text-gray-500">/ {product.priceUnit}</span>
+            {product.price ? (
+              <>
+                <span className="text-2xl font-extrabold text-[#ef4d62]">{product.price}</span>
+                {/* Shown only when the vendor gave a unit — "/ Piece" used to be
+                    hardcoded on every listing, whatever it sold in. */}
+                {product.unit && <span className="text-sm text-gray-500">/ {product.unit}</span>}
+              </>
+            ) : (
+              <span className="text-base font-bold text-gray-700">Price on request</span>
+            )}
           </div>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 text-xs text-gray-500"><Package className="h-3.5 w-3.5" /> MOQ {product.moq}</span>
-            <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-medium text-gray-400">{product.productCode}</span>
-          </div>
+          {product.moq && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 text-xs text-gray-500"><Package className="h-3.5 w-3.5" /> MOQ {product.moq}</span>
+            </div>
+          )}
         </motion.div>
 
         {/* Vendor card (clickable → profile) */}
@@ -498,19 +561,30 @@ const ProductDetail = () => {
                 {product.vendor.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-[#ef4d62]" />}
               </div>
               <div className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                <span className="font-medium text-gray-800">{product.vendor.rating}</span>
-                <span>({product.vendor.reviews} reviews)</span>
+                {vendorReviews === undefined ? (
+                  <span className="h-3 w-24 animate-pulse rounded bg-gray-100" aria-label="Loading vendor rating" />
+                ) : vendorReviewCount > 0 ? (
+                  <>
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span className="font-medium text-gray-800">{vendorReviews.avg.toFixed(1)}</span>
+                    <span>({vendorReviewCount} {vendorReviewCount === 1 ? "review" : "reviews"})</span>
+                  </>
+                ) : (
+                  <span>No vendor reviews yet</span>
+                )}
               </div>
-              <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {product.vendor.location}</div>
+              {product.vendor.location && (
+                <div className="mt-0.5 flex items-center gap-1 text-xs text-gray-500"><MapPin className="h-3 w-3" /> {product.vendor.location}</div>
+              )}
             </div>
             <button onClick={(e) => { e.stopPropagation(); setIsFollowing((f) => !f); }}
               className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowing ? "border-gray-200 text-gray-600" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5")}>
               {isFollowing ? "Following" : "+ Follow"}
             </button>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-500"><Clock className="h-3.5 w-3.5 shrink-0" /> {product.vendor.responseTime}</div>
-          {product.isInAd && (
+          {/* "Usually responds within 4 hours" was printed here for every
+              vendor. Nothing measures response time, so nothing is shown. */}
+          {product.vendor.verified && (
             <div className="mt-2 inline-flex items-center gap-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-semibold text-green-700">
               <CheckCircle2 className="h-3 w-3" /> Trust Seal Verified
             </div>
@@ -540,7 +614,7 @@ const ProductDetail = () => {
                 {product.availableColors.map((c) => (
                   <button key={c} onClick={() => setSelectedColor(c)}
                     className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-                      selectedColor === c ? "border-[#ef4d62] bg-[#ef4d62]/5 text-[#ef4d62]" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                      activeColor === c ? "border-[#ef4d62] bg-[#ef4d62]/5 text-[#ef4d62]" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
                     <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: COLOR_HEX[c] ?? "#ccc" }} />{c}
                   </button>
                 ))}
@@ -582,6 +656,9 @@ const ProductDetail = () => {
                 {specsOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: E }} className="overflow-hidden">
                     <div className="px-4 pb-4">
+                      {product.specifications.length === 0 && (
+                        <p className="text-xs text-gray-500">Not specified by the vendor.</p>
+                      )}
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
                         {product.specifications.map((s) => (
                           <div key={s.label}>
@@ -617,7 +694,9 @@ const ProductDetail = () => {
                 <h3 className="text-sm font-bold text-gray-900">Product Description</h3>
                 <button className="inline-flex items-center gap-1 rounded-full border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-600"><Globe className="h-3 w-3" /> Translate</button>
               </div>
-              <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
+              {product.description
+                ? <p className="text-sm leading-relaxed text-gray-600">{product.description}</p>
+                : <p className="text-sm text-gray-500">The vendor hasn't added a description.</p>}
             </div>
 
             {/* Manufacturing */}
@@ -626,11 +705,15 @@ const ProductDetail = () => {
                 <h3 className="text-sm font-bold text-gray-900">Manufacturing Details</h3>
                 <button onClick={() => navigate(`/vendor/${product.vendor.id}`)} className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:border-gray-300">View Profile</button>
               </div>
+              {/* No certifications are rendered: there is no column for them.
+                  "GOTS" and "OEKO-TEX Standard 100" used to be asserted, as fact,
+                  on every live listing — inherited from the mock template. */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 text-sm text-gray-800"><CheckCircle2 className="h-4 w-4 text-green-600" /> Made in {product.manufacturing.country}</span>
-                {product.manufacturing.certifications.map((c) => (
-                  <span key={c} className="rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-700">{c}</span>
-                ))}
+                {product.countryOfOrigin ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm text-gray-800"><CheckCircle2 className="h-4 w-4 text-green-600" /> Made in {product.countryOfOrigin}</span>
+                ) : (
+                  <span className="text-sm text-gray-500">Country of origin not specified by the vendor.</span>
+                )}
               </div>
             </div>
           </motion.div>
@@ -640,27 +723,35 @@ const ProductDetail = () => {
         {tab === "reviews" && (
           <motion.div initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
             <div className={card}>
-              <div className="flex items-start gap-5">
-                <div className="shrink-0 text-center">
-                  <p className="text-4xl font-extrabold text-gray-900">{avgRating}</p>
-                  <StarRow rating={avgRating} />
-                  <p className="mt-1 text-xs text-gray-400">{reviewsTotal} reviews</p>
-                </div>
-                <div className="flex-1 space-y-2">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const pct = breakdownPct(star);
-                    return (
-                      <div key={star} className="flex items-center gap-2">
-                        <span className="w-2.5 text-xs text-gray-500">{star}</span>
-                        <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
-                        <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                          <motion.div className="h-full rounded-full bg-[#ef4d62]" initial={reduced ? false : { width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: E }} />
+              {reviewsPending ? (
+                <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
+              ) : reviewsError ? (
+                <p className="py-4 text-center text-sm text-gray-500">Couldn't load ratings for this product.</p>
+              ) : !hasReviews ? (
+                <p className="py-4 text-center text-sm text-gray-500">No ratings yet.</p>
+              ) : (
+                <div className="flex items-start gap-5">
+                  <div className="shrink-0 text-center">
+                    <p className="text-4xl font-extrabold text-gray-900">{avgRating!.toFixed(1)}</p>
+                    <StarRow rating={avgRating!} />
+                    <p className="mt-1 text-xs text-gray-400">{reviewCount} {reviewCount === 1 ? "review" : "reviews"}</p>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const pct = breakdownPct(star);
+                      return (
+                        <div key={star} className="flex items-center gap-2">
+                          <span className="w-2.5 text-xs text-gray-500">{star}</span>
+                          <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                          <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
+                            <motion.div className="h-full rounded-full bg-[#ef4d62]" initial={reduced ? false : { width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: E }} />
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             <div className={card}>
@@ -681,7 +772,7 @@ const ProductDetail = () => {
                   </button>
                 )}
               </div>
-              {reviewCards.length > 0 ? (
+              {reviewsPending ? null : reviewCards.length > 0 ? (
                 <div className="space-y-4">{reviewCards.map((r) => <ReviewCard key={r.id} review={r} />)}</div>
               ) : (
                 <p className="py-6 text-center text-sm text-gray-400">No reviews yet. Be the first to review this product.</p>
@@ -757,11 +848,6 @@ const ProductDetail = () => {
         onChatDirectly={openDirectChat}
         onRequestQuotation={() => {
           setChatOptionsOpen(false);
-          if (!row) {
-            // Demo/mock products have no DB row to target.
-            toast.info("Quote requests are available on live products only.");
-            return;
-          }
           setQuoteOpen(true);
         }}
         vendorName={product.vendor.name}
