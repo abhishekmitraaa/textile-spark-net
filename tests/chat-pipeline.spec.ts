@@ -1,4 +1,5 @@
 import { test, expect, type Page, type BrowserContext } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -53,7 +54,8 @@ const LOGIN = {
   vendorA: "chatfx-vendor-a@cosora.test",
   support: "rlstest-support@cosora.test",
 };
-const PASSWORD_FIXTURE = "TestPass123!";
+const PASSWORD_FIXTURE = optionalCredential("FIXTURE_PASSWORD");
+test.skip(!PASSWORD_FIXTURE, "set FIXTURE_PASSWORD in .env (see .env.example)");
 
 function admin(): SupabaseClient {
   return createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });

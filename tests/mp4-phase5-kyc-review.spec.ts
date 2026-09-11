@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -29,7 +30,8 @@ const STORAGE_KEY = `sb-${PROJECT_REF}-auth-token`;
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 
 const EMAIL = "zz-mp4-vendor@cosora.in";
-const PASSWORD = "CosoraQA!2026";
+const PASSWORD = optionalCredential("MP_VENDOR_PASSWORD");
+test.skip(!PASSWORD, "set MP_VENDOR_PASSWORD in .env (see .env.example)");
 const VENDOR_ID = "9ddda61f-d778-41a5-b568-39fd9f3eb37a";
 const REASON = "The PAN scan is cut off at the bottom edge — please re-upload the full card.";
 

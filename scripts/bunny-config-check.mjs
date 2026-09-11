@@ -20,6 +20,7 @@
  * Run: node scripts/bunny-config-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { demoAccount } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 
 const env = Object.fromEntries(
@@ -36,7 +37,7 @@ const ANON = env.VITE_SUPABASE_ANON_KEY;
 // vendor (vendor_profiles row) AND active, because the probe deliberately sits
 // behind the function's full authorization gate rather than merely behind
 // authentication.
-const VENDOR = { email: "demo-vendor@cosora.dev", password: "cosora123" };
+const VENDOR = demoAccount("vendor");
 
 const db = createClient(URL_, ANON, { auth: { persistSession: false } });
 const { data: auth, error: authErr } = await db.auth.signInWithPassword(VENDOR);

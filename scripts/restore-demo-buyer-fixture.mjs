@@ -22,6 +22,7 @@
  *   node scripts/restore-demo-buyer-fixture.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { credential } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -41,7 +42,7 @@ const db = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, {
 
 const { error: loginErr } = await db.auth.signInWithPassword({
   email: "demo-buyer@cosora.dev",
-  password: "cosora123",
+  password: credential("DEMO_BUYER_PASSWORD"),
 });
 if (loginErr) {
   console.error("login failed:", loginErr.message);

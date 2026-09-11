@@ -22,7 +22,9 @@ export default function DevAccountSwitcher() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<DemoRole | "out" | null>(null);
 
-  if (!import.meta.env.DEV) return null;
+  // DEMO_ACCOUNTS is null outside the dev server, and in it when .env lacks the
+  // DEMO_*_PASSWORD values — see vite.config.ts.
+  if (!import.meta.env.DEV || !DEMO_ACCOUNTS) return null;
 
   const current = user?.email ?? null;
 

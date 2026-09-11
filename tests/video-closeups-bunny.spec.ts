@@ -1,4 +1,5 @@
 import { test, expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
+import { hasCredentials, demoPasswordFor } from "../scripts/lib/test-credentials.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import * as tus from "tus-js-client";
 import {
@@ -88,7 +89,7 @@ const LOGIN = {
   admin: "demo-admin@cosora.dev",
   buyer: "demo-buyer@cosora.dev",
 };
-const PASSWORD_DEMO = "cosora123";
+test.skip(!hasCredentials("DEMO_VENDOR_PASSWORD", "DEMO_BUYER_PASSWORD", "DEMO_ADMIN_PASSWORD"), "set DEMO_*_PASSWORD in .env (see .env.example)");
 
 /**
  * The real vendor upload already in this project: 478x850, 21s, ~4 MB — a
@@ -119,7 +120,7 @@ function anonClient(): SupabaseClient {
   return createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
 }
 
-async function apiSignIn(email: string, password = PASSWORD_DEMO) {
+async function apiSignIn(email: string, password = demoPasswordFor(email)) {
   const db = anonClient();
   const { data, error } = await db.auth.signInWithPassword({ email, password });
   if (error) throw new Error(`login failed for ${email}: ${error.message}`);

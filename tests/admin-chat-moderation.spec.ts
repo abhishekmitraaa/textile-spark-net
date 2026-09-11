@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -46,7 +47,8 @@ const F = {
   buyerA: "cf000001-0000-0000-0000-000000000001",
   vendorA: "cf000003-0000-0000-0000-000000000003",
 };
-const PASSWORD_ADMIN = "TestPass123!";
+const PASSWORD_ADMIN = optionalCredential("FIXTURE_PASSWORD");
+test.skip(!PASSWORD_ADMIN, "set FIXTURE_PASSWORD in .env (see .env.example)");
 
 async function apiSignIn(email: string) {
   const db = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });

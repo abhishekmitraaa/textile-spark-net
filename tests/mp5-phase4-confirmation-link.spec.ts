@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -39,7 +40,8 @@ const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
 
 const EMAIL = "zz-mp5-link@cosora.in";
-const PASSWORD = "CosoraQA!2026";
+const PASSWORD = optionalCredential("MP5_LINK_PASSWORD");
+test.skip(!PASSWORD, "set MP5_LINK_PASSWORD in .env (see .env.example)");
 const FULL_NAME = "Kesar Owner";
 const PHONE = "9876500077";
 /** The whole point. Lives only in user metadata until AuthCallback moves it. */

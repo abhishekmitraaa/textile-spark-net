@@ -12,12 +12,12 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
-| 2026-09-11 | Super-admin demo credential shipped in the production JS bundle and committed to a public repo | Critical | `src/contexts/AuthContext.tsx` (`DEMO_ACCOUNTS`); 16 other tracked files in `scripts/` and `tests/` | Open — needs a human to rotate |
 | 2026-09-11 | embed-query's per-IP key parses `x-forwarded-for` identically but was never probed | Low | `supabase/functions/embed-query/index.ts` (`.split(",")[0]`) | Open — confirm next time that file is touched |
 
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-11 | Super-admin demo credential shipped in the production JS bundle and committed to a public repo | Critical | `src/contexts/AuthContext.tsx` (`DEMO_ACCOUNTS`); 16 other tracked files in `scripts/` and `tests/`; more in Cosora-Admin | Fixed 2026-09-11 (Master Prompt 8, Phase 1) — rotated, sessions revoked, old password refused; literal out of every build; all test credentials read from env |
 | 2026-09-11 | Unverified claim that image-search's per-IP key cannot be spoofed via `x-forwarded-for` | Low | `supabase/functions/image-search/index.ts` | Closed 2026-09-11 — tested on this deployment; no bypass; comment made precise, parsing unchanged |
 | 2026-09-10 | image-search has no rate limit | Medium | `supabase/functions/image-search/index.ts` | Fixed 2026-09-10 |
 | 2026-09-10 | No rejection path for non-product images | Low | `supabase/functions/image-search/index.ts`, `src/pages/Search.tsx` | Fixed 2026-09-10 |
@@ -48,16 +48,42 @@ in the next one.
   content, open every vendor's KYC scans through signed URLs (`business_docs_owner_select`
   admits `is_admin()`), and read admin-only tables. Removing the literal from the bundle does
   NOT undo the exposure: it is in public git history and in every bundle already deployed.
-- Fix applied: none — this needs a human decision, because every fix breaks something.
-  Recommended, in order: (1) rotate demo-admin's password now, or remove `is_admin` /
-  `admin_role` from demo-admin and give tests a separate, non-shared admin; (2) gate
-  `DEMO_ACCOUNTS` on `import.meta.env.DEV` so the literal is tree-shaken out of production
-  builds; (3) move test credentials in `scripts/` and `tests/` to environment variables — the
-  Master Prompt 7 admin spec (`tests/mp7-admin-vendor-panels.spec.ts`) already reads
-  `DEMO_ADMIN_PASSWORD` from the environment rather than hardcoding it. Rotating the password
-  breaks the 17 files that hardcode it until (3) is done.
-- Status: Open
-- Related changelog entry: 2026-09-11 (Master Prompt 7, buyer-trust thread · security finding)
+- Fix applied (2026-09-11, Master Prompt 8, Phase 1), in the order recommended above:
+  1. **Rotation, first, before any code.** A new random password per account was generated
+     and bcrypt-hashed locally; only the hash was sent to the database
+     (`auth.users.encrypted_password`), so no new value appears in any tool log or file but
+     the gitignored `.env`. In the same transaction every `auth.sessions` row was deleted and
+     every `auth.refresh_tokens` row revoked, because a password change alone does not end a
+     session an attacker may already hold (demo-admin had 1 live session and 1 unrevoked
+     refresh token at the time). Accounts: demo-admin, and — on Mitra's decision —
+     demo-buyer and demo-vendor. Also rotated, because their passwords were in the same
+     public repo: `zz-mp4-vendor`, `zz-mp5-link` and the three `zz-test-vendor-*` accounts.
+     Verified with a password grant against `/auth/v1/token`: each old password now returns
+     HTTP 400 `invalid_credentials`; each new one returns 200.
+  2. **demo-admin keeps `super_admin`** — Mitra's decision, asked rather than assumed. Its
+     password is now a secret held only in `.env`.
+  3. **No build can contain a demo password.** `vite.config.ts` defines `__DEMO_PASSWORDS__`
+     from `.env` only when `command === "serve"`; every build, including `build:dev`, gets
+     `null`, and `DEMO_ACCOUNTS` is `null` without it. Verified: after `npm run build`, no
+     file in `dist/` contains the old password, any new one, or even the demo-admin email.
+  4. **Every test credential comes from the environment.** `scripts/lib/test-credentials.mjs`
+     in both repos (process env first, then `.env`); names in `.env.example`; CI maps them
+     from repository secrets. Scripts call `credential()`, which throws with the variable's
+     name; specs use `optionalCredential()` plus `test.skip`, the pattern
+     `mp7-admin-vendor-panels.spec.ts` introduced. Beyond the 17 files counted above, the
+     sweep found the throwaway-vendor password in 7 more textile-spark-net files (one of them
+     a tracked handoff file under `screenshots/`, written by `vendor-signup.spec.ts`, which
+     no longer writes it), and the rlstest/chatfx fixture password in 13 Cosora-Admin files,
+     including the two seed scripts that create admin logins. The seeds now read
+     `current_setting('cosora.fixture_password')` and abort if it is unset. No fixture
+     account exists today, so nothing needed rotating there. Verified: `git grep -lF` for
+     each of the three old values returns 0 files in both repositories.
+- Still true, and not fixable: the old passwords remain in public git history and in
+  previously deployed bundles. Rotation is what makes them worthless. CI secrets must be
+  created in GitHub by a human; until they are, the specs that need them skip.
+- Status: Fixed 2026-09-11
+- Related changelog entries: 2026-09-11 (Master Prompt 7, buyer-trust thread · security finding);
+  2026-09-11 (Master Prompt 8 · Phase 1)
 
 ### YYYY-MM-DD — <short title> — Severity: Critical / High / Medium / Low
 - What was found:

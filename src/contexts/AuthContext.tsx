@@ -24,12 +24,22 @@ export interface Profile {
   avatar_url: string | null;
 }
 
-// Seeded in the DB (see migrations/seed). Password is the same for all three.
-export const DEMO_ACCOUNTS: Record<DemoRole, { email: string; password: string; label: string }> = {
-  buyer:  { email: "demo-buyer@cosora.dev",  password: "cosora123", label: "Demo Buyer" },
-  vendor: { email: "demo-vendor@cosora.dev", password: "cosora123", label: "Demo Vendor" },
-  admin:  { email: "demo-admin@cosora.dev",  password: "cosora123", label: "Demo Admin" },
-};
+// Seeded in the DB (see migrations/seed). Dev-server only: the passwords come
+// from the gitignored .env through vite.config.ts, which defines
+// __DEMO_PASSWORDS__ for `vite` (serve) and as null for every build. So no
+// build, of any mode, can contain them. Master Prompt 8, Phase 1: this
+// constant used to hold demo-admin's (super_admin) password as a literal, and
+// the production bundle shipped it.
+const DEMO_PASSWORDS = import.meta.env.DEV ? __DEMO_PASSWORDS__ : null;
+
+export const DEMO_ACCOUNTS: Record<DemoRole, { email: string; password: string; label: string }> | null =
+  DEMO_PASSWORDS
+    ? {
+        buyer:  { email: "demo-buyer@cosora.dev",  password: DEMO_PASSWORDS.buyer,  label: "Demo Buyer" },
+        vendor: { email: "demo-vendor@cosora.dev", password: DEMO_PASSWORDS.vendor, label: "Demo Vendor" },
+        admin:  { email: "demo-admin@cosora.dev",  password: DEMO_PASSWORDS.admin,  label: "Demo Admin" },
+      }
+    : null;
 
 interface AuthContextValue {
   session: Session | null;
@@ -81,6 +91,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile]);
 
   const signInAsDemo = useCallback(async (role: DemoRole) => {
+    if (!DEMO_ACCOUNTS) throw new Error("Demo sign-in needs the dev server and DEMO_*_PASSWORD in .env");
     const acct = DEMO_ACCOUNTS[role];
     const { error } = await supabase.auth.signInWithPassword({ email: acct.email, password: acct.password });
     if (error) throw error;

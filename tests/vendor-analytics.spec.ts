@@ -1,4 +1,5 @@
 import { test, expect, type Browser, type BrowserContext } from "@playwright/test";
+import { hasCredentials, demoPasswordFor } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -38,7 +39,7 @@ const PROJECT_REF = new URL(SUPABASE_URL).hostname.split(".")[0];
 const STORAGE_KEY = `sb-${PROJECT_REF}-auth-token`;
 
 const VENDOR = "demo-vendor@cosora.dev";
-const PASSWORD_DEMO = "cosora123";
+test.skip(!hasCredentials("DEMO_VENDOR_PASSWORD", "DEMO_BUYER_PASSWORD", "DEMO_ADMIN_PASSWORD"), "set DEMO_*_PASSWORD in .env (see .env.example)");
 // `screenshots/`, not `test-results/` — Playwright wipes test-results at the
 // start of every run, and documentation/test.md references these by path.
 const SHOTS = path.join(REPO_ROOT, "screenshots");
@@ -69,7 +70,7 @@ const RETIRED_ADS_FIXTURES = [
 
 async function contextAs(browser: Browser, email: string): Promise<BrowserContext> {
   const db = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
-  const { data, error } = await db.auth.signInWithPassword({ email, password: PASSWORD_DEMO });
+  const { data, error } = await db.auth.signInWithPassword({ email, password: demoPasswordFor(email) });
   if (error) throw new Error(`login failed for ${email}: ${error.message}`);
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1200 } });
   await ctx.addInitScript(

@@ -1,4 +1,5 @@
 import { test, expect, type Browser } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -40,8 +41,8 @@ const STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-tok
 const ADMIN_URL = process.env.ADMIN_APP_URL ?? "http://localhost:5174";
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 
-const ADMIN = { email: "demo-admin@cosora.dev", password: process.env.DEMO_ADMIN_PASSWORD };
-const VENDOR = { email: "zz-mp4-vendor@cosora.in", password: process.env.MP_VENDOR_PASSWORD };
+const ADMIN = { email: "demo-admin@cosora.dev", password: optionalCredential("DEMO_ADMIN_PASSWORD") };
+const VENDOR = { email: "zz-mp4-vendor@cosora.in", password: optionalCredential("MP_VENDOR_PASSWORD") };
 
 /** Throwaway vendor: two DRAWN-signature contracts at the same version, one PAN. */
 const DRAWN = "9ddda61f-d778-41a5-b568-39fd9f3eb37a";

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -35,10 +36,11 @@ const ANON = env.VITE_SUPABASE_ANON_KEY;
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 const HANDOFF = path.join(SHOTS, "zz-test-vendor.txt");
 
-export const TEST_PASSWORD = "CosoraQA!2026";
+export const TEST_PASSWORD = optionalCredential("TEST_VENDOR_PASSWORD");
 const BRAND = "ZZ Test Vendor 2026-09-08";
 
 test("a seller signs up through Register.tsx and lands a correct profiles row", async ({ page }) => {
+  test.skip(!TEST_PASSWORD, "set TEST_VENDOR_PASSWORD in .env (see .env.example)");
   mkdirSync(SHOTS, { recursive: true });
   const email = `zz-test-vendor-${Date.now()}@cosora.in`;
   page.setDefaultTimeout(25_000);
@@ -77,7 +79,10 @@ test("a seller signs up through Register.tsx and lands a correct profiles row", 
   expect(signInError?.message ?? "", "sign-in is refused until the email is confirmed")
     .toMatch(/not confirmed|Invalid login/i);
 
-  writeFileSync(HANDOFF, `${email}\n${TEST_PASSWORD}\n${BRAND}\n`);
+  writeFileSync(HANDOFF, `${email}
+(password: TEST_VENDOR_PASSWORD in .env)
+${BRAND}
+`);
   console.log(`\n  CREATED: ${email}`);
   console.log(`  Confirm this user in Supabase → Authentication → Users, then run`);
   console.log(`  tests/vendor-onboarding-write-path.spec.ts\n`);

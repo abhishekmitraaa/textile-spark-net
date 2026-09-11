@@ -67,6 +67,15 @@ Rules decided before or outside of Claude Code sessions.
 - **Layout wrappers are role-specific** — every **vendor** page wraps in `DashboardLayout`;
   every **buyer** page uses `BuyerShell`. Putting `DashboardLayout` on a buyer route
   double-stacks the top bar.
+- **No credential in source, ever — not even a test one** (Master Prompt 8, 2026-09-11). A
+  super_admin password sat in `AuthContext.tsx`, 16 scripts/specs and the production bundle
+  of a public repo for two months. Test logins are read through
+  `scripts/lib/test-credentials.mjs` from the gitignored `.env` (or CI secrets); the names
+  are in `.env.example`. Scripts use `credential()`; specs use `optionalCredential()` plus
+  `test.skip`. The dev account switcher gets demo passwords only through
+  `vite.config.ts`'s `__DEMO_PASSWORDS__`, which is `null` in every build. A new fixture
+  seed takes its password from `current_setting(...)`, never a literal. After any change
+  near auth, build and `grep -rlF` each value over `dist/`: the answer must be 0.
 
 ## Business Rules — Discovered/Decided During Development
 

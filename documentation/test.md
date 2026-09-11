@@ -120,6 +120,37 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 — Master Prompt 8, Phase 1: credential rotation, bundle grep, env-credential specs 12/13
+
+**Rotation, proven by password grant** (`POST /auth/v1/token?grant_type=password`, anon key; token
+bodies were never printed, only whether one was issued):
+
+| Account | Before rotation | Old password after | New password after |
+|---|---|---|---|
+| demo-admin@cosora.dev | HTTP 200, token issued | HTTP 400 `invalid_credentials` | HTTP 200 |
+| demo-buyer@cosora.dev | — | HTTP 400 `invalid_credentials` | HTTP 200 |
+| demo-vendor@cosora.dev | — | HTTP 400 `invalid_credentials` | HTTP 200 |
+
+SQL after the rotation: all three demo accounts and the five `zz-*` accounts showed `sessions = 0` and
+`live_refresh_tokens = 0`, with a new `$2a$10$` hash. The only admin rows in `profiles` are demo-admin
+and the owner's Google account, whose password was never in the code.
+
+**Production bundle.** `npm run build`, then `grep -rlF` over `dist/`: the old password → 0 files;
+each of the three new passwords → 0 files; `demo-admin@cosora.dev` → 0 files. Dev server:
+`/@vite/env` carries the values (count 1), so the dev switcher still works.
+
+**Source.** `git grep -lF` for each of the three old password values → 0 files in textile-spark-net and
+0 in Cosora-Admin. `node --check` → pass on every `scripts/*.mjs` in both repos.
+
+**Helpers.** `scripts/lib/test-credentials.mjs` signed in as demo-buyer, demo-vendor, demo-admin,
+zz-mp4-vendor and zz-mp5-link (textile-spark-net), and as demo-admin (Cosora-Admin copy). An unset name
+throws `NOPE_NOT_SET is not set. Add it to .env (the names are listed in .env.example) or export it.`
+
+**Specs.** `npx playwright test tests/vendor-my-store.spec.ts tests/vendor-analytics.spec.ts` →
+**12 passed, 1 failed.** The failure is `/kyc reads vendor_documents`, which waits for an "Aadhaar" label
+that `/kyc` stopped rendering when Aadhaar collection was deferred. The assertion is stale and
+unrelated to credentials; it is corrected with Phase 3's `/kyc` change.
+
 ### 2026-09-11 — x-forwarded-for probe on the live deployment (19 requests) + image-search check 18/18 on v7
 
 **Why.** The 2026-09-10 claim that a client cannot forge its IP here rested on one request whose

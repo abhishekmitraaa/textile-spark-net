@@ -24,6 +24,7 @@
  * Run: node scripts/suspension-gate-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { demoAccount } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 
 const env = Object.fromEntries(
@@ -36,8 +37,8 @@ const env = Object.fromEntries(
 const URL_ = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
 
-const VENDOR = { email: "demo-vendor@cosora.dev", password: "cosora123" };
-const ADMIN = { email: "demo-admin@cosora.dev", password: "cosora123" };
+const VENDOR = demoAccount("vendor");
+const ADMIN = demoAccount("admin");
 const TAG = `zz-gate-${Date.now()}`;
 
 function client() {

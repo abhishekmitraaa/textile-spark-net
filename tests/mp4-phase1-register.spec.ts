@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
+test.skip(!optionalCredential("MP_VENDOR_PASSWORD"), "set MP_VENDOR_PASSWORD in .env (see .env.example)");
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,7 +30,7 @@ const env = Object.fromEntries(
 
 export const SIGNUP = {
   email: "zz-mp4-vendor@cosora.in",
-  password: "CosoraQA!2026",
+  password: optionalCredential("MP_VENDOR_PASSWORD"),
   fullName: "Meridian Owner",
   phone: "9876500042",
   /**

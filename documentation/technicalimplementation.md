@@ -1020,6 +1020,24 @@ Established 2026-09-05, when the chat pipeline was first tested at both layers.
 Follow these rather than reinventing them; each one exists because its absence
 produced a wrong result.
 
+### Test credentials come from the environment (2026-09-11, Master Prompt 8)
+
+`scripts/lib/test-credentials.mjs` (Cosora-Admin has an identical copy) is the only
+place a test reads a password. It checks `process.env` first, so CI can inject
+repository secrets, then the gitignored `.env`. Names are in `.env.example`:
+`DEMO_BUYER_PASSWORD`, `DEMO_VENDOR_PASSWORD`, `DEMO_ADMIN_PASSWORD`,
+`MP_VENDOR_PASSWORD`, `MP5_LINK_PASSWORD`, `TEST_VENDOR_PASSWORD`, `FIXTURE_PASSWORD`.
+
+| Caller | Use | Why |
+|---|---|---|
+| `scripts/*.mjs` | `credential(name)`, `demoAccount(role)`, `demoPasswordFor(email)` | Throws with the variable's name, rather than surfacing later as "Invalid login credentials" |
+| `tests/*.spec.ts` | `optionalCredential(name)` / `hasCredentials(...)` + `test.skip(...)` | A throw while Playwright collects files aborts every spec, not just this one |
+| The dev account switcher | `__DEMO_PASSWORDS__`, defined in `vite.config.ts` | Defined only for `command === "serve"`; `null` in every build |
+| Fixture seed SQL (Cosora-Admin) | `current_setting('cosora.fixture_password')` + a guard `DO` block | The SQL editor cannot read `.env`; the guard aborts before any account is created if the setting is missing |
+
+Every demo account now has its own password, so a script that signs in several of them
+by address uses `demoPasswordFor(email)`, not one shared constant.
+
 ### Two layers, and a mismatch is a FAIL
 
 Every feature needs a **database** check (`supabase-js` against the real project,

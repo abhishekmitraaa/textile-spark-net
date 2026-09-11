@@ -16,6 +16,7 @@
  *   node scripts/vendor-contract-integrity-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { credential } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,8 +29,8 @@ const env = Object.fromEntries(
     .map((l) => [l.slice(0, l.indexOf("=")).trim(), l.slice(l.indexOf("=") + 1).trim()]),
 );
 
-const VENDOR = { id: "9ddda61f-d778-41a5-b568-39fd9f3eb37a", email: "zz-mp4-vendor@cosora.in", password: "CosoraQA!2026" };
-const BUYER = { id: "11111111-1111-1111-1111-111111111111", email: "demo-buyer@cosora.dev", password: "cosora123" };
+const VENDOR = { id: "9ddda61f-d778-41a5-b568-39fd9f3eb37a", email: "zz-mp4-vendor@cosora.in", password: credential("MP_VENDOR_PASSWORD") };
+const BUYER = { id: "11111111-1111-1111-1111-111111111111", email: "demo-buyer@cosora.dev", password: credential("DEMO_BUYER_PASSWORD") };
 
 let pass = 0;
 let fail = 0;

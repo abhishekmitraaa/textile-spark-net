@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Browser, type BrowserContext } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -37,7 +38,8 @@ const STORAGE_KEY = `sb-${PROJECT_REF}-auth-token`;
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 
 const EMAIL = "demo-buyer@cosora.dev";
-const PASSWORD = "cosora123";
+const PASSWORD = optionalCredential("DEMO_BUYER_PASSWORD");
+test.skip(!PASSWORD, "set DEMO_BUYER_PASSWORD in .env (see .env.example)");
 const VENDOR_ID = "11111111-1111-1111-1111-111111111111";
 /** The account's role before this run; restored in teardown. */
 const ORIGINAL_ACTIVE_ROLE = "buyer";

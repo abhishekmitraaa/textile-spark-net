@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Locator, type Browser, type BrowserContext } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -34,7 +35,8 @@ const SHOTS = path.join(REPO_ROOT, "screenshots");
 // Overridable so the same proof can be re-run against a NEW throwaway vendor
 // without editing the file that recorded the original run.
 const EMAIL = process.env.MP_VENDOR_EMAIL ?? "zz-mp4-vendor@cosora.in";
-const PASSWORD = process.env.MP_VENDOR_PASSWORD ?? "CosoraQA!2026";
+const PASSWORD = optionalCredential("MP_VENDOR_PASSWORD");
+test.skip(!PASSWORD, "set MP_VENDOR_PASSWORD in .env (see .env.example)");
 /** Typed into /register step 2. Must reach vendor_profiles.brand_name via AuthCallback. */
 const SIGNUP_BRAND = process.env.MP_VENDOR_BRAND ?? "Meridian Weaves";
 

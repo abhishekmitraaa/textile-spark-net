@@ -27,6 +27,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { createClient } from "@supabase/supabase-js";
+import { demoPasswordFor } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 
 const env = Object.fromEntries(
@@ -37,7 +38,6 @@ const env = Object.fromEntries(
 );
 const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
-const PASSWORD = "cosora123";
 const MARKER = `zz-geo-${Date.now().toString(36)}`;
 
 let failures = 0;
@@ -48,7 +48,7 @@ function check(label, ok, detail = "") {
 
 async function signIn(email) {
   const db = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
-  const { data, error } = await db.auth.signInWithPassword({ email, password: PASSWORD });
+  const { data, error } = await db.auth.signInWithPassword({ email, password: demoPasswordFor(email) });
   if (error) throw new Error(`login failed for ${email}: ${error.message}`);
   return { db, id: data.user.id };
 }

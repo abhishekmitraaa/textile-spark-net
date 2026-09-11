@@ -29,6 +29,7 @@
  * Run: node scripts/bunny-e2e-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { demoAccount } from "./lib/test-credentials.mjs";
 import { readFileSync, createWriteStream, createReadStream, statSync, unlinkSync, existsSync } from "node:fs";
 import { Readable } from "node:stream";
 import { fileURLToPath } from "node:url";
@@ -43,8 +44,8 @@ const env = Object.fromEntries(
 );
 const URL_ = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
-const VENDOR = { email: "demo-vendor@cosora.dev", password: "cosora123" };
-const ADMIN = { email: "demo-admin@cosora.dev", password: "cosora123" };
+const VENDOR = demoAccount("vendor");
+const ADMIN = demoAccount("admin");
 
 // The real vendor upload already in the project: 478x850, 21s, ~4 MB. Chosen
 // deliberately over a synthetic clip — it is a genuine phone video from this

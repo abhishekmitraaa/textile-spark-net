@@ -38,3 +38,13 @@ jobs:
 
       - name: Run Playwright tests
         run: npx playwright test --reporter=github
+        # Test logins come from repository secrets (Master Prompt 8, Phase 1);
+        # specs that need an unset one skip instead of failing to sign in.
+        env:
+          DEMO_BUYER_PASSWORD: ${{ secrets.DEMO_BUYER_PASSWORD }}
+          DEMO_VENDOR_PASSWORD: ${{ secrets.DEMO_VENDOR_PASSWORD }}
+          DEMO_ADMIN_PASSWORD: ${{ secrets.DEMO_ADMIN_PASSWORD }}
+          MP_VENDOR_PASSWORD: ${{ secrets.MP_VENDOR_PASSWORD }}
+          MP5_LINK_PASSWORD: ${{ secrets.MP5_LINK_PASSWORD }}
+          TEST_VENDOR_PASSWORD: ${{ secrets.TEST_VENDOR_PASSWORD }}
+          FIXTURE_PASSWORD: ${{ secrets.FIXTURE_PASSWORD }}

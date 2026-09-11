@@ -77,6 +77,7 @@
 // ─────────────────────────────────────────────────────────────
 
 import { build } from "esbuild";
+import { credential } from "./lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -99,7 +100,7 @@ const SUPABASE_URL = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
 
-const PASSWORD = "cosora123";
+const PASSWORD = credential("DEMO_BUYER_PASSWORD");
 const FIXTURE = path.join(REPO_ROOT, "scripts/fixtures/polo-tshirt-listing.jpg");
 // Mirrors UPLOAD_MAX_EDGE in Search.tsx.
 const UPLOAD_MAX_EDGE = 1024;

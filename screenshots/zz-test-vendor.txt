@@ -1,3 +1,3 @@
 zz-test-vendor-1788953047526@cosora.in
-CosoraQA!2026
+(password: TEST_VENDOR_PASSWORD in .env)
 ZZ Test Vendor 2026-09-08

@@ -24,6 +24,7 @@
  *   node scripts/purge-orphaned-kyc-objects.mjs --apply   # delete
  */
 import { createClient } from "@supabase/supabase-js";
+import { credential } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -39,8 +40,8 @@ const env = Object.fromEntries(
 
 /** Owners whose folders this script can clean, and the credentials to do it as them. */
 const OWNERS = [
-  { id: "11111111-1111-1111-1111-111111111111", email: "demo-buyer@cosora.dev", password: "cosora123" },
-  { id: "9ddda61f-d778-41a5-b568-39fd9f3eb37a", email: "zz-mp4-vendor@cosora.in", password: "CosoraQA!2026" },
+  { id: "11111111-1111-1111-1111-111111111111", email: "demo-buyer@cosora.dev", password: credential("DEMO_BUYER_PASSWORD") },
+  { id: "9ddda61f-d778-41a5-b568-39fd9f3eb37a", email: "zz-mp4-vendor@cosora.in", password: credential("MP_VENDOR_PASSWORD") },
 ];
 
 const anon = () => createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY, { auth: { persistSession: false } });

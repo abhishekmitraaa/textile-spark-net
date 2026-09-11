@@ -26,6 +26,7 @@
  * Run: node scripts/notifications-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { credential } from "./lib/test-credentials.mjs";
 import { readFileSync } from "node:fs";
 
 const env = Object.fromEntries(
@@ -40,7 +41,7 @@ const ANON = env.VITE_SUPABASE_ANON_KEY;
 
 // The demo buyer. Same account the app's own dev switcher uses.
 const EMAIL = "demo-buyer@cosora.dev";
-const PASSWORD = "cosora123";
+const PASSWORD = credential("DEMO_BUYER_PASSWORD");
 
 const results = [];
 let failures = 0;

@@ -26,6 +26,7 @@
  * Run: node scripts/recently-viewed-check.mjs [baseUrl]   (default :8090)
  */
 import { chromium } from "@playwright/test";
+import { credential } from "./lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 
@@ -45,7 +46,7 @@ const STORE_KEY = "cosora.recentlyViewed.v1";
 
 // The demo buyer. Same account the app's own dev switcher uses.
 const EMAIL = "demo-buyer@cosora.dev";
-const PASSWORD = "cosora123";
+const PASSWORD = credential("DEMO_BUYER_PASSWORD");
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMPTY_TEXT = "No recently viewed products";

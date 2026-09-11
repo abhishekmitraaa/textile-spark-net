@@ -1,4 +1,5 @@
 import { test, expect, type Page, type Browser, type BrowserContext } from "@playwright/test";
+import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -41,7 +42,8 @@ const STORAGE_KEY = `sb-${PROJECT_REF}-auth-token`;
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 
 const VENDOR = "demo-vendor@cosora.dev";
-const PASSWORD = "cosora123";
+const PASSWORD = optionalCredential("DEMO_VENDOR_PASSWORD");
+test.skip(!PASSWORD, "set DEMO_VENDOR_PASSWORD in .env (see .env.example)");
 
 /** Every literal the removed fixtures used to print. None may come back. */
 const RETIRED = [
