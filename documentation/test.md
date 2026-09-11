@@ -119,6 +119,24 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 6) — Cosora-Admin panels verified, then pushed: 3/3 GREEN
+
+`tests/mp7-admin-vendor-panels.spec.ts` (credentials from the environment, `DEMO_ADMIN_PASSWORD`
+and `MP_VENDOR_PASSWORD`; both dev servers up):
+
+| Case | Result |
+|---|---|
+| P6.a vendor `9ddda61f…`: two contracts at `2026-09-v1`, duplicate flagged, "View signature" opens a signed URL that resolves, no edit/delete control | PASS |
+| P6.b vendor `11111111…` (demo-buyer fixture): "typed — no image on file", no "View signature" | PASS |
+| P6.c PAN: Reject with reason → DB `verified=false`, the reason, `reviewed_by` = the admin → the vendor's `/kyc` shows the reason → Approve → DB `verified=true`, reason cleared | PASS |
+
+Three earlier runs failed on the spec, not the app: `getByText("KYC documents")` also matched a
+row label in the Manual-verification card; the vendor has two unreviewed documents, so "Reject"
+matched twice; and the first version assumed the PAN started verified (a later onboarding
+resubmission had replaced the reviewed row with a fresh one). No click happened in any failed
+run. Push evidence: Cosora-Admin `git log -1` = `git ls-remote origin main` =
+`01ab71e5b549e46d784ed9c0b3f654655cc35bc9`.
+
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 5) — Bunny T8.1: not Bunny's fault; spec fixed, 6/6 GREEN
 
 **Bunny, read directly** (via `bunny-reconcile`, read-only) — the video from the failure message:
