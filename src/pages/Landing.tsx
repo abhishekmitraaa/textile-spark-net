@@ -362,13 +362,10 @@ const Landing = () => {
           <div className="mt-12 grid gap-5 md:grid-cols-6">
             {/* large image cell */}
             <Reveal delay={0} className="md:col-span-4">
-              <div className="group relative h-full min-h-[20rem] overflow-hidden rounded-2xl border border-zinc-200">
-                <img
-                  src="https://picsum.photos/seed/cosora-textile-mill-fabric/1000/700"
-                  alt="Fabric rolls at a textile manufacturer"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  loading="lazy"
-                />
+              {/* No photo: this cell used a hotlinked picsum.photos placeholder
+                  captioned as a textile manufacturer. It is a solid ground until
+                  there is imagery the project owns — see ToDo.md. */}
+              <div className="group relative h-full min-h-[20rem] overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-900">
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/80 via-zinc-950/20 to-transparent" />
                 <div className="relative flex h-full flex-col justify-end p-8">
                   <BadgeCheck className="mb-3 h-7 w-7 text-white" strokeWidth={1.75} />
@@ -428,13 +425,8 @@ const Landing = () => {
             </Reveal>
 
             <Reveal delay={2} className="md:col-span-2">
-              <div className="group relative h-full min-h-[12rem] overflow-hidden rounded-2xl border border-zinc-200">
-                <img
-                  src="https://picsum.photos/seed/cosora-garment-tailoring-studio/700/700"
-                  alt="Garment production in a studio"
-                  className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  loading="lazy"
-                />
+              {/* No photo — same reason as the manufacturers cell above. */}
+              <div className="group relative h-full min-h-[12rem] overflow-hidden rounded-2xl border border-zinc-200 bg-zinc-900">
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/75 to-transparent" />
                 <div className="relative flex h-full flex-col justify-end p-8">
                   <h3 className="font-['Barlow_Condensed'] text-2xl font-bold uppercase tracking-tight text-white">
@@ -449,34 +441,12 @@ const Landing = () => {
           </div>
         </section>
 
-        {/* -------------------------------------------------------- Testimonial */}
-        <section className="border-y border-zinc-200 bg-white">
-          <div className="mx-auto max-w-[1400px] px-5 py-20 lg:px-10 lg:py-28">
-            <Reveal className="mx-auto max-w-3xl text-center">
-              <div className="mb-6 flex justify-center gap-1">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Star key={i} className="h-5 w-5 fill-[#C8102E] text-[#C8102E]" strokeWidth={0} />
-                ))}
-              </div>
-              <blockquote className="font-['Barlow_Condensed'] text-3xl font-bold uppercase leading-[1.05] tracking-tight text-zinc-900 sm:text-4xl lg:text-5xl">
-                &ldquo;We cut our sampling cycle from weeks to days. The vendors are
-                real, the quotes are fast.&rdquo;
-              </blockquote>
-              <figcaption className="mt-8 flex items-center justify-center gap-3">
-                <img
-                  src="https://picsum.photos/seed/ananya-desai-founder/96/96"
-                  alt=""
-                  className="h-11 w-11 rounded-full object-cover"
-                  loading="lazy"
-                />
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-zinc-900">Ananya Desai</p>
-                  <p className="text-sm text-zinc-500">Founder, Indigo Loom Apparel</p>
-                </div>
-              </figcaption>
-            </Reveal>
-          </div>
-        </section>
+        {/* A testimonial used to sit here: "We cut our sampling cycle from weeks
+            to days. The vendors are real, the quotes are fast." — attributed to
+            "Ananya Desai, Founder, Indigo Loom Apparel", with a picsum headshot.
+            No such customer exists in this database. Removed rather than reworded:
+            a softer quote from nobody is still a fabricated endorsement. Put one
+            back only with a real, consenting customer's words. */}
 
         {/* ----------------------------------------------------------- Final CTA */}
         <section className="mx-auto max-w-[1400px] px-5 py-20 lg:px-10 lg:py-24">

@@ -119,6 +119,13 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 2) — Landing: no invented testimonial, no hotlinks: 1/1 GREEN
+
+`tests/mp7-landing-no-fabrication.spec.ts` loads `/`, scrolls the whole page so every lazy section
+mounts, then asserts: the "Verified manufacturers" and "Pan-India network" headings are visible;
+"Ananya Desai", "Indigo Loom" and the quote text are absent; no `img[src*="picsum.photos"]`
+exists; no console errors. PASS. Screenshot: `screenshots/mp7-landing.png`.
+
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 1) — `/product/:id` renders only the database row: 5/5 GREEN
 
 `tests/mp7-product-detail-real-data.spec.ts`, signed out, against the live catalogue (26 live

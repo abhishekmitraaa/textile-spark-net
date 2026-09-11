@@ -279,6 +279,12 @@ undocumented. Deep technical rationale for each lives in
   `reviews_count` from `products` or `vendor_profiles` as a rating** — on seeded rows they are
   fiction (23 of 26 live listings; one vendor claims 4,800 reviews with zero rows). Derive
   ratings from `product_reviews` / `reviews`. `products.sold_count` has no writer at all.
+- **No invented endorsements on marketing pages (2026-09-11).** The landing page carried a
+  five-star testimonial attributed to a named founder of a named brand, with a stock headshot —
+  none of it real. A testimonial, logo wall, customer count or quote goes on a public page only
+  when a real, consenting customer supplied it; rewording an invented quote does not make it
+  real. Same rule for imagery: nothing hotlinked from a placeholder service, and an image the
+  project does not own is replaced with nothing, not with another placeholder.
 - **A registration that was not saved must never look like one that was.** `/onboarding`'s
   submit used to show "Welcome to Cosora" unconditionally — a signed-out vendor completed
   eight steps and wrote nothing anywhere. A missing session or a failed write now blocks on
