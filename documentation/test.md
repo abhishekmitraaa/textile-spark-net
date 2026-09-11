@@ -121,6 +121,16 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 — Master Prompt 8, Phase 7: Trends scroll (browser), new-arrivals regression, typecheck/eslint
+
+- `/home/trends`, Playwright, `domcontentloaded` (the page hotlinks picsum images, so `networkidle` never
+  settles and a first attempt timed out on `page.goto`): product links 0 at first paint → **26 after 17 scroll
+  steps**, sentinel "That's everything listed right now."; "Loading more products..." seen: **false**; page
+  errors 0. Screenshot `screenshots/mp8-p7-trends-end.png`.
+- `tests/new-arrivals.spec.ts` after deleting `BuyerHomeTabs.tsx` → **1 passed** (it only named the file in a comment).
+- `npm run typecheck` → 0 errors. `npx eslint .` → `✖ 22 problems (5 errors, 17 warnings)` — the baseline
+  recorded before Master Prompt 8, unchanged across all seven phases.
+
 ### 2026-09-11 — Master Prompt 8, Phase 6: product page controls 1/1 + product-detail regression 5/5
 
 `npx playwright test tests/mp8-product-detail-controls.spec.ts tests/mp7-product-detail-real-data.spec.ts`

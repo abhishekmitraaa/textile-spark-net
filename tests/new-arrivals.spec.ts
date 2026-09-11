@@ -5,8 +5,8 @@ import { test, expect } from '@playwright/test';
  *
  * This spec used to time out waiting for `[role="tab"]`, and the page was the
  * thing that was wrong — not the selector. It was written against
- * `src/components/buyer/BuyerHomeTabs.tsx`, which has the right roles and
- * labels and which NOTHING IMPORTS. The strip that actually renders lives
+ * `src/components/buyer/BuyerHomeTabs.tsx`, which had the right roles and
+ * labels and which NOTHING IMPORTED (deleted in Master Prompt 8, Phase 7). The strip that actually renders lives
  * inline in NewArrivals.tsx and was five plain links: no tablist, no
  * aria-selected, and an active state hardcoded to /home/new-arrivals rather
  * than derived from the route. The roles are now real, so the original intent

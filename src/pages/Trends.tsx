@@ -272,7 +272,6 @@ const Trends = () => {
   const [apparelGroup, setApparelGroup] = useState(APPAREL_GROUPS[0]);
   const [groupOpen, setGroupOpen] = useState(false);
   const [feedBatches, setFeedBatches] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const categoryChipsDrag = useDragScroll<HTMLDivElement>();
@@ -336,25 +335,25 @@ const Trends = () => {
     }
   });
 
-  // Infinite scroll observer.
+  // Infinite scroll observer. The next batch is already in memory
+  // (feedProducts slices `trending`, loaded in full), so it is revealed at
+  // once. This used to wait 300 ms behind a "Loading more products..." label
+  // for data that needed no loading (Master Prompt 8, Phase 7). The observer
+  // is re-created per batch, so a sentinel still in view after a batch lands
+  // triggers the next one, and it stops once everything is shown.
+  const allShown = feedProducts.length >= trending.length;
   useEffect(() => {
     const target = loadMoreRef.current;
-    if (!target) return;
+    if (!target || allShown) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore) {
-          setLoadingMore(true);
-          window.setTimeout(() => {
-            setFeedBatches((c) => c + 1);
-            setLoadingMore(false);
-          }, 300);
-        }
+        if (entries[0].isIntersecting) setFeedBatches((c) => c + 1);
       },
       { rootMargin: "200px" }
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [loadingMore]);
+  }, [feedBatches, allShown]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -601,7 +600,7 @@ const Trends = () => {
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
             {hasLive && (feedProducts.length >= trending.length
               ? "That's everything listed right now."
-              : loadingMore ? "Loading more products..." : "Scroll for more")}
+              : "Scroll for more")}
           </div>
 
           {/* Submit Requirement — same card + Quick RFQ modal as New Arrivals */}
