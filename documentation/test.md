@@ -119,6 +119,14 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 4) — chat fixtures: NOT RUN (blocked)
+
+`admin-chat-moderation.spec.ts` and `chat-pipeline.spec.ts` need the `rlstest-*` / `chatfx-*`
+accounts, which are seeded by SQL that writes `auth.users` and therefore needs the service role
+or the SQL editor. Neither was available (Supabase MCP disconnected; no service key in the repo),
+so nothing was seeded and nothing needed dropping. Last observed failure, unchanged:
+`login failed for rlstest-support@cosora.test: Invalid login credentials`.
+
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 3) — Trends: real listings or an honest empty state: 4/4 GREEN
 
 `tests/mp7-trends-real-or-empty.spec.ts`. The empty and error states are driven by intercepting
