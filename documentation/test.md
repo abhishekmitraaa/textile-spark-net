@@ -83,6 +83,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `vendor-buyer-geography-check.mjs` | `vendor_buyer_geography` privacy + correctness, 19 assertions. Asserts `buyer_profiles` RLS is **unchanged** (the vendor still reads zero foreign rows), k-anonymity in **both** directions (1 viewer suppressed, 3 viewers named — the positive case matters, without it a function returning nothing would pass), totals reconciling, `ad_impression` exclusion, and the buyer/anon/admin guard matrix. Writes real rows and restores the buyer's original city in `finally` |
 | `engagement-events-check.mjs` | `engagement_events` security + the status guard, 19 assertions across four real accounts (vendor / buyer / admin / anon). Writes through the real RPC and deletes what it wrote; pauses and restores a real campaign for the ad case. **Contains no always-true assertions** — an early draft "passed" by skipping the two guard cases and was rewritten |
 | `ad-destination-check.mjs` | The ad-click campaign-goal branch (`adDestination`/`isProfileGoalAd`), 17 cases. **The one script here that does not touch the database** — it transpiles the dependency-free `src/lib/adDestination.ts` with esbuild and calls it directly, because `active_ads` currently returns zero rows so no UI test can reach this branch |
+| `image-search-check.mjs` | Photo search end to end against the live function, 18 assertions: the `no_image` guard; a real listing photo (`scripts/fixtures/polo-tshirt-listing.jpg`) → a query meeting the function's own contract (3–6 lowercase words, no punctuation); that query through the app's own `fetchSearch` (esbuild-bundled out of `src/lib/queries/search.ts`, not reimplemented) → an array, **empty counting as a pass**; a generated solid-colour square → `no_match`, not a fabricated garment; and the per-IP limit tripping to `rate_limited` in a loop. **Spends this machine's real photo-search budget** (the gateway ignores a spoofed `x-forwarded-for`): self-cleaning only with `SUPABASE_SERVICE_ROLE_KEY`, otherwise it prints the cleanup SQL. ~13 vision calls per run |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -118,6 +119,117 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-11 — x-forwarded-for probe on the live deployment (19 requests) + image-search check 18/18 on v7
+
+**Why.** The 2026-09-10 claim that a client cannot forge its IP here rested on one request whose
+forged value was not even a valid IP. Community reports disagree on Supabase's behaviour, so it was
+measured on this deployment.
+
+**Probe.** A temporary image-search build (v6) answered only the nonce body
+`{"xff_probe":"<nonce>"}` by echoing `x-forwarded-for`, `x-real-ip`, `cf-connecting-ip`,
+`true-client-ip`, `forwarded` and the list of header names. It returned before the limiter and before
+any OpenAI call. Client: this machine; its public IPv4 was confirmed as `136.233.9.123` by
+api.ipify.org, api64.ipify.org and ifconfig.me (no public IPv6). Anon key; Node `fetch`, 3 requests
+per case, plus case (c) once via `curl`.
+
+| Case | Forged input | `x-forwarded-for` received | Forged value present? |
+|---|---|---|---|
+| a | none | `136.233.9.123,136.233.9.123, 13.248.105.x` | — |
+| b | `x-forwarded-for: 203.0.113.7` | same shape | no |
+| c | `x-forwarded-for: 203.0.113.7, 198.51.100.9` (Node ×3, curl ×1) | same shape | no |
+| d | `x-forwarded-for: zz-xffprobe` | same shape | no |
+| e | `x-forwarded-for: 2001:db8::1` | same shape | no |
+| f | `x-real-ip: 203.0.113.50` | same shape; `x-real-ip` absent | no |
+
+In all 19 requests, `cf-connecting-ip` was the real address and no `forwarded` header arrived. The
+trailing proxy entry varied per request (`.16`, `.19`, `.40`–`.46`). **Result:** the header is
+rebuilt at the edge, and position 0 is the real client address. The last entry is a rotating proxy
+and is unsafe as a key. **Probe removal verified:** after v7, the same nonce receives
+`400 {"error":"no_image"}`.
+
+**`node scripts/image-search-check.mjs` against v7 — 18/18**, identical assertions to 2026-09-10:
+- fixture → `"men white t-shirt"` → `fetchSearch` 26 results (semantic + keyword);
+- the solid-colour square → `no_match`;
+- the per-IP loop `no_match` ×8, then `rate_limited` on call 9 (423 ms), which is the clean-bucket
+  prediction.
+
+Cleanup mode reported **"NO service key"**: `SUPABASE_SERVICE_ROLE_KEY` is absent from `.env` and
+from the process/user/machine environment. The service-key branch (snapshot, delete created rows,
+reset pre-existing rows, recount) is therefore **untested live**. The printed SQL was run via MCP:
+`run_rows_remaining = 0`, and `img:ip:` / `img:user:` rows in the table = **0**.
+
+**Typecheck:** `npx tsc --noEmit --skipLibCheck` exit 0; `-p tsconfig.app.json` 0 errors.
+**Advisors (security):** 4 / 1 / 30 / 43 / 1, identical to the baseline.
+
+### 2026-09-10 — Photo search: non-product rejection + rate limit, 18/18 script + 3 browser passes GREEN
+
+**What changed under test.** `image-search` v5 answers through Structured Outputs
+(`is_apparel_or_textile` + `query`) and calls `image_search_rate_check` on every request that would
+reach OpenAI. `Search.tsx` now has a branch per error code. All of it ran against the live project.
+
+**Test data.**
+- `scripts/fixtures/polo-tshirt-listing.jpg`: the real listing photo for "Premium Cotton Polo
+  T-Shirt", 500×650, 38,622 bytes.
+- A **256×256 solid rgb(37,111,239) PNG, 761 bytes, generated byte by byte in Node** (a hand-written
+  PNG encoder in the script; nothing fetched). The browser passes use the same colour, drawn on a
+  canvas.
+- Accounts: `demo-buyer@cosora.dev` for steps 0–4, **anon** for the rate-limit loop, so demo-buyer's
+  `img:user:` bucket is not the one exhausted.
+
+**`node scripts/image-search-check.mjs` — 18/18.** The 13 existing checks all still pass (fixture →
+`"men white t-shirt"` → `fetchSearch` → 26 results, semantic + keyword). The 5 new ones:
+
+| # | Assertion | Result |
+|---|---|---|
+| 4a | The solid square's invoke returns without a transport error | ok |
+| 4b | It answers `{"error":"no_match"}` and carries **no** `query` (not a fabricated garment) | ok |
+| 5a | Looping as anon, the response becomes `rate_limited` within `IP_LIMIT + 1` = 11 calls | ok — **tripped on call 9** |
+| 5b | `rate_limited` arrives as a 200 body, not a transport error | ok — 0 transport errors |
+| 5c | Every call before the trip was served normally (`no_match`), not refused | ok — `no_match` ×8 |
+
+Call 9 is exactly the prediction from a clean bucket: this IP had spent 2 calls in steps 2 and 4
+(step 1's `no_image` returns before the limiter), and 2 + 9 = 11 > 10. The throttled reply took
+**514 ms** against ~1.3–2.0 s for the calls that reached OpenAI.
+
+**Cleanup — required, and confirmed by count.** The loop exhausts this machine's REAL `img:ip:`
+bucket. A spoofed `x-forwarded-for` is not honoured by this project's gateway (measured this
+session), so there is no throwaway bucket to use instead. `embed_query_rate_limit` has RLS on and
+no policies, and no service key is available here, so the script printed its cleanup SQL. That SQL
+was run through MCP:
+- deleted `img:ip:136.233.9.123` (count **12**: 2 buyer calls + 9 loop calls + 1 browser call) and
+  `img:user:<demo-buyer>` (count 2);
+- a separate `count(*)` of the matching rows returned **0**;
+- after the last browser pass, all remaining `img:ip:` / `img:user:` rows were deleted, and the count
+  was again **0**.
+The shared `img:global` counter was left in place on purpose; it is production state. With
+`SUPABASE_SERVICE_ROLE_KEY` set, the script deletes and count-confirms by itself.
+
+**Database layer — self-rolling-back `DO` block** (it RAISEs its results, so nothing persisted):
+
+| Case | Result |
+|---|---|
+| Per-IP limit 3, same IP ×4 | true, true, true, **false** |
+| Same user, 4 rotating IPs, limit 3 | true, true, true, **false** — the user bucket bounds IP rotation |
+| Anon (no user id), 4 rotating IPs | all true; **0** `img:user:` rows created |
+| Global limit 1 | **false**, and the IP row was **not** created (global is checked first) |
+| Blank IP | lands in `img:ip:unknown` |
+| embed-query's own rows | **identical** before and after |
+
+Plus grants: `has_function_privilege` anon **false**, authenticated **false**, service_role **true**.
+`get_advisors(security)` counts were unchanged: 4 / 1 / 30 / 43 / 1.
+
+**Real browser, real `/search` page** (Playwright scratch script; dev server on :8082):
+
+| Pass | Live or mocked | Checks | What it showed |
+|---|---|---|---|
+| This IP's budget genuinely spent | **LIVE** (function answered 200 `rate_limited`) | 8/8 | "Too many photo searches / Try again in a few minutes, or search by text."; no recognition copy, no generic copy; stayed on `/search` |
+| Solid-colour square | **LIVE** (200 `no_match`) | 6/6 | "Couldn't recognise that image / Try another photo or search by text."; no search run |
+| `{"error":"some_future_code"}` | **MOCKED** via `page.route` — the live function cannot be made to emit an unknown code | 5/5 | "Image search unavailable / Please try again."; **never** the recognition copy |
+| Garment fixture | **LIVE** (200 `{"query":"men white cotton t-shirt"}`) | 2/2 | navigated to `/search/results?q=men%20white%20cotton%20t-shirt` |
+
+No page errors in either pass. **Typecheck:** `npx tsc --noEmit --skipLibCheck` exit 0;
+`-p tsconfig.app.json` 0 errors.
 
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 6) — Cosora-Admin panels verified, then pushed: 3/3 GREEN
 

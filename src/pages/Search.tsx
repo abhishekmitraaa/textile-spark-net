@@ -247,10 +247,21 @@ const Search = () => {
       setAnalyzing(false);
       setImagePreview(null);
       if (data?.query) { runSearch(data.query); return; }
+      // Every code the function can return gets its own branch. The old catch-all
+      // used "Couldn't recognise that image" for everything, so a throttled or
+      // failed call told the buyer their photo was the problem.
       if (data?.error === "not_configured") {
         toast.error("Image search isn't set up yet", { description: "The image-search API key needs to be added in Supabase." });
-      } else {
+      } else if (data?.error === "rate_limited") {
+        toast.error("Too many photo searches", { description: "Try again in a few minutes, or search by text." });
+      } else if (data?.error === "no_match") {
+        // The model looked and said this is not an apparel/textile product photo.
         toast.error("Couldn't recognise that image", { description: "Try another photo or search by text." });
+      } else {
+        // vision_failed / request_failed / bad_model_output, or a code added
+        // later: a failure of the service, not a verdict on the photo — so it
+        // must not borrow the "couldn't recognise" copy.
+        toast.error("Image search unavailable", { description: "Please try again." });
       }
     } catch (e) {
       setAnalyzing(false);

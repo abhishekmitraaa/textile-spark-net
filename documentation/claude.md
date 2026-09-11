@@ -624,10 +624,32 @@ so in the UI. Two steps turn on the semantic half, and neither can be done from 
    sensible neighbours. Do that check by hand; at this catalogue size it is five minutes and
    it is the only thing that actually tells you the embeddings are good.
 
-**Watch the spend.** `embed-query` is callable by any holder of the public anon key and
-costs one OpenAI call per *novel* query (repeat queries are served from
-`search_query_embeddings` and cost nothing). ~$0.00002 each, length-capped, **not** rate
-limited. If the marketplace is ever scraped, that is the line item to look at.
+**Watch the spend — both buyer-facing OpenAI functions are rate limited (since 2026-09-10).**
+- **`embed-query`**: callable by any holder of the public anon key; one OpenAI call per *novel*
+  query (repeat queries come from `search_query_embeddings` and cost nothing), ~$0.00002 each,
+  length-capped. Metered only on a cache miss by `embed_query_rate_check`: **30 per IP per 5 min,
+  10,000 globally per hour**.
+- **`image-search`**: one `gpt-4o-mini` vision call per photo and no cache, so it is metered on
+  **every** call by `image_search_rate_check`: **10 per IP per 10 min, 10 per signed-in user per
+  10 min, 300 globally per hour**. Its counters live in the same `embed_query_rate_limit` table
+  under `img:`-prefixed keys.
+- Both return `rate_limited` as a 200 and fail OPEN if the limiter itself errors. **Using up a
+  global budget turns that feature off for everyone until the window rolls.** That is an accepted
+  trade-off on both, because the alternative is an unbounded bill. Mechanism and history:
+  `documentation/securityflags.md` and the 2026-09-10 changelog entries ("Master Prompt 6" for
+  embed-query; "Photo search now refuses non-product images and is rate limited" for image-search).
+
+**The per-IP key is the LEFTMOST `x-forwarded-for` entry. On this deployment that entry is the
+caller's real address — tested, not assumed (2026-09-11).** A temporary probe build of
+`image-search` echoed the headers it received, from a client whose public IPv4 was confirmed
+independently. Six cases, 3 requests each, plus one via curl: no forged header, a forged single
+IPv4, a forged `a, b` pair, a forged non-IP token, a forged IPv6 address, and a forged
+`X-Real-IP`. What arrived was always exactly `<real>,<real>, <upstream proxy>`: **no forged value
+in any position**, and `X-Real-IP` never arrived. **The LAST entry is a proxy address that changes
+per request and must never be used as the key.** This is observed platform behaviour on one date
+from one IPv4 client, not a Supabase guarantee, and community reports disagree. Re-run the probe if
+the proxy chain may have changed. `embed-query` parses the header the same way but was not itself
+probed; that is an open item in securityflags.md.
 
 ## Raising MAX_VIDEO_BYTES (the 90 MB / Pro-plan step)
 

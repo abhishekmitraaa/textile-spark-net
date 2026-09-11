@@ -544,10 +544,129 @@ function, read by `search_products`. The vector never crosses the wire to a brow
   `verify_jwt` alone accepts it. Anon → 403, verified.
 - **`embed-query`** — buyer-facing cache warmer. Returns a status, never the vector.
   Deliberately a separate function so an auth mistake here cannot expose the drainer.
-  Cost exposure documented in `claude.md`: one OpenAI call per *novel* query, no rate limit.
+  Cost exposure: one OpenAI call per *novel* query (a cached phrase costs nothing). **Rate limited
+  since 2026-09-10** by `embed_query_rate_check()` (migration `20260910160000`): a fixed-window
+  counter in `embed_query_rate_limit`, 30 novel queries per IP per 5 min and 10,000 globally per
+  hour. It is metered ONLY on a cache miss, returns `{ ok: false, error: "rate_limited" }` at 200
+  (search degrades to keyword-only), and fails OPEN if the limiter errors. Changelog: 2026-09-10
+  (Master Prompt 6). The same table and pattern were then reused for `image-search` under `img:`
+  keys — see "Photo search" below and the changelog entry "Photo search now refuses non-product
+  images and is rate limited" (2026-09-10). *(This line previously said "no rate limit"; it went
+  stale on 2026-09-10 and was corrected 2026-09-11.)*
 
 Both follow the project's `not_configured`-as-200 convention and carry a `{"probe":true}`
 branch that reports configuration without spending a token.
+
+### Photo search — `image-search` (rate limit + Structured Outputs, 2026-09-10)
+
+Photo → vision model → a short text query → the normal catalogue search (`/search/results?q=`).
+The photo is never matched against product images; that design is deliberate and unchanged.
+`verify_jwt = true`. The client downscales large photos to a 1024px longest edge before sending
+(`compressForUpload()` in `src/pages/Search.tsx`, since the model runs at `detail:"low"`).
+
+**Response contract** (all HTTP 200 except a malformed request):
+
+| Body | Meaning | Search.tsx toast |
+|---|---|---|
+| `{ query }` | apparel/textile photo, described in 3–6 lowercase words | none — runs the search |
+| `{ error: "no_match" }` | the model's verdict: not a product photo (or a safety refusal) | "Couldn't recognise that image" |
+| `{ error: "rate_limited" }` | over an `image_search_rate_check` budget | "Too many photo searches" |
+| `{ error: "not_configured" }` | `OPENAI_API_KEY` missing | "Image search isn't set up yet" |
+| `{ error: "vision_failed" \| "request_failed" \| "bad_model_output", detail? }` | a service failure | "Image search unavailable" (the generic fallback) |
+| 400 `{ error: "no_image" \| "bad_json" }` | malformed request; returns before the limiter | generic catch |
+
+Every code has its own branch in `handleImageFile`. The fallback is the *generic* failure copy on
+purpose: a new code added later must never borrow "couldn't recognise", which blames the photo.
+
+**Structured Outputs.** The Chat Completions call sends
+`response_format: { type: "json_schema", json_schema: { name: "image_search_result", strict: true,
+schema: { is_apparel_or_textile: boolean, query: string | null }, both required,
+additionalProperties: false } }`. The prompt tells the model to describe the item ONLY when the
+photo clearly shows an apparel, fabric, trim, accessory or other textile/fashion product, and
+otherwise return `false` / `null` — "do not guess". The function parses `message.content` as JSON;
+`is_apparel_or_textile !== true` or an empty query → `no_match`; a `message.refusal` → `no_match`;
+unparseable content → `bad_model_output`. `max_tokens` went from 40 to 80 because the JSON envelope
+adds ~15 tokens and a truncated object cannot parse. Model unchanged (`gpt-4o-mini`,
+`IMAGE_SEARCH_MODEL` overridable). Confirmed live on 2026-09-10: the API accepted the schema, a real
+garment photo still returned `men white t-shirt`, and a generated solid-colour square returned
+`no_match`, where the old prompt had produced "men blue denim jacket".
+
+**Rate limit — `image_search_rate_check(p_ip, p_user_id default null, p_ip_limit default 10,
+p_ip_window_secs default 600, p_global_limit default 300, p_global_window_secs default 3600)
+returns boolean`** (migration file `20260910190000_image_search_rate_limit.sql`, recorded in the
+database as version `20260910132753`). A structural copy of `embed_query_rate_check`: the same
+fixed-window UPSERT (`on conflict (caller) do update`, window reset by a `case` on
+`window_start < now() - make_interval(...)`), the same global-before-per-IP ordering, SECURITY
+DEFINER with `search_path = public, extensions`, EXECUTE revoked from `public, anon, authenticated`
+and granted only to `service_role` (checked: `has_function_privilege` false for anon/authenticated).
+It **reuses `embed_query_rate_limit`** with new, namespaced keys, so the two budgets never collide
+and embed-query's own keys and rows are untouched:
+
+| Key | Budget | Notes |
+|---|---|---|
+| `img:global` | 300 / hour | Checked first. The one ceiling that bounds total spend however many IPs or accounts the calls come from |
+| `img:ip:<addr>` | 10 / 10 min | Leftmost `x-forwarded-for`; empty → the shared `img:ip:unknown` bucket |
+| `img:user:<uuid>` | 10 / 10 min (reuses `p_ip_limit`/`p_ip_window_secs`) | Only when the JWT has a `sub`. The only bucket a caller cannot spoof |
+
+A call that fails an earlier bucket does not increment the later ones. Two differences from
+embed-query, both deliberate:
+- **Every call is metered.** embed-query meters only a cache MISS because a cache hit costs nothing;
+  image-search has no cache, so the check runs on every request that would reach OpenAI (after the
+  `no_image` / `not_configured` early returns, which cost nothing).
+- **The user id comes from the JWT payload without re-verifying the signature.** `verify_jwt` has
+  already rejected an invalid token before the handler runs; decoding `sub` is therefore safe.
+  An anon-key token has no `sub`, so anon callers get the global + IP buckets only.
+
+**Fail-open lives in the edge function, not the SQL.** Exactly as embed-query: the SQL function has
+no exception handler, and the TypeScript `catch` around the RPC lets the request through. A limiter
+outage costs a bounded amount of extra spend, not a feature outage.
+
+**`x-forwarded-for` on this deployment — what was actually tested (2026-09-11).** The 2026-09-10
+version of this paragraph rested on one anecdote. An anon call carrying a forged `zz-xffprobe-…`
+was counted under the real address, but that value was not even a syntactically valid IP, so a
+gateway that merely dropped malformed values would have produced the same result. Community reports
+also disagree about whether Supabase appends the real IP after a forged prefix or replaces the header
+outright. So it was measured directly.
+
+- **Method.** A temporary build of `image-search` (v6) answered a one-off nonce by echoing its
+  IP-related headers, before the limiter and before any OpenAI call. v7 removed it; the nonce now
+  gets `400 no_image`. The client's public IPv4 was confirmed independently by three outside
+  services (api.ipify.org, api64.ipify.org, ifconfig.me) as `136.233.9.123`. The machine has no
+  public IPv6.
+- **Cases**, 3 requests each through Node `fetch`, plus case (c) once through `curl`:
+
+  | Case | Sent | `x-forwarded-for` that reached the function |
+  |---|---|---|
+  | a | no forged header | `136.233.9.123,136.233.9.123, 13.248.105.x` |
+  | b | `x-forwarded-for: 203.0.113.7` | identical shape; `203.0.113.7` absent |
+  | c | `x-forwarded-for: 203.0.113.7, 198.51.100.9` | identical shape; both forged values absent |
+  | d | `x-forwarded-for: zz-xffprobe` (non-IP) | identical shape |
+  | e | `x-forwarded-for: 2001:db8::1` (IPv6) | identical shape |
+  | f | `x-real-ip: 203.0.113.50` only | identical shape; `x-real-ip` **not present at all** |
+
+  `cf-connecting-ip` carried the real address in every request; no `forwarded` header arrived.
+- **Conclusion for this deployment.** The header is rebuilt at the edge. **No forged value
+  survived in any position**, so position 0 is always the caller's real address and
+  `.split(",")[0]` is correct. The **last** entry was an upstream proxy address that changed from
+  request to request (`13.248.105.16`–`.46`). The "take the last entry" hardening that is often
+  recommended for `x-forwarded-for` would therefore have been a **bug here**: every caller would
+  have been bucketed by a shared proxy address.
+- **Limits of the claim.** One date, one IPv4 client, one route to the platform. This is observed
+  behaviour, not a documented Supabase guarantee. Re-run the probe after any sign the proxy chain
+  has changed.
+
+`embed-query` parses the header identically but was not itself probed. That is an open item in
+`documentation/securityflags.md` (2026-09-11), to be confirmed the next time that file is touched.
+
+**Housekeeping** comes from the existing nightly `prune-embed-rate-limit` job, unchanged: it deletes
+every row whose caller is not exactly `'global'` and whose window is a day old. That includes all
+`img:*` rows; a stale `img:global` pruned this way is simply recreated on the next call.
+
+**Known trade-off (same as embed-query):** the global bucket is shared, so a caller who burns 300
+calls in an hour disables photo search for everyone until the window rolls. The alternative is an
+unbounded bill. Raise `p_global_limit` in the edge function's RPC call if real traffic approaches it.
+
+Verified by `node scripts/image-search-check.mjs` (see `documentation/test.md`, 2026-09-10).
 
 ---
 
