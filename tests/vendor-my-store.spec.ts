@@ -280,8 +280,10 @@ test("/kyc reads vendor_documents", async ({ browser }) => {
   await page.goto("/kyc");
   await expect(page.getByRole("heading", { name: "KYC" })).toBeVisible({ timeout: 20_000 });
   // demo-vendor submitted no documents, so every row says so rather than
-  // claiming a verification that never happened.
-  for (const label of ["PAN", "GST", "CIN", "Aadhaar"]) {
+  // claiming a verification that never happened. No Aadhaar row: onboarding
+  // cannot collect one (deferred for Aadhaar Act reasons), so /kyc stopped
+  // listing it — this assertion still expected it until Master Prompt 8.
+  for (const label of ["PAN", "GST", "CIN"]) {
     await expect(page.getByText(label, { exact: true })).toBeVisible();
   }
   await expect(page.getByText("Not submitted").first()).toBeVisible();

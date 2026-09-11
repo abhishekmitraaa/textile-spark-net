@@ -340,6 +340,13 @@ undocumented. Deep technical rationale for each lives in
   trigger refuses the four review columns to non-admins; `set_vendor_document_verified()` is
   the only writer. Before adding a self-service column to any table with a permissive `ALL`
   policy, ask what a client could set it to.
+- **A KYC resubmission is a new row, through one helper** (Master Prompt 8, 2026-09-11).
+  The guard above makes editing a reviewed row impossible for a vendor, so a replacement is a
+  fresh INSERT, which the guard forces to unreviewed. Every writer of `vendor_documents` goes
+  through `replaceVendorDocuments()`: insert the new rows, then delete the superseded ones by
+  id, then remove their storage objects. One active document per type, no stranded scan, and
+  never a moment with no row. The rejection is kept in the `kyc_rejected` notification, not
+  in a dead row.
 - **Authorization for a moderation verdict goes INSIDE a SECURITY DEFINER function.** A
   client UPDATE that RLS denies matches zero rows and returns success. This repo has been
   bitten by that; `set_vendor_document_verified()` follows `set_account_status()` — same

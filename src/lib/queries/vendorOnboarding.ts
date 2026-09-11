@@ -75,6 +75,63 @@ export interface VendorOnboardingPayload {
   product?: OnboardingProduct;
 }
 
+/**
+ * One active document per type, and no stranded scan behind it.
+ *
+ * Replaces this vendor's rows for exactly the given doc types, then removes the
+ * storage objects the old rows pointed at. Shared by onboarding (every type at
+ * once) and by /kyc's replacement of a rejected document (one type), so the
+ * two can never drift into different hygiene rules.
+ *
+ * A resubmission is a NEW row, never an edit of the old one:
+ * vendor_documents_guard_review_columns() refuses a vendor's change to
+ * verified / rejection_reason / reviewed_*, and forces a fresh INSERT to
+ * unreviewed, so the new row reads "awaiting review" by construction.
+ *
+ * Order (Master Prompt 8): insert the new rows FIRST, then delete the
+ * superseded ones by id, then remove their objects. Onboarding used to delete
+ * first; a failed insert then left the vendor with no row at all. There is
+ * no unique constraint on (vendor_id, doc_type), so the brief overlap is legal.
+ * Storage is not covered by a row delete and there is no cascade, so the old
+ * paths are read BEFORE the rows go; the rows go before the objects, so a
+ * failed storage delete leaves a harmless orphan rather than a live row
+ * pointing at a missing file. Legacy rows may hold a full public URL from
+ * before KYC moved to the private bucket; those are skipped, not guessed at.
+ */
+export async function replaceVendorDocuments(
+  vendorId: string,
+  docs: { vendor_id: string; doc_type: string; file_url: string | null }[],
+): Promise<void> {
+  if (!docs.length) return;
+  const docTypes = docs.map((d) => d.doc_type);
+
+  const { data: superseded, error: re } = await supabase
+    .from("vendor_documents")
+    .select("id, file_url")
+    .eq("vendor_id", vendorId)
+    .in("doc_type", docTypes);
+  if (re) throw re;
+
+  const { error: ie } = await supabase.from("vendor_documents").insert(docs);
+  if (ie) throw ie;
+
+  const oldIds = (superseded ?? []).map((d) => d.id as string);
+  if (oldIds.length) {
+    const { error: de } = await supabase.from("vendor_documents").delete().in("id", oldIds);
+    if (de) throw de;
+  }
+
+  // Best-effort: a vendor's submission must not fail because a superseded
+  // file could not be tidied up.
+  const stale = (superseded ?? [])
+    .map((d) => d.file_url as string | null)
+    .filter((u): u is string => !!u && !u.startsWith("http") && !docs.some((d) => d.file_url === u));
+  if (stale.length) {
+    const { error: se } = await supabase.storage.from(KYC_BUCKET).remove(stale);
+    if (se) console.warn("[vendorDocuments] superseded KYC objects not removed:", se.message);
+  }
+}
+
 export async function saveVendorOnboarding(vendorId: string, p: VendorOnboardingPayload): Promise<void> {
   const { error: pe } = await supabase.from("vendor_profiles").upsert(
     {
@@ -127,50 +184,7 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
       p.aadhaar ? { doc_type: "aadhaar", file_url: null } : null,
     ].filter(Boolean) as { doc_type: string; file_url: string | null }[]
   ).map((d) => ({ vendor_id: vendorId, ...d }));
-  if (docs.length) {
-    const docTypes = docs.map((d) => d.doc_type);
-
-    // Read the storage paths of the rows about to be replaced, BEFORE deleting
-    // them — once the row is gone there is nothing left pointing at the object.
-    // Storage is not covered by a row delete and there is no cascade, so every
-    // re-submission used to strand the previous identity scan in the private
-    // bucket, referenced by nothing and afterwards indistinguishable from a
-    // real vendor's KYC.
-    const { data: superseded } = await supabase
-      .from("vendor_documents")
-      .select("file_url")
-      .eq("vendor_id", vendorId)
-      .in("doc_type", docTypes);
-
-    // Onboarding can legitimately be submitted twice (a failed product insert,
-    // a retried submit). There is no unique constraint on (vendor_id,
-    // doc_type), so clear this vendor's rows for exactly the types being
-    // rewritten first — otherwise /kyc grows a duplicate row per attempt.
-    const { error: dde } = await supabase
-      .from("vendor_documents")
-      .delete()
-      .eq("vendor_id", vendorId)
-      .in("doc_type", docTypes);
-    if (dde) throw dde;
-    const { error: de } = await supabase.from("vendor_documents").insert(docs);
-    if (de) throw de;
-
-    // Only now remove the old objects. This ORDER is deliberate: the row goes
-    // first, so a failed storage delete leaves a harmless orphan rather than a
-    // live row pointing at a file that no longer exists. Legacy rows may still
-    // hold a full public URL from before KYC moved to the private bucket —
-    // those are not paths in `business-docs` and are skipped rather than
-    // guessed at. Best-effort: a vendor's registration must not fail because a
-    // superseded file could not be tidied up.
-    const stale = (superseded ?? [])
-      .map((d) => d.file_url)
-      .filter((u): u is string => !!u && !u.startsWith("http") && !docs.some((d) => d.file_url === u));
-    if (stale.length) {
-      const { error: se } = await supabase.storage.from(KYC_BUCKET).remove(stale);
-      if (se) console.warn("[vendorOnboarding] superseded KYC objects not removed:", se.message);
-    }
-  }
-
+  await replaceVendorDocuments(vendorId, docs);
   // The step-7 product becomes a real listing (buyers see it once approved).
   if (p.product?.name) {
     const category_id = await resolveCategoryId(p.product.category, p.product.name);
@@ -313,6 +327,27 @@ export async function uploadKycDocument(vendorId: string, file: File): Promise<s
   const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: true });
   if (error) throw error;
   return path;
+}
+
+/**
+ * /kyc: replace a REJECTED document with a new scan (Master Prompt 8, Phase 3).
+ *
+ * Until this existed a rejected vendor had no way back: /kyc said "contact
+ * support", and onboarding, the only upload path, is closed once
+ * onboarding_complete is set. Uploads through uploadKycDocument(), so the
+ * bucket and `${vendorId}/kyc/...` path rules are the same ones onboarding
+ * obeys, then swaps the row through replaceVendorDocuments(). If the row
+ * write fails, the new object is referenced by nothing, so it is removed
+ * rather than left as an orphan identity scan.
+ */
+export async function resubmitKycDocument(vendorId: string, docType: string, file: File): Promise<void> {
+  const path = await uploadKycDocument(vendorId, file);
+  try {
+    await replaceVendorDocuments(vendorId, [{ vendor_id: vendorId, doc_type: docType, file_url: path }]);
+  } catch (err) {
+    await supabase.storage.from(KYC_BUCKET).remove([path]);
+    throw err;
+  }
 }
 
 /**

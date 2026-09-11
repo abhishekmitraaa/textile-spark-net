@@ -20,6 +20,7 @@ Last updated: 2026-09-09
 | `vendor-analytics.spec.ts` | Vendor Analytics / Advertise stats / Quotes performance are counted, not fabricated — asserts every retired fixture string is absent AND that real per-vendor values render; T5 additionally asserts the engagement panels never render nothing | `demo-vendor` (read-only) |
 | `vendor-my-store.spec.ts` | The My Store cluster (`/my-store`, `/my-store/business`, `/business-profile`, `/business-profile-score`, `/kyc`) is read from real rows — every retired demo literal absent, header/counts/score match the vendor row, real QR image, no `#ef4d62`, zero console errors; plus the signed-out registration block | `demo-vendor` (read-only) |
 | `vendor-signup.spec.ts` | Registration through the real `Register.tsx`: the seller branch reaches step 2 (it used to skip it), signup creates a real account, the "check your email" screen appears, an unconfirmed account is refused a session, and `/auth/login` offers email+password with no fake phone check | creates a throwaway `zz-test-vendor-*@cosora.in` |
+| `mp8-kyc-reupload.spec.ts` | A rejected KYC document is replaced on `/kyc`: exactly one PAN row afterwards, a new id, unreviewed; the rejected object removed from `business-docs`; Cosora-Admin shows "awaiting review"; its Approve button verifies it. Needs both dev servers | `demo-admin` + `zz-mp4-vendor` (ends VERIFIED) |
 | `vendor-onboarding-write-path.spec.ts` | The **form-to-database** path: drives the real 9-step `/onboarding` and asserts state, pincode, landmark, category, office photos, the PAN scan's `file_url`, and product `unit`/`sizes`/`colour`/images all landed. Also the logo upload and the unverified-seal branch | `demo-buyer` (**mutating**, self-cleaning) |
 | `mp4-phase1-register.spec.ts` | Part 1 of the signup proof: `/register` creates a real account and stops honestly at "Confirm your email". Does **not** confirm it — no inbox for the throwaway domain | creates `zz-mp4-vendor@cosora.in` |
 | `mp4-phase2-callback-onboarding.spec.ts` | Part 2: `/auth/callback` writes the signup brand name to `vendor_profiles` (session injected directly, never via `/login`, whose own call would prove the wrong site); then the full 9-step onboarding with a **drawn** signature, asserting every column, the signed-URL read of the private KYC path, and the `vendor_contracts` row; then that the score stored at submit equals the score `/business-profile-score` displays | `zz-mp4-vendor@cosora.in` (**left in place** — it is the evidence) |
@@ -119,6 +120,31 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-11 — Master Prompt 8, Phase 3: KYC re-upload 1/1, /kyc 1/1, onboarding write-path 3/3
+
+`npx playwright test tests/mp8-kyc-reupload.spec.ts tests/vendor-my-store.spec.ts -g "P3 a rejected PAN|/kyc reads vendor_documents"`
+→ **2 passed** (vendor app :8080 + Cosora-Admin :5174).
+
+SQL afterwards, throwaway vendor `9ddda61f…`:
+- `pan id=6f459a14 verified=true reviewed=2026-09-11 13:43:01 file=9ddda61f…/kyc/1789134166305-96kgrx.png`. This is
+  the replacement, verified by the spec's final Approve click. The rejected row `2b4edd8a…` no longer exists.
+- `business-docs/9ddda61f…/kyc/`: one object, the replacement. `1788897227689-js2zvz.png` is gone.
+- notifications: `kyc_rejected · Your PAN document needs attention · MP8 re-upload test: …`, then
+  `kyc_approved · Your PAN document was verified`.
+
+**Regression — `vendor-onboarding-write-path.spec.ts`**, because `saveVendorOnboarding()` now goes
+through the shared `replaceVendorDocuments()`:
+- Run 1 (Phase 3 in place): **1 failed, 2 did not run** — at step 6, `getByRole('button', { name: 'Next' })`
+  not found. The page snapshot showed the signed-out seller header, so the session was lost, and it
+  happened BEFORE the submit step, the only thing this phase changed on that page.
+- A/B, Phase 3 source stashed: **3 passed**. Run 2, Phase 3 restored: **3 passed**. The run-1 failure did not
+  reproduce; recorded as a flaky session drop, not a regression.
+- **Teardown gap found:** this spec removes its `business-docs` KYC objects but never its `product-images`
+  uploads (office photos, onboarding product image, store logo). 10 such objects were under demo-buyer after
+  these three runs, referenced by nothing; removed as demo-buyer (10 of 10). `restore-demo-buyer-fixture.mjs`
+  afterwards: `onboarding_complete: false, vendor_documents: 0, products: 0, active_role: 'buyer',
+  vendor_contracts_left_undeletable: 1`.
 
 ### 2026-09-11 — Master Prompt 8, Phase 2: vendor review aggregates (DB 10/10, guard 3/3, UI 3/3) + vendor page crash
 

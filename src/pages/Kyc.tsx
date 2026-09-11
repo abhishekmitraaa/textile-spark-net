@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { ChevronLeft, Check, Clock, FileText, ExternalLink, ShieldCheck, AlertTriangle, Loader2, XCircle } from "lucide-react";
+import { ChevronLeft, Check, Clock, FileText, ExternalLink, ShieldCheck, AlertTriangle, Loader2, XCircle, Upload } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyVendorProfile } from "@/lib/queries/vendorStore";
+import { resubmitKycDocument } from "@/lib/queries/vendorOnboarding";
 import {
   useMyVendorDocuments, DOC_TYPE_LABELS, signedKycUrl, isRejected,
   KYC_URL_TTL_SECONDS, type VendorDocumentRow,
@@ -93,6 +95,72 @@ function ViewDocumentButton({ doc }: { doc: VendorDocumentRow }) {
   );
 }
 
+/** Same limits the onboarding upload copy states: "jpeg, png or pdf formats up to 5MB". */
+const MAX_KYC_BYTES = 5 * 1024 * 1024;
+const KYC_TYPES = /^(image\/(jpeg|png)|application\/pdf)$/;
+
+/**
+ * "Upload a replacement" — only on a REJECTED document (Master Prompt 8, Phase 3).
+ *
+ * The new scan becomes a new vendor_documents row; the guard trigger makes it
+ * unreviewed, so it goes back into the admin's queue as "awaiting review", and
+ * the rejected row and its file are removed (resubmitKycDocument →
+ * replaceVendorDocuments, the same one-active-document rule onboarding uses).
+ * The rejection itself stays on record in the vendor's kyc_rejected
+ * notification.
+ */
+function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: VendorDocumentRow }) {
+  const qc = useQueryClient();
+  const input = useRef<HTMLInputElement | null>(null);
+  const [busy, setBusy] = useState(false);
+  const label = DOC_TYPE_LABELS[doc.docType] ?? doc.docType;
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!KYC_TYPES.test(file.type)) {
+      toast.error("Use a JPEG, PNG or PDF", { description: `${file.name} is not one of those formats.` });
+      return;
+    }
+    if (file.size > MAX_KYC_BYTES) {
+      toast.error("That file is over 5 MB", { description: "Scan or export it at a lower resolution and try again." });
+      return;
+    }
+    setBusy(true);
+    try {
+      await resubmitKycDocument(vendorId, doc.docType, file);
+      await qc.invalidateQueries({ queryKey: ["vendor_documents"] });
+      toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 24–48 hours." });
+    } catch (err) {
+      toast.error(`Couldn't upload your ${label}`, { description: err instanceof Error ? err.message : String(err) });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => input.current?.click()}
+        disabled={busy}
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#256fef] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f5fe0] disabled:opacity-60"
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
+        {busy ? "Uploading…" : `Upload a replacement ${label}`}
+      </button>
+      <input
+        ref={input}
+        type="file"
+        accept="image/jpeg,image/png,application/pdf"
+        className="hidden"
+        aria-label={`Replacement ${label} file`}
+        onChange={onFile}
+      />
+    </>
+  );
+}
+
 const Kyc = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -158,7 +226,7 @@ const Kyc = () => {
                   : submitted.length === 0
                     ? "We don't have any documents from you yet. Add them during seller registration or send them to our team."
                     : rejectedCount > 0
-                      ? `${rejectedCount} document${rejectedCount === 1 ? " was" : "s were"} rejected. See the reason below and send us a replacement.`
+                      ? `${rejectedCount} document${rejectedCount === 1 ? " was" : "s were"} rejected. See the reason below and upload a replacement.`
                       : `${verifiedCount} of ${submitted.length} document${submitted.length === 1 ? "" : "s"} verified. Our team reviews submissions within 24–48 hours.`}
               </p>
             </div>
@@ -226,15 +294,18 @@ const Kyc = () => {
                   {/* The moderator's note, the same way /upload-video surfaces
                       one on a rejected clip. A vendor rejected without a reason
                       cannot fix anything. */}
-                  {rejected && (
-                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
-                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
-                      <p className="text-[11px] leading-4 text-gray-700">
-                        <span className="font-semibold">Rejected:</span>{" "}
-                        {doc?.rejectionReason?.trim()
-                          ? doc.rejectionReason
-                          : "No reason was recorded. Contact support and we'll tell you what to re-submit."}
-                      </p>
+                  {rejected && doc && (
+                    <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-500" />
+                        <p className="text-[11px] leading-4 text-gray-700">
+                          <span className="font-semibold">Rejected:</span>{" "}
+                          {doc.rejectionReason?.trim()
+                            ? doc.rejectionReason
+                            : "No reason was recorded. Contact support and we'll tell you what to re-submit."}
+                        </p>
+                      </div>
+                      {user?.id && <ReplaceDocumentButton vendorId={user.id} doc={doc} />}
                     </div>
                   )}
                 </motion.div>
@@ -243,15 +314,16 @@ const Kyc = () => {
           </motion.div>
         )}
 
-        {/* Honest note about what this page can and cannot do. There is no
-            vendor-facing re-upload path yet: onboarding writes these rows and
-            an admin verifies them, so pretending there is an "Upload" button
-            here would be a button that goes nowhere. */}
+        {/* Honest note about what this page can and cannot do. A REJECTED
+            document can be replaced on its row (Master Prompt 8, Phase 3).
+            Adding a type the vendor never submitted still goes through
+            support: that needs the number as well as the scan, and the
+            number lives in the business profile, not here. */}
         <motion.div variants={section} className="flex items-start gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
           <p className="text-xs leading-5 text-gray-600">
-            Documents are collected during seller registration and verified by the Cosora team — this page shows their
-            current status. To correct or add a document, contact support from{" "}
+            Documents are collected during seller registration and verified by the Cosora team. If one is rejected,
+            upload a replacement on its row and it goes back into review. To add a document you didn't submit, contact support from{" "}
             <button onClick={() => navigate("/help")} className="font-semibold text-[#256fef] underline">
               Help &amp; Support
             </button>

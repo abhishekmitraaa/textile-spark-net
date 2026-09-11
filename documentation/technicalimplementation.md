@@ -727,6 +727,17 @@ nobody had looked at. `saveVendorOnboarding` deletes and rewrites this vendor's 
 doc types it is about to insert, so a retried submit does not grow duplicates (there is no
 unique constraint on `(vendor_id, doc_type)`).
 
+**Replacing a rejected document (2026-09-11, Master Prompt 8).** That rewrite is now the
+shared `replaceVendorDocuments(vendorId, docs)`, used by onboarding and by
+`resubmitKycDocument(vendorId, docType, file)`, which is behind `/kyc`'s "Upload a
+replacement" control on a rejected row. Order: read the superseded rows' `id, file_url`,
+insert the new rows, delete the superseded ones **by id**, then `remove()` their
+`business-docs` objects (best-effort, logged). Insert-first means a failed write can
+never leave a vendor with no row, where the old delete-first order could. A resubmission
+is always a new row because `vendor_documents_guard_review_columns()` forbids a vendor to
+touch the review columns and resets them on INSERT. `resubmitKycDocument` removes its
+own freshly uploaded object if the row write fails.
+
 **KYC documents are private, and the code makes that hard to undo (2026-09-08).** They were
 in the PUBLIC `product-images` bucket, with `getPublicUrl()` stored in
 `vendor_documents.file_url` — a PAN card fetchable by anyone with the URL, no auth at all

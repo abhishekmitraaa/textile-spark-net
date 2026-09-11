@@ -211,9 +211,9 @@ rather than a supplier directory.
   `business-docs` bucket; GST and CIN are optional (not every vendor is registered for GST,
   and only MCA-registered companies and LLPs have a CIN). **Aadhaar is deliberately not
   collected** — see the Aadhaar rule in `claude.md`.
-  **Known gap:** there is no vendor-facing way to re-upload a rejected KYC document —
-  onboarding is the only upload path and it sits behind `onboarding_complete`, so a rejected
-  vendor is told to contact support.
+  A **rejected** document can be replaced on `/kyc` (2026-09-11): the new scan goes back
+  into the admin's queue as "awaiting review", and the rejected one is removed. Adding a
+  document type the vendor never submitted still goes through support.
 - **Catalogue** — products (fabric type, GSM, MOQ, sizes, customization, certifications),
   catalogues, and Video Closeups. **Everything goes through admin moderation before going
   live (24–48 h)** — products and videos both default to `under_review`. A **rejected
