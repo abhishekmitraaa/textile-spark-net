@@ -192,7 +192,7 @@ let slot: {
 let rowId: string | null = null;
 
 /** The Bunny library as its own API reports it — the only honest oracle. */
-async function bunnyLibrary(): Promise<{ guid: string; status: number; availableResolutions: string | null }[]> {
+async function bunnyLibrary(): Promise<{ guid: string; status: number; encodeProgress?: number; availableResolutions: string | null }[]> {
   const { data, error } = await adminDb.functions.invoke("bunny-reconcile", { body: {} });
   if (error) throw new Error(`bunny-reconcile: ${error.message}`);
   if (data?.error) throw new Error(`bunny-reconcile: ${data.detail || data.error}`);
@@ -202,8 +202,11 @@ async function bunnyLibrary(): Promise<{ guid: string; status: number; available
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
-  // Downloading ~4 MB and waiting on a real transcode is the bulk of this.
-  test.setTimeout(ENCODE_TIMEOUT_MS + 120_000);
+  // Fixtures and sign-ins only. The Bunny transcode is NOT waited on here any
+  // more — see arrangeBunnyRow(). A shared beforeAll that waits on a paid
+  // third-party encoder made T8.1/T8.1b, which never upload anything, fail
+  // whenever Bunny was slow.
+  test.setTimeout(120_000);
 
   mkdirSync(FIXTURES, { recursive: true });
 
@@ -220,80 +223,113 @@ test.beforeAll(async () => {
   }
   makeQuickTimeCopy(MP4_PATH, FAKE_MP4_PATH);
 
-  // ── A real Bunny-backed row to drive the UI against ─────────────────────
-  // Arranged through the API rather than by driving the upload form, so that a
-  // Bunny outage or a slow transcode fails in a hook with a clear message
-  // instead of failing an assertion about the UI. The form's own gate is what
-  // T1/T1b test; this is the published-content path.
-  {
-    const { data, error } = await vendor.db.functions.invoke("bunny-upload-url", {
-      // The real probed dimensions of the source clip, exactly as
-      // UploadVideo.tsx sends them from probeVideoFile().
-      body: { title: CAPTION, width: 478, height: 850 },
-    });
-    if (error) throw new Error(`bunny-upload-url: ${error.message}`);
-    if (data?.error) throw new Error(`bunny-upload-url: ${data.detail || data.error}`);
-    slot = data;
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    const upload = new tus.Upload(createReadStream(MP4_PATH), {
-      endpoint: slot.endpoint,
-      uploadSize: statSync(MP4_PATH).size,
-      retryDelays: [0, 3000, 5000, 10000],
-      headers: {
-        AuthorizationSignature: slot.signature,
-        AuthorizationExpire: String(slot.expirationTime),
-        LibraryId: slot.libraryId,
-        VideoId: slot.videoId,
-      },
-      metadata: { filetype: "video/mp4", title: CAPTION },
-      chunkSize: 8 * 1024 * 1024,
-      onError: reject,
-      onSuccess: () => resolve(),
-    });
-    upload.start();
-  });
-
-  // 3 = Finished, 4 = Resolution finished. Anything else and the renditions the
-  // UI is about to be asked to play do not exist yet.
-  const deadline = Date.now() + ENCODE_TIMEOUT_MS;
-  let entry: { status: number; availableResolutions: string | null } | undefined;
-  while (Date.now() < deadline) {
-    entry = (await bunnyLibrary()).find((x) => x.guid === slot.videoId);
-    if (entry && (entry.status === 3 || entry.status === 4)) break;
-    await new Promise((r) => setTimeout(r, POLL_MS));
-  }
-  if (!entry || (entry.status !== 3 && entry.status !== 4)) {
-    throw new Error(`Bunny never finished encoding ${slot.videoId} (status=${entry?.status ?? "absent"})`);
-  }
-
-  const { data: row, error: insErr } = await vendor.db
-    .from("product_videos")
-    .insert({
-      vendor_id: vendor.id,
-      brand_line: CAPTION,
-      category: "Buttons",
-      provider: "bunny",
-      bunny_video_id: slot.videoId,
-      video_url: slot.playbackUrl,
-      thumbnail_url: slot.thumbnailUrl,
-      duration_seconds: 21,
-      video_width: 478,
-      video_height: 850,
-    })
-    .select("id, status")
-    .single();
-  if (insErr) throw new Error(`insert: ${insErr.message}`);
-  rowId = row.id;
-  // Not the assertion — the arrangement. The trigger forcing under_review is
-  // asserted properly (against an insert that explicitly asks for 'live') in
-  // scripts/bunny-e2e-check.mjs step 5. Here it is a precondition: T2 is about
-  // the queue rendering, and it needs the row to be IN the queue.
-  if (row.status !== "under_review") {
-    throw new Error(`expected a fresh row to be under_review, got ${row.status}`);
-  }
 });
+
+// Bunny's VideoModelStatus, from its API reference
+// (bunny.net/docs/reference/video_getvideo — checked 2026-09-11):
+//   0 Created · 1 Uploaded · 2 Processing · 3 Transcoding · 4 Finished
+//   5 Error · 6 UploadFailed · 7 JitSegmenting · 8 JitPlaylistsCreated
+// This spec used to read 3 as "Finished" and 4 as "Resolution finished", so it
+// could proceed while the renditions it was about to play were still being
+// built. Only 4 is done.
+const BUNNY_FINISHED = 4;
+const BUNNY_FAILED = new Set([5, 6]);
+
+let arranged: Promise<void> | null = null;
+
+/**
+ * A real Bunny-backed row to drive the UI against — T8.2–T8.5 only.
+ *
+ * Arranged through the API rather than by driving the upload form, so that a
+ * Bunny outage or a slow transcode fails with a clear message instead of
+ * failing an assertion about the UI. Memoised: the first caller pays for the
+ * upload and transcode, the rest reuse it (and re-throw if it failed).
+ *
+ * THE ROW IS INSERTED BEFORE THE ENCODE WAIT, on purpose. It used to be
+ * inserted after, and afterAll only cleans up `if (rowId)` — so a transcode that
+ * outlasted ENCODE_TIMEOUT_MS left a paid ~21 MB asset at Bunny with no row, and
+ * nothing that could find it again. bunny-reconcile showed two such orphans
+ * (9f07b47a…, 7151edac…), one per failed run. Inserting first also matches the
+ * real product: UploadVideo.tsx writes the row as soon as the upload lands,
+ * while Bunny is still transcoding.
+ */
+function arrangeBunnyRow(): Promise<void> {
+  arranged ??= (async () => {
+    {
+      const { data, error } = await vendor.db.functions.invoke("bunny-upload-url", {
+        // The real probed dimensions of the source clip, exactly as
+        // UploadVideo.tsx sends them from probeVideoFile().
+        body: { title: CAPTION, width: 478, height: 850 },
+      });
+      if (error) throw new Error(`bunny-upload-url: ${error.message}`);
+      if (data?.error) throw new Error(`bunny-upload-url: ${data.detail || data.error}`);
+      slot = data;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const upload = new tus.Upload(createReadStream(MP4_PATH), {
+        endpoint: slot.endpoint,
+        uploadSize: statSync(MP4_PATH).size,
+        retryDelays: [0, 3000, 5000, 10000],
+        headers: {
+          AuthorizationSignature: slot.signature,
+          AuthorizationExpire: String(slot.expirationTime),
+          LibraryId: slot.libraryId,
+          VideoId: slot.videoId,
+        },
+        metadata: { filetype: "video/mp4", title: CAPTION },
+        chunkSize: 8 * 1024 * 1024,
+        onError: reject,
+        onSuccess: () => resolve(),
+      });
+      upload.start();
+    });
+
+    const { data: row, error: insErr } = await vendor.db
+      .from("product_videos")
+      .insert({
+        vendor_id: vendor.id,
+        brand_line: CAPTION,
+        category: "Buttons",
+        provider: "bunny",
+        bunny_video_id: slot.videoId,
+        video_url: slot.playbackUrl,
+        thumbnail_url: slot.thumbnailUrl,
+        duration_seconds: 21,
+        video_width: 478,
+        video_height: 850,
+      })
+      .select("id, status")
+      .single();
+    if (insErr) throw new Error(`insert: ${insErr.message}`);
+    // From here on afterAll can always delete the Bunny asset through the row.
+    rowId = row.id;
+    // Not the assertion — the arrangement. The trigger forcing under_review is
+    // asserted properly (against an insert that explicitly asks for 'live') in
+    // scripts/bunny-e2e-check.mjs step 5. Here it is a precondition: T8.2 is
+    // about the queue rendering, and it needs the row to be IN the queue.
+    if (row.status !== "under_review") {
+      throw new Error(`expected a fresh row to be under_review, got ${row.status}`);
+    }
+
+    const deadline = Date.now() + ENCODE_TIMEOUT_MS;
+    let entry: { status: number; encodeProgress?: number } | undefined;
+    while (Date.now() < deadline) {
+      entry = (await bunnyLibrary()).find((x) => x.guid === slot.videoId);
+      if (entry?.status === BUNNY_FINISHED) return;
+      if (entry && BUNNY_FAILED.has(entry.status)) {
+        throw new Error(`Bunny FAILED encoding ${slot.videoId} (status=${entry.status}) — check transcodingMessages in the Bunny dashboard`);
+      }
+      await new Promise((r) => setTimeout(r, POLL_MS));
+    }
+    throw new Error(
+      `Bunny did not finish encoding ${slot.videoId} within ${ENCODE_TIMEOUT_MS / 60_000} min ` +
+      `(status=${entry?.status ?? "absent"}, encodeProgress=${entry?.encodeProgress ?? "?"}%). ` +
+      `Status 2/3 is Processing/Transcoding — slow, not failed; the asset is cleaned up by afterAll.`,
+    );
+  })();
+  return arranged;
+}
 
 test.afterAll(async () => {
   test.setTimeout(120_000);
@@ -377,6 +413,9 @@ test("T8.1b positive control: the same file with its real MP4 brand is accepted"
 // ───────────────────────────────────────────────────────────────────────────
 
 test("T8.2 the bunny row reaches Cosora-Admin's queue, gated exactly as before", async ({ browser }) => {
+  // The first test to need Bunny pays for the upload and transcode.
+  test.setTimeout(ENCODE_TIMEOUT_MS + 180_000);
+  await arrangeBunnyRow();
   const { ctx } = await contextAs(browser, LOGIN.admin);
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_APP_URL}/videos`, { waitUntil: "domcontentloaded" });
@@ -397,6 +436,7 @@ test("T8.2 the bunny row reaches Cosora-Admin's queue, gated exactly as before",
 });
 
 test("T8.3 the moderator's player actually plays the Bunny MP4", async ({ browser }) => {
+  await arrangeBunnyRow();
   // THE assertion the API script structurally cannot make. From Node every one
   // of these URLs is a 403 (blank Referer -> hotlink protection). A browser
   // sends a Referer, so a successful decode here is the direct measurement that
@@ -436,6 +476,7 @@ test("T8.3 the moderator's player actually plays the Bunny MP4", async ({ browse
 });
 
 test("T8.4 approving through the admin UI publishes it", async ({ browser }) => {
+  await arrangeBunnyRow();
   const { ctx } = await contextAs(browser, LOGIN.admin);
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_APP_URL}/videos`, { waitUntil: "domcontentloaded" });
@@ -482,6 +523,7 @@ test("T8.4 approving through the admin UI publishes it", async ({ browser }) => 
 // ───────────────────────────────────────────────────────────────────────────
 
 test("T8.5 the approved bunny video renders and plays in the buyer reel", async ({ browser }) => {
+  await arrangeBunnyRow();
   const { ctx } = await contextAs(browser, LOGIN.buyer);
   const page = await ctx.newPage();
   await page.goto("/video-closeups", { waitUntil: "domcontentloaded" });

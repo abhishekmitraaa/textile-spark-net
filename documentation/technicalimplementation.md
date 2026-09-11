@@ -397,6 +397,14 @@ runs as `postgres`. It guards only `status` and `rejection_reason` regardless.
 
 ---
 
+#### Bunny's video status enum — read it from Bunny, not from a comment (2026-09-11)
+
+Bunny's API reference defines `status` as 0 Created · 1 Uploaded · 2 Processing · 3 Transcoding ·
+4 Finished · 5 Error · 6 UploadFailed · 7 JitSegmenting · 8 JitPlaylistsCreated. Only **4** means
+the renditions exist; `tests/video-closeups-bunny.spec.ts` used to treat 3 as finished. Anything
+that waits on an encode should also fail fast on 5 or 6, and should create the DB row that owns
+the asset *before* it waits, so a timeout never strands a paid video with nothing pointing at it.
+
 ## Product search — hybrid FTS + vector (2026-09-07)
 
 ### Schema on `products`

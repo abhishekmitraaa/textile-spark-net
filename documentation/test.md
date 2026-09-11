@@ -119,6 +119,24 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 5) — Bunny T8.1: not Bunny's fault; spec fixed, 6/6 GREEN
+
+**Bunny, read directly** (via `bunny-reconcile`, read-only) — the video from the failure message:
+`7151edac-a482-48c9-aa84-d8fbdd9d7330` → `status 4`, `encodeProgress 100`, `hasMP4Fallback true`,
+`480p,240p,360p`. Finished — after the spec's 6-minute window. Status enum per Bunny's API
+reference: 0 Created · 1 Uploaded · 2 Processing · 3 Transcoding · 4 Finished · 5 Error ·
+6 UploadFailed · 7 JitSegmenting · 8 JitPlaylistsCreated.
+
+| Run | Result |
+|---|---|
+| `--grep "T8.1"` (T8.1 + T8.1b; no Bunny involvement) | **2/2 PASS**, 14 s |
+| full `video-closeups-bunny.spec.ts` (admin dev server on :5174) | **6/6 PASS**, 1.8 min |
+| `bunny-reconcile` before the run | 2 videos, both orphans from earlier failed runs (`9f07b47a…`, `7151edac…`) |
+| `bunny-reconcile` after the run | the same 2 videos, `dbRowCount 0` — the run's own asset was deleted |
+
+The two pre-existing orphans (~21 MB each) were not deleted: a destructive action on a billed
+third-party library, left for a human.
+
 ### 2026-09-11 (Master Prompt 7, buyer-trust thread · Phase 4) — chat fixtures: NOT RUN (blocked)
 
 `admin-chat-moderation.spec.ts` and `chat-pipeline.spec.ts` need the `rlstest-*` / `chatfx-*`
