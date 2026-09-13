@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
+import SponsoredNote from "@/components/buyer/SponsoredNote";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
@@ -555,7 +556,10 @@ const NewArrivals = () => {
             <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
             <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
           </div>
-          <p className="text-[10px] lg:text-xs text-gray-300 px-1 mb-2">sponsored</p>
+          {/* The lowercase "sponsored" that used to sit here, above the rail in
+              text-gray-300, is replaced by the shared SponsoredNote below the
+              rail — same wording, position and colour as every other paid
+              placement. Two disclosures on one section is not twice as clear. */}
           <div
             ref={brandPicksDrag.ref}
             className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide", brandPicksDrag.className)}
@@ -586,6 +590,7 @@ const NewArrivals = () => {
               </div>
             ))}
           </div>
+          <SponsoredNote className="px-1" />
         </div>
         )}
 

@@ -29,6 +29,20 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 //    indirectly through the slide counter.
 // ─────────────────────────────────────────────────────────────
 
+// REMOVED 2026-09-13: `sponsored?: boolean`, and the `sponsored: true` on the
+// first slide below.
+//
+// These eight slides are invented — Unsplash photography, vendor ids "v1".."v8"
+// that match no vendor_profiles row, and prices nobody set. Every slide links
+// to `/product/ef-N`, a route that has never existed, so every tap is a dead
+// end. Slide one additionally carried a "sponsored" chip, which made a
+// fabricated product claim to be PAID INVENTORY: the same failure as the old
+// RECENT_VIEW_ADS rail and the `isAd: true` seed brand in followingStore.
+//
+// The false paid claim is removed here because it is squarely part of the
+// advertising system. The rest of the fabricated hero is a product decision
+// (it is the New Arrivals hero) and is logged in ToDo.md + securityflags.md
+// rather than deleted unasked.
 interface HeroSlide {
   id: string;
   vendorId: string;
@@ -37,11 +51,10 @@ interface HeroSlide {
   price: string;
   moq: string;
   image: string;
-  sponsored?: boolean;
 }
 
 const SLIDES: HeroSlide[] = [
-  { id: "ef-1", vendorId: "v1", name: "Satin Slip Dress",    category: "Dress",    price: "₹459", moq: "MOQ 12", image: "https://images.unsplash.com/photo-1495385794356-15371f348c31?w=600&h=800&fit=crop", sponsored: true },
+  { id: "ef-1", vendorId: "v1", name: "Satin Slip Dress",    category: "Dress",    price: "₹459", moq: "MOQ 12", image: "https://images.unsplash.com/photo-1495385794356-15371f348c31?w=600&h=800&fit=crop" },
   { id: "ef-2", vendorId: "v2", name: "Camp Collar Shirt",   category: "Shirt",    price: "₹499", moq: "MOQ 10", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&h=800&fit=crop" },
   { id: "ef-3", vendorId: "v3", name: "Ribbed Tank Top",     category: "Top",      price: "₹299", moq: "MOQ 20", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=600&h=800&fit=crop" },
   { id: "ef-4", vendorId: "v4", name: "Tailored Trouser",    category: "Trouser",  price: "₹699", moq: "MOQ 10", image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=600&h=800&fit=crop" },
@@ -115,12 +128,6 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
           loading={Math.abs(offset) <= 1 ? "eager" : "lazy"}
           draggable={false}
         />
-
-        {slide.sponsored && (
-          <span className="absolute top-3 left-3 text-[10px] font-semibold text-white bg-black/55 backdrop-blur-sm px-2 py-0.5 rounded">
-            sponsored
-          </span>
-        )}
 
         <button
           onClick={e => {

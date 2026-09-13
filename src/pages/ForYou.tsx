@@ -7,6 +7,7 @@ import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
+import SponsoredNote from "@/components/buyer/SponsoredNote";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { useAuth } from "@/contexts/AuthContext";
@@ -227,6 +228,7 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
           </button>
         ))}
       </div>
+      <SponsoredNote />
     </div>
   );
 }

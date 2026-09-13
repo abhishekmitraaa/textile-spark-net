@@ -108,7 +108,13 @@ const SEED: Brand[] = [
     location: "Busan, KR",
     followers: "1,267",
     items: 88,
-    isAd: true,
+    // REMOVED 2026-09-13: `isAd: true`. This is a hardcoded signed-out demo
+    // brand, and the flag made NewBrandsCarousel print an "AD" chip on it — a
+    // fabricated PAID placement for a brand that does not exist and that nobody
+    // bought. Same class of problem as the old RECENT_VIEW_ADS rail. Real
+    // sponsored slides now come from active_ads() and are marked "Paid
+    // placement"; see Following.tsx. The rest of this SEED is still mock data
+    // shown to signed-out visitors and is logged separately in ToDo.md.
     isFollowing: false,
     isHidden: false,
     topProducts: [

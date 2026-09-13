@@ -33,12 +33,26 @@ export interface AdSlot {
   types: AdType[];
   /** How many cards the slot asks for. */
   max: number;
+  /**
+   * Defined but NOT rendered yet. A deferred slot reserves the placement
+   * decision without pretending the surface exists — its ad types are still
+   * "placed" in the plan, but nothing on the buyer side asks for them, so a
+   * campaign buying them delivers nothing today.
+   */
+  deferred?: boolean;
 }
 
 export const AD_SLOTS = {
+  // DEFERRED. The plan gives New Arrivals a 1216x130 banner above the category
+  // chips, and says it "reuses the admin's existing (unused) banner-management
+  // table". There is no such table — nothing in the database matches %banner%,
+  // confirmed live. Rendering these as ordinary product cards would missell
+  // both types, so the slot is reserved and left unrendered until there is a
+  // banner creative model (dimensions, click-through URL, separate upload).
   newArrivalsBanner: {
     id: "newArrivalsBanner", page: "newArrivals",
     label: "Sponsored", types: ["websiteBanner", "mobileBanner"], max: 1,
+    deferred: true,
   },
   newArrivalsSponsored: {
     id: "newArrivalsSponsored", page: "newArrivals",
@@ -48,6 +62,10 @@ export const AD_SLOTS = {
     id: "newArrivalsBrandPicks", page: "newArrivals",
     label: "Brand Picks", types: ["storePromotion", "brandAd"], max: 8,
   },
+  // NOTE: `wholesalerPick` is sold with a "72h bump" and does NOT get one. It
+  // is served and ordered exactly like every other eligible campaign
+  // (created_at desc, id desc). The slot is real; the bump is not built. Logged
+  // in ToDo.md — do not describe this placement as delivering the bump.
   trendsSponsored: {
     id: "trendsSponsored", page: "trends",
     label: "Sponsored", types: ["featuredProduct", "wholesalerPick"], max: 8,
@@ -60,9 +78,14 @@ export const AD_SLOTS = {
     id: "forYouSponsored", page: "forYou",
     label: "Sponsored", types: ["openListing", "featuredProduct"], max: 4,
   },
+  // Not a rail. These campaigns are INTERLEAVED into the organic brand
+  // carousel at 1-in-4 (see NewBrandsCarousel), so `label` is the section they
+  // appear inside, not a heading this slot renders, and `max` is an upper
+  // bound on how many are fetched — the carousel's own ratio decides how many
+  // are actually shown, which is always fewer.
   followingBrands: {
     id: "followingBrands", page: "following",
-    label: "Brands to discover", types: ["storePromotion", "brandAd"], max: 8,
+    label: "Looking for New Brands? (Sponsored slides)", types: ["storePromotion", "brandAd"], max: 8,
   },
   followingPopular: {
     id: "followingPopular", page: "following",
@@ -107,3 +130,24 @@ export const UNPLACED_AD_TYPES: Readonly<Record<string, string>> = {
 
 /** trustedSeal renders as the existing product-card badge, which is already live and correct. */
 export const BADGE_AD_TYPES: readonly AdType[] = ["trustedSeal"];
+
+/**
+ * Ad types that may render as an on-platform card ANYWHERE, including rails
+ * that predate the slot map and ask for no particular type — ProductDetail's
+ * "Sponsored" rail being the one that exists today.
+ *
+ * This is the backstop for a real leak, found with live inventory: an untyped
+ * rail calls active_ads() with no placement filter, which returns EVERY
+ * eligible campaign. So a campaign whose only placements are off-platform
+ * (fbInsta, googleProduct, socialCombo) or undeliverable (searchListing,
+ * directBroadcast, webMobileCombo) was rendering as an ordinary product card.
+ * A vendor who paid ₹59 for Facebook/Instagram reach was getting a card on a
+ * Cosora product page instead — not what they bought, and it made the "these
+ * seven have no placement" list quietly untrue.
+ *
+ * Badge types are excluded too: a campaign bought purely as trustedSeal or
+ * verifiedCertificate buys a badge, not a card.
+ */
+export const ON_PLATFORM_CARD_TYPES: readonly AdType[] = [
+  "openListing", "featuredProduct", "wholesalerPick", "storePromotion", "brandAd",
+];

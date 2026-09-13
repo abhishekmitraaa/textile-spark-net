@@ -4,7 +4,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Megaphone, Star } from "lucide-react";
 import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
-import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
+import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, type AdSlotId } from "@/lib/adSlots";
+import SponsoredNote from "@/components/buyer/SponsoredNote";
 
 // Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (eligible,
 // promoting a live product) as tappable cards. Impressions are logged once per
@@ -21,9 +22,15 @@ const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 //   `slot`      — a Phase 5 placement. Ad types, size and heading come from
 //                 AD_SLOTS, so a page cannot render an ad type the placement
 //                 plan never gave it a slot for.
-//   `max`       — an untyped rail accepting any ad type. Used by ProductDetail,
-//                 which predates the slot map and is not one of the five
-//                 artboards; left as-is deliberately rather than regressed.
+//   `max`       — a general rail, used by ProductDetail, which predates the
+//                 slot map and is not one of the five artboards. It still does
+//                 NOT accept every ad type: it falls back to
+//                 ON_PLATFORM_CARD_TYPES, because an unfiltered call returns
+//                 every eligible campaign including the off-platform ones
+//                 (fbInsta, googleProduct, socialCombo) and the undeliverable
+//                 ones (searchListing, directBroadcast, webMobileCombo). Those
+//                 were rendering here as ordinary product cards — a vendor who
+//                 bought Facebook reach got a card on a Cosora product page.
 //
 // `category` (optional) filters serving to ads targeting that category plus
 // untargeted ads — pass a real category context to make targeting take effect.
@@ -39,7 +46,7 @@ export default function SponsoredRail({
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const spec = slot ? AD_SLOTS[slot] : null;
-  const { data: ads = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? null);
+  const { data: ads = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES);
   const heading = label ?? spec?.label ?? "Sponsored";
   const logged = useRef<Set<string>>(new Set());
 
@@ -107,6 +114,7 @@ export default function SponsoredRail({
           </motion.button>
         ))}
       </div>
+      <SponsoredNote />
     </section>
   );
 }
