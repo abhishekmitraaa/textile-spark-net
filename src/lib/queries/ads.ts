@@ -42,12 +42,23 @@ export interface AdRow {
   startsAt: string | null;
   endsAt: string | null;
   createdAt: string;
+  /**
+   * Why the campaign is in the state it is in — the reason code and note the
+   * moderator recorded. Load-bearing, not decoration: `runStateOf` reads these
+   * to say "Not approved: misleading claims" instead of the generic "This
+   * campaign was not approved". They were being fetched (`select("*")`) and
+   * then dropped in this mapper, so the vendor-facing reasoning added in
+   * Phase 8.1 silently fell back to its no-reason branch every single time.
+   */
+  moderationReason: string | null;
+  moderatedAt: string | null;
 }
 
 interface RawAd {
   id: string; title: string; product_id: string | null; image_url: string | null;
   daily_budget: number | null; placement: string | null; status: string;
   impressions: number; clicks: number; starts_at: string | null; ends_at: string | null; created_at: string;
+  moderation_reason: string | null; moderated_at: string | null;
 }
 
 function mapAd(a: RawAd): AdRow {
@@ -57,6 +68,7 @@ function mapAd(a: RawAd): AdRow {
     placement: a.placement, status: (a.status as AdStatus) ?? "draft",
     impressions: a.impressions, clicks: a.clicks,
     startsAt: a.starts_at, endsAt: a.ends_at, createdAt: a.created_at,
+    moderationReason: a.moderation_reason, moderatedAt: a.moderated_at,
   };
 }
 
