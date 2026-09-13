@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
-import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlot, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
@@ -103,22 +103,21 @@ const LOOKING_FOR_THESE = [
 // Brand Picks and Recommended Premium Brands were static mock arrays whose
 // cards all routed to the same placeholder (`/search/results` and
 // `/vendor/premium-1`). Both now read real data:
-//   Brand Picks     → useActiveAds(), the same paid-ad pipeline SponsoredRail
-//                     uses, routed to the real promoted product.
+//   Brand Picks     → the newArrivalsBrandPicks slot: storePromotion + brandAd
+//                     campaigns specifically, routed to the vendor's storefront.
 //   Premium Brands  → useTopVendors(), routed to the real vendor.
-// See the render blocks below for the SponsoredRail de-duplication rule.
-
-// De-duplication between the two ad surfaces on this page. SponsoredRail sits
-// higher and is served first; Brand Picks takes the rows after it. The RPC
-// orders deterministically (advertisements.created_at desc), so the split is
-// stable and the same ad can never appear twice in one scroll — which also
-// keeps impression counts honest, since those feed ad reporting.
 //
-// Consequence worth knowing: the two sections SPLIT the available inventory
-// rather than both showing everything, so Brand Picks stays empty until more
-// than SPONSORED_MAX campaigns are live. Kept low for that reason.
-const SPONSORED_MAX = 3;
-const BRAND_PICKS_MAX = 6;
+// THE DE-DUPLICATION HACK IS GONE. Both surfaces used to draw from ONE
+// useActiveAds() window and split it by array index — SponsoredRail took the
+// first three rows, Brand Picks took the rest. That kept the same ad off the
+// page twice, but it also meant the two sections COMPETED for one pool, so
+// Brand Picks stayed empty until more than three campaigns were live, and a
+// storefront campaign could land in the product rail and vice versa.
+//
+// Phase 5 routes them to disjoint ad types instead (openListing vs
+// storePromotion/brandAd), matched server-side in active_ads(filter_placements).
+// Disjoint pools cannot overlap, so no index arithmetic is needed and neither
+// section starves the other.
 // Thumbnails shown in the Video Close-Ups teaser rail. The viewer still gets
 // the full ranked list; this just caps how many images the feed page fetches.
 const VIDEO_RAIL_MAX = 12;
@@ -223,12 +222,10 @@ const NewArrivals = () => {
   const { profile } = useAuth();
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
 
-  // ── Brand Picks: real paid ads, de-duplicated against SponsoredRail ──
-  // One window covering both sections; SponsoredRail renders the first
-  // SPONSORED_MAX, Brand Picks takes the rest. Ordering is deterministic, so
-  // the split is stable across renders.
-  const { data: adWindow = [] } = useActiveAds(SPONSORED_MAX + BRAND_PICKS_MAX);
-  const brandPicks = useMemo(() => adWindow.slice(SPONSORED_MAX), [adWindow]);
+  // ── Brand Picks: storePromotion + brandAd campaigns only ──
+  // Its own slot, so it cannot collide with the Sponsored rail above and does
+  // not need the old index-splitting workaround. Empty renders nothing.
+  const { data: brandPicks = [] } = useAdSlot("newArrivalsBrandPicks");
   const loggedAds = useRef<Set<string>>(new Set());
   useEffect(() => {
     brandPicks.forEach((a) => {
@@ -470,7 +467,7 @@ const NewArrivals = () => {
         {/* ── Sponsored (vendor ad campaigns) ──
             Explicit max so Brand Picks below knows exactly how many rows to
             skip; the component itself is unchanged. */}
-        <SponsoredRail max={SPONSORED_MAX} />
+        <SponsoredRail slot="newArrivalsSponsored" />
 
         {/* ── Video Close-Ups — Reels style ──
             Omitted entirely when no supplier has posted one, rather than

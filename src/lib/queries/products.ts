@@ -755,6 +755,35 @@ async function loadCategories(): Promise<CategoryRow[]> {
 }
 
 /**
+ * Resolve a display name to a real `categories` row id, trying each candidate
+ * in order. Exact match first, then case-insensitive.
+ *
+ * Ad targeting needs this because several buyer surfaces carry a CURATED label
+ * rather than a taxonomy id — the Trends chips, for instance, are editorial
+ * ("Denim", "Long Dress") and have no category_id of their own. Passing that
+ * label straight to active_ads(filter_category uuid) would be a type error at
+ * best and a silent no-match at worst, so the label is resolved to a real row
+ * here first. Same rule the search path follows: never raw text as a category.
+ *
+ * Returns null when nothing matches, which callers must treat as "no category
+ * context" (serve untargeted ads), NOT as "match nothing".
+ */
+export async function resolveCategoryIdByName(
+  candidates: readonly (string | null | undefined)[],
+): Promise<string | null> {
+  const names = candidates.map((c) => c?.trim()).filter(Boolean) as string[];
+  if (!names.length) return null;
+  const cats = await loadCategories();
+  for (const n of names) {
+    const exact = cats.find((c) => c.name === n);
+    if (exact) return exact.id;
+    const ci = cats.find((c) => c.name.toLowerCase() === n.toLowerCase());
+    if (ci) return ci.id;
+  }
+  return null;
+}
+
+/**
  * The precise category for a listing: the seeded subcategory row matching the
  * subcategory the vendor actually picked, looked up under its parent category.
  *

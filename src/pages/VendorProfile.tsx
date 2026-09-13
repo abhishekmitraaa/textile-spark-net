@@ -11,6 +11,8 @@ import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
 import { useCallVendor, useContactGate } from "@/lib/queries/calls";
+import { messaging } from "@/lib/messaging";
+import { logEngagement } from "@/lib/queries/engagement";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import { cn } from "@/lib/utils";
@@ -160,6 +162,26 @@ const VendorProfile = () => {
   const toggleFollow = () => (following ? unfollow(vendorId) : follow(vendorId));
 
   const brandName = vendor?.brandName ?? BRAND;
+
+  // Interim buyer→vendor messaging (Phase 7). Gated on the SAME contact rule
+  // the Call button uses — a vendor whose contact details are withheld by
+  // moderation must not be reachable through a different button on the same
+  // card. `canReach` is false when the stored number cannot be normalised into
+  // a plausible one, so a malformed entry hides the button rather than opening
+  // a stranger's chat.
+  const contact = useMemo(
+    () => ({ vendorId, brandName, whatsapp: vendor?.whatsapp ?? null }),
+    [vendorId, brandName, vendor?.whatsapp],
+  );
+  const canWhatsApp = !contactLoading && !contactBlocked && messaging().canReach(contact);
+  const openWhatsApp = () => {
+    const ok = messaging().open(contact);
+    if (!ok) {
+      toast.error("Couldn't open WhatsApp", { description: "This seller hasn't added a valid WhatsApp number." });
+      return;
+    }
+    void logEngagement({ eventType: "cta_click", vendorId, ctaName: "message", source: "direct" });
+  };
   const vendorLocation = vendor ? [vendor.city, vendor.country].filter(Boolean).join(", ") : "Gwalior, Madhya Pradesh · India";
   const aboutText =
     vendor?.about ??
@@ -363,8 +385,12 @@ const VendorProfile = () => {
             </div>
           </div>
 
-          {/* Action buttons (Follow / Chat / Call) — per note, chat added */}
-          <div className="bg-white px-3 py-3 grid grid-cols-3 gap-2">
+          {/* Action buttons (Follow / Chat / Call / WhatsApp).
+              WhatsApp appears only when THIS vendor has a reachable number of
+              their own (vendor_profiles.whatsapp, collected at onboarding) and
+              the same contact gate the Call button obeys allows it. It is a
+              click-to-chat link, not the Cloud API — see lib/messaging.ts. */}
+          <div className={cn("bg-white px-3 py-3 grid gap-2", canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={toggleFollow}
               className={cn("flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors",
                 following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-[#ef4d62]/10 text-[#ef4d62] hover:bg-[#ef4d62]/15")}>
@@ -379,6 +405,12 @@ const VendorProfile = () => {
               className="flex items-center justify-center gap-1.5 rounded-xl bg-[#ef4d62] py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
               <Phone className="h-4 w-4" /> Call Now
             </motion.button>
+            {canWhatsApp && (
+              <motion.button whileTap={TAP} transition={TAP_T} onClick={openWhatsApp}
+                className="flex items-center justify-center gap-1.5 rounded-xl border border-gray-200 py-2.5 text-sm font-bold text-gray-700 hover:border-gray-300 transition-colors">
+                <Send className="h-4 w-4" /> WhatsApp
+              </motion.button>
+            )}
           </div>
         </motion.section>
 

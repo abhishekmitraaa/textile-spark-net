@@ -18,6 +18,8 @@ import {
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
+import { useResolvedCategoryId } from "@/lib/queries/ads";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
@@ -283,6 +285,17 @@ const Trends = () => {
   const hasLive = trending.length > 0;
 
   const category = useMemo(() => CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES[0], [categoryId]);
+
+  // Phase 3.3 — category context for the sponsored rail below.
+  //
+  // The chips are EDITORIAL ("Denim", "Long Dress"): `category.id` is a slug,
+  // not a categories.id, so it cannot be handed to active_ads(filter_category
+  // uuid). `featured.sub` is tried first because it is already written in
+  // taxonomy vocabulary ("T-shirts/Tops", "Jeans"); the chip label is the
+  // fallback. If neither resolves, this is null and the rail simply has no
+  // category context — untargeted ads still serve, which is the honest
+  // behaviour for a chip the taxonomy has no row for.
+  const { data: trendCategoryId = null } = useResolvedCategoryId([category.featured.sub, category.label]);
   const styled = STYLED_TRENDS[styledIndex];
   const keywords = HOT_KEYWORDS[apparelGroup] ?? [];
 
@@ -469,6 +482,16 @@ const Trends = () => {
             <SearchIcon className="w-4 h-4" />
           </button>
         </div>
+
+        {/* ── Sponsored — trending in #{hashtag} (Phase 5) ──
+            Featured Product + Wholesaler Pick campaigns, filtered to the
+            selected chip's resolved category. Renders nothing when no eligible
+            campaign matches — never a placeholder. */}
+        <SponsoredRail
+          slot="trendsSponsored"
+          category={trendCategoryId}
+          label={`Sponsored — trending in #${category.hashtag}`}
+        />
 
         {/* "Top Brands for #hashtag" was here: six invented brand names per
             category ("BLESSING", "favor", "J.Holic", ...) with picsum logos, none

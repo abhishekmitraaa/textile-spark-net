@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { logEngagement } from "@/lib/queries/engagement";
+import { logEngagement, sessionId } from "@/lib/queries/engagement";
+import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
+import { resolveCategoryIdByName } from "@/lib/queries/products";
 
 // (buyer-facing active-ads + analytics helpers are exported at the bottom)
 
@@ -9,7 +11,23 @@ import { logEngagement } from "@/lib/queries/engagement";
 // promotes one of the vendor's products with a daily budget + placement.
 // ─────────────────────────────────────────────────────────────
 
-export type AdStatus = "draft" | "active" | "paused" | "ended";
+/**
+ * The full campaign state set (migration 20260912120000). Each value is a state
+ * a vendor needs to see at a glance, which is why the two pauses are separate:
+ * a vendor may lift their own pause and may NOT lift an admin's.
+ *
+ * 'paused' and 'ended' are LEGACY values kept in the DB constraint so existing
+ * rows keep working. New code should not write them; `runStateOf` in
+ * campaignRunState.ts folds them into the new states for display.
+ *
+ * 'budget_exhausted' is in the constraint but structurally unreachable —
+ * pricing is flat-rate/prepaid, so nothing can ever set it.
+ */
+export type AdStatus =
+  | "draft" | "pending_review" | "scheduled" | "active" | "rejected"
+  | "changes_requested" | "paused_by_vendor" | "paused_by_admin" | "expired"
+  | "budget_exhausted" | "suspended" | "archived"
+  | "paused" | "ended";
 
 export interface AdRow {
   id: string;
@@ -78,16 +96,54 @@ export async function createAd(vendorId: string, a: NewAd): Promise<void> {
     image_url: a.imageUrl ?? null,
     daily_budget: a.dailyBudget ?? null,
     placement: a.placement ?? null,
-    status: a.status ?? "active",
+    // 'draft', never 'active'. A campaign reaches buyers only through payment
+    // (which lands it on pending_review) and then admin approval. The RLS
+    // INSERT policy refuses status='active' from a vendor anyway; this makes
+    // the intent explicit rather than relying on being refused.
+    status: a.status ?? "draft",
     starts_at: new Date().toISOString(),
     ends_at: a.endsAt ?? null,
   });
   if (error) throw error;
 }
 
-export async function updateAdStatus(id: string, status: AdStatus): Promise<void> {
-  const { error } = await supabase.from("advertisements").update({ status }).eq("id", id);
+// ── Status changes go through the review RPCs, never a bare UPDATE ──────────
+//
+// A client UPDATE that RLS denies matches zero rows and PostgREST reports
+// SUCCESS — the vendor would see "Campaign paused" and it would still be
+// running. Each RPC below checks authorization inside itself and RAISES, so a
+// refusal actually surfaces here as a thrown error.
+
+/** Vendor pauses their own running campaign. */
+export async function pauseMyCampaign(id: string, reasonCode?: string): Promise<void> {
+  const { error } = await supabase.rpc("pause_ad_campaign_by_vendor", {
+    p_ad_id: id,
+    p_reason_code: reasonCode ?? undefined,
+  });
   if (error) throw error;
+}
+
+/**
+ * Resume. Returns where it landed — 'active' or 'scheduled' — because a
+ * campaign resumed before its start date must not claim to be live.
+ * Raises if an admin was the one who paused it.
+ */
+export async function resumeMyCampaign(id: string): Promise<string> {
+  const { data, error } = await supabase.rpc("resume_ad_campaign", { p_ad_id: id });
+  if (error) throw error;
+  return (data as string | null) ?? "active";
+}
+
+/** changes_requested → pending_review, after the vendor has edited the campaign. */
+export async function resubmitMyCampaign(id: string): Promise<void> {
+  const { error } = await supabase.rpc("resubmit_ad_campaign", { p_ad_id: id });
+  if (error) throw error;
+}
+
+/** Convenience for the dashboard's single pause/resume toggle. */
+export async function setCampaignRunning(id: string, running: boolean): Promise<void> {
+  if (running) await resumeMyCampaign(id);
+  else await pauseMyCampaign(id);
 }
 
 export async function deleteAd(id: string): Promise<void> {
@@ -126,8 +182,28 @@ interface RawActiveAd {
 // categoryId (optional) filters serving to ads targeting that category, plus
 // untargeted ads — real category targeting where a buyer category signal exists
 // (e.g. the product-detail page's own category).
-async function fetchActiveAds(max: number, categoryId?: string | null): Promise<ActiveAd[]> {
-  const { data, error } = await supabase.rpc("active_ads", { max_count: max, filter_category: categoryId ?? undefined });
+//
+// placements (optional) restricts the slot to specific ad types, matched
+// SERVER-SIDE against the comma-joined `placement` column. Filtering client-side
+// after the LIMIT would let a rail come back empty purely because its ad types
+// happened to fall outside the first N rows.
+//
+// categoryIds (optional) is the plural form, for a page whose context is a SET
+// of categories — For You, where the context is the buyer's stored preferences
+// and each preference covers several taxonomy rows. UNIONed with categoryId,
+// not intersected: both describe context the viewer is in.
+async function fetchActiveAds(
+  max: number,
+  categoryId?: string | null,
+  placements?: readonly string[] | null,
+  categoryIds?: readonly string[] | null,
+): Promise<ActiveAd[]> {
+  const { data, error } = await supabase.rpc("active_ads", {
+    max_count: max,
+    filter_category: categoryId ?? undefined,
+    filter_placements: placements && placements.length ? [...placements] : undefined,
+    filter_categories: categoryIds && categoryIds.length ? [...categoryIds] : undefined,
+  });
   if (error) throw error;
   return ((data ?? []) as RawActiveAd[]).map((a) => ({
     adId: a.ad_id,
@@ -143,11 +219,50 @@ async function fetchActiveAds(max: number, categoryId?: string | null): Promise<
   }));
 }
 
-export function useActiveAds(max = 12, categoryId?: string | null) {
+export function useActiveAds(
+  max = 12,
+  categoryId?: string | null,
+  placements?: readonly string[] | null,
+  categoryIds?: readonly string[] | null,
+) {
   return useQuery({
-    queryKey: ["advertisements", "active", max, categoryId ?? null],
-    queryFn: () => fetchActiveAds(max, categoryId),
+    queryKey: [
+      "advertisements", "active", max, categoryId ?? null,
+      placements ? [...placements].sort().join(",") : null,
+      categoryIds ? [...categoryIds].sort().join(",") : null,
+    ],
+    queryFn: () => fetchActiveAds(max, categoryId, placements, categoryIds),
     staleTime: 60_000,
+  });
+}
+
+/**
+ * The way every Phase 5 rail should ask for inventory: name the slot, and the
+ * ad types and size come from AD_SLOTS. A page cannot then quietly render an
+ * ad type the placement plan never gave it a slot for.
+ */
+export function useAdSlot(slot: AdSlotId, categoryId?: string | null, categoryIds?: readonly string[] | null) {
+  const spec = AD_SLOTS[slot];
+  return useActiveAds(spec.max, categoryId, spec.types, categoryIds);
+}
+
+/**
+ * Category context for pages whose own vocabulary is curated rather than
+ * taxonomic (the Trends chips). Resolves display names to a real categories
+ * row so targeting can be evaluated against the one taxonomy.
+ *
+ * Returns undefined while loading and null when nothing matched — the caller
+ * passes that straight through, and `null` means "no category context", which
+ * active_ads() treats as "do not let category exclude anything" rather than
+ * "match nothing".
+ */
+export function useResolvedCategoryId(candidates: readonly (string | null | undefined)[]) {
+  const key = candidates.filter(Boolean).join("|");
+  return useQuery({
+    queryKey: ["category_id_by_name", key],
+    queryFn: () => resolveCategoryIdByName(candidates),
+    enabled: key.length > 0,
+    staleTime: 30 * 60 * 1000,
   });
 }
 
@@ -218,12 +333,20 @@ export { isProfileGoalAd, adDestination, PROFILE_GOAL_PLACEMENTS } from "@/lib/a
 // Counter + event, side by side. The counters stay because the campaigns table
 // and Cosora-Admin read advertisements.impressions/clicks directly; the event
 // adds the timestamp, viewer and source the counter cannot carry.
+//
+// Both halves are scoped to the SAME anonymous session id. ad_impression now
+// consults ad_frequency_capped(), which counts out of engagement_events — so if
+// the counter passed a different session than the log wrote, the cap would
+// count one viewer and suppress another. Signed-in viewers are keyed on
+// auth.uid() inside the RPC and the session id is ignored.
+//
+// Past the daily cap the ad STILL RENDERS; only the counting stops (Phase 3.6).
 export async function logAdImpression(adId: string): Promise<void> {
-  await supabase.rpc("ad_impression", { ad: adId });
+  await supabase.rpc("ad_impression", { ad: adId, p_session: sessionId() ?? undefined });
   void logEngagement({ eventType: "ad_impression", adId, source: "ad" });
 }
 
 export async function logAdClick(adId: string): Promise<void> {
-  await supabase.rpc("ad_click", { ad: adId });
+  await supabase.rpc("ad_click", { ad: adId, p_session: sessionId() ?? undefined });
   void logEngagement({ eventType: "ad_click", adId, source: "ad" });
 }

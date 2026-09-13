@@ -24,7 +24,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, updateAdStatus, deleteAd, useVendorCategories, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, type AdRow } from "@/lib/queries/ads";
+import { runStateOf } from "@/lib/campaignRunState";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
@@ -1262,9 +1263,14 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
   ads: AdRow[]; onToggle: (id: string, status: "active" | "paused") => void; onDelete: (id: string) => void;
 }) {
   if (ads.length === 0) return null;
-  const statusStyle: Record<string, string> = {
-    active: "bg-green-100 text-green-700", paused: "bg-orange-100 text-orange-700",
-    draft: "bg-gray-100 text-gray-500", ended: "bg-gray-100 text-gray-400",
+  // Tone per run state, not per raw status: the states a vendor needs to tell
+  // apart are "running", "waiting on Cosora", "needs your attention" and
+  // "stopped" — not the twelve values the column can hold.
+  const toneStyle: Record<string, string> = {
+    live: "bg-green-100 text-green-700",
+    waiting: "bg-blue-100 text-blue-700",
+    attention: "bg-orange-100 text-orange-700",
+    stopped: "bg-gray-100 text-gray-500",
   };
   const totalImpr = ads.reduce((s, a) => s + a.impressions, 0);
   const totalClicks = ads.reduce((s, a) => s + a.clicks, 0);
@@ -1290,33 +1296,48 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
       </div>
 
       <div className="space-y-2.5">
-        {ads.map((a) => (
-          <div key={a.id} className="flex items-center gap-3 rounded-xl border border-gray-100 p-3">
-            <div className="w-9 h-9 rounded-lg bg-[#fff5f5] flex items-center justify-center shrink-0 overflow-hidden">
-              {a.imageUrl ? <img src={a.imageUrl} alt="" className="h-full w-full object-cover" /> : <Megaphone className="w-4 h-4 text-[#f75f71]" />}
+        {ads.map((a) => {
+          // Phase 8.1: the campaign's run state in words the vendor can act on.
+          // The raw status used to be printed verbatim, which meant a paid
+          // campaign showed the bare word "pending_review" with nothing saying
+          // that payment had gone through, that Cosora was reviewing it, or
+          // that there was nothing for the vendor to do.
+          const rs = runStateOf(a);
+          return (
+            <div key={a.id} className="rounded-xl border border-gray-100 p-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-[#fff5f5] flex items-center justify-center shrink-0 overflow-hidden">
+                  {a.imageUrl ? <img src={a.imageUrl} alt="" className="h-full w-full object-cover" /> : <Megaphone className="w-4 h-4 text-[#f75f71]" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{a.title}</p>
+                  <p className="text-[11px] text-gray-400">
+                    {a.dailyBudget != null ? `₹${a.dailyBudget}/day · ` : ""}{a.impressions.toLocaleString("en-IN")} impressions · {a.clicks.toLocaleString("en-IN")} clicks · {ctr(a.clicks, a.impressions)}% CTR
+                  </p>
+                </div>
+                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", toneStyle[rs.tone])}>
+                  {rs.label}
+                </span>
+                {/* Only offered where the RPC would actually allow it. An admin
+                    pause shows no Resume button because resume_ad_campaign
+                    refuses the vendor, and a button that always fails is worse
+                    than no button. */}
+                {(rs.action === "pause" || rs.action === "resume") && (
+                  <button
+                    onClick={() => onToggle(a.id, rs.action === "pause" ? "paused" : "active")}
+                    className="text-[11px] font-semibold text-[#f75f71] hover:underline shrink-0"
+                  >
+                    {rs.action === "pause" ? "Pause" : "Resume"}
+                  </button>
+                )}
+                <button onClick={() => onDelete(a.id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="mt-1.5 pl-12 text-[11px] text-gray-500">{rs.reason}</p>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 truncate">{a.title}</p>
-              <p className="text-[11px] text-gray-400">
-                {a.dailyBudget != null ? `₹${a.dailyBudget}/day · ` : ""}{a.impressions.toLocaleString("en-IN")} impressions · {a.clicks.toLocaleString("en-IN")} clicks · {ctr(a.clicks, a.impressions)}% CTR
-              </p>
-            </div>
-            <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0", statusStyle[a.status])}>
-              {a.status}
-            </span>
-            {(a.status === "active" || a.status === "paused") && (
-              <button
-                onClick={() => onToggle(a.id, a.status === "active" ? "paused" : "active")}
-                className="text-[11px] font-semibold text-[#f75f71] hover:underline shrink-0"
-              >
-                {a.status === "active" ? "Pause" : "Resume"}
-              </button>
-            )}
-            <button onClick={() => onDelete(a.id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -1345,8 +1366,13 @@ const Advertisements = () => {
   const planGrantsSeal = Boolean(vplan?.limits.has_verified_badge);
   const planName = vplan?.plan.name ?? "your";
   const refreshAds = () => qc.invalidateQueries({ queryKey: ["advertisements"] });
+  // Goes through pause_ad_campaign_by_vendor / resume_ad_campaign, not a bare
+  // UPDATE: an RLS-denied UPDATE matches zero rows and reports success, so the
+  // vendor would be told the campaign paused while it kept running. The RPCs
+  // raise, so a refusal actually lands in the catch below — including the
+  // deliberate refusal to let a vendor lift an admin's pause.
   const toggleAd = async (id: string, status: "active" | "paused") => {
-    try { await updateAdStatus(id, status); refreshAds(); } catch (e) { toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) }); }
+    try { await setCampaignRunning(id, status === "active"); refreshAds(); } catch (e) { toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) }); }
   };
   const removeAd = async (id: string) => {
     try { await deleteAd(id); refreshAds(); toast.success("Campaign removed"); } catch (e) { toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) }); }

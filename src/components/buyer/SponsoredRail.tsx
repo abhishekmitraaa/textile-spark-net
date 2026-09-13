@@ -4,21 +4,43 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Megaphone, Star } from "lucide-react";
 import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
+import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
 
-// Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (active, promoting
-// a live product) as tappable cards. Impressions are logged once per ad per
-// mount; a tap logs a click and opens whatever the campaign's goal actually
-// bought — the storefront for a profile-goal placement, the product otherwise
-// (see adDestination in queries/ads.ts). See queries/ads.ts.
+// Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (eligible,
+// promoting a live product) as tappable cards. Impressions are logged once per
+// ad per mount; a tap logs a click and opens whatever the campaign's goal
+// actually bought — the storefront for a profile-goal placement, the product
+// otherwise (see adDestination in queries/ads.ts).
+//
+// Every campaign reaching this component has passed is_ad_eligible() in the
+// database: approved by an admin, inside its schedule, from a vendor in good
+// standing, matching the category/city context. Nothing is filtered here.
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 
+// Two ways to ask for inventory:
+//   `slot`      — a Phase 5 placement. Ad types, size and heading come from
+//                 AD_SLOTS, so a page cannot render an ad type the placement
+//                 plan never gave it a slot for.
+//   `max`       — an untyped rail accepting any ad type. Used by ProductDetail,
+//                 which predates the slot map and is not one of the five
+//                 artboards; left as-is deliberately rather than regressed.
+//
 // `category` (optional) filters serving to ads targeting that category plus
-// untargeted ads — pass a real category context (e.g. the product page's own
-// category) to make category targeting take effect.
-export default function SponsoredRail({ max = 10, className, category }: { max?: number; className?: string; category?: string | null }) {
+// untargeted ads — pass a real category context to make targeting take effect.
+export default function SponsoredRail({
+  max = 10, className, category, slot, label,
+}: {
+  max?: number;
+  className?: string;
+  category?: string | null;
+  slot?: AdSlotId;
+  label?: string;
+}) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { data: ads = [] } = useActiveAds(max, category);
+  const spec = slot ? AD_SLOTS[slot] : null;
+  const { data: ads = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? null);
+  const heading = label ?? spec?.label ?? "Sponsored";
   const logged = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -55,7 +77,7 @@ export default function SponsoredRail({ max = 10, className, category }: { max?:
     <section className={className}>
       <div className="flex items-center gap-1.5 mb-3">
         <Megaphone className="h-4 w-4 text-[#ef4d62]" />
-        <h2 className="text-sm font-bold text-gray-900">Sponsored</h2>
+        <h2 className="text-sm font-bold text-gray-900">{heading}</h2>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {ads.map((a) => (

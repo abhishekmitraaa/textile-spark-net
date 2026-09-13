@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
@@ -319,6 +320,17 @@ const Following = () => {
 
       <div className="max-w-2xl lg:max-w-6xl mx-auto px-4 lg:px-6 pb-24 space-y-6 lg:space-y-8">
 
+        {/* ── Brands to discover (Phase 5) ──
+            Store Promotion + Brand Ad campaigns, routed to the vendor's
+            storefront by adDestination(). Sits ABOVE the organic carousel
+            rather than interleaved into it: the plan sketched "roughly 1-in-4
+            slides paid", but mixing paid slides into an organic brand carousel
+            makes it ambiguous which brands are there because they're relevant
+            and which are there because they paid — even with an "Ad" chip on
+            each. Kept as its own labelled rail; the interleave is flagged in
+            the report as a design decision rather than assumed. */}
+        <SponsoredRail slot="followingBrands" label="Brands to discover" />
+
         {/* Looking for New Brands? */}
         <NewBrandsCarousel brands={discoverable} onFollow={(b) => follow(b.id)} />
 
@@ -399,6 +411,10 @@ const Following = () => {
             <p className="text-[11px] text-gray-400 mb-2">
               You've seen everything new from your brands. Here's what's trending across Cosora.
             </p>
+            {/* Open Listing campaigns, shown only once the followed-brand feed
+                has run dry — the one point on this page where a buyer has
+                explicitly reached the end of what they asked for. */}
+            <SponsoredRail slot="followingPopular" className="mb-3" />
             <FeedControls
               gender={gender} setGender={setGender}
               sort={sort} setSort={setSort}

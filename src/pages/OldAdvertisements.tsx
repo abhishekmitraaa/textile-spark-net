@@ -5,7 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, updateAdStatus, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, setCampaignRunning, type AdRow } from "@/lib/queries/ads";
+import { runStateOf } from "@/lib/campaignRunState";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, Eye, MousePointerClick, TrendingUp, Pause, Play, Megaphone } from "lucide-react";
 
@@ -13,7 +14,8 @@ import { ChevronLeft, Eye, MousePointerClick, TrendingUp, Pause, Play, Megaphone
 // "Old Advertisements" — the vendor's REAL campaign history (was mock data).
 // Reads the same advertisements table via useMyAds and derives an effective
 // status (active campaigns past their end date read as Ended). Pause/Resume
-// writes through the real updateAdStatus mutation.
+// writes through the review RPCs (pause_ad_campaign_by_vendor /
+// resume_ad_campaign), never a bare UPDATE — see setCampaignRunning.
 // ─────────────────────────────────────────────────────────────
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -24,17 +26,23 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 const listContainer = { show: { transition: { staggerChildren: 0.055 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
-type EffStatus = "Active" | "Paused" | "Ended";
-type FilterTab = "All" | "Active" | "Paused" | "Ended";
-const TABS: FilterTab[] = ["All", "Active", "Paused", "Ended"];
+type EffStatus = "Active" | "In review" | "Paused" | "Ended";
+type FilterTab = "All" | "Active" | "In review" | "Paused" | "Ended";
+const TABS: FilterTab[] = ["All", "Active", "In review", "Paused", "Ended"];
 
+/**
+ * Derived from runStateOf so this page and the campaigns list cannot disagree
+ * about what a status means. "In review" is a new bucket and a necessary one:
+ * before the state model, a paid-but-unreviewed campaign had no status of its
+ * own, and anything that wasn't active/paused fell through to "Ended" — so a
+ * campaign the vendor had just paid for appeared in their history as finished.
+ */
 function effStatus(a: AdRow): EffStatus {
-  if (a.status === "paused") return "Paused";
-  if (a.status === "active") {
-    if (a.endsAt && new Date(a.endsAt).getTime() < Date.now()) return "Ended";
-    return "Active";
-  }
-  return "Ended"; // ended + draft read as inactive history
+  const rs = runStateOf({ status: a.status, startsAt: a.startsAt, endsAt: a.endsAt });
+  if (rs.tone === "live") return "Active";
+  if (rs.tone === "waiting" || rs.tone === "attention") return "In review";
+  if (rs.action === "resume") return "Paused";
+  return "Ended";
 }
 
 function formatNum(n: number): string {
@@ -48,6 +56,7 @@ function fmtDateRange(a: AdRow): string {
 function StatusBadge({ status }: { status: EffStatus }) {
   const styles: Record<EffStatus, string> = {
     Active: "bg-green-100 text-green-700",
+    "In review": "bg-blue-100 text-blue-700",
     Paused: "bg-amber-100 text-amber-700",
     Ended: "bg-gray-100 text-gray-500",
   };
@@ -128,17 +137,20 @@ export default function OldAdvertisements() {
   const counts: Record<FilterTab, number> = {
     All: withStatus.length,
     Active: withStatus.filter((x) => x.status === "Active").length,
+    "In review": withStatus.filter((x) => x.status === "In review").length,
     Paused: withStatus.filter((x) => x.status === "Paused").length,
     Ended: withStatus.filter((x) => x.status === "Ended").length,
   };
   const filtered = activeTab === "All" ? withStatus : withStatus.filter((x) => x.status === activeTab);
 
   const onToggle = async (a: AdRow) => {
-    const next = a.status === "active" ? "paused" : "active";
     try {
-      await updateAdStatus(a.id, next);
+      await setCampaignRunning(a.id, a.status !== "active");
       qc.invalidateQueries({ queryKey: ["advertisements"] });
     } catch (e) {
+      // Surfaces the real reason, including "this campaign was paused by Cosora
+      // and only an admin can resume it" — which a silent zero-row UPDATE
+      // would have reported as success.
       toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) });
     }
   };

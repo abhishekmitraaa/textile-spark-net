@@ -11,7 +11,7 @@ import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForYouRanking, usePrefCategoryMap, categoryToPrefId } from "@/lib/queries/forYou";
-import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlot, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { BUYER_CATEGORIES as CATEGORIES } from "@/lib/buyerCategories";
 import {
@@ -341,12 +341,24 @@ const ForYou = () => {
   const { data: prefMap } = usePrefCategoryMap();
   const catToPref = useMemo(() => categoryToPrefId(prefMap ?? {}), [prefMap]);
 
-  // Real ad inventory for the in-feed "Related To Recent Views" slot. Fetched
-  // here rather than inside the block so the feed can skip emitting the slot
-  // entirely when there is nothing to serve — see feedItems below. Untargeted
-  // (null category) because this placement sits in a mixed feed with no single
-  // category context to target on.
-  const { data: recentAds = [] } = useActiveAds(4, null);
+  // Real ad inventory for the in-feed sponsored slot. Fetched here rather than
+  // inside the block so the feed can skip emitting the slot entirely when there
+  // is nothing to serve — see feedItems below.
+  //
+  // Phase 3.3: targeted on the buyer's OWN stored preferences, resolved through
+  // the same PrefCategoryMap the ranking uses, so "what For You shows you" and
+  // "what For You advertises to you" cannot disagree about what a preference
+  // means. One preference covers several taxonomy rows, which is why this is
+  // the plural parameter — targeting on just the first would have silently
+  // ignored every interest the buyer picked after the first one.
+  //
+  // Empty preferences → empty array → no category context, and untargeted
+  // campaigns still serve. That is "we don't know", not "match nothing".
+  const prefCategoryIds = useMemo(
+    () => Array.from(new Set(prefs.categories.flatMap((p) => (prefMap ?? {})[p] ?? []))),
+    [prefs.categories, prefMap],
+  );
+  const { data: recentAds = [] } = useAdSlot("forYouSponsored", null, prefCategoryIds);
 
   const pool = useMemo<ListingProduct[]>(() => {
     if (!live || !live.length) return [];

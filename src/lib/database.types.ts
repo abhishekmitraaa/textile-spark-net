@@ -89,6 +89,22 @@ export type Database = {
           },
         ]
       }
+      ad_review_log: {
+        Row: {
+          ad_id: string
+          created_at: string
+          decision: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+          reason_code: string | null
+          reviewer_id: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
       ad_orders: {
         Row: {
           amount: number
@@ -2289,7 +2305,12 @@ export type Database = {
     Functions: {
       account_is_active: { Args: { p_id: string }; Returns: boolean }
       active_ads: {
-        Args: { filter_category?: string; max_count?: number }
+        Args: {
+          filter_categories?: string[]
+          filter_category?: string
+          filter_placements?: string[]
+          max_count?: number
+        }
         Returns: {
           ad_id: string
           category_name: string
@@ -2305,8 +2326,42 @@ export type Database = {
         }[]
       }
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
-      ad_click: { Args: { ad: string }; Returns: undefined }
-      ad_impression: { Args: { ad: string }; Returns: undefined }
+      ad_click: { Args: { ad: string; p_session?: string }; Returns: undefined }
+      ad_frequency_capped: {
+        Args: { p_ad: string; p_cap?: number; p_session?: string }
+        Returns: boolean
+      }
+      ad_impression: {
+        Args: { ad: string; p_session?: string }
+        Returns: undefined
+      }
+      approve_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string }
+        Returns: string
+      }
+      archive_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
+      pause_ad_campaign_by_admin: {
+        Args: { p_ad_id: string; p_reason_code: string }
+        Returns: undefined
+      }
+      pause_ad_campaign_by_vendor: {
+        Args: { p_ad_id: string; p_reason_code?: string }
+        Returns: undefined
+      }
+      reject_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
+      }
+      request_ad_changes: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
+      }
+      resubmit_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
+      resume_ad_campaign: { Args: { p_ad_id: string }; Returns: string }
+      suspend_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
+      }
       admin_role: {
         Args: never
         Returns: Database["public"]["Enums"]["admin_role_type"]

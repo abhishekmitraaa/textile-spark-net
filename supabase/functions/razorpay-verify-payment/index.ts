@@ -43,8 +43,11 @@ interface AdSpec {
   targetCategories?: string[]; targetCities?: string[]; // real targeting (persisted)
 }
 
-// Ad types that grant a time-bound trust seal when purchased.
+// Ad types that grant a time-bound trust seal when purchased. Kept as the
+// documented list of seal-bearing placements; ad_seal_sources() in the database
+// mirrors it, and that is now where the grant actually happens.
 const SEAL_SOURCES = new Set(["trustedSeal", "verifiedCertificate"]);
+void SEAL_SOURCES;
 
 function campaignEndIso(spec: AdSpec): string {
   const days = Math.max(1, Math.floor(spec.days || 1));
@@ -161,21 +164,19 @@ async function recordDemoRefundTrace(url: string, key: string, vendorId: string,
   return { ok: r.ok, orderId };
 }
 
-// Grant the time-bound trust seal for any trustedSeal/verifiedCertificate
-// placements in the spec (expires with the campaign). Idempotency isn't critical
-// — a re-grant just extends the max(expires_at), which publishOrder already
-// guards against by only running once per claimed order.
-async function grantSeals(url: string, key: string, vendorId: string, spec: AdSpec): Promise<void> {
-  const exp = campaignEndIso(spec);
-  for (const pid of spec.placementIds || []) {
-    if (!SEAL_SOURCES.has(pid)) continue;
-    await fetch(`${url}/rest/v1/rpc/grant_ad_verification`, {
-      method: "POST",
-      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ v: vendorId, src: pid, exp }),
-    });
-  }
-}
+// REMOVED 2026-09-12 (Advertising v3): grantSeals().
+//
+// It called grant_ad_verification() here, on the payment path, for any
+// trustedSeal / verifiedCertificate placement in the spec. So paying ₹44
+// extended `vendor_profiles.ad_verified_until` immediately and put the verified
+// badge on the vendor's profile and every one of their product cards, before
+// any human had reviewed the campaign. Payment is never approval — and a trust
+// badge is the most trust-bearing thing this system sells, so it was the worst
+// possible exception to that rule.
+//
+// The grant now happens inside approve_ad_campaign() (migration
+// 20260912120500), keyed off the campaign's own placement CSV and expiring with
+// its ends_at. Rejected campaigns therefore never produce a badge at all.
 
 async function insertAds(url: string, key: string, rows: unknown[]): Promise<boolean> {
   if (rows.length === 0) return false;
@@ -231,7 +232,9 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   }
   const rows = adRows(order.vendor_id, decision.spec);
   const ok = await insertAds(url, key, rows);
-  if (ok) await grantSeals(url, key, order.vendor_id, decision.spec);
+  // No seal grant here any more — see the note where grantSeals used to be.
+  // The rows land on `pending_review` regardless of the 'active' requested in
+  // adRows(): guard_ad_activation redirects them on INSERT.
   return { ok, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed };
 }
 
@@ -266,7 +269,10 @@ Deno.serve(async (req: Request): Promise<Response> => {
     }
     const rows = adRows(vendorId, decision.spec);
     const ok = await insertAds(url, serviceKey, rows);
-    if (ok) await grantSeals(url, serviceKey, vendorId, decision.spec);
+    // Demo mode gets no seal grant either, and its campaigns land on
+    // `pending_review` like any other, so it can no longer publish unreviewed
+    // inventory or hand out a verified badge. It can still create campaigns
+    // with no payment record at all — logged in securityflags.md as Open.
     return json({ ok, demo: true, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed });
   }
 

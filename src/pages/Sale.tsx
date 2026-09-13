@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts, filterSale, type ProductCardData } from "@/lib/queries/products";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useCallVendor } from "@/lib/queries/calls";
 import trustedSeal from "@/assets/Trustedseal.png";
 
@@ -369,6 +370,15 @@ const Sale = () => {
               </button>
             </div>
           </div>
+        </motion.section>
+
+        {/* ── Sponsored deals (Phase 5) ──
+            Open Listing + Featured Product campaigns. No category context: the
+            Sale page is cross-category by definition, so passing one would
+            narrow inventory on a page that has no single category to narrow to.
+            Renders nothing when no eligible campaign exists. */}
+        <motion.section variants={section}>
+          <SponsoredRail slot="saleSponsored" label="Sponsored deals" />
         </motion.section>
 
         {/* ── FLASH DEALS ── */}
