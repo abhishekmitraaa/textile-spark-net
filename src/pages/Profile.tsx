@@ -26,6 +26,7 @@ import {
   BadgeCheck,
   Store,
   MapPin,
+  X,
   CalendarDays,
   Mail,
   Phone,
@@ -357,6 +358,9 @@ const Profile = () => {
 
   const [editOpen, setEditOpen] = useState(false);
   const [editTab, setEditTab] = useState("personal");
+  // Session-scoped, not persisted: a buyer who dismisses it and later decides
+  // to add a city should see the prompt again next visit rather than never.
+  const [cityNudgeDismissed, setCityNudgeDismissed] = useState(false);
   const openEdit = (tab: string) => { setEditTab(tab); setEditOpen(true); };
 
   // Real signed-in user's profile from the DB (no demo fallback — a signed-out
@@ -421,6 +425,42 @@ const Profile = () => {
         <div className="flex items-center justify-between mb-3 lg:mb-5">
           <h1 className="text-lg lg:text-3xl font-bold text-gray-900">My Profile</h1>
         </div>
+
+        {/* ── City nudge ──
+            Dismissible, additive, and it gates nothing. Only 1 of the buyer
+            profiles on this project has a city set, which is why city-targeted
+            ad campaigns reach almost nobody: ad_targeting_matches() FAILS
+            CLOSED — a viewer whose city we do not know is not shown a
+            city-targeted ad, because "target Mumbai" cannot honestly be
+            honoured for someone whose city is unknown. That default is correct
+            and stays; this just asks for the missing field.
+
+            Deliberately framed as what the buyer gets (local suppliers), not as
+            what Cosora gets (targetable inventory) — but it does not overclaim
+            either: it says offers "from suppliers near you", which is what a
+            city actually enables. */}
+        {!cityNudgeDismissed && !view.city?.trim() && (
+          <div className="mb-3 lg:mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#ef4d62]/20 bg-[#ef4d62]/5 px-4 py-3">
+            <MapPin className="h-4 w-4 shrink-0 text-[#ef4d62]" />
+            <p className="min-w-0 flex-1 text-sm text-gray-700">
+              <span className="font-semibold text-gray-900">Add your city</span>{" "}
+              to see offers from suppliers near you.
+            </p>
+            <button
+              onClick={() => openEdit("personal")}
+              className="shrink-0 rounded-xl bg-[#ef4d62] px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-[#ef4d62]/90"
+            >
+              Add city
+            </button>
+            <button
+              onClick={() => setCityNudgeDismissed(true)}
+              aria-label="Dismiss"
+              className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:text-gray-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
         {/* Desktop: sticky identity rail (left) + scrolling lists (right).
             Mobile: the wrappers are display:contents, so the single-column

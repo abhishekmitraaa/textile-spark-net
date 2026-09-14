@@ -23,25 +23,14 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-const AD_PRICE: Record<string, number> = {
-  openListing: 22, searchListing: 35, featuredProduct: 55, storePromotion: 99,
-  directBroadcast: 15, wholesalerPick: 59, brandAd: 69, websiteBanner: 89,
-  mobileBanner: 99, webMobileCombo: 129, fbInsta: 59, googleProduct: 59,
-  socialCombo: 99, trustedSeal: 44, verifiedCertificate: 199,
-};
-const PER_MSG = new Set(["directBroadcast"]);
-
-interface AdItem { productId: string; title: string; imageUrl: string | null }
-interface AdSpec { placementIds: string[]; days: number; items: AdItem[]; campaignLabel?: string }
-
-function computeAmountRupees(spec: AdSpec): number {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  const perProduct = (spec.placementIds || []).reduce((sum, id) => {
-    const price = AD_PRICE[id];
-    return price ? sum + price * (PER_MSG.has(id) ? 1 : days) : sum;
-  }, 0);
-  return perProduct * Math.max(1, (spec.items || []).length);
-}
+// Price table and amount formula moved to ../_shared/adPricing.ts on
+// 2026-09-14. They used to be copy-pasted here, into razorpay-verify-payment
+// and into razorpay-webhook, with no way to prove the three agreed — and the
+// browser's copy in src/pages/Advertisements.tsx made four.
+// scripts/ad-pricing-check.mjs now asserts the one remaining duplicate (the
+// browser's, in src/lib/adPricing.ts) matches this one across 4000 generated
+// orders, because a drift here quotes the vendor one price and charges another.
+import { computeOrderRupees, type AdSpec } from "../_shared/adPricing.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -84,7 +73,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "bad_spec" }, 400);
   }
 
-  const rupees = computeAmountRupees(spec);
+  const rupees = computeOrderRupees(spec);
   if (rupees <= 0) return json({ error: "zero_amount" }, 400);
   const amount = rupees * 100; // paise
 

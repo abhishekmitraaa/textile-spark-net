@@ -29,58 +29,20 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "content-type": "application/json" } });
 }
 
-const AD_PRICE: Record<string, number> = {
-  openListing: 22, searchListing: 35, featuredProduct: 55, storePromotion: 99,
-  directBroadcast: 15, wholesalerPick: 59, brandAd: 69, websiteBanner: 89,
-  mobileBanner: 99, webMobileCombo: 129, fbInsta: 59, googleProduct: 59,
-  socialCombo: 99, trustedSeal: 44, verifiedCertificate: 199,
-};
-const PER_MSG = new Set(["directBroadcast"]);
-
-interface AdItem { productId: string; title: string; imageUrl: string | null }
-interface AdSpec {
-  placementIds: string[]; days: number; items: AdItem[]; campaignLabel?: string;
-  targetCategories?: string[]; targetCities?: string[]; // real targeting (persisted)
-}
-
-// Ad types that grant a time-bound trust seal when purchased. Kept as the
-// documented list of seal-bearing placements; ad_seal_sources() in the database
-// mirrors it, and that is now where the grant actually happens.
-const SEAL_SOURCES = new Set(["trustedSeal", "verifiedCertificate"]);
-void SEAL_SOURCES;
-
-function campaignEndIso(spec: AdSpec): string {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  return new Date(Date.now() + days * 86_400_000).toISOString();
-}
-
-function adRows(vendorId: string, spec: AdSpec) {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  const perProduct = (spec.placementIds || []).reduce((sum, id) => {
-    const price = AD_PRICE[id];
-    return price ? sum + price * (PER_MSG.has(id) ? 1 : days) : sum;
-  }, 0);
-  const dailyBudget = Math.max(1, Math.round(perProduct / days));
-  const placement = (spec.placementIds || []).join(",");
-  const startsAt = new Date().toISOString();
-  const endsAt = campaignEndIso(spec);
-  const label = spec.campaignLabel || "Ad";
-  const targetCategories = Array.isArray(spec.targetCategories) && spec.targetCategories.length ? spec.targetCategories : null;
-  const targetCities = Array.isArray(spec.targetCities) && spec.targetCities.length ? spec.targetCities : null;
-  return (spec.items || []).map((it) => ({
-    vendor_id: vendorId,
-    product_id: it.productId,
-    title: it.title ? `${it.title} — ${label}` : label,
-    image_url: it.imageUrl ?? null,
-    daily_budget: dailyBudget,
-    placement,
-    status: "active",
-    starts_at: startsAt,
-    ends_at: endsAt,
-    target_categories: targetCategories,
-    target_cities: targetCities,
-  }));
-}
+// Price table, amount formula and campaign-row construction moved to
+// ../_shared/adPricing.ts on 2026-09-14 — they were duplicated across three
+// edge functions plus the browser, with no way to prove the four agreed.
+//
+// buildAdRows() also carries the per-vendor billing fix: `trustedSeal` and
+// `verifiedCertificate` are properties of the VENDOR, not of a product, so they
+// now produce ONE campaign row with product_id = null instead of one row per
+// product. That is what stops a 3-product certificate order from creating three
+// campaigns, three seal grants and three physical parcels.
+//
+// Rows still request status 'active' and are still redirected to
+// 'pending_review' by guard_ad_activation on INSERT, service_role included —
+// payment is never approval.
+import { buildAdRows, computeOrderPaise, type AdSpec } from "../_shared/adPricing.ts";
 
 // ── Plan ad-location-scope resolution + enforcement ──
 function scopeAllowance(scope: string): number | null {
@@ -129,15 +91,6 @@ function applyScopeToSpec(spec: AdSpec, scope: string): ScopeDecision {
   return { blocked: false, spec: { ...spec, targetCities: cities.slice(0, allowance) }, requested: cities.length, allowed: allowance };
 }
 
-function computeAmountPaise(spec: AdSpec): number {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  const perProduct = (spec.placementIds || []).reduce((sum, id) => {
-    const price = AD_PRICE[id];
-    return price ? sum + price * (PER_MSG.has(id) ? 1 : days) : sum;
-  }, 0);
-  return perProduct * Math.max(1, (spec.items || []).length) * 100;
-}
-
 // Flag a claimed live/webhook order that shouldn't have published (Free vendor)
 // for refund / admin review — a durable trace on the order itself, never a
 // silent drop. (Ad refunds are a manual admin follow-up; this project has no
@@ -159,7 +112,7 @@ async function recordDemoRefundTrace(url: string, key: string, vendorId: string,
   const r = await fetch(`${url}/rest/v1/ad_orders`, {
     method: "POST",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount: computeAmountPaise(spec), status: "refund_review" }),
+    body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount: computeOrderPaise(spec), status: "refund_review" }),
   });
   return { ok: r.ok, orderId };
 }
@@ -230,11 +183,15 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
     const flagged = await flagOrderForRefund(url, key, orderId);
     return { ok: false, count: 0, blocked: true, refundFlagged: flagged, requested: decision.requested, allowed: 0 };
   }
-  const rows = adRows(order.vendor_id, decision.spec);
+  // Stamp the paying order onto every campaign it produced, so revenue is
+  // attributable per campaign (migration advertisements_ad_order_id_fk).
+  // One order becomes many rows, which is why the FK lives on the campaign.
+  const rows = buildAdRows(order.vendor_id, decision.spec)
+    .map((r) => ({ ...r, ad_order_id: orderId }));
   const ok = await insertAds(url, key, rows);
   // No seal grant here any more — see the note where grantSeals used to be.
   // The rows land on `pending_review` regardless of the 'active' requested in
-  // adRows(): guard_ad_activation redirects them on INSERT.
+  // buildAdRows(): guard_ad_activation redirects them on INSERT.
   return { ok, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed };
 }
 
@@ -267,7 +224,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const trace = await recordDemoRefundTrace(url, serviceKey, vendorId, body.spec);
       return json({ ok: false, demo: true, error: "plan_not_eligible", refundFlagged: trace.ok, orderId: trace.orderId, count: 0 });
     }
-    const rows = adRows(vendorId, decision.spec);
+    // Demo mode has no ad_orders row to point at, so ad_order_id stays null —
+    // which is exactly why demo campaigns are unattributable revenue.
+    const rows = buildAdRows(vendorId, decision.spec);
     const ok = await insertAds(url, serviceKey, rows);
     // Demo mode gets no seal grant either, and its campaigns land on
     // `pending_review` like any other, so it can no longer publish unreviewed

@@ -206,6 +206,7 @@ export type Database = {
       }
       advertisements: {
         Row: {
+          ad_order_id: string | null
           clicks: number
           created_at: string
           daily_budget: number | null
@@ -226,6 +227,7 @@ export type Database = {
           vendor_id: string
         }
         Insert: {
+          ad_order_id?: string | null
           clicks?: number
           created_at?: string
           daily_budget?: number | null
@@ -246,6 +248,7 @@ export type Database = {
           vendor_id: string
         }
         Update: {
+          ad_order_id?: string | null
           clicks?: number
           created_at?: string
           daily_budget?: number | null
@@ -266,6 +269,13 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "advertisements_ad_order_id_fkey"
+            columns: ["ad_order_id"]
+            isOneToOne: false
+            referencedRelation: "ad_orders"
+            referencedColumns: ["order_id"]
+          },
           {
             foreignKeyName: "advertisements_moderated_by_fkey"
             columns: ["moderated_by"]
@@ -2536,6 +2546,7 @@ export type Database = {
           category_name: string
           currency: string
           image_url: string
+          is_bumped: boolean
           placement: string
           price_value: number
           product_id: string
@@ -2558,6 +2569,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      ad_bump_window: { Args: never; Returns: string }
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string; p_session?: string }; Returns: undefined }
       ad_fraud_signals: {
@@ -2582,6 +2594,10 @@ export type Database = {
       ad_impression: {
         Args: { ad: string; p_session?: string }
         Returns: undefined
+      }
+      ad_is_bumped: {
+        Args: { a: Database["public"]["Tables"]["advertisements"]["Row"] }
+        Returns: boolean
       }
       ad_logging_throttled: {
         Args: { p_ad: string; p_session?: string; p_window?: string }

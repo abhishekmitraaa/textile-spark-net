@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { Megaphone, Star } from "lucide-react";
+import { ArrowUp, Megaphone, Star } from "lucide-react";
 import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";
@@ -117,6 +117,15 @@ export default function SponsoredRail({
               <span className="absolute left-1.5 top-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur">
                 Ad
               </span>
+              {/* A bumped Wholesaler Pick is ordered ahead of every other
+                  campaign in this rail for 72 hours. A placement that outranks
+                  everything else should be visible as such rather than
+                  silently privileged — the buyer can see why it is first. */}
+              {a.isBumped && (
+                <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#ef4d62] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                  <ArrowUp className="h-2.5 w-2.5" /> Bumped
+                </span>
+              )}
             </div>
             <div className="p-2">
               <p className="truncate text-[11px] font-bold text-gray-900">{a.productName ?? a.title}</p>

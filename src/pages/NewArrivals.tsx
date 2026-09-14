@@ -87,6 +87,7 @@ const BASE_PRODUCTS: Product[] = [
 // absent or fails to load, so removing these is also safe.
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
 import { usePreferences } from "@/lib/preferencesStore";
+import { usePrefCategoryMap } from "@/lib/queries/forYou";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 
 // First 3 are the mobile-visible set (unchanged). The extra 3 only render at
@@ -361,6 +362,22 @@ const NewArrivals = () => {
   // what this feeds into.
   const { categories: preferredIds } = usePreferences();
   const preferredNames = usePreferredVideoCategoryNames(preferredIds);
+
+  // ── "we recommend": the buyer's own preferences, not the top of the feed ──
+  //
+  // pref_category_map is the single source of truth for preference → real
+  // categories.id (the For You page ranks on the same map), so this section and
+  // For You cannot disagree about what a preference means.
+  //
+  // `displayProducts` is what the organic feed above renders, including its
+  // padding fillers; excluding those ids is what stops this being a duplicate
+  // of the rows already on screen. Renders nothing when the buyer has no
+  // preferences or nothing matches — see the note at the render site.
+  const { data: prefMap } = usePrefCategoryMap();
+  const prefCategoryIds = useMemo(
+    () => new Set(preferredIds.flatMap((p) => (prefMap ?? {})[p] ?? [])),
+    [preferredIds, prefMap],
+  );
   const interestedCategories = useMemo(() => {
     const cats = new Set<string>(preferredNames);
     for (const video of videoCatalogue) {
@@ -450,6 +467,20 @@ const NewArrivals = () => {
     { slot: "newArrivalsBrandPicks", block: 1 },
     { slot: "newArrivalsSponsored", block: 2 },
   ];
+
+  // Products matching the buyer's stored preferences that the feed above has
+  // NOT already rendered. Capped at one row of four.
+  // Drawn from `liveProducts`, not from `products`: `products` falls back to the
+  // dev-only BASE_PRODUCTS samples when the catalogue is empty or still loading,
+  // and those carry no category at all. Personalising off a sample would be
+  // exactly the fabricated-recommendation problem this section already had once.
+  const recommended = useMemo(() => {
+    if (prefCategoryIds.size === 0) return [];
+    const shown = new Set(displayProducts.map((p) => p.id));
+    return (liveProducts ?? [])
+      .filter((p) => p.categoryId && prefCategoryIds.has(p.categoryId) && !shown.has(p.id))
+      .slice(0, 4);
+  }, [liveProducts, displayProducts, prefCategoryIds]);
 
   const feedNodes: JSX.Element[] = [];
   displayProducts.forEach((product, i) => {
@@ -691,26 +722,36 @@ const NewArrivals = () => {
         </div>
 
         {/* ── Personalized recommendations ──
-            The "AD" chip that used to sit at the right of this heading is gone.
-            These four cards are `products.slice(0, 4)` — the live catalogue,
-            the same rows the organic feed above renders. Nobody paid for them,
-            so labelling them AD was a false disclosure in the direction nobody
-            checks for: it told the buyer this ranking was bought when it was
-            not, and told the vendor whose product it was nothing at all. Real
-            paid placement on this page is the newArrivalsSponsored and
-            newArrivalsBrandPicks slots, each of which discloses itself.
-            (The section still shows the first four catalogue rows a second
-            time, which is a content duplication logged in ToDo.md — separate
-            from the label, and a product decision.) */}
+            HISTORY, because this section has been wrong twice.
+            1. It carried an "AD" chip while rendering unpaid catalogue rows —
+               a false paid-placement disclosure, removed 2026-09-13.
+            2. It then rendered `products.slice(0, 4)`: the first four rows of
+               the same catalogue array "Today's New In" renders directly above,
+               so the "we recommend" heading was a personalisation claim with no
+               personalisation behind it, and the cards were literal duplicates.
+
+            Now it is what it says. `recommended` (below) filters the live
+            catalogue to the buyer's OWN stored preferences, resolved through
+            pref_category_map — the same single source of truth the For You page
+            ranks on, so the two cannot disagree about what a preference means —
+            and excludes anything the feed above has already shown.
+
+            If the buyer has set no preferences, or nothing matches, the section
+            does not render at all. An empty personalised rail is the honest
+            answer; padding it back out with the top of the catalogue is what
+            made it a duplicate in the first place. */}
+        {recommended.length > 0 && (
         <div>
           <p className="text-sm lg:text-base mb-2 lg:mb-4 px-1">
             <Link to="/profile" className="text-blue-600 font-semibold hover:underline">{firstName}</Link>
             <span className="text-gray-900 font-bold">, we recommend</span>
+            <span className="ml-2 text-[10px] lg:text-xs font-medium text-gray-500">based on your interests</span>
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-            {products.slice(0, 4).map(p => <ProductCard key={"rec-" + p.id} product={p} />)}
+            {recommended.map(p => <ProductCard key={"rec-" + p.id} product={p} />)}
           </div>
         </div>
+        )}
 
         {/* ── Recommended Premium Brands — real vendors ──
             Ranked paid-plan-first, then rating (see useTopVendors). There is

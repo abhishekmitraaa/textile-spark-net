@@ -183,13 +183,21 @@ export interface ActiveAd {
   /** Promoted product's category, e.g. "T-shirts/Tops". Returned by the RPC so
    *  buyers never have to read `products`/`advertisements` directly for it. */
   categoryName: string | null;
+  /**
+   * True while a `wholesalerPick` campaign is inside its paid 72-hour
+   * guaranteed-exposure window, during which active_ads() orders it ahead of
+   * every non-bumped campaign in the slot. Surfaced so the card can say so —
+   * a placement that outranks everything else should be visibly labelled, not
+   * silently privileged.
+   */
+  isBumped: boolean;
 }
 
 interface RawActiveAd {
   ad_id: string; product_id: string | null; title: string; placement: string | null;
   product_name: string | null; price_value: number | null; currency: string | null;
   image_url: string | null; vendor_id: string | null; vendor_name: string | null;
-  category_name: string | null;
+  category_name: string | null; is_bumped: boolean | null;
 }
 
 // categoryId (optional) filters serving to ads targeting that category, plus
@@ -229,6 +237,7 @@ async function fetchActiveAds(
     vendorId: a.vendor_id,
     vendorName: a.vendor_name,
     categoryName: a.category_name,
+    isBumped: Boolean(a.is_bumped),
   }));
 }
 

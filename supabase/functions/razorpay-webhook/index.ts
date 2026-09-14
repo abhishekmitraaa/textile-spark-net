@@ -17,53 +17,11 @@
 //   events: payment.captured (and optionally order.paid)
 //   secret: set the same value as the RAZORPAY_WEBHOOK_SECRET function secret
 
-const AD_PRICE: Record<string, number> = {
-  openListing: 22, searchListing: 35, featuredProduct: 55, storePromotion: 99,
-  directBroadcast: 15, wholesalerPick: 59, brandAd: 69, websiteBanner: 89,
-  mobileBanner: 99, webMobileCombo: 129, fbInsta: 59, googleProduct: 59,
-  socialCombo: 99, trustedSeal: 44, verifiedCertificate: 199,
-};
-const PER_MSG = new Set(["directBroadcast"]);
-
-interface AdItem { productId: string; title: string; imageUrl: string | null }
-interface AdSpec {
-  placementIds: string[]; days: number; items: AdItem[]; campaignLabel?: string;
-  targetCategories?: string[]; targetCities?: string[];
-}
-
-const SEAL_SOURCES = new Set(["trustedSeal", "verifiedCertificate"]);
-function campaignEndIso(spec: AdSpec): string {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  return new Date(Date.now() + days * 86_400_000).toISOString();
-}
-
-function adRows(vendorId: string, spec: AdSpec) {
-  const days = Math.max(1, Math.floor(spec.days || 1));
-  const perProduct = (spec.placementIds || []).reduce((sum, id) => {
-    const price = AD_PRICE[id];
-    return price ? sum + price * (PER_MSG.has(id) ? 1 : days) : sum;
-  }, 0);
-  const dailyBudget = Math.max(1, Math.round(perProduct / days));
-  const placement = (spec.placementIds || []).join(",");
-  const startsAt = new Date().toISOString();
-  const endsAt = campaignEndIso(spec);
-  const label = spec.campaignLabel || "Ad";
-  const targetCategories = Array.isArray(spec.targetCategories) && spec.targetCategories.length ? spec.targetCategories : null;
-  const targetCities = Array.isArray(spec.targetCities) && spec.targetCities.length ? spec.targetCities : null;
-  return (spec.items || []).map((it) => ({
-    vendor_id: vendorId,
-    product_id: it.productId,
-    title: it.title ? `${it.title} — ${label}` : label,
-    image_url: it.imageUrl ?? null,
-    daily_budget: dailyBudget,
-    placement,
-    status: "active",
-    starts_at: startsAt,
-    ends_at: endsAt,
-    target_categories: targetCategories,
-    target_cities: targetCities,
-  }));
-}
+// Price table, amount formula and campaign-row construction moved to
+// ../_shared/adPricing.ts on 2026-09-14. buildAdRows() carries the per-vendor
+// billing fix: trustedSeal / verifiedCertificate now produce ONE campaign row
+// with product_id = null instead of one per product.
+import { buildAdRows, type AdSpec } from "../_shared/adPricing.ts";
 
 // ── Plan ad-location-scope resolution + enforcement (mirrors verify-payment) ──
 function scopeAllowance(scope: string): number | null {
@@ -108,17 +66,27 @@ async function flagOrderForRefund(url: string, key: string, orderId: string): Pr
   });
 }
 
-async function grantSeals(url: string, key: string, vendorId: string, spec: AdSpec): Promise<void> {
-  const exp = campaignEndIso(spec);
-  for (const pid of spec.placementIds || []) {
-    if (!SEAL_SOURCES.has(pid)) continue;
-    await fetch(`${url}/rest/v1/rpc/grant_ad_verification`, {
-      method: "POST",
-      headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify({ v: vendorId, src: pid, exp }),
-    });
-  }
-}
+// ── REMOVED 2026-09-14: grantSeals(). ──
+//
+// This function called grant_ad_verification() directly, here on the PAYMENT
+// path, for any trustedSeal / verifiedCertificate placement in the order — so a
+// webhook-delivered payment put the verified badge on the vendor's profile and
+// every one of their product cards before any human reviewed the campaign.
+//
+// razorpay-verify-payment had this removed on 2026-09-12 for exactly that
+// reason. The webhook did not, and it is the OTHER publish path — the
+// server-to-server backstop that fires when the buyer closes the browser before
+// verify-payment runs. So the rule "payment is never approval" held on one path
+// and not the other, and the one it did not hold on is the one that runs
+// unattended.
+//
+// guard_ad_activation protects the campaign STATUS on both paths, but nothing
+// protected the seal grant here: grant_ad_verification is SECURITY DEFINER with
+// no internal authorization check, and this function runs as service_role.
+//
+// The grant now happens only inside approve_ad_campaign(), keyed off the
+// campaign's own placement CSV and expiring with its ends_at. A rejected
+// campaign therefore never produces a badge, whichever path published it.
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -148,14 +116,16 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
     await flagOrderForRefund(url, key, orderId);
     return 0;
   }
-  const rows = adRows(order.vendor_id, decision.spec);
+  // Stamp the paying order onto every campaign it produced — same as
+  // verify-payment, since either path may be the one that publishes.
+  const rows = buildAdRows(order.vendor_id, decision.spec)
+    .map((r) => ({ ...r, ad_order_id: orderId }));
   if (rows.length === 0) return 0;
   const ins = await fetch(`${url}/rest/v1/advertisements`, {
     method: "POST",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify(rows),
   });
-  if (ins.ok) await grantSeals(url, key, order.vendor_id, decision.spec);
   return ins.ok ? rows.length : 0;
 }
 

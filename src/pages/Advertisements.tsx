@@ -33,6 +33,7 @@ import { useLeadFunnelData, funnelForWindow, formatInrCompact } from "@/lib/quer
 import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, type AdSpec } from "@/lib/queries/payments";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
+import { computeOrderRupees, priceLines } from "@/lib/adPricing";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -921,15 +922,16 @@ function CostSummary({
   }
 
   const days = parseInt(selectedDuration) || 1;
-  const perProductPerRun = selectedAdTypes.reduce((sum, id) => {
-    const ad = AD_TYPES.find(a => a.id === id);
-    if (!ad) return sum;
-    const price = parseInt(ad.price.replace("₹", ""));
-    const runDays = ad.period === "/msg" ? 1 : days;
-    return sum + price * runDays;
-  }, 0);
-  const total = perProductPerRun * selectedProducts.length;
-  const dailyBudget = Math.max(1, Math.round(perProductPerRun / days));
+  // The price shown here comes from the SAME module the payment path charges
+  // from (src/lib/adPricing.ts mirrors supabase/functions/_shared/adPricing.ts,
+  // and scripts/ad-pricing-check.mjs asserts they agree across 4000 generated
+  // orders). It used to be a fourth hand-maintained copy of the formula.
+  //
+  // The visible change: trustedSeal and verifiedCertificate are now charged
+  // ONCE for the account instead of once per product per day. A ₹199
+  // certificate across 3 products on a 30-day campaign quoted ₹17,910 before.
+  const total = computeOrderRupees(selectedAdTypes, days, selectedProducts.length);
+  const lines = priceLines(selectedAdTypes, days, selectedProducts.length);
   const campaignLabel = selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.name).filter(Boolean).join(", ") || "Ad";
 
   const buildSpec = (): AdSpec => ({
@@ -1008,9 +1010,21 @@ function CostSummary({
           <span className="text-4xl font-bold text-gray-900 lg:tabular-nums min-[1400px]:leading-tight">₹{total.toLocaleString("en-IN")}</span>
           <span className="text-gray-600 text-base min-[1400px]:text-sm">for {selectedDuration} days</span>
         </div>
-        <p className="text-sm text-gray-500 min-[1400px]:text-xs min-[1400px]:leading-relaxed">
-          {selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.price).join(" + ")}/day × {selectedDuration} days × {selectedProducts.length} product{selectedProducts.length > 1 ? "s" : ""}
-        </p>
+        {/* A real per-line breakdown, not one blanket "× days × products"
+            sentence. That sentence is now false for account-level placements —
+            a Trusted Seal does not multiply by product count — and a vendor
+            who cannot see WHY the total changed just sees a different number. */}
+        <ul className="space-y-1 text-sm text-gray-500 min-[1400px]:text-xs min-[1400px]:leading-relaxed">
+          {lines.map((l) => (
+            <li key={l.id} className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0">
+                <span className="text-gray-700">{AD_TYPES.find(a => a.id === l.id)?.name ?? l.id}</span>
+                <span className="block text-xs text-gray-400">{l.basis}</span>
+              </span>
+              <span className="shrink-0 tabular-nums text-gray-700">₹{l.rupees.toLocaleString("en-IN")}</span>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <button onClick={startCheckout} disabled={busy}
@@ -1019,7 +1033,11 @@ function CostSummary({
       </button>
 
       <div className="grid grid-cols-2 gap-4 mt-6 min-[1400px]:grid-cols-1 min-[1400px]:gap-2.5 min-[1400px]:mt-5 min-[1400px]:border-t min-[1400px]:border-gray-100 min-[1400px]:pt-5">
-        {["No minimum spend", "Start from ₹22/day", "Go live instantly", "Pause or stop anytime"].map(b => (
+        {/* "Go live instantly" was false and is now "Reviewed before it runs":
+            since the v3 ads work, a paid campaign lands on `pending_review` and
+            reaches no buyer until an admin approves it. Payment is never
+            approval — the checkout panel should not promise otherwise. */}
+        {["No minimum spend", "Start from ₹22/day", "Reviewed before it runs", "Pause or stop anytime"].map(b => (
           <div key={b} className="flex items-center gap-2">
             <div className="w-2 h-2 bg-pink-500 rounded-full shrink-0" />
             <span className="text-sm text-gray-600 min-[1400px]:text-xs">{b}</span>
