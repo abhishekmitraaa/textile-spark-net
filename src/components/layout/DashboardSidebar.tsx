@@ -25,6 +25,7 @@ import {
   Wrench,
   Briefcase,
   Camera,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -61,6 +62,10 @@ const sellerNavigation = [
   { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
   { name: "Analytics", href: "/analytics", icon: TrendingUp },
   { name: "Subscription", href: "/subscription", icon: Crown },
+  // Billing: every payment made to Cosora, the printable bill for each, and the
+  // delivery state of any physical certificate ordered. Sits below Subscription
+  // because that is the page most payments originate from.
+  { name: "My Payments", href: "/my-payments", icon: Receipt },
 ];
 
 interface DashboardSidebarProps {

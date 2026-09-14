@@ -1,17 +1,42 @@
--- Removes everything scripts/ad-demo-campaigns.sql created.
+-- Removes everything scripts/ad-demo-campaigns.sql and
+-- scripts/ad-demo-search-and-certificates.sql created.
 --
 -- Run this before any real advertising launch: the seeded campaigns promote
 -- real vendors' real products without anyone having paid for them, which is
 -- fine for a staging walkthrough and not fine in front of paying customers.
 --
 -- ad_review_log has ON DELETE CASCADE from advertisements, so deleting the
--- campaigns takes their decision history with them. The trust seals granted at
--- approval do NOT cascade (they live on vendor_ad_verifications and are keyed
--- by vendor, not by campaign), so they are removed explicitly below — otherwise
--- a vendor would keep a verified badge bought by a campaign that no longer
--- exists.
+-- campaigns takes their decision history with them. Two things do NOT cascade
+-- and are removed explicitly below:
+--
+--   * Trust seals granted at approval. They live on vendor_ad_verifications
+--     keyed by vendor, not by campaign, so a vendor would otherwise keep a
+--     verified badge bought by a campaign that no longer exists.
+--   * Certificate orders. certificate_orders.ad_id is ON DELETE SET NULL by
+--     design — deleting a campaign must never erase the record of a parcel that
+--     was printed and posted — so deleting the demo campaigns would leave
+--     orphaned demo certificates sitting in the admin fulfilment queue forever.
+--     They have to be matched and removed BEFORE the campaigns go, while ad_id
+--     still points at them.
 
 begin;
+
+-- Demo certificate orders. Matched through ad_id while it is still set, so a
+-- certificate from a genuine purchase is never touched. Deleted first: after
+-- the campaigns go, ad_id is NULL and there is nothing left to match on.
+delete from public.notifications n
+where n.kind like 'certificate_%'
+  and exists (
+    select 1 from public.certificate_orders co
+     join public.advertisements a on a.id = co.ad_id
+    where a.title like '%[demo]' and co.vendor_id = n.profile_id
+  );
+
+delete from public.certificate_orders co
+where exists (
+  select 1 from public.advertisements a
+   where a.id = co.ad_id and a.title like '%[demo]'
+);
 
 -- Trust seals whose granting campaign is one of the demo rows. Matched on the
 -- expiry the campaign set, so a seal from a genuine purchase is never touched.
@@ -51,4 +76,7 @@ update public.vendor_profiles vp
 
 commit;
 
-select count(*) as demo_campaigns_left from public.advertisements where title like '%[demo]';
+select (select count(*) from public.advertisements where title like '%[demo]') as demo_campaigns_left,
+       (select count(*) from public.certificate_orders where reference like 'CERT-%'
+         and ad_id is null and vendor_name is not null) as certificate_orders_left_unlinked,
+       (select count(*) from public.certificate_orders) as certificate_orders_total;

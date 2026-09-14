@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
-import { useAdSlot, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
@@ -212,6 +213,82 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// BRAND PICKS RAIL — one block of the newArrivalsBrandPicks slot
+//
+// Lifted out of the page body so the slot can appear at more than one depth
+// (Mitra, 2026-09-13: ad slots recur, they are not one rail at the top). Each
+// instance renders a DISJOINT slice of one shared fetch, so the second rail
+// shows different vendors from the first rather than the same ones again.
+//
+// It owns its own impression logging and drag hook for the same reason
+// SponsoredRail does: a caller that forgot either would silently under-report a
+// vendor's reach or ship a rail desktop mice cannot move.
+// ─────────────────────────────────────────────────────────────
+function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd) => void }) {
+  const callVendor = useCallVendor();
+  const drag = useDragScroll<HTMLDivElement>();
+  const logged = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    ads.forEach((a) => {
+      if (!logged.current.has(a.adId)) {
+        logged.current.add(a.adId);
+        void logAdImpression(a.adId);
+      }
+    });
+  }, [ads]);
+
+  // Renders nothing when no vendor has a live campaign in this block, same rule
+  // as SponsoredRail: a sponsored rail with no sponsors should be absent, not
+  // filled with placeholders.
+  if (ads.length === 0) return null;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
+        <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
+        <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
+      </div>
+      {/* The lowercase "sponsored" that used to sit here, above the rail in
+          text-gray-300, is replaced by the shared SponsoredNote below the
+          rail — same wording, position and colour as every other paid
+          placement. Two disclosures on one section is not twice as clear. */}
+      <div
+        ref={drag.ref}
+        className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide", drag.className)}
+        onMouseDown={drag.onMouseDown}
+        onMouseMove={drag.onMouseMove}
+        onMouseUp={drag.onMouseUp}
+        onMouseLeave={drag.onMouseLeave}
+        onClickCapture={drag.onClickCapture}
+      >
+        {/* Card body and Call Now are siblings, not nested buttons — the
+            old markup nested a button inside a Link, which is invalid. */}
+        {ads.map((a) => (
+          <div key={a.adId} className="shrink-0 w-32 lg:w-48">
+            <button onClick={() => onOpen(a)} className="w-full text-left">
+              <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
+                {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
+              </div>
+              <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.productName ?? a.title}</p>
+              <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.categoryName ?? a.vendorName ?? ""}</p>
+              <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{a.price ?? ""}</p>
+            </button>
+            <button
+              onClick={() => { if (a.vendorId) void callVendor(a.vendorId, a.productName ?? a.title); }}
+              className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded"
+            >
+              <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
+            </button>
+          </div>
+        ))}
+      </div>
+      <SponsoredNote className="px-1" />
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
@@ -219,23 +296,20 @@ const NewArrivals = () => {
   const t = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const callVendor = useCallVendor();
+  // No page-level useCallVendor: the only caller left was the Brand Picks rail,
+  // which now owns its own (see BrandPicksRail).
   const { profile } = useAuth();
   const firstName = (profile?.full_name?.trim().split(/\s+/)[0]) || "there";
 
   // ── Brand Picks: storePromotion + brandAd campaigns only ──
   // Its own slot, so it cannot collide with the Sponsored rail above and does
-  // not need the old index-splitting workaround. Empty renders nothing.
-  const { data: brandPicks = [] } = useAdSlot("newArrivalsBrandPicks");
-  const loggedAds = useRef<Set<string>>(new Set());
-  useEffect(() => {
-    brandPicks.forEach((a) => {
-      if (!loggedAds.current.has(a.adId)) {
-        loggedAds.current.add(a.adId);
-        void logAdImpression(a.adId);
-      }
-    });
-  }, [brandPicks]);
+  // not need the old index-splitting workaround. Two blocks: one below the
+  // Video Close-Ups where it has always been, one further down the product
+  // feed. Disjoint slices of one fetch — the second rail is different vendors,
+  // not the first rail again. Empty blocks render nothing.
+  const brandPickBlocks = useAdSlotBlocks("newArrivalsBrandPicks");
+  // Impressions are logged by BrandPicksRail itself, per block, so a block that
+  // never renders (no inventory left) reports no impression for ads nobody saw.
 
   // Same goal-aware routing as SponsoredRail — see adDestination(). Both
   // surfaces render the same ads, so a click had to mean the same thing in both.
@@ -258,7 +332,8 @@ const NewArrivals = () => {
   // users able to slide them at all.
   const categoriesDrag = useDragScroll<HTMLDivElement>();
   const videoRailDrag = useDragScroll<HTMLDivElement>();
-  const brandPicksDrag = useDragScroll<HTMLDivElement>();
+  // The Brand Picks rail keeps its own drag hook — there are now two of them on
+  // the page, and one shared hook would bind both rails to a single ref.
 
   // Vendor-uploaded reels. The sample set is dev-only, so in production an
   // empty catalogue means the section is genuinely omitted (see the rail below).
@@ -360,6 +435,22 @@ const NewArrivals = () => {
   // mobile rows, desktop every 5 desktop rows.
   const mobileInterval = cols * 5;         // 10 (2-col) or 15 (3-col)
   const desktopInterval = desktopCols * 5; // 20 (2-col) or 30 (3-col)
+
+  // ── Sponsored blocks interleaved down the feed ──
+  //
+  // Block 0 of each slot renders in its original position near the top of the
+  // page; these are the recurrences. They are listed in the order they appear,
+  // one per interval, so the feed alternates between the two slots instead of
+  // stacking three identical rails. Every entry is a distinct (slot, block)
+  // pair, and blocks within a slot are disjoint, so no campaign renders twice
+  // on this page.
+  const adInterval = desktopCols * 2;      // 8 (2-col) or 12 (3-col)
+  const FEED_ADS: { slot: AdSlotId; block: number }[] = [
+    { slot: "newArrivalsSponsored", block: 1 },
+    { slot: "newArrivalsBrandPicks", block: 1 },
+    { slot: "newArrivalsSponsored", block: 2 },
+  ];
+
   const feedNodes: JSX.Element[] = [];
   displayProducts.forEach((product, i) => {
     feedNodes.push(<ProductCard key={product.id} product={product} />);
@@ -377,6 +468,18 @@ const NewArrivals = () => {
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
         </div>
       );
+    }
+    if (n % adInterval === 0) {
+      const entry = FEED_ADS[n / adInterval - 1];
+      if (entry) {
+        feedNodes.push(
+          <div key={`ad-${entry.slot}-${entry.block}`} className="col-span-full my-1">
+            {entry.slot === "newArrivalsBrandPicks"
+              ? <BrandPicksRail ads={brandPickBlocks[entry.block] ?? []} onOpen={openAd} />
+              : <SponsoredRail slot={entry.slot} block={entry.block} />}
+          </div>
+        );
+      }
     }
   });
 
@@ -546,53 +649,10 @@ const NewArrivals = () => {
           </div>
         </div>
 
-        {/* ── Brand Picks — real paid ad campaigns ──
-            Renders nothing when no vendor has a live campaign, same rule as
-            SponsoredRail: a sponsored rail with no sponsors should be absent,
-            not filled with placeholders. */}
-        {brandPicks.length > 0 && (
-        <div>
-          <div className="flex items-center justify-between mb-2 lg:mb-4 px-1">
-            <h2 className="text-base lg:text-xl font-bold text-gray-900">Brand Picks</h2>
-            <ChevronRight className="w-4 lg:w-5 h-4 lg:h-5 text-gray-400" />
-          </div>
-          {/* The lowercase "sponsored" that used to sit here, above the rail in
-              text-gray-300, is replaced by the shared SponsoredNote below the
-              rail — same wording, position and colour as every other paid
-              placement. Two disclosures on one section is not twice as clear. */}
-          <div
-            ref={brandPicksDrag.ref}
-            className={cn("flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide", brandPicksDrag.className)}
-            onMouseDown={brandPicksDrag.onMouseDown}
-            onMouseMove={brandPicksDrag.onMouseMove}
-            onMouseUp={brandPicksDrag.onMouseUp}
-            onMouseLeave={brandPicksDrag.onMouseLeave}
-            onClickCapture={brandPicksDrag.onClickCapture}
-          >
-            {/* Card body and Call Now are siblings, not nested buttons — the
-                old markup nested a button inside a Link, which is invalid. */}
-            {brandPicks.map((a) => (
-              <div key={a.adId} className="shrink-0 w-32 lg:w-48">
-                <button onClick={() => openAd(a)} className="w-full text-left">
-                  <div className="aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 mb-1.5 lg:mb-2.5">
-                    {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? a.title} className="w-full h-full object-cover" loading="lazy" />}
-                  </div>
-                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.productName ?? a.title}</p>
-                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.categoryName ?? a.vendorName ?? ""}</p>
-                  <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{a.price ?? ""}</p>
-                </button>
-                <button
-                  onClick={() => { if (a.vendorId) void callVendor(a.vendorId, a.productName ?? a.title); }}
-                  className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded"
-                >
-                  <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
-                </button>
-              </div>
-            ))}
-          </div>
-          <SponsoredNote className="px-1" />
-        </div>
-        )}
+        {/* ── Brand Picks — real paid ad campaigns (block 0) ──
+            Block 1 of the same slot recurs further down the product feed; see
+            FEED_ADS. Disjoint slices, so the two rails never share a vendor. */}
+        <BrandPicksRail ads={brandPickBlocks[0] ?? []} onOpen={openAd} />
 
         {/* ── Today's New In + first 2 rows + Submit Requirement Box + more rows ── */}
         <div>
@@ -630,12 +690,22 @@ const NewArrivals = () => {
           </div>
         </div>
 
-        {/* ── Personalized recommendations ── */}
+        {/* ── Personalized recommendations ──
+            The "AD" chip that used to sit at the right of this heading is gone.
+            These four cards are `products.slice(0, 4)` — the live catalogue,
+            the same rows the organic feed above renders. Nobody paid for them,
+            so labelling them AD was a false disclosure in the direction nobody
+            checks for: it told the buyer this ranking was bought when it was
+            not, and told the vendor whose product it was nothing at all. Real
+            paid placement on this page is the newArrivalsSponsored and
+            newArrivalsBrandPicks slots, each of which discloses itself.
+            (The section still shows the first four catalogue rows a second
+            time, which is a content duplication logged in ToDo.md — separate
+            from the label, and a product decision.) */}
         <div>
           <p className="text-sm lg:text-base mb-2 lg:mb-4 px-1">
             <Link to="/profile" className="text-blue-600 font-semibold hover:underline">{firstName}</Link>
             <span className="text-gray-900 font-bold">, we recommend</span>
-            <span className="float-right text-[10px] lg:text-xs text-gray-300 font-semibold">AD</span>
           </p>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
             {products.slice(0, 4).map(p => <ProductCard key={"rec-" + p.id} product={p} />)}

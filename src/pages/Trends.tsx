@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
 import { useResolvedCategoryId } from "@/lib/queries/ads";
+import { AD_SLOTS } from "@/lib/adSlots";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useDragScroll } from "@/hooks/useDragScroll";
@@ -328,6 +329,13 @@ const Trends = () => {
   // every 10 products on mobile (2-col) and every 20 on desktop (4-col). Cards at
   // a multiple of 20 show on both; the in-between multiples of 10 are mobile-only
   // (`lg:hidden`, collapsing out of the desktop grid). Must live in ONE grid.
+  // Sponsored blocks recur down the same feed. Block 0 is the rail above the
+  // curated looks; blocks 1 and 2 land here, at 8 and 16 products — a multiple
+  // of both the mobile (2) and desktop (4) column counts, so a rail never
+  // splits a row. Each block is a disjoint slice of one fetch, and the same
+  // category context as block 0, so a recurrence is more trending campaigns for
+  // this chip and never the same campaign twice.
+  const AD_EVERY = 8;
   const feedNodes: JSX.Element[] = [];
   feedProducts.forEach((product, i) => {
     feedNodes.push(<ProductCard key={product.id} product={product} />);
@@ -345,6 +353,21 @@ const Trends = () => {
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
         </div>
       );
+    }
+    if (n % AD_EVERY === 0) {
+      const block = n / AD_EVERY; // block 0 is the rail higher up the page
+      if (block < AD_SLOTS.trendsSponsored.repeat.blocks) {
+        feedNodes.push(
+          <div key={`ad-${block}`} className="col-span-full my-1">
+            <SponsoredRail
+              slot="trendsSponsored"
+              block={block}
+              category={trendCategoryId}
+              label={`Sponsored — trending in #${category.hashtag}`}
+            />
+          </div>
+        );
+      }
     }
   });
 

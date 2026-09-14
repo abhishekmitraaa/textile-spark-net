@@ -7,6 +7,7 @@ import ListingProductCard from "@/components/buyer/ListingProductCard";
 import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useAdSlot } from "@/lib/queries/ads";
+import { AD_SLOTS, type AdSlot, type AdSlotId } from "@/lib/adSlots";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
@@ -211,7 +212,19 @@ function applyControls(products: ListingProduct[], gender: GenderFilter, sort: S
 // 20 on desktop. Cards at multiples of 20 show on both; the in-between multiples
 // of 10 are mobile-only (`lg:hidden`, so they collapse out of the desktop grid),
 // which leaves desktop with a card only every 20 products (5 desktop rows).
-function feedWithRequirements(products: ListingProduct[], onQuickRfq: () => void): JSX.Element[] {
+//
+// `sponsored` (optional) additionally recurs an ad slot down the same grid,
+// starting from block `fromBlock` — Most Popular passes it, the followed-brand
+// feed does not. That feed is the brands the buyer explicitly chose to follow,
+// and the paid placement on this page is the interleaved carousel above it; an
+// ad rail cutting through the one list a buyer curated themselves is the wrong
+// trade even though there is room for it.
+function feedWithRequirements(
+  products: ListingProduct[],
+  onQuickRfq: () => void,
+  sponsored?: { slot: AdSlotId; fromBlock: number },
+): JSX.Element[] {
+  const AD_EVERY = 8; // 4 mobile rows / 2 desktop rows
   const nodes: JSX.Element[] = [];
   products.forEach((p, i) => {
     nodes.push(<ListingProductCard key={p.id} product={p} />);
@@ -229,6 +242,17 @@ function feedWithRequirements(products: ListingProduct[], onQuickRfq: () => void
           <SubmitRequirementCard onQuickRfq={onQuickRfq} />
         </div>
       );
+    }
+    if (sponsored && n % AD_EVERY === 0) {
+      const block = sponsored.fromBlock + n / AD_EVERY - 1;
+      const spec: AdSlot = AD_SLOTS[sponsored.slot];
+      if (block < (spec.repeat?.blocks ?? 1)) {
+        nodes.push(
+          <div key={`ad-${block}`} className="col-span-full">
+            <SponsoredRail slot={sponsored.slot} block={block} />
+          </div>
+        );
+      }
     }
   });
   return nodes;
@@ -424,7 +448,11 @@ const Following = () => {
               verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
             />
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
-              {feedWithRequirements(mostPopular, () => setQuickRfqOpen(true))}
+              {/* Block 0 is the rail directly above this grid, so the feed picks
+                  up at block 1 — a different set of campaigns, not the rail
+                  above repeated. */}
+              {feedWithRequirements(mostPopular, () => setQuickRfqOpen(true),
+                { slot: "followingPopular", fromBlock: 1 })}
             </div>
           </section>
         )}

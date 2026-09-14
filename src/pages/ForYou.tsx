@@ -12,7 +12,7 @@ import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForYouRanking, usePrefCategoryMap, categoryToPrefId } from "@/lib/queries/forYou";
-import { useAdSlot, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
+import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { BUYER_CATEGORIES as CATEGORIES } from "@/lib/buyerCategories";
 import {
@@ -203,7 +203,11 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
     <div className="rounded-2xl border border-gray-200 bg-white p-3 lg:p-4">
       <div className="flex items-center justify-between mb-2.5 lg:mb-3">
         <h3 className="text-sm lg:text-lg font-bold text-gray-900">Related To Recent Views</h3>
-        <span className="text-[9px] lg:text-[10px] font-semibold text-gray-300 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
+        {/* gray-500, not gray-300. This chip is the paid-placement disclosure
+            for the block; at gray-300 on white it sits around 2.3:1, well under
+            the 4.5:1 WCAG AA needs for text this size. A disclosure that cannot
+            be read is not a disclosure — same reason SponsoredNote is gray-500. */}
+        <span className="text-[9px] lg:text-[10px] font-semibold text-gray-500 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-5">
         {ads.map((a) => (
@@ -360,7 +364,17 @@ const ForYou = () => {
     () => Array.from(new Set(prefs.categories.flatMap((p) => (prefMap ?? {})[p] ?? []))),
     [prefs.categories, prefMap],
   );
-  const { data: recentAds = [] } = useAdSlot("forYouSponsored", null, prefCategoryIds);
+  // Blocks, not one array reused.
+  //
+  // THE BUG THIS FIXES. The feed emitted a "recent" block every 16 products and
+  // handed EVERY one of them the same `recentAds` array. So a buyer who scrolled
+  // 48 products saw the identical four campaigns three times, and because each
+  // RecentViewsAd instance keeps its own `logged` ref, each showing fired its
+  // own ad_impression — one page view billing three impressions per campaign
+  // while the buyer saw one set of ads repeated. Blocks are disjoint slices of
+  // one fetch, so the second block is four DIFFERENT campaigns and each ad is
+  // counted once.
+  const recentAdBlocks = useAdSlotBlocks("forYouSponsored", null, prefCategoryIds);
 
   const pool = useMemo<ListingProduct[]>(() => {
     if (!live || !live.length) return [];
@@ -390,20 +404,31 @@ const ForYou = () => {
   // Build interleaved feed: product cards + requirement box + recent-views ad.
   // Blocks span the full grid width and land on a multiple of 4 products so no
   // ragged half-row precedes them on desktop (see the constants above).
-  type FeedItem = { kind: "product"; product: ListingProduct } | { kind: "requirement" } | { kind: "recent" };
+  type FeedItem =
+    | { kind: "product"; product: ListingProduct }
+    | { kind: "requirement" }
+    | { kind: "recent"; block: number };
   const feedItems = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [];
+    let adsEmitted = 0;
     visible.forEach((product, i) => {
       items.push({ kind: "product", product });
       const productsDone = i + 1;
       if (productsDone % PRODUCTS_PER_REQUIREMENT_BOX === 0) items.push({ kind: "requirement" });
-      // Only reserve the ad slot when there is real inventory to fill it. With
-      // no live campaigns the block is not rendered empty — it is not emitted,
-      // so the feed has no unexplained gap where an ad would have gone.
-      else if (recentAds.length > 0 && productsDone % PRODUCTS_PER_RECENT_VIEW === 0) items.push({ kind: "recent" });
+      // Only reserve the ad slot when there is real inventory to fill it — and
+      // now, when there is inventory LEFT: the nth block is emitted only if the
+      // nth slice is non-empty. With four live campaigns in a 3x4 slot that is
+      // one block, not three. A block is never emitted empty, so the feed has
+      // no unexplained gap where an ad would have gone.
+      else if (productsDone % PRODUCTS_PER_RECENT_VIEW === 0) {
+        if ((recentAdBlocks[adsEmitted]?.length ?? 0) > 0) {
+          items.push({ kind: "recent", block: adsEmitted });
+          adsEmitted++;
+        }
+      }
     });
     return items;
-  }, [visible, recentAds.length]);
+  }, [visible, recentAdBlocks]);
 
   // Infinite scroll.
   useEffect(() => {
@@ -664,7 +689,7 @@ const ForYou = () => {
                   return <div key={`req-${idx}`} className="col-span-full lg:max-w-4xl lg:mx-auto"><SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} /></div>;
                 }
                 if (item.kind === "recent") {
-                  return <div key={`rv-${idx}`} className="col-span-full"><RecentViewsAd ads={recentAds} /></div>;
+                  return <div key={`rv-${idx}`} className="col-span-full"><RecentViewsAd ads={recentAdBlocks[item.block] ?? []} /></div>;
                 }
                 return <ListingProductCard key={item.product.id} product={item.product} />;
               })}

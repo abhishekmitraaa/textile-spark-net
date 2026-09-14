@@ -3,8 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import { useResolvedCategoryId } from "@/lib/queries/ads";
+import { AD_SLOTS } from "@/lib/adSlots";
 import { useSearchSuggestions, useDebounced } from "@/lib/queries/search";
 import {
   ArrowLeft, Search as SearchIcon, Mic, Camera, ImagePlus, X, BadgeCheck,
@@ -273,6 +276,47 @@ const Search = () => {
   // Restart the recommendation feed when the trending filter changes.
   useEffect(() => { setRecBatches(1); }, [selectedCat]);
 
+  // ── Sponsored placement (searchListing) ───────────────────────────────────
+  //
+  // This is where `searchListing` finally delivers. It was sold at ₹35/day and
+  // rendered nowhere at all until Mitra's decision on 2026-09-13: the slot goes
+  // on the page the buyer lands on from the Search button, down in the scrolled
+  // feed rather than above it — someone who has just tapped Search is typing,
+  // not reading a rail, so an ad at the top would be both ignored and in the way.
+  //
+  // Category context is the chip the buyer has selected, resolved to a real
+  // taxonomy row so targeting is evaluated against the ONE taxonomy. No chip
+  // means no category context, which active_ads() reads as "do not let category
+  // exclude anything" rather than "match nothing".
+  const { data: searchCategoryId } = useResolvedCategoryId([selectedCat]);
+  const adSlot = AD_SLOTS.searchSponsored;
+
+  // The slot recurs down the feed instead of appearing once. Each block is a
+  // disjoint slice of one fetch (see adSlotBlock), so a buyer who keeps
+  // scrolling meets new campaigns, never the same one again — and a block with
+  // no inventory left behind it renders nothing at all.
+  const AD_EVERY = 8; // 4 rows on mobile (2-col), 2 on desktop (4-col)
+  const feedNodes: JSX.Element[] = [];
+  recommended.forEach((p, i) => {
+    feedNodes.push(
+      <motion.div variants={reduced ? {} : listItem} key={p.id}>
+        <ListingProductCard product={p} />
+      </motion.div>
+    );
+    const n = i + 1;
+    // Never trail the last loaded card: a rail below the final row reads as the
+    // end of the catalogue rather than a break in it.
+    if (n >= recommended.length) return;
+    if (n % AD_EVERY !== 0) return;
+    const block = n / AD_EVERY - 1;
+    if (block >= adSlot.repeat.blocks) return;
+    feedNodes.push(
+      <div key={`ad-${block}`} className="col-span-full my-1">
+        <SponsoredRail slot="searchSponsored" block={block} category={searchCategoryId} />
+      </div>
+    );
+  });
+
   return (
     <div className="min-h-screen bg-white">
       {/* ── Top bar: logo + back/input/mic ── */}
@@ -438,11 +482,7 @@ const Search = () => {
               </span>
             </p>
             <motion.div key={selectedCat ?? "all"} variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
-              {recommended.map((p) => (
-                <motion.div variants={reduced ? {} : listItem} key={p.id}>
-                  <ListingProductCard product={p} />
-                </motion.div>
-              ))}
+              {feedNodes}
             </motion.div>
             <div ref={loadMoreRef} className="py-6 text-center text-xs text-gray-400">
               {loadingMore ? "Loading more..." : "Scroll for more"}

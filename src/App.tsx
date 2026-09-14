@@ -22,6 +22,8 @@ import Leads from "./pages/Leads";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
 import InvoiceDetail from "./pages/InvoiceDetail";
+import MyPayments from "./pages/MyPayments";
+import AdReceiptDetail from "./pages/AdReceiptDetail";
 import Quotes from "./pages/Quotes";
 import Profile from "./pages/Profile";
 import MyStore from "./pages/MyStore";
@@ -261,6 +263,9 @@ const App = () => (
             <Route path="/terms" element={<TermsConditions />} />
             <Route path="/subscription" element={<Subscription />} />
             <Route path="/subscription/invoice/:id" element={<InvoiceDetail />} />
+            {/* Vendor billing: every payment, its bill, and certificate tracking. */}
+            <Route path="/my-payments" element={<MyPayments />} />
+            <Route path="/my-payments/receipt/:orderId" element={<AdReceiptDetail />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/profile/notifications" element={<ProfileNotifications />} />

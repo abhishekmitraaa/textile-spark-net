@@ -1,7 +1,8 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { logEngagement, sessionId } from "@/lib/queries/engagement";
-import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
+import { AD_SLOTS, adSlotBlock, type AdSlot, type AdSlotId } from "@/lib/adSlots";
 import { resolveCategoryIdByName } from "@/lib/queries/products";
 
 // (buyer-facing active-ads + analytics helpers are exported at the bottom)
@@ -256,6 +257,33 @@ export function useActiveAds(
 export function useAdSlot(slot: AdSlotId, categoryId?: string | null, categoryIds?: readonly string[] | null) {
   const spec = AD_SLOTS[slot];
   return useActiveAds(spec.max, categoryId, spec.types, categoryIds);
+}
+
+/**
+ * The same inventory, already cut into the slot's repeating blocks — for pages
+ * that render the ad markup themselves (New Arrivals' Brand Picks, For You)
+ * rather than mounting SponsoredRail, which does its own slicing.
+ *
+ * One fetch, N disjoint slices: `blocks[0]` and `blocks[1]` never share a
+ * campaign, so putting them at different depths of a feed gives the page more
+ * sponsored positions without showing any vendor's ad twice. Short inventory
+ * yields fewer non-empty blocks, never a repeat — three live campaigns across a
+ * 3x4 slot is one block of three, not three blocks of the same three.
+ */
+export function useAdSlotBlocks(
+  slot: AdSlotId,
+  categoryId?: string | null,
+  categoryIds?: readonly string[] | null,
+): ActiveAd[][] {
+  // Annotated rather than inferred: AD_SLOTS[slot] on a generic AdSlotId is the
+  // union of every slot's literal type, and `repeat` is absent from the deferred
+  // one, so the union has no such property.
+  const spec: AdSlot = AD_SLOTS[slot];
+  const { data } = useActiveAds(spec.max, categoryId, spec.types, categoryIds);
+  return useMemo(() => {
+    const count = spec.repeat ? spec.repeat.blocks : 1;
+    return Array.from({ length: count }, (_, i) => adSlotBlock(slot, data ?? [], i));
+  }, [slot, spec, data]);
 }
 
 /**

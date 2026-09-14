@@ -10,6 +10,9 @@ import { useCatalogue } from "@/lib/queries/products";
 import { useProductSearch } from "@/lib/queries/search";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
+import SponsoredRail from "@/components/buyer/SponsoredRail";
+import { useResolvedCategoryId } from "@/lib/queries/ads";
+import { AD_SLOTS } from "@/lib/adSlots";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import { devOnlyVideoCloseUps } from "@/data/videoCloseUps";
@@ -727,6 +730,30 @@ const SearchResults = () => {
       .map((x) => x.v);
   }, [dbVideos, query]);
 
+  // ── Sponsored placement (searchListing) ───────────────────────────────────
+  //
+  // The results page is where `searchListing` carries real intent: the buyer has
+  // named what they want. Category context is taken from the facet they picked
+  // if there is one, otherwise the category most of the matched products sit in,
+  // otherwise the raw term — resolved against the one taxonomy, so an ad
+  // targeting "Jeans" serves on a jeans search and nowhere else. Unresolved
+  // means no context, which active_ads() treats as "do not let category exclude
+  // anything" rather than "match nothing".
+  const dominantCategory = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const p of products) {
+      if (p.categoryName) counts.set(p.categoryName, (counts.get(p.categoryName) ?? 0) + 1);
+    }
+    let best: string | null = null;
+    let bestN = 0;
+    for (const [name, n] of counts) if (n > bestN) { best = name; bestN = n; }
+    return best;
+  }, [products]);
+  const { data: adCategoryId } = useResolvedCategoryId(
+    [selections.category?.[0], dominantCategory, query.trim() || null],
+  );
+  const adSlot = AD_SLOTS.searchResultsSponsored;
+
   // Product feed with a "Submit Requirement" card interleaved every 5 rows —
   // same per-breakpoint cadence as New Arrivals. A row is `cols` cards on mobile
   // and `cols*2` on desktop, so cards land at multiples of the desktop interval
@@ -735,6 +762,10 @@ const SearchResults = () => {
   const desktopCols = cols * 2;             // 4 (2-col) or 6 (3-col)
   const mobileInterval = cols * 5;          // 10 or 15
   const desktopInterval = desktopCols * 5;  // 20 or 30
+  // Sponsored blocks recur on their own, tighter cadence. A multiple of BOTH
+  // column counts, so a rail always lands on a row boundary at either
+  // breakpoint instead of splitting a row in half.
+  const adInterval = desktopCols * 2;       // 8 or 12
   const feedNodes: JSX.Element[] = [];
   products.forEach((p, i) => {
     feedNodes.push(
@@ -754,6 +785,16 @@ const SearchResults = () => {
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
         </div>
       );
+    }
+    if (n % adInterval === 0) {
+      const block = n / adInterval - 1;
+      if (block < adSlot.repeat.blocks) {
+        feedNodes.push(
+          <div key={`ad-${block}`} className="col-span-full my-1">
+            <SponsoredRail slot="searchResultsSponsored" block={block} category={adCategoryId} />
+          </div>
+        );
+      }
     }
   });
 

@@ -5,7 +5,6 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[]
-
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -89,22 +88,6 @@ export type Database = {
           },
         ]
       }
-      ad_review_log: {
-        Row: {
-          ad_id: string
-          created_at: string
-          decision: string
-          id: string
-          new_status: string | null
-          note: string | null
-          previous_status: string | null
-          reason_code: string | null
-          reviewer_id: string | null
-        }
-        Insert: never
-        Update: never
-        Relationships: []
-      }
       ad_orders: {
         Row: {
           amount: number
@@ -134,6 +117,57 @@ export type Database = {
           vendor_id?: string
         }
         Relationships: []
+      }
+      ad_review_log: {
+        Row: {
+          ad_id: string
+          created_at: string
+          decision: string
+          id: string
+          new_status: string | null
+          note: string | null
+          previous_status: string | null
+          reason_code: string | null
+          reviewer_id: string | null
+        }
+        Insert: {
+          ad_id: string
+          created_at?: string
+          decision: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          reason_code?: string | null
+          reviewer_id?: string | null
+        }
+        Update: {
+          ad_id?: string
+          created_at?: string
+          decision?: string
+          id?: string
+          new_status?: string | null
+          note?: string | null
+          previous_status?: string | null
+          reason_code?: string | null
+          reviewer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_review_log_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ad_review_log_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       admin_flags: {
         Row: {
@@ -453,6 +487,99 @@ export type Database = {
           },
         ]
       }
+      certificate_orders: {
+        Row: {
+          ad_id: string | null
+          ad_order_id: string | null
+          address_line: string | null
+          area: string | null
+          city: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          courier: string | null
+          created_at: string
+          delivered_at: string | null
+          dispatched_at: string | null
+          id: string
+          postal_code: string | null
+          printed_at: string | null
+          purchased_at: string
+          reference: string
+          return_reason: string | null
+          state: string | null
+          status: string
+          tracking_number: string | null
+          updated_at: string
+          vendor_id: string
+          vendor_name: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          ad_order_id?: string | null
+          address_line?: string | null
+          area?: string | null
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          courier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          dispatched_at?: string | null
+          id?: string
+          postal_code?: string | null
+          printed_at?: string | null
+          purchased_at?: string
+          reference: string
+          return_reason?: string | null
+          state?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          vendor_id: string
+          vendor_name?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          ad_order_id?: string | null
+          address_line?: string | null
+          area?: string | null
+          city?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          courier?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          dispatched_at?: string | null
+          id?: string
+          postal_code?: string | null
+          printed_at?: string | null
+          purchased_at?: string
+          reference?: string
+          return_reason?: string | null
+          state?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          vendor_id?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certificate_orders_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certificate_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_block_reasons: {
         Row: {
           active: boolean
@@ -607,6 +734,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      embed_query_rate_limit: {
+        Row: {
+          caller: string
+          count: number
+          window_start: string
+        }
+        Insert: {
+          caller: string
+          count?: number
+          window_start?: string
+        }
+        Update: {
+          caller?: string
+          count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
+      embedding_pipeline_health_log: {
+        Row: {
+          checked_at: string
+          products_missing: number | null
+          queue_depth: number | null
+          reason: string | null
+          rfqs_missing: number | null
+          status: string
+          vault_secret_ok: boolean | null
+          videos_missing: number | null
+        }
+        Insert: {
+          checked_at?: string
+          products_missing?: number | null
+          queue_depth?: number | null
+          reason?: string | null
+          rfqs_missing?: number | null
+          status: string
+          vault_secret_ok?: boolean | null
+          videos_missing?: number | null
+        }
+        Update: {
+          checked_at?: string
+          products_missing?: number | null
+          queue_depth?: number | null
+          reason?: string | null
+          rfqs_missing?: number | null
+          status?: string
+          vault_secret_ok?: boolean | null
+          videos_missing?: number | null
+        }
+        Relationships: []
       }
       engagement_events: {
         Row: {
@@ -1120,8 +1298,8 @@ export type Database = {
           sizes: string[] | null
           sleeve_type: string | null
           sold_count: number
-          unit: string | null
           status: Database["public"]["Enums"]["product_status"]
+          unit: string | null
           vendor_id: string
           views_count: number
           waist_sizes: string[] | null
@@ -1160,8 +1338,8 @@ export type Database = {
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
-          unit?: string | null
           status?: Database["public"]["Enums"]["product_status"]
+          unit?: string | null
           vendor_id: string
           views_count?: number
           waist_sizes?: string[] | null
@@ -1200,8 +1378,8 @@ export type Database = {
           sizes?: string[] | null
           sleeve_type?: string | null
           sold_count?: number
-          unit?: string | null
           status?: Database["public"]["Enums"]["product_status"]
+          unit?: string | null
           vendor_id?: string
           views_count?: number
           waist_sizes?: string[] | null
@@ -1963,6 +2141,29 @@ export type Database = {
           },
         ]
       }
+      vendor_catalog_recompute_queue: {
+        Row: {
+          queued_at: string
+          vendor_id: string
+        }
+        Insert: {
+          queued_at?: string
+          vendor_id: string
+        }
+        Update: {
+          queued_at?: string
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_catalog_recompute_queue_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: true
+            referencedRelation: "vendor_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_contracts: {
         Row: {
           agreement_version: string
@@ -2006,10 +2207,10 @@ export type Database = {
           created_at: string
           doc_type: string
           file_url: string | null
+          id: string
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
-          id: string
           vendor_id: string
           verified: boolean
         }
@@ -2017,10 +2218,10 @@ export type Database = {
           created_at?: string
           doc_type: string
           file_url?: string | null
+          id?: string
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          id?: string
           vendor_id: string
           verified?: boolean
         }
@@ -2028,14 +2229,21 @@ export type Database = {
           created_at?: string
           doc_type?: string
           file_url?: string | null
+          id?: string
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
-          id?: string
           vendor_id?: string
           verified?: boolean
         }
         Relationships: [
+          {
+            foreignKeyName: "vendor_documents_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vendor_documents_vendor_id_fkey"
             columns: ["vendor_id"]
@@ -2048,14 +2256,14 @@ export type Database = {
       vendor_profiles: {
         Row: {
           about: string | null
-          annual_turnover: string | null
-          capacity: string[]
           ad_verified_until: string | null
           address_line: string | null
+          annual_turnover: string | null
           area: string | null
           banner_url: string | null
           brand_name: string | null
           business_type: string | null
+          capacity: string[]
           catalog_embedding: unknown
           catalog_embedding_updated_at: string | null
           category: string[] | null
@@ -2082,8 +2290,8 @@ export type Database = {
           postal_code: string | null
           profile_score: number
           rating_avg: number
-          regional: Json | null
           recommended_product_ids: string[]
+          regional: Json | null
           reviews_count: number
           social: Json | null
           state: string | null
@@ -2093,14 +2301,14 @@ export type Database = {
         }
         Insert: {
           about?: string | null
-          annual_turnover?: string | null
-          capacity?: string[]
           ad_verified_until?: string | null
           address_line?: string | null
+          annual_turnover?: string | null
           area?: string | null
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          capacity?: string[]
           catalog_embedding?: unknown
           catalog_embedding_updated_at?: string | null
           category?: string[] | null
@@ -2127,8 +2335,8 @@ export type Database = {
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
-          regional?: Json | null
           recommended_product_ids?: string[]
+          regional?: Json | null
           reviews_count?: number
           social?: Json | null
           state?: string | null
@@ -2138,14 +2346,14 @@ export type Database = {
         }
         Update: {
           about?: string | null
-          annual_turnover?: string | null
-          capacity?: string[]
           ad_verified_until?: string | null
           address_line?: string | null
+          annual_turnover?: string | null
           area?: string | null
           banner_url?: string | null
           brand_name?: string | null
           business_type?: string | null
+          capacity?: string[]
           catalog_embedding?: unknown
           catalog_embedding_updated_at?: string | null
           category?: string[] | null
@@ -2172,8 +2380,8 @@ export type Database = {
           postal_code?: string | null
           profile_score?: number
           rating_avg?: number
-          regional?: Json | null
           recommended_product_ids?: string[]
+          regional?: Json | null
           reviews_count?: number
           social?: Json | null
           state?: string | null
@@ -2300,7 +2508,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      embedding_usage_daily: {
+        Row: {
+          avg_queue_seconds: number | null
+          chars_embedded: number | null
+          day: string | null
+          est_usd: number | null
+          jobs_processed: number | null
+          max_queue_seconds: number | null
+          retried_jobs: number | null
+          source_table: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       account_is_active: { Args: { p_id: string }; Returns: boolean }
@@ -2325,8 +2545,36 @@ export type Database = {
           vendor_name: string
         }[]
       }
+      ad_apply_decision: {
+        Args: {
+          p_ad_id: string
+          p_decision: string
+          p_new_status: string
+          p_note?: string
+          p_notify_body?: string
+          p_notify_title?: string
+          p_reason_code?: string
+          p_reviewer?: string
+        }
+        Returns: undefined
+      }
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string; p_session?: string }; Returns: undefined }
+      ad_fraud_signals: {
+        Args: { p_days?: number }
+        Returns: {
+          ad_id: string
+          clicks: number
+          clicks_per_viewer: number
+          depth_ratio: number
+          distinct_viewers: number
+          post_click_events: number
+          reasons: string[]
+          status: string
+          title: string
+          vendor_id: string
+        }[]
+      }
       ad_frequency_capped: {
         Args: { p_ad: string; p_cap?: number; p_session?: string }
         Returns: boolean
@@ -2335,38 +2583,46 @@ export type Database = {
         Args: { ad: string; p_session?: string }
         Returns: undefined
       }
-      approve_ad_campaign: {
-        Args: { p_ad_id: string; p_note?: string }
-        Returns: string
+      ad_logging_throttled: {
+        Args: { p_ad: string; p_session?: string; p_window?: string }
+        Returns: boolean
       }
-      archive_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
-      pause_ad_campaign_by_admin: {
-        Args: { p_ad_id: string; p_reason_code: string }
-        Returns: undefined
+      ad_moderator: { Args: never; Returns: boolean }
+      ad_owner: { Args: { p_ad_id: string }; Returns: boolean }
+      ad_review_metrics: { Args: { p_days?: number }; Returns: Json }
+      ad_seal_sources: { Args: { p_placement: string }; Returns: string[] }
+      ad_target_live_status: { Args: { p_ad_id: string }; Returns: string }
+      ad_targeting_matches: {
+        Args: {
+          a: Database["public"]["Tables"]["advertisements"]["Row"]
+          p_categories: string[]
+          p_city: string
+        }
+        Returns: boolean
       }
-      pause_ad_campaign_by_vendor: {
-        Args: { p_ad_id: string; p_reason_code?: string }
-        Returns: undefined
-      }
-      reject_ad_campaign: {
-        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
-        Returns: undefined
-      }
-      request_ad_changes: {
-        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
-        Returns: undefined
-      }
-      resubmit_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
-      resume_ad_campaign: { Args: { p_ad_id: string }; Returns: string }
-      suspend_ad_campaign: {
-        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
-        Returns: undefined
+      ad_viewer_city: { Args: never; Returns: string }
+      admin_embedding_pipeline_health: {
+        Args: { p_limit?: number }
+        Returns: {
+          checked_at: string
+          products_missing: number
+          queue_depth: number
+          reason: string
+          rfqs_missing: number
+          status: string
+          vault_secret_ok: boolean
+          videos_missing: number
+        }[]
       }
       admin_role: {
         Args: never
         Returns: Database["public"]["Enums"]["admin_role_type"]
       }
       admin_role_values: { Args: never; Returns: string[] }
+      approve_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string }
+        Returns: string
+      }
       approve_vendor_content: {
         Args: { target_id: string; target_table: string }
         Returns: undefined
@@ -2375,6 +2631,7 @@ export type Database = {
         Args: { target: string }
         Returns: undefined
       }
+      archive_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
       build_video_search_text: {
         Args: { v: Database["public"]["Tables"]["product_videos"]["Row"] }
         Returns: string
@@ -2388,6 +2645,58 @@ export type Database = {
         Args: { p_embedding: string; p_query: string }
         Returns: boolean
       }
+      certificate_apply: {
+        Args: {
+          p_courier?: string
+          p_from: string[]
+          p_id: string
+          p_notify_body?: string
+          p_notify_title?: string
+          p_reason?: string
+          p_to: string
+          p_tracking?: string
+        }
+        Returns: string
+      }
+      certificate_cancel_order: {
+        Args: { p_ad_certificate_id: string; p_reason: string }
+        Returns: string
+      }
+      certificate_dispatch: {
+        Args: {
+          p_ad_certificate_id: string
+          p_courier: string
+          p_tracking: string
+        }
+        Returns: string
+      }
+      certificate_fulfiller: { Args: never; Returns: boolean }
+      certificate_mark_delivered: {
+        Args: { p_ad_certificate_id: string }
+        Returns: string
+      }
+      certificate_mark_printed: {
+        Args: { p_ad_certificate_id: string }
+        Returns: string
+      }
+      certificate_mark_returned: {
+        Args: { p_ad_certificate_id: string; p_reason: string }
+        Returns: string
+      }
+      drain_vendor_catalog_recompute: {
+        Args: { p_limit?: number }
+        Returns: number
+      }
+      embed_query_rate_check: {
+        Args: {
+          p_global_limit?: number
+          p_global_window_secs?: number
+          p_ip: string
+          p_ip_limit?: number
+          p_ip_window_secs?: number
+        }
+        Returns: boolean
+      }
       embedding_jobs_archive: { Args: { p_msg_id: number }; Returns: boolean }
       embedding_jobs_read: {
         Args: { batch_size?: number; vt?: number }
@@ -2397,20 +2706,26 @@ export type Database = {
           read_ct: number
         }[]
       }
-      expire_subscriptions: { Args: never; Returns: number }
-      log_engagement_event: {
-        Args: {
-          p_ad_id?: string
-          p_cta_name?: string
-          p_event_type: string
-          p_product_id?: string
-          p_query_text?: string
-          p_session_id?: string
-          p_source?: string
-          p_vendor_id?: string
-        }
-        Returns: undefined
+      embedding_jobs_set_vt: {
+        Args: { p_msg_id: number; p_vt: number }
+        Returns: boolean
       }
+      embedding_pipeline_health: {
+        Args: never
+        Returns: {
+          oldest_job_age: string
+          products_missing: number
+          queue_depth: number
+          reason: string
+          rfqs_missing: number
+          status: string
+          vault_secret_ok: boolean
+          videos_missing: number
+          worker_last_failure: string
+          worker_last_run: string
+        }[]
+      }
+      expire_subscriptions: { Args: never; Returns: number }
       for_you_products: {
         Args: { match_count?: number; p_buyer_id: string }
         Returns: {
@@ -2426,6 +2741,17 @@ export type Database = {
       }
       halfvec_scale: { Args: { k: number; v: unknown }; Returns: unknown }
       has_query_embedding: { Args: { p_query: string }; Returns: boolean }
+      image_search_rate_check: {
+        Args: {
+          p_global_limit?: number
+          p_global_window_secs?: number
+          p_ip: string
+          p_ip_limit?: number
+          p_ip_window_secs?: number
+          p_user_id?: string
+        }
+        Returns: boolean
+      }
       immutable_array_to_string: {
         Args: { arr: string[]; sep: string }
         Returns: string
@@ -2433,12 +2759,34 @@ export type Database = {
       increment_product_enquiry: { Args: { p: string }; Returns: undefined }
       increment_product_view: { Args: { p: string }; Returns: undefined }
       increment_video_view: { Args: { p: string }; Returns: undefined }
+      is_ad_eligible: {
+        Args: {
+          a: Database["public"]["Tables"]["advertisements"]["Row"]
+          p_categories?: string[]
+          p_city?: string
+        }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
+      log_engagement_event: {
+        Args: {
+          p_ad_id?: string
+          p_cta_name?: string
+          p_event_type: string
+          p_product_id?: string
+          p_query_text?: string
+          p_session_id?: string
+          p_source?: string
+          p_vendor_id?: string
+        }
+        Returns: undefined
+      }
       match_products: {
         Args: {
           boost_weight?: number
           match_count?: number
+          max_distance?: number
           query: string
           query_embedding?: unknown
         }
@@ -2487,15 +2835,40 @@ export type Database = {
         }
         Returns: undefined
       }
+      notify_embedding_alert_webhook: {
+        Args: { p_queue_depth?: number; p_reason: string; p_status: string }
+        Returns: boolean
+      }
       owns_product: { Args: { pid: string }; Returns: boolean }
       owns_rfq: { Args: { rid: string }; Returns: boolean }
+      pause_ad_campaign_by_admin: {
+        Args: { p_ad_id: string; p_reason_code: string }
+        Returns: undefined
+      }
+      pause_ad_campaign_by_vendor: {
+        Args: { p_ad_id: string; p_reason_code?: string }
+        Returns: undefined
+      }
+      prune_search_query_embeddings: {
+        Args: {
+          p_max_age_days?: number
+          p_max_rows?: number
+          p_min_hits?: number
+        }
+        Returns: number
+      }
       recompute_vendor_catalog_embedding: {
         Args: { v_id: string }
         Returns: undefined
       }
+      record_embedding_pipeline_health: { Args: never; Returns: string }
       regex_probe: {
         Args: { p_pattern: string; p_sample: string }
         Returns: Json
+      }
+      reject_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
       }
       reject_vendor_content: {
         Args: { reason?: string; target_id: string; target_table: string }
@@ -2513,6 +2886,10 @@ export type Database = {
         Args: { reply: string; review_id: string }
         Returns: undefined
       }
+      request_ad_changes: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
+      }
       resolve_conversation_review: {
         Args: {
           p_reason_id?: string
@@ -2522,6 +2899,8 @@ export type Database = {
         }
         Returns: undefined
       }
+      resubmit_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
+      resume_ad_campaign: { Args: { p_ad_id: string }; Returns: string }
       search_products: {
         Args: { match_count?: number; query: string }
         Returns: {
@@ -2561,6 +2940,10 @@ export type Database = {
         Args: { p_embedding: string; p_id: string }
         Returns: boolean
       }
+      set_vendor_document_verified: {
+        Args: { p_doc_id: string; p_reason?: string; p_verified: boolean }
+        Returns: undefined
+      }
       set_video_embedding: {
         Args: { p_embedding: string; p_id: string }
         Returns: boolean
@@ -2573,7 +2956,22 @@ export type Database = {
         }
         Returns: undefined
       }
+      suspend_ad_campaign: {
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
+        Returns: undefined
+      }
+      sweep_ad_schedules: {
+        Args: never
+        Returns: {
+          expired: number
+          promoted: number
+        }[]
+      }
       user_has_password: { Args: { target_email: string }; Returns: boolean }
+      vendor_account_in_good_standing: {
+        Args: { p_vendor: string }
+        Returns: boolean
+      }
       vendor_buyer_geography: {
         Args: { p_days?: number; v?: string }
         Returns: Json

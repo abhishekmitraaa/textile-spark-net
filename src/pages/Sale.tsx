@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useLiveProducts, filterSale, type ProductCardData } from "@/lib/queries/products";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
+import { AD_SLOTS } from "@/lib/adSlots";
 import { useCallVendor } from "@/lib/queries/calls";
 import trustedSeal from "@/assets/Trustedseal.png";
 
@@ -294,6 +295,7 @@ const Sale = () => {
   const cols = viewMode === "2-col" ? 2 : 3;
   const mobileInterval = cols * 5;      // 10 (2-col) or 15 (3-col)
   const desktopInterval = cols * 2 * 5; // 20 (2-col) or 30 (3-col)
+  const adInterval = cols * 2 * 2;      // 8 (2-col) or 12 (3-col)
   const dealFeedNodes: JSX.Element[] = [];
   products.forEach((p, i) => {
     dealFeedNodes.push(
@@ -315,6 +317,20 @@ const Sale = () => {
           <SubmitRequirementCard onQuickRfq={() => setQuickRfqOpen(true)} />
         </div>
       );
+    }
+    // Sponsored deals recur down the feed. Block 0 is the rail under the hero;
+    // blocks 1 and 2 land here. The interval is a multiple of BOTH the mobile
+    // and desktop column counts at either density toggle, so a rail always
+    // lands on a row boundary instead of splitting one.
+    if (n % adInterval === 0) {
+      const block = n / adInterval; // block 0 is the rail under the hero
+      if (block < AD_SLOTS.saleSponsored.repeat.blocks) {
+        dealFeedNodes.push(
+          <div key={`ad-${block}`} className="col-span-full my-1">
+            <SponsoredRail slot="saleSponsored" block={block} label="Sponsored deals" />
+          </div>
+        );
+      }
     }
   });
 

@@ -35,7 +35,7 @@ await build({
 
 const {
   AD_TYPES, AD_SLOTS, PLACED_AD_TYPES, UNPLACED_AD_TYPES, BADGE_AD_TYPES,
-  ON_PLATFORM_CARD_TYPES,
+  ON_PLATFORM_CARD_TYPES, FULFILMENT_AD_TYPES, SLOT_ONLY_AD_TYPES, adSlotBlock,
 } = await import(pathToFileURL(outfile).href);
 
 let failures = 0;
@@ -65,12 +65,16 @@ check(
 );
 
 // 2. Every ad type is accounted for exactly once: it has a slot, or it is
-//    listed as unplaced with a stated reason, or it is the product-card badge.
+//    listed as unplaced with a stated reason, or it is the product-card badge,
+//    or it is a physical article the vendor is sent rather than a placement.
 const placed = new Set(PLACED_AD_TYPES);
 const unplaced = new Set(Object.keys(UNPLACED_AD_TYPES));
 const badge = new Set(BADGE_AD_TYPES);
+const fulfilment = new Set(FULFILMENT_AD_TYPES);
+const slotOnly = new Set(Object.keys(SLOT_ONLY_AD_TYPES));
 
-const unaccounted = AD_TYPES.filter((t) => !placed.has(t) && !unplaced.has(t) && !badge.has(t));
+const unaccounted = AD_TYPES.filter(
+  (t) => !placed.has(t) && !unplaced.has(t) && !badge.has(t) && !fulfilment.has(t));
 check("every ad type is accounted for", unaccounted.length === 0,
   unaccounted.length ? `no slot and no stated reason: ${unaccounted.join(", ")}` : "");
 
@@ -131,35 +135,115 @@ check("no unplaced type can render as a card", leaked.length === 0,
 const badgeLeak = [...badge].filter((t) => cardTypes.has(t));
 check("no badge-only type renders as a card", badgeLeak.length === 0, badgeLeak.join(", "));
 
+const fulfilmentLeak = [...fulfilment].filter((t) => cardTypes.has(t) || placed.has(t));
+check("no fulfilment type is placed or rendered", fulfilmentLeak.length === 0,
+  fulfilmentLeak.length
+    ? `a physical article cannot be an impression: ${fulfilmentLeak.join(", ")}` : "");
+
 // A type whose ONLY slots are deferred is not expected to render anywhere yet,
-// so it is exempt. Anything else that is placed but cannot render as a card
-// would be sold, slotted, and still invisible.
+// and a type listed in SLOT_ONLY_AD_TYPES is deliberately confined to its own
+// slots. Anything ELSE that is placed but cannot render as a card would be
+// sold, slotted, and still invisible — which is the failure this catches.
 const deferredOnly = new Set(
   [...placed].filter((t) => {
     const slotsWithType = Object.values(AD_SLOTS).filter((s) => s.types.includes(t));
     return slotsWithType.length > 0 && slotsWithType.every((s) => s.deferred);
   }),
 );
-const droppedFromCards = [...placed].filter((t) => !cardTypes.has(t) && !deferredOnly.has(t));
+const droppedFromCards = [...placed].filter(
+  (t) => !cardTypes.has(t) && !deferredOnly.has(t) && !slotOnly.has(t));
 check("every live placed type can render as a card", droppedFromCards.length === 0,
   droppedFromCards.length ? `placed but excluded from untyped rails: ${droppedFromCards.join(", ")}` : "");
 
-// 8. The five agreed artboards each have at least one slot.
+// A deliberate exclusion has to name a type that is actually placed and
+// actually excluded, or the list is stale cover for a real omission.
+const staleSlotOnly = [...slotOnly].filter((t) => !placed.has(t) || cardTypes.has(t));
+check("every slot-only exclusion is real", staleSlotOnly.length === 0,
+  staleSlotOnly.length ? `listed but not placed, or not actually excluded: ${staleSlotOnly.join(", ")}` : "");
+
+// 8. Every page that sells advertising has at least one slot.
 const pages = new Set(Object.values(AD_SLOTS).map((s) => s.page));
-const wantPages = ["newArrivals", "trends", "sale", "forYou", "following"];
+const wantPages = ["newArrivals", "trends", "sale", "forYou", "following", "search", "searchResults"];
 const pagesMissing = wantPages.filter((p) => !pages.has(p));
-check("all five artboards have a slot", pagesMissing.length === 0, pagesMissing.join(", "));
+check("every advertising page has a slot", pagesMissing.length === 0, pagesMissing.join(", "));
+
+// 9. REPETITION (Mitra, 2026-09-13: "the ad slots have to be repetitive and not
+//    just exist as one single rail"). Encoded so it cannot quietly regress to a
+//    single rail at the top of a page nobody scrolls back to.
+//
+//    Every live slot repeats, EXCEPT one that is interleaved into an organic
+//    list — that is already spread down the page, and giving it blocks too
+//    would double-count it. A deferred slot renders nothing, so it repeats
+//    nothing.
+const notRepeated = Object.values(AD_SLOTS).filter(
+  (s) => !s.deferred && !s.interleaved && !s.repeat);
+check("every live rail slot repeats down its page", notRepeated.length === 0,
+  notRepeated.map((s) => s.id).join(", "));
+
+// The blocks are disjoint slices of ONE window of `max` rows, so the arithmetic
+// has to close exactly. If max < block*blocks the last block is silently
+// starved; if max > block*blocks the surplus is fetched and never rendered —
+// impressions logged for ads nobody saw.
+const badRepeat = Object.values(AD_SLOTS)
+  .filter((s) => s.repeat)
+  .filter((s) => s.repeat.block < 1 || s.repeat.blocks < 2 || s.max !== s.repeat.block * s.repeat.blocks)
+  .map((s) => `${s.id}: max=${s.max} vs ${s.repeat.block}x${s.repeat.blocks}`);
+check("repeat arithmetic closes", badRepeat.length === 0, badRepeat.join("; "));
+
+const bothRepeatAndInterleaved = Object.values(AD_SLOTS)
+  .filter((s) => s.repeat && s.interleaved).map((s) => s.id);
+check("no slot is both repeated and interleaved", bothRepeatAndInterleaved.length === 0,
+  bothRepeatAndInterleaved.join(", "));
+
+// 10. adSlotBlock PARTITIONS the window — the property the whole "repetitive"
+//     design rests on. If blocks overlapped, one vendor's campaign would appear
+//     several times down a page it was sold once on, and each appearance would
+//     log its own impression. Exercised at every inventory depth from empty to
+//     a full window plus surplus, because the short-inventory cases are the
+//     ones that actually happen today.
+const partitionFaults = [];
+for (const s of Object.values(AD_SLOTS)) {
+  const blocks = s.repeat ? s.repeat.blocks : 1;
+  for (let depth = 0; depth <= s.max + 3; depth++) {
+    const window = Array.from({ length: depth }, (_, i) => `ad${i}`);
+    const out = [];
+    for (let b = 0; b < blocks; b++) out.push(...adSlotBlock(s.id, window, b));
+    const seen = new Set(out);
+    if (seen.size !== out.length) {
+      partitionFaults.push(`${s.id}@${depth}: an ad appears in two blocks`);
+      break;
+    }
+    // Every row the slot fetched must land in some block, up to `max`.
+    const expected = Math.min(depth, s.max);
+    if (out.length !== expected) {
+      partitionFaults.push(`${s.id}@${depth}: rendered ${out.length} of ${expected} fetched`);
+      break;
+    }
+  }
+  // A block index past the configured count must render nothing, not wrap.
+  if (adSlotBlock(s.id, Array.from({ length: s.max }, (_, i) => i), blocks).length !== 0) {
+    partitionFaults.push(`${s.id}: block ${blocks} is out of range but rendered rows`);
+  }
+}
+check("blocks partition the window, never repeat an ad", partitionFaults.length === 0,
+  partitionFaults.slice(0, 4).join("; "));
 
 const deferredSlots = Object.values(AD_SLOTS).filter((s) => s.deferred).map((s) => s.id);
 
 console.table(rows);
 if (deferredSlots.length) console.log(`\ndeferred slots (defined, not rendered): ${deferredSlots.join(", ")}`);
-console.log(`placed:   ${[...placed].sort().join(", ")}`);
-console.log(`badge:    ${[...badge].sort().join(", ")}`);
-console.log(`unplaced: ${[...unplaced].sort().join(", ")}`);
+const repeated = Object.values(AD_SLOTS)
+  .filter((s) => s.repeat)
+  .map((s) => `${s.id} ${s.repeat.blocks}x${s.repeat.block}`);
+console.log(`repeated slots: ${repeated.join(", ")}`);
+console.log(`placed:     ${[...placed].sort().join(", ")}`);
+console.log(`badge:      ${[...badge].sort().join(", ")}`);
+console.log(`fulfilment: ${[...fulfilment].sort().join(", ")}`);
+console.log(`unplaced:   ${[...unplaced].sort().join(", ")}`);
 console.log(
   failures === 0
-    ? `\nPLACEMENT MAP CONSISTENT — ${placed.size} placed, ${badge.size} badge, ${unplaced.size} unplaced of ${AD_TYPES.length}`
+    ? `\nPLACEMENT MAP CONSISTENT — ${placed.size} placed, ${badge.size} badge, ` +
+      `${fulfilment.size} fulfilment, ${unplaced.size} unplaced of ${AD_TYPES.length}`
     : `\n${failures} CHECK(S) FAILED`,
 );
 

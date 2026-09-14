@@ -1,10 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Megaphone, Star } from "lucide-react";
 import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
-import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, type AdSlotId } from "@/lib/adSlots";
+import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
 
 // Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (eligible,
@@ -34,19 +34,36 @@ const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 //
 // `category` (optional) filters serving to ads targeting that category plus
 // untargeted ads — pass a real category context to make targeting take effect.
+//
+// `block` is which repetition of the slot this instance renders (Mitra,
+// 2026-09-13: slots must recur down a page, not sit as one rail at the top).
+// Every instance of the same slot on a page shares ONE fetch — React Query keys
+// on (max, category, types), so mounting three of these is one request — and
+// each renders a DISJOINT slice of it via adSlotBlock. A buyer scrolling the
+// page therefore meets more sponsored positions but never the same campaign
+// twice, and each ad logs exactly one impression. Blocks past the end of the
+// available inventory render nothing rather than looping back to the start.
 export default function SponsoredRail({
-  max = 10, className, category, slot, label,
+  max = 10, className, category, slot, label, block = 0,
 }: {
   max?: number;
   className?: string;
   category?: string | null;
   slot?: AdSlotId;
   label?: string;
+  block?: number;
 }) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const spec = slot ? AD_SLOTS[slot] : null;
-  const { data: ads = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES);
+  const { data: window = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES);
+  // An untyped rail (ProductDetail) has no slot and so no blocks: it is the
+  // whole window, exactly as before. Memoised because adSlotBlock returns a new
+  // array each call, and the impression effect below keys on this identity.
+  const ads = useMemo(
+    () => (slot ? adSlotBlock(slot, window, block) : window),
+    [slot, window, block],
+  );
   const heading = label ?? spec?.label ?? "Sponsored";
   const logged = useRef<Set<string>>(new Set());
 
