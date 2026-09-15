@@ -17,6 +17,49 @@ then `keyword_blocklist`/`flag_patterns`/`conversation_reviews` with the message
 
 ---
 
+## 2026-09-15: Phase 3c requested, NOT started. Two blockers found in Step 0. DB unchanged.
+
+No migration was written or applied and no script was edited. The only DB activity was read-only inspection plus one
+self-rolling-back probe; afterwards `guard_ad_deletion` md5 is `0810623a…` (invoker, unchanged), both tables are in `public`,
+`ad_review_log` has 27 rows, and the latest migration is still `20260915172340`.
+
+**Blocker 1: 3b is not deployed (protocol STOP).** This file recorded 3b as "committed", not "deployed". After `git fetch`:
+Cosora-Admin `origin` has **no** `admin-separation/phase-3b` branch, `c322055` is **not** in `origin/main`, and `origin/main`'s
+panel still queries the tables directly (`FlagLog.tsx` 2, `Reports.tsx` 1, `AdReviewQueue.tsx` 1, 0 RPC calls). If production
+builds from `origin/main`, moving the tables breaks the live flag log, Reports list, add-note and decision history.
+Needed: push + merge 3b, deploy, and confirm the **production bundle** calls `admin_flag_list`/`admin_flag_add`/`admin_ad_review_log_list`.
+
+**Blocker 2: `guard_ad_deletion` precondition fails (Q-15).** Its decision is caller-scoped:
+`if current_user <> 'authenticated' then return old; end if; if public.is_admin() then return old; end if;` then the
+`OLD.id` history check. Under SECURITY DEFINER `current_user` is always `postgres`, so a literal conversion disables the guard.
+Rolled-back probe, deleting reviewed ad `0b015f15…` (owner `a0000004…`, non-admin):
+- CURRENT invoker: owner **42501 refused**; super_admin, service_role and postgres deleted.
+- LITERAL SECDEF, same body: owner **DELETED (guard off)**; others deleted.
+- CANDIDATE SECDEF with bypass `coalesce(current_setting('role', true), 'none') <> 'authenticated'`: owner **42501 refused**;
+  super_admin deleted (inside: `postgres/role=authenticated`), service_role deleted (`role=service_role`), postgres deleted (`role=none`).
+- The cascade path (admin deletes a vendor profile) was inconclusive in all three variants: an unrelated FK 23503 on
+  `vendor_catalog_recompute_queue` stops it first. No function deletes advertisements; the only cascade into `advertisements`
+  is `vendor_id → profiles ON DELETE CASCADE`, and `profiles_delete` is admin-only, so `is_admin()` returns early there in every variant.
+Needs a decision: candidate SECDEF (keeps the brief's SECDEF + V6) or invoker trigger + a SECDEF helper (exact `current_user` semantics).
+
+**Step 0 inventory (for when 3c resumes):**
+- Cosora-Admin `src/` (branch `admin-separation/phase-3b`): 0 direct queries; only comments, generated types and the 4 RPC calls.
+- Non-panel direct references. In Cosora-Admin (the five): `scripts/ad-review-rls.mjs:161-182` (INSERT/DELETE deny + SELECT),
+  `scripts/rls-matrix.mjs:159-190` (insert + forgery), `scripts/chat-pipeline-matrix.mjs:585-596` (support insert + delete),
+  `scripts/drop-chat-fixtures.sql:40`, `scripts/drop-test-admins.sql:5`. **Also in textile-spark-net (not in the brief):**
+  `scripts/ad-demo-campaigns-cleanup.sql:56` (`public.ad_review_log`, breaks), `scripts/admin-separation/02_role_matrix.sql:59`
+  (`sel ad_review_log owner|A` as authenticated, becomes an error after the move), `04_phase3a_rpc_parity.sql` (direct half is valid pre-move only, by design).
+- Buyer/vendor app: no read of either table in `src/`, `supabase/functions/` or `tests/`. Only generated types mention them.
+- Functions referencing the tables: exactly the 7 in the brief. No views. FKs out of `advertisements`: `vendor_id → profiles CASCADE`,
+  `product_id → products SET NULL`, `ad_order_id → ad_orders SET NULL`, `moderated_by → profiles`.
+- Table ACLs still grant anon/authenticated (admin_flags `arwdDxtm`, ad_review_log `rDxtm`): revoke in 3c (Q-13).
+- Verification plan for V2: a new RPC-only matrix `05` with **fixed** fixture timestamps (the 3a harness seeds with `now()`, so its
+  flag md5s differ per run), resolving tables via `to_regclass('admin.…')` or `public.…`. Run it before and after the move, expecting exactly one
+  changed cell (owner-vendor c5 rows → 42501). Swap `02` check 2 to the RPC so `02` stays comparable across the move.
+
+**NEXT STEP:** Mitra: (1) deploy 3b and confirm the production bundle, (2) decide the `guard_ad_deletion` approach.
+Then re-run 3c from Step 0.
+
 ## 2026-09-15: Phase 3b complete (in Cosora-Admin). HARD STOP: 3c needs Mitra's explicit, independent go.
 
 Mitra's go for 3b was given. The panel is off the tables: `FlagLog.tsx` (read + add), `Reports.tsx` (newest 25) and
