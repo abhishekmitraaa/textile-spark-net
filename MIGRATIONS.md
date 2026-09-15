@@ -103,6 +103,38 @@ list. That is the whole procedure.
 
 ---
 
+## Admin-schema separation (all in textile-spark-net)
+
+Moves admin identity, audit and moderation data into a locked-down `admin`
+Postgres schema in the same project. Spec: `documentation/admin-separation-spec.md`.
+Rolling state: `documentation/admin-separation-context.md`.
+
+```
+    repo              file                                                    live version
+12  textile-spark-net 20260915090000_admin_schema_foundation.sql              20260914193629
+13  textile-spark-net 20260915140000_harden_admin_grants_q17.sql              20260915164541
+14  textile-spark-net 20260915150000_flip_admin_identity_to_admin_users.sql   20260915165030
+15  textile-spark-net 20260915170000_admin_flags_and_review_log_rpcs.sql      20260915172340
+```
+
+- **Order within the set matters and the timestamps encode it.** 2b (`…150000`)
+  reads `admin.admin_users`, created by `…090000`; 3a (`…170000`) calls
+  `public.is_admin()`, which 2b repointed.
+- **Buyer depends on admin, again:** `…170000` wraps `public.admin_flags`
+  (created by Cosora-Admin `20260717140000_admin_panel_schema.sql`) and
+  `public.ad_review_log` (created by Cosora-Admin
+  `20260912120000_ad_campaign_state_model.sql`). Apply those first, which
+  timestamp order already does.
+- **Live version ≠ filename.** Applied through the Supabase MCP, which stamps its
+  own UTC version. `supabase_migrations.schema_migrations` records the live
+  column above; the filename timestamps are the ordering authority.
+- **Verification artifacts live in `scripts/admin-separation/`.** Each file is one
+  self-rolling-back SQL statement (run as postgres, e.g. MCP `execute_sql`). Re-run
+  `01`–`03` after any later admin-separation migration; `04` is valid only while
+  `admin_flags`/`ad_review_log` are still in `public`.
+
+---
+
 ## Two more things that bite
 
 **1. `create or replace function` cannot change a return type, and a changed
