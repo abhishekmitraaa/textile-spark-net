@@ -115,7 +115,17 @@ Rolling state: `documentation/admin-separation-context.md`.
 13  textile-spark-net 20260915140000_harden_admin_grants_q17.sql              20260915164541
 14  textile-spark-net 20260915150000_flip_admin_identity_to_admin_users.sql   20260915165030
 15  textile-spark-net 20260915170000_admin_flags_and_review_log_rpcs.sql      20260915172340
+16  textile-spark-net 20260916090000_move_admin_flags_and_review_log_to_admin.sql 20260915192048
 ```
+
+- **`…090000` (Phase 3c) moves `admin_flags` and `ad_review_log` into `admin`.** From then on any
+  script, seed or cleanup that names them must say `admin.admin_flags` / `admin.ad_review_log`
+  and run as postgres / service role; client roles cannot reach them at all. It also makes
+  `guard_ad_deletion()` SECURITY DEFINER, with its caller bypass keyed on
+  `current_setting('role', true)`. Do not revert that line to `current_user`: inside a definer
+  function `current_user` is always postgres, and the guard would silently stop guarding.
+- **The committed 3c file equals what was applied** (whitespace-insensitive md5 of the file
+  and of `supabase_migrations.schema_migrations.statements`: `616be0e8…`).
 
 - **Order within the set matters and the timestamps encode it.** 2b (`…150000`)
   reads `admin.admin_users`, created by `…090000`; 3a (`…170000`) calls
@@ -129,9 +139,11 @@ Rolling state: `documentation/admin-separation-context.md`.
   own UTC version. `supabase_migrations.schema_migrations` records the live
   column above; the filename timestamps are the ordering authority.
 - **Verification artifacts live in `scripts/admin-separation/`.** Each file is one
-  self-rolling-back SQL statement (run as postgres, e.g. MCP `execute_sql`). Re-run
-  `01`–`03` after any later admin-separation migration; `04` is valid only while
-  `admin_flags`/`ad_review_log` are still in `public`.
+  self-rolling-back SQL statement (run as postgres, e.g. MCP `execute_sql`). After any later
+  admin-separation migration, re-run `01` (accessor parity), `02` (role matrix), `03`
+  (mirror), `05` (deterministic RPC matrix), `06` (ad deletion matrix) and `07` (audit
+  write); `05`–`07` resolve the tables in whichever schema holds them. `04` is a
+  pre-Phase-3c artifact and no longer runs.
 
 ---
 

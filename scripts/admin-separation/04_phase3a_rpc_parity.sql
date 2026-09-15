@@ -1,6 +1,14 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN-SCHEMA SEPARATION HARNESS 04 — Phase 3a RPC parity.
 --
+-- ╔═ PRE-MOVE ARTIFACT — DO NOT RUN AFTER PHASE 3c (2026-09-16) ═════════════╗
+-- ║ This harness compares the RPCs with DIRECT queries on public.admin_flags / ║
+-- ║ public.ad_review_log. Phase 3c moved both tables into the admin schema, so ║
+-- ║ those direct queries no longer resolve (and client roles cannot reach the  ║
+-- ║ tables at all). It is kept as the record of what verified Phase 3a         ║
+-- ║ (0 mismatches, mutation-tested). Post-3c, use 05_rpc_matrix_deterministic. ║
+-- ╚════════════════════════════════════════════════════════════════════════════╝
+--
 -- For every persona, runs each panel operation TWICE — the current direct query
 -- on the still-public table, and the new RPC — and compares the outcomes:
 --
