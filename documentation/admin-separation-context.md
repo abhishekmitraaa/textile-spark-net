@@ -17,6 +17,15 @@ then `keyword_blocklist`/`flag_patterns`/`conversation_reviews` with the message
 
 ---
 
+## 2026-09-15: Phase 3b complete (in Cosora-Admin). HARD STOP: 3c needs Mitra's explicit, independent go.
+
+Mitra's go for 3b was given. The panel is off the tables: `FlagLog.tsx` (read + add), `Reports.tsx` (newest 25) and
+`AdReviewQueue.tsx` (decision history) now call `admin_flag_list` / `admin_flag_add` / `admin_ad_review_log_list`.
+In a real browser there were 0 direct `/rest/v1/admin_flags|ad_review_log` requests and the render data was byte-identical before and after.
+No DB change. Branch `admin-separation/phase-3b` in Cosora-Admin (committed). Details:
+`cosora-admin/documentation/admin-separation-context.md` and its `CHANGELOG.md`. Cosora-Admin scripts that still hit the
+tables directly (RLS tests, fixture cleanup) are listed there and move with 3c. **3c (the irreversible `SET SCHEMA`) is gated.**
+
 ## 2026-09-15: Phase 3a complete. HARD STOP: 3b needs Mitra's explicit, independent go.
 
 **Do not start 3b because checks are green.** The gate exists for an external check before the panel is rewired.
