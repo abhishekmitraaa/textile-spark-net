@@ -1,11 +1,11 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { img } from "@/lib/listingProducts";
 import {
   useBrands,
-  followBrand as followLocal,
   unfollowBrand as unfollowLocal,
   hideBrand as hideLocal,
   type Brand,
@@ -110,7 +110,17 @@ export function useFollowing(): UseFollowingResult {
 
   const follow = useCallback(
     async (vendorId: string) => {
-      if (!signedIn) return followLocal(vendorId);
+      // Signed out there is nowhere real to put a follow. followBrand() patches
+      // a brand already in the local list and cannot insert one, so since the
+      // seed was removed (Master Prompt 9) calling it here would have left the
+      // button looking like it worked while doing nothing at all. Say so
+      // instead.
+      if (!signedIn) {
+        toast.info("Sign in to follow brands", {
+          description: "Following is saved to your account.",
+        });
+        return;
+      }
       await supabase.from("follows").insert({ follower_id: user!.id, vendor_id: vendorId });
       qc.invalidateQueries({ queryKey: ["follows", user!.id] });
     },
