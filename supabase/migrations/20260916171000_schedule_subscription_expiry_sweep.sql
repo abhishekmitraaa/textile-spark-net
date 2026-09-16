@@ -1,0 +1,67 @@
+-- Schedule the subscription-expiry sweep.
+--
+-- `public.expire_subscriptions()` has existed since 20260716120100 and was never
+-- called by anything: not from cron.job, not from an edge function. Its own
+-- header called it an "optional sweeper (a cron COULD call it)" — nothing ever
+-- did. So a paid subscription that lapsed stayed `status = 'active'` forever,
+-- and `vendor_profiles.plan_id` / `plan_expires_at` kept caching a plan that had
+-- ended.
+--
+-- ── What this is NOT ───────────────────────────────────────────────────────
+-- This is not an entitlement or security fix, and the sweep is not on the
+-- enforcement path. `get_vendor_plan()` and all four plan-enforcement triggers
+-- (enforce_product_cap, enforce_lead_cap, enforce_catalogue_plan,
+-- enforce_ad_location_scope) independently re-check
+-- `status = 'active' AND current_period_end > now()` at read/write time, so a
+-- lapsed vendor was already correctly held to Free limits regardless of the
+-- stale flag. Verified live before this migration: vendor
+-- 22222222-2222-2222-2222-222222222222 read `status = 'active'`, `plan_id =
+-- 'gold'`, `current_period_end = 2026-08-16`, while `get_vendor_plan()` for that
+-- same vendor already returned `effective_plan_id = 'free'`.
+--
+-- What the missing sweep actually broke is anything that trusts the RAW columns
+-- instead of going through `get_vendor_plan()`: Cosora-Admin's Subscriptions
+-- page reads `vendor_subscriptions` directly, so a lapsed subscription still
+-- displayed as "Active" with a period end in the past, and any revenue query
+-- filtered on `status = 'active'` would overcount.
+--
+-- Nothing in this file changes `expire_subscriptions()`, `get_vendor_plan()` or
+-- any enforcement trigger. They are already correct; this only arranges for the
+-- existing function to be called.
+--
+-- ── Cadence: daily, not the ads sweep's */5 ────────────────────────────────
+-- `ads-schedule-sweep` runs every five minutes because it gates live paid
+-- DELIVERY — it promotes scheduled campaigns to active and expires finished
+-- ones, so lateness there means a vendor's money is being spent (or not spent)
+-- incorrectly, minute by minute.
+--
+-- This sweep corrects a denormalised reporting column that no entitlement
+-- decision reads. Its only consumers are human-facing: an admin looking at the
+-- Subscriptions list, and revenue counts. Daily is sufficient for that and keeps
+-- ~280 pointless wake-ups a day off the scheduler. The trade-off, stated so it
+-- is reviewable rather than discovered: a subscription that lapses just after a
+-- run can read "Active" in the admin list for up to ~24h. If that is ever too
+-- coarse for billing follow-up, the cadence is the only thing to change here.
+--
+-- 00:15 UTC — off the top of the hour, where the other daily maintenance in this
+-- project sits, and away from the */5 jobs' alignment.
+--
+-- Naming and structure mirror `ads-schedule-sweep` exactly (see
+-- 20260912120200_ad_eligibility_targeting_and_sweep.sql): an unschedule-if-exists
+-- guard so the migration is re-runnable, then `cron.schedule` with the body in a
+-- `$cron$` block.
+--
+-- Grants need no change: `expire_subscriptions()` is revoked from
+-- public/anon/authenticated and granted to service_role, exactly like
+-- `sweep_ad_schedules()`, and pg_cron runs the job as the scheduling superuser.
+
+select cron.unschedule('subscription-expiry-sweep')
+ where exists (select 1 from cron.job where jobname = 'subscription-expiry-sweep');
+select cron.schedule('subscription-expiry-sweep', '15 0 * * *', $cron$ select public.expire_subscriptions(); $cron$);
+
+-- Run it once now, so rows that are already stale are corrected when this
+-- migration is applied rather than at the first scheduled tick (which, on a
+-- daily cadence, could be nearly a day away). Idempotent by construction: the
+-- function only touches rows whose period has already ended, so re-running this
+-- migration is a no-op once they are expired.
+select public.expire_subscriptions();
