@@ -5,6 +5,10 @@
 -- real vendors' real products without anyone having paid for them, which is
 -- fine for a staging walkthrough and not fine in front of paying customers.
 --
+-- Run as postgres / service role (SQL editor). Since admin-schema separation
+-- Phase 3c (2026-09-16) the review log is admin.ad_review_log, a schema no client
+-- role can reach; the reference below is schema-qualified accordingly.
+--
 -- ad_review_log has ON DELETE CASCADE from advertisements, so deleting the
 -- campaigns takes their decision history with them. Two things do NOT cascade
 -- and are removed explicitly below:
@@ -53,7 +57,7 @@ where exists (
 delete from public.notifications n
 where n.kind like 'ad_%'
   and exists (
-    select 1 from public.ad_review_log l
+    select 1 from admin.ad_review_log l
      join public.advertisements a on a.id = l.ad_id
     where a.title like '%[demo]'
       and a.vendor_id = n.profile_id
