@@ -43,8 +43,10 @@
 -- run can read "Active" in the admin list for up to ~24h. If that is ever too
 -- coarse for billing follow-up, the cadence is the only thing to change here.
 --
--- 00:15 UTC — off the top of the hour, where the other daily maintenance in this
--- project sits, and away from the */5 jobs' alignment.
+-- 03:29 UTC, inside the window the project's existing daily housekeeping already
+-- uses — `prune-query-embedding-cache` at 03:17 and `prune-embed-rate-limit` at
+-- 03:23 (checked in cron.job before writing this) — and, like them, off the
+-- :00/:30 marks.
 --
 -- Naming and structure mirror `ads-schedule-sweep` exactly (see
 -- 20260912120200_ad_eligibility_targeting_and_sweep.sql): an unschedule-if-exists
@@ -53,11 +55,12 @@
 --
 -- Grants need no change: `expire_subscriptions()` is revoked from
 -- public/anon/authenticated and granted to service_role, exactly like
--- `sweep_ad_schedules()`, and pg_cron runs the job as the scheduling superuser.
+-- `sweep_ad_schedules()`, and pg_cron runs a job as the role that scheduled it
+-- (this migration's owner), the same way every other job in cron.job runs.
 
 select cron.unschedule('subscription-expiry-sweep')
  where exists (select 1 from cron.job where jobname = 'subscription-expiry-sweep');
-select cron.schedule('subscription-expiry-sweep', '15 0 * * *', $cron$ select public.expire_subscriptions(); $cron$);
+select cron.schedule('subscription-expiry-sweep', '29 3 * * *', $cron$ select public.expire_subscriptions(); $cron$);
 
 -- Run it once now, so rows that are already stale are corrected when this
 -- migration is applied rather than at the first scheduled tick (which, on a
