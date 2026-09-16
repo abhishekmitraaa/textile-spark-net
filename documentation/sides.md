@@ -93,24 +93,36 @@ the demand side of India's fashion and textile supply chain.
   tagged product's real review data.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
-- **Following shows seven fabricated brands to every signed-out visitor.** `followingStore.ts`
-  `load()` returns a hardcoded `SEED` ("prezel", "Maison Lyra", "LUNE" selling "Mickey Mouse
-  Chuck" at "$8.36", …) whenever localStorage is empty, and `useFollowing()`
-  (`queries/follows.ts`) deliberately falls back to that store when signed out — so it reaches
-  Following, Following → View all, the vendor page's follow state and the new-brands carousel.
-  It is worse than the Recently Viewed seed was: `load()` also treats an *empty* array as
-  missing, so a visitor who unfollows every brand gets all seven back on the next load.
-  Signed-in buyers are unaffected (DB-backed via `follows`). Same fix shape as Recently
-  Viewed: an empty list, a real empty state, and dropping non-UUID ids from storage.
-- **My Quotes' vendor chat opens with a scripted conversation.** `VendorChatModal.tsx` seeds
-  two hardcoded messages ("Hello! Thank you for your interest in our quote…" / "Hi! I wanted
-  to discuss the MOQ…") on every open, rendered from `MyQuotes.tsx`. The buyer's half of that
-  exchange is words they never typed.
+- **A buyer cannot delete their own chat message, and neither can an admin.** `messages` has
+  no DELETE policy at all, so a PostgREST delete returns success with zero rows removed for
+  every role. Sensible as an audit default for a moderated chat, but it means anything written
+  to a thread — including a test message — can only be removed with service_role. Found while
+  verifying the quote chat on 2026-09-16; two clearly-labelled test rows are still in the demo
+  buyer's thread for that reason.
 - **A vendor's public page invents what the vendor left blank.** On `/vendor/:id`, an empty
   owner name, phone, email, website, address, GSTIN or PAN is replaced by a hardcoded demo
   value ("Mr. K.S. Tomar", a Gwalior address, a GSTIN that is no one's), and so are the
   About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
   decision (Master Prompt 8).
+
+### Fixed 2026-09-16 (Master Prompt 9)
+- **Following no longer invents brands.** `followingStore.ts` served seven fabricated brands
+  ("prezel", "Maison Lyra", "LUNE" selling a "Mickey Mouse Chuck" for "$8.36", …) — four of
+  them pre-marked as already followed — to every signed-out visitor, across the Following
+  feed, Following → View all, the vendor follow chip and the new-brands carousel. Their ids
+  were not vendor ids, so every tile linked to a `/vendor/:id` with no vendor behind it. The
+  seed is gone, an empty history renders the real empty state that was already written, and
+  rows whose id is not a UUID are dropped from storage on load. The specific
+  unfollow-everyone bug is fixed too: `load()` treated an empty array as missing, so
+  unfollowing all seven brought all seven back — an intentionally empty list now stays empty.
+  Signed-in buyers were never affected (DB-backed via `follows`) and still aren't.
+- **The quote chat is a real conversation.** `VendorChatModal.tsx` reset to two hardcoded
+  messages on every open — one of them attributed to the buyer, words they never typed — and
+  anything typed into it was component state that vanished on close. It now uses the same
+  `conversations` / `messages` tables and the same `useChatThread()` hook as `/chats/:id`, so
+  the quote chat and the main chat are one thread rather than two systems. Loading, empty and
+  populated are three distinct states, a message survives close → reopen, and the fabricated
+  "Online now" badge is gone (nothing in this project tracks presence).
 
 ### Fixed 2026-09-11 (Master Prompt 8)
 - **Vendor profile pages render again.** Every `/vendor/:id` was blank on the live site

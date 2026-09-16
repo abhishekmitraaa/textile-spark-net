@@ -885,6 +885,24 @@ context. Each exposes a `useX()` hook plus mutation functions: `savedStore`,
 `followingStore`, `brandFollowStore`, `preferencesStore`, `profileStore`,
 `recentlyViewedStore`, `notificationsStore`, `quotesStore`, `callStore`.
 
+**`followingStore` is the SIGNED-OUT fallback only** (2026-09-16). Signed in, `useFollowing()`
+(`queries/follows.ts`) reads and writes the `follows` table and never consults this store. It
+carries no seed: the seven invented brands it used to return for an empty list are gone, and
+`load()` drops any row whose id is not a UUID (a real follow is keyed by `vendor_profiles.id`)
+and rewrites storage. The empty-array check went with them — `Array.isArray(parsed) &&
+parsed.length` treated "I unfollowed everything" as "nothing stored" and resurrected the seed,
+so an intentionally empty list now stays empty. One consequence worth knowing: `followBrand()`
+patches a row already in the list and cannot insert one, so with no seed a signed-out visitor
+has nothing to patch — `useFollowing().follow()` therefore asks them to sign in instead of
+calling it and appearing to work.
+
+**The quote chat is not a second messaging system** (2026-09-16). `VendorChatModal`
+(My Quotes) uses the same `useChatThread()` hook, the same `conversations` / `messages`
+tables and the same find-or-create-by-user-pair behaviour as `/chats/:id`, keyed on the
+quote's `vendor_id`. A message sent from either surface appears in the other because they are
+one thread. Its previous two hardcoded messages — one written in the buyer's own voice — are
+gone, along with an "Online now" badge that nothing in this project could support.
+
 **Recently Viewed has two backings, and says which one is authoritative** (2026-09-10).
 Signed in → the `recently_viewed` table: StoreSync calls `setRecentUser(uid)`, the store is
 replaced with the DB rows (hydrated into cards via `fetchProductCardsByIds`, which reads
