@@ -116,7 +116,15 @@ Rolling state: `documentation/admin-separation-context.md`.
 14  textile-spark-net 20260915150000_flip_admin_identity_to_admin_users.sql   20260915165030
 15  textile-spark-net 20260915170000_admin_flags_and_review_log_rpcs.sql      20260915172340
 16  textile-spark-net 20260916090000_move_admin_flags_and_review_log_to_admin.sql 20260915192048
+17  textile-spark-net 20260921090000_chat_moderation_rpcs.sql                20260921164254
 ```
+
+- **`…20260921090000` (Phase 4a) is additive.** It adds 12 SECURITY DEFINER RPCs over
+  `keyword_blocklist`, `flag_patterns`, `chat_block_reasons`, `conversation_reviews` and
+  `account_suspensions`, which are still in `public`. Each gate reproduces the table's current
+  RLS. Nothing calls them until 4b switches the panel. The committed file equals what was applied
+  (whitespace-insensitive md5 `9802c415…`). Its parity harness,
+  `scripts/admin-separation/08_phase4a_rpc_parity.sql`, is valid only until 4c moves the tables.
 
 - **`…090000` (Phase 3c) moves `admin_flags` and `ad_review_log` into `admin`.** From then on any
   script, seed or cleanup that names them must say `admin.admin_flags` / `admin.ad_review_log`
