@@ -83,12 +83,23 @@ async function contextAs(browser: BrowserContext["browser"], email: string) {
 let support: { db: SupabaseClient; id: string };
 let convId: string;
 
+/**
+ * The five chat-moderation tables are admin.* since admin-schema separation
+ * Phase 4c (2026-09-21) and unreachable over REST, so moderation state is read
+ * and written through the same admin RPCs the panel uses.
+ */
+async function removeBlockedTerm(term: string) {
+  const { data } = await support.db.rpc("admin_keyword_list");
+  for (const k of data ?? []) {
+    if (k.term === term) await support.db.rpc("admin_keyword_remove", { p_id: k.id });
+  }
+}
+
 async function unlockConversation() {
-  const { data: pending } = await support.db
-    .from("conversation_reviews")
-    .select("id")
-    .eq("conversation_id", convId)
-    .eq("status", "pending");
+  const { data: pending } = await support.db.rpc("admin_conversation_review_list", {
+    p_status: "pending",
+    p_conversation_id: convId,
+  });
   for (const r of pending ?? []) {
     await support.db.rpc("resolve_conversation_review", {
       p_review_id: r.id,
@@ -212,7 +223,7 @@ test("T5.1/T5.2 locked thread: both sides show banner, dead composer, no call bu
 // ─────────────────────────────────────────────────────────────────────────────
 test("T2.1 blocklisted send: error toast, draft retained, no message row", async ({ browser }) => {
   const term = "chatfx-zzuiblocked";
-  await support.db.from("keyword_blocklist").insert({ term, added_by: support.id });
+  await support.db.rpc("admin_keyword_add", { p_term: term });
   await unlockConversation();
 
   const buyer = await contextAs(browser, LOGIN.buyerA);
@@ -239,7 +250,7 @@ test("T2.1 blocklisted send: error toast, draft retained, no message row", async
   const after = await support.db.from("messages").select("id").eq("conversation_id", convId);
   expect(after.data?.length, "no message row may be written").toBe(before.data?.length);
 
-  await support.db.from("keyword_blocklist").delete().eq("term", term);
+  await removeBlockedTerm(term);
   await buyer.ctx.close();
 });
 

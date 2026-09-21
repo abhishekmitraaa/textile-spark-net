@@ -117,8 +117,16 @@ Rolling state: `documentation/admin-separation-context.md`.
 15  textile-spark-net 20260915170000_admin_flags_and_review_log_rpcs.sql      20260915172340
 16  textile-spark-net 20260916090000_move_admin_flags_and_review_log_to_admin.sql 20260915192048
 17  textile-spark-net 20260921090000_chat_moderation_rpcs.sql                20260921164254
+18  textile-spark-net 20260921190000_move_chat_moderation_tables_to_admin.sql 20260921181400
 ```
 
+- **`…20260921190000` (Phase 4c) moves the five chat-moderation / suspension tables into `admin`.**
+  The tables are `keyword_blocklist`, `flag_patterns`, `chat_block_reasons`, `conversation_reviews` and `account_suspensions`.
+  From then on any script, seed or cleanup that names them must say `admin.<table>` and run as postgres. No client role can reach them over REST, and neither can service_role.
+  The migration repoints 17 function bodies (the 5 legacy SECURITY DEFINER functions and the 12 4a RPCs) with a pure
+  `public.<t>` → `admin.<t>` substitution applied in-database. Each body is md5-guarded both ways against the definitions inspected at Step 0.
+  The committed file equals what was applied (whitespace-insensitive md5 `c22d7a9c…`).
+  Rollback is commented in the file. Harness `08` is pre-move only; post-move, run `09` (messaging/moderation/FK) and `10` (RPC matrix).
 - **`…20260921090000` (Phase 4a) is additive.** It adds 12 SECURITY DEFINER RPCs over
   `keyword_blocklist`, `flag_patterns`, `chat_block_reasons`, `conversation_reviews` and
   `account_suspensions`, which are still in `public`. Each gate reproduces the table's current

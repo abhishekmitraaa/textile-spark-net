@@ -10,11 +10,57 @@ audit, decisions and moderation config move into a dedicated `admin` Postgres sc
 revoked from `anon`/`authenticated` and NOT exposed to PostgREST. Approvals stay atomic and DB-enforced.
 Phases: 1 schema foundation ✅ → 2 identity flip ✅ → 3 `admin_flags` + `ad_review_log` behind the wall ✅ (3a RPCs · 3b panel ·
 3c move) → 4 `chat_block_reasons`/`account_suspensions`/`keyword_blocklist`/`flag_patterns`/`conversation_reviews` with the
-message-trigger repoint (4a RPCs ✅ **pending Mitra's go** · 4b panel · 4c move) → 5 retire `profiles` as admin authority.
+message-trigger repoint (4a RPCs ✅ · 4b panel ✅ · 4c move ✅ **pending Mitra's independent verification**) → 5 retire `profiles` as admin authority.
 
 **Spec:** `documentation/admin-separation-spec.md` (FROZEN 2026-09-15; Q-17 closed, Q-12 decided, Q-4 decided, Q-15 closed, Q-13 partly closed).
 
 ---
+
+## 2026-09-22: Phase 4c complete (tables moved). HARD STOP: Phase 4 is complete only after Mitra's independent verification.
+
+**Preconditions (Step 0):**
+- **A.** Prod `cosora-admin.vercel.app` bundle `index--JJm6wRt.js`: 12 RPC names and 0 `.from(<five>)` (matcher positive control fires). A browser on every affected screen made 0 table requests.
+- **B.** main holds 4a (`a15890e`, tsn) and 4b (`a0218a6`, Cosora-Admin).
+
+**Step 0 (live):**
+- Rows are 0/3/7/1/0.
+- Exactly 17 bodies name the tables: 5 legacy SECDEF (`search_path=public`, all already `public.`-qualified) and the 12 4a RPCs.
+- `regex_probe` reads none of them.
+- Nothing else refers to the tables: no views, defaults, cron jobs, publications, other tables' policies, realtime subscriptions, app `src` or edge functions.
+
+**Applied:** `20260921190000_move_chat_moderation_tables_to_admin` (live `20260921181400`); file == applied (`c22d7a9c…`).
+- All five tables are `admin.*` with ACL `{postgres, service_role}`. RLS is on, and the 15 policies and 13 FKs are intact.
+- No client USAGE on `admin`. REST gives 404 PGRST205, and 406 PGRST106 with `Accept-Profile: admin`.
+- 17 bodies repointed by in-DB substitution, md5-guarded pre and post. Rollback is commented in the file.
+
+**Verification:**
+- V1: placement and REST as above; grants gone.
+- V2/V3/V5: harness `09` 15/15 (messaging, reports, resolve, suspend/reinstate, refusals, SET NULL/CASCADE/23503). Mutation (both message triggers neutered) fails exactly M1 and M2.
+- V4: harness `10` 0/140 changed vs 4a.
+- `02`: new baseline (checks 1 and 4 on the RPCs).
+- V6: advisors identical to post-4a.
+- V7: types −249/repo, typecheck 0 (harness fires), both builds pass.
+- V8:
+  - `chat-moderation-behaviour` 17/17 and `contact-gate-check` 7/7, live.
+  - `chat-moderation-matrix`: converted cases 22/22 with demo-admin + demo-buyer. The 2 buyer rows on public `conversations`/`messages` are correct participant access.
+  - `chat-pipeline-matrix`: new helpers and T7.7 exercised (PGRST205 ×3).
+  - `drop-chat-fixtures.sql` ran on `admin.*` cleanly.
+  - The two tsn specs are type-checked (errors unchanged, none on changed lines).
+  - No script reads the five over REST (T7.7's `.from(table)` is the intended negative test).
+- Not run: the full `chat-pipeline-matrix`, `chat-moderation-matrix` and the two specs. They need seeded `rlstest-*`/`chatfx-*` logins in prod (not seeded, as in 3c).
+- Every verification row was removed; live data is 0/3/7/1/0, the demo thread 4 messages, 42 notifications.
+
+**Harnesses:**
+- `08` is pre-move only.
+- Post-move: `09` messaging+FK and `10` RPC matrix.
+- Pitfall: `pg_get_functiondef` output depends on search_path, so pin it before md5-comparing.
+
+**Found and fixed:** `chat-moderation-matrix.mjs` called `resolve_conversation_review` with `p_resolution`, not `p_verdict`. That was PGRST202 for every role, which the matrix scored as "passed auth".
+
+**Carried state for Phase 5:**
+- Admin identity writes still go through `public.profiles`, mirrored into `admin.admin_users`.
+- The 5 legacy chat functions keep `search_path=public` (pinned, not `''`).
+- Branches `admin-separation/phase-4c` exist in both repos and are not merged.
 
 ## 2026-09-21: Phase 4a complete (RPCs, additive). HARD STOP: wait for Mitra's independent go before 4b.
 

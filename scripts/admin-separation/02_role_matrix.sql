@@ -26,6 +26,19 @@
 -- [anon] is_admin()=false admin_role()=null | sel chat_block_reasons R{su,sa}=0 | sel ad_review_log owner|A=0 | upd categories A=0 | upd chat_block_reasons R{sa}=0 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support=0 | self->super_admin=0 | rpc regex_probe R{su,sa}->42501
 -- Counts depend on live data (chat_block_reasons=7, ad_review_log=27 at baseline).
 --
+-- CHANGED IN PHASE 4c (2026-09-21): checks 1 and 4 were a direct SELECT / UPDATE on
+-- public.chat_block_reasons, which moved to admin.chat_block_reasons in 4c and is
+-- unreachable by client roles. They now call the 4a RPCs that front the same
+-- policies: check 1 = admin_block_reason_list() (S = support/super_admin), check 4 =
+-- admin_block_reason_update(cbr) with no field changed (SA = super_admin), the
+-- no-op equivalent of the old `set id = id`. Allowed cells are unchanged (7 / 1);
+-- a denied cell that used to read 0 rows now reads ->42501 (the RPC refuses instead
+-- of RLS filtering), exactly the 4a DENIED-BOTH relation. New baseline (2026-09-21, post-4c):
+-- [super_admin] is_admin()=true admin_role()=super_admin | rpc chat_block_reasons list S=7 | rpc admin_ad_review_log_list A=2 | upd categories A=1 | rpc chat_block_reasons update SA=1 | upd vendor_profiles(other) R{sa,vo}=1 | promote other->support=1 | self->super_admin=1 | rpc regex_probe R{su,sa}=1
+-- [support(in-txn)] is_admin()=true admin_role()=support | rpc chat_block_reasons list S=7 | rpc admin_ad_review_log_list A=2 | upd categories A=1 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support->42501 | self->super_admin->42501 | rpc regex_probe R{su,sa}=1
+-- [buyer] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support=0 | self->super_admin->42501 | rpc regex_probe R{su,sa}->42501
+-- [anon] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support=0 | self->super_admin=0 | rpc regex_probe R{su,sa}->42501
+--
 -- Pitfall already hit once: never probe an RPC as `count(*) from (select rpc()) s`
 -- — the planner drops the unused column and the function is never called.
 --
@@ -40,7 +53,7 @@ declare
   vp  uuid;
   logad uuid;
   personas text[] := array['super_admin', 'support(in-txn)', 'buyer', 'anon'];
-  labels text[] := array['sel chat_block_reasons R{su,sa}', 'rpc admin_ad_review_log_list A', 'upd categories A', 'upd chat_block_reasons R{sa}', 'upd vendor_profiles(other) R{sa,vo}', 'promote other->support', 'self->super_admin', 'rpc regex_probe R{su,sa}'];
+  labels text[] := array['rpc chat_block_reasons list S', 'rpc admin_ad_review_log_list A', 'upd categories A', 'rpc chat_block_reasons update SA', 'upd vendor_profiles(other) R{sa,vo}', 'promote other->support', 'self->super_admin', 'rpc regex_probe R{su,sa}'];
   p text; who uuid; n int; i int; t text; out text := '';
 begin
   select id into vp from public.vendor_profiles where id <> bu order by id limit 1;
@@ -66,10 +79,10 @@ begin
         if i = 0 then
           out := out || ' is_admin()=' || public.is_admin() || ' admin_role()=' || coalesce(public.admin_role()::text, 'null');
           raise exception using errcode = 'P0098';
-        elsif i = 1 then execute 'select count(*) from public.chat_block_reasons' into n;
+        elsif i = 1 then execute 'select count(*) from (select x.id from public.admin_block_reason_list() x) s' into n;
         elsif i = 2 then execute format('select count(*) from (select x.id from public.admin_ad_review_log_list(%L) x) s', logad) into n;
         elsif i = 3 then execute format('update public.categories set id = id where id = %L', cat); get diagnostics n = row_count;
-        elsif i = 4 then execute format('update public.chat_block_reasons set id = id where id = %L', cbr); get diagnostics n = row_count;
+        elsif i = 4 then execute format('select count(*) from (select x.id from public.admin_block_reason_update(%L) x) s', cbr) into n;
         elsif i = 5 then execute format('update public.vendor_profiles set id = id where id = %L', vp); get diagnostics n = row_count;
         elsif i = 6 then execute format('update public.profiles set is_admin = true, admin_role = %L where id = %L', 'support', vp); get diagnostics n = row_count;
         elsif i = 7 then execute 'update public.profiles set is_admin = true, admin_role = ''super_admin'' where id = auth.uid()'; get diagnostics n = row_count;

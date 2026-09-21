@@ -74,8 +74,11 @@ test.beforeAll(async () => {
 });
 
 test.afterAll(async () => {
-  const { data: pending } = await support
-    .from("conversation_reviews").select("id").eq("conversation_id", convId).eq("status", "pending");
+  // conversation_reviews is admin.* since admin-schema separation Phase 4c; read it via the admin RPC.
+  const { data: pending } = await support.rpc("admin_conversation_review_list", {
+    p_status: "pending",
+    p_conversation_id: convId,
+  });
   for (const r of pending ?? []) {
     await support.rpc("resolve_conversation_review", { p_review_id: r.id, p_verdict: "resumed", p_resume: true });
   }

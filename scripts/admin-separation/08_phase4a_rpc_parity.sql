@@ -7,6 +7,7 @@
 -- ║ chat_block_reasons, conversation_reviews and account_suspensions as the    ║
 -- ║ panel does today. After Phase 4c moves them, the direct half no longer     ║
 -- ║ resolves by design; keep this file as the record of what verified 4a.      ║
+-- ║ Moved 2026-09-21 (Phase 4c): post-move, run 10_phase4c_rpc_matrix.sql.     ║
 -- ╚════════════════════════════════════════════════════════════════════════════╝
 --
 -- For every persona, runs each panel operation TWICE — the current direct query

@@ -112,11 +112,12 @@ async function setConversation(status) {
       p_reported_reason: "zz-contact-gate-check",
     });
   } else {
-    const { data: pending } = await admin.db
-      .from("conversation_reviews")
-      .select("id")
-      .eq("conversation_id", data.id)
-      .eq("status", "pending");
+    // conversation_reviews is admin.* since admin-schema separation Phase 4c
+    // (2026-09-21), unreachable over REST; read it through the admin RPC.
+    const { data: pending } = await admin.db.rpc("admin_conversation_review_list", {
+      p_status: "pending",
+      p_conversation_id: data.id,
+    });
     for (const r of pending ?? []) {
       await admin.db.rpc("resolve_conversation_review", {
         p_review_id: r.id,

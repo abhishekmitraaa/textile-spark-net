@@ -1,3 +1,30 @@
+- 2026-09-22 (Admin-schema separation · Phase 4c, the move): **The five chat-moderation and suspension tables now live in the `admin` schema, unreachable by the public app's key. Buyer/vendor chat still blocks, flags and reports exactly as before, and the admin panel and every moderation action still work.** Migration `20260921190000_move_chat_moderation_tables_to_admin` (recorded live as `20260921181400`; file equals the applied statements, md5 `c22d7a9c…`).
+  - **Gated on two preconditions, both checked first.**
+    - The deployed panel `cosora-admin.vercel.app` (bundle `index--JJm6wRt.js`) calls all 12 RPCs and has 0 `.from()` on the five tables. The matcher was proven on a positive control.
+    - A real browser on every affected screen made 0 requests to them.
+    - Both repos' `main` hold the 4a migration and the 4b panel.
+  - **What moved.** `keyword_blocklist` (0 rows), `flag_patterns` (3), `chat_block_reasons` (7), `conversation_reviews` (1), `account_suspensions` (0). Their 15 RLS policies and 13 FKs travel with them, so the references into `profiles`, `conversations` and `messages` simply become cross-schema. The anon/authenticated ALL grants they carried are revoked; RLS stays on as defence in depth.
+  - **17 function bodies repointed, and provably nothing else changed.**
+    - The 17 are `check_message_blocklist`, `check_message_flag_patterns`, `resolve_conversation_review`, `set_account_status` and `submit_report`, plus the 12 4a RPCs.
+    - Each is rewritten in-database by substituting `public.<table>` with `admin.<table>`.
+    - The migration refuses to run unless every body md5-matches what Step 0 inspected. It aborts unless reversing the substitution reproduces each pre-move md5, which also proves search_path, volatility and SECURITY DEFINER unchanged.
+    - `regex_probe` reads no table and was not touched.
+    - A rolled-back dry run passed every assertion first. Its first attempt aborted on the migration's own FK-count guard, because the expected count was miscounted as 14; the true count is 13.
+  - **Messaging still works** (new harness `09`, a signed-in buyer inserting through RLS, all rolled back, 15/15):
+    - A blocklisted term is hard-rejected (42501) by `admin.keyword_blocklist`, and the same body sends once the term is gone.
+    - A WhatsApp mention sends, writes one pending `regex_flag` review to `admin.conversation_reviews`, locks the chat and notifies both parties.
+    - A buyer report writes an admin review. A clean message sends with no review.
+    - Resolve and suspend/reinstate write the admin rows. The buyer is refused on resolve, suspend and a foreign report.
+    - Message delete → SET NULL, conversation delete → CASCADE, and three FK checks (23503), all across schemas.
+    - A mutation run that neutered both message triggers failed exactly M1 and M2.
+  - **RPC matrix unchanged.** New harness `10` (the post-move successor of `08`, same fixtures and 7 personas × 20 RPC calls) shows **0 of 140 cells changed** against the 4a baseline: same rows, same order, same allow/deny.
+  - Harness `02` checks 1 and 4 (direct `chat_block_reasons` read and update) now call the RPCs; allowed cells are unchanged, and its new baseline is in the header. REST as anon, buyer and super_admin: 404 PGRST205 on all five, and 406 PGRST106 for `Accept-Profile: admin`.
+  - Security advisors are identical to post-4a in every category (0 findings added or removed).
+  - Types −249 lines in each repo (the five table blocks). Typecheck 0 (the harness fires 1); both builds pass.
+  - **Tooling.**
+    - `tests/chat-pipeline.spec.ts`, `tests/admin-chat-moderation.spec.ts` and `scripts/contact-gate-check.mjs` read and write through the RPCs.
+    - `contact-gate-check` ran green (7/7). The two specs need the seeded `rlstest-*`/`chatfx-*` logins, which are not seeded in production. They were type-checked instead: the 15 errors they already had are unchanged, and none is on a changed line.
+    - The production panel was re-checked after the move: every RPC 200, 0 table requests. Every verification row was deleted; live data is back to 0/3/7/1/0.
 - 2026-09-21 (Admin-schema separation · Phase 4a, RPCs over the chat-moderation and suspension tables): **Twelve SECURITY DEFINER RPCs now cover every direct panel read and write of `keyword_blocklist`, `flag_patterns`, `chat_block_reasons`, `conversation_reviews` and `account_suspensions`. Each reproduces its table's current RLS. Nothing calls them yet, and nothing else changed.** Migration `20260921090000_chat_moderation_rpcs` (live `20260921164254`; file equals the applied statements, md5 `9802c415…`).
   - **The set is exactly what the panel does.** It came from a Step 0 inventory against the live DB and both repos.
     - Keywords: list, add, remove.
