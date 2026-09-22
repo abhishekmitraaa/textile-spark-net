@@ -10,11 +10,22 @@ audit, decisions and moderation config move into a dedicated `admin` Postgres sc
 revoked from `anon`/`authenticated` and NOT exposed to PostgREST. Approvals stay atomic and DB-enforced.
 Phases: 1 schema foundation ✅ → 2 identity flip ✅ → 3 `admin_flags` + `ad_review_log` behind the wall ✅ (3a RPCs · 3b panel ·
 3c move) → 4 `chat_block_reasons`/`account_suspensions`/`keyword_blocklist`/`flag_patterns`/`conversation_reviews` with the
-message-trigger repoint (4a RPCs ✅ · 4b panel ✅ · 4c move ✅ **pending Mitra's independent verification**) → 5 retire `profiles` as admin authority.
+message-trigger repoint (4a RPCs ✅ · 4b panel ✅ · 4c move ✅ **pending Mitra's independent verification**) → 5 retire `profiles` as admin authority (5a identity RPCs ✅ **HARD STOP, awaiting the gate** · 5b repoint · 5c contract).
 
 **Spec:** `documentation/admin-separation-spec.md` (FROZEN 2026-09-15; Q-17 closed, Q-12 decided, Q-4 decided, Q-15 closed, Q-13 partly closed).
 
 ---
+
+## 2026-09-22: Phase 5a complete (identity RPCs, additive). HARD STOP: 5b needs the external gate.
+
+Working notes for Phase 5 live in `.claude/tmp/phase5-context.md` (both repos, uncommitted).
+- Migration `20260922120000_admin_identity_rpcs` (live `20260922120205`, md5 `682218c9…`) adds 7 RPCs plus the private
+  `admin.shadow_admin_columns`. The three write RPCs update `admin_users` first, then copy onto the profiles columns while
+  those exist, so both paths agree through 5b.
+- Harness `11` passed 96/96, and a mutation run failed exactly the 8 predicted cells. `admin-invite` v5 grants via
+  `admin_grant`, and was verified live. Drift is 0, with 3 admins.
+- **For 5c:** `trg_profiles_sync_admin_users` is `UPDATE OF is_admin, admin_role`, so it must be dropped before the
+  columns (the prompt's step order already does this). The `is_admin` default goes with the column.
 
 ## 2026-09-22: Phase 4c complete (tables moved). HARD STOP: Phase 4 is complete only after Mitra's independent verification.
 
