@@ -73,8 +73,10 @@ in the next one.
   - **(B) only:** a session-minting edge function that trusts its caller would be a full
     authentication bypass.
   - **Client-supplied metadata:** the signup data rides on the OTP request from the browser.
-    `handle_new_user()` whitelists `active_role` to buyer/seller and ignores `is_admin`,
-    and that must stay true on any new path.
+    `handle_new_user()` whitelists `active_role` to buyer/seller, and admin status is not
+    settable from metadata at all. Since Phase 5c (2026-09-22) `profiles` has no admin column;
+    admin identity is only `admin.admin_users`, written only by the admin_* RPCs or as postgres.
+    That must stay true on any new path.
 - Fix applied (or recommended fix):
   - Nothing to fix yet.
   - Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, short

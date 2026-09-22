@@ -495,7 +495,9 @@ Three places, in increasing order of how hard they are to miss:
 1. **`cron.job_run_details`** — `embedding-health-alarm` RAISEs, so a bad state is a failed
    run. Requires someone to look.
 2. **In-app notifications** — a transition into a non-OK state writes one `kind='system'`
-   row per `profiles.is_admin`. These render in the BUYER/vendor app's `/notifications`
+   row per active admin (`admin.admin_users where is_active`, joined through `profiles` for the
+   `notifications.profile_id` FK; since admin-schema separation Phase 5c, 2026-09-22, when
+   `profiles.is_admin` was dropped). These render in the BUYER/vendor app's `/notifications`
    (it filters no `kind` and falls back gracefully on unknown ones) and, since 2026-09-10,
    on **Cosora-Admin's System Health page**, which reads
    `admin_embedding_pipeline_health()` — a SECURITY DEFINER RPC gated on

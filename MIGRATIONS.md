@@ -119,7 +119,21 @@ Rolling state: `documentation/admin-separation-context.md`.
 17  textile-spark-net 20260921090000_chat_moderation_rpcs.sql                20260921164254
 18  textile-spark-net 20260921190000_move_chat_moderation_tables_to_admin.sql 20260921181400
 19  textile-spark-net 20260922120000_admin_identity_rpcs.sql                20260922120205
+20  textile-spark-net 20260922180000_retire_profiles_admin_columns.sql      20260922171801
 ```
+
+- **`…20260922180000` (Phase 5c) is IRREVERSIBLE.** It drops `profiles.is_admin` / `profiles.admin_role`,
+  the mirror trigger `trg_profiles_sync_admin_users` + `admin.sync_from_profiles()`, and the
+  `profiles_admin_requires_role` CHECK. It rewrites `enforce_admin_grants()` (account_status guard only)
+  and changes the recipients of `record_embedding_pipeline_health()` to `admin.admin_users`.
+  - Pre-guards: md5 of both functions vs Step 0, zero drift, no unexpected column dependents.
+  - Post-assertions: the health body equals the old body with only the recipient block swapped;
+    security properties are unchanged.
+  - A dry run (forced abort) passed first. The committed file equals the applied statements
+    (md5 `974823ee…`). It is mirrored byte-identically into Cosora-Admin; that copy is one
+    migration applied once, and must never be applied again.
+  - There is no rollback. Disaster recovery only: re-add the columns as nullable and backfill
+    from `admin.admin_users`.
 
 - **`…20260922120000` (Phase 5a) is additive.** It adds 7 SECURITY DEFINER RPCs over `admin.admin_users`:
   `admin_whoami`, `admin_list_admins`, `admin_search_candidates`, `admin_set_role`, `admin_grant`, `admin_revoke`

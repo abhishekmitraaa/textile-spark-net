@@ -1,3 +1,27 @@
+- 2026-09-22 (Admin-schema separation · Phase 5c, the contract, IRREVERSIBLE): **`profiles.is_admin` and `profiles.admin_role` are gone. `admin.admin_users` is now the only source of truth for who is an admin, and every admin path in both apps, the four edge functions and the role matrix works unchanged on the far side of the drop.** Migration `20260922180000_retire_profiles_admin_columns` (live `20260922171801`; file equals the applied statements, md5 `974823ee…`).
+  - **What it did, in one transaction.**
+    - Rewrote `enforce_admin_grants()` to guard only `account_status`.
+    - Switched `record_embedding_pipeline_health()`'s alert recipients to `admin.admin_users`; nothing else in that function changed, and the migration asserts it byte for byte.
+    - Dropped the mirror trigger, `admin.sync_from_profiles()`, the `profiles_admin_requires_role` CHECK, then both columns.
+    - `admin.shadow_admin_columns()` is kept as a no-op.
+  - **Before, all green.**
+    - DB sweep: only the 3 known functions read the columns; no policy, view, matview, index, generated column, publication or rule references them; no other schema does either.
+    - All 14 deployed edge functions: the 10 not repointed never referenced the columns in any git version.
+    - The live production bundles contain the 5b code: `cosora.in` uses `rpc("is_admin")` and a profile select without the column; `cosora-admin.vercel.app` has the six RPCs and 0 column selects.
+    - Pre-flight: 2/1/1 present, 3 = 3 admins, 0/0/0 drift, 0 rlstest.
+    - A full dry run with a forced abort passed every guard and assertion, and was confirmed rolled back.
+  - **After, all green.**
+    - Columns / mirror / function / CHECK: 0 rows.
+    - Types −6 lines in each repo (the profiles Row/Insert/Update fields only). tsc 0 in both repos, and the probe fires 1 in each.
+    - Harnesses on the Phase-A baseline, cell by cell: rls-matrix 60/60, rls-superadmin 11/11, chat-pipeline 72/72, invite-tests 9/9 — **0 cells differing**.
+    - **Production** `cosora-admin.vercel.app`, 16/16: login, whoami, roster, promote, role change, demote, invite, 0 column requests. A non-admin is refused.
+    - App `isAdmin`: true for an admin, false for a non-admin.
+    - Edge functions: 403 for a non-admin, pass for a super_admin (refund, bunny-delete, bunny-reconcile, invite).
+    - Old `select … is_admin` now fails `42703`.
+    - Health recipients: 3 = active admins.
+    - All test rows were cleaned up: 0 in profiles and admin_users; moderation data is back to baseline.
+  - One smoke-script false pass was caught and corrected: its final "demote again" matched a still-visible toast. The API log shows promote, role change, demote and invite all succeeded; the missing cleanup revoke was done by hand.
+  - Not in scope and now stale: the historical `scripts/admin-separation/` harnesses 01–11 that write `profiles.is_admin` (03 is the mirror test). They documented earlier phases and do not run as-is any more.
 - 2026-09-22 (Admin-schema separation · Phase 5b, repoint): **Nothing in either repo reads or writes `profiles.is_admin` / `profiles.admin_role` any more. Every admin-identity read and write goes through the 5a RPCs or `is_admin()`. The columns and the mirror still exist, untouched, as the safety margin for 5c.** No migration.
   - **This repo.** `AuthContext.tsx` no longer selects `is_admin`, and `Profile` no longer declares it. `isAdmin` comes from `rpc('is_admin')`, in parallel with the profile read in the same `loadProfile`, so the onAuthStateChange shape is unchanged. An RPC error means not-admin, and sign-out resets it. `bunny-delete-video` and `bunny-reconcile` authorize the caller through `admin_status_of`, keeping super_admin / product_moderator. Deployed as v3 each; the pre-deploy check found only comment differences from the repo.
   - **Proof of zero.** The Step 0 grep in both repos finds no direct column access: no PostgREST select or filter on the columns, no `profiles` update of them, no `profile.is_admin`. The only remaining `is_admin` / `admin_role` names are RPC result fields, the invite request/response field, and generated types. The live DB scan still shows only D1–D3 reading the columns. The parallel session's `20260922200000_vendor_review_aggregates_single_writer` uses only the helpers.

@@ -412,8 +412,23 @@ undocumented. Deep technical rationale for each lives in
   routing to a dashboard the account cannot load. `active_role` is carried in
   `raw_user_meta_data` and applied by `handle_new_user` **at signup**, because the client has
   no session to write it with — and a seller confirmed as a buyer is a bug you notice much
-  later. That metadata is client-supplied, so the role is whitelisted to buyer/seller there;
-  `is_admin` is deliberately not settable from it.
+  later. That metadata is client-supplied, so the role is whitelisted to buyer/seller there.
+  Admin status cannot be set from it at all: since admin-schema separation Phase 5c (2026-09-22)
+  `profiles` has no admin column.
+
+- **`admin.admin_users` is the ONLY source of truth for who is an admin and in what role
+  (Phase 5c, 2026-09-22).** `profiles.is_admin` / `profiles.admin_role`, the profiles → admin_users
+  mirror trigger (`admin.sync_from_profiles`) and the `profiles_admin_requires_role` CHECK are
+  dropped. Do not reintroduce any of them.
+  - Read: `is_admin()` / `admin_role()` for the caller (RLS, triggers, the main app's `isAdmin`);
+    `admin_whoami()` for the panel's identity; `admin_status_of(uuid)` for service-role edge
+    functions authorizing a decoded caller; `admin_list_admins()` for the roster.
+  - Write: only `admin_grant` / `admin_set_role` / `admin_revoke` (super_admin or service_role).
+    They refuse (42501) to leave zero active super_admins; the escape hatch is SQL as postgres on
+    `admin.admin_users`. Dev seed and cleanup scripts write that table directly.
+  - `admin.shadow_admin_columns()` survives as a no-op: its profiles write is guarded by a
+    column-exists check. `enforce_admin_grants()` now guards only `account_status`.
+  - Embedding-health alerts go to the active `admin_users` rows.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.

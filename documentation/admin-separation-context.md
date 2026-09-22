@@ -10,11 +10,19 @@ audit, decisions and moderation config move into a dedicated `admin` Postgres sc
 revoked from `anon`/`authenticated` and NOT exposed to PostgREST. Approvals stay atomic and DB-enforced.
 Phases: 1 schema foundation ✅ → 2 identity flip ✅ → 3 `admin_flags` + `ad_review_log` behind the wall ✅ (3a RPCs · 3b panel ·
 3c move) → 4 `chat_block_reasons`/`account_suspensions`/`keyword_blocklist`/`flag_patterns`/`conversation_reviews` with the
-message-trigger repoint (4a RPCs ✅ · 4b panel ✅ · 4c move ✅ **pending Mitra's independent verification**) → 5 retire `profiles` as admin authority (5a identity RPCs ✅ · 5b repoint ✅ **HARD STOP, awaiting the gate** · 5c contract).
+message-trigger repoint (4a RPCs ✅ · 4b panel ✅ · 4c move ✅ **pending Mitra's independent verification**) → 5 retire `profiles` as admin authority (5a identity RPCs ✅ · 5b repoint ✅ · 5c contract ✅ **columns dropped 2026-09-22; build complete**).
 
 **Spec:** `documentation/admin-separation-spec.md` (FROZEN 2026-09-15; Q-17 closed, Q-12 decided, Q-4 decided, Q-15 closed, Q-13 partly closed).
 
 ---
+
+## 2026-09-22: Phase 5c complete. profiles.is_admin/admin_role DROPPED. Admin-db-separation build complete.
+
+- Migration `20260922180000_retire_profiles_admin_columns` (live `20260922171801`, md5 `974823ee…`). It was dry-run first.
+- `admin.admin_users` is the sole source of truth. The mirror, the CHECK and both columns are gone; `shadow_admin_columns` is a kept no-op.
+- Post-drop: tsc 0 (both repos); harnesses on the Phase-A baseline with 0 differing cells; the production panel 16/16; the app flag true/false;
+  the edge functions 403/pass; health recipients 3 = active admins; 0 test residue.
+- Remaining, out of scope: the historical harnesses 01–11 in scripts/admin-separation still write the dropped columns.
 
 ## 2026-09-22: Phase 5b complete (every reader/writer repointed). HARD STOP: 5c needs the external gate.
 
