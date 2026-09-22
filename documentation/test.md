@@ -121,6 +121,37 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-22 — Master Prompt 9: vendor review aggregates, every writer (DB 130/130, probe 6/6, signed-in 5/5, browser 2/2)
+
+**The prompt's query**, before → after the migration:
+`total 130, mismatched 118` → `total 130, mismatched 0`. Ratings: `rating_mismatched 0` at the column's own
+`numeric(2,1)` (a raw `round(avg, 2)` comparison reports false mismatches such as 4.8 vs 4.75). `[LOADTEST]` rows: 120,
+all 120 now 0 / 0.0.
+
+**Privileged path**: a DO block run as `postgres` that ends in `raise exception`, so every probe is rolled back:
+`a) direct UPDATE reviews_count=999: REFUSED 42501; b) INSERT claiming (999, 5.0) stored as (0, 0.0); c) after one
+real review: (1, 4.0); d) flag after sync = ''; e) direct UPDATE after a sync, same transaction: REFUSED 42501;
+f) deliberate escape hatch (flag on) no-op update: ok`.
+
+**Signed-in path**, over the anon key with real logins:
+
+| Case | Result |
+|---|---|
+| demo-vendor sets own `reviews_count` | REFUSED 42501 |
+| demo-vendor sets own `ad_verified_until` (2026-09-14 guard) | REFUSED 42501 |
+| demo-vendor sets own `plan_id = vip`, `plan_expires_at = 2036` | REFUSED 42501; read back `null` / `null` |
+| demo-vendor ordinary update (`about`, same value) | ok, 1 row |
+| demo-buyer edits own review 4 → 1 → 4 | aggregate 4.4 → 3.8 → 4.4 |
+
+A first `plan_id = null` probe printed "ACCEPTED"; it was a no-op, because demo-vendor's gold subscription expired on
+2026-08-16 and `plan_id` was already null. It was redone with a real change (row 3 above).
+
+**Browser**: Playwright against a local dev server on `127.0.0.1:8090`, signed in as demo-buyer.
+`textile-spark-net.vercel.app` returned `404 DEPLOYMENT_NOT_FOUND`, and `localhost:8090` resolved to another session's
+Cosora-Admin on `[::1]`. `/vendor/<[LOADTEST] Vendor Co 23>` → `Reviews and Ratings … –/5 No reviews yet`; before
+the fix that vendor claimed 23 reviews. `/home/new-arrivals` → 384 vendor links, 358 of them `[LOADTEST]`, 0 with a
+star rating. 0 page errors. Screenshot: `screenshots/mp9-loadtest-vendor-no-reviews.png`.
+
 ### 2026-09-11 — Master Prompt 8, Phase 7: Trends scroll (browser), new-arrivals regression, typecheck/eslint
 
 - `/home/trends`, Playwright, `domcontentloaded` (the page hotlinks picsum images, so `networkidle` never

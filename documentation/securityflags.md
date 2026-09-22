@@ -12,6 +12,7 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Open — cleanup belongs to Master Prompt 11 ("Part 3"), on Mitra's decision (2026-09-22). Their review numbers are already corrected |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
 | 2026-09-22 | Integration option (B), the custom API verifying codes itself with an edge function minting the session, would make that edge function an authentication authority | High (design-time) | Future `otp-verify` edge function (not written); `TODO(otp-integration)` in `src/lib/auth/otp.ts` | Open, design constraint, nothing built. If (B) is chosen, the function must verify the code with the API **server-to-server**, and never trust a client-sent "verified" flag or API response. It must keep the API secret server-side, bind the code to the exact E.164 number, make codes single-use, rate-limit, and create or find the user without letting client metadata set `is_admin` (`handle_new_user()` whitelists `active_role` only; keep it that way). Option (A), Supabase's Send SMS hook, keeps generation and verification inside Supabase and avoids this class entirely |
 | 2026-09-11 | Public vendor profile fills a vendor's empty identity and contact fields with invented values (GSTIN, PAN, owner, phone, email, address) | Medium | `src/pages/VendorProfile.tsx` (`detailRows`, `contactRows`, `contactAddress`, `aboutText`, `bannerSrc`) | Open — logged only, on Mitra's decision (Master Prompt 8) |
@@ -35,6 +36,7 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-22 | Privileged writers could still set vendor review numbers — 118 of 130 vendor rows were fabricated again five days after the Master Prompt 8 fix | Medium | `enforce_vendor_profile_admin_fields()` (returned early for every role but `authenticated`) | Fixed 2026-09-22 (Master Prompt 9) — migration `20260922200000_vendor_review_aggregates_single_writer`: computed on INSERT and refused on UPDATE for every role unless `sync_vendor_rating()` is writing; all rows recomputed, mismatched 118 → 0 |
 | 2026-09-12 | Paid ad campaigns published to buyers with no review, because the activation guard was BEFORE UPDATE only and the payment path INSERTs | High | `guard_ad_activation()`; `supabase/functions/razorpay-verify-payment/index.ts` (`adRows()` sets `status:"active"`) | Fixed 2026-09-12 (Advertising v3, Phase 1) — guard rebuilt and bound to INSERT; any non-admin insert of `status='active'` is redirected to `pending_review`. Proven live before and after |
 | 2026-09-12 | A vendor could revive their own rejected campaign via rejected → paused → active | High | `guard_ad_activation()` (allowed any `paused` → `active`); `enforce_ads_moderation()` (owner exempt from the status check) | Fixed 2026-09-12 (Advertising v3, Phase 1) — non-admin → `active` now raises 42501; the owner exemption is narrowed to `draft`/`pending_review`/`paused_by_vendor`/`archived`. Proven live before and after |
 | 2026-09-12 | Campaigns delivered before their own start date — the serving RPC checked `ends_at` but never `starts_at` | Medium | `active_ads()` | Fixed 2026-09-12 (Advertising v3, Phase 3.1) — delivery gates on `is_ad_eligible()`, which checks both bounds, vendor good standing and targeting |
@@ -189,6 +191,53 @@ in the next one.
   provided" or omit the row, as `/product/:id` already does.
 - Status: Open
 - Related changelog entry: 2026-09-11 (Master Prompt 8 · Phase 2)
+
+### 2026-09-22 — Privileged writers could still set vendor review numbers — Severity: Medium
+- What was found: Master Prompt 8 made `vendor_profiles.rating_avg` / `reviews_count`
+  truthful and refused signed-in writes, but `enforce_vendor_profile_admin_fields()` began
+  with `if current_user <> 'authenticated' then return new; end if;`. Any service_role,
+  postgres or migration insert could therefore set any number. On 2026-09-16 17:36:02 UTC a
+  load-test batch did: 120 "[LOADTEST] Vendor Co N" rows, 118 of them with
+  `reviews_count = N` (1–49) and a rating of 3.0–4.9, against 0 rows in `reviews`.
+- Where: `enforce_vendor_profile_admin_fields()`; the batch came from the Master Prompt 11
+  thread (its commit `08a0550` uses `loadtest-vendor-3@cosora.test`). No script in either
+  repository creates it.
+- How it was discovered: Mitra's Master Prompt 9 re-audit, 2026-09-22 —
+  `total 130, mismatched 118` on the prompt's own query.
+- Risk / impact: the one-writer rule held only for app users. Any seed, load test or future
+  admin tool running with privileges could hand vendors a reputation they never earned.
+- Fix applied: migration `20260922200000_vendor_review_aggregates_single_writer.sql`. On
+  INSERT, from any role, both columns are computed from `reviews`, whatever the payload says.
+  On UPDATE, from any role, changing either raises `42501` unless the transaction-local
+  setting `cosora.review_aggregate_sync` is `'on'`. `sync_vendor_rating()` sets it around its
+  own UPDATE and clears it straight after; PostgREST gives clients no way to set it. A
+  privileged session can set it deliberately; that is the documented escape hatch, and the
+  migration's own recompute uses it. The badge and plan guards added on 2026-09-14
+  (`20260914110000`) were carried over unchanged. Verified: mismatched 118 → 0. In a
+  rolled-back probe as postgres: a direct UPDATE was refused `42501`; an INSERT claiming
+  (999, 5.0) was stored as (0, 0.0); one real review gave (1, 4.0); the setting read `''`
+  after the sync, and a direct UPDATE later in the same transaction was still refused.
+  Signed in: a vendor's own count, badge date and plan were each refused `42501`; an ordinary
+  profile edit worked; a buyer's review edit moved the aggregate 4.4 → 3.8 → 4.4.
+- Status: Fixed 2026-09-22
+- Related changelog entry: 2026-09-22 (Master Prompt 9, buyer-trust thread)
+
+### 2026-09-22 — Load-test fixtures are live in the buyer catalogue — Severity: Medium
+- What was found: 370 `loadtest-*@cosora.test` accounts (250 buyers, 120 sellers), created
+  2026-09-16 17:35 UTC, with 120 "[LOADTEST] Vendor Co N" vendor profiles (40 of them
+  `is_verified = true`) and 351 "[LOADTEST] …" products, all `live`. That is 351 of the 377
+  live products a buyer can see.
+- Where: `auth.users`, `profiles`, `vendor_profiles`, `products` (and, per `08a0550`, quotes
+  on open RFQs that the anon key cannot see).
+- How it was discovered: Master Prompt 9, tracing the 118 mismatched review counts.
+- Risk / impact: buyers browse a catalogue that is 93% test listings, from vendors whose
+  verified badge was never earned. The project's own precedent is to delete synthetic data
+  after a load test and verify 0 remain (the 2026-09-10 scale run, `d3b5ccf` / `1a926ad`).
+- Fix applied: none here. Mitra chose to leave the cleanup to the Master Prompt 11 thread that
+  created the data (`08a0550`: "The other 369 are left for Part 3"). Only the review
+  numbers were corrected (all 120 now read 0 / 0.0).
+- Status: Open
+- Related changelog entry: 2026-09-22 (Master Prompt 9, buyer-trust thread)
 
 ### YYYY-MM-DD — <short title> — Severity: Critical / High / Medium / Low
 - What was found:

@@ -859,6 +859,14 @@ media and specs whenever the vendor left them empty — rendered as fiction on r
   now refuses any signed-in write to them, so `sync_vendor_rating()` (AFTER INSERT/UPDATE/DELETE on
   `reviews`, SECURITY DEFINER) is their only writer. The product half is unchanged by decision: the
   cards still read the seeded `products` columns.
+  **Update, Master Prompt 9 (2026-09-22):** the guard now covers every role, not just
+  `authenticated`. Migration `20260922200000_vendor_review_aggregates_single_writer.sql`:
+  on INSERT the trigger computes both columns from `reviews`; on UPDATE it raises `42501`
+  unless the transaction-local setting `cosora.review_aggregate_sync = 'on'`.
+  `sync_vendor_rating()` sets it around its own UPDATE and clears it immediately, so the
+  permission cannot leak into the rest of the transaction; the rolled-back probe proved a
+  later direct UPDATE in the same transaction is still refused. Reason: a load-test batch
+  inserted as a privileged role on 2026-09-16 gave 118 vendors invented counts.
 - **Four distinct states.** Loading (spinner), error (`ProductLoadError`, with Retry), not-found
   (`ProductNotFound`, identical for missing and RLS-blocked ids), and the product. A malformed id
   is caught by `UUID_RE` before any request, because PostgREST answers a non-uuid with an error

@@ -88,6 +88,11 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
+- **Most of the live catalogue is load-test data.** 351 of the 377 live products are
+  "[LOADTEST] …" listings from 120 "[LOADTEST] Vendor Co N" vendors (40 marked
+  verified), created 2026-09-16 by the Master Prompt 11 thread and not yet cleaned up. Their
+  review numbers are correct (0) since 2026-09-22; the rows themselves are that thread's to
+  remove (Mitra's decision, Master Prompt 9).
 - **Mobile + OTP sign-in cannot complete yet.** The flow is restored and honest, but no code
   can be delivered until the in-house OTP API is wired into `src/lib/auth/otp.ts`. Google and
   guest browsing are the working routes, and email-only accounts can only get in through Google

@@ -76,10 +76,15 @@ Rules decided before or outside of Claude Code sessions.
   `vite.config.ts`'s `__DEMO_PASSWORDS__`, which is `null` in every build. A new fixture
   seed takes its password from `current_setting(...)`, never a literal. After any change
   near auth, build and `grep -rlF` each value over `dist/`: the answer must be 0.
-- **A reputation number has one writer, and no fallback** (Master Prompt 8, 2026-09-11).
-  `vendor_profiles.rating_avg` / `reviews_count` are written only by `sync_vendor_rating()`
-  on `reviews`; `enforce_vendor_profile_admin_fields()` refuses anyone signed in, admins
-  included. A surface with no real reviews shows none: "–" and "No reviews yet", never
+- **A reputation number has one writer, and no fallback** (Master Prompt 8, 2026-09-11;
+  every role since Master Prompt 9, 2026-09-22). `vendor_profiles.rating_avg` /
+  `reviews_count` are written only by `sync_vendor_rating()` on `reviews`. For EVERY role —
+  signed-in users, admins, service_role, postgres, migrations —
+  `enforce_vendor_profile_admin_fields()` computes them from `reviews` on INSERT and refuses
+  an UPDATE with `42501` unless `cosora.review_aggregate_sync` is `'on'`, which only
+  `sync_vendor_rating()` sets. A seed or load test that wants a vendor with reviews writes
+  real `reviews` rows; one that claims a count gets 0. Signed-in-only guards are not
+  enough: a 2026-09-16 load-test batch walked straight through the old one. A surface with no real reviews shows none: "–" and "No reviews yet", never
   4.5, never a seeded aggregate, never a demo breakdown. Product-level `rating_avg` /
   `reviews_count` / `sold_count` are still seed values on the cards (Mitra's call); do
   not add a new reader of them.
