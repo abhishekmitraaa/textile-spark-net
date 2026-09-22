@@ -2,7 +2,7 @@
 
 Updated automatically whenever a side's scope, features, or flows change.
 
-Last updated: 2026-09-10
+Last updated: 2026-09-22
 
 Cosora is fundamentally a three-sided marketplace. **Key mechanic:** the same person can be
 both a buyer and a vendor and toggles between the two experiences inside one unified web
@@ -73,9 +73,14 @@ the demand side of India's fashion and textile supply chain.
   notifications, help & support chat.
 
 ### User journey
-1. Register with **email + password** (not phone OTP — no SMS provider is configured), confirm
-   by email, then select role → select sourcing interests. The company name typed at signup is
-   written to the buyer profile by `/auth/callback`, on the first sign-in that has a session.
+1. Sign in or register with **mobile number + OTP**, the primary path again since 2026-09-22
+   (branch `auth/restore-mobile-otp`). Enter the number, then the code on `/auth/otp-verify`,
+   then select role → select sourcing interests. "Create an account" uses the same mobile + OTP
+   path, and the company name typed there is written to the buyer profile once the code screen
+   has a session. **SMS delivery is not live yet.** The in-house OTP API is not integrated and
+   Supabase has no SMS provider, so the code screen says plainly that no code was sent. Until
+   then, buyers get in with **Continue with Google** or browse with **Explore as Guest**. Email
+   + password is no longer a user-facing sign-in.
 2. Land on the discovery feed; browse, search, save, follow.
 3. Post a requirement — Quick RFQ or the detailed per-category form.
 4. Receive quotes from multiple vendors in My Quotes.
@@ -83,6 +88,10 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
+- **Mobile + OTP sign-in cannot complete yet.** The flow is restored and honest, but no code
+  can be delivered until the in-house OTP API is wired into `src/lib/auth/otp.ts`. Google and
+  guest browsing are the working routes, and email-only accounts can only get in through Google
+  with the same email. See claude.md, "Mobile number + OTP login".
 - **Listing cards everywhere still show seeded ratings and sales.** Cards on New Arrivals,
   Search, For You and Trends read `products.rating_avg` and `sold_count`; on 23 of 26 live
   listings the rating has no reviews behind it, and `sold_count` has no writer (there is no
@@ -276,11 +285,14 @@ rather than a supplier directory.
 - **Settings** — Business, Notifications (email/push), Language, Security, Help & Legal.
 
 ### User journey
-1. Register with **email + password** (phone OTP is gone — no SMS provider is configured, so
-   the phone control is a labelled "coming soon" row). Email confirmation is **ON**, so
-   signup returns no session and ends on a "check your email" screen; the confirmation link
-   lands on `/auth/callback`, which is where the brand name typed at signup is finally
-   written to `vendor_profiles` — that page has to finish the signup, not just redirect.
+1. Register with **mobile number + OTP** (restored 2026-09-22). On "Create an account", choose
+   Seller, enter name, brand and mobile number, then Send Code, then enter the code on
+   `/auth/otp-verify`. Signup metadata (role, name, phone, brand) rides on the OTP request.
+   `handle_new_user()` applies the role, and `applyPendingSignupProfile()` writes the brand to
+   `vendor_profiles` once the code screen has a session; the vendor then goes to `/onboarding`.
+   **Delivery is not live yet**, so the code screen says no code was sent; vendors get in with
+   Google meanwhile. The email + password signup and its "check your email" screen are
+   removed. `/auth/callback` still finishes Google sign-ins and any old confirmation links.
 2. Complete the 9-step vendor onboarding, ending on the supplier agreement and a signature.
 3. Land on the vendor dashboard.
 4. List products / catalogues / videos → they sit in `under_review` until admin approves.

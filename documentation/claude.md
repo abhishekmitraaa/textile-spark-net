@@ -782,6 +782,113 @@ BEFORE trigger still enforces it, whatever the provider — asserted at both lay
 (`bunny-e2e-check.mjs` step 5 against an insert that explicitly asks for `live`, and
 `video-closeups-bunny.spec.ts` T8.2/T8.4 through the real moderation UI).
 
+## Mobile number + OTP login: the brief and where it stands (2026-09-22)
+
+The standing brief for auth in the buyer/vendor app. Branch `auth/restore-mobile-otp`,
+commit `532cd3e`. **Not pushed:** wait for Mitra's go.
+
+**Why.** The app was originally OTP-only. Email + password was later made the primary login,
+and phone sign-in was demoted to a disabled "coming soon" row, because this Supabase project
+has no SMS provider (`signInWithOtp({ phone })` returns `phone_provider_disabled`). That is
+now reversed: **mobile number + OTP is the primary sign-in AND the account-creation path.**
+Continue with Google, "Create an account" and "Explore as Guest" stay. Email + password is
+removed as a *user-facing* sign-in.
+
+**Delivery is not live, and the rule is honesty.** Codes will be delivered by a custom
+in-house OTP/verification API: separate software, **not integrated yet**. Supabase phone OTP
+is disabled. So delivery is stubbed behind one seam, and the no-fake-signals rule applies in
+full:
+- Never say "we texted you a code" when nothing was sent.
+- Never show an expiry timer for a code that doesn't exist.
+- Never show a "verified" tick for a code nothing checked.
+- A visible dev note or a fixed dev code is acceptable. A fake "code sent" is not.
+
+**Ground rules for any work on this flow.**
+- App.tsx is edited only by surgical insertion, never rewritten.
+- Do not touch the DevAccountSwitcher / demo-account logins. They use `signInWithPassword` for
+  demo-buyer/vendor/admin, are dev-only, and must keep working.
+- Frontend/auth-flow change only: no migration, nothing regenerated on the DB.
+- Typecheck against `tsconfig.app.json`, and prove the harness catches an injected error before
+  trusting a 0. The build must pass.
+- Commit to the branch. Do not push until Mitra says so.
+
+**The seam: `src/lib/auth/otp.ts`, the ONLY place a code is sent or checked.**
+- It exposes `sendOtp(phone, { signupData? })` and `verifyOtp(phone, code)`, with phone in
+  E.164 (`+91…`). No other file may call `supabase.auth.signInWithOtp` or
+  `supabase.auth.verifyOtp`. Check with
+  `grep -rnE "auth\s*\.\s*(signInWithOtp|verifyOtp)\s*\(" src`, which must find only otp.ts.
+- **Interim behaviour:** it calls Supabase phone auth for real. `phone_provider_disabled` maps
+  to `{ status: "not_live" }`. The code screen then says "No code was sent", drops the "You
+  will receive an OTP" line and the timer, and raises no "sent" toast. `verifyOtp` returns
+  `not_live` without calling `/verify` when the last send for that number was not live. The
+  honesty comes from the server's answer, not a flag, so it flips by itself once delivery
+  works.
+- **Session mechanism:** a successful `verifyOtp` is an ordinary Supabase session. AuthContext,
+  RLS, `handle_new_user()` and `applyPendingSignupProfile()` need no change. The signup
+  metadata (`full_name`, E.164 `phone`, `active_role`, `brand_name`) rides on the OTP
+  request. `handle_new_user()` reads `profiles.phone` from **metadata**, not from
+  `auth.users.phone`, so the seam always sends `phone` in `data`.
+- **Open decision for integration day** (recorded as `TODO(otp-integration)` in otp.ts;
+  **neither is implemented**):
+  - **(A) The custom API is only the SMS SENDER.** Supabase generates and verifies the code and
+    issues the session. Point Auth → Hooks → "Send SMS hook" at the API and enable the Phone
+    provider. otp.ts does not change.
+  - **(B) The custom API generates AND verifies the code.** A Supabase edge function checks the
+    code with the API server-to-server, finds or creates the `auth.users` row (with the signup
+    metadata), and mints a session. The client applies it with `supabase.auth.setSession()`.
+    Only the two Supabase calls in otp.ts get replaced, and the result types stay the same.
+    Security requirements for (B) are in `securityflags.md`.
+  - Do not add a third path.
+
+**What the "previous OTP UI" actually was (Step 0).** It lives in git at `2279630^`; commit
+`2279630` (2026-09-09) replaced it.
+- **Layout (restored):** Login had a country-code picker (12 countries, +91 default), a 10-digit
+  number field and **Send Code**. `/auth/otp-verify` (`OtpVerify.tsx`) had a masked number
+  (`+91-9876XXXXX`), "Not You?", a 57-second expiry timer, and a Previous/Next bar lifted above
+  the on-screen keyboard. The code boxes now use the existing `input-otp` component.
+- **Behaviour (not restored, all of it fake):**
+  - The old flow **never called Supabase**.
+  - A `setTimeout(400)` checked the number against a hardcoded Set of two "registered" numbers,
+    and a match "signed you in" with no session.
+  - The code screen accepted any six digits, then went to role selection with no session.
+  - It showed the timer for a code nothing had sent.
+  - It fell back to a hardcoded phone number when opened directly.
+  - Onboarding also had an OTP "Verify" modal that toasted "OTP sent" and ticked "Mobile
+    verified" for any six digits; that stays removed. Onboarding's phone field remains a plain
+    contact field.
+
+**Flow now.**
+- **Sign-in:** Login (number) → `sendOtp` → `/auth/otp-verify` → `verifyOtp` →
+  `applyPendingSignupProfile` → route by `profiles`. Not onboarded goes to
+  `/auth/role-selection`; seller goes to `/seller-home`; otherwise `/home/new-arrivals`.
+- **Signup:** Register (role → name, brand, mobile) → `sendOtp(e164, { signupData })` → the same
+  code screen. Not onboarded then goes seller → `/onboarding`, buyer → `/home/new-arrivals`, as
+  Register did before.
+- Open `/auth/otp-verify` with no navigation state → redirect to `/auth/login`.
+- A plain send error (bad number, rate limit) stays on the entry screen.
+
+**Consequences accepted with this change.**
+- 376 accounts have an email identity and no Google identity: 370 `@cosora.test` fixtures, 5
+  `@cosora.in`, 1 `@gmail.com`. They have no user-facing way in except Google with the same
+  verified email.
+- Three UI specs drive the removed email signup and fail as written: `mp4-phase1-register`,
+  `mp5-phase4-confirmation-link` (P4.a) and `vendor-signup`. `mp4-phase2-callback-onboarding`
+  signs in through the API and is unaffected.
+- The dev-only switcher pill (fixed, bottom-left) overlaps the OTP screen's Previous button at
+  phone width. It does not render in any build.
+- **Until delivery is live, nobody can sign in or sign up by phone.** Google and guest browsing
+  are the only working routes for real users.
+
+**Verified 2026-09-22.** A browser run passed 43/43 checks against the dev server:
+- V1: login surface.
+- V2: Google hands off to accounts.google.com with `redirect_to=/auth/callback`; guest home
+  renders; the demo switcher returns 200 and creates a session.
+- V3: phone → code, honest on both the login and the signup path.
+- V4: grep.
+- V5: `tsc` 0 errors, the probe fires 1, and the build passes.
+
+The verified-code → session step can only run once an SMS provider or the custom API exists.
+
 ## Domain Terms
 
 | Term | Meaning |

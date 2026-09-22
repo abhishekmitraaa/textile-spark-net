@@ -12,6 +12,8 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
+| 2026-09-22 | Integration option (B), the custom API verifying codes itself with an edge function minting the session, would make that edge function an authentication authority | High (design-time) | Future `otp-verify` edge function (not written); `TODO(otp-integration)` in `src/lib/auth/otp.ts` | Open, design constraint, nothing built. If (B) is chosen, the function must verify the code with the API **server-to-server**, and never trust a client-sent "verified" flag or API response. It must keep the API secret server-side, bind the code to the exact E.164 number, make codes single-use, rate-limit, and create or find the user without letting client metadata set `is_admin` (`handle_new_user()` whitelists `active_role` only; keep it that way). Option (A), Supabase's Send SMS hook, keeps generation and verification inside Supabase and avoids this class entirely |
 | 2026-09-11 | Public vendor profile fills a vendor's empty identity and contact fields with invented values (GSTIN, PAN, owner, phone, email, address) | Medium | `src/pages/VendorProfile.tsx` (`detailRows`, `contactRows`, `contactAddress`, `aboutText`, `bannerSrc`) | Open — logged only, on Mitra's decision (Master Prompt 8) |
 | 2026-09-11 | Product-level `rating_avg` / `reviews_count` / `sold_count` are vendor-writable and have no real source | Low | `products` (`products_update` admits `vendor_id = auth.uid()`; no guard on these columns) | Open — cards keep showing them on Mitra's decision; guard them when they are computed from something real |
 | 2026-09-11 | embed-query's per-IP key parses `x-forwarded-for` identically but was never probed | Low | `supabase/functions/embed-query/index.ts` (`.split(",")[0]`) | Open — confirm next time that file is touched |
@@ -49,6 +51,38 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-22 — Primary login moved to mobile + OTP with delivery stubbed: the risks to settle before go-live — Severity: Medium (High for option B, design-time)
+- What was found: Mobile number + OTP was restored as the primary sign-in and signup (branch
+  `auth/restore-mobile-otp`). All send/verify goes through `src/lib/auth/otp.ts`. No code
+  can be delivered yet: the in-house OTP API is not integrated, and Supabase answers
+  `phone_provider_disabled`. Nothing is exploitable today. What matters is what must be true on
+  the day delivery is switched on.
+- Where: `src/lib/auth/otp.ts`, `src/pages/Login.tsx`, `src/pages/Register.tsx`,
+  `src/pages/OtpVerify.tsx`; Supabase Auth phone and hook settings; the future `otp-verify`
+  edge function if option (B) is chosen.
+- How it was discovered: designing the integration seam for the restore-mobile-OTP brief
+  (2026-09-22).
+- Risk / impact if left unaddressed:
+  - **SMS pumping / toll fraud:** the send endpoint is unauthenticated by nature, so without
+    limits anyone can make the platform pay to text arbitrary numbers.
+  - **Code brute force:** 6 digits is 10^6, trivial without an attempt cap.
+  - **(B) only:** a session-minting edge function that trusts its caller would be a full
+    authentication bypass.
+  - **Client-supplied metadata:** the signup data rides on the OTP request from the browser.
+    `handle_new_user()` whitelists `active_role` to buyer/seller and ignores `is_admin`,
+    and that must stay true on any new path.
+- Fix applied (or recommended fix):
+  - Nothing to fix yet.
+  - Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, short
+    code expiry, and ideally a CAPTCHA on send.
+  - Prefer option (A), Supabase's Send SMS hook, which keeps generation, verification and
+    session issuance inside Supabase.
+  - If (B): verify server-to-server, keep the secret server-side, make codes single-use and
+    bound to the E.164 number, and create users without client control of privileged columns.
+- Status: Open (monitoring until integration)
+- Related changelog entry: 2026-09-22 "Auth · mobile number + OTP restored as the primary
+  login" in documentation/changelog.md
 
 ### 2026-09-11 — Super-admin demo credential shipped in the production bundle — Severity: Critical
 - What was found: `DEMO_ACCOUNTS` in `src/contexts/AuthContext.tsx` is a module-level export
