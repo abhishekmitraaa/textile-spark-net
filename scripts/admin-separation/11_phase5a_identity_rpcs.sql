@@ -10,10 +10,11 @@
 --   user               demo-buyer, not an admin
 --   anon               no JWT
 --   service_role       claims role=service_role, as the edge functions call
--- The write checks also assert the TRANSITIONAL SHADOW WRITE. After each write,
--- profiles.(is_admin, admin_role) must equal the admin_users result, and for a
--- grant created_by must be the caller (null for service_role). The target of the
--- grant/role/revoke checks is demo-vendor (22222222-…), a non-admin.
+-- The grant check also asserts created_by is the caller (null for service_role).
+-- The target of the grant/role/revoke checks is demo-vendor (22222222-…), a non-admin.
+-- Phase 5c (2026-09-22) dropped profiles.is_admin/admin_role, so the shadow-write
+-- assertions this harness carried at 5a are gone with them: admin.admin_users is the
+-- only state left to check, and personas are promoted by writing it directly.
 -- c9–c12 first reduce the active super_admins to demo-admin alone, to exercise
 -- the last-super_admin guard.
 --
@@ -46,7 +47,7 @@ begin
   select least(count(*), 10) into n_demo from public.profiles p
    where p.email ilike '%demo%' and not exists (select 1 from admin.admin_users au where au.id = p.id and au.is_active);
 
-  -- Each query returns one text. Writes append the profiles shadow (read back as postgres, see below).
+  -- Each query returns one text. The grant check appends created_by (read back as postgres, see below).
   q := array[
     'select coalesce(string_agg(row(id = auth.uid(), is_admin, role)::text, '';''), ''0 rows'') from public.admin_whoami()',
     'select ''rows='' || count(*) from public.admin_list_admins()',
@@ -83,15 +84,15 @@ begin
         when 2 then case when is_sa then 'rows=3' when is_adm then 'rows=4' else 'ERR 42501' end
         when 3 then case when is_sa then 'rows=' || n_demo else 'ERR 42501' end
         when 4 then case when is_sa then 'rows=0' else 'ERR 42501' end
-        when 5 then case when is_sa then '(support,t)|(t,support)|cb=' || sa
-                         when is_svc then '(support,t)|(t,support)|cb=null' else 'ERR 42501' end
-        when 6 then case when is_sa or is_svc then '(ads_moderator,t)|(t,ads_moderator)' else 'ERR 42501' end
-        when 7 then case when is_sa or is_svc then '(support,f)|(f,)' else 'ERR 42501' end
-        when 8 then case when is_sa or is_svc then '(super_admin,f)|(f,)' else 'ERR 42501' end
+        when 5 then case when is_sa then '(support,t)|cb=' || sa
+                         when is_svc then '(support,t)|cb=null' else 'ERR 42501' end
+        when 6 then case when is_sa or is_svc then '(ads_moderator,t)' else 'ERR 42501' end
+        when 7 then case when is_sa or is_svc then '(support,f)' else 'ERR 42501' end
+        when 8 then case when is_sa or is_svc then '(super_admin,f)' else 'ERR 42501' end
         when 9 then 'ERR 42501'
         when 10 then 'ERR 42501'
         when 11 then 'ERR 42501'
-        when 12 then case when is_sa or is_svc then '(super_admin,t)|(t,super_admin)' else 'ERR 42501' end
+        when 12 then case when is_sa or is_svc then '(super_admin,t)' else 'ERR 42501' end
         when 13 then case when is_svc then '(t,super_admin)' else 'ERR 42501' end
         when 14 then case when is_svc then '(f,)' else 'ERR 42501' end
         when 15 then case when is_sa or is_svc then 'ERR P0002' else 'ERR 42501' end
@@ -101,10 +102,12 @@ begin
       begin
         -- Setup, as postgres.
         if p like '%(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = role_of_p::public.admin_role_type where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, role_of_p::public.admin_role_type, true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         if i in (6, 7) then  -- target is an active support admin
-          update public.profiles set is_admin = true, admin_role = 'support' where id = tg;
+          insert into admin.admin_users (id, admin_role, is_active) values (tg, 'support', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         if i between 9 and 12 then  -- demo-admin becomes the only active super_admin
           update admin.admin_users set is_active = false where admin_role = 'super_admin' and id <> sa;
@@ -130,22 +133,11 @@ begin
 
         begin
           execute q[i] into r;
-          -- Read the shadow back as postgres INSIDE this block: the P0097 below
+          -- Read created_by back as postgres INSIDE this block: the P0097 below
           -- rolls the write back, so afterwards there is nothing left to see.
           reset role;
-          if i in (5, 6, 7, 8, 12) then
-            r := r || '|' || (select row(pp.is_admin, pp.admin_role)::text from public.profiles pp
-                               where pp.id = case when i in (5, 6, 7) then tg when i = 8 then sa2 else sa end);
-            if i = 5 then
-              r := r || '|cb=' || coalesce((select created_by::text from admin.admin_users where id = tg), 'null');
-            end if;
-            -- The mirror must agree with admin_users for the row just written.
-            if exists (select 1 from public.profiles pp join admin.admin_users au on au.id = pp.id
-                        where pp.id = case when i in (5, 6, 7) then tg when i = 8 then sa2 else sa end
-                          and (pp.is_admin is distinct from au.is_active
-                               or (au.is_active and pp.admin_role is distinct from au.admin_role))) then
-              r := r || '|MIRROR DRIFT';
-            end if;
+          if i = 5 then
+            r := r || '|cb=' || coalesce((select created_by::text from admin.admin_users where id = tg), 'null');
           end if;
           raise exception using errcode = 'P0097', message = coalesce(r, '(null)');
         exception

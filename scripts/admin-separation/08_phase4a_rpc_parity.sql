@@ -36,7 +36,7 @@
 --   s2 open suspensions, page   Accounts select          vs admin_account_suspension_list({vendor,buyer}, true)
 --
 -- Personas: super_admin (demo-admin); support, ads_moderator and vendor_ops
--- (demo-buyer promoted inside the subtransaction through profiles → mirror);
+-- (demo-buyer promoted inside the subtransaction by writing admin.admin_users);
 -- buyer-participant (demo-buyer, a member of the reviewed conversation);
 -- vendor-participant (demo-vendor, the other member, and the profile the seeded
 -- suspensions are about); anon.
@@ -204,7 +204,8 @@ begin
     for i in 1..array_length(checks, 1) loop
       begin
         if p like '%(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = split_part(p, '(', 1)::public.admin_role_type where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, split_part(p, '(', 1)::public.admin_role_type, true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         who := case p when 'super_admin' then sa when 'vendor-participant' then ve when 'anon' then null else bu end;
         if who is null then

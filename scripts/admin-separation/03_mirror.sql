@@ -1,4 +1,23 @@
 -- ─────────────────────────────────────────────────────────────────────────────
+-- HISTORICAL — THIS HARNESS CANNOT RUN ANY MORE, AND IS KEPT AS THE RECORD.
+--
+-- It exercises the profiles -> admin.admin_users MIRROR by writing the profiles columns (the Phase 2b proof).
+-- Admin-schema separation Phase 5c (2026-09-22, migration 20260922180000) DROPPED
+-- those columns and the mirror trigger, so every statement below would fail with
+-- 42703 (undefined_column). admin.admin_users is now the sole source of truth, and
+-- there is nothing left to compare it against.
+--
+-- What replaced it: harness 11 (the identity RPCs) and, for the role matrix,
+-- harness 02. Do not "fix" this file — the thing it tested no longer exists.
+-- The guard below stops it before it can half-run.
+-- ─────────────────────────────────────────────────────────────────────────────
+do $historical$
+begin
+  raise exception 'HISTORICAL harness 03_mirror.sql: it tested the pre-5c profiles admin columns / mirror, dropped on 2026-09-22. Use harness 11 (identity RPCs) or 02 (role matrix).';
+end
+$historical$;
+
+-- ─────────────────────────────────────────────────────────────────────────────
 -- ADMIN-SCHEMA SEPARATION HARNESS 03 — profiles → admin.admin_users mirror.
 --
 -- As super_admin (authenticated, the panel's own profiles UPDATEs), each case in

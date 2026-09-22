@@ -20,7 +20,7 @@
 --   c6 log, another ad      AdReviewQueue read  vs admin_ad_review_log_list(ad2)
 --
 -- Personas: super_admin (demo-admin); support and ads_moderator (demo-buyer
--- promoted inside the subtransaction through profiles → mirror); the vendor who
+-- promoted inside the subtransaction by writing admin.admin_users); the vendor who
 -- owns `ad`; another non-admin vendor; buyer (demo-buyer); anon.
 --
 -- Result per call: `rows:md5` of the full row content (reads), `OK author_is_self=…
@@ -104,9 +104,11 @@ begin
     for i in 1..6 loop
       begin
         if p = 'support(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = 'support' where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, 'support', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         elsif p = 'ads_moderator(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = 'ads_moderator' where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, 'ads_moderator', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         who := case p when 'super_admin' then sa when 'owner-vendor' then v_owner
                       when 'other-vendor' then v_other when 'anon' then null else bu end;

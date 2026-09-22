@@ -11,7 +11,7 @@
 -- differed per run and could not be compared across the move).
 --
 -- Personas: super_admin (demo-admin); support and ads_moderator (demo-buyer
--- promoted in-transaction through profiles -> mirror); the vendor owning `ad`;
+-- promoted in-transaction by writing admin.admin_users); the vendor owning `ad`;
 -- another non-admin vendor; buyer (demo-buyer); anon.
 -- Checks:
 --   c1 admin_flag_list('ad', ad)            c4 admin_flag_add('video', …) -> CHECK
@@ -72,9 +72,11 @@ begin
     for i in 1..6 loop
       begin
         if p = 'support(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = 'support' where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, 'support', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         elsif p = 'ads_moderator(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = 'ads_moderator' where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, 'ads_moderator', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         who := case p when 'super_admin' then sa when 'owner-vendor' then v_owner
                       when 'other-vendor' then v_other when 'anon' then null else bu end;

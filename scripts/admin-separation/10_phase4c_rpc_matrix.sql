@@ -122,7 +122,8 @@ begin
         else 'ERR 42501' end;
       begin
         if p like '%(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = split_part(p, '(', 1)::public.admin_role_type where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, split_part(p, '(', 1)::public.admin_role_type, true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         who := case p when 'super_admin' then sa when 'vendor-participant' then ve when 'anon' then null else bu end;
         if who is null then

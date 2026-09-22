@@ -3,9 +3,9 @@
 --
 -- 4 personas × 8 admin-gated checks, each in its own rolled-back subtransaction:
 --   super_admin      demo-admin 33333333-…
---   support(in-txn)  demo-buyer promoted to support inside the subtransaction,
---                    THROUGH public.profiles (so after Phase 2b it also exercises
---                    the profiles → admin.admin_users mirror)
+--   support(in-txn)  demo-buyer promoted to support inside the subtransaction by
+--                    writing admin.admin_users directly (as postgres). Before Phase 5c
+--                    this went through public.profiles and the mirror, which are gone.
 --   buyer            demo-buyer 11111111-…
 --   anon
 -- Checks: R{su,sa} read, admin-only decision-history RPC, A write, R{sa} write,
@@ -39,6 +39,23 @@
 -- [buyer] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support=0 | self->super_admin->42501 | rpc regex_probe R{su,sa}->42501
 -- [anon] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support=0 | self->super_admin=0 | rpc regex_probe R{su,sa}->42501
 --
+-- CHANGED IN PHASE 5c (2026-09-22): profiles.is_admin / profiles.admin_role are dropped.
+-- The support(in-txn) persona is now promoted by inserting into admin.admin_users (as
+-- postgres, inside the rolled-back subtransaction), and checks 6 and 7 — which were a
+-- panel-shaped promotion and a self-escalation through those columns — call the write
+-- RPCs that replaced them: admin_grant(other, 'support') and
+-- admin_set_role(auth.uid(), 'super_admin'). Both are gated on super_admin OR
+-- service_role and RAISE 42501 for anyone else, where the old column UPDATE was
+-- refused by enforce_admin_grants (support) or silently matched 0 rows (buyer/anon).
+-- So two cells legitimately change shape: buyer/anon "promote other->support" and anon
+-- "self->super_admin" go from =0 to ->42501. New baseline (2026-09-22, post-5c):
+-- [super_admin] is_admin()=true admin_role()=super_admin | rpc chat_block_reasons list S=7 | rpc admin_ad_review_log_list A=2 | upd categories A=1 | rpc chat_block_reasons update SA=1 | upd vendor_profiles(other) R{sa,vo}=1 | promote other->support=1 | self->super_admin=1 | rpc regex_probe R{su,sa}=1
+-- [support(in-txn)] is_admin()=true admin_role()=support | rpc chat_block_reasons list S=7 | rpc admin_ad_review_log_list A=2 | upd categories A=1 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support->42501 | self->super_admin->42501 | rpc regex_probe R{su,sa}=1
+-- [buyer] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support->42501 | self->super_admin->42501 | rpc regex_probe R{su,sa}->42501
+-- [anon] is_admin()=false admin_role()=null | rpc chat_block_reasons list S->42501 | rpc admin_ad_review_log_list A->42501 | upd categories A=0 | rpc chat_block_reasons update SA->42501 | upd vendor_profiles(other) R{sa,vo}=0 | promote other->support->42501 | self->super_admin->42501 | rpc regex_probe R{su,sa}->42501
+-- Confirmed live on 2026-09-22 after the drop: every other cell is identical to the
+-- post-4c baseline above.
+--
 -- Pitfall already hit once: never probe an RPC as `count(*) from (select rpc()) s`
 -- — the planner drops the unused column and the function is never called.
 --
@@ -64,7 +81,8 @@ begin
     for i in 0..8 loop
       begin
         if p = 'support(in-txn)' then
-          update public.profiles set is_admin = true, admin_role = 'support' where id = bu;
+          insert into admin.admin_users (id, admin_role, is_active) values (bu, 'support', true)
+          on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
         end if;
         who := case p when 'super_admin' then sa when 'anon' then null else bu end;
         if who is null then
@@ -84,8 +102,8 @@ begin
         elsif i = 3 then execute format('update public.categories set id = id where id = %L', cat); get diagnostics n = row_count;
         elsif i = 4 then execute format('select count(*) from (select x.id from public.admin_block_reason_update(%L) x) s', cbr) into n;
         elsif i = 5 then execute format('update public.vendor_profiles set id = id where id = %L', vp); get diagnostics n = row_count;
-        elsif i = 6 then execute format('update public.profiles set is_admin = true, admin_role = %L where id = %L', 'support', vp); get diagnostics n = row_count;
-        elsif i = 7 then execute 'update public.profiles set is_admin = true, admin_role = ''super_admin'' where id = auth.uid()'; get diagnostics n = row_count;
+        elsif i = 6 then execute format('select count(*) from (select x.id from public.admin_grant(%L, ''support'') x) s', vp) into n;
+        elsif i = 7 then execute 'select count(*) from (select x.id from public.admin_set_role(auth.uid(), ''super_admin'') x) s' into n;
         elsif i = 8 then execute 'select public.regex_probe(''a'', ''a'')::text' into t; n := 1;
         end if;
         raise exception using errcode = 'P0099', message = n::text;
