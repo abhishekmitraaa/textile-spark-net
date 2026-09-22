@@ -118,7 +118,17 @@ Rolling state: `documentation/admin-separation-context.md`.
 16  textile-spark-net 20260916090000_move_admin_flags_and_review_log_to_admin.sql 20260915192048
 17  textile-spark-net 20260921090000_chat_moderation_rpcs.sql                20260921164254
 18  textile-spark-net 20260921190000_move_chat_moderation_tables_to_admin.sql 20260921181400
+19  textile-spark-net 20260922120000_admin_identity_rpcs.sql                20260922120205
 ```
+
+- **`…20260922120000` (Phase 5a) is additive.** It adds 7 SECURITY DEFINER RPCs over `admin.admin_users`:
+  `admin_whoami`, `admin_list_admins`, `admin_search_candidates`, `admin_set_role`, `admin_grant`, `admin_revoke`
+  and `admin_status_of`, plus the private `admin.shadow_admin_columns`. The latter is a TRANSITIONAL write-back onto
+  `profiles.is_admin/admin_role` that becomes a no-op once 5c drops the columns. The committed file equals the applied
+  statements (md5 `682218c9…`). Harness: `scripts/admin-separation/11_phase5a_identity_rpcs.sql`.
+  **Mirrored copy:** at the Phase 5 prompt's request, a byte-identical copy is also in Cosora-Admin
+  `supabase/migrations/`. It is ONE migration, applied once. A timestamp sort of both directories lists it twice,
+  so count it once. Never apply the Cosora-Admin copy separately.
 
 - **`…20260921190000` (Phase 4c) moves the five chat-moderation / suspension tables into `admin`.**
   The tables are `keyword_blocklist`, `flag_patterns`, `chat_block_reasons`, `conversation_reviews` and `account_suspensions`.

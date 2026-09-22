@@ -22,7 +22,6 @@ export interface Profile {
   full_name: string | null;
   email: string | null;
   active_role: string;
-  is_admin: boolean;
   onboarded: boolean;
   avatar_url: string | null;
 }
@@ -62,15 +61,26 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Admin status comes from the is_admin() RPC, which reads admin.admin_users,
+  // the only source of truth since admin-schema separation Phase 5.
+  // profiles.is_admin is being retired. It resolves in parallel with the
+  // profile row and is applied in the same tick. An RPC error counts as
+  // not-admin (fail closed), and this flag only gates what the UI shows:
+  // Postgres enforces every admin action itself.
   const loadProfile = useCallback(async (uid: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, full_name, email, active_role, is_admin, onboarded, avatar_url")
-      .eq("id", uid)
-      .maybeSingle();
+    const [{ data }, { data: adminFlag, error: adminError }] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, full_name, email, active_role, onboarded, avatar_url")
+        .eq("id", uid)
+        .maybeSingle(),
+      supabase.rpc("is_admin"),
+    ]);
     setProfile((data as Profile) ?? null);
+    setIsAdmin(!adminError && adminFlag === true);
   }, []);
 
   useEffect(() => {
@@ -87,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       // Never call other Supabase methods synchronously inside this callback.
       if (next?.user) void loadProfile(next.user.id);
-      else setProfile(null);
+      else { setProfile(null); setIsAdmin(false); }
     });
 
     return () => { active = false; sub.subscription.unsubscribe(); };
@@ -137,7 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: session?.user ?? null,
         profile,
         loading,
-        isAdmin: Boolean(profile?.is_admin),
+        isAdmin,
         signInAsDemo,
         signInWithGoogle,
         chooseRole,
