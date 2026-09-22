@@ -111,10 +111,13 @@ Deno.serve(async (req: Request): Promise<Response> => {
   let allowed = row.vendor_id === callerId;
   if (!allowed) {
     try {
-      const pr = await fetch(
-        `${url}/rest/v1/profiles?id=eq.${callerId}&select=is_admin,admin_role`,
-        { headers: REST(serviceKey) },
-      );
+      // admin_status_of() reads admin.admin_users (admin-schema separation
+      // Phase 5; service_role only). Same {is_admin, admin_role} row shape.
+      const pr = await fetch(`${url}/rest/v1/rpc/admin_status_of`, {
+        method: "POST",
+        headers: REST(serviceKey),
+        body: JSON.stringify({ p_user_id: callerId }),
+      });
       const prows = pr.ok ? await pr.json() : [];
       const caller = Array.isArray(prows) && prows.length ? prows[0] : null;
       allowed = Boolean(caller?.is_admin) &&
