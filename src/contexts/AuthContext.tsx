@@ -64,12 +64,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  // Admin status comes from the is_admin() RPC, which reads admin.admin_users,
-  // the only source of truth since admin-schema separation Phase 5.
-  // profiles.is_admin is being retired. It resolves in parallel with the
-  // profile row and is applied in the same tick. An RPC error counts as
-  // not-admin (fail closed), and this flag only gates what the UI shows:
-  // Postgres enforces every admin action itself.
+  // Admin status comes from the is_admin() RPC, which reads admin.admin_users —
+  // the only source of truth since admin-schema separation Phase 5c dropped
+  // profiles.is_admin (2026-09-22). It resolves in parallel with the profile row
+  // and is applied in the same tick. An RPC error counts as not-admin (fail
+  // closed), and this flag only gates what the UI shows: Postgres enforces every
+  // admin action itself.
   const loadProfile = useCallback(async (uid: string) => {
     const [{ data }, { data: adminFlag, error: adminError }] = await Promise.all([
       supabase
