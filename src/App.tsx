@@ -49,6 +49,7 @@ import CosoraStudio from "./pages/CosoraStudio";
 import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
+import OtpVerify from "./pages/OtpVerify";
 import RoleSelection from "./pages/RoleSelection";
 import SubRole from "./pages/SubRole";
 import AccountInfo from "./pages/AccountInfo";
@@ -216,6 +217,7 @@ const App = () => (
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/auth/login" element={<Login />} />
+            <Route path="/auth/otp-verify" element={<OtpVerify />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/role-selection" element={<RoleSelection />} />
             <Route path="/auth/sub-role" element={<SubRole />} />

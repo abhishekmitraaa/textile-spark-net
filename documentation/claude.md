@@ -389,11 +389,19 @@ undocumented. Deep technical rationale for each lives in
   re-submission used to strand the previous identity scan in the private bucket, referenced by
   nothing. Any code path — product OR test — that replaces a row holding a storage path must
   read the path first, delete the row, then remove the object, in that order.
-- **Do not ship an auth control with no provider behind it.** `signInWithOtp({ phone })`
-  returns `phone_provider_disabled` on this project. So phone sign-in is a labelled
-  "coming soon" row, `/auth/otp-verify` is deleted, and onboarding's phone field is a plain
-  contact field — it previously showed a green "Mobile verified" tick after accepting any six
-  digits. Check the provider before building the form.
+- **Mobile + OTP is the primary sign-in and signup, and every code goes through ONE seam.**
+  `src/lib/auth/otp.ts` (`sendOtp` / `verifyOtp`) is the only file allowed to call
+  `supabase.auth.signInWithOtp` / `supabase.auth.verifyOtp`. Login.tsx and Register.tsx
+  send, and `/auth/otp-verify` (OtpVerify.tsx) verifies. Email + password is no longer a
+  user-facing sign-in; the dev demo switcher still uses it. **SMS delivery is not live**: the
+  project has no SMS provider, so the send returns `phone_provider_disabled`. The seam maps that
+  to `not_live`, and the code screen then says "No code was sent" and shows no expiry timer.
+  That state is read from the server's answer, not from a flag. Never show "code sent", a timer
+  or a "verified" tick unless the server accepted the send and the verify. Google and guest
+  browsing are the working routes until then. The custom in-house OTP API plugs into
+  `otp.ts` only: its TODO records the open choice between an Auth "Send SMS hook" (otp.ts
+  unchanged) and API-side verification with an edge function minting the session.
+  Onboarding's phone field is still a plain contact field.
 - **Email confirmation is ON, so a signup has no session.** `auth.signUp()` returns a user and
   `session: null`. Register.tsx therefore ends on a "check your email" screen rather than
   routing to a dashboard the account cannot load. `active_role` is carried in

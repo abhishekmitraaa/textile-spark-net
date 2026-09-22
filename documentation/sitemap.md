@@ -185,6 +185,7 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 | `/` | `Landing` |
 | `/login` | `Login` |
 | `/auth/login` | `Login` |
+| `/auth/otp-verify` | `OtpVerify` |
 | `/auth/callback` | `AuthCallback` |
 | `/auth/role-selection` | `RoleSelection` |
 | `/auth/sub-role` | `SubRole` |

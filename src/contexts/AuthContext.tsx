@@ -5,11 +5,14 @@ import { supabase } from "@/lib/supabase";
 // ─────────────────────────────────────────────────────────────
 // Auth context — the real session + profile for the signed-in user.
 //
-// Phone-OTP is deferred; for now we sign in against three seeded demo
-// accounts (buyer / vendor / admin) via the dev switcher. Because these
-// are genuine Supabase auth users, auth.uid() and RLS work for real, and
-// swapping in phone-OTP later changes nothing downstream — the session,
-// profile, and role all keep the same shape.
+// Mobile number + OTP is the primary sign-in (Login → /auth/otp-verify). It
+// goes through the single seam src/lib/auth/otp.ts, whose verifyOtp()
+// establishes an ordinary Supabase session, so it lands here like any other.
+// SMS delivery is not live yet (see that file). Meanwhile Google works, and in
+// dev the switcher signs in as three seeded demo accounts (buyer / vendor /
+// admin). All are genuine Supabase auth users, so auth.uid() and RLS work for
+// real and the session, profile and role keep the same shape whichever path
+// signed you in.
 // ─────────────────────────────────────────────────────────────
 
 export type DemoRole = "buyer" | "vendor" | "admin";

@@ -4,143 +4,81 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, ArrowRight, Building2, ShoppingBag, Check, Loader2, MailCheck, AlertCircle } from "lucide-react";
+import { ArrowRight, Building2, ShoppingBag, Check, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useUserRole } from "@/contexts/UserRoleContext";
 import CosoraLogo from "@/components/CosoraLogo";
-import { supabase } from "@/lib/supabase";
-import { signupMetadata, applyPendingSignupProfile } from "@/lib/queries/signupProfile";
+import { signupMetadata } from "@/lib/queries/signupProfile";
+import { COUNTRY_CODES, PHONE_DIGITS, cleanPhoneDigits, toE164 } from "@/lib/auth/phone";
+import { sendOtp } from "@/lib/auth/otp";
+import type { OtpVerifyState } from "@/pages/OtpVerify";
 
 type Role = "buyer" | "seller";
 
-/**
- * Turn a Supabase auth error into something a person can act on.
- *
- * The previous version of this page made zero network calls, so none of these
- * cases could arise and none were handled. They are the ordinary ones.
- */
-function describeSignUpError(message: string): string {
-  const m = message.toLowerCase();
-  if (m.includes("already registered") || m.includes("already been registered")) {
-    return "An account with this email already exists. Try signing in instead.";
-  }
-  if (m.includes("password")) {
-    return "That password is too weak. Use at least 8 characters.";
-  }
-  if (m.includes("rate limit")) {
-    return "Too many sign-up attempts right now. Please try again in a few minutes.";
-  }
-  if (m.includes("invalid") && m.includes("email")) {
-    return "That email address wasn't accepted. Check it for typos.";
-  }
-  return message;
-}
-
 const Register = () => {
   const navigate = useNavigate();
-  const { setRole } = useUserRole();
   const [selectedRole, setSelectedRole] = useState<Role>("buyer");
-  const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  /** Set when the account was created but needs an email confirmation first. */
-  const [confirmSent, setConfirmSent] = useState<string | null>(null);
+  const [countryIndex, setCountryIndex] = useState(0);
   const [form, setForm] = useState({
     fullName: "",
     brandName: "",
-    email: "",
     phone: "",
-    password: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const value = e.target.name === "phone" ? cleanPhoneDigits(e.target.value) : e.target.value;
+    setForm({ ...form, [e.target.name]: value });
+    setError(null);
   };
 
   /**
    * Step 1 is the role, step 2 is the details, and BOTH roles go through both.
+   * The account is created by mobile number + OTP, the same path as sign-in.
    *
    * Picking "Seller" used to skip step 2 entirely and jump straight to /seller,
-   * so a seller never supplied a name, an email or a password — they were not
-   * signing up at all, they were being shown the seller landing page.
+   * so a seller never supplied their details — they were not signing up at all.
+   *
+   * Email + password signup (auth.signUp + a "confirm your email" screen) was
+   * removed when mobile + OTP was restored as the primary path. The metadata
+   * is unchanged: handle_new_user() applies active_role/full_name/phone from
+   * it, and applyPendingSignupProfile() moves brand_name once the code screen
+   * has a session.
    */
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { setStep(2); return; }
-    if (submitting) return;
+    if (submitting || form.phone.length < PHONE_DIGITS) return;
 
     setSubmitting(true);
     setError(null);
 
-    const meta = signupMetadata({
+    const country = COUNTRY_CODES[countryIndex];
+    const e164 = toE164(country.code, form.phone);
+    const data = signupMetadata({
       fullName: form.fullName.trim(),
-      phone: form.phone.trim(),
+      phone: e164,
       brandName: form.brandName.trim(),
       role: selectedRole,
     });
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: form.email.trim(),
-      password: form.password,
-      options: { data: meta, emailRedirectTo: `${window.location.origin}/auth/callback` },
-    });
-
-    if (signUpError) {
-      setSubmitting(false);
-      setError(describeSignUpError(signUpError.message));
-      return;
-    }
-
-    // No session means email confirmation is switched on: the account exists
-    // but cannot be used yet. Routing to a dashboard here would land the user
-    // on a page that immediately bounces them back to sign-in.
-    if (!data.session) {
-      setSubmitting(false);
-      setConfirmSent(form.email.trim());
-      return;
-    }
-
-    // Confirmation is off — we have a session, so finish the profile now.
-    // active_role was already applied by handle_new_user() from the metadata.
-    if (data.user) await applyPendingSignupProfile(data.user);
-    setRole(selectedRole);
+    const delivery = await sendOtp(e164, { signupData: data });
     setSubmitting(false);
-    navigate(selectedRole === "buyer" ? "/home/new-arrivals" : "/onboarding");
-  };
 
-  // Email confirmation is ON for this project, so this is the real end of the
-  // signup flow for most users. Saying "check your email" is the honest
-  // outcome; routing to a dashboard they cannot load is not.
-  if (confirmSent) {
-    return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-6">
-        <div className="w-full max-w-md text-center">
-          <div className="mb-6 flex justify-center"><CosoraLogo height={26} /></div>
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-accent/10">
-            <MailCheck className="h-7 w-7 text-accent" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">Confirm your email</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            We've sent a confirmation link to <span className="font-medium text-foreground">{confirmSent}</span>.
-            Open it to activate your account — you'll come straight back here signed in.
-          </p>
-          <p className="mt-4 text-xs text-muted-foreground">
-            Nothing in your inbox? Check spam, or{" "}
-            <button
-              onClick={() => { setConfirmSent(null); setStep(2); }}
-              className="font-medium text-accent hover:underline"
-            >
-              try a different address
-            </button>.
-          </p>
-          <Button variant="outline" className="mt-6 w-full" onClick={() => navigate("/auth/login")}>
-            Go to sign in
-          </Button>
-        </div>
-      </div>
-    );
-  }
+    // "sent" and "not_live" both continue: the code screen says which one it
+    // was. Only a plain failure stays here.
+    if (delivery.status === "error") { setError(delivery.message); return; }
+
+    const state: OtpVerifyState = {
+      phone: form.phone,
+      countryCode: country.code,
+      e164,
+      delivery,
+      signup: { role: selectedRole, data },
+    };
+    navigate("/auth/otp-verify", { state });
+  };
 
   const buyerBenefits = ["Browse 50,000+ manufacturers", "Post unlimited RFQs", "Get quotes in 24 hours", "Verified supplier network"];
   const sellerBenefits = ["List unlimited products", "Get matched with buyers", "Manage quotes & leads", "Analytics dashboard"];
@@ -373,55 +311,32 @@ const Register = () => {
                   </div>
 
                   <div className="space-y-1.5">
-                    <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={form.email}
-                      onChange={handleChange}
-                      required
-                      className="h-10"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone" className="text-sm font-medium">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      placeholder="+1 (555) 000-0000"
-                      value={form.phone}
-                      onChange={handleChange}
-                      required
-                      className="h-10"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="password" className="text-sm font-medium">Password</Label>
-                    <div className="relative">
+                    <Label htmlFor="phone" className="text-sm font-medium">Mobile Number</Label>
+                    <div className="flex gap-2">
+                      <select
+                        aria-label="Country code"
+                        value={countryIndex}
+                        onChange={(e) => setCountryIndex(Number(e.target.value))}
+                        className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm"
+                      >
+                        {COUNTRY_CODES.map((c, i) => (
+                          <option key={c.name + i} value={i}>{c.flag} {c.code}</option>
+                        ))}
+                      </select>
                       <Input
-                        id="password"
-                        name="password"
-                        type={showPassword ? "text" : "password"}
-                        placeholder="Min. 8 characters"
-                        value={form.password}
+                        id="phone"
+                        name="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        placeholder="Phone Number"
+                        value={form.phone}
                         onChange={handleChange}
                         required
-                        minLength={8}
-                        className="h-10 pr-10"
+                        className="h-10"
                       />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
                     </div>
+                    <p className="text-xs text-muted-foreground">We'll verify this number with a one-time code.</p>
                   </div>
 
                   <p className="text-xs text-muted-foreground">
@@ -448,10 +363,10 @@ const Register = () => {
                     >
                       Back
                     </Button>
-                    <Button type="submit" variant="gold" className="flex-1 gap-2" disabled={submitting}>
+                    <Button type="submit" variant="gold" className="flex-1 gap-2" disabled={submitting || form.phone.length < PHONE_DIGITS}>
                       {submitting
-                        ? <><Loader2 className="h-4 w-4 animate-spin" /> Creating…</>
-                        : <>Create Account <ArrowRight className="h-4 w-4" /></>}
+                        ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
+                        : <>Send Code <ArrowRight className="h-4 w-4" /></>}
                     </Button>
                   </div>
                 </motion.div>
