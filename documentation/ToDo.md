@@ -119,6 +119,50 @@ with no need to dictate format, context, or reference each time.
 - [ ] Clean up the 2026-09-16 load-test population (owned by the Master Prompt 11 thread) — Added: 2026-09-22 — Priority: High — Context: 370 `loadtest-*@cosora.test` accounts (250 buyers, 120 sellers) are live, with 120 "[LOADTEST] Vendor Co N" vendor profiles (40 `is_verified = true`) and 351 "[LOADTEST] …" live products. That is 351 of the 377 live products buyers see. Master Prompt 11's commit `08a0550` used `loadtest-vendor-3` and says "The other 369 are left for Part 3" and that its quote "is covered by the synthetic-data cleanup script", but no such script is in either repository and the data is still there six days later. Precedent: the 2026-09-10 scale run deleted every synthetic row and `auth.users` entry and verified 0 by count. Master Prompt 9 corrected only their review numbers (all 0 now) and, on Mitra's decision, left the deletion to that thread. Logged in `securityflags.md` (Open). Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22.
 - [ ] Find out where the buyer app is deployed now — Added: 2026-09-22 — Context: `https://textile-spark-net.vercel.app/` returned Vercel's `404 DEPLOYMENT_NOT_FOUND` on 2026-09-22 (it served the app through 2026-09-11). Either the project was renamed or moved, or production is down. Master Prompt 9's browser check ran against a local dev server for that reason. Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22.
 
+### Fix the Bunny Stream API key — added 2026-09-23
+- Task: get a working `BUNNY_API_KEY` configured so the Bunny video path (upload, delete,
+  reconcile) actually works again.
+- Context: found while verifying `bunny-reconcile` and `bunny-delete-video` post-drop during
+  admin-schema separation Phase 5b/5c. As a real super_admin, both functions pass their own
+  authorization check and then fail: `bunny-reconcile` gets `401 "Authentication has been
+  denied for this request."` straight from `video.bunnycdn.com`, so it cannot list the library,
+  and any Bunny-provider delete would fail the same way. Unrelated to the admin-schema
+  separation work — the key itself is wrong or has been rotated/revoked at Bunny's end. Not
+  chased further because it needs dashboard/Bunny-account access this session doesn't have.
+  Today 0 `product_videos` rows use the `bunny` provider, so nothing is actively broken for a
+  real user yet, but the path cannot be exercised or trusted until the key works. Logged Low in
+  `securityflags.md` (2026-09-22 entry, "BUNNY_API_KEY is rejected by Bunny Stream").
+- Reference: 2026-09-22/23 session, admin-schema separation Phase 5 (5b live-smoke and 5c
+  post-drop verification of the four admin-gated edge functions).
+- Priority: Low (nothing user-facing broken today; blocks trusting the Bunny path before it's used)
+- Status: Open
+
+### Wire up mobile OTP delivery (or finish the dev-mode bypass safely) — added 2026-09-23
+- Task: get real SMS delivery working for mobile-number sign-in, OR, if a dev/test bypass is
+  wanted in the meantime, finish `supabase/functions/otp-dev-verify` properly and deploy it.
+- Context: `auth/restore-mobile-otp` (2026-09-22) put mobile number + OTP back as the primary
+  sign-in, but this Supabase project has no SMS provider, so `sendOtp()` in
+  `src/lib/auth/otp.ts` always gets `phone_provider_disabled` and the UI honestly says "no code
+  was sent" — nobody can actually complete phone sign-in today. Google and Explore-as-Guest are
+  the only working entry points meanwhile.
+  A separate attempt at a "dev bypass" edge function, `supabase/functions/otp-dev-verify/index.ts`,
+  exists UNTRACKED in the repo (never committed, never deployed) — it was blocked by the
+  permission system as a security-weakening change, because as written it would let anyone sign
+  in as any phone number with any code. It is not safe to deploy as-is.
+  If it's ever picked back up: it currently reads `profiles.is_admin` in one spot to refuse
+  minting an admin session — that column was DROPPED in admin-schema separation Phase 5c
+  (2026-09-22), so that check must be rewritten to call the `admin_status_of(uuid)` RPC
+  (service_role only, reads `admin.admin_users`) instead, or it will simply error.
+  Options to actually solve delivery: (a) configure a real SMS provider (Twilio/MSG91/etc.) in
+  Supabase Auth so `signInWithOtp` works for real, or (b) scope a dev-only bypass down to a
+  fixed allowlist of test numbers with a fixed code, gated so it can never run against
+  production, and get that reviewed/approved before deploying.
+- Reference: 2026-09-22/23 session — `auth/restore-mobile-otp` (mobile OTP restore) and the
+  admin-schema separation Phase 5 work (which is what surfaced the stale `is_admin` reference
+  in the untracked bypass function).
+- Priority: Medium (blocks real phone sign-in; Google/guest cover the gap for now)
+- Status: Open
+
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
