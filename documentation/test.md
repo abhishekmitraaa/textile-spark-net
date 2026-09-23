@@ -87,7 +87,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
-| `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. While the interim grant stands (MPF-19), its 4 signed-in checks fail by design |
+| `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
@@ -143,6 +143,30 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-24 — Deploy, then MPF-19 closed (live bundles checked; production specs 3/3 before the revoke and 5/5 after; privacy check 24/24)
+
+- **Merged and pushed** textile-spark-net `main` `d1ff52a` and Cosora-Admin `main` `106f84c`.
+  Both production builds passed first (`npm run build`, exit 0).
+- **Live bundles,** fetched and searched. The Vercel connector lists no projects for this
+  team, so the deploys were confirmed from the sites themselves:
+  - `www.cosora.in` `index-Clokv8L0.js` has `my_contact_info`, `call_buyer_contact`,
+    `log_call` and `rfqs!inner(buyer_id)`. It has 0 `profiles`-style select strings naming
+    email or phone, and 0 direct `calls` inserts.
+  - `cosora-admin.vercel.app` `index-BzKTnSmz.js` has `admin_profile_search` and
+    `admin_profile_emails`, and 0 such selects.
+- **Before the revoke,** against production (`BUYER_APP_URL=https://www.cosora.in`):
+  `profile-quotes-chats-stat` 2/2 and `profile-calls-stat` 1/1.
+- **SQL before the revoke:** the interim column grant was the only remaining read path. No
+  non-definer function in `public` or `admin`, and no view, reads the columns.
+- **Revoke** `20260923190354`; its self-check passed.
+- **After:** `scripts/profile-contact-privacy-check.mjs` **24/24** (20/24 by design during the
+  interim).
+- **Against the live sites** (`BUYER_APP_URL=https://www.cosora.in`,
+  `ADMIN_APP_URL=https://cosora-admin.vercel.app`): `profile-contact-privacy.spec.ts` 4/4 and
+  `profile-edit-routes.spec.ts` 1/1. Both write and restore. Afterwards the three demo accounts
+  are active, with no open suspension.
+- The screenshots the production runs re-rendered were restored with `git checkout`.
 
 ### 2026-09-24 — Phase 13: MPF-1 closed (probe re-run; spec 2/2, and it fails on the old code; regression 5/5)
 

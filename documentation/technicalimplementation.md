@@ -117,7 +117,7 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (112 as of 2026-09-23, after the My Profile brief's Phase 12). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (113 as of 2026-09-24, after the My Profile brief's MPF-19 revoke). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
@@ -1375,8 +1375,9 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
 ## Profile contact details — private columns, narrow readers (2026-09-23)
 
 Phase 11 of the My Profile brief (MPF-3). `profiles.email` and `profiles.phone` aren't
-client-selectable. The migrations are `20260923171821_profiles_contact_columns_private.sql` and,
-for now, `20260923174653_profiles_contact_columns_interim_authenticated.sql`.
+client-selectable. The migrations are `20260923171821_profiles_contact_columns_private.sql`, the interim
+`20260923174653_profiles_contact_columns_interim_authenticated.sql`, and
+`20260923190354_profiles_contact_columns_revoke_interim.sql`, which ended it.
 
 - **Grants.** `profiles_select` is still `USING (true)`: names, avatars, roles and
   `account_status` are read everywhere (chat, reviews, quotes, callGate). anon and
@@ -1388,8 +1389,9 @@ for now, `20260923174653_profiles_contact_columns_interim_authenticated.sql`.
     email and phone.
   - A new `profiles` column isn't client-readable until it's granted on purpose. The
     migration's self-check fails if the column list changes.
-  - **Interim:** `20260923174653` grants the two columns back to authenticated until both front
-    ends are deployed (MPF-19). Anon stays closed.
+  - **Interim, ended:** `20260923174653` granted the two columns back to authenticated until
+    both front ends were deployed (MPF-19). `20260923190354` revoked it on 2026-09-24, after
+    the live bundles were checked. No client role can read them now.
 - **Readers.** Each is SECURITY DEFINER, with `search_path = ''` and EXECUTE for authenticated
   only:
 

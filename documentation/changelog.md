@@ -1,3 +1,29 @@
+- 2026-09-24 (deploy; MPF-19 closed): **The My Profile brief is live on `www.cosora.in` and `cosora-admin.vercel.app`, and the interim grant is revoked. No client can read another user's email or phone, signed in or out.**
+  - **Merged and pushed on "push and merge to main":**
+    - textile-spark-net `main` `d1ff52a`, merging `my-profile/phases-1-9` (`2838382`, `bf03161`);
+    - Cosora-Admin `main` `106f84c`, merging `my-profile/phase-9-faqs` (`4e694f5`, `baa4ad3`).
+    - Checked first: both production builds pass, and a scan of every committed file found no key, token, `.env` value or QC password. `supabase/functions/otp-dev-verify` and `.claude/tmp/` stay untracked.
+  - **Live bundles, fetched and searched:**
+    - `www.cosora.in` `index-Clokv8L0.js` (was `index-Bl47x8Yt.js`): calls `my_contact_info`, `call_buyer_contact` and `log_call`, and has the MPF-1 filter. No `profiles` select names email or phone, and there is no direct `calls` insert.
+    - `cosora-admin.vercel.app` `index-BzKTnSmz.js` (was `index-B920YuHP.js`): calls `admin_profile_search` and `admin_profile_emails`, with no email select.
+  - **Before the revoke,** read-only against production: `profile-quotes-chats-stat` and `profile-calls-stat`, 3/3.
+  - **Migration `20260923190354_profiles_contact_columns_revoke_interim.sql`** (live, on Mitra's go-ahead): `revoke select (email, phone) on public.profiles from authenticated`.
+    - Checked first: no invoker-rights function or view reads the columns, and every edge function that reads `profiles` uses the service role.
+    - It self-asserts that neither role can select them, that the other 7 columns and UPDATE are kept, and that the contact functions are executable.
+  - **After:** `scripts/profile-contact-privacy-check.mjs` **24/24**. Against the live sites:
+    - `tests/profile-contact-privacy.spec.ts` 4/4: the 27-page sweep, Call Buyer and its suspended refusal, and the admin's Accounts and Chats;
+    - `tests/profile-edit-routes.spec.ts` 1/1: saves still land.
+    - The demo accounts are back to active, with no open suspension.
+  - **Also live with this deploy:**
+    - call logging on `cosora.in` through `log_call()` (MPF-2; confirmed in the bundle, not click-tested on production);
+    - the owner-filtered Quotes and Chats stats (MPF-1).
+  - **Docs:**
+    - myprofileflags: MPF-19 → Fixed, plus the production notes on MPF-1, MPF-2 and MPF-3;
+    - securityflags: the interim row → Fixed;
+    - ToDo: the deploy task → Completed;
+    - test.md, technicalimplementation, MIGRATIONS.md, claude.md and sides.md;
+    - Cosora-Admin's CHANGELOG and README.
+
 - 2026-09-24 (Phase 13, MPF-1): **The Quotes and Chats stats on `/profile` count the user's own rows. Anyone who also sells, or is an admin, used to see other people's quotes and chats counted in.**
   - **Before** (the MPF-1 probe, re-run, rolled back): the admin account MPF-1 measured (super_admin, also a vendor) showed Quotes 3 against 1 of its own and Chats 4 against 3. demo-admin showed 3 and 4 against 0 and 0, and demo-vendor Quotes 2 against 0 (the quotes it sent). demo-buyer was already right.
   - **Fix, `useProfileStats()` in `src/lib/queries/profile.ts`:**

@@ -144,9 +144,6 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
-- **Any signed-in account can still read other users' email and phone, for now.** Signed out
-  they're closed (MPF-3, fixed 2026-09-23). The signed-in grant stays until the new code is
-  live on `cosora.in` and the admin panel, and then it's revoked (MPF-19).
 - **Delete my account can't send its code yet.** The flow is built and verified end to end,
   but the email step needs `RESEND_API_KEY`, which isn't set. Until then the dialog says
   honestly that deletion isn't available online and points to support. With Resend's shared
@@ -185,6 +182,11 @@ the demand side of India's fashion and textile supply chain.
   value ("Mr. K.S. Tomar", a Gwalior address, a GSTIN that is no one's), and so are the
   About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
   decision (Master Prompt 8).
+
+### Fixed 2026-09-24 (My Profile brief)
+- **Other users' email and phone are private, signed in or out.** Signed out since 2026-09-23
+  (MPF-3). The signed-in grant that kept the old live code working was revoked once the new
+  code was live on `cosora.in` and the admin panel (MPF-19).
 
 ### Fixed 2026-09-16 (Master Prompt 9)
 - **Following no longer invents brands.** `followingStore.ts` served seven fabricated brands

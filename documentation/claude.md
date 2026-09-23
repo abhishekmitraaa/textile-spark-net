@@ -199,8 +199,8 @@ undocumented. Deep technical rationale for each lives in
   - **Revoking a column that clients read is ordered:** ship the new readers and the code,
     deploy both front ends, check the live bundles, and only then revoke. Phase 11 revoked
     first and broke `cosora.in` and the admin panel (MPF-19).
-  - Until MPF-19 is closed, signed-in users can still read the two columns. Don't write code
-    that relies on it.
+  - MPF-19 closed 2026-09-24: the interim grant is revoked, so no client role can read the
+    two columns.
   - Detail: `technicalimplementation.md` → "Profile contact details".
 - **`calls` rows are written only by `log_call()`** (MPF-2, Phase 12 of the My Profile brief,
   2026-09-23).

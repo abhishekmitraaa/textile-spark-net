@@ -15,32 +15,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
-### Deploy the MPF-3 code, then revoke the interim signed-in grant — added 2026-09-23
-- Task: deploy the Phase 11 code to `cosora.in` and `cosora-admin.vercel.app`, then run
-  `revoke select (email, phone) on public.profiles from authenticated;` as a migration.
-- Context:
-  - MPF-3's fix (`20260923171821`) made `profiles.email` and `profiles.phone` unreadable by
-    clients, but the live bundles still select them directly, so both front ends broke.
-  - `20260923174653` re-granted them to signed-in users only, so production works and signed
-    out stays closed. Until the revoke, any signed-in account can read everyone's email and
-    phone.
-  - Before revoking, confirm that each live bundle calls `my_contact_info` /
-    `admin_profile_search` and no longer contains the old selects.
-  - After the revoke, `node scripts/profile-contact-privacy-check.mjs` must show 24/24. Its 4
-    signed-in checks fail while the grant stands.
-  - Detail: `myprofileflags.md` → MPF-19.
-  - The same deploy restores call logging on `cosora.in`. Since MPF-2's fix
-    (`20260923182259`), the live bundle's direct insert into `calls` is refused. It still
-    dials, but those calls aren't recorded until the new code, which uses `log_call()`, is
-    live.
-  - The same deploy fixes the Quotes and Chats stats on `cosora.in`'s `/profile` (MPF-1,
-    Phase 13, 2026-09-24). Until then they over-count for anyone who also sells or is an
-    admin.
-- Reference: My Profile brief, Phase 11 (MPF-3), 2026-09-23. When the outage was found, Mitra
-  chose "Re-open to signed-in only". The call-logging note was added in Phase 12 (MPF-2).
-- Priority: High
-- Status: Open
-
 ### Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
 - Task: configure the `embedding_alert_webhook_url` Vault secret so CRITICAL pipeline alerts
   reach a human outside the app.
@@ -168,6 +142,38 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Deploy the MPF-3 code, then revoke the interim signed-in grant — added 2026-09-23
+- Task: deploy the Phase 11 code to `cosora.in` and `cosora-admin.vercel.app`, then run
+  `revoke select (email, phone) on public.profiles from authenticated;` as a migration.
+- Context:
+  - MPF-3's fix (`20260923171821`) made `profiles.email` and `profiles.phone` unreadable by
+    clients, but the live bundles still select them directly, so both front ends broke.
+  - `20260923174653` re-granted them to signed-in users only, so production works and signed
+    out stays closed. Until the revoke, any signed-in account can read everyone's email and
+    phone.
+  - Before revoking, confirm that each live bundle calls `my_contact_info` /
+    `admin_profile_search` and no longer contains the old selects.
+  - After the revoke, `node scripts/profile-contact-privacy-check.mjs` must show 24/24. Its 4
+    signed-in checks fail while the grant stands.
+  - Detail: `myprofileflags.md` → MPF-19.
+  - The same deploy restores call logging on `cosora.in`. Since MPF-2's fix
+    (`20260923182259`), the live bundle's direct insert into `calls` is refused. It still
+    dials, but those calls aren't recorded until the new code, which uses `log_call()`, is
+    live.
+  - The same deploy fixes the Quotes and Chats stats on `cosora.in`'s `/profile` (MPF-1,
+    Phase 13, 2026-09-24). Until then they over-count for anyone who also sells or is an
+    admin.
+- Reference: My Profile brief, Phase 11 (MPF-3), 2026-09-23. When the outage was found, Mitra
+  chose "Re-open to signed-in only". The call-logging note was added in Phase 12 (MPF-2).
+- Priority: High
+- Status: Completed
+- Completed: 2026-09-24 — merged and pushed on Mitra's "push and merge to main":
+  textile-spark-net `main` `d1ff52a` and Cosora-Admin `main` `106f84c`. Both deployed, and
+  the live bundles were checked. Then, with Mitra's go-ahead,
+  `20260923190354_profiles_contact_columns_revoke_interim.sql` revoked the grant. The privacy
+  check shows 24/24, and the live smoke passed. Call logging and the Quotes and Chats stats
+  went live with the same deploy.
 
 ### Remove the synthetic load-test population with scripts/loadtest-cleanup.sql — added 2026-09-23
 - Task: once testing on the synthetic accounts is finished, run `scripts/loadtest-cleanup.sql`

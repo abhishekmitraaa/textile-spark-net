@@ -15,7 +15,7 @@ what someone needs to pick it up later without the original conversation.
 |---|---|---|---|---|---|
 | MPF-1 | 2026-09-23, Phase 1 | Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin | Correctness | Medium (wrong numbers on the user's own profile; nothing exposed) | **Fixed 2026-09-24** (Phase 13); probe re-run, and the new spec fails on the old code |
 | MPF-2 | 2026-09-23, Phase 1 | Buyers write their own `calls` rows, and vendor call analytics trusts them | Security (data integrity) | Low | **Fixed 2026-09-23** (Phase 12); proven first, rolled back |
-| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | **Fixed 2026-09-23** (Phase 11) for signed-out callers; the signed-in half is reopened on purpose until deploy (MPF-19) |
+| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | **Fixed 2026-09-23** (Phase 11) for signed-out callers; the signed-in half was reopened on purpose until deploy, and closed 2026-09-24 (MPF-19) |
 | MPF-4 | 2026-09-23, Phase 2 | Deletion emails can't go out yet: no `RESEND_API_KEY`, and no verified sending domain | Setup (blocks the feature for real users) | High for the feature | Open, waiting on setup |
 | MPF-5 | 2026-09-23, Phase 2 | Cosora-Admin shows a deleted account as "active" | Correctness (admin UI, other repo) | Low | Open |
 | MPF-6 | 2026-09-23, Phase 2 | Phone-only accounts will have no email to receive a deletion code, and sign-in is mobile-only, so that becomes every new account | Product gap | **High** once real sign-ups start; nil today | Open, a decision |
@@ -31,7 +31,7 @@ what someone needs to pick it up later without the original conversation.
 | MPF-16 | 2026-09-23, Phase 9 content | Andy's Seller Registration and Subscription FAQs promise things the product doesn't do (published verbatim by decision) | Overclaiming content | Medium (vendors are told about proration, alerts and documents that don't match) | Open, by decision |
 | MPF-17 | 2026-09-23, Phase 9 content | The Subscription FAQ promises a 7-day money-back guarantee; the Terms say fees are non-refundable, and no refund can run today | Policy conflict | Medium (a public financial promise the Terms contradict) | Open, published by decision |
 | MPF-18 | 2026-09-23, Phase 11 | A vendor can set their own quote to "accepted" | Security (data integrity) | Low | Open, proven (rolled back) |
-| MPF-19 | 2026-09-23, Phase 11 | Interim: signed-in users can still read every user's email and phone until the new code is deployed | Security (PII exposure), temporary | Medium | Open, by decision until both deploys |
+| MPF-19 | 2026-09-23, Phase 11 | Interim: signed-in users can still read every user's email and phone until the new code is deployed | Security (PII exposure), temporary | Medium | **Fixed 2026-09-24**: both front ends deployed, then the grant was revoked (`20260923190354`) |
 
 ---
 
@@ -118,8 +118,8 @@ what someone needs to pick it up later without the original conversation.
       received "4").
   - Regression: `profile-calls-stat` and `buyer-settings` with the new spec, 5/5. tsc 0,
     eslint 0.
-- **Production:** `cosora.in` shows the old counts until this code is deployed (the same deploy
-  as MPF-19).
+- **Production:** live since the 2026-09-24 deploy (textile-spark-net `main` `d1ff52a`, bundle
+  `index-Clokv8L0.js`). The new spec passes 2/2 against `https://www.cosora.in`.
 
 ---
 
@@ -213,9 +213,10 @@ what someone needs to pick it up later without the original conversation.
   - `profile-calls-stat` and `vendor-analytics`: 6/6.
   - The test rows (2 from the gate script, 1 from the click) were deleted with SQL, back to
     the original 10.
-- **Production:** the live `cosora.in` bundle's direct insert is now refused. It ignores the
-  result and dials anyway, so calling works, but calls placed there aren't logged until the
-  Phase 12 code is deployed, the same deploy MPF-19 waits for.
+- **Production:** until the 2026-09-24 deploy, the live `cosora.in` bundle's direct insert was
+  refused. It ignored the result and dialled anyway, so calls placed there weren't logged.
+  The deployed bundle (`index-Clokv8L0.js`) calls `log_call()` and has no direct insert
+  (checked in the bundle; not click-tested on production).
 
 ---
 
@@ -256,8 +257,8 @@ what someone needs to pick it up later without the original conversation.
   visibility is probably intended for the marketplace. The contact columns are the part to
   close.
 - **Status: Fixed 2026-09-23 (My Profile Phase 11)** for signed-out callers, which is the
-  proven leak. The signed-in half is reopened on purpose until the new code is deployed:
-  see MPF-19.
+  proven leak. The signed-in half was reopened on purpose until the new code was deployed,
+  and closed on 2026-09-24: see MPF-19.
 - **Re-proven first:** at the start of Phase 11, the same two anon-only requests still
   returned `0-0/20` and `0-0/7`.
 - **Fix:** migration `20260923171821_profiles_contact_columns_private.sql`.
@@ -718,6 +719,27 @@ what someone needs to pick it up later without the original conversation.
   4. Re-run `scripts/profile-contact-privacy-check.mjs` and expect 24/24. While the grant
      stands, its four "buyer cannot read / filter" checks fail by design.
 - **Tracked in:** `ToDo.md`.
+- **Status: Fixed 2026-09-24.** Mitra approved the revoke once the deploy was checked. By the
+  migration versions (UTC), the grant was live for about 77 minutes: `20260923174653` to
+  `20260923190354`.
+  1. **Deployed.** textile-spark-net `main` `d1ff52a` is on `www.cosora.in` (bundle
+     `index-Clokv8L0.js`, was `index-Bl47x8Yt.js`). Cosora-Admin `main` `106f84c` is on
+     `cosora-admin.vercel.app` (`index-BzKTnSmz.js`, was `index-B920YuHP.js`).
+  2. **Bundles checked.** The buyer bundle calls `my_contact_info`, `call_buyer_contact` and
+     `log_call`. The admin bundle calls `admin_profile_search` and `admin_profile_emails`.
+     Neither has a `profiles` select string naming `email` or `phone`. Also checked in SQL:
+     no invoker-rights function or view reads the columns. Every edge function that reads
+     `profiles` uses the service role.
+  3. **Revoked** by `20260923190354_profiles_contact_columns_revoke_interim.sql`. Its
+     self-check asserts that neither anon nor authenticated can select the two columns, that
+     the other 7 columns and UPDATE are kept, and that the contact functions are executable.
+  4. **`scripts/profile-contact-privacy-check.mjs` 24/24.**
+  - **Live smoke after the revoke,** against `https://www.cosora.in` and
+    `https://cosora-admin.vercel.app`:
+    - `tests/profile-contact-privacy.spec.ts` 4/4: the 27-page sweep, Call Buyer and its
+      suspended refusal, and the admin's Accounts and Chats;
+    - `tests/profile-edit-routes.spec.ts` 1/1: saves still land.
+    - The demo accounts are back to active, with no open suspension.
 
 ---
 
