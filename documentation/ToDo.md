@@ -15,6 +15,54 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Remove the synthetic load-test population with scripts/loadtest-cleanup.sql — added 2026-09-23
+- Task: once testing on the synthetic accounts is finished, run `scripts/loadtest-cleanup.sql`
+  against production to delete the 370 `loadtest-*@cosora.test` accounts and everything they
+  own. Run it first as-is (dry run), check its report, then run it again in commit mode.
+- Context:
+  - **Why it matters.**
+    - These accounts are live production logins that all share one password (open Medium
+      flag in `securityflags.md`).
+    - They own most of the buyer catalogue: 351 of the 377 live listings are
+      "[LOADTEST] …", against 26 real ones (577 synthetic products in all statuses).
+    - They own 120 "[LOADTEST] Vendor Co N" vendors and nearly all of the vendor lead pool.
+  - **What it deletes** (live counts 2026-09-23): 370 users and identities, 170 sessions, 120
+    vendor profiles, 577 products, 572 RFQs, 1,082 quotes, 221 conversations with 1,321
+    messages, 24 ads with 18 review-log rows, 24 subscriptions and 184 engagement events. The
+    dry run prints the current numbers.
+  - **How to run.** As postgres: the Supabase SQL editor, psql or MCP `execute_sql`.
+    1. Run the file unchanged. Its 'dry-run' mode deletes inside a transaction, verifies,
+       rolls everything back and ends with an error listing what it would delete. Nothing
+       changes.
+    2. To delete for real, change `'dry-run'` to `'commit'` in step 0 and run it again. The
+       final SELECT must return all zeros.
+    - If the population size was changed on purpose, update `cosora.loadtest_expected_users`
+      (370). Otherwise the preflight refuses.
+  - **Safety built in.**
+    - It refuses before touching a row if an admin, Storage objects, a Bunny video or a
+      signed contract is involved, or if any real user's own content would be destroyed.
+    - It deletes children first, because a one-line `delete from auth.users` aborts on the
+      product → recompute-queue FK and the NO ACTION links.
+    - It then checks that nothing synthetic remains and that the real rows in 15 tables are
+      unchanged.
+    - Validated live on 2026-09-23 without executing any delete: the preflight passed and
+      all 7 DELETEs plan.
+  - **Side effects to expect.**
+    - The catalogue shrinks to the ~26 real listings.
+    - Every check that signs in as a loadtest account stops working until a new fixture set
+      exists: `scripts/load/*` (k6), `tests/mp12-sourcing-loop.spec.ts`,
+      `scripts/targeted-lead-cap-check.mjs`, `scripts/quote-rfq-open-check.mjs`,
+      `scripts/cap-race-check.mjs` and `scripts/loadtest-login-check.mjs`.
+    - `LOADTEST_PASSWORD` in `.env` becomes unused.
+  - **If the cleanup is delayed,** rotate the shared password first.
+  - **Afterwards:** close the two load-test flags in `securityflags.md`, update the
+    load-test gap in `sides.md`, and add changelog / test.md entries.
+- Reference: 2026-09-23 session, Master Prompt 12 Part G (cleanup script written; commit
+  `4c4a762`, live validation `a5bf067`), then the request "add the cleanup task in the
+  todo.md".
+- Priority: High (while it waits, 370 production logins share one password)
+- Status: Open
+
 ### Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
 - Task: configure the `embedding_alert_webhook_url` Vault secret so CRITICAL pipeline alerts
   reach a human outside the app.
