@@ -11,13 +11,14 @@ import { fileURLToPath } from "node:url";
  * An admin edits FAQs in Cosora-Admin's FAQs page, and the live pages change
  * with no deploy:
  *   buyer_help           /profile/help, as a SIGNED-OUT visitor
- *   subscription         /subscription, as demo-vendor, with its "Contact us" link
- *   seller_registration  not placed on any page yet, so it is checked through
- *                        the public read the page will use (anon REST)
- * For each: add → appears; edit → updates; move up → reorders (then moved back);
- * deactivate → disappears; delete → gone from admin.
+ *   subscription         /subscription, as demo-vendor; "Contact us" opens /help
+ *   seller_registration  /seller (the vendor landing page), as a SIGNED-OUT visitor
+ * For each: add → appears last; edit → updates; move up → reorders (then moved
+ * back); deactivate → disappears; delete → gone from admin. Each page's list is
+ * compared with its state before the test, so the real content is left as found.
  *
- * Also: the 12 seeded buyer Help FAQs render signed out, and a non-admin (and
+ * Also: the 12 buyer Help FAQs render signed out; Andy's Subscription and Seller
+ * Registration content (loaded 2026-09-23) is on its pages; and a non-admin (and
  * anon) gets a permission error calling every admin_faq_* RPC, writing the
  * table directly, and reading its created_by column.
  *
@@ -122,6 +123,15 @@ async function subscriptionQuestions(browser: Browser, vendorSession: Session): 
   await ctx.close();
   return { qs, contactHref };
 }
+async function sellerLandingQuestions(browser: Browser): Promise<string[]> {
+  const { ctx, page } = await pageWith(browser, null); // signed out: /seller is for visitors deciding to register
+  await page.goto("/seller", { waitUntil: "networkidle" });
+  const block = page.locator('[data-faq-surface="seller_registration"]');
+  await expect(block.locator("button[data-state]").first()).toBeAttached();
+  const qs = (await block.locator("button[data-state]").allInnerTexts()).map((q) => q.trim());
+  await ctx.close();
+  return qs;
+}
 
 test("admins edit FAQs on all three surfaces and the live pages follow; non-admins cannot", async ({ browser }) => {
   const admin = await signIn(ADMIN);
@@ -164,6 +174,44 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     await ctx.close();
   }
 
+  // ── Andy's content is on its pages (loaded 2026-09-23 through the admin RPCs) ──
+  const subBase = await subscriptionQuestions(browser, vendor.session);
+  expect(subBase.qs.slice(0, 5), "Andy's Subscription FAQ, in his order").toEqual([
+    "Can I upgrade or downgrade my plan anytime?",
+    "Is there a refund policy?",
+    "What happens when I reach my lead limit?",
+    "Do you offer discounts for annual billing?",
+    "Lowest billing plan?",
+  ]);
+  expect(subBase.contactHref, "Contact us opens the Help page (Andy's content)").toBe("/help");
+  {
+    const { ctx, page } = await pageWith(browser, vendor.session);
+    await page.goto("/subscription", { waitUntil: "networkidle" });
+    const card = page.locator('[data-faq-surface="subscription"]');
+    await card.getByRole("button", { name: "Lowest billing plan?" }).click();
+    await expect(card.getByText(/₹699\/month/)).toBeVisible();
+    await card.scrollIntoViewIfNeeded();
+    await card.screenshot({ path: path.join(SHOTS, "faqs-subscription.png") });
+    await card.getByRole("link", { name: /Contact us/ }).click();
+    await expect(page).toHaveURL(/\/help$/);
+    await ctx.close();
+  }
+  const sellerBase = await sellerLandingQuestions(browser);
+  expect(sellerBase, "Andy's 10 Seller Registration FAQs, in his order").toHaveLength(10);
+  expect(sellerBase[0]).toBe("What is Cosora?");
+  expect(sellerBase[9]).toBe("Can I edit my listings after uploading?");
+  {
+    const { ctx, page } = await pageWith(browser, null);
+    await page.goto("/seller", { waitUntil: "networkidle" });
+    const block = page.locator('[data-faq-surface="seller_registration"]');
+    await block.scrollIntoViewIfNeeded();
+    await block.getByRole("button", { name: "Who can register as a seller on Cosora?" }).click();
+    await expect(block.getByText("• Ready-made garments")).toBeVisible(); // line breaks survive
+    await page.waitForTimeout(600); // whileInView fade-in
+    await block.screenshot({ path: path.join(SHOTS, "faqs-seller-landing.png") });
+    await ctx.close();
+  }
+
   const { ctx: adminCtx, page: adminPage } = await pageWith(browser, admin.session);
   try {
     // ── Buyer Help ──
@@ -193,7 +241,6 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     await adminAdd(adminPage, "Subscription", { question: sq, answer: "Subscription answer." });
     let sub = await subscriptionQuestions(browser, vendor.session);
     expect(sub.qs.at(-1)).toBe(sq);
-    expect(sub.contactHref, "Contact us is the real support email").toMatch(/^mailto:hello@cosora\.in/);
     await adminEdit(adminPage, "Subscription", sq, sq2);
     sub = await subscriptionQuestions(browser, vendor.session);
     expect(sub.qs).toContain(sq2);
@@ -204,18 +251,28 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     await adminMove(adminPage, "Subscription", sq2, "down");
     await adminToggle(adminPage, "Subscription", sq2, "Deactivate");
     sub = await subscriptionQuestions(browser, vendor.session);
-    expect(sub.qs).not.toContain(sq2);
-    expect(sub.qs.length, "the 5 seeded subscription FAQs remain").toBe(5);
+    expect(sub.qs, "the real Subscription FAQ is back as it was").toEqual(subBase.qs);
     await adminDelete(adminPage, "Subscription", sq2);
 
-    // ── Seller Registration (no page yet: the public read it will use) ──
+    // ── Seller Registration, on /seller signed out ──
     const rq = `${MARK} Seller registration question?`;
+    const rq2 = `${MARK} Seller registration question, edited?`;
     await adminAdd(adminPage, "Seller Registration", { question: rq, answer: "Seller registration answer." });
-    const visible = async () => (await anon.from("faqs").select("id").eq("surface", "seller_registration").eq("question", rq)).data?.length ?? -1;
-    expect(await visible(), "active seller_registration FAQ is publicly readable").toBe(1);
-    await adminToggle(adminPage, "Seller Registration", rq, "Deactivate");
-    expect(await visible(), "deactivated FAQ is not").toBe(0);
-    await adminDelete(adminPage, "Seller Registration", rq);
+    let sl = await sellerLandingQuestions(browser);
+    expect(sl.at(-1), "added FAQ shows last on /seller").toBe(rq);
+    await adminEdit(adminPage, "Seller Registration", rq, rq2);
+    sl = await sellerLandingQuestions(browser);
+    expect(sl).toContain(rq2);
+    expect(sl).not.toContain(rq);
+    const rBefore = sl.indexOf(rq2);
+    await adminMove(adminPage, "Seller Registration", rq2, "up");
+    sl = await sellerLandingQuestions(browser);
+    expect(sl.indexOf(rq2), "moved up one place").toBe(rBefore - 1);
+    await adminMove(adminPage, "Seller Registration", rq2, "down");
+    await adminToggle(adminPage, "Seller Registration", rq2, "Deactivate");
+    sl = await sellerLandingQuestions(browser);
+    expect(sl, "the real Seller Registration FAQ is back as it was").toEqual(sellerBase);
+    await adminDelete(adminPage, "Seller Registration", rq2);
   } finally {
     // Anything a failed step left behind.
     const { data: left } = await admin.db.rpc("admin_faq_list");

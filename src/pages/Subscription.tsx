@@ -377,16 +377,16 @@ export default function Subscription() {
         </motion.div>
 
         {/* FAQ: admin-editable (surface "subscription"), 2026-09-23.
-            "Contact us" is email because it is the one real support channel a
-            vendor has. /help renders the buyer Help page, and its chat is canned
-            replies (see myprofileflags.md, MPF-15). */}
+            "Contact us" opens the Help page, per Andy's FAQ content. That page is
+            the buyer Help page today; its email link is real but its chat is canned
+            replies (myprofileflags.md, MPF-15). */}
         <motion.div variants={section}>
           <FaqSection
             surface="subscription"
             description="Everything you need to know about our plans"
             contact={{
               label: "Contact us",
-              href: "mailto:hello@cosora.in?subject=Subscription%20question",
+              href: "/help",
               hint: "Still have a question about plans or billing?",
             }}
           />

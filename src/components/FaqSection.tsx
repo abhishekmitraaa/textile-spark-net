@@ -1,17 +1,18 @@
-import { MessageSquare, Mail } from "lucide-react";
+import { Link } from "react-router-dom";
+import { LifeBuoy, MessageSquare, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useFaqs, type FaqSurface } from "@/lib/queries/faqs";
 
 // One surface's admin-editable FAQs as a card with an accordion (Phase 9,
-// 2026-09-23). Used on the vendor Subscription page. Built to be dropped into
-// the vendor onboarding page once its placement is confirmed, as
-// <FaqSection surface="seller_registration" />, with no query logic to rebuild.
-// Buyer Help keeps its own layout and reads the same data through useFaqs().
+// 2026-09-23). Used on the vendor Subscription page, and droppable into any
+// other page with no query logic to rebuild. Buyer Help and the vendor landing
+// page (/seller) keep their own layouts and read the same data through useFaqs().
 
 export interface FaqContact {
   label: string;
+  /** An in-app route ("/help") navigates in place; anything else is a plain link (mailto:, https:). */
   href: string;
   /** One line above the button, e.g. "Still have a question?". */
   hint?: string;
@@ -64,9 +65,15 @@ export function FaqSection({
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 px-4 py-3">
             <p className="text-sm text-muted-foreground">{contact.hint ?? "Still have a question?"}</p>
             <Button asChild variant="outline" size="sm">
-              <a href={contact.href}>
-                <Mail className="mr-1.5 h-4 w-4" /> {contact.label}
-              </a>
+              {contact.href.startsWith("/") ? (
+                <Link to={contact.href}>
+                  <LifeBuoy className="mr-1.5 h-4 w-4" /> {contact.label}
+                </Link>
+              ) : (
+                <a href={contact.href}>
+                  <Mail className="mr-1.5 h-4 w-4" /> {contact.label}
+                </a>
+              )}
             </Button>
           </div>
         )}

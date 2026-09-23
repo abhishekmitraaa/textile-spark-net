@@ -64,14 +64,18 @@ the demand side of India's fashion and textile supply chain.
 - **Following** — followed brands, plus a separate follow set for brands surfaced on the
   Search Results Brand tab (different id space, deliberately kept separate).
 - **Chat** — in-app messaging with a vendor, opened with lead context (product, quantity,
-  requirements) pre-loaded. Calls go out via the native phone dialer.
+  requirements) pre-loaded. Calls go out via the native phone dialer. Each call is recorded
+  by the server (`log_call()`, 2026-09-23): a repeat tap within a minute counts once, and a
+  suspended account's calls aren't recorded.
 - **Reviews** — write and manage reviews across vendors, products and services
   (`/profile/reviews` fans out across all three tables).
 - **Service vendors, freelancers and Cosora Studio** — printers and logistics firms, pattern
   makers / CLO 3D artists / trend researchers, and photographers.
 - **Profile** — interest preferences, social links, regional settings, data export,
   notifications, help & support chat. The **Calls** stat counts the buyer's own calls
-  (2026-09-23; it was a hardcoded "0").
+  (2026-09-23; it was a hardcoded "0"). The **Quotes** and **Chats** stats count the buyer's
+  own too: quotes received on their requests, and their conversations (2026-09-24; anyone who
+  also sells or is an admin used to see other people's counted in).
 - **Settings** (`/profile/settings`, 2026-09-23): the buyer's account and security page.
   - It shows the sign-in number and account email, has Log Out, and notes that sign-in is
     mobile + OTP, so there's no password.
@@ -140,6 +144,9 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
+- **Any signed-in account can still read other users' email and phone, for now.** Signed out
+  they're closed (MPF-3, fixed 2026-09-23). The signed-in grant stays until the new code is
+  live on `cosora.in` and the admin panel, and then it's revoked (MPF-19).
 - **Delete my account can't send its code yet.** The flow is built and verified end to end,
   but the email step needs `RESEND_API_KEY`, which isn't set. Until then the dialog says
   honestly that deletion isn't available online and points to support. With Resend's shared
@@ -320,6 +327,10 @@ rather than a supplier directory.
   "[object Object]"; error toasts across both sides now show the server's reason.) Caps now hold
   exactly under simultaneous submissions: before 2026-09-23, several quotes or listings sent
   at once could all take the last free slot.
+  **Call Buyer**, on an accepted quote, gets the buyer's number from the database, and only
+  when the vendor has quoted on one of that buyer's requests, neither account is suspended
+  and their chat isn't under review. Otherwise the vendor is told why (2026-09-23, MPF-3).
+  Before that, a buyer's phone was readable by anyone.
 - **Advertisements** — paid campaigns with category and geographic targeting (including Pan
   India), placement pricing, benchmarks, and TradeSEAL verification purchase.
 - **Competitor ads** — see what competitors in your category and city are advertising and at
@@ -329,9 +340,14 @@ rather than a supplier directory.
   **No Razorpay Subscriptions API and no autopay** — every billing period is a discrete
   order the vendor pays explicitly.
   The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
-  button that emails hello@cosora.in. That email is the only real support channel a
-  vendor has: Help & Support opens the buyer help page, and its chat sends canned replies
-  (MPF-15).
+  button that opens the Help page, as Andy asked. That's the buyer help page: its email
+  link (hello@cosora.in) is the only real support channel a vendor has, and its chat sends
+  canned replies (MPF-15). Some of Andy's plan answers promise what billing doesn't do yet:
+  proration, limit notifications and a 7-day refund (MPF-16, MPF-17).
+- **Seller FAQ on the landing page** (`/seller`, 2026-09-23): Andy's 10 registration
+  questions, editable from the admin panel. They're published verbatim, though some don't
+  match the product: Aadhaar isn't collected, there are no email or WhatsApp lead alerts,
+  and there's no pay-per-lead yet (MPF-16).
 - **Analytics** — every figure counted from the vendor's own rows; no chart fixtures remain.
   Lifetime KPIs (views, inquiries, active products); **Total Order Value**, the platform's
   strongest retention metric, computed from accepted quotes × RFQ quantity and shared with
@@ -339,7 +355,8 @@ rather than a supplier directory.
   funnel** (requirements → quotes sent → accepted → order value); **buyer responsiveness**
   ("X% of buyer messages get a first reply within 24 hours", with the threads currently
   waiting on a reply as a tappable action list); **call analytics** (inbound vs outbound,
-  trend, and what buyers call about, from the `calls` table); **repeat buyers**; a real
+  trend, and what buyers call about, from the `calls` table, which only the server writes
+  since 2026-09-23, so buyers can't forge, backdate or erase them); **repeat buyers**; a real
   **views-by-category** split; **best/worst-rated live product**; a **you vs category
   average** tile reusing the `ad_category_benchmarks` RPC; a **profile-score gap nudge**
   driven by the same weights as the dashboard ring; and **per-campaign revenue booked ÷
@@ -454,7 +471,7 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 
 **Content**
 - **FAQs** (`/faqs`, 2026-09-23): the first real admin-editable content. It covers the
-  buyer Help, vendor Subscription and (once placed) seller-registration FAQs. super_admin
+  buyer Help, vendor Subscription and seller landing (`/seller`) FAQs. super_admin
   edits them and support reads them, and changes show on the site with no release.
 - Site content (banners and theme) is still a dev-seed mock with no table.
 
@@ -466,6 +483,9 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   with a static `UPDATE` per branch.
 - An admin cannot bypass the status triggers by widening RLS; unlocking goes through the
   purpose-built RPC.
+- **Emails and phones come through `admin_profile_search()` and `admin_profile_emails()`**,
+  never a `profiles` select: the columns aren't client-selectable (MPF-3). Any active admin
+  can call them, the same access as before.
 
 ---
 

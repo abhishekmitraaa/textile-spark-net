@@ -14,13 +14,15 @@ Last updated: 2026-09-09
 | Spec | Covers | Accounts |
 |---|---|---|
 | `new-arrivals.spec.ts` | Buyer New Arrivals tabs render (>=5) and the active route's tab is marked selected | anon |
-| `faqs-admin-editable.spec.ts` | Admin-editable FAQs across both apps. In Cosora-Admin (:5174), demo-admin adds, edits, moves up then back down, deactivates and deletes an FAQ on each surface, and the live page follows each step with no deploy: Buyer Help on `/profile/help` signed out, Subscription on `/subscription` as demo-vendor (plus its "Contact us" mailto), and Seller Registration through the anon REST read, because it isn't on a page yet. It also checks that the 12 seeded Help FAQs render signed out, and that demo-buyer and anon get 42501 from every `admin_faq_*` RPC, a direct insert, and a read of `created_by`. **Mutating, self-cleaning:** every row it creates starts `[P9TEST` and is deleted in `finally`. Needs both dev servers (`ADMIN_APP_URL` overrides :5174) | `demo-admin`, `demo-vendor`, `demo-buyer`, anon |
+| `faqs-admin-editable.spec.ts` | Admin-editable FAQs across both apps. **The real content first:** the 12 Help FAQs signed out, then Andy's 5 Subscription questions and his 10 Seller Registration questions in his order. It also checks that "Contact us" goes to `/help` (clicked through) and that a bulleted answer renders as lines. **Then the edit flow:** in Cosora-Admin (:5174), demo-admin adds, edits, moves up then back down, deactivates and deletes an FAQ on each surface, and the live page follows each step with no deploy. That's Buyer Help on `/profile/help` signed out, Subscription on `/subscription` as demo-vendor, and Seller Registration on `/seller` signed out. Each page must end exactly as it started. **Permissions:** demo-buyer and anon get 42501 from every `admin_faq_*` RPC, from a direct insert, and from reading `created_by`. **Mutating, self-cleaning:** the rows it creates start with `[P9TEST` and are deleted in `finally`. Needs both dev servers (`ADMIN_APP_URL` overrides :5174) | `demo-admin`, `demo-vendor`, `demo-buyer`, anon |
 | `buyer-settings.spec.ts` | The buyer sidebar's "Settings", clicked from `/notifications` (the buyer page that renders `DashboardSidebar`), lands on `/profile/settings`, not `/profile`. The page shows account and security content only, with the delete-account entry and no profile forms. "Download your data" and `/profile` → "Account & Security" work, and "My Profile" still goes to `/profile`. As demo-vendor (after switching to Seller, per MPF-13), Settings still goes to `/settings` | `demo-buyer`, `demo-vendor` (read-only) |
 | `profile-notifications-honesty.spec.ts` | `/profile/notifications` presents its switches as saved preferences. It checks the amber "aren't live yet" note, the "Saved for when…" subtitles, that no "Instant alerts" or "Get notified" copy remains, and that all 6 switches render with the newsletter switch showing the saved value | `demo-buyer` (read-only) |
 | `profile-regional-honesty.spec.ts` | Regional Settings on `/profile/regional-settings`. Choosing a currency other than ₹ INR, or a timezone other than IST, shows the amber "saved, but not used yet" note and an honest toast; the defaults show no note. It also checks the choice really is saved to `buyer_profiles.regional` | `demo-buyer` (**mutating, self-restoring**: snapshots and restores `regional`) |
-| `profile-edit-routes.spec.ts` | `/profile/edit` and `/profile/business-details` as real routes. Each is loaded straight from its URL, then hard-reloaded, and must render the buyer's real values. A save on each lands in `buyer_profiles` (read back from the database), and the second save keeps the first's change. It also checks the `/profile` entry points (Edit, camera, Business Details), that `?focus=city` focuses City, the signed-out prompt on both, and that the fake email "Verify" is gone | `demo-buyer` (**mutating, self-restoring**: snapshots and restores every column `saveProfileFull()` writes; `KEEP_EDIT_MARKERS=1` leaves them for a SQL check) |
+| `profile-edit-routes.spec.ts` | `/profile/edit` and `/profile/business-details` as real routes. Each is loaded straight from its URL, then hard-reloaded, and must render the buyer's real values, including the email and phone, which it reads through `my_contact_info()` (MPF-3). A save on each lands in `buyer_profiles` (read back from the database), and the second save keeps the first's change. It also checks the `/profile` entry points (Edit, camera, Business Details), that `?focus=city` focuses City, the signed-out prompt on both, and that the fake email "Verify" is gone | `demo-buyer` (**mutating, self-restoring**: snapshots and restores every column `saveProfileFull()` writes; `KEEP_EDIT_MARKERS=1` leaves them for a SQL check) |
+| `profile-contact-privacy.spec.ts` | MPF-3. **Signed out, over HTTP:** both proof requests and 5 other routes to `profiles.email`/`phone` are refused 401/42501 with no count, and the other columns still read. **A 27-page sweep** as demo-buyer, demo-vendor and signed out: no `profiles` read or contact RPC is refused, and `/profile` and `/profile/edit` show the buyer's own email and phone. **A real Call Buyer click:** the number comes from `call_buyer_contact()` (200). With the buyer suspended, the database refuses it (403, `target_suspended`) and the page shows "Calling is unavailable". **Cosora-Admin:** Accounts finds demo-buyer by email and the suspension history names the admin; the Chats search, a thread and the review queue resolve people | `demo-buyer`, `demo-vendor`, `demo-admin`, anon (**mutating, self-restoring**: accepts one demo-vendor quote and suspends demo-buyer, then restores both; each run leaves a suspension-ledger row and two notifications). Needs Cosora-Admin on :5174 |
 | `profile-data-export.spec.ts` | Both Data & Export buttons on `/profile/data-export`, through the real downloads. Before clicking, it proves the buyer can see foreign rows under RLS (so a missing owner filter would fail rather than pass by luck). Then: every CSV and JSON row is owned by the buyer (quotes on its RFQs, messages in its conversations), counts equal its own rows, no foreign RFQ, review or product-review id appears anywhere in either file, no `embedding` column, and the chat-scope note is on screen | `demo-buyer` (read-only) |
 | `profile-calls-stat.spec.ts` | The `/profile` Calls stat is counted, not hardcoded. Three numbers must agree: the buyer's own `calls` rows (counted with a `buyer_id` filter), the rendered stat, and the rows `/chats?tab=calls` lists (a separate query). It refuses to pass on a buyer with 0 calls, because "0" is what the bug hardcoded | `demo-buyer` (read-only; needs call history) |
+| `profile-quotes-chats-stat.spec.ts` | MPF-1. The `/profile` Quotes and Chats stats count the user's own rows. For each account three numbers must agree: an independent owner count taken by a different route from the app's (the user's RFQ ids, then their quotes; conversation ids from separate `user_a` and `user_b` filters), the rendered stats, and the page each stat opens ("Total Quotes" on `/requirement/my-quotes`, "N Conversations" on `/chats`). It waits for the count responses first, because every cell shows 0 while loading. demo-admin is the account that can catch the bug: the test first asserts that RLS shows it more quotes and chats than it owns. demo-buyer keeps a non-zero case. The screenshots show the stats row only | `demo-admin`, `demo-buyer` (read-only) |
 | `mp12-sourcing-loop.spec.ts` | The core loop through the real UI, and the rules fixed around it. F1: a vendor quotes an open request on `/leads`, and the "N/10 leads used" counter equals `get_vendor_plan()` before and after (findings §2 regression). F2: the buyer accepts it in My Quotes. F3: at the cap, open requests show "Upgrade to quote" while a request addressed to the vendor is still answered and uses no lead. F4: a request closed while the vendor is replying is refused, with the reason on screen | `loadtest-buyer-1`, `loadtest-vendor-64`, `loadtest-vendor-3`; writes `[LOADTEST]` rows only. **Cannot run since 2026-09-23:** these accounts were deleted by the cleanup |
 | `chat-pipeline.spec.ts` | Chat + chat-moderation, UI layer (T1–T13's browser half) | `chatfx-*` / `rlstest-*` fixtures |
 | `admin-chat-moderation.spec.ts` | Cosora-Admin's chat review queue | `rlstest-*` fixtures |
@@ -83,8 +85,9 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies. Runs each case **twice — active and suspended — and passes only if the answer changes** |
-| `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
+| `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
+| `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
+| `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. While the interim grant stands (MPF-19), its 4 signed-in checks fail by design |
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
@@ -140,6 +143,164 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-24 — Phase 13: MPF-1 closed (probe re-run; spec 2/2, and it fails on the old code; regression 5/5)
+
+- **Probe (rolled back):** counts as `authenticated` under each user's claims. Bare (the old
+  query) / new query / owned (counted as the migration role):
+
+  | Account | Quotes | Chats |
+  |---|---|---|
+  | admin account (`6f66d05d…`, super_admin, also a vendor) | 3 / **1** / 1 | 4 / **3** / 3 |
+  | demo-admin (super_admin) | 3 / 0 / 0 | 4 / 0 / 0 |
+  | demo-vendor | 2 / 0 / 0 | 2 / 2 / 2 |
+  | demo-buyer | 2 / 2 / 2 | 1 / 1 / 1 |
+
+- **Over REST** with real sign-ins (a scratch script that prints counts only): the two new
+  requests equal an independent owner count for demo-buyer, demo-vendor and demo-admin, and
+  the `rfqs!inner` embed returns no error.
+- **Playwright** `tests/profile-quotes-chats-stat.spec.ts` (new), dev server on :8080: **2/2**.
+  - Mutation check 1: `useProfileStats()` temporarily back to bare counts. demo-admin
+    **failed** (Quotes stat: expected "0", received "3"); demo-buyer passed, as MPF-1 predicted
+    for a plain buyer.
+  - Mutation check 2: only the Chats filter removed. demo-admin **failed** (Chats stat:
+    expected "0", received "4"). The two cell checks are soft, so one can't hide the other.
+  - The fix was restored byte for byte (`cmp`) after each.
+  - Screenshots, stats row only: `screenshots/profile-quotes-chats-stat-admin.png` (Calls 0,
+    Quotes 0, Saved 0, Chats 0) and `profile-quotes-chats-stat-buyer.png` (2, 2, 0, 1).
+- **Regression:** `profile-calls-stat` and `buyer-settings` (read-only) with the new spec,
+  **5/5**. No tracked screenshot changed.
+- **Checks:** tsc 0 and eslint 0 (buyer app). No migration, so the advisors are unchanged.
+
+### 2026-09-23 — Phase 12: MPF-2 closed (proven first; rehearsal 18/18; suspension gate 9/9; Call Now logged then rate-limited; regression 6/6)
+
+- **Before (rolled back, as demo-buyer):** a call dated 400 days ago with direction `missed` to
+  demo-vendor → accepted; re-target and re-date it → 1 row; delete it → 1 row.
+- **Rehearsal (rolled back):** the migration, its self-check, and 18 checks.
+  - Direct INSERT/UPDATE/DELETE → 42501.
+  - Visible rows for buyer, vendor and admin before and after: 2/2, 3/3, 10/10.
+  - `log_call` → `logged`, with the server's buyer, direction and time, and a 200-character
+    cleaned context.
+  - A repeat → `rate_limited` (retry after 60 s).
+  - A non-vendor, self or null target → 22023.
+  - A blank context → null.
+  - A 6th call to one vendor in 24 h, and a 31st in an hour → `too_many_calls`.
+  - A suspended buyer → `account_not_active`; anon → 42501.
+- **Applied** `20260923182259`; its self-check passed.
+- **`scripts/suspension-gate-check.mjs`**, extended:
+  - **Run 1, 8/9.** All five MPF-2 rows passed. The ad case failed, active and suspended
+    alike, with "Advertising is a paid feature: your free plan". The demo vendor's gold
+    subscription has been `expired` since the 2026-09-16 sweep, and the fixture only moved the
+    date, so the ad case had been failing since then, unrelated to MPF-2. The last recorded run
+    was 2026-08-02, when the ad case passed.
+  - **Run 2, after the fixture also saves and restores the status: 9/9.**
+  - Afterwards: the subscription is back to `expired` with its original date, and demo-vendor
+    is active. There are no product, RFQ, ad or review leftovers. The 2 tagged calls were
+    deleted with SQL.
+- **Browser** (buyer app on :8080): a temporary spec, deleted after the run. demo-buyer tapped
+  Call Now twice on demo-vendor's profile:
+  - the first tap → `logged`, the second → `rate_limited`;
+  - the number was shown both times;
+  - there was no direct write to `/rest/v1/calls`, and exactly one row was added, deleted
+    with SQL afterwards.
+- **Regression:** `profile-calls-stat` and `vendor-analytics` (read-only), **6/6**.
+- **After:** `calls` holds its original 10 rows.
+- **Advisors:** 137 security findings (was 136). The new one is `log_call`'s "authenticated can
+  execute" notice.
+- **Checks:** tsc 0 and eslint 0 (buyer app); tsc 0 (Cosora-Admin).
+- 6 tracked screenshots that the regression specs re-rendered were restored with
+  `git checkout`.
+
+### 2026-09-23 — Phase 11: MPF-3 closed (proof requests 401; privacy check 24/24; gate 13/13; spec 4/4; regression 25/25), then an interim signed-in grant
+
+- **Before:** the two MPF-3 proof requests, anon key only, returned `0-0/20` (email) and
+  `0-0/7` (phone). Only ids and counts were requested.
+- **Rehearsal (rolled back):** the migration plus 18 behaviour checks as anon, demo-buyer,
+  demo-vendor and an admin, via `set local role` and JWT claims. All behaved as intended. The
+  output was codes and booleans only.
+- **After `20260923171821`:** the proof requests → HTTP 401, `42501`, no `Content-Range`, no
+  rows.
+- **`scripts/profile-contact-privacy-check.mjs`** (new, read-only): **24/24**.
+- **`scripts/contact-gate-check.mjs`** (extended): **13/13**, the 7 callGate states plus 6
+  server states. It writes state as before: it suspends the demo accounts and locks their
+  chat, then restores them.
+- **Playwright**, with the buyer app on :8080 and Cosora-Admin on :5174:
+  - `tests/profile-contact-privacy.spec.ts`: **4/4**.
+    - The first run timed out in the page sweep at the default 60 s. Pages took about 5 s
+      each; no check failed. The sweep now has 300 s and caps each page's idle wait.
+    - The admin test first screenshotted the account drawer mid-load, so it now waits for the
+      drawer and asserts the history names the admin.
+  - Regression, one run with the new spec (29/29 in total): **25/25**. It covered
+    `profile-edit-routes` (writes data, restores itself, and now asserts the user's own email
+    and phone), `profile-data-export`, `profile-calls-stat`, `buyer-settings`,
+    `profile-notifications-honesty`, `vendor-analytics`, `vendor-my-store`,
+    `mp8-product-detail-controls` and `mp7-product-detail-real-data`.
+  - **Not runnable:**
+    - `chat-pipeline` and `admin-chat-moderation` need the `chatfx-*`/`rlstest-*` fixtures,
+      and there are 0 `cf00000…` profiles;
+    - `mp12-sourcing-loop` needs the deleted load-test accounts.
+  - **Nothing left behind:** afterwards SQL shows both demo accounts active, demo-vendor's
+    quotes pending, the demo chat active, no edit markers and 0 open suspensions.
+- **Interim grant `20260923174653`** (applied after the runs above):
+  - both proof requests still return 401/42501;
+  - the four queries the live bundles send (profile load, profile page, admin search, admin
+    participants) succeed as demo-buyer and demo-admin;
+  - the privacy check shows exactly its 4 signed-in checks failing: 20/24.
+- **Screenshots:**
+  - `mpf3-call-buyer.png`, with the number masked;
+  - `mpf3-call-buyer-suspended.png`;
+  - `mpf3-admin-accounts.png`.
+- **Advisors:** 136 security findings, up from 132. The 4 new ones are the new functions'
+  "authenticated can execute" notices, accepted like the other definer RPCs.
+- **Checks:** tsc 0 and eslint 0 errors on the changed files (2 existing warnings in
+  `AuthContext.tsx`); tsc 0 (Cosora-Admin).
+- The 14 tracked screenshots that the regression specs re-rendered were restored with
+  `git checkout`.
+
+### 2026-09-23 — Phase 9, content: Andy's FAQs live on /seller and /subscription (1 unexplained failure, then 5/5)
+
+- **Content load:** a one-off script (in the scratchpad, not committed) signed in as
+  demo-admin and called the `admin_faq_*` RPCs, the admin page's own path.
+  - **Dry run first.** It listed all 22 steps and checked its guards: no seller rows yet,
+    Andy's rows not already loaded, the 5 old subscription rows present, and the target
+    positions free.
+  - **With `--write`,** `admin_faq_list` showed:
+    - subscription 10–50: Andy's 5, active;
+    - subscription 120–140: autopay, payment methods and GST, active;
+    - subscription 210 and 240: the superseded upgrade and lead-limit rows, inactive;
+    - seller_registration 10–100: Andy's 10, active.
+- **Playwright** `tests/faqs-admin-editable.spec.ts`, extended (see the table), with the buyer
+  app on :8080 and Cosora-Admin on :5174:
+  - **Run 1 failed.** Its error report was lost: the next run started before I read it, and
+    Playwright wipes `test-results/`. It was the first run after the code changes, which fits
+    a one-off Vite reload, but that's a guess.
+  - **Runs 2–5 passed** (1.6 min on a warm server). **Run 6 also passed,** straight after a
+    cold restart of both dev servers, as a reproduction attempt.
+  - **Nothing left behind:** SQL afterwards shows every row at its loaded position and no
+    `[P9TEST` rows. The failed run's `finally` deleted its own rows, and no real row stayed
+    swapped.
+  - **Checked:**
+    - Andy's 5 Subscription questions come first, in his order.
+    - "Lowest billing plan?" expands to the ₹699/month answer.
+    - "Contact us" has `href="/help"`, and clicking it lands on `/help`.
+    - Signed out, `/seller` shows his 10 questions in order.
+    - "Who can register…" expands with `• Ready-made garments` on its own line.
+    - Seller Registration on `/seller`: add → last, edit, move up (index −1) and back down,
+      deactivate → the page equals its starting list, then delete.
+    - The Subscription flow ends with the page equal to its starting list. Its reorder crosses
+      the two hidden rows (positions 210 and 240), which exercises the admin fix.
+- **Regression:** `vendor-my-store.spec.ts` and `mp7-admin-vendor-panels.spec.ts` (both
+  read-only; they load `/kyc` and `/onboarding`): **11/11**.
+  - **Not run:** the other four specs that load those pages. `vendor-onboarding-write-path`
+    and `mp8-kyc-reupload` write data, and I didn't check `mp4-phase5-kyc-review` or
+    `mp4-phase2-callback-onboarding`.
+  - The only change on those pages is one copy string, and a grep confirms no test or script
+    asserts it.
+- **Screenshots:**
+  - `faqs-seller-landing.png`: the `/seller` FAQ block, with a bulleted answer open;
+  - `faqs-subscription.png`: the Subscription FAQ, with "Lowest billing plan?" open and the
+    Contact us button.
+- **Checks:** tsc 0 and eslint 0 (buyer app); tsc 0 (Cosora-Admin).
 
 ### 2026-09-23 — Phase 9: admin-editable FAQs, both apps (1/1, mutating, self-cleaning)
 
@@ -458,7 +619,7 @@ other than the Resend owner's, a verified domain.
 
   RLS only is wrong for anyone the SELECT policy also admits as vendor or admin, which is why
   `useCallCount()` filters. The Quotes and Chats cells (`useProfileStats`) have the same
-  flaw; not fixed in this phase.
+  flaw; not fixed in this phase (fixed 2026-09-24, Phase 13, MPF-1).
 - **Playwright** `tests/profile-calls-stat.spec.ts` as demo-buyer, dev server on :8080:
   - With the fix: **1/1 passed** twice. Stat "2" = database 2 = Calls tab rows 2.
   - Mutation check: with `Profile.tsx` temporarily restored to the hardcoded value, it

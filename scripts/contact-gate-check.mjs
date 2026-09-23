@@ -23,6 +23,15 @@
  * TSX-adjacent and pulls in React. Keeping the two in step is the point of the
  * comment block above each case; if callGate changes, this must change with it.
  *
+ * SERVER TWIN (MPF-3, migration 20260923171821): a buyer's phone is no longer
+ * client-readable. useCallBuyer gets it from call_buyer_contact(), which applies
+ * the same three rules in the database and raises the reason code as a 42501.
+ * Every state below is also checked from the VENDOR's side against that
+ * function, so the client gate and the server gate cannot drift apart. The
+ * vendor has quoted on demo-buyer's RFQ, so with nothing blocking it gets the
+ * phone. Seen from the vendor, the roles swap: the vendor suspended is
+ * caller_suspended, the buyer suspended is target_suspended.
+ *
  * Run: node scripts/contact-gate-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
@@ -74,6 +83,16 @@ async function callGate(db, meId, otherId) {
     if (conv?.status === "under_review") return "under_review";
   }
   return null;
+}
+
+/**
+ * call_buyer_contact(), the server-side gate for the vendor -> buyer direction.
+ * Returns the refusal's reason code, or null when the phone is released.
+ */
+async function serverGate(db, buyerId) {
+  const { data, error } = await db.rpc("call_buyer_contact", { p_buyer_id: buyerId });
+  if (error) return error.message;
+  return Array.isArray(data) && data.length === 1 && data[0].phone ? null : `unexpected: ${JSON.stringify(data?.length)} rows`;
 }
 
 const buyer = await signIn(BUYER);
@@ -151,17 +170,20 @@ try {
   await setStatus(vendor.id, "active");
   convId = await setConversation("active");
   check("none (both active)", null, await callGate(buyer.db, buyer.id, vendor.id));
+  check("server: none -> vendor gets the buyer's phone", null, await serverGate(vendor.db, buyer.id));
 
   // ── under_review: nothing suspended, thread locked ──
   await setConversation("under_review");
   check("conversation under_review", "under_review", await callGate(buyer.db, buyer.id, vendor.id));
   // Both directions: the vendor is just as blocked as the buyer.
   check("under_review, other direction", "under_review", await callGate(vendor.db, vendor.id, buyer.id));
+  check("server: under_review", "under_review", await serverGate(vendor.db, buyer.id));
   await setConversation("active");
 
   // ── target_suspended ──
   await setStatus(vendor.id, "suspended");
   check("target suspended", "target_suspended", await callGate(buyer.db, buyer.id, vendor.id));
+  check("server: vendor suspended -> caller_suspended", "caller_suspended", await serverGate(vendor.db, buyer.id));
 
   // ── caller_suspended, and it WINS over target_suspended ──
   await setStatus(buyer.id, "suspended");
@@ -170,9 +192,11 @@ try {
     "caller_suspended",
     await callGate(buyer.db, buyer.id, vendor.id),
   );
+  check("server: both suspended -> caller wins", "caller_suspended", await serverGate(vendor.db, buyer.id));
 
   await setStatus(vendor.id, "active");
   check("caller suspended only", "caller_suspended", await callGate(buyer.db, buyer.id, vendor.id));
+  check("server: buyer suspended only -> target_suspended", "target_suspended", await serverGate(vendor.db, buyer.id));
 
   // ── suspension outranks the thread lock ──
   await setStatus(buyer.id, "active");
@@ -182,6 +206,11 @@ try {
     "suspended target outranks a locked thread",
     "target_suspended",
     await callGate(buyer.db, buyer.id, vendor.id),
+  );
+  check(
+    "server: suspended vendor outranks a locked thread",
+    "caller_suspended",
+    await serverGate(vendor.db, buyer.id),
   );
 } finally {
   await setStatus(buyer.id, "active");
@@ -226,7 +255,7 @@ try {
 console.table(results);
 console.log(
   failures === 0
-    ? "\nPASS - callGate returns the right reason for every state, in the right order."
+    ? "\nPASS - callGate and call_buyer_contact() return the right reason for every state, in the right order."
     : `\n${failures} STATE(S) WRONG`,
 );
 console.log(

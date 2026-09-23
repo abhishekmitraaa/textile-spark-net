@@ -117,7 +117,7 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (109 as of 2026-09-23, after the My Profile brief's Phase 9). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (112 as of 2026-09-23, after the My Profile brief's Phase 12). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
@@ -1332,24 +1332,142 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
   - `<FaqSection surface title description contact>` (`src/components/FaqSection.tsx`) is
     the drop-in for any page: a card with an accordion, plus an optional contact row (label,
     href, hint). It renders nothing when there are no rows and no contact. It's used on
-    `/subscription` and ready for Seller Registration.
+    `/subscription`. A contact `href` that starts with `/` renders a React Router `Link`
+    (in-app, no reload); anything else (`mailto:`, `https:`) is a plain link.
   - Buyer Help keeps its own accordion and search (the brief changed only the data source),
     with `groupFaqs()` feeding its old shape.
+  - The vendor landing page `/seller` (`VendorLanding.tsx`) also keeps its own markup and
+    reads `useFaqs("seller_registration")`. Its block carries
+    `data-faq-surface="seller_registration"` for tests, like `FaqSection`'s card.
+  - `FaqSection` and `/seller` render answers with `whitespace-pre-line`, so an answer written
+    as lines (`•` bullets) keeps them. Buyer Help doesn't yet, because its answers are single
+    paragraphs.
 - **Freshness:** query key `["faqs", surface]` and the app-wide 60 s `staleTime`. An admin
   edit shows up on the next page load, or within a minute in a tab that's already open,
   with no deploy. There's no realtime subscription: FAQ edits are rare, and an accordion
   rearranging under the reader would be worse than a minute's lag.
 - **Seed:** the 17 hardcoded rows moved over verbatim (12 buyer_help, 5 subscription). The
   text wasn't edited on the way, so the inaccuracies in MPF-14 moved with it.
+- **Andy's content (2026-09-23)** went in through the `admin_faq_*` RPCs as demo-admin, not a
+  migration, so it's admin-owned from day one:
+  - 10 seller_registration rows (10–100);
+  - 5 subscription rows (10–50);
+  - the old subscription rows kept live at 120–140;
+  - the two superseded rows deactivated at 210 and 240.
+
+  Source and decisions: `documentation/seller-registration-and-subscription-faq-content.md`.
+  The "Lowest billing plan?" answer hardcodes plan prices; it isn't derived from
+  `subscription_plans`.
 - **Cosora-Admin `src/pages/Faqs.tsx`** has:
   - a tab per surface, with counts;
   - an add form, where Category (with suggestions) appears on Buyer Help only and is
     required there;
   - per-category tables on Buyer Help, and a flat table elsewhere;
   - Edit (a modal), Deactivate/Reactivate, and Delete (with a confirm).
+  - up/down arrows that swap with the previous or next row **of the same visibility** in
+    its group. A live row steps past hidden ones, so every press changes the live page.
 
   Every mutation goes through `assertWrote`. For support, `canWrite(role, "faqs")` disables
   the controls under the standard read-only banner. The database gate is the real one.
+
+---
+
+## Profile contact details — private columns, narrow readers (2026-09-23)
+
+Phase 11 of the My Profile brief (MPF-3). `profiles.email` and `profiles.phone` aren't
+client-selectable. The migrations are `20260923171821_profiles_contact_columns_private.sql` and,
+for now, `20260923174653_profiles_contact_columns_interim_authenticated.sql`.
+
+- **Grants.** `profiles_select` is still `USING (true)`: names, avatars, roles and
+  `account_status` are read everywhere (chat, reviews, quotes, callGate). anon and
+  authenticated have **column** SELECT on `id`, `full_name`, `avatar_url`, `active_role`,
+  `onboarded`, `account_status` and `created_at`.
+  - `select=*`, or a filter, `order` or `or=` on `email`/`phone`, fails with 42501. So does
+    returning either column.
+  - UPDATE is unchanged: `saveProfileFull()` and `saveAccountInfo()` still write the user's own
+    email and phone.
+  - A new `profiles` column isn't client-readable until it's granted on purpose. The
+    migration's self-check fails if the column list changes.
+  - **Interim:** `20260923174653` grants the two columns back to authenticated until both front
+    ends are deployed (MPF-19). Anon stays closed.
+- **Readers.** Each is SECURITY DEFINER, with `search_path = ''` and EXECUTE for authenticated
+  only:
+
+  | Function | Returns | Gate | Used by |
+  |---|---|---|---|
+  | `my_contact_info()` | own `email`, `phone` | `auth.uid()`'s row only | `fetchMyContactInfo()` in `src/lib/queries/myContact.ts` → `AuthContext`, `fetchProfileFull()`, the data export |
+  | `call_buyer_contact(p_buyer_id)` | the buyer's `phone`, `full_name` | the caller has quoted on one of the buyer's RFQs; neither account suspended; their chat not under review | `useCallBuyer()` |
+  | `admin_profile_search(p_term, p_limit)` | id, name, email, status, role, created | any active admin | Cosora-Admin Accounts and Chats search |
+  | `admin_profile_emails(p_ids)` | id, name, email | any active admin | Cosora-Admin chat participants and suspension-history actors |
+
+- **`call_buyer_contact()` is callGate in the database.**
+  - A refusal is a 42501 whose message is the reason, checked in this order: `not_signed_in`,
+    `caller_suspended`, `no_rfq_relationship`, `target_suspended`, `under_review`.
+  - The relationship check comes before anything about the buyer, so a stranger learns nothing
+    more.
+  - It ignores quote status on purpose, because a vendor can set their own (MPF-18).
+  - `useCallBuyer()` maps the reason to callGate's copy and no longer calls `callGate()` itself.
+  - `useCallVendor()` keeps the client gate, because a vendor's business phone
+    (`vendor_profiles.phone`) is public by design.
+- **`fetchProfileFull()` throws on a read error.** It used to return blanks, and
+  `useEditableProfile` seeds its form from the first result while `saveProfileFull()` writes
+  every field (MPF-9). A refused read could have been saved over real values.
+- **Tests:**
+  - `scripts/profile-contact-privacy-check.mjs`: every role, over HTTP;
+  - `scripts/contact-gate-check.mjs`: the client and server gates in every state;
+  - `tests/profile-contact-privacy.spec.ts`: the page sweep, Call Buyer and the admin.
+
+---
+
+## Calls — one write path, `log_call()` (2026-09-23)
+
+Phase 12 of the My Profile brief (MPF-2). Migration
+`20260923182259_calls_writes_only_through_log_call.sql`.
+
+- **No client writes.** anon and authenticated have no INSERT, UPDATE, DELETE or TRUNCATE on
+  `public.calls`, and `calls_insert` and `calls_write` are dropped. `calls_select` (buyer,
+  vendor or admin) is unchanged.
+- **`log_call(p_vendor_id, p_product_context default null)`** returns jsonb. It's SECURITY
+  DEFINER, with `search_path = ''` and EXECUTE for authenticated only.
+  - It refuses: `not_signed_in` and `account_not_active` (42501); `not_a_vendor` (no
+    `vendor_profiles` row) and `cannot_call_self` (22023).
+  - It sets `buyer_id = auth.uid()`, `direction = 'outgoing'` and `created_at = now()`. No
+    client value reaches them.
+  - `product_context`: whitespace collapsed, trimmed, at most 200 characters, empty → null.
+  - Rate limit, after a per-caller `pg_advisory_xact_lock`:
+    - `{status: 'rate_limited', retry_after_seconds}` within 60 s of the caller's last call to
+      the same vendor;
+    - `{status: 'too_many_calls'}` at 5 calls to one vendor in 24 h, or 30 in an hour.
+
+    Otherwise it returns `{status: 'logged', id}`.
+- **`useCallVendor()`** calls it fire-and-forget, after callGate and the phone lookup. The dial
+  never waits on it, and the Calls query is invalidated only on `logged`.
+- **Nothing logs vendor-initiated calls.** `useCallBuyer()` doesn't log, so `direction` is
+  always `outgoing`. `callAnalytics.ts` maps it to the vendor's point of view.
+- **Tests:** `scripts/suspension-gate-check.mjs` (active/suspended pair and direct-write
+  refusals). The check leaves one tagged call per run, because no client can delete `calls`.
+
+---
+
+## Profile stats — owner-filtered counts (2026-09-24)
+
+Phase 13 of the My Profile brief (MPF-1). No migration.
+
+- **Each "my N" count on `/profile` filters on the owner column.** Calls is `useCallCount()`
+  (`calls.buyer_id`); Quotes and Chats are `useProfileStats()`. The SELECT policies admit more
+  than the user's own rows: `quotes_select` admits the vendor who sent a quote and every admin,
+  `conversations_select` admits support and super_admin admins, and `calls_select` admits the
+  vendor and admins.
+- **Quotes** = quotes received on the user's own RFQs. `quotes` has no buyer column, so the
+  count embeds the parent with an inner join and filters on it:
+  `select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
+  There is one FK (`quotes_rfq_id_fkey`), so the embed is unambiguous. It is the set My Quotes
+  totals.
+- **Chats** = ``.or(`user_a.eq.${userId},user_b.eq.${userId}`)``, the filter `useConversations()` uses for
+  the `/chats` list.
+- Both throw on a read error rather than rendering 0.
+- **Tests:** `tests/profile-quotes-chats-stat.spec.ts`. demo-admin catches the bug, which
+  demo-buyer can't. `tests/profile-calls-stat.spec.ts` covers Calls.
 
 ---
 

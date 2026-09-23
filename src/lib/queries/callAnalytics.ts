@@ -20,13 +20,13 @@ import { inWindow, inPriorWindow } from "@/lib/queries/vendorAnalytics";
 //   • "Missed calls" is NOT COMPUTABLE and must never be rendered as a number.
 //     `MISSED_CALLS_UNAVAILABLE` is the reason string every surface shows
 //     instead.
-//   • `direction` is 'outgoing' on every row that exists, because the insert
-//     policy is `buyer_id = auth.uid()` — only the buyer can log, and from the
-//     buyer's point of view every call is outgoing. From the VENDOR's point of
-//     view that same row is an inbound call. The grouping below therefore maps
-//     direction → vendor perspective rather than printing the raw value, and
-//     still handles 'incoming' rows correctly if the RLS policy is ever widened
-//     so useCallBuyer can log too (see queries/calls.ts).
+//   • `direction` is 'outgoing' on every row that exists, because the only
+//     write path, log_call() (MPF-2), sets it server-side and records calls BY
+//     the buyer — from the buyer's point of view every call is outgoing. From
+//     the VENDOR's point of view that same row is an inbound call. The grouping
+//     below therefore maps direction → vendor perspective rather than printing
+//     the raw value, and still handles 'incoming' rows correctly if a server
+//     function ever logs vendor-initiated calls too (see queries/calls.ts).
 // ─────────────────────────────────────────────────────────────
 
 export const MISSED_CALLS_UNAVAILABLE =

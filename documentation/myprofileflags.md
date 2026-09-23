@@ -13,9 +13,9 @@ what someone needs to pick it up later without the original conversation.
 
 | ID | Found | Title | Type | Severity | Status |
 |---|---|---|---|---|---|
-| MPF-1 | 2026-09-23, Phase 1 | Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin | Correctness | Medium (wrong numbers on the user's own profile; nothing exposed) | Open |
-| MPF-2 | 2026-09-23, Phase 1 | Buyers write their own `calls` rows, and vendor call analytics trusts them | Security (data integrity) | Low | Open, suspected (not exercised live) |
-| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | Open, proven over HTTP |
+| MPF-1 | 2026-09-23, Phase 1 | Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin | Correctness | Medium (wrong numbers on the user's own profile; nothing exposed) | **Fixed 2026-09-24** (Phase 13); probe re-run, and the new spec fails on the old code |
+| MPF-2 | 2026-09-23, Phase 1 | Buyers write their own `calls` rows, and vendor call analytics trusts them | Security (data integrity) | Low | **Fixed 2026-09-23** (Phase 12); proven first, rolled back |
+| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | **Fixed 2026-09-23** (Phase 11) for signed-out callers; the signed-in half is reopened on purpose until deploy (MPF-19) |
 | MPF-4 | 2026-09-23, Phase 2 | Deletion emails can't go out yet: no `RESEND_API_KEY`, and no verified sending domain | Setup (blocks the feature for real users) | High for the feature | Open, waiting on setup |
 | MPF-5 | 2026-09-23, Phase 2 | Cosora-Admin shows a deleted account as "active" | Correctness (admin UI, other repo) | Low | Open |
 | MPF-6 | 2026-09-23, Phase 2 | Phone-only accounts will have no email to receive a deletion code, and sign-in is mobile-only, so that becomes every new account | Product gap | **High** once real sign-ups start; nil today | Open, a decision |
@@ -28,6 +28,10 @@ what someone needs to pick it up later without the original conversation.
 | MPF-13 | 2026-09-23, Phase 8 | Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav | Correctness (role state, pre-existing) | Medium | Open |
 | MPF-14 | 2026-09-23, Phase 9 | The seeded buyer Help FAQs promise features that don't exist | Overclaiming content (pre-existing, moved verbatim) | Medium (buyers are told about escrow and refunds that don't exist) | Open, now editable with no deploy |
 | MPF-15 | 2026-09-23, Phase 9 | Vendors have no real support destination; vendor Help is the buyer page and its chat is canned | Product gap (pre-existing) | Medium | Open, a decision |
+| MPF-16 | 2026-09-23, Phase 9 content | Andy's Seller Registration and Subscription FAQs promise things the product doesn't do (published verbatim by decision) | Overclaiming content | Medium (vendors are told about proration, alerts and documents that don't match) | Open, by decision |
+| MPF-17 | 2026-09-23, Phase 9 content | The Subscription FAQ promises a 7-day money-back guarantee; the Terms say fees are non-refundable, and no refund can run today | Policy conflict | Medium (a public financial promise the Terms contradict) | Open, published by decision |
+| MPF-18 | 2026-09-23, Phase 11 | A vendor can set their own quote to "accepted" | Security (data integrity) | Low | Open, proven (rolled back) |
+| MPF-19 | 2026-09-23, Phase 11 | Interim: signed-in users can still read every user's email and phone until the new code is deployed | Security (PII exposure), temporary | Medium | Open, by decision until both deploys |
 
 ---
 
@@ -77,6 +81,45 @@ what someone needs to pick it up later without the original conversation.
   - Note that demo-buyer alone can't tell right from wrong here, because its numbers match
     either way. The check needs an account that is also a vendor or an admin.
 - **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real"; `test.md` Phase 1 entry.
+- **Status: Fixed 2026-09-24 (My Profile Phase 13).**
+- **Fix:** `useProfileStats()` in `src/lib/queries/profile.ts` filters each count on the owner
+  column. No migration: the policies are unchanged, and they are right for the pages that
+  need the wider view (a vendor's own quotes, the admin queues).
+  - **Quotes** = quotes *received* on the user's own RFQs, as recommended above:
+    `.from("quotes").select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
+    That is the set "Total Quotes" on `/requirement/my-quotes` counts, which the stat opens.
+  - **Chats:** ``.or(`user_a.eq.${userId},user_b.eq.${userId}`)``, the same filter as the `/chats` list
+    (`useConversations()`).
+  - Both counts now throw on a read error instead of rendering 0.
+  - The comment that said RLS alone meant "mine" now names the policies that admit more, and
+    points at the `claude.md` rule. The `useCallCount()` comment no longer calls these counts
+    RLS-reliant.
+- **Verified:**
+  - The probe, re-run rolled back (counts as `authenticated` under each user's claims). Bare
+    (the old query) / new query / owned:
+
+    | Account | Quotes | Chats |
+    |---|---|---|
+    | admin account (`6f66d05d…`, super_admin, also a vendor) | 3 / **1** / 1 | 4 / **3** / 3 |
+    | demo-admin (super_admin) | 3 / 0 / 0 | 4 / 0 / 0 |
+    | demo-vendor | 2 / 0 / 0 | 2 / 2 / 2 |
+    | demo-buyer | 2 / 2 / 2 | 1 / 1 / 1 |
+
+  - Over REST with real sign-ins, the two new requests equal an independent owner count for
+    demo-buyer, demo-vendor and demo-admin.
+  - New `tests/profile-quotes-chats-stat.spec.ts`: **2/2**. For demo-admin and demo-buyer, the
+    Quotes and Chats cells must equal an independent owner count (taken by a different route
+    from the app's) and the page each cell opens. demo-admin stands in for `6f66d05d…`, whose
+    password the tests don't hold: RLS shows it 3 quotes and 4 chats while it owns none, and
+    the spec asserts that gap before anything else.
+    - With the old bare counts put back temporarily, demo-admin **failed** (Quotes: expected
+      "0", received "3"), and demo-buyer passed, as the note above predicted.
+    - With only the Chats filter removed, demo-admin **failed** on Chats (expected "0",
+      received "4").
+  - Regression: `profile-calls-stat` and `buyer-settings` with the new spec, 5/5. tsc 0,
+    eslint 0.
+- **Production:** `cosora.in` shows the old counts until this code is deployed (the same deploy
+  as MPF-19).
 
 ---
 
@@ -126,6 +169,53 @@ what someone needs to pick it up later without the original conversation.
   - `scripts/suspension-gate-check.mjs` is the pattern to extend: run each case active and
     suspended, and pass only if the answer changes.
 - **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real".
+- **Status: Fixed 2026-09-23 (My Profile Phase 12).**
+- **Proven first:** in a `DO` block as `authenticated` under demo-buyer's claims, then rolled
+  back:
+  - a call to demo-vendor dated 400 days ago, with direction `missed`, was accepted;
+  - re-targeting that row to another profile and re-dating it was accepted (1 row);
+  - deleting it was accepted (1 row).
+- **Fix:** migration `20260923182259_calls_writes_only_through_log_call.sql`.
+  - anon and authenticated lose INSERT, UPDATE, DELETE and TRUNCATE on `calls`, and
+    `calls_insert` and `calls_write` are dropped. `calls_select` is unchanged: it already
+    admits the buyer, the vendor and admins, so dropping `calls_write` (FOR ALL) changed no
+    read. The rehearsal counted 2, 3 and 10 visible rows before and after.
+  - `log_call(p_vendor_id, p_product_context)`, SECURITY DEFINER with `search_path = ''`:
+    - refuses `not_signed_in` and `account_not_active` (42501), and `not_a_vendor` and
+      `cannot_call_self` (22023);
+    - sets `buyer_id = auth.uid()`, `direction = 'outgoing'` and `created_at = now()`;
+    - collapses whitespace in `product_context`, trims it, cuts it to 200 characters, and
+      stores empty as null;
+    - rate-limits with the account-deletion idiom: a per-caller advisory lock, then
+      `rate_limited` (with `retry_after_seconds`) within 60 s of the last call to the same
+      vendor, and `too_many_calls` past 5 calls to one vendor in 24 h or 30 calls in an hour.
+      A limit is a status, not an error: the dial has already happened, and the tap just
+      isn't counted.
+  - `useCallVendor()` calls it instead of inserting; logging stays best-effort and the dial
+    goes ahead either way. `qc/pipeline.mjs` (workspace root) was switched too.
+  - It doesn't refuse a suspended *target* vendor: the brief didn't ask for it, and callGate
+    blocks those calls in the UI before logging.
+- **Verified:**
+  - Rehearsal, rolled back: direct INSERT/UPDATE/DELETE → 42501; visible rows unchanged for
+    buyer, vendor and admin; a logged call has the server's buyer, direction and time and a
+    200-character cleaned context; a repeat → `rate_limited` (60 s); non-vendor, self and null
+    target refused; a 6th call to one vendor in 24 h and a 31st call in an hour →
+    `too_many_calls`; suspended buyer → `account_not_active`; anon → 42501.
+  - `scripts/suspension-gate-check.mjs`, extended: 9/9. The `log_call()` pair is ALLOW active
+    and DENY suspended (`account_not_active`). While active, direct INSERT/UPDATE/DELETE
+    return 42501, and a non-vendor target returns `not_a_vendor`.
+    - Its ad case had failed on its own since 2026-09-16, because the expiry sweep marked the
+      demo vendor's gold subscription `expired` and the fixture only moved the date. The
+      fixture now saves and restores the status too.
+  - A real Call Now click as demo-buyer on demo-vendor's profile (a temporary spec, deleted
+    afterwards): the first tap → `logged`, the second → `rate_limited`, the number shown both
+    times, no direct write to `/rest/v1/calls`, exactly one row added.
+  - `profile-calls-stat` and `vendor-analytics`: 6/6.
+  - The test rows (2 from the gate script, 1 from the click) were deleted with SQL, back to
+    the original 10.
+- **Production:** the live `cosora.in` bundle's direct insert is now refused. It ignores the
+  result and dials anyway, so calling works, but calls placed there aren't logged until the
+  Phase 12 code is deployed, the same deploy MPF-19 waits for.
 
 ---
 
@@ -165,6 +255,60 @@ what someone needs to pick it up later without the original conversation.
   open, an RFQ's `buyer_id` leads straight to that buyer's email and phone. Open-RFQ
   visibility is probably intended for the marketplace. The contact columns are the part to
   close.
+- **Status: Fixed 2026-09-23 (My Profile Phase 11)** for signed-out callers, which is the
+  proven leak. The signed-in half is reopened on purpose until the new code is deployed:
+  see MPF-19.
+- **Re-proven first:** at the start of Phase 11, the same two anon-only requests still
+  returned `0-0/20` and `0-0/7`.
+- **Fix:** migration `20260923171821_profiles_contact_columns_private.sql`.
+  - anon and authenticated lose table SELECT on `profiles`. They get column SELECT on the
+    other seven columns: `id`, `full_name`, `avatar_url`, `active_role`, `onboarded`,
+    `account_status` and `created_at`.
+  - UPDATE is unchanged, so a user still edits their own email and phone. A filter or
+    RETURNING on the two columns needs SELECT, so neither can read someone else's.
+  - `my_contact_info()`: the caller's own email and phone. `src/lib/queries/myContact.ts`
+    wraps it for `AuthContext`, `fetchProfileFull()` (`/profile`, `/profile/edit`, the
+    onboarding prefill) and the data export.
+  - `call_buyer_contact(buyer)`: the buyer's phone and name, for `useCallBuyer()`.
+    - It applies callGate's three rules in the database, plus the RFQ relationship: the caller
+      has quoted on one of this buyer's RFQs, in any status (MPF-18 says why not "accepted").
+    - A refusal is a 42501 whose message is the reason, checked in this order:
+      `not_signed_in`, `caller_suspended`, `no_rfq_relationship`, `target_suspended`,
+      `under_review`. The hook maps them to callGate's copy.
+  - `admin_profile_search(term, limit)` and `admin_profile_emails(ids)`: any active admin.
+    Cosora-Admin's Accounts search, Chats search, chat participants and suspension-history
+    actors use them.
+  - Every other `profiles` reader in both repos selects only the other columns. Checked by
+    grepping `from("profiles")` and embedded selects in both repos' `src/`, `scripts/` and
+    `tests/`, and the edge functions, which use the service role and are unaffected.
+  - `rfqs_select` is unchanged, as the brief required.
+- **Verified:**
+  - The two proof requests → HTTP 401, 42501, no `Content-Range`, no rows.
+  - `scripts/profile-contact-privacy-check.mjs` (new, read-only): 24/24 before the interim
+    grant.
+    - Anon: 7 routes to the columns refused, the other columns readable, the 4 functions
+      refused.
+    - demo-buyer: others' columns refused, own row via `my_contact_info()`, admin functions
+      refused.
+    - demo-vendor: the phone of the buyer it quoted, and a refusal for a buyer it never quoted.
+    - demo-admin: emails.
+  - `scripts/contact-gate-check.mjs`, extended: 13/13. Each suspension and lock state is
+    checked for callGate and for `call_buyer_contact()`.
+  - `tests/profile-contact-privacy.spec.ts` (new): 4/4.
+    - A 27-page sweep as buyer, vendor and signed out, with no refused `profiles` read.
+    - A real Call Buyer click: the number is shown, and with the buyer suspended the click is
+      refused with the right copy.
+    - Cosora-Admin's Accounts and Chats.
+  - Regression: 25/25, across:
+    - `profile-edit-routes`, which now also asserts the user's own email and phone;
+    - `profile-data-export`, `profile-calls-stat`, `buyer-settings` and
+      `profile-notifications-honesty`;
+    - `vendor-analytics` and `vendor-my-store`;
+    - `mp8-product-detail-controls` and `mp7-product-detail-real-data` (reviews).
+  - Not runnable: `chat-pipeline`, `admin-chat-moderation` and `mp12-sourcing-loop`. They need
+    fixture accounts that no longer exist: there are 0 `cf00000…` profiles, and the load-test
+    accounts were deleted. Chat and quotes are covered instead by the sweep, the Call Buyer
+    click and the data export.
 
 ---
 
@@ -460,24 +604,149 @@ what someone needs to pick it up later without the original conversation.
   - honest copy on `/help` for vendors.
 
   Separately, the canned chat should be labelled as such or removed, on both sides.
+- **Update (2026-09-23, Phase 9 content):** Andy's content asks for the Subscription FAQ's
+  "Contact us" to open the Help page, so it now goes to `/help`, the buyer page this flag
+  describes. A vendor who taps it gets buyer FAQs, a canned chat, and one real channel: the
+  hello@cosora.in email link.
 
 ---
 
-## Phase 9 decisions waiting on Andy
+## MPF-16: Andy's Seller Registration and Subscription FAQs promise things the product doesn't do
 
-These aren't defects. They block the rest of Phase 9's content, not its code.
+- **Where:** `public.faqs`, surfaces `seller_registration` (shown on `/seller`) and
+  `subscription` (shown on `/subscription`). Loaded 2026-09-23 from Andy's content
+  (`documentation/seller-registration-and-subscription-faq-content.md`).
+- **Decision:** Mitra chose to publish the answers **verbatim** (2026-09-23), rather than as
+  corrected versions, and to log each mismatch here. Each claim was checked against the code
+  and the live data before publishing:
 
-1. **The content file is missing.** The brief cites
-   `seller-registration-and-subscription-faq-content.md` for the 10 seller-registration
-   questions and the new subscription ones. It isn't in either repo or anywhere in the
-   workspace (searched 2026-09-23), so nothing from it is seeded. When it arrives, the
-   content goes in through Cosora-Admin `/faqs`, not a migration, as the brief asked.
-2. **Where Seller Registration goes.** `<FaqSection surface="seller_registration" />` is
-   built, and the read it uses is tested, but it isn't on any page. The candidates are
-   `Register.tsx`, `RoleSelection.tsx` and `Onboarding.tsx`. Placing it is one line plus an
-   import.
-3. **Should `support` write FAQs?** Today support reads (`admin_faq_list`) and only
-   super_admin writes. Widening that means changing the four write RPCs' gates (a migration)
-   **and** `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`. Either change alone is wrong.
-4. **"Lowest billing plan?"** is an unanswered placeholder in the source content. It needs a
-   real answer before it's added to the Subscription FAQ.
+  | Answer (surface) | Claim | Reality (checked 2026-09-23) |
+  |---|---|---|
+  | Can I upgrade or downgrade my plan anytime? (subscription) | "the difference will be prorated" | No proration anywhere. `activateSubscription()` in `subscription-verify-payment` charges the plan's full price and starts a fresh period at the moment of payment |
+  | same | "Downgrades will take effect from your next billing cycle" | A lower plan is bought like any other: it starts immediately and replaces the current one. The page enables every plan except the current one and Free |
+  | What happens when I reach my lead limit? (subscription) | "You'll receive notifications as you approach your limit" | Nothing sends a notification about the limit. `/leads` shows "N/cap leads used", and quoting at the cap is refused with an upgrade prompt |
+  | How are leads managed on Cosora? (seller) | Notified "via dashboard, email, or WhatsApp" | No email or WhatsApp is sent, and no in-app notification fires for new RFQs (Phase 7). Leads appear on `/leads` |
+  | What documents are required to register? (seller) | GST, PAN, business registration (or MSME/Udyam), Aadhaar, product catalog | Onboarding requires only PAN; GST and CIN are optional. KYC collects PAN, GST and CIN (`COLLECTED_DOC_TYPES` in `Kyc.tsx`). Aadhaar is deliberately not collected, and there's no MSME/Udyam document type. Catalogues have their own upload page (`UploadCatalogue.tsx`) |
+  | I don't have a GST number… (seller) | Marked "Unverified Seller", which "may affect visibility and lead access" | There's no such label. Searching the SQL and the app found no ranking or lead-access gate on `is_verified`. GST is optional at registration |
+  | Is there any cost to register? (seller) | "Basic registration is free… pay for Premium listings, Pay-per-lead access, Featured vendor badges" | Registration is free (the **Free** plan), but "Basic" is the name of a ₹699/month plan on the Subscription page. Pay-per-lead doesn't exist; Andy's own lead answer calls it future |
+
+- **Holds up:**
+  - what Cosora is, and who can register;
+  - buyers call or chat;
+  - verification time (now 3–5 days across the app);
+  - no shipping through Cosora;
+  - the annual discount: yearly is 10× monthly, about 16.7%, so "up to 17%" and "2 months
+    free" are right;
+  - editing listings, though the answer doesn't mention that an edit sends a live listing
+    back to review, hidden from buyers until re-approved.
+- **Fix shape:** Andy edits the wording in Cosora-Admin `/faqs` (no deploy), or the product
+  catches up. Each row is independent.
+
+---
+
+## MPF-17: The Subscription FAQ promises a 7-day money-back guarantee that the Terms contradict
+
+- **Where:** the `public.faqs` subscription row "Is there a refund policy?", on
+  `/subscription`: "We offer a 7-day money-back guarantee for first-time subscribers."
+- **Conflicts:**
+  - `TermsConditions.tsx` says "Fees are non-refundable unless stated otherwise."
+  - No refund can run today. Cosora-Admin's `admin-refund-payment` exists, but its README
+    records that refunds can't execute on this project because the Razorpay keys aren't set.
+  - Nothing tracks "first-time subscriber" or the 7-day window.
+- **Decision:** Mitra chose to publish it as written (2026-09-23).
+- **Risk:** it's a public financial promise. A vendor who asks for a refund needs manual
+  handling outside the app, and the Terms say the opposite.
+- **Fix shape:**
+  - update the Terms to state the guarantee, so "unless stated otherwise" is explicit in the
+    Terms themselves;
+  - then either set the Razorpay keys so `admin-refund-payment` works, or define the manual
+    process support follows.
+
+---
+
+## MPF-18: A vendor can set their own quote to "accepted"
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Low).
+- **Where:** `quotes_update` on `public.quotes`. It is
+  `vendor_id = auth.uid() OR owns_rfq(rfq_id) OR is_admin()` for both USING and WITH CHECK, and
+  no trigger guards `status`. The two quote triggers watch `rfq_id`/`vendor_id` and the lead
+  cap.
+- **Evidence (2026-09-23):** a `DO` block as `authenticated`, under demo-vendor's claims,
+  updated its own pending quote to `accepted` (1 row), then raised to roll back.
+- **Impact:**
+  - a buyer's quote list can show a quote as accepted that they never accepted;
+  - the vendor's acceptance rate and Total Order Value (Analytics and the Quotes page) count
+    it;
+  - nothing is exposed: `call_buyer_contact()` ignores quote status on purpose.
+- **How it came up:** Phase 11. "Call Buyer" only renders on accepted quotes, so "accepted"
+  looked like the natural server rule. The probe showed that it would add nothing over "has
+  quoted".
+- **Recommended fix:** a BEFORE UPDATE trigger that lets only the RFQ owner, or an admin,
+  change `status`, and lets the vendor change only the quote's own terms. After that,
+  `call_buyer_contact()` can require `accepted`, if that's the intended rule.
+- **Verify by:** as demo-vendor, the self-accept is refused. As demo-buyer, accept, shortlist
+  and reject still work (the `setQuoteStatusDb()` path).
+
+---
+
+## MPF-19: Interim: signed-in users can still read every user's email and phone
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Medium).
+- **Where:** migration `20260923174653_profiles_contact_columns_interim_authenticated.sql`:
+  `grant select (email, phone) on public.profiles to authenticated`.
+- **Why it exists:** the MPF-3 fix went live before the code that uses the new readers. Both
+  production front ends still run the old code:
+  - `cosora.in` (bundle `index-Bl47x8Yt.js`) loads the signed-in user's profile with `email`
+    in the select, and the profile pages read `email` and `phone` directly;
+  - `cosora-admin.vercel.app` (bundle `index-B920YuHP.js`) searches with `email.ilike` and reads
+    participants' emails.
+
+  All of that was refused, so profile loading and the admin's Accounts and Chats broke. A
+  profile edit could also have saved blanks over the user's real name, email, phone and photo.
+  Mitra chose to re-open the two columns to signed-in users only (2026-09-23).
+- **What still holds:** signed out stays closed, and both MPF-3 proof requests still return
+  401/42501. The four production queries were checked working again as demo-buyer and
+  demo-admin.
+- **Exposure until closed:** any signed-in account can read any user's email and phone, as
+  that role could before MPF-3.
+- **To close:**
+  1. Deploy the Phase 11 code in both repos, to `cosora.in` and `cosora-admin.vercel.app`.
+  2. Check that the new bundles call `my_contact_info` and `admin_profile_search` and no longer
+     contain the old selects. The check used here fetches each `/assets/*.js` and searches for
+     the old select strings.
+  3. Run `revoke select (email, phone) on public.profiles from authenticated;` as a migration.
+  4. Re-run `scripts/profile-contact-privacy-check.mjs` and expect 24/24. While the grant
+     stands, its four "buyer cannot read / filter" checks fail by design.
+- **Tracked in:** `ToDo.md`.
+
+---
+
+## Phase 9 decisions (2026-09-23)
+
+1. **Content file:** arrived. It's kept as
+   `documentation/seller-registration-and-subscription-faq-content.md` and was loaded
+   through the admin RPCs.
+2. **Seller Registration placement:** the vendor landing page `/seller` (Mitra's choice). It
+   replaces that page's 4 hardcoded questions.
+3. **"Lowest billing plan?":** written in Andy's tone from the live plans (Mitra: "write them
+   up yourself"). It hardcodes ₹699/₹6,990 and the Free and Basic limits, so it needs
+   updating if plan prices change. Worth a read by Andy.
+4. **Should `support` write FAQs?** **Still open.** Today support reads and only super_admin
+   writes. Widening it means changing the four write RPCs' gates (a migration) **and**
+   `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`.
+
+---
+
+## Phase 11 decisions (2026-09-23)
+
+1. **Interim grant:** Mitra chose to re-open `email` and `phone` to signed-in users only until
+   both front ends run the new code (MPF-19). The alternative was leaving production broken
+   until a hotfix deploy.
+2. **What "an RFQ relationship" means for `call_buyer_contact()`:** the caller has a quote, in
+   any status, on one of the buyer's RFQs. My call, not asked. Quote status can't be trusted
+   (MPF-18), so requiring `accepted` would add nothing today. Once MPF-18 is fixed, it can be
+   narrowed to `accepted` if that's the intent; "Call Buyer" only renders on accepted quotes.
+3. **Admin email access:** `admin_profile_search()` and `admin_profile_emails()` admit any
+   active admin. That keeps today's access, because every admin role could read the columns
+   before. Narrowing them to support and super_admin is open: product, ads, vendor-ops and
+   finance admins would then lose emails on Accounts and Chats.

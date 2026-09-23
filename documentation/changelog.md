@@ -1,3 +1,121 @@
+- 2026-09-24 (Phase 13, MPF-1): **The Quotes and Chats stats on `/profile` count the user's own rows. Anyone who also sells, or is an admin, used to see other people's quotes and chats counted in.**
+  - **Before** (the MPF-1 probe, re-run, rolled back): the admin account MPF-1 measured (super_admin, also a vendor) showed Quotes 3 against 1 of its own and Chats 4 against 3. demo-admin showed 3 and 4 against 0 and 0, and demo-vendor Quotes 2 against 0 (the quotes it sent). demo-buyer was already right.
+  - **Fix, `useProfileStats()` in `src/lib/queries/profile.ts`:**
+    - Quotes: quotes received on the user's own RFQs, `select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`. That is the set "Total Quotes" counts on `/requirement/my-quotes`, which the stat opens;
+    - Chats: ``.or(`user_a.eq.${userId},user_b.eq.${userId}`)``, the `/chats` list's filter;
+    - a read error now throws instead of showing 0;
+    - the comment that said RLS alone meant "mine" now names the policies that admit more.
+    - No migration; the policies are unchanged.
+  - **Verified:**
+    - the probe after: the MPF-1 account reads Quotes 1 and Chats 3, and every account's new count equals what it owns;
+    - over REST with real sign-ins, the new requests equal an independent owner count for all three demo accounts;
+    - new `tests/profile-quotes-chats-stat.spec.ts`, 2/2 (demo-admin, demo-buyer). It fails on the old code: Quotes "3" for "0" and, with only the Chats filter removed, Chats "4" for "0";
+    - regression: `profile-calls-stat` and `buyer-settings` with the new spec, 5/5;
+    - tsc 0 and eslint 0.
+  - **Production:** `cosora.in` keeps the old counts until this code is deployed, with MPF-19's deploy.
+  - **Docs:** myprofileflags (MPF-1 → Fixed), test.md, technicalimplementation, claude.md, sides.md, ToDo.md.
+
+- 2026-09-23 (Phase 12, MPF-2): **Call records can only be written by the server. A buyer can no longer forge, backdate, re-target or delete `calls` rows, or log calls while suspended; `log_call()` is the only way in, and it rate-limits.**
+  - **Proven first** (rolled back, as demo-buyer): a call dated 400 days ago with direction `missed` was accepted, and so were re-targeting, re-dating and deleting it.
+  - **Migration `20260923182259_calls_writes_only_through_log_call.sql`** (live):
+    - anon and authenticated lose INSERT, UPDATE, DELETE and TRUNCATE on `calls`, and the `calls_insert` and `calls_write` policies are dropped. Reads are unchanged;
+    - `log_call(p_vendor_id, p_product_context)`: active caller, a vendor target that isn't the caller, server-set `buyer_id`, `direction` and `created_at`, the context cleaned to 200 characters;
+    - rate limit, the account-deletion idiom: a per-caller lock; 60 s between calls to the same vendor (`rate_limited`); at most 5 per vendor per day and 30 per hour (`too_many_calls`). A limit only stops the tap being counted.
+  - **Buyer app:** `useCallVendor()` calls `log_call()`, still best-effort, and the dial goes ahead either way. `database.types.ts` in both repos has the function. Comments in `calls.ts` and `callAnalytics.ts` no longer describe the old insert policy.
+  - **Scripts:**
+    - `scripts/suspension-gate-check.mjs` has a `log_call()` active/suspended pair, and while active asserts direct writes are refused and a non-vendor target is refused.
+    - Its ad case had been failing since the 2026-09-16 expiry sweep marked the demo vendor's subscription `expired`. The fixture now saves and restores the status as well as the date.
+    - `qc/pipeline.mjs` logs through `log_call()`.
+  - **Production:** the live `cosora.in` bundle's direct insert is now refused. It ignores the result and still dials, so calls placed there aren't logged until this code is deployed, with MPF-19's deploy.
+  - **Verified:**
+    - rehearsal, 18 checks;
+    - `suspension-gate-check.mjs` 9/9;
+    - a real Call Now click: logged, then rate-limited, and the number shown both times;
+    - `profile-calls-stat` + `vendor-analytics` 6/6;
+    - tsc 0 and eslint 0 (buyer app), tsc 0 (admin);
+    - advisors 136 → 137 (the expected notice for `log_call`).
+    - Test rows deleted; `calls` back to its original 10 rows.
+  - **Docs:** securityflags (MPF-2's row → Fixed), myprofileflags (MPF-2 → Fixed), test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md, ToDo.md.
+
+- 2026-09-23 (Phase 11, MPF-3): **Signed out, nobody can read users' emails or phones any more. Clients can't select `profiles.email` or `profiles.phone`; the app reads them through four narrow SECURITY DEFINER functions. Signed-in users keep read access for now, by decision, until the new code is deployed (MPF-19).**
+  - **Re-proven first:** the two anon-only count requests from MPF-3 still returned `0-0/20` (emails) and `0-0/7` (phones).
+  - **Migration `20260923171821_profiles_contact_columns_private.sql`** (live):
+    - For anon and authenticated, table SELECT on `profiles` is replaced by column SELECT on the other 7 columns. UPDATE is unchanged, so users still edit their own email and phone.
+    - `my_contact_info()`: the caller's own pair.
+    - `call_buyer_contact(buyer)`: a buyer's phone, for a vendor who has quoted on one of their RFQs. It's refused (42501, reason code as message) when either account is suspended or their chat is under review: callGate's rules, now enforced by the database.
+    - `admin_profile_search()` and `admin_profile_emails()`: any active admin.
+    - Rehearsed rolled back first (18 checks). It self-asserts every grant.
+    - `rfqs_select` is untouched, as the brief said.
+  - **Buyer app:**
+    - new `src/lib/queries/myContact.ts` (`fetchMyContactInfo()`);
+    - `AuthContext` and `fetchProfileFull()` select the other columns and take email and phone from it. `fetchProfileFull()` now throws on a read error instead of returning blanks, because the edit form saves every field;
+    - the data export builds its profile object from both, with the same keys in the same order;
+    - `useCallBuyer()` calls `call_buyer_contact()` and shows the server's reason with callGate's copy, or "You can call a buyer after you've quoted on one of their requests." when there's no relationship;
+    - `database.types.ts`: the four functions.
+  - **Cosora-Admin:** the Accounts search, Chats search, chat participants and suspension-history actors use the admin functions. Its own changelog has the detail.
+  - **Incident: production broke, then an interim grant (`20260923174653`).**
+    - The migration went live before the code. Both live front ends (`cosora.in`, `cosora-admin.vercel.app`) still select the columns as a signed-in user, confirmed from their bundles, so profile loading and the admin's search and chats were refused.
+    - On Mitra's decision, the two columns are granted back to **authenticated only**. Signed out stays closed, and the four production queries work again.
+    - To close it after both deploys: `revoke select (email, phone) on public.profiles from authenticated;` (MPF-19, ToDo).
+  - **Found:** a vendor can set their own quote to "accepted" (rolled-back probe). That's why `call_buyer_contact()` doesn't trust quote status. MPF-18, Low.
+  - **Verified:**
+    - the proof requests after the fix: HTTP 401, 42501, no count, no rows;
+    - `scripts/profile-contact-privacy-check.mjs` (new): 24/24 before the interim grant. During it, exactly its 4 signed-in checks fail, by design;
+    - `scripts/contact-gate-check.mjs`, extended with the server gate: 13/13;
+    - `tests/profile-contact-privacy.spec.ts` (new): 4/4;
+    - regression 25/25; tsc 0 and eslint 0 (buyer app), tsc 0 (admin);
+    - security advisors 132 → 136: the 4 new functions' expected "authenticated can execute a definer function" notices.
+  - **Docs:** securityflags (MPF-3 → Fixed; 2 new Open rows), myprofileflags (MPF-3 fixed; MPF-18, MPF-19; Phase 11 decisions), test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md, ToDo.md. The sitemap is unchanged: no route moved.
+
+- 2026-09-23 (Phase 9, content): **Andy's Seller Registration and Subscription FAQs are live. The Seller Registration FAQ is on the vendor landing page (`/seller`), the Subscription FAQ's "Contact us" opens the Help page, and the KYC copy now says verification takes 3–5 days.** No schema change: the content went in through the `admin_faq_*` RPCs, not code or a migration.
+  - **Content.** The source is kept in `documentation/seller-registration-and-subscription-faq-content.md`.
+    - **Seller Registration:** 10 questions, verbatim.
+    - **Subscription:** Andy's 5 questions, verbatim, first on the page.
+      - "Lowest billing plan?" was unfinished ("Yes! for ______"). I wrote the answer in his tone from the live `subscription_plans`: Basic ₹699/month or ₹6,990/year, with 10 listings and 150 leads; Free, with 2 listings and 10 leads. It hardcodes those numbers.
+      - His upgrade/downgrade and lead-limit questions replace the old rows on those topics. The old rows are deactivated, not deleted.
+      - The old autopay, payment-methods and GST rows stay live, after his.
+    - **Formatting only:** bold markers dropped, `-` bullets shown as `•` lines, and "3 - 5" typeset as "3–5".
+  - **Decisions (Mitra):**
+    - placement on `/seller`;
+    - answers published **verbatim**, even where they promise what the product doesn't do (each mismatch is MPF-16);
+    - the refund answer published as written (MPF-17);
+    - "3–5 days" for verification everywhere.
+  - **`VendorLanding.tsx` (`/seller`):**
+    - Its FAQ block reads `useFaqs("seller_registration")`. That replaces 4 hardcoded questions, one of which wrongly said onboarding takes Aadhaar, which the app doesn't collect.
+    - Answers keep their line breaks, so bulleted answers render as lists.
+    - The literal "FAQ FILE LINK" placeholder pill is gone.
+    - The footer used to say "Visit the Cosora FAQ for complete onboarding guidance" and linked nowhere. It now reads "Still have questions? Write to hello@cosora.in", the page's existing support address.
+  - **`Subscription.tsx` and `FaqSection.tsx`:**
+    - "Contact us" → `/help`, as Andy's content asks, replacing the Phase 9 mailto.
+    - `FaqSection` now routes an in-app `href` through React Router (`Link`, no full reload) and keeps `mailto:`/`https:` as plain links.
+    - `/help` is the buyer Help page, so MPF-15 now applies to this button.
+  - **`Kyc.tsx` (2 strings) and `Onboarding.tsx` (1):** "within 24–48 hours" → "within 3–5 days", for **document verification** only. Listing, video and catalogue moderation copy still says 24–48 hours; that's a different review.
+  - **Cosora-Admin `Faqs.tsx`:**
+    - The arrows now step past hidden rows. Before, a live FAQ could swap places with a deactivated neighbour, which changed nothing on the live page, and the Subscription tab now has two hidden rows.
+    - The tab note says where Seller Registration appears (`/seller`).
+  - **Verified:**
+    - **`tests/faqs-admin-editable.spec.ts`, extended.** It now checks that:
+      - Andy's questions appear in his order on `/subscription` and on `/seller` (signed out);
+      - "Contact us" has `href="/help"`, and clicking it lands on `/help`;
+      - a bulleted answer renders as lines;
+      - Seller Registration's add / edit / reorder / deactivate flow shows on the live `/seller` page, instead of being checked through the anon REST read;
+      - each page ends exactly as it was before the test.
+    - **Spec results:** the first run failed, and its error report was overwritten before I read it. The next 5 runs passed, including one straight after a cold restart of both dev servers. Afterwards, SQL shows every row at its loaded position and no test rows.
+    - **Regression:** `vendor-my-store` and `mp7-admin-vendor-panels` (read-only; they load `/kyc` and `/onboarding`), 11/11. I didn't run the specs that write data on those pages for a copy-only change that no spec asserts.
+    - tsc 0 and eslint 0 (buyer app); tsc 0 (admin).
+  - **Flags:**
+    - **MPF-16:** the verbatim answers that don't match the product:
+      - proration;
+      - downgrades "from your next billing cycle";
+      - email/WhatsApp lead alerts;
+      - limit notifications;
+      - Aadhaar and MSME/Udyam;
+      - "Unverified Seller";
+      - pay-per-lead offered as if it exists now;
+      - "Basic registration is free" beside a ₹699 plan called Basic.
+    - **MPF-17:** the 7-day money-back guarantee against the Terms' "non-refundable", with no working refund path.
+    - **Still open:** whether support should write FAQs.
+  - **Docs:** `sitemap.md`, `technicalimplementation.md`, `test.md`, `claude.md`, `sides.md`, `myprofileflags.md`, `ToDo.md` and the new content file; Cosora-Admin `CHANGELOG.md` and `README.md`.
 - 2026-09-23 (Phase 9): **FAQs are admin-editable. Buyer Help and the vendor Subscription page now read their FAQs from a new `public.faqs` table, a super_admin edits it on Cosora-Admin's new `/faqs` page, and changes go live with no deploy. This is the first real (non-seed) admin-editable content system in the product: Cosora-Admin's `Content.tsx` (banners and theme) was the only earlier example, and it is still dev-seed dummy data with no table behind it.** A third surface, Seller Registration, is built and tested. It has no content and is on no page yet; both wait on answers (below).
   - **Migration `20260923144549_faqs_admin_editable.sql`** (live; its whitespace-insensitive md5 `0493a662…` matches):
     - **Table `public.faqs`:**

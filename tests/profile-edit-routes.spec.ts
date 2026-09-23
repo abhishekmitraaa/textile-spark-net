@@ -35,8 +35,10 @@ const STORAGE_KEY = `sb-${new URL(SUPABASE_URL).hostname.split(".")[0]}-auth-tok
 const SHOTS = path.join(REPO_ROOT, "screenshots");
 const BUYER = "demo-buyer@cosora.dev";
 
-// Exactly the columns saveProfileFull() writes.
-const PROFILE_COLS = "full_name, email, phone, avatar_url";
+// The columns saveProfileFull() writes are full_name, email, phone and
+// avatar_url. email and phone are not client-selectable (MPF-3), so the
+// snapshot reads them through my_contact_info(), as the app does.
+const PROFILE_COLS = "full_name, avatar_url";
 const BUYER_COLS =
   "display_name, company, city, job_title, department, business_type, website, industry, street, business_city, state, postal_code, country, gstin, pan";
 
@@ -48,7 +50,10 @@ test("both routes render on a hard load, save to the database, and are reachable
   if (error) throw new Error(`login failed: ${error.message}`);
   const uid = auth.user.id;
 
-  const { data: pBefore } = await db.from("profiles").select(PROFILE_COLS).eq("id", uid).single();
+  const { data: pCols } = await db.from("profiles").select(PROFILE_COLS).eq("id", uid).single();
+  const { data: contact, error: contactErr } = await db.rpc("my_contact_info").maybeSingle();
+  expect(contactErr, "my_contact_info").toBeNull();
+  const pBefore = pCols && contact ? { ...pCols, email: contact.email, phone: contact.phone } : null;
   const { data: bBefore } = await db.from("buyer_profiles").select(BUYER_COLS).eq("id", uid).single();
   expect(pBefore && bBefore, "snapshot").toBeTruthy();
 
@@ -64,6 +69,9 @@ test("both routes render on a hard load, save to the database, and are reachable
       else await page.reload({ waitUntil: "networkidle" });
       await expect(page.getByRole("heading", { name: "Edit profile" })).toBeVisible();
       await expect(page.getByLabel("Full Name"), `${load}: real name`).toHaveValue(pBefore!.full_name ?? "");
+      // Own email and phone arrive through my_contact_info(), not a column select.
+      await expect(page.getByLabel("Email Address"), `${load}: real email`).toHaveValue(pBefore!.email ?? "");
+      await expect(page.getByLabel("Phone Number"), `${load}: real phone`).toHaveValue(pBefore!.phone ?? "");
       await expect(page.getByLabel("City"), `${load}: real city`).toHaveValue(bBefore!.city ?? "");
     }
     // The fake email "Verify" did not survive the move.

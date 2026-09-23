@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { fetchMyContactInfo } from "@/lib/queries/myContact";
 
 // ─────────────────────────────────────────────────────────────
 // Profile → Data & Export (Phase 3 of the My Profile brief, 2026-09-23).
@@ -152,14 +153,21 @@ export const CHAT_SCOPE_NOTE =
 export interface AllDataExport { filename: string; json: string; counts: Record<string, number> }
 
 export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
-  const [{ data: profile, error: pErr }, { data: buyerProfile, error: bErr }] = await Promise.all([
+  // email and phone are not client-selectable on profiles (MPF-3); the export
+  // takes them from my_contact_info() and keeps the object's original key order.
+  const [{ data: p, error: pErr }, contact, { data: buyerProfile, error: bErr }] = await Promise.all([
     supabase.from("profiles")
-      .select("id, full_name, email, phone, avatar_url, active_role, onboarded, account_status, created_at")
+      .select("id, full_name, avatar_url, active_role, onboarded, account_status, created_at")
       .eq("id", userId).maybeSingle(),
+    fetchMyContactInfo(),
     supabase.from("buyer_profiles").select("*").eq("id", userId).maybeSingle(),
   ]);
   if (pErr) throw pErr;
   if (bErr) throw bErr;
+  const profile = p && {
+    id: p.id, full_name: p.full_name, email: contact.email, phone: contact.phone, avatar_url: p.avatar_url,
+    active_role: p.active_role, onboarded: p.onboarded, account_status: p.account_status, created_at: p.created_at,
+  };
 
   const rfqs = await myRfqs(userId);
   const quotes = await quotesOn(rfqs.map((r) => String(r.id)));

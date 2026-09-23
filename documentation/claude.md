@@ -98,7 +98,8 @@ Rules decided before or outside of Claude Code sessions.
   and admins, so a bare `count: "exact"` over-reports for anyone who is also a vendor or an
   admin. Measured on the admin account: calls 10 against 8 of its own, quotes 3 against 1,
   chats 4 against 3. `useCallCount()` filters `buyer_id`. `useProfileStats()` (Quotes and
-  Chats on `/profile`) still counts unfiltered, which is a known bug, not a pattern to copy.
+  Chats on `/profile`) filters quotes on `rfqs.buyer_id` through an `rfqs!inner` embed, and
+  chats on `user_a`/`user_b` (fixed 2026-09-24, MPF-1; it used to count unfiltered).
   Read the policy before trusting RLS to mean "mine".
   - More measured in Phase 3 (data export), signed in as demo-buyer:
     - `rfqs_select` shows every active open RFQ to any signed-in user: 3 against 2 of its own.
@@ -164,8 +165,8 @@ undocumented. Deep technical rationale for each lives in
   - Detail: `technicalimplementation.md` → "For You ranking".
 - **FAQ content lives in `public.faqs`, never in a component** (Phase 9 of the My Profile
   brief, 2026-09-23).
-  - Buyer Help (`/profile/help`, `/help`) and `/subscription` read it with
-    `useFaqs(surface)`. A new FAQ block anywhere uses `<FaqSection surface="…">`. Don't add
+  - Buyer Help (`/profile/help`, `/help`), `/subscription` and the seller landing `/seller`
+    read it with `useFaqs(surface)`. A new FAQ block anywhere uses `<FaqSection surface="…">`. Don't add
     another hardcoded array.
   - Clients read active rows (anon too), and every write is an `admin_faq_*` RPC from
     Cosora-Admin `/faqs`: super_admin writes, support reads. Letting support write means
@@ -175,8 +176,42 @@ undocumented. Deep technical rationale for each lives in
     columns, because `select *` fails.
   - The seeded text was moved verbatim and isn't vetted. Several buyer Help answers describe
     features that don't exist (MPF-14). Fix them in the admin, not in code.
-  - `seller_registration` has no content and no page yet (waiting on Andy).
+  - Andy's Seller Registration and Subscription answers are published **verbatim**, by
+    Mitra's decision (2026-09-23), even where the product differs (MPF-16, MPF-17). Don't
+    quietly "fix" them in code or in the admin. Raise it instead: the wording is Andy's call.
+  - "Lowest billing plan?" hardcodes plan prices, so a change to `subscription_plans` prices
+    means editing that answer in the admin too.
+  - Document verification is promised in **3–5 days** everywhere: the FAQ, `Kyc.tsx` and
+    `Onboarding.tsx`. Listing, video and catalogue moderation is a separate review, still
+    quoted as 24–48 hours.
   - Detail: `technicalimplementation.md` → "FAQs".
+- **`profiles.email` and `profiles.phone` are not client-selectable** (MPF-3, Phase 11 of the
+  My Profile brief, 2026-09-23).
+  - Never select, filter, order on or return them from `profiles`, in either app. Use:
+    - `fetchMyContactInfo()` (`my_contact_info()`) for the signed-in user's own;
+    - `call_buyer_contact()` for a buyer's phone, which applies callGate's rules in the
+      database;
+    - `admin_profile_search()` / `admin_profile_emails()` in Cosora-Admin.
+  - Anyone else's contact details need a new definer function with an explicit rule. Never
+    re-grant the columns.
+  - `profiles` has column grants, so `select("*")` fails, and a new column needs
+    `grant select (col)` in its migration.
+  - **Revoking a column that clients read is ordered:** ship the new readers and the code,
+    deploy both front ends, check the live bundles, and only then revoke. Phase 11 revoked
+    first and broke `cosora.in` and the admin panel (MPF-19).
+  - Until MPF-19 is closed, signed-in users can still read the two columns. Don't write code
+    that relies on it.
+  - Detail: `technicalimplementation.md` → "Profile contact details".
+- **`calls` rows are written only by `log_call()`** (MPF-2, Phase 12 of the My Profile brief,
+  2026-09-23).
+  - Clients have no INSERT, UPDATE or DELETE on `calls`. Never add a write policy or grant back;
+    change `log_call()` instead.
+  - The server owns `buyer_id`, `direction` and `created_at`. A limit (`rate_limited`,
+    `too_many_calls`) is a status, not an error, and a dial must never wait on the log.
+  - Logging vendor-initiated calls needs its own definer function with its own rules.
+  - A test that logs a call can't clean it up as a client. Tag its `product_context` and
+    remove it with SQL.
+  - Detail: `technicalimplementation.md` → "Calls — one write path".
 - **The admin side exists and is built — in a separate repo.** `Cosora-Admin` runs against
   the same Supabase project and owns some of this project's migrations. Older notes
   claiming "admin is not designed or built" are stale.

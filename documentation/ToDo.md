@@ -15,6 +15,32 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Deploy the MPF-3 code, then revoke the interim signed-in grant — added 2026-09-23
+- Task: deploy the Phase 11 code to `cosora.in` and `cosora-admin.vercel.app`, then run
+  `revoke select (email, phone) on public.profiles from authenticated;` as a migration.
+- Context:
+  - MPF-3's fix (`20260923171821`) made `profiles.email` and `profiles.phone` unreadable by
+    clients, but the live bundles still select them directly, so both front ends broke.
+  - `20260923174653` re-granted them to signed-in users only, so production works and signed
+    out stays closed. Until the revoke, any signed-in account can read everyone's email and
+    phone.
+  - Before revoking, confirm that each live bundle calls `my_contact_info` /
+    `admin_profile_search` and no longer contains the old selects.
+  - After the revoke, `node scripts/profile-contact-privacy-check.mjs` must show 24/24. Its 4
+    signed-in checks fail while the grant stands.
+  - Detail: `myprofileflags.md` → MPF-19.
+  - The same deploy restores call logging on `cosora.in`. Since MPF-2's fix
+    (`20260923182259`), the live bundle's direct insert into `calls` is refused. It still
+    dials, but those calls aren't recorded until the new code, which uses `log_call()`, is
+    live.
+  - The same deploy fixes the Quotes and Chats stats on `cosora.in`'s `/profile` (MPF-1,
+    Phase 13, 2026-09-24). Until then they over-count for anyone who also sells or is an
+    admin.
+- Reference: My Profile brief, Phase 11 (MPF-3), 2026-09-23. When the outage was found, Mitra
+  chose "Re-open to signed-in only". The call-logging note was added in Phase 12 (MPF-2).
+- Priority: High
+- Status: Open
+
 ### Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
 - Task: configure the `embedding_alert_webhook_url` Vault secret so CRITICAL pipeline alerts
   reach a human outside the app.
@@ -116,25 +142,28 @@ with no need to dictate format, context, or reference each time.
 - Status: Open
 
 ### Finish the Phase 9 FAQ content (seller registration, subscription, buyer Help accuracy) — added 2026-09-23
-- Task: once Andy answers, add the remaining FAQ content through Cosora-Admin `/faqs` and
-  place the Seller Registration FAQ.
+- Task: bring the admin-editable FAQs' wording in line with the product, and settle who can
+  edit them.
 - Context: Phase 9 of the My Profile brief made FAQs admin-editable (`public.faqs`,
-  `admin_faq_*`, Cosora-Admin `/faqs`). The code is done. What's still waiting:
-  - the source file `seller-registration-and-subscription-faq-content.md`, which isn't in
-    either repo;
-  - where `<FaqSection surface="seller_registration" />` goes (`Register.tsx`,
-    `RoleSelection.tsx` or `Onboarding.tsx`);
-  - a real answer for the "Lowest billing plan?" placeholder;
-  - whether support should also write FAQs (the RPC gates and `roles.ts` change together);
-  - a content pass over the buyer Help answers that promise features that don't exist
-    (MPF-14).
+  `admin_faq_*`, Cosora-Admin `/faqs`).
+  - **Done 2026-09-23:**
+    - Andy's content is live: Seller Registration on `/seller`, and Subscription with
+      "Contact us" → `/help`;
+    - "Lowest billing plan?" is written;
+    - verification is quoted as 3–5 days across the app.
+  - **Left:**
+    - Andy to review the answers published verbatim that don't match the product (MPF-16);
+    - align the Terms page with the 7-day money-back guarantee, and make refunds workable
+      (MPF-17);
+    - a content pass over the buyer Help answers (MPF-14);
+    - decide whether support should also write FAQs (the RPC gates and `roles.ts` change
+      together);
+    - keep the "Lowest billing plan?" prices in step with `subscription_plans`.
 
-  Full context: `documentation/myprofileflags.md` → "Phase 9 decisions waiting on Andy",
-  MPF-14 and MPF-15.
+  Full context: `documentation/myprofileflags.md`, MPF-14 to MPF-17 and "Phase 9 decisions".
 - Reference: My Profile brief, Phase 9 (2026-09-23).
-- Priority: Medium (the buyer Help inaccuracies are live today; seller registration shows
-  nothing until placed)
-- Status: Open
+- Priority: Medium (live pages carry claims the product doesn't back)
+- Status: Open (content loaded; accuracy and permissions pending)
 
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if

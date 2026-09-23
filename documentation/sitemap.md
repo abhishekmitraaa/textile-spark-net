@@ -126,7 +126,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/old-advertisements` | `OldAdvertisements` | |
 | `/advertisement-slideshow` | `AdvertisementSlideshow` | |
 | `/competitor-ads` | `CompetitorAds` | Competitor intelligence loop |
-| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `mailto:hello@cosora.in` (2026-09-23) |
+| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `/help` (2026-09-23) |
 | `/subscription/invoice/:id` | `InvoiceDetail` | |
 
 ### Store & business profile
@@ -149,7 +149,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 ### Vendor acquisition & onboarding
 | Route | Component | Notes |
 |---|---|---|
-| `/seller` | `VendorLanding` | Vendor marketing landing |
+| `/seller` | `VendorLanding` | Vendor marketing landing. Its FAQ block is `public.faqs` (`seller_registration`), Andy's 10 questions, edited in Cosora-Admin `/faqs` (2026-09-23) |
 | `/register` | `Register` | |
 | `/onboarding` | `Onboarding` | Business details, documents, products, contract |
 
@@ -177,8 +177,8 @@ what moves a `product_videos` row from `under_review` to `live`, and therefore t
 reason anything ever appears in this repo's `/video-closeups` buyer feed.
 
 **`/faqs`** (added 2026-09-23) edits the FAQ rows in this repo's `public.faqs`: the ones on
-`/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and, once
-it's placed, the seller-registration FAQ (`seller_registration`). super_admin writes and
+`/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and on
+the seller landing page `/seller` (`seller_registration`). super_admin writes and
 support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no deploy.
 
 ---

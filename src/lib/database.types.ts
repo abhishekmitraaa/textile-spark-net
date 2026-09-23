@@ -2677,6 +2677,25 @@ export type Database = {
           id: string
         }[]
       }
+      admin_profile_emails: {
+        Args: { p_ids: string[] }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      admin_profile_search: {
+        Args: { p_limit?: number; p_term: string }
+        Returns: {
+          account_status: Database["public"]["Enums"]["account_status_type"]
+          active_role: string
+          created_at: string
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
       admin_revoke: {
         Args: { p_user_id: string }
         Returns: {
@@ -2752,6 +2771,13 @@ export type Database = {
       cache_query_embedding: {
         Args: { p_embedding: string; p_query: string }
         Returns: boolean
+      }
+      call_buyer_contact: {
+        Args: { p_buyer_id: string }
+        Returns: {
+          full_name: string
+          phone: string
+        }[]
       }
       cancel_account_deletion: { Args: never; Returns: Json }
       certificate_apply: {
@@ -2888,6 +2914,10 @@ export type Database = {
         Args: { p_since: string; p_vendor: string }
         Returns: number
       }
+      log_call: {
+        Args: { p_product_context?: string; p_vendor_id: string }
+        Returns: Json
+      }
       log_engagement_event: {
         Args: {
           p_ad_id?: string
@@ -2940,6 +2970,13 @@ export type Database = {
         Returns: {
           distance: number
           id: string
+        }[]
+      }
+      my_contact_info: {
+        Args: never
+        Returns: {
+          email: string
+          phone: string
         }[]
       }
       next_invoice_number: { Args: never; Returns: string }

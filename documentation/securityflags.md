@@ -13,8 +13,8 @@ not the sensitive value itself. This file may end up in version control history.
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
 | 2026-09-23 | Account deletion leaves some traces: avatar files in Storage, a 1-hour access-token window, GoTrue's audit log | Low (privacy; the account itself cannot sign in again) | `anonymize_account()` (migration `20260923115839`), Storage avatar objects, `auth.audit_log_entries` | Open, by design for now. `avatar_url` is nulled, but SQL cannot delete Storage objects, so the image stays reachable by anyone who kept its URL. An access token issued before the sweep lives up to 1 hour: INSERTs, identity-row writes and refresh are refused (verified with a real token), but UPDATEs to the user's own RFQ or review text and reads are not. GoTrue's audit log keeps the old email. Detail and fix shape: `myprofileflags.md` → MPF-7 |
-| 2026-09-23 | **Every user's email and phone number is readable by anyone holding the public anon key, without signing in** | High (PII of all users, unauthenticated) | `profiles_select` on `public.profiles` is `USING (true)` for role `public`, and `anon` and `authenticated` hold SELECT on every column, including `email` and `phone` | Open, proven. Found in Phase 2 (account deletion) recon. Over real HTTP with only the anon key from `.env`, `GET /rest/v1/profiles?select=id&email=not.is.null` with `Prefer: count=exact` returned `0-0/20`, and the same for `phone` returned `0-0/7`. Only ids and counts were requested; no value was read. So an unauthenticated caller can list, filter and read every email and phone. Not fixed here: several legitimate readers depend on `profiles` being readable (`callGate` reads `account_status`; `useCallBuyer` reads a buyer's `phone` for the vendor on an RFQ; chat and review surfaces read names), so the fix needs its own phase. Fix shape: revoke column SELECT on `email` and `phone` from `anon` and `authenticated`, and serve the legitimate cases through narrow SECURITY DEFINER reads (own row; the phone of a buyer whose RFQ the caller is quoting, behind the existing call gate). Tracked with context in `myprofileflags.md` → MPF-3 |
-| 2026-09-23 | A buyer writes their own `calls` rows, and vendor call analytics trusts them: any vendor, any timestamp, any context text, even while suspended | Low (analytics integrity; nothing is exposed) | `calls_insert` and `calls_write` (FOR ALL) on `public.calls`, both only `buyer_id = auth.uid()`; readers `src/lib/queries/callAnalytics.ts` and `vendorAnalytics.ts` | Open, suspected. Read from the live policy and column definitions, not exercised, because that would write rows. `vendor_id` may be any profile (FK → `profiles`). `created_at` defaults to `now()` but a client may set it (no trigger). `product_context` is free text shown in the vendor's top contexts. There is no `account_is_active()` check, so a suspended buyer, told they "cannot place calls", can still log them through the API. `calls_write` also lets a buyer UPDATE or DELETE their rows later. So one script can inflate, backdate or erase any vendor's call count, trend and "N today". Fix shape: insert through a SECURITY DEFINER `log_call(vendor_id, product_context)` that checks `account_is_active()`, requires a vendor target, sets `created_at` and `direction` server-side and rate-limits, then drop client UPDATE/DELETE. Found while wiring the Profile Calls stat (Phase 1) |
+| 2026-09-23 | Signed-in users can still read every user's email and phone (interim grant while production runs the old code) | Medium (PII, readable by any signed-in account; signed out is closed) | `profiles.email`, `profiles.phone`: column SELECT granted back to `authenticated` by `20260923174653` | Open, by decision (Mitra, 2026-09-23) until both front ends run the Phase 11 code. The MPF-3 fix (`20260923171821`) closed both columns to anon and authenticated, but the live bundles on `cosora.in` and `cosora-admin.vercel.app` still select them directly as a signed-in user, so profile loading and the admin's Accounts and Chats broke. The interim grant restores those. Signed out stays closed: both MPF-3 proof requests still return 401/42501. Close it after both deploys with `revoke select (email, phone) on public.profiles from authenticated;`, then re-run `scripts/profile-contact-privacy-check.mjs` (24/24). `myprofileflags.md` → MPF-19 |
+| 2026-09-23 | A vendor can set their own quote's status, including to "accepted", with no buyer involved | Low (integrity of the buyer's quote list and the vendor's acceptance rate and Total Order Value; nothing exposed) | `quotes_update` on `public.quotes` (`vendor_id = auth.uid() OR owns_rfq(rfq_id) OR is_admin()`, no column guard) | Open, proven with a rolled-back probe as demo-vendor: 1 row updated to `accepted`. Found in Phase 11 while choosing the rule for `call_buyer_contact()`, which therefore does **not** trust quote status: any quote by the caller on the buyer's RFQ counts. Fix shape: a trigger letting only the RFQ owner or an admin change `status`, and the vendor only the quote's own terms. `myprofileflags.md` → MPF-18 |
 | 2026-09-23 | pg_cron's run history is 63% of the database and grows without limit toward the free plan's 500 MB cap, which makes the project read-only | Medium (availability) | `cron.job_run_details`: 120 MB, 50,692 rows since 2026-09-06, ~3,000 rows/day from two every-minute jobs | Open, a decision for the owner. Pruning deletes run history, and `embedding-health-alarm` deliberately surfaces failures as rows there, so the window must be long enough to notice an alarm. Suggested: a daily pg_cron job `delete from cron.job_run_details where end_time < now() - interval '14 days'` (postgres has DELETE; it cannot VACUUM FULL or index the table, which `supabase_admin` owns). Its full-scan cost was already removed from the health check (migration `20260923093304`) |
 | 2026-09-22 | `BUNNY_API_KEY` is rejected by Bunny Stream (401 "Authentication has been denied"), so reconciliation cannot list the library and a vendor delete of a Bunny video cannot remove the paid asset | Low (misconfiguration; cost leak, not access) | Edge-function secret `BUNNY_API_KEY` used by `bunny-reconcile`, `bunny-delete-video`, `bunny-upload-url` | Open. Found during admin-schema separation 5b: as super_admin `bunny-reconcile` passed authz and got 401 from `video.bunnycdn.com`. Most likely a rotated or wrong key. Today 0 `product_videos` rows use the bunny provider, so nothing is leaking yet. If uploads switch to Bunny while the key is bad, each delete fails with `bunny_delete_failed` (the function refuses to report success). Fix: set a valid library API key and re-run `bunny-reconcile`. The key value is not recorded here |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
@@ -40,6 +40,8 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-23 | A buyer wrote their own `calls` rows, and vendor call analytics trusted them: any vendor, any timestamp, any direction and context text, even while suspended, with UPDATE and DELETE afterwards | Low (analytics integrity; nothing exposed) | `calls_insert` and `calls_write` (FOR ALL) on `public.calls`, both only `buyer_id = auth.uid()` | Fixed 2026-09-23 (My Profile Phase 12), migration `20260923182259_calls_writes_only_through_log_call.sql`. **Proven before the fix**, rolled back as demo-buyer: a call dated 400 days ago with direction `missed` was accepted, re-targeting and re-dating it was accepted, and deleting it was accepted. Now clients hold no INSERT, UPDATE, DELETE or TRUNCATE on `calls`, both write policies are dropped, and `log_call(vendor, context)` is the only write path: it requires an active caller and a vendor target that isn't the caller, sets `buyer_id`, `direction` and `created_at` itself, cleans the context to 200 characters, and rate-limits (60 s per vendor, 5 per vendor per day, 30 per hour). SELECT is unchanged. **Verified:** rolled-back rehearsal, 18 checks; `scripts/suspension-gate-check.mjs` 9/9 (the log_call pair plus 4 new invariants); a real Call Now click logged once, then rate-limited, and dialled both times; `profile-calls-stat` and `vendor-analytics` 6/6. Detail: `myprofileflags.md` → MPF-2 |
+| 2026-09-23 | **Every user's email and phone number was readable by anyone holding the public anon key, without signing in** | High (PII of all users, unauthenticated) | `public.profiles`: `profiles_select` is `USING (true)`, and anon and authenticated held table-wide SELECT | Fixed 2026-09-23 (My Profile Phase 11), migration `20260923171821_profiles_contact_columns_private.sql`. Table SELECT is replaced by column SELECT on every column except `email` and `phone`, for anon and authenticated. The legitimate readers go through `my_contact_info()` (own row), `call_buyer_contact()` (a buyer's phone for a vendor who has quoted on their RFQ, with callGate's suspension and chat-lock rules enforced in the database), and the admin-gated `admin_profile_search()` / `admin_profile_emails()`. **Verified:** the two proof requests re-run before the fix (still `0-0/20` and `0-0/7`) and after (HTTP 401, 42501, no `Content-Range`, no rows); `scripts/profile-contact-privacy-check.mjs` 24/24; `scripts/contact-gate-check.mjs` 13/13; `tests/profile-contact-privacy.spec.ts` 4/4; regression 25/25. The signed-in half is reopened on purpose until deploy: see the Open row and MPF-19. Detail: `myprofileflags.md` → MPF-3 |
 | 2026-09-23 | New `faqs` table let anyone, signed out, read `created_by`, which names the admin who wrote each FAQ | Low (would identify super admins, with their contact details via MPF-3's open profiles; no rows carried an admin id yet) | `public.faqs` table-wide SELECT for anon/authenticated, granted by `20260923144549` | Fixed 2026-09-23, same phase: `20260923150408` grants column SELECT without `created_by`. Over HTTP as anon afterwards: the app's query returns 200 with 12 rows, and `created_by` returns 42501. Guarded by `tests/faqs-admin-editable.spec.ts` |
 | 2026-09-23 | The 370 load-test accounts can now sign in to production, all with one shared password | Medium | `auth.users` rows `loadtest-%@cosora.test` (250 buyers, 120 vendors) | Closed 2026-09-23: the accounts no longer exist. `scripts/loadtest-cleanup.sql` was run (dry run, then commit) and deleted all 370 users with their 370 identities and 170 sessions. Afterwards 0 `auth.users` match `@cosora.test` or `loadtest`, so the shared password opens nothing. It was never in either repo or its history. It is still in `.env` as `LOADTEST_PASSWORD` (now unused) and in old prompt text. Until then the flag stood as logged: repaired on purpose for the Master Prompt 12 load harness, the accounts could act towards real users |
 | 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Closed 2026-09-23: the population was deleted by `scripts/loadtest-cleanup.sql`: 120 vendor profiles, 577 products, 572 RFQs, 1,082 quotes, 221 conversations, 1,321 messages, 24 ads (and 18 review-log rows), 24 subscriptions, 184 engagement events. Leftover checks are all 0, including every `[LOADTEST]` / `loadtest` text pattern. Real rows are unchanged: 26 live listings, 10 vendor profiles. The 40 unearned verified badges went with their vendors |
@@ -62,6 +64,60 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-23 — Every user's email and phone readable with the public anon key — Severity: High (fixed for signed-out callers; the signed-in half stays open until deploy)
+- What was found: `profiles_select` is `USING (true)`, and anon and authenticated held
+  table-wide SELECT, so `email` and `phone` were readable by anyone with the anon key, which
+  ships in the app bundle.
+- Where: `public.profiles`, columns `email` and `phone`.
+- How it was discovered: My Profile Phase 2 recon (account deletion), with two count-only HTTP
+  requests. It was logged then in the Open table. Re-proven at the start of Phase 11, before any
+  change: `select=id&email=not.is.null` → `0-0/20`, and the same for `phone` → `0-0/7`.
+- Risk / impact if left unaddressed: a complete, unauthenticated list of every user's email
+  and phone. Open RFQs are readable by any signed-in user, so any RFQ also led to its buyer's
+  contact details.
+- Fix applied: migration `20260923171821_profiles_contact_columns_private.sql`.
+  - It revokes table SELECT and grants column SELECT on the 7 other columns to anon and
+    authenticated. Names, avatars, roles and `account_status` stay readable, as the app needs.
+  - Four SECURITY DEFINER readers, with `search_path = ''` and EXECUTE for authenticated only:
+    `my_contact_info()`, `call_buyer_contact(buyer)`, `admin_profile_search(term, limit)` and
+    `admin_profile_emails(ids)`.
+  - `call_buyer_contact()` moves the vendor→buyer phone read into the database, with the RFQ
+    relationship (the caller has quoted on one of the buyer's RFQs) and callGate's rules:
+    caller suspended, target suspended, chat under review. A refusal is a 42501 whose message
+    is the reason code.
+  - Callers moved: in the buyer app `AuthContext`, `fetchProfileFull()`, the data export and
+    `useCallBuyer()`; in Cosora-Admin the Accounts search, Chats search, chat participants and
+    suspension-history actors, plus one admin test script.
+  - It was rehearsed rolled back first, with 18 behaviour checks as anon, demo-buyer,
+    demo-vendor and an admin. The migration self-asserts the grants.
+- Verification: the two proof requests → HTTP 401, 42501, no `Content-Range`, no rows. The
+  script and spec results are in the Fixed row.
+- **Incident during the fix:** the migration went live before the new front-end code. Both
+  production front ends (`cosora.in`, `cosora-admin.vercel.app`) still select the columns
+  directly as a signed-in user, so profile loading and the admin searches broke. In that
+  window, a profile edit on `cosora.in` could also have saved blanks over the user's name,
+  email, phone and photo, because the old edit form seeded itself from the refused read. On
+  Mitra's decision, `20260923174653` granted the two columns back to **authenticated only**.
+  Signed out stays closed. The grant stands until both deploys (the Open row; MPF-19).
+- Lesson: revoking a column that clients read is a two-step change. Ship the new readers and
+  the code, deploy, check the live bundles, and only then revoke.
+- Status: Fixed for signed-out callers. The signed-in half is Open (interim) until deploy.
+
+### 2026-09-23 — A vendor can mark their own quote accepted — Severity: Low
+- What was found: `quotes_update` admits `vendor_id = auth.uid()` with no column guard, so a
+  vendor can set their own quote's `status` to anything, including `accepted`.
+- Where: `quotes_update` on `public.quotes`. Accepted quotes are read by the buyer's quote
+  list and by the vendor's acceptance rate and Total Order Value (`vendorAnalytics.ts`,
+  `Quotes.tsx`).
+- How it was discovered: Phase 11, while choosing the relationship rule for
+  `call_buyer_contact()`. A rolled-back probe as demo-vendor updated 1 row to `accepted`.
+- Risk / impact if left unaddressed: a vendor can fake a buyer's acceptance, which the buyer
+  then sees in their list, and inflate their own acceptance rate and Total Order Value. It
+  gates nothing else today: `call_buyer_contact()` ignores quote status for this reason.
+- Recommended fix: a trigger letting only the RFQ owner or an admin change `status`, while the
+  vendor edits only price, MOQ, lead time and comment.
+- Status: Open. Detail: `myprofileflags.md` → MPF-18.
 
 ### 2026-09-23 — New `faqs` table exposed which admin wrote each FAQ — Severity: Low (fixed the same phase)
 - What was found: Phase 9's migration `20260923144549` granted SELECT on the whole of
@@ -106,9 +162,23 @@ in the next one.
 - Recommended fix: a SECURITY DEFINER `log_call()` as the only insert path (active account,
   vendor target, server-set `created_at` and `direction`, rate limit); no client
   UPDATE/DELETE on `calls`.
-- Status: Open
-- Related changelog entry: 2026-09-23 "Profile Calls stat is real". Fuller context, and how to
-  verify a fix: `myprofileflags.md` → MPF-2.
+- Status: **Fixed 2026-09-23** (My Profile Phase 12), migration
+  `20260923182259_calls_writes_only_through_log_call.sql`.
+  - Proven first, in a rolled-back transaction as demo-buyer: a call dated 400 days ago with
+    direction `missed` to demo-vendor was accepted; re-targeting it to another profile and
+    re-dating it was accepted; deleting it was accepted.
+  - The fix, as recommended: `log_call()` is the only insert path, and clients have no
+    INSERT/UPDATE/DELETE/TRUNCATE on `calls`. `calls_insert` and `calls_write` are dropped, so a
+    grant restored by mistake would still meet RLS with no write policy. The rate limit is the
+    account-deletion idiom: a per-caller advisory lock, 60 seconds between calls to the same
+    vendor, and caps of 5 per vendor per day and 30 per hour.
+  - It also refuses calling yourself, so a vendor can't inflate their own count.
+  - Verification is in the Fixed row and in `test.md`.
+  - **Production:** the live `cosora.in` bundle still inserts directly. That insert is now
+    refused, but the bundle ignores the result and dials anyway, so calls placed there aren't
+    logged until the Phase 12 code is deployed (the same deploy as MPF-19).
+- Related changelog entry: 2026-09-23 "Profile Calls stat is real" and "Phase 12, MPF-2".
+  Fuller context: `myprofileflags.md` → MPF-2.
 
 ### 2026-09-23 — Plan caps bypassable by concurrent requests — Severity: Medium (fixed the same day)
 - What was found: `enforce_product_cap()` and `enforce_lead_cap()` count the vendor's rows

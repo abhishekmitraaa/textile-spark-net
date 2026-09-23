@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
+import { fetchMyContactInfo } from "@/lib/queries/myContact";
 
 type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert"];
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -21,18 +22,28 @@ export const EMPTY_PROFILE: ProfileData = {
   state: "", postalCode: "", country: "India", gstin: "", pan: "", location: "", memberSince: "",
 };
 
+// The signed-in user's own profile: every caller passes their own id, and the
+// email and phone come from my_contact_info(), which only reads auth.uid()'s row
+// (profiles.email and .phone are not client-selectable, MPF-3).
+//
+// Read errors throw rather than falling through to blanks. useEditableProfile
+// seeds its form from the first result and saveProfileFull() writes every field,
+// so a refused read that came back as "" would erase the real values on save.
 async function fetchProfileFull(userId: string): Promise<ProfileData> {
-  const [{ data: p }, { data: bp }] = await Promise.all([
-    supabase.from("profiles").select("full_name, email, phone, avatar_url, created_at").eq("id", userId).maybeSingle(),
+  const [{ data: p, error: pErr }, contact, { data: bp, error: bErr }] = await Promise.all([
+    supabase.from("profiles").select("full_name, avatar_url, created_at").eq("id", userId).maybeSingle(),
+    fetchMyContactInfo(),
     supabase.from("buyer_profiles").select("*").eq("id", userId).maybeSingle(),
   ]);
+  if (pErr) throw pErr;
+  if (bErr) throw bErr;
   const city = bp?.city ?? "";
   const state = bp?.state ?? "";
   return {
     fullName: p?.full_name ?? "",
-    email: p?.email ?? "",
-    emailVerified: Boolean(p?.email),
-    phone: p?.phone ?? "",
+    email: contact.email ?? "",
+    emailVerified: Boolean(contact.email),
+    phone: contact.phone ?? "",
     city,
     jobTitle: bp?.job_title ?? "",
     department: bp?.department ?? "",
@@ -198,19 +209,34 @@ export async function saveAccountInfo(
   if (error) throw error;
 }
 
-// Real profile stats. Counts rely on RLS: a buyer only "sees" quotes on their
-// own RFQs and conversations they're part of, so a plain count is correct.
+// Real profile stats: the user's OWN quotes and chats, each filtered on the
+// owner column. RLS alone does not mean "mine" here (MPF-1): quotes_select also
+// admits `vendor_id = auth.uid()` and every admin, and conversations_select
+// admits support/super_admin admins, so a bare count added quotes a user SENT
+// as a vendor and, for an admin, every quote or chat on the platform.
+//   • Quotes = quotes RECEIVED on the user's own RFQs, the same set the stat
+//     links to (/requirement/my-quotes, its "Total Quotes").
+//   • Chats  = conversations the user is a party to, the same filter as the
+//     /chats list (useConversations in queries/chat.ts).
 export interface ProfileStats { quotes: number; chats: number }
 
 export function useProfileStats(userId: string | undefined) {
   return useQuery({
     queryKey: ["profile_stats", userId],
     queryFn: async (): Promise<ProfileStats> => {
-      const [{ count: quotes }, { count: chats }] = await Promise.all([
-        supabase.from("quotes").select("*", { count: "exact", head: true }),
-        supabase.from("conversations").select("*", { count: "exact", head: true }),
+      const [quotesRes, chatsRes] = await Promise.all([
+        supabase
+          .from("quotes")
+          .select("id, rfqs!inner(buyer_id)", { count: "exact", head: true })
+          .eq("rfqs.buyer_id", userId as string),
+        supabase
+          .from("conversations")
+          .select("*", { count: "exact", head: true })
+          .or(`user_a.eq.${userId},user_b.eq.${userId}`),
       ]);
-      return { quotes: quotes ?? 0, chats: chats ?? 0 };
+      if (quotesRes.error) throw quotesRes.error;
+      if (chatsRes.error) throw chatsRes.error;
+      return { quotes: quotesRes.count ?? 0, chats: chatsRes.count ?? 0 };
     },
     enabled: Boolean(userId),
   });
