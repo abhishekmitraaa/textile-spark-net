@@ -666,6 +666,14 @@ undocumented. Deep technical rationale for each lives in
   backwards with a LIMIT. A `max()` or `where jobid =` over it is a full scan, which is what
   made `embedding_pipeline_health()` take 64 s under load. Pruning it is an open retention
   decision. Note that `embedding-health-alarm` surfaces failures as rows in this table.
+- **Deleting a vendor account is not a one-statement cascade here.** `auth.users` →
+  `profiles` → `vendor_profiles` / `products` does cascade. But deleting a product fires
+  `trg_products_sync_vendor_catalog`, which INSERTs into `vendor_catalog_recompute_queue`
+  (FK → `vendor_profiles`), so in one cascade the product deletes can hit a vendor row
+  that is already gone, and the whole delete aborts. `messages.quote_id` / `rfq_id` and
+  `rfqs.product_id` are NO ACTION, and `vendor_contracts` is RESTRICT. Delete children first:
+  conversations, RFQs, ads, products, then the user. `scripts/loadtest-cleanup.sql` is the
+  worked example.
 - **GoTrue returns HTTP 500 "Database error querying schema" for any user row with NULL in
   `confirmation_token`, `recovery_token`, `email_change_token_new` or `email_change`.** It
   fails before the password is checked, so a user seeded by raw SQL looks perfect in

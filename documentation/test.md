@@ -128,6 +128,30 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-23 — Master Prompt 12, Part G: cleanup script written; checked, NOT run
+
+`scripts/loadtest-cleanup.sql` was written and **not executed**, not even as a rolled-back dry
+run, as asked. What was checked instead:
+- **The cascade graph, read-only against live.** Every FK in `public` and `admin` plus those
+  into `auth.users`, with its ON DELETE action. Every DELETE trigger on the affected tables.
+- **Population counts:** 370 users, 120 vendor profiles, 577 products, 572 RFQs, 1,082 quotes,
+  221 conversations, 1,321 messages, 24 ads, 24 subscriptions, 184 engagement events, 370
+  identities, 170 sessions.
+- **Boundary with real users, all 0:** real RFQs aimed at synthetic vendors or products; quotes
+  crossing either way; mixed conversations; synthetic events on real vendors; untagged
+  synthetic rows or tagged real ones; Storage objects owned; a real vendor recommending a
+  synthetic product.
+- **Offline syntax, with PostgreSQL's own parser** (`libpg-query` 18.1.5, installed in the
+  scratchpad): 30 statements parse, the three `DO` bodies parse as PL/pgSQL, and the DELETE
+  order read back from the parse tree is conversations → rfqs → quotes → advertisements →
+  products → engagement_events → auth.users.
+- **Not done:** a live `EXPLAIN` / preflight validation. The Supabase connector disconnected
+  while it was being sent, so nothing reached the database.
+  - Every expression except `product_videos.provider = 'bunny'` had already run against the
+    live schema in the read-only checks above.
+  - The first real run is the built-in dry run anyway, which stops in the preflight before
+    touching a row if anything is wrong.
+
 ### 2026-09-23 — Master Prompt 12, Part F: k6 load (10→50 VUs), Playwright sourcing loop 4/4, regression 28/28
 
 **Setup.** k6 v2.3.0, the official Windows binary, checksum-verified and run from the scratchpad

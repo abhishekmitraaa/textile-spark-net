@@ -1274,6 +1274,29 @@ production catalogue until the Master Prompt 12 cleanup script runs.
   `scripts/loadtest-login-check.mjs`. The other four token columns were already `''`.
 - **A load-test vendor quotes `[LOADTEST]` RFQs only.** Open-marketplace RFQs include real
   buyers' requests, and a test quote would land in a real inbox.
+- **Removal: `scripts/loadtest-cleanup.sql` (written 2026-09-23, NOT run).** It is not a
+  migration and must stay out of `supabase/migrations/`.
+  - **Dry-run by default.** It deletes inside one transaction, verifies, then rolls back and
+    reports. Change one line to `'commit'` to delete for real.
+  - **Preflight refusals.** It pins the target to the exact email regex and a count of 370.
+    It refuses if an admin, a Storage object, a Bunny video or a signed contract is involved,
+    or if a real user's own content would be destroyed (a real vendor's quote on a synthetic
+    RFQ, a mixed conversation, a real review).
+  - **Post-checks.** Nothing synthetic may remain, and a before/after count of every table's
+    real rows must be unchanged.
+  - **The cascade was mapped from `pg_constraint` and the DELETE triggers, not assumed, and a
+    single `delete from auth.users` is NOT safe:**
+    - `trg_products_sync_vendor_catalog` inserts into `vendor_catalog_recompute_queue`
+      (FK → `vendor_profiles`) on every product delete. Inside one cascade that can fire after
+      the vendor row is gone, violate the FK and abort everything.
+    - `messages.quote_id` / `messages.rfq_id` and `rfqs.product_id` are NO ACTION.
+    - `engagement_events.viewer_id` is SET NULL, so synthetic views of real listings would
+      survive, anonymised.
+    - `vendor_contracts` is RESTRICT.
+  - Hence the order: conversations → RFQs (quotes cascade) → leftover quotes → ads → products
+    → synthetic viewers' events → `auth.users`.
+  - Checked 2026-09-23: the population is closed. It has 0 links to real users' content and
+    owns 0 Storage objects; every product and RFQ carries the tag.
 
 - **Never the demo accounts.** `messages` has no DELETE policy for any role, so
   every probe message is permanent; and a crashed run leaves a demo account

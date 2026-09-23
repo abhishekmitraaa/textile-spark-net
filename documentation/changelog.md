@@ -1,3 +1,16 @@
+- 2026-09-23 (Master Prompt 12, Part G): **The synthetic-data cleanup script is written, checked, and NOT run.** `scripts/loadtest-cleanup.sql` removes the 370 `loadtest-*` accounts and everything they own. It is deliberately not a migration.
+  - **Cascade confirmed, not assumed. A one-line `delete from auth.users` is not safe here**, for three reasons:
+    - product deletes fire `trg_products_sync_vendor_catalog`, whose insert into `vendor_catalog_recompute_queue` (FK → `vendor_profiles`) can abort the whole cascade;
+    - messages → quotes/RFQs and RFQs → products are NO ACTION;
+    - `engagement_events.viewer_id` is SET NULL, which would leave anonymised synthetic views on real listings.
+  - **So it deletes children first:** conversations, RFQs, leftover quotes, ads, products, synthetic viewers' events, then `auth.users`, which cascades the rest.
+  - **Safety.**
+    - Dry-run by default: it deletes, verifies, rolls back and reports, and one line switches it to commit.
+    - It requires the exact target: regex plus a count of 370.
+    - It refuses on admins, Storage objects, Bunny videos, signed contracts, or any real user's content in the blast radius.
+    - It verifies zero synthetic leftovers and an unchanged count of real rows in 15 tables.
+  - **Checked:** the live FK/trigger graph and population boundary (0 cross-links, 0 Storage objects), and an offline parse with PostgreSQL's own grammar (30 statements and 3 PL/pgSQL bodies OK). A live EXPLAIN pass could not run: the Supabase connector dropped.
+  - Docs: `technicalimplementation.md` (fixtures), `claude.md` (the cascade fact), `securityflags.md` (both load-test flags), `sides.md`, `test.md`.
 - 2026-09-23 (Master Prompt 12, Part F): **A k6 load harness and a Playwright sourcing-loop spec, run against production inside the synthetic population. They found three real defects, all fixed and re-run green.** Migrations `20260923093304_embedding_health_reads_recent_cron_runs_only` (md5 `a0234fcd…`) and `20260923094728_embedding_health_missing_excludes_queued_rows` (md5 `c2e31070…`); both files equal the applied statements.
   - **Harness.** `scripts/load/`: `mint-tokens.mjs` (sign-ins outside k6, because GoTrue's per-IP limit answered 429 twice in 151 sign-ins), `marketplace.k6.js` (the app's own queries, 10→50 VUs, 70% buyers) and `analyze.mjs` (per level and per endpoint). Its safety rules are in `technicalimplementation.md` → "Load testing". k6 ran as a checksum-verified binary from the scratchpad, not installed.
   - **Found 1: at 50 VUs PostgREST's pool ran dry, and the client saw 0 errors.** p95 7.0 s, p99 14.6 s, and throughput fell from 31.6 to 24.6 req/s.

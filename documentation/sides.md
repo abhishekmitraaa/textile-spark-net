@@ -95,6 +95,8 @@ the demand side of India's fashion and textile supply chain.
   remove (Mitra's decision, Master Prompt 9). **Since 2026-09-23 all 370 of these accounts can
   sign in** (repaired for the Master Prompt 12 load harness; before, every login returned HTTP
   500). They share one password, so they stay live only until the Part G cleanup script is run.
+  That script (`scripts/loadtest-cleanup.sql`) is written and not yet run; removing the rows
+  empties most of today's catalogue, which is the honest state.
 - **Mobile + OTP sign-in cannot complete yet.** The flow is restored and honest, but no code
   can be delivered until the in-house OTP API is wired into `src/lib/auth/otp.ts`. Google and
   guest browsing are the working routes, and email-only accounts can only get in through Google
