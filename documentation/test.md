@@ -145,12 +145,21 @@ run, as asked. What was checked instead:
   scratchpad): 30 statements parse, the three `DO` bodies parse as PL/pgSQL, and the DELETE
   order read back from the parse tree is conversations → rfqs → quotes → advertisements →
   products → engagement_events → auth.users.
-- **Not done:** a live `EXPLAIN` / preflight validation. The Supabase connector disconnected
-  while it was being sent, so nothing reached the database.
-  - Every expression except `product_videos.provider = 'bunny'` had already run against the
-    live schema in the read-only checks above.
-  - The first real run is the built-in dry run anyway, which stops in the preflight before
-    touching a row if anything is wrong.
+- **Live validation, once the connector was back (10:28 UTC). No DELETE executed.**
+  - The method: the script's own text, extracted by a builder from the committed file (md5
+    `7120cf99…`, the same on GitHub). Setup, preflight and count statements ran verbatim. Every
+    DELETE ran as `EXPLAIN` only, and the leftover query ran as a plain SELECT. It all ran in one
+    transaction ending in a deliberate error.
+  - **Preflight passed** against live data, including the `provider = 'bunny'` check.
+  - **All 7 DELETEs plan:** conversations, rfqs, quotes, advertisements, products,
+    engagement_events, auth.users.
+  - **The leftover check parses.** Before any delete it reports exactly the population: 370
+    users and identities, 170 sessions, 120 vendors, 577 products, 572 RFQs, 1,082 quotes, 221
+    conversations, 1,321 messages, 24 ads, 24 subscriptions, 184 events.
+  - **Cascade counts:** 1,321 messages, 1,082 quotes, 18 ad review-log rows, 0 notifications.
+  - **The real-data drift check works** and reports none.
+  - **Afterwards,** unchanged: 370 users, 577 products, 572 RFQs, 0 temp objects left.
+  - The script itself remains unrun, including its dry-run mode.
 
 ### 2026-09-23 — Master Prompt 12, Part F: k6 load (10→50 VUs), Playwright sourcing loop 4/4, regression 28/28
 
