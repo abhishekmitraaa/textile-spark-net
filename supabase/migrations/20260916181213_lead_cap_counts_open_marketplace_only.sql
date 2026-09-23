@@ -1,3 +1,4 @@
+-- Renamed 2026-09-23 from 20260916181100_… (committed 08a0550) to the version apply_migration recorded live; statements unchanged.
 -- Lead cap: enforce the same count the vendor is shown.
 --
 -- ── The bug ────────────────────────────────────────────────────────────────

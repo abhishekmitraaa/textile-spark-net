@@ -1,3 +1,4 @@
+-- Renamed 2026-09-23 from 20260916171000_… (committed 68bb846/a2165c1) to the version apply_migration recorded live; statements unchanged.
 -- Schedule the subscription-expiry sweep.
 --
 -- `public.expire_subscriptions()` has existed since 20260716120100 and was never

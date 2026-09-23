@@ -500,6 +500,21 @@ undocumented. Deep technical rationale for each lives in
   `verify_jwt` (the anon key gets 403 — verified), because the anon key ships in the bundle
   and would otherwise let anyone burn OpenAI credits. They are separate functions so an auth
   mistake on the buyer-facing path cannot expose the drainer.
+- **The lead cap applies to the open marketplace only (Andy, 2026-09-22).** A lead is a
+  distinct open-marketplace RFQ (`rfqs.vendor_id is null`) the vendor quoted in the window.
+  A reply to a request addressed directly to the vendor is never counted and never refused,
+  even at the cap and even after the buyer closed it. The dashboard (`get_vendor_plan()`,
+  the source of truth) and `enforce_lead_cap()` must count the same thing. Mechanism:
+  `technicalimplementation.md` → "Plan caps".
+- **Any signed-in user may read any ACTIVE open-marketplace RFQ (Andy, 2026-09-22).**
+  `rfqs_select` works like an open sourcing board on purpose. It does not check that the
+  reader is a vendor. Settled; do not "fix" it.
+- **Every migration is a committed file named by its LIVE version (Master Prompt 12,
+  2026-09-23).** Applying through the MCP is not enough. Apply, read the version the
+  database stamped, and name the file `<that version>_<name>.sql` with statements equal to
+  what was applied (md5-compared). Reports cite the file's raw GitHub URL. Older files use
+  authored timestamps (`MIGRATIONS.md`), and 45 live migrations, the whole base schema
+  among them, are in neither repo.
 
 ### Postgres facts that are not guessable (all cost a failed migration to learn)
 
@@ -603,6 +618,22 @@ undocumented. Deep technical rationale for each lives in
   A scalar subquery (`(select embedding from cur)`) resolves as an InitPlan and **does**
   keep the index; extra `ORDER BY` tiebreakers after the `<=>` are fine too, handled by an
   Incremental Sort. Both verified on this database at 10k products / 2.5k videos.
+- **A trigger that must see rows RLS hides needs a SECURITY DEFINER helper; the trigger
+  itself must stay INVOKER.** The plan-cap triggers start with
+  `if current_user <> 'authenticated' then return new`. Inside a definer function
+  `current_user` is the owner, so making the trigger definer silently disables the cap for
+  everyone. Left as invoker, whatever it reads is filtered by the caller's RLS: `rfqs_select`
+  hides a CLOSED RFQ even from the vendor who quoted it, and `quotes_insert` does not stop
+  quotes on closed RFQs. An in-trigger count then under-counts (a cap bypass), and an
+  in-trigger lookup reads NULL (a wrong refusal). `lead_cap_used()` and
+  `rfq_targets_vendor()` are the pattern: definer, pinned `search_path`, raise `42501` unless
+  asked about the caller (with `is distinct from`), EXECUTE to authenticated only. Return the
+  narrowest answer the trigger needs, never a column RLS would hide.
+- **GoTrue returns HTTP 500 "Database error querying schema" for any user row with NULL in
+  `confirmation_token`, `recovery_token`, `email_change_token_new` or `email_change`.** It
+  fails before the password is checked, so a user seeded by raw SQL looks perfect in
+  `auth.users` and cannot log in. Seed those four as `''`. All 370 load-test users had this
+  until 2026-09-23.
 - **pg_cron runs each job in ONE transaction, so a job that RAISEs rolls back its own
   logging.** Recording health history and raising an alarm therefore cannot live in the same
   job — `embedding-health-log` (records, never raises) and `embedding-health-alarm` (raises,

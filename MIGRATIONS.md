@@ -21,6 +21,37 @@ The timestamps already encode the correct order. They interleave across repos on
 purpose. There is no "apply admin first, then buyer" shortcut — the dependency
 runs **both ways**.
 
+> **Measured 2026-09-23: even merged, the two directories cannot build the schema
+> from an empty database.** Of the 162 versions in
+> `supabase_migrations.schema_migrations`, 45 have no file in either repo under any
+> timestamp. That includes all 21 from 2026-07-04/05, which create `profiles`,
+> `rfqs`, `quotes` and `vendor_profiles`; `grep` finds no `create table` for any
+> of them in either repo. Their SQL exists only in
+> `schema_migrations.statements` on the live project. The rule above orders what
+> IS committed. It is not a from-scratch rebuild.
+
+## Standing rule for new migrations (Master Prompt 12, 2026-09-23)
+
+- **Every migration lands as a committed file.** Applying it live through the MCP is
+  not enough on its own.
+- **Name the file by the version the database recorded.** `apply_migration` stamps
+  its own UTC version, so apply, read the version back from `list_migrations` (or
+  `schema_migrations`), and then name the file `<that version>_<name>.sql`. The
+  repo name and the live history then agree, and
+  `https://raw.githubusercontent.com/abhishekmitraaa/textile-spark-net/main/supabase/migrations/<version>_<name>.sql`
+  resolves for anyone checking. The file's statements must equal what was applied:
+  compare whitespace-insensitive md5s of the file and of
+  `array_to_string(statements, E'\n')`.
+- **Renaming an older file to its live version is safe only if no other file, in
+  either repo, sorts between the old and new names.** Check both directories
+  before renaming.
+
+| file (= live version) | what it does |
+|---|---|
+| `20260916180244_schedule_subscription_expiry_sweep.sql` | Daily 03:29 UTC `cron.schedule` of `expire_subscriptions()`. Committed as `20260916171000_…`, renamed 2026-09-23 |
+| `20260916181213_lead_cap_counts_open_marketplace_only.sql` | `lead_cap_used()` plus `enforce_lead_cap()` counting open-marketplace quotes only. Committed as `20260916181100_…`, renamed 2026-09-23 |
+| `20260923074903_targeted_quotes_exempt_from_lead_cap.sql` | `rfq_targets_vendor()` plus the targeted early return in `enforce_lead_cap()`. Self-asserts its grants and invoker rights |
+
 ---
 
 ## The dependencies, named

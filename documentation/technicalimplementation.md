@@ -117,10 +117,19 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (40 as of 2026-09-06). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (100 as of 2026-09-23). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
+
+**Neither repo, nor both together, can build this schema from scratch (measured 2026-09-23).**
+Of 162 versions in `supabase_migrations.schema_migrations`, **45 have no file in either repo**,
+including all 21 from 2026-07-04/05, which create `profiles`, `rfqs`, `quotes` and
+`vendor_profiles`. Their SQL survives only in `schema_migrations.statements`. Separately,
+most committed files are named by their authored timestamp while the live version differs
+(`MIGRATIONS.md`: "Live version ≠ filename"), so a raw URL built from a live version 404s
+even when the file is committed. From 2026-09-23 the lead-cap and subscription migrations
+are named by their live version.
 
 ### Tables — by domain
 
@@ -154,6 +163,45 @@ Enforcement pattern used throughout: **RLS decides who may touch a row; BEFORE t
 decide which state transitions are legal.** Moderation RPCs are `SECURITY DEFINER` and
 carry no `EXECUTE` grant to `PUBLIC`. See Known Constraints below for the invariants that
 must not be undone.
+
+### Plan caps — the lead cap counts what the dashboard shows (2026-09-16, 2026-09-23)
+
+`get_vendor_plan()` is the source of truth for what a vendor is shown; the four BEFORE
+triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
+`enforce_ad_location_scope`) enforce it and must agree with it. For leads they did not.
+
+- **What counts.** A lead is a distinct **open-marketplace** RFQ (`rfqs.vendor_id is null`)
+  the vendor quoted inside the window. The window is the subscription period for an active
+  paid plan, otherwise the calendar month. A reply to a request **addressed to the vendor**
+  (`rfqs.vendor_id = vendor`) is not counted, and, since Andy's decision of 2026-09-22, is
+  never refused either. `enforce_lead_cap()` returns early for it before any cap lookup.
+- **Why the counting and the target check are SECURITY DEFINER helpers.**
+  `enforce_lead_cap()` is SECURITY INVOKER and must stay so. Its first line,
+  `if current_user <> 'authenticated' then return new`, is how it tells a signed-in request
+  from a migration or service_role, and inside a definer function `current_user` is the
+  owner, so the cap would silently switch off. But running as the vendor, anything it reads
+  from `rfqs` is filtered by `rfqs_select`, which shows a targeted RFQ to its vendor only
+  while `status = 'active'`. And `quotes_insert` does not check RFQ status. So an in-trigger
+  join or lookup gets **closed** RFQs wrong in both directions:
+  - a count would drop a quoted-then-closed RFQ, handing the slot back (a cap bypass;
+    shown 7 vs 8 in a purpose-built rolled-back scenario);
+  - a target lookup would read NULL and refuse a targeted quote at the cap. Shown over real
+    HTTP: the vendor's own read of the closed RFQ returns 0 rows.
+- **The helpers.** `lead_cap_used(p_vendor, p_since)` (migration `20260916181213`) and
+  `rfq_targets_vendor(p_rfq, p_vendor)` (`20260923074903`). Both are
+  `STABLE SECURITY DEFINER`, `search_path = public`, and raise `42501` unless `p_vendor` is
+  the caller or an admin. `is distinct from` keeps that closed with no JWT. EXECUTE goes to
+  `authenticated` + `service_role` only, because the trigger runs as the vendor and needs it;
+  anon is revoked by name, not just PUBLIC. `rfq_targets_vendor` deliberately returns a
+  boolean for the caller, not the RFQ's target vendor id: a definer function returning
+  `rfqs.vendor_id` for any id would reveal to any signed-in user what `rfqs_select` hides.
+- **Re-runnable live checks:** `scripts/lead-cap-repro.mjs` (count agreement) and
+  `scripts/targeted-lead-cap-check.mjs` (targeted exemption, including the closed case).
+  Both sign in over real HTTP as `loadtest-*` accounts and write only `[LOADTEST]` rows on
+  `[LOADTEST]` RFQs.
+- **Lapsed subscriptions** are also marked lapsed in the raw columns by the
+  `subscription-expiry-sweep` cron job (daily 03:29 UTC, `20260916180244`). The triggers
+  never relied on it: each re-checks `status = 'active' and current_period_end > now()`.
 
 ### `engagement_events` — visit-level tracking (migration 20260907170000)
 
@@ -1109,6 +1157,21 @@ Inherited from `Cosora-Admin/scripts/rls-matrix.mjs` and not negotiable:
 `Cosora-Admin/scripts/seed-chat-fixtures.sql` — buyerA/buyerB/vendorA/vendorB at
 deterministic ids `cf00000*`, `chatfx-*@cosora.test`. Torn down by
 `drop-chat-fixtures.sql`.
+
+**The load-test population** — `loadtest-buyer-1..250` / `loadtest-vendor-1..120`
+`@cosora.test`, one shared password read as `LOADTEST_PASSWORD` (`.env`, never source),
+content tagged `[LOADTEST]`. Created 2026-09-16 outside both repos, and live in the
+production catalogue until the Master Prompt 12 cleanup script runs.
+
+- **A user row inserted straight into `auth.users` must carry `''`, not NULL, in
+  `confirmation_token`, `recovery_token`, `email_change_token_new` and `email_change`.**
+  GoTrue scans them into non-nullable strings, so the password grant fails with
+  **HTTP 500 "Database error querying schema"** before it ever checks the password. The
+  row looks perfect in SQL and nobody can log in. All 370 were like this; repaired
+  2026-09-23 by `scripts/loadtest-auth-token-repair.sql` and verified with
+  `scripts/loadtest-login-check.mjs`. The other four token columns were already `''`.
+- **A load-test vendor quotes `[LOADTEST]` RFQs only.** Open-marketplace RFQs include real
+  buyers' requests, and a test quote would land in a real inbox.
 
 - **Never the demo accounts.** `messages` has no DELETE policy for any role, so
   every probe message is permanent; and a crashed run leaves a demo account

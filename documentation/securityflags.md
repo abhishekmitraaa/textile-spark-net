@@ -12,6 +12,8 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-23 | The 370 load-test accounts can now sign in to production, all with one shared password | Medium | `auth.users` rows `loadtest-%@cosora.test` (250 buyers, 120 vendors) | Open, deliberate and temporary. Until 2026-09-23 every login returned HTTP 500 (NULL GoTrue token columns), so the population was inert. It was repaired on purpose so the Master Prompt 12 load harness can drive real sessions. Consequence: anyone holding the shared password can act as any of them against **real** users (quote real buyers' open RFQs, message them, submit listings and ads, which still go through moderation). The password is in neither repo nor either repo's git history (checked with `git grep` and `git log -S`), but it circulates in prompt text. Closes when the Part G cleanup runs; rotate the password first if testing will run long. Same population as the catalogue flag below |
+| 2026-09-23 | `quotes_insert` does not check the RFQ's status or who it is addressed to | Low (suspected for the cross-vendor case) | `quotes_insert` policy on `public.quotes`: `vendor_id = auth.uid() AND account_is_active(auth.uid())` | Open, logged only. A vendor can quote an RFQ the buyer has **closed**, proven over real HTTP on 2026-09-23 (Master Prompt 12, Part A). From the policy text, a vendor can also quote an RFQ addressed to a **different** vendor if they know its id. Not proven; `rfqs_select` hides those ids from them, which is what keeps it Low. Whether a closed RFQ should accept quotes is a product decision, so nothing was changed. The lead-cap trigger is correct either way (see `technicalimplementation.md`, "Plan caps") |
 | 2026-09-22 | `BUNNY_API_KEY` is rejected by Bunny Stream (401 "Authentication has been denied"), so reconciliation cannot list the library and a vendor delete of a Bunny video cannot remove the paid asset | Low (misconfiguration; cost leak, not access) | Edge-function secret `BUNNY_API_KEY` used by `bunny-reconcile`, `bunny-delete-video`, `bunny-upload-url` | Open. Found during admin-schema separation 5b: as super_admin `bunny-reconcile` passed authz and got 401 from `video.bunnycdn.com`. Most likely a rotated or wrong key. Today 0 `product_videos` rows use the bunny provider, so nothing is leaking yet. If uploads switch to Bunny while the key is bad, each delete fails with `bunny_delete_failed` (the function refuses to report success). Fix: set a valid library API key and re-run `bunny-reconcile`. The key value is not recorded here |
 | 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Open — cleanup belongs to Master Prompt 11 ("Part 3"), on Mitra's decision (2026-09-22). Their review numbers are already corrected |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
@@ -54,6 +56,26 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-23 — Load-test accounts made able to sign in; quotes accepted on closed RFQs — Severity: Medium / Low
+- What was found: (1) All 370 `loadtest-*@cosora.test` users had NULL in four GoTrue string
+  columns, so every sign-in failed with HTTP 500. Repairing them, as Master Prompt 12 Part D
+  requires, turns 370 dormant rows into working production accounts that share one password.
+  (2) `quotes_insert` admits any quote whose `vendor_id` is the caller's, whatever the RFQ's
+  status or target.
+- Where: `auth.users` (`loadtest-%@cosora.test`); the `quotes_insert` policy.
+- How it was discovered: Master Prompt 12. (1) The Part D repair itself: four untouched
+  accounts returned 500 before and 200 after. (2) The Part A live check: a quote on a
+  targeted RFQ the buyer had just closed was accepted, while the vendor's own read of that
+  RFQ returned 0 rows.
+- Risk / impact if left unaddressed: (1) Anyone with the password can act as 120 vendors and
+  250 buyers towards real users until cleanup. (2) Buyers can receive quotes on requests they
+  closed. A cross-vendor quote needs an RFQ id the vendor cannot list.
+- Fix applied (or recommended fix): (1) None yet, by design. Run the Part G cleanup script
+  when testing is done, and rotate the password first if that is not soon. (2) None; this is a
+  product decision (should a closed RFQ accept quotes?). If it should not, add
+  `exists (select 1 from rfqs r where r.id = rfq_id and r.status = 'active' and (r.vendor_id
+  is null or r.vendor_id = auth.uid()))` to the policy's WITH CHECK.
 
 ### 2026-09-22 — Primary login moved to mobile + OTP with delivery stubbed: the risks to settle before go-live — Severity: Medium (High for option B, design-time)
 - What was found: Mobile number + OTP was restored as the primary sign-in and signup (branch

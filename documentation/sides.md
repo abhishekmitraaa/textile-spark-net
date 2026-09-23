@@ -92,7 +92,9 @@ the demand side of India's fashion and textile supply chain.
   "[LOADTEST] …" listings from 120 "[LOADTEST] Vendor Co N" vendors (40 marked
   verified), created 2026-09-16 by the Master Prompt 11 thread and not yet cleaned up. Their
   review numbers are correct (0) since 2026-09-22; the rows themselves are that thread's to
-  remove (Mitra's decision, Master Prompt 9).
+  remove (Mitra's decision, Master Prompt 9). **Since 2026-09-23 all 370 of these accounts can
+  sign in** (repaired for the Master Prompt 12 load harness; before, every login returned HTTP
+  500). They share one password, so they stay live only until the Part G cleanup script is run.
 - **Mobile + OTP sign-in cannot complete yet.** The flow is restored and honest, but no code
   can be delivered until the in-house OTP API is wired into `src/lib/auth/otp.ts`. Google and
   guest browsing are the working routes, and email-only accounts can only get in through Google
@@ -248,7 +250,12 @@ rather than a supplier directory.
   vendor can act on it instead of resubmitting blind. (A rejected *product* still does
   not — the vendor-facing product list has no equivalent surface yet.)
 - **Leads** — buyer inquiries arriving in the dashboard.
-- **Quote requests** — respond to RFQs; targeted RFQs are excluded from the leads-used count.
+- **Quote requests** — respond to RFQs. The plan's lead cap applies to **open-marketplace
+  RFQs only**: the dashboard's "leads used" and the cap check count exactly the same quotes
+  (fixed 2026-09-16; before, the check also counted replies to direct requests, so a vendor
+  shown 7/10 was refused as having "already quoted 171"). A quote on a request **addressed
+  directly to the vendor** is never counted and never refused, even at 10/10, including
+  after the buyer has closed that request (Andy's decision, fixed 2026-09-23).
 - **Advertisements** — paid campaigns with category and geographic targeting (including Pan
   India), placement pricing, benchmarks, and TradeSEAL verification purchase.
 - **Competitor ads** — see what competitors in your category and city are advertising and at

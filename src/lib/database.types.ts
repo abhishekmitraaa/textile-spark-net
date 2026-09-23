@@ -2821,6 +2821,10 @@ export type Database = {
       }
       resubmit_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
       resume_ad_campaign: { Args: { p_ad_id: string }; Returns: string }
+      rfq_targets_vendor: {
+        Args: { p_rfq: string; p_vendor: string }
+        Returns: boolean
+      }
       search_products: {
         Args: { match_count?: number; query: string }
         Returns: {

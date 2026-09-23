@@ -85,6 +85,9 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `engagement-events-check.mjs` | `engagement_events` security + the status guard, 19 assertions across four real accounts (vendor / buyer / admin / anon). Writes through the real RPC and deletes what it wrote; pauses and restores a real campaign for the ad case. **Contains no always-true assertions** — an early draft "passed" by skipping the two guard cases and was rewritten |
 | `ad-destination-check.mjs` | The ad-click campaign-goal branch (`adDestination`/`isProfileGoalAd`), 17 cases. **The one script here that does not touch the database** — it transpiles the dependency-free `src/lib/adDestination.ts` with esbuild and calls it directly, because `active_ads` currently returns zero rows so no UI test can reach this branch |
 | `image-search-check.mjs` | Photo search end to end against the live function, 18 assertions: the `no_image` guard; a real listing photo (`scripts/fixtures/polo-tshirt-listing.jpg`) → a query meeting the function's own contract (3–6 lowercase words, no punctuation); that query through the app's own `fetchSearch` (esbuild-bundled out of `src/lib/queries/search.ts`, not reimplemented) → an array, **empty counting as a pass**; a generated solid-colour square → `no_match`, not a fabricated garment; and the per-IP limit tripping to `rate_limited` in a loop. **Spends this machine's real photo-search budget** (the gateway ignores a spoofed `x-forwarded-for`): self-cleaning only with `SUPABASE_SERVICE_ROLE_KEY`, otherwise it prints the cleanup SQL. ~13 vision calls per run |
+| `lead-cap-repro.mjs` | Lead-cap count agreement over a real HTTP login: the dashboard's `leads_used` vs what `enforce_lead_cap()` refuses on. Writes one `[LOADTEST]` quote when accepted. `LOADTEST_PASSWORD` must be set |
+| `targeted-lead-cap-check.mjs` | A targeted-request quote is never cap-gated; the open marketplace still is. Real HTTP as `loadtest-buyer-1` and `loadtest-vendor-3`: tops the vendor up to the cap on `[LOADTEST]` RFQs only, the buyer addresses a request to the vendor, then targeted vs open quotes. `--closed` adds a targeted RFQ the buyer closes, showing the vendor's own read returns 0 rows while the quote is still accepted. `--rfq=<id>` reuses a request |
+| `loadtest-login-check.mjs` | Real password-grant logins for named `loadtest-*` accounts. Prints GoTrue's HTTP status, then does one authenticated own-profile read so a 200 proves a usable JWT |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -120,6 +123,37 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-23 — Master Prompt 12, Parts A–D: targeted quotes vs the cap (before 1 refused → after 3/3), load-test logins (4 × 500 → 4 × 200), migrations vs GitHub
+
+**Test data.** `loadtest-vendor-3` (`db85f246…`, free plan, cap 10), `loadtest-buyer-1` (`37814c6a…`). Real HTTP
+password grants throughout; the password is read as `LOADTEST_PASSWORD` from `.env`.
+
+**Part D, logins** (`node scripts/loadtest-login-check.mjs loadtest-buyer-1 loadtest-buyer-250 loadtest-vendor-5
+loadtest-vendor-120`). Before the repair: all four `HTTP 500 unexpected_failure Database error querying schema`;
+the control `loadtest-vendor-3` (repaired in Master Prompt 11) `HTTP 200`. SQL census before: 369 of 370 NULL in
+exactly the four columns, 0 in the other four token columns, 0 unconfirmed. The repair updated 369 rows (250 buyers,
+119 vendors). After: all four `HTTP 200`, and each JWT reads its own profile row (`active_role` buyer/seller). SQL
+after: 0 of 370 still NULL, 0 non-loadtest accounts affected.
+
+**Part A, before** the migration (`node scripts/targeted-lead-cap-check.mjs`): the dashboard read 8/10, and two
+top-up quotes on `[LOADTEST]` open RFQs were accepted (10/10). The buyer created targeted RFQ `82e3e0f6…`. The
+vendor's quote on it was **REFUSED `P0001 … already quoted 10`**, the bug. An open-RFQ quote was refused with the
+same error.
+
+**Part A, after** (`--rfq=82e3e0f6… --closed`): the same targeted RFQ was **ACCEPTED** (quote `9aad55e2…`). The
+open-RFQ quote at the same moment was still **REFUSED** at 10. Targeted RFQ `c89f97a8…` was created and then closed
+by the buyer; the vendor's own RLS read of it returned **0 rows**, and the quote was still **ACCEPTED**
+(`51adf813…`). The dashboard stayed at 10/10. Helper guards over HTTP: caller about own RFQ → `true`; caller about
+another vendor → `42501`; anon → `42501 permission denied`. Advisors: `rfq_targets_vendor` appears only in the
+authenticated SECURITY DEFINER list (expected, like `lead_cap_used`), not in the anon one; nothing else new.
+
+**Part B, GitHub raw content**, before the rename: `…/20260916180244_…`, `…/20260916181213_…` and
+`…/20260915192048_…` → 404, while the same three under their committed names → 200, with `package.json` 200 as a
+control. So they were committed, under authored timestamps. Migration census: 162 live versions; 29 have a file
+named by the live version, 71 have one under another timestamp, 62 have none in this repo, of which 17 are in
+Cosora-Admin, leaving **45 in neither repo**. File vs live md5 (whitespace-insensitive): equal for both renamed
+files, excluding the one added header line, and for the new `20260923074903` file.
 
 ### 2026-09-22 — Master Prompt 9: vendor review aggregates, every writer (DB 130/130, probe 6/6, signed-in 5/5, browser 2/2)
 
