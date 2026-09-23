@@ -89,7 +89,9 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
     role === "buyer"
       ? [
           { name: "My Profile", href: "/profile", icon: UserCircle },
-          { name: "Settings", href: "/profile", icon: Settings },
+          // Buyer settings (account & security). Pointed at /profile until the
+          // page existed (2026-09-23); /settings is the vendor's page.
+          { name: "Settings", href: "/profile/settings", icon: Settings },
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ]
       : [

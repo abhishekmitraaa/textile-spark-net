@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { openCallNumber } from "@/lib/callStore";
+import { errorMessage } from "@/lib/errorMessage";
 import type { CallRecord } from "@/lib/chatData";
 
 // ─────────────────────────────────────────────────────────────
@@ -12,11 +13,12 @@ import type { CallRecord } from "@/lib/chatData";
 //
 // `useCallVendor()` returns a handler that opens the phone's native dialer
 // pre-filled with the vendor's number (via a `tel:` URL — a web app cannot
-// auto-place a call), logs the outgoing call to `calls` for signed-in buyers,
-// and falls back to opening the chat thread when the vendor has no number.
+// auto-place a call), logs the outgoing call through log_call() for signed-in
+// buyers, and falls back to opening the chat thread when the vendor has no number.
 //
 // `useCalls()` reads the signed-in buyer's real call history, grouped
-// Today / Yesterday / <date> for the Messages hub Calls tab.
+// Today / Yesterday / <date> for the Messages hub Calls tab. `useCallCount()`
+// counts the same rows for the Profile page's Calls stat.
 // ─────────────────────────────────────────────────────────────
 
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
@@ -53,10 +55,13 @@ export function demoPhone(seed: string): string {
 // VendorProfile alone has two "Call Now" buttons, and the next surface to add
 // one would silently miss the check.
 //
-// Unlike messaging, there is no database-level enforcement possible: placing a
-// call is a `tel:` URL, not a write. This is a client-side gate over data the
-// DB owns, which is why it re-reads that data on every attempt rather than
-// trusting anything cached.
+// Unlike messaging, placing a call is a `tel:` URL, not a write, so no policy can
+// stop the dial itself. This is a client-side gate over data the DB owns, which
+// is why it re-reads that data on every attempt rather than trusting anything
+// cached. What the database CAN guard is the number: a buyer's phone is only
+// released by call_buyer_contact(), which applies these same rules server-side
+// (useCallBuyer below). A vendor's business phone is public by design (R-18 in
+// scripts/contact-gate-check.mjs), so for useCallVendor this gate stays advisory.
 // ─────────────────────────────────────────────────────────────
 
 // Why the gate said no. The gate reports the REASON and each surface writes its
@@ -89,8 +94,9 @@ const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
 };
 
 export async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
-  // Both account statuses in one round trip. profiles_select is `true`, so the
-  // other party's row is readable.
+  // Both account statuses in one round trip. profiles_select is `true` and
+  // account_status is client-selectable, so the other party's status is
+  // readable; their email and phone are not (MPF-3).
   const ids = meId && meId !== otherId ? [meId, otherId] : [otherId];
   const { data: rows } = await supabase.from("profiles").select("id, account_status").in("id", ids);
   const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
@@ -185,12 +191,20 @@ export function useCallVendor() {
         return;
       }
 
-      // Log the outgoing call (RLS requires buyer_id = auth.uid(), so signed-in only).
+      // Log the outgoing call through log_call() (MPF-2), the only write path to
+      // `calls`: clients hold no INSERT/UPDATE/DELETE on it. The server sets
+      // buyer_id, direction and created_at, checks the caller is active and the
+      // target is a vendor, and rate-limits. Logging is best-effort on purpose:
+      // the dial below goes ahead either way, and a refused or rate-limited log
+      // only means this tap isn't counted. Signed-in only.
       if (user) {
         void supabase
-          .from("calls")
-          .insert({ buyer_id: user.id, vendor_id: vendorId, direction: "outgoing", product_context: productContext ?? null })
-          .then(() => qc.invalidateQueries({ queryKey: ["calls", user.id] }));
+          .rpc("log_call", { p_vendor_id: vendorId, p_product_context: productContext ?? null })
+          .then(({ data, error }) => {
+            if (!error && (data as { status?: string } | null)?.status === "logged") {
+              void qc.invalidateQueries({ queryKey: ["calls", user.id] });
+            }
+          });
       }
 
       // Mobile → dial; desktop → show the number on screen.
@@ -201,14 +215,25 @@ export function useCallVendor() {
 }
 
 // The mirror image of useCallVendor, for a vendor ringing the buyer behind an
-// RFQ. Buyers have no vendor_profiles row, so the number comes from `profiles`.
+// RFQ. Buyers have no vendor_profiles row, so the number is profiles.phone.
 //
-// Deliberately does NOT log to `calls`: that table's insert policy is
-// `buyer_id = auth.uid()`, and here auth.uid() is the *vendor*, so the write
-// would be rejected by RLS. Logging vendor-initiated calls needs a policy
-// change, which is out of scope for this hook.
+// That column is not client-selectable (MPF-3): the number comes from
+// call_buyer_contact(), which applies callGate's three rules ON THE SERVER, plus
+// the relationship this button implies (the caller has quoted on one of this
+// buyer's RFQs). Unlike a vendor's public business number, a buyer's phone is
+// private, so the gate here is enforced rather than advisory. A refusal is a
+// 42501 whose message is the reason code; the copy is the same as callGate's.
+//
+// Deliberately does NOT log to `calls`: the only write path, log_call(), records
+// a call BY the signed-in user TO a vendor (buyer_id = auth.uid()), and here
+// auth.uid() is the *vendor*. Logging vendor-initiated calls needs its own
+// server function, which is out of scope for this hook.
+const NO_RFQ_RELATIONSHIP_COPY: BlockCopy = {
+  title: "Calling is unavailable",
+  description: "You can call a buyer after you've quoted on one of their requests.",
+};
+
 export function useCallBuyer() {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   return useCallback(
@@ -218,21 +243,19 @@ export function useCallBuyer() {
         return;
       }
 
-      // Same gate as useCallVendor — a locked thread has to be locked in both
-      // directions, and a suspended vendor must not be able to ring the buyer.
-      const blocked = await callGate(user?.id, buyerId);
-      if (blocked) {
-        const copy = CALL_BLOCK_COPY[blocked];
+      // Only fires on click, not per render.
+      const { data: rows, error } = await supabase.rpc("call_buyer_contact", { p_buyer_id: buyerId });
+      if (error) {
+        const copy =
+          Object.prototype.hasOwnProperty.call(CALL_BLOCK_COPY, error.message)
+            ? CALL_BLOCK_COPY[error.message as CallBlockReason]
+            : error.message === "no_rfq_relationship"
+              ? NO_RFQ_RELATIONSHIP_COPY
+              : { title: "Couldn't get the buyer's number", description: errorMessage(error) };
         toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
         return;
       }
-
-      // Only fires on click, not per render.
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("phone, full_name")
-        .eq("id", buyerId)
-        .maybeSingle();
+      const p = rows?.[0];
       const phone = p?.phone ?? null;
 
       if (!phone) {
@@ -244,7 +267,7 @@ export function useCallBuyer() {
 
       placeCall(p?.full_name ?? "buyer", phone);
     },
-    [user, navigate],
+    [navigate],
   );
 }
 
@@ -309,6 +332,29 @@ export function useCalls() {
   return useQuery({
     queryKey: ["calls", user?.id],
     queryFn: () => fetchCalls(user!.id),
+    enabled: Boolean(user?.id),
+  });
+}
+
+// The buyer's own call count, so it always matches the Calls tab list above.
+// Filtered on buyer_id explicitly, NOT left to RLS (the same rule as the Quotes
+// and Chats counts in useProfileStats): calls_select also admits
+// `vendor_id = auth.uid()` and `is_admin()`, so a bare count would add calls
+// made TO a vendor and, for an admin, every call on the platform. Keyed under
+// ["calls", userId] so the invalidation in useCallVendor refreshes it the
+// moment a call is logged.
+export function useCallCount() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["calls", user?.id, "count"],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("calls")
+        .select("*", { count: "exact", head: true })
+        .eq("buyer_id", user!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
     enabled: Boolean(user?.id),
   });
 }

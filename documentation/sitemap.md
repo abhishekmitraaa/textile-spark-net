@@ -76,9 +76,10 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 ### Buyer profile
 | Route | Component | Notes |
 |---|---|---|
-| `/profile` | `Profile` | Buyer sidebar "Settings" also points here — **known bug**, buyer has no dedicated Settings page |
-| `/profile/edit` **(shell)** | — | Personal, business, photo |
-| `/profile/business-details` **(shell)** | — | |
+| `/profile` | `Profile` | |
+| `/profile/settings` | `Settings` (`src/pages/Settings.tsx`) | Buyer account & security (2026-09-23): sign-in number, account email, Log Out, download data, delete account, help & legal. The buyer sidebar's "Settings" and `/profile` → "Account & Security" link here. (`/settings` is the vendor's page.) |
+| `/profile/edit` | `ProfileEdit` | Photo + personal details (was the Edit Profile modal's Photo/Personal tabs; the modal is gone). `?focus=city` focuses City — the `/profile` "Add city" nudge links there |
+| `/profile/business-details` | `ProfileBusinessDetails` | Business name/type/website/industry, address, GSTIN, PAN (was the modal's Business tab) |
 | `/profile/interest-preference` | `InterestPreference` | |
 | `/profile/reviews` | `MyReviews` | Fans out across `reviews`, `product_reviews`, `service_reviews` |
 | `/profile/notifications` | `ProfileNotifications` | |
@@ -86,7 +87,7 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 | `/profile/regional-settings` | `ProfileAccountPrefs` | |
 | `/profile/data-export` | `ProfileAccountPrefs` | |
 | `/profile/terms` | `TermsConditions` | |
-| `/profile/help` | `Help` | |
+| `/profile/help` | `Help` | FAQ rows come from `public.faqs` (`buyer_help`), edited in Cosora-Admin `/faqs` with no deploy (2026-09-23). Also the Delete my account entry |
 | `/profile/help/chat` | `SupportChat` | |
 
 ### Content
@@ -125,7 +126,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/old-advertisements` | `OldAdvertisements` | |
 | `/advertisement-slideshow` | `AdvertisementSlideshow` | |
 | `/competitor-ads` | `CompetitorAds` | Competitor intelligence loop |
-| `/subscription` | `Subscription` | Basic / Silver / Gold |
+| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `/help` (2026-09-23) |
 | `/subscription/invoice/:id` | `InvoiceDetail` | |
 
 ### Store & business profile
@@ -148,7 +149,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 ### Vendor acquisition & onboarding
 | Route | Component | Notes |
 |---|---|---|
-| `/seller` | `VendorLanding` | Vendor marketing landing |
+| `/seller` | `VendorLanding` | Vendor marketing landing. Its FAQ block is `public.faqs` (`seller_registration`), Andy's 10 questions, edited in Cosora-Admin `/faqs` (2026-09-23) |
 | `/register` | `Register` | |
 | `/onboarding` | `Onboarding` | Business details, documents, products, contract |
 
@@ -175,6 +176,11 @@ this side: **`/videos`** is the Video Closeups moderation queue (added 2026-09-0
 what moves a `product_videos` row from `under_review` to `live`, and therefore the only
 reason anything ever appears in this repo's `/video-closeups` buyer feed.
 
+**`/faqs`** (added 2026-09-23) edits the FAQ rows in this repo's `public.faqs`: the ones on
+`/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and on
+the seller landing page `/seller` (`seller_registration`). super_admin writes and
+support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no deploy.
+
 ---
 
 ## Shared / Cross-role
@@ -198,7 +204,7 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 | Route | Component | Notes |
 |---|---|---|
 | `/notifications` | `Notifications` | Backed by the `notifications` table; 4 moderation kinds are real, the rest are dev-only samples |
-| `/help` | `Help` | Both sidebars' "Help & Support" |
+| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`, so vendors land on the buyer FAQs (MPF-15) |
 | `/terms` | `TermsConditions` | |
 | `/about` | `About` | |
 | `/report-fraud` | `ReportFraud` | |
@@ -210,4 +216,3 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 
 - **`/orders`** — there is no orders route. "Track Orders" → `/requirement/my-quotes`;
   "View Order Details" → `/chat`.
-- **A buyer Settings page** — buyer sidebar "Settings" points at `/profile`.

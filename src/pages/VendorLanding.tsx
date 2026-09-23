@@ -27,6 +27,7 @@ import {
   Star,
   Users,
 } from "lucide-react";
+import { useFaqs } from "@/lib/queries/faqs";
 import hotpingLogo from "@/assets/brands/hotping.png";
 import mocoBlingLogo from "@/assets/brands/moco-bling.png";
 import merongShopLogo from "@/assets/brands/merong-shop.png";
@@ -125,25 +126,6 @@ const testimonials = [
   },
 ];
 
-const faqs = [
-  {
-    q: "How long does onboarding take?",
-    a: "Around 10 minutes with PAN, Aadhaar, business address, and one product photo.",
-  },
-  {
-    q: "Is there any joining fee?",
-    a: "Registration is completely free. You can list products once verified.",
-  },
-  {
-    q: "How do I get buyer leads?",
-    a: "Buyers discover you through search, category pages, and requirement postings.",
-  },
-  {
-    q: "Can I sell outside India?",
-    a: "Yes. Cosora connects you with buyer teams across 150+ countries.",
-  },
-];
-
 const menuLinks = [
   { label: "Cosora FAQ", href: "/help" },
   { label: "Blogs", href: "/seller/blogs" },
@@ -156,6 +138,10 @@ const menuLinks = [
 ];
 
 const VendorLanding = () => {
+  // Seller Registration FAQs are admin-edited in Cosora-Admin (/faqs) and read
+  // live, signed out included. They replaced a hardcoded list here (2026-09-23).
+  const { data: faqs, isPending: faqsLoading } = useFaqs("seller_registration");
+
   return (
     <div className="vendor-shell min-h-screen bg-[#ffffff] text-[#363636]">
       <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
@@ -420,30 +406,35 @@ const VendorLanding = () => {
           id="faq"
           className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
         >
-          <div className="rounded-2xl border border-[#d0d4dc] bg-[#ffffff] p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Frequently asked questions</h3>
-              <a
-                href="/help"
-                className="rounded-full border border-[#d0d4dc] px-3 py-1 text-[11px] font-semibold text-[#256fef]"
-              >
-                FAQ FILE LINK
-              </a>
-            </div>
-            <Accordion type="single" collapsible className="mt-4">
-              {faqs.map((faq, i) => (
-                <AccordionItem key={i} value={`faq-${i}`} className="border-[#d0d4dc]">
-                  <AccordionTrigger className="text-left text-sm font-medium text-[#363636]">
-                    {faq.q}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-base text-[#363636]/70">
-                    {faq.a}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
+          <div
+            data-faq-surface="seller_registration"
+            className="rounded-2xl border border-[#d0d4dc] bg-[#ffffff] p-4 shadow-sm"
+          >
+            <h3 className="text-lg font-semibold">Frequently asked questions</h3>
+            {faqsLoading ? (
+              <p className="mt-4 text-sm text-[#363636]/70">Loading questions…</p>
+            ) : (
+              faqs && faqs.length > 0 && (
+                <Accordion type="single" collapsible className="mt-4">
+                  {faqs.map((faq) => (
+                    <AccordionItem key={faq.id} value={faq.id} className="border-[#d0d4dc]">
+                      <AccordionTrigger className="text-left text-sm font-medium text-[#363636]">
+                        {faq.question}
+                      </AccordionTrigger>
+                      {/* whitespace-pre-line: answers can hold line-broken lists. */}
+                      <AccordionContent className="whitespace-pre-line text-base text-[#363636]/70">
+                        {faq.answer}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              )
+            )}
             <div className="mt-4 rounded-xl border border-[#d0d4dc] bg-[#f5f5f5] p-3 text-sm text-[#363636]/70">
-              Looking for more answers? Visit the Cosora FAQ for complete onboarding guidance.
+              Still have questions? Write to{" "}
+              <a href="mailto:hello@cosora.in" className="font-semibold text-[#256fef]">
+                hello@cosora.in
+              </a>
             </div>
           </div>
 

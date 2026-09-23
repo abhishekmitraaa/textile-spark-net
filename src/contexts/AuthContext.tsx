@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
+import { fetchMyContactInfo } from "@/lib/queries/myContact";
 
 // ─────────────────────────────────────────────────────────────
 // Auth context — the real session + profile for the signed-in user.
@@ -70,16 +71,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // and is applied in the same tick. An RPC error counts as not-admin (fail
   // closed), and this flag only gates what the UI shows: Postgres enforces every
   // admin action itself.
+  //
+  // `email` is not selectable on profiles (MPF-3): it comes from
+  // my_contact_info(). A failure there leaves email null rather than dropping
+  // the whole profile, because the rest of the app routes on active_role.
   const loadProfile = useCallback(async (uid: string) => {
-    const [{ data }, { data: adminFlag, error: adminError }] = await Promise.all([
+    const [{ data }, contact, { data: adminFlag, error: adminError }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, full_name, email, active_role, onboarded, avatar_url")
+        .select("id, full_name, active_role, onboarded, avatar_url")
         .eq("id", uid)
         .maybeSingle(),
+      fetchMyContactInfo().catch(() => null),
       supabase.rpc("is_admin"),
     ]);
-    setProfile((data as Profile) ?? null);
+    setProfile(data ? ({ ...data, email: contact?.email ?? null } as Profile) : null);
     setIsAdmin(!adminError && adminFlag === true);
   }, []);
 

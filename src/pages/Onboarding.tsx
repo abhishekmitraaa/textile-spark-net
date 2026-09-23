@@ -1948,7 +1948,7 @@ export default function Onboarding() {
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#256fef]" />
                   <p className="text-xs leading-5 text-[#363636]">
                     Cosora checks the format here and queues your documents for review. A member of our team verifies them
-                    against your uploads, usually within 24–48 hours, and your profile is marked verified once that is done.
+                    against your uploads, usually within 3–5 days, and your profile is marked verified once that is done.
                   </p>
                 </div>
 

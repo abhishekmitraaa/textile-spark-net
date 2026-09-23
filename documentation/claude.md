@@ -93,6 +93,21 @@ Rules decided before or outside of Claude Code sessions.
   4.5, never a seeded aggregate, never a demo breakdown. Product-level `rating_avg` /
   `reviews_count` / `sold_count` are still seed values on the cards (Mitra's call); do
   not add a new reader of them.
+- **A "my N" count filters on the owner column. It never leans on RLS alone** (2026-09-23).
+  The SELECT policies on `calls`, `quotes` and `conversations` also admit the vendor side
+  and admins, so a bare `count: "exact"` over-reports for anyone who is also a vendor or an
+  admin. Measured on the admin account: calls 10 against 8 of its own, quotes 3 against 1,
+  chats 4 against 3. `useCallCount()` filters `buyer_id`. `useProfileStats()` (Quotes and
+  Chats on `/profile`) filters quotes on `rfqs.buyer_id` through an `rfqs!inner` embed, and
+  chats on `user_a`/`user_b` (fixed 2026-09-24, MPF-1; it used to count unfiltered).
+  Read the policy before trusting RLS to mean "mine".
+  - More measured in Phase 3 (data export), signed in as demo-buyer:
+    - `rfqs_select` shows every active open RFQ to any signed-in user: 3 against 2 of its own.
+    - `reviews`, `product_reviews` and `profiles` are `SELECT true`: 9 against 2, 11 against 3,
+      and 20 against 1.
+  - Any "my data" read, count or export filters on the owner column: `buyer_id` or `id`, or
+    the parent's (quotes by `rfq_id` in my RFQs, messages by `conversation_id` in my
+    conversations).
 
 ## Business Rules — Discovered/Decided During Development
 
@@ -100,6 +115,103 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
+- **A buyer account is anonymized, never deleted, and only after an emailed code and 14
+  days** (Phase 2 of the My Profile brief, 2026-09-23; design approved by Mitra).
+  - The flow runs from `/profile/help`: a 6-digit code goes to the **auth** email, then
+    `cooling_off`, a `/profile` banner with Cancel, and finally the daily
+    `account-deletion-sweep`, which runs `anonymize_account()`.
+  - The rows stay, because other people's history hangs off them. RFQs, messages and
+    conversations CASCADE from `profiles`, and reviews CASCADE from `auth.users`.
+  - The identity is scrubbed everywhere it is copied: `profiles`, `buyer_profiles`, the
+    three review tables' `reviewer_name`, and `auth.users`. Identities are removed and the
+    auth user is banned, so the person cannot sign back in to the scrubbed row.
+  - `'deleted'` is terminal. `set_account_status()` refuses it both ways.
+  - Vendor, admin and suspended accounts are refused and sent to support.
+  - Every state change is a definer function; clients hold SELECT only. **Email is not live
+    until `RESEND_API_KEY` is set** (the function answers `not_configured`).
+  - Detail: `technicalimplementation.md` → "Account deletion".
+- **Notification preferences are stored and read by nothing, and there is no delivery
+  pipeline** (checked 2026-09-23).
+  - Nothing reads `buyer_profiles.notifications` or `vendor_profiles.notifications` to send
+    anything. There is no push infrastructure. The only email sender (`account-deletion`) is
+    transactional.
+  - `notify()` fills the in-app bell only from ad, certificate, account, deletion, KYC and
+    chat-moderation events. **No quote, message or RFQ event notifies anyone.**
+  - `/profile/notifications` says so. Its `DELIVERY_LIVE` flag is the one switch to flip
+    once a sender honours the toggles.
+  - Building delivery is its own master prompt, not a profile-page change.
+- **`buyer_profiles.regional.currency` and `.timezone` are stored and read by nothing**
+  (checked repo-wide 2026-09-23).
+  - Every price is ₹ INR, and no date renders in the chosen zone.
+  - Regional Settings says so for any non-default choice (an amber note, and a "saved", never
+    "updated", toast).
+  - Don't add a reader casually: multi-currency pricing is its own feature.
+  - Don't claim an effect in copy until one exists.
+- **A buyer's location nudges For You, and never filters it** (Phase 5 of the My Profile
+  brief, 2026-09-23).
+  - `for_you_products()` subtracts a small boost from the cosine distance, for ordering
+    only: 0.05 same city, 0.02 same state. It applies on the taste and cold-start tiers, not
+    popularity.
+  - Hard requirement: a buyer with no city or state, or whose city matches nothing, gets
+    **byte-identical** results to before. The no-location case is a verbatim branch of the
+    old query.
+  - The boost reorders the same rows and never adds or drops one. The reported `distance`
+    stays raw.
+  - Location resolves like the app shows it: `products.location`, falling back to the
+    vendor's city.
+  - Any change keeps the vector-DB ground rules: SECURITY DEFINER,
+    `search_path = public, extensions`, the `auth.uid()` guard, minimal grants and no new
+    OpenAI calls. Re-verify the no-location buyers against a baseline md5.
+  - Detail: `technicalimplementation.md` → "For You ranking".
+- **FAQ content lives in `public.faqs`, never in a component** (Phase 9 of the My Profile
+  brief, 2026-09-23).
+  - Buyer Help (`/profile/help`, `/help`), `/subscription` and the seller landing `/seller`
+    read it with `useFaqs(surface)`. A new FAQ block anywhere uses `<FaqSection surface="…">`. Don't add
+    another hardcoded array.
+  - Clients read active rows (anon too), and every write is an `admin_faq_*` RPC from
+    Cosora-Admin `/faqs`: super_admin writes, support reads. Letting support write means
+    changing the RPC gates **and** `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`
+    together.
+  - Clients have **column** SELECT on `faqs`, without `created_by`: a new reader names its
+    columns, because `select *` fails.
+  - The seeded text was moved verbatim and isn't vetted. Several buyer Help answers describe
+    features that don't exist (MPF-14). Fix them in the admin, not in code.
+  - Andy's Seller Registration and Subscription answers are published **verbatim**, by
+    Mitra's decision (2026-09-23), even where the product differs (MPF-16, MPF-17). Don't
+    quietly "fix" them in code or in the admin. Raise it instead: the wording is Andy's call.
+  - "Lowest billing plan?" hardcodes plan prices, so a change to `subscription_plans` prices
+    means editing that answer in the admin too.
+  - Document verification is promised in **3–5 days** everywhere: the FAQ, `Kyc.tsx` and
+    `Onboarding.tsx`. Listing, video and catalogue moderation is a separate review, still
+    quoted as 24–48 hours.
+  - Detail: `technicalimplementation.md` → "FAQs".
+- **`profiles.email` and `profiles.phone` are not client-selectable** (MPF-3, Phase 11 of the
+  My Profile brief, 2026-09-23).
+  - Never select, filter, order on or return them from `profiles`, in either app. Use:
+    - `fetchMyContactInfo()` (`my_contact_info()`) for the signed-in user's own;
+    - `call_buyer_contact()` for a buyer's phone, which applies callGate's rules in the
+      database;
+    - `admin_profile_search()` / `admin_profile_emails()` in Cosora-Admin.
+  - Anyone else's contact details need a new definer function with an explicit rule. Never
+    re-grant the columns.
+  - `profiles` has column grants, so `select("*")` fails, and a new column needs
+    `grant select (col)` in its migration.
+  - **Revoking a column that clients read is ordered:** ship the new readers and the code,
+    deploy both front ends, check the live bundles, and only then revoke. Phase 11 revoked
+    first and broke `cosora.in` and the admin panel (MPF-19).
+  - Until MPF-19 is closed, signed-in users can still read the two columns. Don't write code
+    that relies on it.
+  - Detail: `technicalimplementation.md` → "Profile contact details".
+- **`calls` rows are written only by `log_call()`** (MPF-2, Phase 12 of the My Profile brief,
+  2026-09-23).
+  - Clients have no INSERT, UPDATE or DELETE on `calls`. Never add a write policy or grant back;
+    change `log_call()` instead.
+  - The server owns `buyer_id`, `direction` and `created_at`. A limit (`rate_limited`,
+    `too_many_calls`) is a status, not an error, and a dial must never wait on the log.
+  - Logging vendor-initiated calls needs its own definer function with its own rules.
+  - A test that logs a call can't clean it up as a client. Tag its `product_context` and
+    remove it with SQL.
+  - Detail: `technicalimplementation.md` → "Calls — one write path".
 - **The admin side exists and is built — in a separate repo.** `Cosora-Admin` runs against
   the same Supabase project and owns some of this project's migrations. Older notes
   claiming "admin is not designed or built" are stale.
@@ -674,6 +786,12 @@ undocumented. Deep technical rationale for each lives in
   `rfqs.product_id` are NO ACTION, and `vendor_contracts` is RESTRICT. Delete children first:
   conversations, RFQs, ads, products, then the user. `scripts/loadtest-cleanup.sql` is the
   worked example.
+- **Production holds no load-test population since 2026-09-23.** `scripts/loadtest-cleanup.sql`
+  deleted all 370 `loadtest-*@cosora.test` accounts and their content, leaving 20 real
+  accounts and 26 live listings. Row counts are now real usage. Any check that signs in as
+  `loadtest-*` (the k6 harness, `mp12-sourcing-loop`, the cap and quote scripts) needs a new
+  population first. Create it with the same email pattern and `[LOADTEST]` tags, so the same
+  script can remove it.
 - **GoTrue returns HTTP 500 "Database error querying schema" for any user row with NULL in
   `confirmation_token`, `recovery_token`, `email_change_token_new` or `email_change`.** It
   fails before the password is checked, so a user seeded by raw SQL looks perfect in
@@ -883,6 +1001,14 @@ BEFORE trigger still enforces it, whatever the provider — asserted at both lay
 The standing brief for auth in the buyer/vendor app. Branch `auth/restore-mobile-otp`,
 commit `532cd3e`. **Not pushed:** wait for Mitra's go.
 
+> **Standing instruction (Mitra, 2026-09-23): sign-in stays mobile number + OTP only, and
+> the OTP is a dummy for now. Don't change it.** No phase of other work may add, alter or
+> re-route a sign-in method. That includes email sign-in, email-verification flows used as
+> a login, and "just making the OTP real". Features that need to confirm who someone is
+> (for example the Phase 2 deletion code, which goes to the account's email) must not turn
+> into a sign-in path. Every account created through real sign-in has only a placeholder
+> email, which is why account deletion can't reach them yet (`myprofileflags.md`, MPF-6).
+
 **Why.** The app was originally OTP-only. Email + password was later made the primary login,
 and phone sign-in was demoted to a disabled "coming soon" row, because this Supabase project
 has no SMS provider (`signInWithOtp({ phone })` returns `phone_provider_disabled`). That is
@@ -1029,6 +1155,8 @@ Depth — schema, invariants, integrations, tech debt — lives in
 - Routes/pages: `documentation/sitemap.md`
 - Buyer/Vendor/Admin feature detail: `documentation/sides.md`
 - Security flags & gaps: `documentation/securityflags.md`
+- Flags found and not fixed during the phased My Profile brief (2026-09-23 onward):
+  `documentation/myprofileflags.md`
 - ToDo list: `documentation/ToDo.md`
 - Razorpay runbook: `supabase/RAZORPAY.md`
 

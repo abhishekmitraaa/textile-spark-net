@@ -63,3 +63,11 @@ verify_jwt = true
 # cached term costs one indexed lookup with no OpenAI call.
 [functions.embed-query]
 verify_jwt = true
+
+# "Delete my account", step 1 (2026-09-23). Reads the caller's id from the JWT
+# payload without verifying it, like bunny-*, so this gate is load-bearing:
+# without it anyone could hand-write a `sub` and have a deletion code minted
+# for another account (the code still only goes to that account's own inbox,
+# but the request row and the email would be theirs to trigger).
+[functions.account-deletion]
+verify_jwt = true

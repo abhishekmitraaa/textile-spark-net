@@ -117,7 +117,7 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (100 as of 2026-09-23). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (112 as of 2026-09-23, after the My Profile brief's Phase 12). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
@@ -228,7 +228,8 @@ triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
     migration's final block proves each function changed by exactly the lock lines (md5 of
     the new definition minus the block = md5 before).
 - **Re-runnable live checks,** all real HTTP as `loadtest-*` accounts, writing only
-  `[LOADTEST]` rows on `[LOADTEST]` RFQs:
+  `[LOADTEST]` rows on `[LOADTEST]` RFQs. **Since the 2026-09-23 cleanup those accounts no
+  longer exist, so none of these runs until a new load-test population is created:**
   - `scripts/lead-cap-repro.mjs`: count agreement.
   - `scripts/targeted-lead-cap-check.mjs`: the targeted exemption; its `--closed` step now
     expects "closed".
@@ -769,6 +770,49 @@ Verified by `node scripts/image-search-check.mjs` (see `documentation/test.md`, 
 
 ---
 
+## For You ranking — `for_you_products()` (location soft boost 2026-09-23)
+
+`for_you_products(p_buyer_id, match_count)` returns `(id, distance, source)`. The app
+(`forYou.ts`) calls it with `match_count = 200`, which is the whole live catalogue today (26
+rows), and orders the already-fetched product pool by the returned rank. It never re-sorts
+by `distance`.
+
+- **Three tiers, in order:**
+  - `taste`: `buyer_taste_embedding()`, built from the buyer's history.
+  - `cold_start`: `buyer_cold_start_embedding()`, from `preferred_categories` through
+    `pref_category_map`. Verified in Master Prompt 5 and deliberately left untouched.
+  - `popularity`: `enquiries_count, views_count`, with `distance` NULL.
+- **Ground rules:** SECURITY DEFINER, STABLE, `search_path = public, extensions`, the
+  `auth.uid()` self-access guard (another buyer's feed is 42501), and EXECUTE for
+  authenticated and service_role only (not anon). Migration `20260923133539` self-asserts
+  all of them after its replace. The function makes no OpenAI calls; it only ranks
+  embeddings that already exist.
+- **Location soft boost** (migration `20260923133539_for_you_location_soft_boost`):
+  - **Vector tiers only.** The sort key is `distance − boost`: 0.05 for a same-city
+    product, 0.02 for a same-state one (the larger applies, not both). The returned
+    `distance` stays raw.
+  - **Same rows.** The candidates are the pre-boost query verbatim, as a CTE (the
+    index-served `ORDER BY embedding <=> v_emb`, the same LIMIT). The boost only reorders
+    inside it.
+  - **No location takes a verbatim branch.** A buyer with neither city nor state runs the
+    old query exactly, so an unchanged result holds by construction.
+  - **An unmatched city is identical too.** With every boost 0, the order is the same keys
+    in the same order. Verified byte-identical against a baseline.
+  - **Where a product's location comes from:** `products.location` ("City[, State]": the
+    city before the first comma, the state after it), falling back to
+    `vendor_profiles.city` / `state`. This mirrors what `products.ts` displays. Matching is
+    trim + lower-case equality, so "Navi Mumbai" does not match "Mumbai".
+  - **The popularity tier is untouched.** It has no score, and ranking location first
+    there would turn the boost into a hard sort.
+- **Scale today:** 1 of 7 buyer profiles has a city (demo-buyer, Mumbai), so the boost is
+  visible for that buyer only. Its four Mumbai products moved from ranks 8, 17, 18, 19 to
+  5, 12, 15, 16; the top 4 (distance 0.20–0.24) held. See `test.md`, Phase 5.
+- **Tuning:** the two constants sit at the top of the function body. Raising the city
+  boost past about 0.1 would start lifting same-city products over clearly better matches;
+  measure against a baseline before changing it.
+
+---
+
 ## Key Modules
 
 ### Data access — `src/lib/queries/`
@@ -1077,6 +1121,356 @@ Rules:
 
 ---
 
+## Account deletion — emailed code, 14-day cooling-off, anonymize (2026-09-23)
+
+Phase 2 of the My Profile brief. Migrations `20260923115507_account_status_deleted` and
+`20260923115839_account_deletion_requests` (the second one's header lists every design
+decision and each deviation from the brief).
+
+**Flow.**
+1. `/profile/help` → `DeleteAccountCard` → edge function `account-deletion` `{action:"request"}`.
+   The function calls `issue_account_deletion_code(uid)` as service_role, then emails the
+   code through Resend.
+2. The user types the code: `confirm_account_deletion(code)` → `cooling_off`,
+   `scheduled_for = now() + 14 days`, plus an in-app notification. `/profile` shows a banner
+   with Cancel.
+3. `cancel_account_deletion()` works any time before the sweep.
+4. pg_cron `account-deletion-sweep` runs daily at 03:41 UTC. It calls
+   `process_due_account_deletions()`, which runs `anonymize_account()` on each due row and
+   then marks it `completed`.
+
+**Data.**
+- **`account_deletion_requests`:** status `pending_confirmation | cooling_off | cancelled |
+  completed`. There is a partial unique index allowing one open request per user.
+  - Also stored: `codes_sent`, `last_code_sent_at`, `code_expires_at` (not secret) and
+    `last_error` (set by the sweep).
+  - Clients hold SELECT only; the policy admits the owner and support/super_admin. There is
+    no client INSERT, UPDATE or DELETE.
+- **`account_deletion_otps`:** `sha256(request_id || ':' || code)`, `expires_at` (10 minutes)
+  and `attempts` (max 5). RLS is on, there are no policies, and every client role
+  (service_role included) has its privileges revoked.
+
+**Rules worth knowing before touching it.**
+- **The code goes to `auth.users.email`, never `profiles.email`.** Users can edit
+  `profiles.email`, so a hijacked session could redirect the code there first.
+  `account_deletion_blocker()` requires a confirmed address that is not a `.invalid`
+  placeholder.
+- **A wrong code returns a status and never raises.** A RAISE would roll back the attempt
+  counter it had just incremented, and the lock would never trigger. The same reasoning
+  explains why the sweep records failures in `last_error` and never raises: a pg_cron job
+  is one transaction.
+- **Every writer takes `pg_advisory_xact_lock(hashtext('account_deletion:'||uid))`**, the
+  plan-cap idiom. So a double tap, or a cancel racing the sweep, is serialized. The sweep
+  re-reads the row under the lock.
+- **Refused:** accounts with a `vendor_profiles` row, admins (any `admin.admin_users` row) and
+  suspended accounts ("contact support"). `anonymize_account()` re-checks all three at sweep
+  time.
+- **Never delete the rows.** `rfqs`, `messages`, `conversations`, `calls`, `follows` and
+  saved items CASCADE from `profiles`; the three review tables CASCADE from `auth.users`.
+  `anonymize_account()` scrubs instead:
+  - **profiles:** name becomes "Deleted user"; email, phone and avatar are nulled; status
+    becomes `'deleted'`.
+  - **buyer_profiles:** every descriptive or identifying column is nulled, and `social` is
+    set to `{}`.
+  - **Review tables:** the `reviewer_name` / `reviewer_company` copies on the review rows are
+    scrubbed.
+  - **Auth:** sessions, refresh tokens, MFA factors, one-time tokens and identities are
+    deleted. On `auth.users`, email and phone are nulled, metadata is set to `{}`, the
+    password is blanked, and `banned_until` is set to now + 100 years.
+  - GoTrue's four string token columns stay `''`. Setting them NULL would bring back the
+    load-test 500.
+  - An `'infinity'` ban was avoided: GoTrue is written in Go and may fail to read that
+    timestamp.
+- **`'deleted'` is terminal.**
+  - `account_is_active()` is false for it, so every gated INSERT refuses it.
+  - `enforce_admin_grants()` already stops a signed-in user from changing
+    `account_status`.
+  - `set_account_status()` now refuses `'deleted'` in both directions (42501). Before, its
+    else branch would have revived a deleted account.
+  - `guard_deleted_account()` (BEFORE UPDATE on `profiles`, BEFORE INSERT/UPDATE on
+    `buyer_profiles`, signed-in callers only) stops a still-valid access token from writing
+    a name back.
+
+**Edge function `account-deletion`** (`verify_jwt = true`; the manual JWT decode depends on
+that).
+- `{action:"status"}` → `{configured}`.
+- `{action:"request"}` → `sent | not_configured | send_failed | <blocker reason>`.
+- It always answers 200 for business outcomes, because `functions.invoke()` drops a non-2xx
+  body.
+- Secrets:
+  - `RESEND_API_KEY` is required. Until it is set, `request` answers `not_configured` and
+    mints nothing.
+  - `RESEND_FROM` is optional. The default `onboarding@resend.dev` only delivers to the
+    Resend account owner's address, so real users need a verified sending domain.
+- On a failed send, the function discards the code and lifts the 60-second resend cooldown.
+
+**Known limits (tracked in `myprofileflags.md`):**
+- No email is sent until the key is set.
+- Phone-only accounts have no address to receive a code.
+- Avatar files stay in Storage.
+- An access token lives up to 1 hour after the sweep. INSERTs are refused through
+  `account_is_active()`, and so are writes to the identity rows. Updates to the user's own
+  rows elsewhere (an RFQ's description, a review's text) are not refused, and neither are
+  reads.
+- Cosora-Admin shows a deleted account as "active".
+
+---
+
+## Profile editing — two routes, one hook (2026-09-23)
+
+`/profile/edit` (`ProfileEdit.tsx`: photo and personal) and `/profile/business-details`
+(`ProfileBusinessDetails.tsx`) replaced the Edit Profile modal on `/profile`, which is
+deleted. There is one form implementation: the shared parts are in
+`components/buyer/ProfileEditKit.tsx`, and the state and save are in
+`hooks/useEditableProfile.ts`.
+
+- **The data layer is unchanged:** `saveProfileFull()` and `uploadAvatar()` in
+  `lib/queries/profile.ts`.
+- **Seed once, after the load.** `saveProfileFull()` writes every field (MPF-9), so the hook
+  keeps `form` null until `useProfileFull` resolves, and the pages render no inputs until
+  then. It never re-seeds, so a refetch can't wipe typing in progress.
+- **Same semantics as the modal.** A photo uploads immediately and applies on Save. An empty
+  avatar adopts the Google picture on save. Both pages go back to `/profile` on save or
+  cancel.
+- **`?focus=city`** autofocuses City. The `/profile` "Add city" nudge links there.
+- **Email is a plain field.** The modal's fake verify flow was dropped (MPF-10).
+
+---
+
+## Data & Export — client-side, owner-filtered (2026-09-23)
+
+Phase 3 of the My Profile brief. `src/lib/queries/dataExport.ts` holds
+`buildRfqHistoryCsv()`, `buildAllDataJson()` and `downloadFile()`. They are called from
+`ProfileAccountPrefs.tsx` (`/profile/data-export`). There is no backend: no edge function,
+no service role, no job queue. Revisit that only if one buyer's own rows grow large.
+
+- **Owner filter on every query.** RLS here admits more than "mine": other buyers' open
+  RFQs, every review, every profile, the vendor side, and admins. So:
+  - `rfqs` are filtered by `buyer_id`, and `quotes` by `rfq_id` in those RFQs;
+  - `conversations` by `or(user_a, user_b)`, and `messages` by `conversation_id` in those
+    conversations;
+  - `reviews` and `product_reviews` by `buyer_id`, and the two profile rows by `id`.
+
+  Probe numbers are in `test.md`.
+- **Complete reads.** `allPages()` pages by 1,000 (PostgREST's cap) and orders by
+  `created_at, id`, so pages never overlap. `inChunks()` splits `in.(…)` lists into groups
+  of 100 ids, to stay under URL limits.
+- **CSV** (`cosora-rfq-history-YYYY-MM-DD.csv`):
+  - One row per quote received; an RFQ with no quotes still gets one row. Seller brand names
+    come from `vendor_profiles` (public).
+  - RFC 4180 quoting, a UTF-8 BOM so Excel reads it correctly, and CRLF line endings.
+  - Formula-injection guard: vendors write quote comments, so a string cell starting with
+    `= + - @` (or a tab or CR) gets a leading `'`. Numbers are untouched.
+- **JSON** (`cosora-data-export-YYYY-MM-DD.json`):
+  - An `export` header (generated_at, account_id, format_version 1, contents, the chat-scope
+    note, counts), then one section per table.
+  - `embedding` and `search_text` are left out of RFQs: they're the search index, not buyer
+    data.
+  - Each conversation gets `other_party_name` (a brand name only, never contact details).
+- **Filenames** use the IST date. Blob URLs are revoked 1 second after the click; revoking
+  in the same tick can cancel the download.
+- **Scope:** the brief's table list. The other tables the buyer owns rows in are not
+  exported yet (MPF-8).
+
+---
+
+## FAQs — one table, admin RPCs, three surfaces (2026-09-23)
+
+Phase 9 of the My Profile brief. FAQ content used to be hardcoded in two components
+(`faqCategories` in `Help.tsx`, `FAQS` in `Subscription.tsx`). It's now rows in `public.faqs`:
+clients read the table directly, and Cosora-Admin writes to it through RPCs. Migrations
+`20260923144549_faqs_admin_editable.sql` and `20260923150408_faqs_hide_created_by_from_clients.sql`.
+
+- **Why this shape.** The only earlier admin-content page, Cosora-Admin's `Content.tsx`, is
+  dev-seed with no table. The working pattern for an admin-managed text list is
+  `chat_block_reasons` + `admin_block_reason_*` + `ChatReasons.tsx`, and this copies it:
+  - SECURITY DEFINER, `search_path = ''` and schema-qualified names;
+  - `#variable_conflict use_column`;
+  - a role gate that raises 42501;
+  - EXECUTE revoked from everyone, then granted to `authenticated`.
+- **Reads:** policy `faqs_select_active` (anon and authenticated, `using (active)`). Grants:
+  - Supabase grants ALL on a new public table to anon, authenticated and service_role,
+    each in its own right, so the migration revokes it from those three and `public`.
+  - It then grants **column** SELECT back to anon and authenticated: every column except
+    `created_by`. The first migration granted the whole table; `20260923150408` narrowed it.
+    `created_by` names the admin who wrote a row, and profiles are readable signed out
+    (MPF-3), so it would have let anyone identify the super admins.
+  - A column grant makes `select=*` fail with 42501. `useFaqs()` names its columns, and
+    any new reader must too.
+  - No client role, and not service_role, can write.
+  - The partial index `faqs_surface_order (surface, position, created_at) where active`
+    matches the one query the apps make.
+- **Writes** are super_admin only; `admin_faq_list` also admits support.
+  - `admin_faq_add(surface, category, question, answer, position default null)`:
+    - an unknown surface raises 22023;
+    - text is trimmed, and a blank category is stored as null;
+    - with no position, the row goes to the surface's `max(position) + 10`, taken under
+      `pg_advisory_xact_lock(hashtext('faqs:' || surface))` so two concurrent adds can't
+      take the same slot;
+    - `created_by = auth.uid()`.
+  - `admin_faq_update(id, category, question, answer, active)`:
+    - a null argument keeps the column, and `''` clears the category;
+    - a blank question or answer keeps the old text (the table's check constraints forbid
+      blanks anyway);
+    - sets `updated_at`.
+  - `admin_faq_delete(id)` is a real delete. Nothing references an FAQ, unlike block
+    reasons, which reviews point at. Deactivate is the reversible option, and the admin
+    page offers both.
+  - `admin_faq_reorder(id, position)`: under the same per-surface lock, the row already at
+    `position` on that surface takes the moved row's old position, and the moved row takes
+    `position`. It's a swap, so order stays unique without renumbering. The admin's
+    up/down arrows pass the neighbour's position, within one category group on Buyer Help.
+    An unknown id returns no row, which the admin's `assertWrote` reports.
+- **Positions are spaced by 10,** and Buyer Help categories by 100 (10–30, 110–130, 210–230,
+  310–330), so an admin can insert between two rows without renumbering.
+- **Client:**
+  - `useFaqs(surface)` (`src/lib/queries/faqs.ts`) filters `surface` and `active = true`
+    explicitly rather than relying on RLS alone. It orders by `position, created_at, id`, so
+    ties are stable.
+  - `groupFaqs()` groups by `category_label` (null → "General") in first-appearance order,
+    so each category sits at its lowest position.
+  - `<FaqSection surface title description contact>` (`src/components/FaqSection.tsx`) is
+    the drop-in for any page: a card with an accordion, plus an optional contact row (label,
+    href, hint). It renders nothing when there are no rows and no contact. It's used on
+    `/subscription`. A contact `href` that starts with `/` renders a React Router `Link`
+    (in-app, no reload); anything else (`mailto:`, `https:`) is a plain link.
+  - Buyer Help keeps its own accordion and search (the brief changed only the data source),
+    with `groupFaqs()` feeding its old shape.
+  - The vendor landing page `/seller` (`VendorLanding.tsx`) also keeps its own markup and
+    reads `useFaqs("seller_registration")`. Its block carries
+    `data-faq-surface="seller_registration"` for tests, like `FaqSection`'s card.
+  - `FaqSection` and `/seller` render answers with `whitespace-pre-line`, so an answer written
+    as lines (`•` bullets) keeps them. Buyer Help doesn't yet, because its answers are single
+    paragraphs.
+- **Freshness:** query key `["faqs", surface]` and the app-wide 60 s `staleTime`. An admin
+  edit shows up on the next page load, or within a minute in a tab that's already open,
+  with no deploy. There's no realtime subscription: FAQ edits are rare, and an accordion
+  rearranging under the reader would be worse than a minute's lag.
+- **Seed:** the 17 hardcoded rows moved over verbatim (12 buyer_help, 5 subscription). The
+  text wasn't edited on the way, so the inaccuracies in MPF-14 moved with it.
+- **Andy's content (2026-09-23)** went in through the `admin_faq_*` RPCs as demo-admin, not a
+  migration, so it's admin-owned from day one:
+  - 10 seller_registration rows (10–100);
+  - 5 subscription rows (10–50);
+  - the old subscription rows kept live at 120–140;
+  - the two superseded rows deactivated at 210 and 240.
+
+  Source and decisions: `documentation/seller-registration-and-subscription-faq-content.md`.
+  The "Lowest billing plan?" answer hardcodes plan prices; it isn't derived from
+  `subscription_plans`.
+- **Cosora-Admin `src/pages/Faqs.tsx`** has:
+  - a tab per surface, with counts;
+  - an add form, where Category (with suggestions) appears on Buyer Help only and is
+    required there;
+  - per-category tables on Buyer Help, and a flat table elsewhere;
+  - Edit (a modal), Deactivate/Reactivate, and Delete (with a confirm).
+  - up/down arrows that swap with the previous or next row **of the same visibility** in
+    its group. A live row steps past hidden ones, so every press changes the live page.
+
+  Every mutation goes through `assertWrote`. For support, `canWrite(role, "faqs")` disables
+  the controls under the standard read-only banner. The database gate is the real one.
+
+---
+
+## Profile contact details — private columns, narrow readers (2026-09-23)
+
+Phase 11 of the My Profile brief (MPF-3). `profiles.email` and `profiles.phone` aren't
+client-selectable. The migrations are `20260923171821_profiles_contact_columns_private.sql` and,
+for now, `20260923174653_profiles_contact_columns_interim_authenticated.sql`.
+
+- **Grants.** `profiles_select` is still `USING (true)`: names, avatars, roles and
+  `account_status` are read everywhere (chat, reviews, quotes, callGate). anon and
+  authenticated have **column** SELECT on `id`, `full_name`, `avatar_url`, `active_role`,
+  `onboarded`, `account_status` and `created_at`.
+  - `select=*`, or a filter, `order` or `or=` on `email`/`phone`, fails with 42501. So does
+    returning either column.
+  - UPDATE is unchanged: `saveProfileFull()` and `saveAccountInfo()` still write the user's own
+    email and phone.
+  - A new `profiles` column isn't client-readable until it's granted on purpose. The
+    migration's self-check fails if the column list changes.
+  - **Interim:** `20260923174653` grants the two columns back to authenticated until both front
+    ends are deployed (MPF-19). Anon stays closed.
+- **Readers.** Each is SECURITY DEFINER, with `search_path = ''` and EXECUTE for authenticated
+  only:
+
+  | Function | Returns | Gate | Used by |
+  |---|---|---|---|
+  | `my_contact_info()` | own `email`, `phone` | `auth.uid()`'s row only | `fetchMyContactInfo()` in `src/lib/queries/myContact.ts` → `AuthContext`, `fetchProfileFull()`, the data export |
+  | `call_buyer_contact(p_buyer_id)` | the buyer's `phone`, `full_name` | the caller has quoted on one of the buyer's RFQs; neither account suspended; their chat not under review | `useCallBuyer()` |
+  | `admin_profile_search(p_term, p_limit)` | id, name, email, status, role, created | any active admin | Cosora-Admin Accounts and Chats search |
+  | `admin_profile_emails(p_ids)` | id, name, email | any active admin | Cosora-Admin chat participants and suspension-history actors |
+
+- **`call_buyer_contact()` is callGate in the database.**
+  - A refusal is a 42501 whose message is the reason, checked in this order: `not_signed_in`,
+    `caller_suspended`, `no_rfq_relationship`, `target_suspended`, `under_review`.
+  - The relationship check comes before anything about the buyer, so a stranger learns nothing
+    more.
+  - It ignores quote status on purpose, because a vendor can set their own (MPF-18).
+  - `useCallBuyer()` maps the reason to callGate's copy and no longer calls `callGate()` itself.
+  - `useCallVendor()` keeps the client gate, because a vendor's business phone
+    (`vendor_profiles.phone`) is public by design.
+- **`fetchProfileFull()` throws on a read error.** It used to return blanks, and
+  `useEditableProfile` seeds its form from the first result while `saveProfileFull()` writes
+  every field (MPF-9). A refused read could have been saved over real values.
+- **Tests:**
+  - `scripts/profile-contact-privacy-check.mjs`: every role, over HTTP;
+  - `scripts/contact-gate-check.mjs`: the client and server gates in every state;
+  - `tests/profile-contact-privacy.spec.ts`: the page sweep, Call Buyer and the admin.
+
+---
+
+## Calls — one write path, `log_call()` (2026-09-23)
+
+Phase 12 of the My Profile brief (MPF-2). Migration
+`20260923182259_calls_writes_only_through_log_call.sql`.
+
+- **No client writes.** anon and authenticated have no INSERT, UPDATE, DELETE or TRUNCATE on
+  `public.calls`, and `calls_insert` and `calls_write` are dropped. `calls_select` (buyer,
+  vendor or admin) is unchanged.
+- **`log_call(p_vendor_id, p_product_context default null)`** returns jsonb. It's SECURITY
+  DEFINER, with `search_path = ''` and EXECUTE for authenticated only.
+  - It refuses: `not_signed_in` and `account_not_active` (42501); `not_a_vendor` (no
+    `vendor_profiles` row) and `cannot_call_self` (22023).
+  - It sets `buyer_id = auth.uid()`, `direction = 'outgoing'` and `created_at = now()`. No
+    client value reaches them.
+  - `product_context`: whitespace collapsed, trimmed, at most 200 characters, empty → null.
+  - Rate limit, after a per-caller `pg_advisory_xact_lock`:
+    - `{status: 'rate_limited', retry_after_seconds}` within 60 s of the caller's last call to
+      the same vendor;
+    - `{status: 'too_many_calls'}` at 5 calls to one vendor in 24 h, or 30 in an hour.
+
+    Otherwise it returns `{status: 'logged', id}`.
+- **`useCallVendor()`** calls it fire-and-forget, after callGate and the phone lookup. The dial
+  never waits on it, and the Calls query is invalidated only on `logged`.
+- **Nothing logs vendor-initiated calls.** `useCallBuyer()` doesn't log, so `direction` is
+  always `outgoing`. `callAnalytics.ts` maps it to the vendor's point of view.
+- **Tests:** `scripts/suspension-gate-check.mjs` (active/suspended pair and direct-write
+  refusals). The check leaves one tagged call per run, because no client can delete `calls`.
+
+---
+
+## Profile stats — owner-filtered counts (2026-09-24)
+
+Phase 13 of the My Profile brief (MPF-1). No migration.
+
+- **Each "my N" count on `/profile` filters on the owner column.** Calls is `useCallCount()`
+  (`calls.buyer_id`); Quotes and Chats are `useProfileStats()`. The SELECT policies admit more
+  than the user's own rows: `quotes_select` admits the vendor who sent a quote and every admin,
+  `conversations_select` admits support and super_admin admins, and `calls_select` admits the
+  vendor and admins.
+- **Quotes** = quotes received on the user's own RFQs. `quotes` has no buyer column, so the
+  count embeds the parent with an inner join and filters on it:
+  `select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
+  There is one FK (`quotes_rfq_id_fkey`), so the embed is unambiguous. It is the set My Quotes
+  totals.
+- **Chats** = ``.or(`user_a.eq.${userId},user_b.eq.${userId}`)``, the filter `useConversations()` uses for
+  the `/chats` list.
+- Both throw on a read error rather than rendering 0.
+- **Tests:** `tests/profile-quotes-chats-stat.spec.ts`. demo-admin catches the bug, which
+  demo-buyer can't. `tests/profile-calls-stat.spec.ts` covers Calls.
+
+---
+
 ## Integrations
 
 ### Supabase
@@ -1161,7 +1555,9 @@ Built, but in a **separate repo (`Cosora-Admin`)** against the same Supabase pro
 `scripts/load/`: `mint-tokens.mjs` → `marketplace.k6.js` → `analyze.mjs`. There is no
 staging project (branching needs a paid plan), so it runs against production, inside the
 synthetic population, with these rules. Each one exists because breaking it would touch a
-real user, a real bill or the moderation system:
+real user, a real bill or the moderation system. **That population was deleted on
+2026-09-23** (see "The load-test population" below). Re-running the harness needs a new one,
+tagged the same way so the same cleanup script can remove it:
 
 - **Sign in first, outside k6.** GoTrue rate-limits password grants per IP: 151 sign-ins in 4
   minutes from one address drew two 429s, each cleared by a 60 s wait. Fifty VUs signing in at
@@ -1263,7 +1659,8 @@ deterministic ids `cf00000*`, `chatfx-*@cosora.test`. Torn down by
 **The load-test population** — `loadtest-buyer-1..250` / `loadtest-vendor-1..120`
 `@cosora.test`, one shared password read as `LOADTEST_PASSWORD` (`.env`, never source),
 content tagged `[LOADTEST]`. Created 2026-09-16 outside both repos, and live in the
-production catalogue until the Master Prompt 12 cleanup script runs.
+production catalogue until **2026-09-23, when `scripts/loadtest-cleanup.sql` deleted it.** None
+of these accounts exists now. The notes below stay as the rules for any future population.
 
 - **A user row inserted straight into `auth.users` must carry `''`, not NULL, in
   `confirmation_token`, `recovery_token`, `email_change_token_new` and `email_change`.**
@@ -1274,8 +1671,16 @@ production catalogue until the Master Prompt 12 cleanup script runs.
   `scripts/loadtest-login-check.mjs`. The other four token columns were already `''`.
 - **A load-test vendor quotes `[LOADTEST]` RFQs only.** Open-marketplace RFQs include real
   buyers' requests, and a test quote would land in a real inbox.
-- **Removal: `scripts/loadtest-cleanup.sql` (written 2026-09-23, NOT run).** It is not a
+- **Removal: `scripts/loadtest-cleanup.sql` (written 2026-09-23, run 2026-09-23).** It is not a
   migration and must stay out of `supabase/migrations/`.
+  - **The run.** The committed file (md5 `7120cf99…` with LF endings, unchanged since
+    `4c4a762`) was sent through MCP `execute_sql`, statements verbatim from `begin;` onward,
+    with the header and some inline comments trimmed. It ran first as the dry run, then with
+    only the mode set to `'commit'`. The dry run's report matched the expected population
+    exactly. The commit run passed its own leftover and drift checks, and its final SELECT
+    returned all zeros. The file on disk was never edited. To reuse it for a future
+    population, use the same email pattern and `[LOADTEST]` tags. Apart from the mode line,
+    only `cosora.loadtest_expected_users` then needs changing.
   - **Dry-run by default.** It deletes inside one transaction, verifies, then rolls back and
     reports. Change one line to `'commit'` to delete for real.
   - **Preflight refusals.** It pins the target to the exact email regex and a count of 370.

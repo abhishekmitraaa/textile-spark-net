@@ -132,7 +132,7 @@ function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: Vendo
     try {
       await resubmitKycDocument(vendorId, doc.docType, file);
       await qc.invalidateQueries({ queryKey: ["vendor_documents"] });
-      toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 24–48 hours." });
+      toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 3–5 days." });
     } catch (err) {
       toast.error(`Couldn't upload your ${label}`, { description: errorMessage(err) });
     } finally {
@@ -228,7 +228,7 @@ const Kyc = () => {
                     ? "We don't have any documents from you yet. Add them during seller registration or send them to our team."
                     : rejectedCount > 0
                       ? `${rejectedCount} document${rejectedCount === 1 ? " was" : "s were"} rejected. See the reason below and upload a replacement.`
-                      : `${verifiedCount} of ${submitted.length} document${submitted.length === 1 ? "" : "s"} verified. Our team reviews submissions within 24–48 hours.`}
+                      : `${verifiedCount} of ${submitted.length} document${submitted.length === 1 ? "" : "s"} verified. Our team reviews submissions within 3–5 days.`}
               </p>
             </div>
           </div>

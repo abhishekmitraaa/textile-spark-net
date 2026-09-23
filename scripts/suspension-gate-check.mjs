@@ -9,6 +9,11 @@
  * policy), which is exactly the kind of false confidence a gate test must not
  * give.
  *
+ * Since MPF-2 the same pairing covers call logging through log_call(), the only
+ * write path to `calls`. Alongside it, while active, the script asserts that a
+ * direct INSERT/UPDATE/DELETE on `calls` is refused (42501) and that log_call()
+ * refuses a target with no vendor_profiles row.
+ *
  * INSERTs raise on a WITH CHECK violation, so these are judged on the error.
  * (Unlike UPDATE/DELETE, where an RLS denial is silent — see
  * Cosora-Admin/scripts/rls-matrix.mjs.)
@@ -56,6 +61,21 @@ const vendor = await signIn(VENDOR);
 const admin = await signIn(ADMIN);
 
 /**
+ * MPF-2: `calls` is written only through log_call(), which needs a real vendor
+ * that isn't the caller. demo-buyer's account also has a vendor_profiles row, so
+ * the test call stays inside the demo accounts. NON_VENDOR is demo-admin, whose
+ * account has none (both are checked below rather than assumed).
+ */
+const CALL_TARGET = "11111111-1111-1111-1111-111111111111";
+const NON_VENDOR = admin.id;
+{
+  const { data: vp } = await admin.db.from("vendor_profiles").select("id").in("id", [CALL_TARGET, NON_VENDOR]);
+  const ids = new Set((vp ?? []).map((r) => r.id));
+  if (!ids.has(CALL_TARGET)) throw new Error("CALL_TARGET has no vendor_profiles row; pick another demo vendor");
+  if (ids.has(NON_VENDOR)) throw new Error("NON_VENDOR has a vendor_profiles row; pick another non-vendor");
+}
+
+/**
  * Each case inserts one throwaway row and reports whether it was accepted.
  * `cleanup` removes it when it was.
  */
@@ -88,6 +108,21 @@ const CASES = {
         .insert({ buyer_id: vendor.id, vendor_id: vendor.id, rating: 5, body: TAG })
         .select("id"),
     cleanup: () => vendor.db.from("reviews").delete().eq("body", TAG),
+  },
+  // MPF-2. A suspended caller is refused 42501 by the function itself; an active
+  // one gets a JSON status. "Allowed" means the gate admitted the caller: the
+  // status is `logged`, or `rate_limited` / `too_many_calls` when the script is
+  // re-run inside the limits' windows (no row is written then; that's the limit
+  // working, not the gate). NOT cleaned up, and it cannot be: clients hold no
+  // DELETE on `calls` since MPF-2, so each run leaves one call from demo-vendor
+  // to demo-buyer's vendor profile with product_context = TAG. Clear those with
+  // SQL if a clean demo history is needed: product_context like 'zz-gate-%'.
+  "calls via log_call()": {
+    run: async () => {
+      const { data, error } = await vendor.db.rpc("log_call", { p_vendor_id: CALL_TARGET, p_product_context: TAG });
+      return { data: error ? null : [data], error };
+    },
+    cleanup: async () => {},
   },
 };
 
@@ -127,21 +162,32 @@ let failures = 0;
  * So: read the current period end, push it out far enough to run the case, and
  * put the ORIGINAL value back in the finally block. Never a blanket "set it to
  * a year from now" — that would silently hand a demo account a real plan.
+ *
+ * The STATUS matters too: get_vendor_plan() needs status = 'active' as well as a
+ * future period end. Since the expiry sweep (2026-09-16) marked the demo vendor's
+ * lapsed gold subscription 'expired', pushing the date alone left it on free,
+ * and the ad case failed active and suspended alike (found 2026-09-23, MPF-2
+ * run). The original status is saved and restored exactly like the date.
  */
 let originalPeriodEnd = null;
+let originalStatus = null;
 {
   const { data } = await admin.db
     .from("vendor_subscriptions")
-    .select("current_period_end")
+    .select("current_period_end, status")
     .eq("vendor_id", vendor.id)
     .maybeSingle();
   originalPeriodEnd = data?.current_period_end ?? null;
-  if (originalPeriodEnd && new Date(originalPeriodEnd) <= new Date()) {
+  originalStatus = data?.status ?? null;
+  const lapsed = originalPeriodEnd && new Date(originalPeriodEnd) <= new Date();
+  if (originalPeriodEnd && (lapsed || originalStatus !== "active")) {
     const future = new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString();
-    await admin.db
+    const { data: moved, error } = await admin.db
       .from("vendor_subscriptions")
-      .update({ current_period_end: future })
-      .eq("vendor_id", vendor.id);
+      .update({ current_period_end: lapsed ? future : originalPeriodEnd, status: "active" })
+      .eq("vendor_id", vendor.id)
+      .select("vendor_id");
+    if (error || (moved?.length ?? 0) !== 1) throw new Error(`could not arm the ad case: ${error?.message ?? "0 rows"}`);
   }
 }
 
@@ -150,6 +196,42 @@ try {
   await setStatus("active");
   const before = {};
   for (const name of Object.keys(CASES)) before[name] = await attempt(name);
+
+  // ── MPF-2 invariants, checked while ACTIVE so a refusal can't be the suspension ──
+  // Direct writes to `calls` are refused outright (no client grant). The update
+  // and delete filter on an id that can't exist, so if the grant ever came back
+  // they would still touch nothing.
+  const NO_ROW = "00000000-0000-0000-0000-000000000000";
+  const directWrites = {
+    "calls direct INSERT": () =>
+      vendor.db.from("calls").insert({ buyer_id: vendor.id, vendor_id: CALL_TARGET, direction: "outgoing", product_context: TAG }).select("id"),
+    "calls direct UPDATE": () => vendor.db.from("calls").update({ product_context: TAG }).eq("id", NO_ROW).select("id"),
+    "calls direct DELETE": () => vendor.db.from("calls").delete().eq("id", NO_ROW).select("id"),
+  };
+  for (const [name, run] of Object.entries(directWrites)) {
+    const { error } = await run();
+    const ok = error?.code === "42501";
+    if (!ok) failures++;
+    results.push({
+      action: `${name} (active)`,
+      active: ok ? "DENY" : "*** ALLOW ***",
+      suspended: "n/a",
+      verdict: ok ? "PASS" : "*** FAIL ***",
+      db_said: (error ? `${error.code} ${error.message}` : "no error").slice(0, 58),
+    });
+  }
+  {
+    const { error } = await vendor.db.rpc("log_call", { p_vendor_id: NON_VENDOR, p_product_context: TAG });
+    const ok = error?.message === "not_a_vendor";
+    if (!ok) failures++;
+    results.push({
+      action: "log_call() to a profile with no vendor row (active)",
+      active: ok ? "DENY" : "*** ALLOW ***",
+      suspended: "n/a",
+      verdict: ok ? "PASS" : "*** FAIL ***",
+      db_said: (error ? `${error.code} ${error.message}` : "no error").slice(0, 58),
+    });
+  }
 
   // ── Suspended: the same inserts must now be REFUSED ──
   await setStatus("suspended");
@@ -188,12 +270,14 @@ try {
   // Always reinstate, even if a case threw. A demo account left suspended by a
   // failed test run is a worse outcome than the failure itself.
   await setStatus("active");
-  // And put the billing period back EXACTLY as it was, expired or not.
+  // And put the billing period and status back EXACTLY as they were, expired or not.
   if (originalPeriodEnd !== null) {
-    await admin.db
+    const { data: restored } = await admin.db
       .from("vendor_subscriptions")
-      .update({ current_period_end: originalPeriodEnd })
-      .eq("vendor_id", vendor.id);
+      .update({ current_period_end: originalPeriodEnd, status: originalStatus })
+      .eq("vendor_id", vendor.id)
+      .select("vendor_id");
+    if ((restored?.length ?? 0) !== 1) console.error("!! vendor_subscriptions NOT restored; fix by hand");
   }
   // NOT cleaned up, and it cannot be: account_suspensions has no DELETE policy
   // for any role, on purpose — a ledger a client can erase is not a ledger. So
@@ -208,7 +292,7 @@ try {
 console.table(results);
 console.log(
   failures === 0
-    ? "\nPASS - suspension blocks content creation, and the same inserts work when active."
+    ? "\nPASS - suspension blocks content creation and call logging, and the same writes work when active."
     : `\n${failures} CASE(S) FAILED`,
 );
 process.exit(failures === 0 ? 0 : 1);
