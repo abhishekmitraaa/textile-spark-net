@@ -25,7 +25,11 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  reporter: [["list"], ["html", { outputFolder: "test-results/html", open: "never" }]],
+  // The HTML report lives OUTSIDE test-results/: Playwright 1.60 reports a
+  // configuration error when the report folder is inside the tests output
+  // folder (the report step would wipe artifacts). playwright-report/ is
+  // already gitignored.
+  reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
   timeout: 60_000,
   expect: { timeout: 10_000 },
   use: {

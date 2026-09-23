@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -287,7 +288,7 @@ const UploadCatalogue = () => {
         description: "It'll go live after review (24–48 hours).",
       });
     } catch (err) {
-      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Upload failed", { description: errorMessage(err) });
     } finally {
       setIsSubmitting(false);
     }
@@ -299,7 +300,7 @@ const UploadCatalogue = () => {
       qc.invalidateQueries({ queryKey: ["catalogues"] });
       toast.success("Catalogue removed");
     } catch (err) {
-      toast.error("Couldn't remove", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Couldn't remove", { description: errorMessage(err) });
     }
   };
 

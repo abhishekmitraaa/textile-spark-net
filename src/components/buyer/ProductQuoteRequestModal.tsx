@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -134,7 +135,7 @@ export default function ProductQuoteRequestModal({
       navigate("/requirement/my-quotes");
     } catch (e) {
       toast.error("Could not send request", {
-        description: e instanceof Error ? e.message : String(e),
+        description: errorMessage(e),
       });
     } finally {
       setSubmitting(false);

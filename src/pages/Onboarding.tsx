@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -277,7 +278,7 @@ export default function Onboarding() {
       setBusinessImageUploads((current) => [...current, ...urls]);
     } catch (err) {
       toast.error("Couldn't upload business images", {
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     } finally {
       setUploadingBusinessImages(0);
@@ -332,7 +333,7 @@ export default function Onboarding() {
       setProductImages((current) => [...current, ...urls]);
     } catch (err) {
       toast.error("Couldn't upload product images", {
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     } finally {
       setUploadingProductImages(0);
@@ -502,7 +503,7 @@ export default function Onboarding() {
       // Same reasoning as the signed-out case: a write that failed is a
       // registration that does not exist, so it must not look like one that
       // succeeded. Everything typed stays on screen and Submit can be retried.
-      const msg = err instanceof Error ? err.message : String(err);
+      const msg = errorMessage(err);
       setSubmitError(`We couldn't save your registration: ${msg}`);
       toast.error("Couldn't save your registration", { description: msg });
       return;

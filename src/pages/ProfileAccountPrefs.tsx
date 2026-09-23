@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -50,7 +51,7 @@ const ProfileAccountPrefs = () => {
         await saveSetting(user.id, "regional", next);
         queryClient.invalidateQueries({ queryKey: ["profile_settings", user.id] });
       } catch (e) {
-        toast.error("Couldn't save", { description: e instanceof Error ? e.message : String(e) });
+        toast.error("Couldn't save", { description: errorMessage(e) });
         return;
       }
     } else {

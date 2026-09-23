@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -164,7 +165,7 @@ const VendorSettings = () => {
       qc.invalidateQueries({ queryKey: ["vendor_settings", user.id] });
     } catch (e) {
       setNotif(prev); // revert on failure
-      toast.error("Couldn't save", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't save", { description: errorMessage(e) });
     }
   };
 
@@ -175,7 +176,7 @@ const VendorSettings = () => {
       await saveVendorSetting(user.id, "regional", { language: code });
       qc.invalidateQueries({ queryKey: ["vendor_settings", user.id] });
     } catch (e) {
-      toast.error("Couldn't save language", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't save language", { description: errorMessage(e) });
     }
   };
 
@@ -185,7 +186,7 @@ const VendorSettings = () => {
       toast.success("Logged out");
       navigate("/");
     } catch (e) {
-      toast.error("Couldn't log out", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't log out", { description: errorMessage(e) });
     }
   };
 

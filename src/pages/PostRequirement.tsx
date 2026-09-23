@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
@@ -627,7 +628,7 @@ const PostRequirement = () => {
       });
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
     } catch (e) {
-      toast.error("Couldn't submit your requirement", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't submit your requirement", { description: errorMessage(e) });
       return;
     }
     setStep("success");

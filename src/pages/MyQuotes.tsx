@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -126,7 +127,7 @@ const MyQuotes = () => {
       if (s === "accepted") flashBanner("accepted");
       else if (s === "rejected") flashBanner("rejected");
     } catch (e) {
-      toast.error("Couldn't update quote", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't update quote", { description: errorMessage(e) });
     }
   };
 

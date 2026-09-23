@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -213,7 +214,7 @@ const AccountInfo = () => {
                 await refreshProfile();
               } catch (e) {
                 setSaving(false);
-                toast.error("Couldn't save your details", { description: e instanceof Error ? e.message : String(e) });
+                toast.error("Couldn't save your details", { description: errorMessage(e) });
                 return;
               }
               setSaving(false);

@@ -1,3 +1,24 @@
+- 2026-09-23 (Master Prompt 12, Part F): **A k6 load harness and a Playwright sourcing-loop spec, run against production inside the synthetic population. They found three real defects, all fixed and re-run green.** Migrations `20260923093304_embedding_health_reads_recent_cron_runs_only` (md5 `a0234fcd…`) and `20260923094728_embedding_health_missing_excludes_queued_rows` (md5 `c2e31070…`); both files equal the applied statements.
+  - **Harness.** `scripts/load/`: `mint-tokens.mjs` (sign-ins outside k6, because GoTrue's per-IP limit answered 429 twice in 151 sign-ins), `marketplace.k6.js` (the app's own queries, 10→50 VUs, 70% buyers) and `analyze.mjs` (per level and per endpoint). Its safety rules are in `technicalimplementation.md` → "Load testing". k6 ran as a checksum-verified binary from the scratchpad, not installed.
+  - **Found 1: at 50 VUs PostgREST's pool ran dry, and the client saw 0 errors.** p95 7.0 s, p99 14.6 s, and throughput fell from 31.6 to 24.6 req/s.
+    - `postgrest_logs` had `504 PGRST003`; the gateway retried them into slow 200s.
+    - Cause, in `postgres_logs`: `embedding_pipeline_health()` ran for **64 s**. Its two `max(start_time)` reads did a full scan of `cron.job_run_details` (120 MB, 63% of the DB, never pruned, no `jobid` index; 1.26 s per read even idle, 5–7 s per health run, every 5 minutes).
+    - **Fix:** read it by `runid desc limit` (~24 ms).
+    - **Same run, re-timed after the fix:** 50 VUs at 38.2 req/s, p95 645 ms, p99 1.09 s, 0 PGRST003. The health runs take 0.66 s.
+    - Throughput probe (no think time): ~128 req/s steady at p95 ~610 ms. Only a simultaneous 50-request burst queues up to 7 s.
+  - **Found 2: the health check raised false alarms from ordinary traffic.** A request posted in the minute before a check counted as "enqueue may have been missed" while its job sat in the queue. **My Part A test run triggered one at 07:50 UTC that notified all 3 admins**, and the alarm cron failed at 09:25, 09:35 and 09:45 on k6's queued RFQs.
+    - **Fix:** rows with a pending queue job are not "missing". The migration proves it with a rolled-back RFQ.
+  - **Found 3: every database refusal reached the user as "[object Object]".** Supabase errors are plain objects, and 41 toasts rendered `e instanceof Error ? e.message : String(e)`. That includes the lead-cap refusal and the new closed-request message.
+    - Playwright F4 caught it.
+    - **Fix:** `src/lib/errorMessage.ts`, applied by a codemod to 41 sites in 27 files. F4 then passed.
+  - **Playwright:** new `tests/mp12-sourcing-loop.spec.ts` (F1–F4) covers quote → dashboard counter = enforced count, accept, the at-cap direct reply and the closed request. 4/4. Regression over six read-only existing specs: 28/28 with the new spec. `playwright.config.ts`: the HTML report moved to `playwright-report/`, because Playwright 1.60 flagged the old folder inside `test-results/` as a configuration error.
+  - **Also measured, not changed (decisions):**
+    - New Arrivals ships the whole live catalogue (21 KB gzipped for 377 rows). The vendor lead pool ships and renders every open RFQ (12.5 KB, 253+ cards). Both grow linearly.
+    - `cron.job_run_details` retention: logged in `securityflags.md`.
+    - The per-IP sign-in limit.
+    - Peak database connections were 29 of 60; PostgREST held ~11.
+  - **Rows written, all `[LOADTEST]`:** 194 quotes, 59 RFQs (59 embedding calls), 229 messages from k6, and 10 RFQs from Playwright. 0 conversations locked. Egress used ≈ 113 MB.
+  - tsc 0 (the probe fires 1); eslint 0 errors; build passes; the load-test password appears 0 times in the bundle.
 - 2026-09-23 (Master Prompt 12, Part E + closed RFQs): **Plan caps can no longer be beaten by sending requests at once, and a closed request takes no quotes.** Migrations `20260923081708_quotes_only_on_rfqs_open_to_the_vendor` (md5 `6a5f8000…`) and `20260923082118_plan_cap_triggers_serialize_per_vendor` (md5 `cbe22e23…`); both files equal the applied statements.
   - **Part E found a real race, not a theoretical one.** The prompt asked for an advisory lock as insurance, because the 2026-09-16 probe had seen none. That probe ran its "concurrent" inserts one after another in a single SQL session. Real simultaneous HTTP inserts (new `scripts/cap-race-check.mjs`, 10 at once, one free slot) broke the **product cap in 5 of 5 rounds** (up to 5 accepted, 6/2 listings) and the **lead cap in 4 of 5** (11/10).
     - **Fix:** `pg_advisory_xact_lock(hashtext(vendor_id::text))` before the count in `enforce_product_cap()` and `enforce_lead_cap()`.

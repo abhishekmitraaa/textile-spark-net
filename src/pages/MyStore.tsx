@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -226,7 +227,7 @@ const MyStore = () => {
       toast.success(t("Logo updated"));
     } catch (err) {
       toast.error(t("Couldn't update your logo"), {
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
     } finally {
       setUploadingLogo(false);
@@ -241,7 +242,7 @@ const MyStore = () => {
       await signOut();
     } catch (err) {
       toast.error(t("Couldn't sign you out"), {
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
       return;
     }

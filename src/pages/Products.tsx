@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -351,7 +352,7 @@ const Products = () => {
       refresh();
       toast.success("Product deleted");
     } catch (e) {
-      toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Delete failed", { description: errorMessage(e) });
     }
   };
 
@@ -362,7 +363,7 @@ const Products = () => {
       refresh();
       toast.success("Product duplicated", { description: "Saved as a draft." });
     } catch (e) {
-      toast.error("Duplicate failed", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Duplicate failed", { description: errorMessage(e) });
     }
   };
 

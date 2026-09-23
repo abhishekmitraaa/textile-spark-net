@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -133,7 +134,7 @@ function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: Vendo
       await qc.invalidateQueries({ queryKey: ["vendor_documents"] });
       toast.success(`${label} sent for review`, { description: "Our team reviews submissions within 24–48 hours." });
     } catch (err) {
-      toast.error(`Couldn't upload your ${label}`, { description: err instanceof Error ? err.message : String(err) });
+      toast.error(`Couldn't upload your ${label}`, { description: errorMessage(err) });
     } finally {
       setBusy(false);
     }

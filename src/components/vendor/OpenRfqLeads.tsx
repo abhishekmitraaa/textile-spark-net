@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -60,7 +61,7 @@ export default function OpenRfqLeads() {
       setOpenId(null);
       setForm({ price: "", moq: "", leadTime: "", comment: "" });
     } catch (e) {
-      toast.error("Couldn't submit quote", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't submit quote", { description: errorMessage(e) });
     } finally {
       setBusy(false);
     }

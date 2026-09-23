@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { KYC_BUCKET, assertKycBucket } from "@/lib/queries/vendorOnboarding";
@@ -130,7 +131,7 @@ export async function signedKycUrl(
     }
     return { url: data.signedUrl, error: null };
   } catch (e) {
-    return { url: null, error: e instanceof Error ? e.message : String(e) };
+    return { url: null, error: errorMessage(e) };
   }
 }
 

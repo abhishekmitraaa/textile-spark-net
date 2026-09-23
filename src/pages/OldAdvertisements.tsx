@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -151,7 +152,7 @@ export default function OldAdvertisements() {
       // Surfaces the real reason, including "this campaign was paused by Cosora
       // and only an admin can resume it" — which a silent zero-row UPDATE
       // would have reported as success.
-      toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Update failed", { description: errorMessage(e) });
     }
   };
 

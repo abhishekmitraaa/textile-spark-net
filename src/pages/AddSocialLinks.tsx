@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -310,7 +311,7 @@ export default function AddSocialLinks() {
     } catch (e) {
       // Deliberately not setting `saved` here — the button must never claim a
       // save that did not happen, which was the whole problem with this page.
-      toast.error("Couldn't save social links", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't save social links", { description: errorMessage(e) });
     } finally {
       setSaving(false);
     }

@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { UserCog, X, LogOut, Loader2 } from "lucide-react";
@@ -34,7 +35,7 @@ export default function DevAccountSwitcher() {
       await signInAsDemo(role);
       toast.success(`Signed in as ${DEMO_ACCOUNTS[role].label}`);
     } catch (e) {
-      toast.error("Sign-in failed", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Sign-in failed", { description: errorMessage(e) });
     } finally {
       setBusy(null);
     }

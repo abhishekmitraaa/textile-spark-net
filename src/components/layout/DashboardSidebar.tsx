@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -105,7 +106,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       await signOut();
     } catch (err) {
       toast.error("Couldn't sign you out", {
-        description: err instanceof Error ? err.message : String(err),
+        description: errorMessage(err),
       });
       return;
     }

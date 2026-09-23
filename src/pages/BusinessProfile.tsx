@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -419,7 +420,7 @@ const BusinessProfile = () => {
       toast.success(successMsg);
       return true;
     } catch (e) {
-      toast.error("Couldn't save", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't save", { description: errorMessage(e) });
       return false;
     }
   };
@@ -509,7 +510,7 @@ const BusinessProfile = () => {
         urls.length === 1 ? "Photo added" : `${urls.length} photos added`
       );
     } catch (err) {
-      toast.error("Couldn't upload photos", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Couldn't upload photos", { description: errorMessage(err) });
     } finally {
       setUploadingPhotos(0);
     }
@@ -591,7 +592,7 @@ const BusinessProfile = () => {
       const url = await uploadVendorImage(user.id, file, "banner");
       await persist({ bannerUrl: url }, "Banner updated");
     } catch (err) {
-      toast.error("Couldn't upload the banner", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Couldn't upload the banner", { description: errorMessage(err) });
     } finally {
       setUploadingBanner(false);
     }

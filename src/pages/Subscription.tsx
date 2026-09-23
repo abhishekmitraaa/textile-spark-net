@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
@@ -131,7 +132,7 @@ export default function Subscription() {
       }
     } catch (e) {
       if (e instanceof Error && e.message === "dismissed") toast.info("Checkout cancelled");
-      else toast.error("Checkout failed", { description: e instanceof Error ? e.message : String(e) });
+      else toast.error("Checkout failed", { description: errorMessage(e) });
     } finally {
       setBusyPlan(null);
     }

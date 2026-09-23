@@ -14,6 +14,7 @@ Last updated: 2026-09-09
 | Spec | Covers | Accounts |
 |---|---|---|
 | `new-arrivals.spec.ts` | Buyer New Arrivals tabs render (>=5) and the active route's tab is marked selected | anon |
+| `mp12-sourcing-loop.spec.ts` | The core loop through the real UI, and the rules fixed around it. F1: a vendor quotes an open request on `/leads`, and the "N/10 leads used" counter equals `get_vendor_plan()` before and after (findings §2 regression). F2: the buyer accepts it in My Quotes. F3: at the cap, open requests show "Upgrade to quote" while a request addressed to the vendor is still answered and uses no lead. F4: a request closed while the vendor is replying is refused, with the reason on screen | `loadtest-buyer-1`, `loadtest-vendor-64`, `loadtest-vendor-3`; writes `[LOADTEST]` rows only |
 | `chat-pipeline.spec.ts` | Chat + chat-moderation, UI layer (T1–T13's browser half) | `chatfx-*` / `rlstest-*` fixtures |
 | `admin-chat-moderation.spec.ts` | Cosora-Admin's chat review queue | `rlstest-*` fixtures |
 | `video-closeups-bunny.spec.ts` | Phase 8 Bunny Stream, browser half: the container gate, the moderation queue, real MP4 playback in both apps, approve-to-publish | `demo-*` |
@@ -89,6 +90,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `targeted-lead-cap-check.mjs` | A targeted-request quote is never cap-gated; the open marketplace still is. Real HTTP as `loadtest-buyer-1` and `loadtest-vendor-3`: tops the vendor up to the cap on `[LOADTEST]` RFQs only, the buyer addresses a request to the vendor, then targeted vs open quotes. `--closed` adds a targeted RFQ the buyer closes: the vendor's own read of it returns 0 rows, and since 2026-09-23 the quote is refused as closed. `--rfq=<id>` reuses a request |
 | `loadtest-login-check.mjs` | Real password-grant logins for named `loadtest-*` accounts. Prints GoTrue's HTTP status, then does one authenticated own-profile read so a 200 proves a usable JWT |
 | `quote-rfq-open-check.mjs` | A quote needs an RFQ open to that vendor, 6 cases through the app's own upsert. Accepted: an active open RFQ, and an active request addressed to the vendor. Refused: a closed open RFQ, a closed addressed request, a request addressed to another vendor (`--other`), and re-submitting after the buyer closed. Prints each result against its expectation. Exit 1 on any mismatch |
+| `load/mint-tokens.mjs` → `load/marketplace.k6.js` → `load/analyze.mjs` | The k6 load harness: sign-ins outside k6, stepped VU levels running the app's own queries, then a per-level and per-endpoint summary. Its safety rules are in `technicalimplementation.md` → "Load testing". Needs the k6 binary. Tokens stay out of the repo |
 | `cap-race-check.mjs` | Real concurrent HTTP inserts at a plan cap with one free slot (`--kind=product` or `--kind=quote`, `--n` at once, `--rounds`). Tops the vendor up to cap−1 with `[LOADTEST]` fillers, warms N connections, fires N inserts together, reports how many were accepted, then deletes them so the next round starts at cap−1. Exit 1 if any round accepted more than one. **The only instrument here that can show a race:** a single SQL session runs "concurrent" statements one after another |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
@@ -125,6 +127,86 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-23 — Master Prompt 12, Part F: k6 load (10→50 VUs), Playwright sourcing loop 4/4, regression 28/28
+
+**Setup.** k6 v2.3.0, the official Windows binary, checksum-verified and run from the scratchpad
+(not installed). `scripts/load/mint-tokens.mjs` signed in 40 buyers (each with a synthetic
+conversation) and 20 vendors (10 paid). That took 151 sign-ins from one IP over 4 min, with
+**2 × HTTP 429** from GoTrue's per-IP limit, each cleared by a 60 s wait; sign-in p50 409 ms,
+p95 615 ms. Step test: 60 s per level, 15 s gaps, 70% buyers, think time 1–3 s. The database was
+sampled during the run, then `postgrest_logs` / `postgres_logs` / `edge_logs` were read for the
+window.
+
+**Run 1, realistic, before the fix.**
+
+| VUs | reqs | req/s | fail | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|---|---|
+| 10 | 488 | 8.1 | 0 | 304 | 780 | 1312 | 1395 |
+| 20 | 936 | 15.6 | 0 | 308 | 773 | 1063 | 2567 |
+| 30 | 1398 | 23.3 | 0 | 313 | 631 | 1027 | 1424 |
+| 40 | 1893 | 31.6 | 0 | 314 | 701 | 981 | 1368 |
+| **50** | 1475 | **24.6** | 0 | 411 | **6994** | **14628** | **16745** |
+
+- At 50 VUs throughput fell and the tail rose tenfold, in two bursts: 09:25:15–:30 and ~:50.
+- k6's timing split put all of it in `waiting`; connect and TLS were 0 ms on reused connections.
+- `postgrest_logs`: **`504 PGRST003 Timed out acquiring connection from connection pool`**
+  at 09:25:31. The edge logs show **0** 5xx to clients, so the gateway retried.
+- `postgres_logs`: `embedding_pipeline_health()` **64,407 ms**, started by
+  `embedding-health-alarm` at 09:25:00. It scans all of `cron.job_run_details`: 120 MB,
+  63% of the DB, 1.26 s per read even when idle.
+- A database sample *inside* the stall showed 11 PostgREST connections, 0 busy, no lock waits.
+- Peak database connections for the run: 23 of 60.
+
+**Run 3, the same run after migration `20260923093304`,** timed identically: the 50-VU level
+started 15 s after the `:45` alarm.
+
+| VUs | reqs | req/s | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|---|
+| 10 | 424 | 7.1 | 361 | 949 | 1362 | 1781 |
+| 20 | 916 | 15.3 | 328 | 826 | 1039 | 1515 |
+| 30 | 1312 | 21.9 | 329 | 1092 | 2483 | 2934 |
+| 40 | 1821 | 30.4 | 333 | 762 | 1036 | 1269 |
+| **50** | 2294 | **38.2** | 326 | **645** | **1091** | **1510** |
+
+- 0 failures.
+- 0 requests over 3 s at 50 VUs, in any 5 s bucket.
+- 0 PGRST003 and 0 504 in `postgrest_logs`.
+- The `:45` alarm took 0.656 s (it took 64.7 s in run 1). Health jobs before the fix: 5.4–6.9 s
+  per run. After: 0.66–1.6 s.
+
+**Run 2, throughput probe (THINK=0, same VU ceiling), 30 s per level.**
+- 25 VUs: 66.0 req/s, p95 612 ms, p99 1.9 s.
+- 50 VUs: 107.5 req/s overall, and **~128 req/s steady state at p95 ~610 ms** after the first
+  5 s.
+- The first 5 s of each level (all VUs firing at once) queued up to 7 s: 52 requests over 1 s,
+  all of it `waiting`, since PostgREST's ~10-connection pool was absorbing a 50-request burst.
+- No PGRST003. 0 client failures.
+
+**Across all runs:**
+- 0 client-visible failures.
+- 47 `P0001` lead-cap refusals (5 + 19 + 23); **all 47 cited the vendor's own dashboard
+  `leads_used`** (the findings §2 regression, under load).
+- 0 conversations locked (the letters-only chat text never matched a flag).
+- Wrote 194 quotes, 59 RFQs and 229 messages, all `[LOADTEST]`. The embedding queue drained
+  (0 RFQs without an embedding), and health is OK.
+- Wire bytes received: 36.8 + 41.9 + 34.7 MB ≈ **113 MB** of egress, about 2.3% of the 5 GB
+  monthly allowance.
+
+**Playwright.** New `tests/mp12-sourcing-loop.spec.ts`, run with
+`BUYER_APP_URL=http://127.0.0.1:8080`:
+- First run: F1 failed on the spec's own locator (`.last()` picked the innermost wrapper). The
+  page was right: it showed "2/10 leads used".
+- Second run: F1–F3 passed, and **F4 failed on a real bug**. The toast read "[object Object]"
+  instead of the reason. Reproduced in Node: a Supabase error is a plain `Object`, so
+  `e instanceof Error` is false.
+- Fixed with `errorMessage()` at all 41 sites. Third run: **4/4**.
+- Regression, on the fixed code: the new spec plus `new-arrivals`, `mp7-landing-no-fabrication`,
+  `mp7-product-detail-real-data`, `mp7-trends-real-or-empty`, `vendor-analytics` and
+  `vendor-my-store` (all read-only). **28/28 passed** (2.2 min).
+- `tsc -p tsconfig.app.json` 0 errors; the injected probe fires 1.
+- eslint: 0 errors, and 4 pre-existing hook-dependency warnings on lines not touched.
+- `vite build` passes, and the bundle contains the load-test password 0 times.
 
 ### 2026-09-23 — Master Prompt 12, Part E + closed RFQs: cap races (9/10 rounds over → 0/20), quote-on-open-RFQ (2/6 → 6/6)
 

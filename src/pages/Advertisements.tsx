@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
@@ -803,7 +804,7 @@ function PaymentModal({
       await onPaid();
       onClose();
     } catch (e) {
-      toast.error("Payment failed", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Payment failed", { description: errorMessage(e) });
     } finally {
       setPaying(false);
     }
@@ -994,7 +995,7 @@ function CostSummary({
       }
     } catch (e) {
       if (e instanceof Error && e.message === "dismissed") toast.info("Payment cancelled");
-      else toast.error("Checkout failed", { description: e instanceof Error ? e.message : String(e) });
+      else toast.error("Checkout failed", { description: errorMessage(e) });
     } finally {
       setBusy(false);
     }
@@ -1390,10 +1391,10 @@ const Advertisements = () => {
   // raise, so a refusal actually lands in the catch below — including the
   // deliberate refusal to let a vendor lift an admin's pause.
   const toggleAd = async (id: string, status: "active" | "paused") => {
-    try { await setCampaignRunning(id, status === "active"); refreshAds(); } catch (e) { toast.error("Update failed", { description: e instanceof Error ? e.message : String(e) }); }
+    try { await setCampaignRunning(id, status === "active"); refreshAds(); } catch (e) { toast.error("Update failed", { description: errorMessage(e) }); }
   };
   const removeAd = async (id: string) => {
-    try { await deleteAd(id); refreshAds(); toast.success("Campaign removed"); } catch (e) { toast.error("Delete failed", { description: e instanceof Error ? e.message : String(e) }); }
+    try { await deleteAd(id); refreshAds(); toast.success("Campaign removed"); } catch (e) { toast.error("Delete failed", { description: errorMessage(e) }); }
   };
   const [selectedAdTypes, setSelectedAdTypes] = useState<string[]>(["openListing"]);
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);

@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -57,7 +58,7 @@ const RoleSelection = () => {
     } catch (e) {
       setSaving(false);
       toast.error("Couldn't save your role", {
-        description: e instanceof Error ? e.message : String(e),
+        description: errorMessage(e),
       });
       return;
     }

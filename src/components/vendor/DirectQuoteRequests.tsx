@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -46,7 +47,7 @@ export default function DirectQuoteRequests() {
       setOpenId(null);
       setForm({ price: "", moq: "", leadTime: "", comment: "" });
     } catch (e) {
-      toast.error("Couldn't send quote", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't send quote", { description: errorMessage(e) });
     } finally {
       setBusy(false);
     }

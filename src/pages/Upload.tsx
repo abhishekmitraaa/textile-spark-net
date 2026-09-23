@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/lib/supabase";
@@ -468,7 +469,7 @@ const Upload = () => {
       });
       navigate("/products");
     } catch (err) {
-      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Upload failed", { description: errorMessage(err) });
     } finally {
       setSubmitting(false);
     }

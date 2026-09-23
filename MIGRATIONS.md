@@ -53,6 +53,8 @@ runs **both ways**.
 | `20260923074903_targeted_quotes_exempt_from_lead_cap.sql` | `rfq_targets_vendor()` plus the targeted early return in `enforce_lead_cap()`. Self-asserts its grants and invoker rights |
 | `20260923081708_quotes_only_on_rfqs_open_to_the_vendor.sql` | Definer trigger `trg_quotes_accepting_rfq`: a quote needs an active RFQ, addressed to nobody or to that vendor. Self-asserts EXECUTE revoked and that it fires before `trg_quotes_lead_cap` |
 | `20260923082118_plan_cap_triggers_serialize_per_vendor.sql` | Per-vendor `pg_advisory_xact_lock` in `enforce_product_cap()` and `enforce_lead_cap()`. Self-asserts that each function changed by exactly the lock lines (md5 before = md5 after minus the block) |
+| `20260923093304_embedding_health_reads_recent_cron_runs_only.sql` | `embedding_pipeline_health()` reads `cron.job_run_details` by `runid desc limit`, not a full scan (64 s under load → ~24 ms). Self-asserts the exact `worker_last_run` equals the old full-scan answer |
+| `20260923094728_embedding_health_missing_excludes_queued_rows.sql` | Its "missing embedding" counts skip rows whose job is still queued: no WARN (and admin notification) for a request posted a minute ago. Self-proves it with a rolled-back RFQ, queued vs unqueued |
 
 ---
 

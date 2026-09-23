@@ -76,6 +76,11 @@ Rules decided before or outside of Claude Code sessions.
   `vite.config.ts`'s `__DEMO_PASSWORDS__`, which is `null` in every build. A new fixture
   seed takes its password from `current_setting(...)`, never a literal. After any change
   near auth, build and `grep -rlF` each value over `dist/`: the answer must be 0.
+- **Show a caught error with `errorMessage(e)` (`src/lib/errorMessage.ts`), never with
+  `e instanceof Error ? e.message : String(e)`** (Master Prompt 12, 2026-09-23). Supabase
+  throws plain objects, not `Error`s, so that pattern rendered "[object Object]" in 41
+  toasts: a vendor refused by the lead cap or by a closed request was never told why.
+  Found by `tests/mp12-sourcing-loop.spec.ts` F4.
 - **A reputation number has one writer, and no fallback** (Master Prompt 8, 2026-09-11;
   every role since Master Prompt 9, 2026-09-22). `vendor_profiles.rating_avg` /
   `reviews_count` are written only by `sync_vendor_rating()` on `reviews`. For EVERY role —
@@ -649,6 +654,18 @@ undocumented. Deep technical rationale for each lives in
   in a VOLATILE function takes a fresh snapshot under READ COMMITTED (PostgREST's default),
   so the waiter's count sees the row the lock holder just committed. It would not work
   under REPEATABLE READ. Test a race with separate connections, never with one session.
+- **PostgREST pool exhaustion does not show up as an error. It shows up as a 10–15 s stall
+  with HTTP 200.** When PostgREST cannot get a pool connection within 10 s it returns
+  `504 PGRST003`, and Supabase's gateway retries it, so the client sees a slow success. In
+  the 2026-09-23 load test the client error rate was 0% while `postgrest_logs` held the
+  PGRST003s. Look for pool trouble there, and in latency tails, never in client error rates.
+  PostgREST's pool here tops out at ~11 connections, whatever the load.
+- **`cron.job_run_details` is never pruned, has no `jobid` index, and is 63% of the database**
+  (120 MB of 190 MB on 2026-09-23, +~3,000 rows/day). It belongs to `supabase_admin`:
+  `postgres` can DELETE from it but cannot index it. Read it only by walking `runid`
+  backwards with a LIMIT. A `max()` or `where jobid =` over it is a full scan, which is what
+  made `embedding_pipeline_health()` take 64 s under load. Pruning it is an open retention
+  decision. Note that `embedding-health-alarm` surfaces failures as rows in this table.
 - **GoTrue returns HTTP 500 "Database error querying schema" for any user row with NULL in
   `confirmation_token`, `recovery_token`, `email_change_token_new` or `email_change`.** It
   fails before the password is checked, so a user seeded by raw SQL looks perfect in

@@ -564,7 +564,19 @@ acceptable because it feeds **only** RFQ↔vendor matching; a vendor's own listi
 appear in buyer search immediately, via `products.embedding` on a different path.
 
 #### Observability
-- `embedding_pipeline_health()` — point-in-time verdict, service_role only.
+- `embedding_pipeline_health()` — point-in-time verdict, service_role only. **Must stay cheap:
+  both health crons call it.** Until 2026-09-23 its `worker_last_run` / `worker_last_failure`
+  columns did `max(start_time) from cron.job_run_details … where jobname='embedding-worker'`,
+  a full parallel seq scan of pg_cron's whole run history. That table is never pruned and has
+  no `jobid` index; it is owned by `supabase_admin`, so `postgres` cannot add one.
+  - The cost: 120 MB, 50,692 rows, 63% of the database. 1.26 s per read on an idle system,
+    ~3 s per health call on average, and **64 s** once, during the 50-VU load test, when
+    PostgREST's pool ran dry (Master Prompt 12 Part F).
+  - The fix (migration `20260923093304`): the newest worker run is found by walking `runid`
+    backwards (exact, 6 buffers). The newest failure is searched only among the latest 5,000
+    cron runs (~1.4 days). The whole call now takes ~24 ms.
+  - Rule for anything new that reads `cron.job_run_details`: `order by runid desc limit n`,
+    never `max()` or `where jobid =` over the whole table.
 - `embedding-health-log` cron (*/10) → `embedding_pipeline_health_log`, 90-day history, and
   notifies admins **on transition** into a bad state only.
 - `embedding-health-alarm` cron (5-55/10) → RAISEs when unhealthy, so it surfaces in
@@ -1143,6 +1155,59 @@ configurable in Lovable project settings.
 Built, but in a **separate repo (`Cosora-Admin`)** against the same Supabase project.
 
 ---
+
+## Load testing — k6 against the live project (Master Prompt 12 Part F, 2026-09-23)
+
+`scripts/load/`: `mint-tokens.mjs` → `marketplace.k6.js` → `analyze.mjs`. There is no
+staging project (branching needs a paid plan), so it runs against production, inside the
+synthetic population, with these rules. Each one exists because breaking it would touch a
+real user, a real bill or the moderation system:
+
+- **Sign in first, outside k6.** GoTrue rate-limits password grants per IP: 151 sign-ins in 4
+  minutes from one address drew two 429s, each cleared by a 60 s wait. Fifty VUs signing in at
+  t=0 would measure that limit, not the marketplace. Tokens (1 h) go to a file outside the
+  repo.
+- **Same calls as the app.** Every select is copied from `src/lib/queries/*`: New Arrivals,
+  product detail, search + hydration, My Quotes, the vendor dashboard's plan / pool / quoted-ids
+  / vector ranking / direct inbox, quote submit, RFQ post, chat history + send.
+- **Writes stay synthetic.**
+  - View counters only on `[LOADTEST]` listings, and no `engagement_events`, so no real
+    vendor's analytics move.
+  - Quotes only on `[LOADTEST]` RFQs. Chat only in the buyer's existing loadtest↔loadtest
+    thread (0 of the 220 involve a real user).
+  - Letters-only chat text: digits match the phone flag, `@` the email flag, and a flag locks
+    the thread.
+  - Searches only for terms with a cached embedding (no OpenAI call). New RFQs at 3% of buyer
+    iterations, since each one is an embedding job.
+- **Egress is metered** (5 GB/month, org-wide on the free plan). The New Arrivals query ships
+  the whole live catalogue: 377 rows, 21 KB gzipped (149 KB raw). The vendor lead pool ships
+  every open RFQ: 253 rows, 12.5 KB gzipped. One realistic 10→50-VU step run received
+  36.8 MB.
+- **Cap refusals are answers, not failures.** Each `P0001` lead-cap refusal is counted
+  separately, and its "already quoted N" is checked against the vendor's dashboard number
+  (the findings §2 regression).
+- **Read the server side too.** The client error rate hides pool exhaustion (see claude.md:
+  the gateway retries `504 PGRST003`). Sample `pg_stat_activity` during the run, then read
+  `postgrest_logs` / `postgres_logs` / `edge_logs` for the window with `query_logs`, and
+  split k6's own timings (`http_req_connecting` / `tls_handshaking` / `waiting`) to place a
+  stall.
+
+**Measured capacity on the current free-tier project (2026-09-23, from India to the project's
+region, ~300 ms RTT floor).**
+- **Realistic users (1–3 s think time):** throughput is linear to 50 VUs, at 7→15→22→30→38
+  req/s with p95 0.65–1.1 s and 0 failures. That was after `20260923093304`; before it, the
+  health check's 64 s scan emptied PostgREST's pool at 50 VUs.
+- **No think time:** 66 req/s at 25 VUs, ~128 req/s steady at 50 VUs, p95 ~0.6 s. A burst of 50
+  simultaneous requests queues up to 7 s behind PostgREST's pool of ~10 connections, with no
+  PGRST003 at that size.
+- **Connections:** peak 29 of 60 in total; PostgREST never exceeded ~11, whatever the load.
+  The 60 ceiling (findings §1) is therefore not what limits 50 concurrent users. PostgREST's
+  pool size and payload size are, in that order. Queries are cheap in the database (New Arrivals
+  9.7 ms, search 20 ms, vendor plan 6.5 ms).
+- **Payload scales with the catalogue, not the page.** New Arrivals sends every live product
+  and the vendor lead pool every open RFQ. At 10k products a New Arrivals visit would be
+  ~560 KB gzipped, and 5 GB of egress would cover ~9,000 visits a month. Pagination is the fix,
+  and it is a UX decision, not done here.
 
 ## Testing Patterns
 

@@ -257,7 +257,9 @@ rather than a supplier directory.
   directly to the vendor** is never counted and never refused by the cap, even at 10/10
   (Andy's decision, fixed 2026-09-23). **A closed request accepts no quotes**, new or
   revised, and a request addressed to one vendor cannot be quoted by another (2026-09-23).
-  The vendor sees "This request is closed and is no longer accepting quotes." Caps now hold
+  The vendor sees "This request is closed and is no longer accepting quotes." (Until
+  2026-09-23 every such refusal, the lead-cap one included, reached the vendor as
+  "[object Object]"; error toasts across both sides now show the server's reason.) Caps now hold
   exactly under simultaneous submissions: before 2026-09-23, several quotes or listings sent
   at once could all take the last free slot.
 - **Advertisements** — paid campaigns with category and geographic targeting (including Pan

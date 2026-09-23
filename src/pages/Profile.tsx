@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -149,7 +150,7 @@ function EditProfileModal({
       setForm((f) => ({ ...f, avatar: url }));
       toast.success("Photo uploaded — press Save Changes to apply");
     } catch (err) {
-      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Upload failed", { description: errorMessage(err) });
     } finally {
       setUploadingPhoto(false);
     }
@@ -189,7 +190,7 @@ function EditProfileModal({
       onOpenChange(false);
       toast.success("Profile updated");
     } catch (e) {
-      toast.error("Couldn't save profile", { description: e instanceof Error ? e.message : String(e) });
+      toast.error("Couldn't save profile", { description: errorMessage(e) });
     } finally {
       setSaving(false);
     }

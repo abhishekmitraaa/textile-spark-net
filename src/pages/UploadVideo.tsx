@@ -1,3 +1,4 @@
+import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -490,7 +491,7 @@ const UploadVideo = () => {
         description: "It'll appear in the buyer feed after review (24–48 hours).",
       });
     } catch (err) {
-      toast.error("Upload failed", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Upload failed", { description: errorMessage(err) });
     } finally {
       setIsSubmitting(false);
     }
@@ -502,7 +503,7 @@ const UploadVideo = () => {
       qc.invalidateQueries({ queryKey: ["product_videos"] });
       toast.success("Video closeup removed");
     } catch (err) {
-      toast.error("Couldn't remove", { description: err instanceof Error ? err.message : String(err) });
+      toast.error("Couldn't remove", { description: errorMessage(err) });
     }
   };
 
