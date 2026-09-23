@@ -502,10 +502,21 @@ undocumented. Deep technical rationale for each lives in
   mistake on the buyer-facing path cannot expose the drainer.
 - **The lead cap applies to the open marketplace only (Andy, 2026-09-22).** A lead is a
   distinct open-marketplace RFQ (`rfqs.vendor_id is null`) the vendor quoted in the window.
-  A reply to a request addressed directly to the vendor is never counted and never refused,
-  even at the cap and even after the buyer closed it. The dashboard (`get_vendor_plan()`,
-  the source of truth) and `enforce_lead_cap()` must count the same thing. Mechanism:
-  `technicalimplementation.md` → "Plan caps".
+  A reply to a request addressed directly to the vendor is never counted and never refused
+  by the cap, even at the cap. The dashboard (`get_vendor_plan()`, the source of truth) and
+  `enforce_lead_cap()` must count the same thing. Mechanism: `technicalimplementation.md` →
+  "Plan caps".
+- **A quote needs an RFQ that is open to that vendor (Mitra, 2026-09-23: "closed RFQs should
+  not receive any quotes").** The RFQ must be `active`, and a request addressed to a vendor
+  can be quoted only by that vendor. This applies to every writer, and it covers re-submitting
+  an existing quote after the buyer closed the request. Enforced by `trg_quotes_accepting_rfq`
+  (migration `20260923081708`), which fires before the lead cap so a closed request reports
+  "closed", not a cap hit. Accepting or rejecting a quote is unaffected.
+- **A plan cap must hold under concurrent requests, not just sequential ones.**
+  `enforce_product_cap()` and `enforce_lead_cap()` take
+  `pg_advisory_xact_lock(hashtext(vendor_id::text))` before they count (`20260923082118`).
+  Without it, 10 simultaneous HTTP inserts at one free slot got 2–5 through, in 9 of 10
+  rounds. Any new count-then-decide trigger takes the same lock.
 - **Any signed-in user may read any ACTIVE open-marketplace RFQ (Andy, 2026-09-22).**
   `rfqs_select` works like an open sourcing board on purpose. It does not check that the
   reader is a vendor. Settled; do not "fix" it.
@@ -623,12 +634,21 @@ undocumented. Deep technical rationale for each lives in
   `if current_user <> 'authenticated' then return new`. Inside a definer function
   `current_user` is the owner, so making the trigger definer silently disables the cap for
   everyone. Left as invoker, whatever it reads is filtered by the caller's RLS: `rfqs_select`
-  hides a CLOSED RFQ even from the vendor who quoted it, and `quotes_insert` does not stop
-  quotes on closed RFQs. An in-trigger count then under-counts (a cap bypass), and an
-  in-trigger lookup reads NULL (a wrong refusal). `lead_cap_used()` and
+  hides a CLOSED RFQ even from the vendor who quoted it. An in-trigger count then
+  under-counts past quotes on RFQs closed since (a cap bypass), and an in-trigger lookup reads
+  NULL. `lead_cap_used()` and
   `rfq_targets_vendor()` are the pattern: definer, pinned `search_path`, raise `42501` unless
   asked about the caller (with `is distinct from`), EXECUTE to authenticated only. Return the
   narrowest answer the trigger needs, never a column RLS would hide.
+- **A count-then-decide trigger races under real concurrency, and a single SQL session cannot
+  show it.** Each concurrent transaction counts before the others commit, so all of them see
+  the same free slot. The 2026-09-16 probe reported "no race" because its "concurrent"
+  inserts ran one after another in one session. Real parallel HTTP requests
+  (`scripts/cap-race-check.mjs`) broke both caps in 9 of 10 rounds. The fix is a
+  per-key `pg_advisory_xact_lock` before the count. It works because each plpgsql statement
+  in a VOLATILE function takes a fresh snapshot under READ COMMITTED (PostgREST's default),
+  so the waiter's count sees the row the lock holder just committed. It would not work
+  under REPEATABLE READ. Test a race with separate connections, never with one session.
 - **GoTrue returns HTTP 500 "Database error querying schema" for any user row with NULL in
   `confirmation_token`, `recovery_token`, `email_change_token_new` or `email_change`.** It
   fails before the password is checked, so a user seeded by raw SQL looks perfect in

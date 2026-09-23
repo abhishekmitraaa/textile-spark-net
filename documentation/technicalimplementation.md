@@ -164,7 +164,7 @@ decide which state transitions are legal.** Moderation RPCs are `SECURITY DEFINE
 carry no `EXECUTE` grant to `PUBLIC`. See Known Constraints below for the invariants that
 must not be undone.
 
-### Plan caps — the lead cap counts what the dashboard shows (2026-09-16, 2026-09-23)
+### Plan caps — the lead cap counts what the dashboard shows, and holds under concurrency (2026-09-16, 2026-09-23)
 
 `get_vendor_plan()` is the source of truth for what a vendor is shown; the four BEFORE
 triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
@@ -181,12 +181,13 @@ triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
   from a migration or service_role, and inside a definer function `current_user` is the
   owner, so the cap would silently switch off. But running as the vendor, anything it reads
   from `rfqs` is filtered by `rfqs_select`, which shows a targeted RFQ to its vendor only
-  while `status = 'active'`. And `quotes_insert` does not check RFQ status. So an in-trigger
-  join or lookup gets **closed** RFQs wrong in both directions:
-  - a count would drop a quoted-then-closed RFQ, handing the slot back (a cap bypass;
-    shown 7 vs 8 in a purpose-built rolled-back scenario);
-  - a target lookup would read NULL and refuse a targeted quote at the cap. Shown over real
-    HTTP: the vendor's own read of the closed RFQ returns 0 rows.
+  while `status = 'active'`. So an in-trigger join or lookup gets **closed** RFQs wrong:
+  - a count would drop quotes on RFQs closed since, handing the slot back (a cap bypass;
+    shown 7 vs 8 in a purpose-built rolled-back scenario). This still matters after the
+    closed-RFQ rule below, because the count covers quotes made before the RFQ closed;
+  - a target lookup would read NULL (the vendor's own read of a closed RFQ returns 0 rows,
+    shown over real HTTP). The closed-RFQ rule now refuses that quote before the lead cap
+    runs, so this helper is defence in depth.
 - **The helpers.** `lead_cap_used(p_vendor, p_since)` (migration `20260916181213`) and
   `rfq_targets_vendor(p_rfq, p_vendor)` (`20260923074903`). Both are
   `STABLE SECURITY DEFINER`, `search_path = public`, and raise `42501` unless `p_vendor` is
@@ -195,10 +196,46 @@ triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
   anon is revoked by name, not just PUBLIC. `rfq_targets_vendor` deliberately returns a
   boolean for the caller, not the RFQ's target vendor id: a definer function returning
   `rfqs.vendor_id` for any id would reveal to any signed-in user what `rfqs_select` hides.
-- **Re-runnable live checks:** `scripts/lead-cap-repro.mjs` (count agreement) and
-  `scripts/targeted-lead-cap-check.mjs` (targeted exemption, including the closed case).
-  Both sign in over real HTTP as `loadtest-*` accounts and write only `[LOADTEST]` rows on
-  `[LOADTEST]` RFQs.
+- **A quote needs an RFQ open to that vendor** (`enforce_quote_rfq_open()`, trigger
+  `trg_quotes_accepting_rfq`, BEFORE INSERT OR UPDATE OF `rfq_id, vendor_id`, migration
+  `20260923081708`). The rule: `rfqs.status = 'active'`, and a request addressed to a vendor
+  may only be quoted by that vendor.
+  - It applies to every role. It is SECURITY DEFINER because it must read the RFQ whatever
+    its visibility, and it has no `current_user` test for definer rights to break. EXECUTE is
+    revoked from every client role; a trigger function fires without it.
+  - BEFORE INSERT fires before ON CONFLICT is resolved, so `submitQuote()`'s upsert cannot
+    revise a quote on a closed request. An UPDATE that keeps both ids (the buyer's accept or
+    reject, the upsert's DO UPDATE) returns at once.
+  - Name order (`trg_quotes_accepting_rfq` < `trg_quotes_lead_cap`) makes it fire first, so
+    a closed request reports `P0001 This request is closed…`, not a cap hit. A request
+    addressed to another vendor gets `42501`.
+- **Concurrency: one cap check per vendor at a time** (migration `20260923082118`).
+  `enforce_product_cap()` (after its "takes a slot" early return) and `enforce_lead_cap()`
+  (after its INSERT-only early return) take `pg_advisory_xact_lock(hashtext(vendor_id::text))`
+  before counting.
+  - Without it, real concurrent HTTP inserts at one free slot got through 2–5 at a time:
+    product cap over in 5 of 5 rounds (peak 6/2), lead cap in 4 of 5 (11/10). With it,
+    exactly 1 of 10 and 1 of 20 in all 20 rounds, at the same latency (~0.3–1.0 s per batch of
+    10–20).
+  - Correct only because each plpgsql statement in a VOLATILE function takes a fresh snapshot
+    under READ COMMITTED, which is PostgREST's default. The waiter's count therefore sees the
+    row the holder committed.
+  - The key is per vendor, so vendors never wait on each other. The two triggers share the
+    key, so one vendor's product and quote writes queue behind each other for milliseconds.
+    Nothing else in the database takes advisory locks.
+  - `enforce_ad_location_scope()` and `enforce_catalogue_plan()` take no lock: each checks
+    only the row being written and counts nothing, so there is no race to close. The
+    migration's final block proves each function changed by exactly the lock lines (md5 of
+    the new definition minus the block = md5 before).
+- **Re-runnable live checks,** all real HTTP as `loadtest-*` accounts, writing only
+  `[LOADTEST]` rows on `[LOADTEST]` RFQs:
+  - `scripts/lead-cap-repro.mjs`: count agreement.
+  - `scripts/targeted-lead-cap-check.mjs`: the targeted exemption; its `--closed` step now
+    expects "closed".
+  - `scripts/quote-rfq-open-check.mjs`: closed, other-vendor and post-close revision, 6
+    cases.
+  - `scripts/cap-race-check.mjs`: N concurrent inserts at one free slot, for products or
+    quotes. It cleans up after each round.
 - **Lapsed subscriptions** are also marked lapsed in the raw columns by the
   `subscription-expiry-sweep` cron job (daily 03:29 UTC, `20260916180244`). The triggers
   never relied on it: each re-checks `status = 'active' and current_period_end > now()`.

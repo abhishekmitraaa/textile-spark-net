@@ -86,8 +86,10 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `ad-destination-check.mjs` | The ad-click campaign-goal branch (`adDestination`/`isProfileGoalAd`), 17 cases. **The one script here that does not touch the database** — it transpiles the dependency-free `src/lib/adDestination.ts` with esbuild and calls it directly, because `active_ads` currently returns zero rows so no UI test can reach this branch |
 | `image-search-check.mjs` | Photo search end to end against the live function, 18 assertions: the `no_image` guard; a real listing photo (`scripts/fixtures/polo-tshirt-listing.jpg`) → a query meeting the function's own contract (3–6 lowercase words, no punctuation); that query through the app's own `fetchSearch` (esbuild-bundled out of `src/lib/queries/search.ts`, not reimplemented) → an array, **empty counting as a pass**; a generated solid-colour square → `no_match`, not a fabricated garment; and the per-IP limit tripping to `rate_limited` in a loop. **Spends this machine's real photo-search budget** (the gateway ignores a spoofed `x-forwarded-for`): self-cleaning only with `SUPABASE_SERVICE_ROLE_KEY`, otherwise it prints the cleanup SQL. ~13 vision calls per run |
 | `lead-cap-repro.mjs` | Lead-cap count agreement over a real HTTP login: the dashboard's `leads_used` vs what `enforce_lead_cap()` refuses on. Writes one `[LOADTEST]` quote when accepted. `LOADTEST_PASSWORD` must be set |
-| `targeted-lead-cap-check.mjs` | A targeted-request quote is never cap-gated; the open marketplace still is. Real HTTP as `loadtest-buyer-1` and `loadtest-vendor-3`: tops the vendor up to the cap on `[LOADTEST]` RFQs only, the buyer addresses a request to the vendor, then targeted vs open quotes. `--closed` adds a targeted RFQ the buyer closes, showing the vendor's own read returns 0 rows while the quote is still accepted. `--rfq=<id>` reuses a request |
+| `targeted-lead-cap-check.mjs` | A targeted-request quote is never cap-gated; the open marketplace still is. Real HTTP as `loadtest-buyer-1` and `loadtest-vendor-3`: tops the vendor up to the cap on `[LOADTEST]` RFQs only, the buyer addresses a request to the vendor, then targeted vs open quotes. `--closed` adds a targeted RFQ the buyer closes: the vendor's own read of it returns 0 rows, and since 2026-09-23 the quote is refused as closed. `--rfq=<id>` reuses a request |
 | `loadtest-login-check.mjs` | Real password-grant logins for named `loadtest-*` accounts. Prints GoTrue's HTTP status, then does one authenticated own-profile read so a 200 proves a usable JWT |
+| `quote-rfq-open-check.mjs` | A quote needs an RFQ open to that vendor, 6 cases through the app's own upsert. Accepted: an active open RFQ, and an active request addressed to the vendor. Refused: a closed open RFQ, a closed addressed request, a request addressed to another vendor (`--other`), and re-submitting after the buyer closed. Prints each result against its expectation. Exit 1 on any mismatch |
+| `cap-race-check.mjs` | Real concurrent HTTP inserts at a plan cap with one free slot (`--kind=product` or `--kind=quote`, `--n` at once, `--rounds`). Tops the vendor up to cap−1 with `[LOADTEST]` fillers, warms N connections, fires N inserts together, reports how many were accepted, then deletes them so the next round starts at cap−1. Exit 1 if any round accepted more than one. **The only instrument here that can show a race:** a single SQL session runs "concurrent" statements one after another |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
 Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
@@ -123,6 +125,36 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-23 — Master Prompt 12, Part E + closed RFQs: cap races (9/10 rounds over → 0/20), quote-on-open-RFQ (2/6 → 6/6)
+
+**Closed RFQs** (`node scripts/quote-rfq-open-check.mjs`, loadtest-vendor-56 quoting, loadtest-vendor-57 as the
+other vendor, loadtest-buyer-1). **Before** migration `20260923081708`, 2/6 as expected: a closed open RFQ, a closed
+addressed request, a request addressed to vendor-57, and re-submitting after close were all **ACCEPTED**. **After**,
+6/6: those four were refused, the first three with `P0001 This request is closed and is no longer accepting quotes.`
+and the other-vendor case with `42501 This request was sent to a different vendor…`. The two active controls were
+still accepted. A rolled-back SQL probe as the real users: the buyer accepting a quote on a closed RFQ → 1 row;
+the vendor moving an existing quote onto a closed RFQ → refused P0001; the vendor editing their quote on an active
+RFQ → 1 row. `node scripts/targeted-lead-cap-check.mjs --closed` (vendor-3 at 10/10): targeted accepted, open
+refused, closed targeted refused **as closed** (the new trigger fires before the cap).
+
+**Cap races** (`node scripts/cap-race-check.mjs`; 10 simultaneous HTTP inserts at one free slot, 5 rounds; each
+round's accepted rows deleted afterwards).
+
+| | Product cap, loadtest-vendor-36 (free, 1/2) | Lead cap, loadtest-vendor-61 (free, 9/10) |
+|---|---|---|
+| Before `20260923082118` | accepted 2, 3, 2, 2, 5: **over the cap 5/5** (peak 6/2) | accepted 2, 2, 1, 2, 2: **over the cap 4/5** (11/10) |
+| After, n = 10 | 1, 1, 1, 1, 1: 0/5 over | 1, 1, 1, 1, 1: 0/5 over |
+| After, n = 20 | 1, 1, 1, 1, 1: 0/5 over | 1, 1, 1, 1, 1: 0/5 over |
+
+Batch wall time: 312–974 ms before, 333–1029 ms after, so no measurable cost. The vendor-61 top-up from 1 to 9 leads
+used 8 permanent `[LOADTEST]` quotes. Both vendors were left at cap−1 (1/2, 9/10).
+
+**Migration self-checks** (they abort the transaction if false): EXECUTE on `enforce_quote_rfq_open` is revoked from
+anon and authenticated; the triggers on `quotes` are exactly `trg_quotes_accepting_rfq`, `trg_quotes_lead_cap` in
+that order; `md5(new definition − lock block) = md5(old definition)` for both cap functions; both are still SECURITY
+INVOKER. Security advisors: identical to earlier the same day (124 = 124, none added or removed). Performance
+advisors: nothing names the changed functions or the new trigger.
 
 ### 2026-09-23 — Master Prompt 12, Parts A–D: targeted quotes vs the cap (before 1 refused → after 3/3), load-test logins (4 × 500 → 4 × 200), migrations vs GitHub
 

@@ -13,7 +13,6 @@ not the sensitive value itself. This file may end up in version control history.
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
 | 2026-09-23 | The 370 load-test accounts can now sign in to production, all with one shared password | Medium | `auth.users` rows `loadtest-%@cosora.test` (250 buyers, 120 vendors) | Open, deliberate and temporary. Until 2026-09-23 every login returned HTTP 500 (NULL GoTrue token columns), so the population was inert. It was repaired on purpose so the Master Prompt 12 load harness can drive real sessions. Consequence: anyone holding the shared password can act as any of them against **real** users (quote real buyers' open RFQs, message them, submit listings and ads, which still go through moderation). The password is in neither repo nor either repo's git history (checked with `git grep` and `git log -S`), but it circulates in prompt text. Closes when the Part G cleanup runs; rotate the password first if testing will run long. Same population as the catalogue flag below |
-| 2026-09-23 | `quotes_insert` does not check the RFQ's status or who it is addressed to | Low (suspected for the cross-vendor case) | `quotes_insert` policy on `public.quotes`: `vendor_id = auth.uid() AND account_is_active(auth.uid())` | Open, logged only. A vendor can quote an RFQ the buyer has **closed**, proven over real HTTP on 2026-09-23 (Master Prompt 12, Part A). From the policy text, a vendor can also quote an RFQ addressed to a **different** vendor if they know its id. Not proven; `rfqs_select` hides those ids from them, which is what keeps it Low. Whether a closed RFQ should accept quotes is a product decision, so nothing was changed. The lead-cap trigger is correct either way (see `technicalimplementation.md`, "Plan caps") |
 | 2026-09-22 | `BUNNY_API_KEY` is rejected by Bunny Stream (401 "Authentication has been denied"), so reconciliation cannot list the library and a vendor delete of a Bunny video cannot remove the paid asset | Low (misconfiguration; cost leak, not access) | Edge-function secret `BUNNY_API_KEY` used by `bunny-reconcile`, `bunny-delete-video`, `bunny-upload-url` | Open. Found during admin-schema separation 5b: as super_admin `bunny-reconcile` passed authz and got 401 from `video.bunnycdn.com`. Most likely a rotated or wrong key. Today 0 `product_videos` rows use the bunny provider, so nothing is leaking yet. If uploads switch to Bunny while the key is bad, each delete fails with `bunny_delete_failed` (the function refuses to report success). Fix: set a valid library API key and re-run `bunny-reconcile`. The key value is not recorded here |
 | 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Open — cleanup belongs to Master Prompt 11 ("Part 3"), on Mitra's decision (2026-09-22). Their review numbers are already corrected |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
@@ -39,6 +38,8 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-23 | **Plan caps could be exceeded by sending requests at the same time**: a free vendor at 1/2 listings ended at 6/2, and one at 9/10 leads at 11/10 | Medium (paid-entitlement bypass; needs no privilege, only parallel requests) | `enforce_product_cap()`, `enforce_lead_cap()`: count-then-decide with no lock | Fixed 2026-09-23 (Master Prompt 12, Part E), migration `20260923082118_plan_cap_triggers_serialize_per_vendor`: a per-vendor `pg_advisory_xact_lock` before each count. **Proven both ways over real HTTP** with `scripts/cap-race-check.mjs` (10 simultaneous inserts at one free slot, 5 rounds per cap). Before: the product cap was over in 5/5 rounds (2–5 accepted), the lead cap in 4/5 (2 accepted). After: exactly 1 accepted in all 20 rounds at 10 and at 20 concurrency. The 2026-09-16 findings had reported this as a PASS because their probe ran its inserts sequentially in one SQL session. Any vendor with a script, or a double-tapped submit button, could exceed a free plan's listing or lead limit. Every over-cap row the probes created was deleted by the probe itself |
+| 2026-09-23 | `quotes_insert` did not check the RFQ's status or who it was addressed to: quotes landed on closed requests, and on requests addressed to a different vendor | Low | `quotes_insert` policy on `public.quotes` (`vendor_id = auth.uid() AND account_is_active(auth.uid())`); `quotes_update` let a vendor move a quote to another RFQ | Fixed 2026-09-23, migration `20260923081708_quotes_only_on_rfqs_open_to_the_vendor` (Mitra: "closed RFQs should not receive any quotes"). New definer trigger `trg_quotes_accepting_rfq` on INSERT and on UPDATE of `rfq_id`/`vendor_id`, applied to every role. **The cross-vendor case, suspected when logged, was proven before the fix:** loadtest-vendor-56 quoted a request addressed only to loadtest-vendor-57, and it was accepted. `scripts/quote-rfq-open-check.mjs`: before 2/6 as expected, after 6/6. Closed and post-close revision are refused P0001; other-vendor is refused 42501; an active open RFQ and an active addressed-to-me request are accepted. A rolled-back probe: moving a quote onto a closed RFQ is refused, and the buyer can still accept a quote on a closed RFQ |
 | 2026-09-22 | Privileged writers could still set vendor review numbers — 118 of 130 vendor rows were fabricated again five days after the Master Prompt 8 fix | Medium | `enforce_vendor_profile_admin_fields()` (returned early for every role but `authenticated`) | Fixed 2026-09-22 (Master Prompt 9) — migration `20260922200000_vendor_review_aggregates_single_writer`: computed on INSERT and refused on UPDATE for every role unless `sync_vendor_rating()` is writing; all rows recomputed, mismatched 118 → 0 |
 | 2026-09-12 | Paid ad campaigns published to buyers with no review, because the activation guard was BEFORE UPDATE only and the payment path INSERTs | High | `guard_ad_activation()`; `supabase/functions/razorpay-verify-payment/index.ts` (`adRows()` sets `status:"active"`) | Fixed 2026-09-12 (Advertising v3, Phase 1) — guard rebuilt and bound to INSERT; any non-admin insert of `status='active'` is redirected to `pending_review`. Proven live before and after |
 | 2026-09-12 | A vendor could revive their own rejected campaign via rejected → paused → active | High | `guard_ad_activation()` (allowed any `paused` → `active`); `enforce_ads_moderation()` (owner exempt from the status check) | Fixed 2026-09-12 (Advertising v3, Phase 1) — non-admin → `active` now raises 42501; the owner exemption is narrowed to `draft`/`pending_review`/`paused_by_vendor`/`archived`. Proven live before and after |
@@ -56,6 +57,23 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-23 — Plan caps bypassable by concurrent requests — Severity: Medium (fixed the same day)
+- What was found: `enforce_product_cap()` and `enforce_lead_cap()` count the vendor's rows
+  and then decide, with nothing serializing two writes from the same vendor. Concurrent
+  requests all count the same free slot.
+- Where: both trigger functions (they fire on `products` and `quotes`).
+- How it was discovered: Master Prompt 12 Part E asked for an advisory lock as insurance
+  against a race that the 2026-09-16 probe had NOT observed. Before adding it, the race was
+  tested properly: `scripts/cap-race-check.mjs` sent 10 simultaneous HTTP inserts, as separate
+  transactions on separate connections, at a vendor with one free slot. That broke the product
+  cap in 5/5 rounds (up to 5 accepted, 6/2 listings) and the lead cap in 4/5 (11/10). The
+  earlier "PASS" came from inserts run one after another in a single SQL session.
+- Risk / impact if left unaddressed: any vendor could exceed a paid limit (listings, monthly
+  leads) with a trivial script, or by accident with a double-submit.
+- Fix applied: migration `20260923082118`, a per-vendor `pg_advisory_xact_lock` before each
+  count. After: exactly 1 accepted in every one of 20 rounds (10 and 20 concurrent). See the
+  Fixed table and `technicalimplementation.md` → "Plan caps".
 
 ### 2026-09-23 — Load-test accounts made able to sign in; quotes accepted on closed RFQs — Severity: Medium / Low
 - What was found: (1) All 370 `loadtest-*@cosora.test` users had NULL in four GoTrue string
@@ -76,6 +94,10 @@ in the next one.
   product decision (should a closed RFQ accept quotes?). If it should not, add
   `exists (select 1 from rfqs r where r.id = rfq_id and r.status = 'active' and (r.vendor_id
   is null or r.vendor_id = auth.uid()))` to the policy's WITH CHECK.
+- **Update, same day:** (2) decided and fixed. Mitra: "closed RFQs should not receive any
+  quotes". Implemented as a trigger rather than the WITH CHECK above, so the vendor gets a
+  specific message and every role is covered (migration `20260923081708`). The cross-vendor
+  case was proven exploitable before the fix. See the Fixed table.
 
 ### 2026-09-22 — Primary login moved to mobile + OTP with delivery stubbed: the risks to settle before go-live — Severity: Medium (High for option B, design-time)
 - What was found: Mobile number + OTP was restored as the primary sign-in and signup (branch

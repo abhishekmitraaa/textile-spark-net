@@ -254,8 +254,12 @@ rather than a supplier directory.
   RFQs only**: the dashboard's "leads used" and the cap check count exactly the same quotes
   (fixed 2026-09-16; before, the check also counted replies to direct requests, so a vendor
   shown 7/10 was refused as having "already quoted 171"). A quote on a request **addressed
-  directly to the vendor** is never counted and never refused, even at 10/10, including
-  after the buyer has closed that request (Andy's decision, fixed 2026-09-23).
+  directly to the vendor** is never counted and never refused by the cap, even at 10/10
+  (Andy's decision, fixed 2026-09-23). **A closed request accepts no quotes**, new or
+  revised, and a request addressed to one vendor cannot be quoted by another (2026-09-23).
+  The vendor sees "This request is closed and is no longer accepting quotes." Caps now hold
+  exactly under simultaneous submissions: before 2026-09-23, several quotes or listings sent
+  at once could all take the last free slot.
 - **Advertisements** — paid campaigns with category and geographic targeting (including Pan
   India), placement pricing, benchmarks, and TradeSEAL verification purchase.
 - **Competitor ads** — see what competitors in your category and city are advertising and at

@@ -51,6 +51,8 @@ runs **both ways**.
 | `20260916180244_schedule_subscription_expiry_sweep.sql` | Daily 03:29 UTC `cron.schedule` of `expire_subscriptions()`. Committed as `20260916171000_…`, renamed 2026-09-23 |
 | `20260916181213_lead_cap_counts_open_marketplace_only.sql` | `lead_cap_used()` plus `enforce_lead_cap()` counting open-marketplace quotes only. Committed as `20260916181100_…`, renamed 2026-09-23 |
 | `20260923074903_targeted_quotes_exempt_from_lead_cap.sql` | `rfq_targets_vendor()` plus the targeted early return in `enforce_lead_cap()`. Self-asserts its grants and invoker rights |
+| `20260923081708_quotes_only_on_rfqs_open_to_the_vendor.sql` | Definer trigger `trg_quotes_accepting_rfq`: a quote needs an active RFQ, addressed to nobody or to that vendor. Self-asserts EXECUTE revoked and that it fires before `trg_quotes_lead_cap` |
+| `20260923082118_plan_cap_triggers_serialize_per_vendor.sql` | Per-vendor `pg_advisory_xact_lock` in `enforce_product_cap()` and `enforce_lead_cap()`. Self-asserts that each function changed by exactly the lock lines (md5 before = md5 after minus the block) |
 
 ---
 

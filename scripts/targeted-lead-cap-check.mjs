@@ -18,8 +18,11 @@
  *   4. vendor tries one more open RFQ          -> must be REFUSED (cap holds);
  *   5. with --closed: buyer creates a second targeted request and CLOSES it.
  *      The vendor's own RLS-bound read of that RFQ returns 0 rows — which is
- *      why the trigger cannot look the target up itself — and the quote must
- *      still be ACCEPTED.
+ *      why the trigger cannot look the target up itself. Until 20260923081708
+ *      the quote was ACCEPTED here; since then a closed RFQ takes no quotes at
+ *      all ("closed RFQs should not receive any quotes", 2026-09-23), so it
+ *      must be REFUSED as closed — not as a cap hit. The full closed/other-
+ *      vendor matrix is scripts/quote-rfq-open-check.mjs.
  *
  * Every row written is tagged [LOADTEST] and belongs to a loadtest account.
  *
