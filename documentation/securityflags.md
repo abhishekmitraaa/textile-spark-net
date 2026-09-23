@@ -12,10 +12,11 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-23 | Account deletion leaves some traces: avatar files in Storage, a 1-hour access-token window, GoTrue's audit log | Low (privacy; the account itself cannot sign in again) | `anonymize_account()` (migration `20260923115839`), Storage avatar objects, `auth.audit_log_entries` | Open, by design for now. `avatar_url` is nulled, but SQL cannot delete Storage objects, so the image stays reachable by anyone who kept its URL. An access token issued before the sweep lives up to 1 hour: INSERTs, identity-row writes and refresh are refused (verified with a real token), but UPDATEs to the user's own RFQ or review text and reads are not. GoTrue's audit log keeps the old email. Detail and fix shape: `myprofileflags.md` → MPF-7 |
+| 2026-09-23 | **Every user's email and phone number is readable by anyone holding the public anon key, without signing in** | High (PII of all users, unauthenticated) | `profiles_select` on `public.profiles` is `USING (true)` for role `public`, and `anon` and `authenticated` hold SELECT on every column, including `email` and `phone` | Open, proven. Found in Phase 2 (account deletion) recon. Over real HTTP with only the anon key from `.env`, `GET /rest/v1/profiles?select=id&email=not.is.null` with `Prefer: count=exact` returned `0-0/20`, and the same for `phone` returned `0-0/7`. Only ids and counts were requested; no value was read. So an unauthenticated caller can list, filter and read every email and phone. Not fixed here: several legitimate readers depend on `profiles` being readable (`callGate` reads `account_status`; `useCallBuyer` reads a buyer's `phone` for the vendor on an RFQ; chat and review surfaces read names), so the fix needs its own phase. Fix shape: revoke column SELECT on `email` and `phone` from `anon` and `authenticated`, and serve the legitimate cases through narrow SECURITY DEFINER reads (own row; the phone of a buyer whose RFQ the caller is quoting, behind the existing call gate). Tracked with context in `myprofileflags.md` → MPF-3 |
+| 2026-09-23 | A buyer writes their own `calls` rows, and vendor call analytics trusts them: any vendor, any timestamp, any context text, even while suspended | Low (analytics integrity; nothing is exposed) | `calls_insert` and `calls_write` (FOR ALL) on `public.calls`, both only `buyer_id = auth.uid()`; readers `src/lib/queries/callAnalytics.ts` and `vendorAnalytics.ts` | Open, suspected. Read from the live policy and column definitions, not exercised, because that would write rows. `vendor_id` may be any profile (FK → `profiles`). `created_at` defaults to `now()` but a client may set it (no trigger). `product_context` is free text shown in the vendor's top contexts. There is no `account_is_active()` check, so a suspended buyer, told they "cannot place calls", can still log them through the API. `calls_write` also lets a buyer UPDATE or DELETE their rows later. So one script can inflate, backdate or erase any vendor's call count, trend and "N today". Fix shape: insert through a SECURITY DEFINER `log_call(vendor_id, product_context)` that checks `account_is_active()`, requires a vendor target, sets `created_at` and `direction` server-side and rate-limits, then drop client UPDATE/DELETE. Found while wiring the Profile Calls stat (Phase 1) |
 | 2026-09-23 | pg_cron's run history is 63% of the database and grows without limit toward the free plan's 500 MB cap, which makes the project read-only | Medium (availability) | `cron.job_run_details`: 120 MB, 50,692 rows since 2026-09-06, ~3,000 rows/day from two every-minute jobs | Open, a decision for the owner. Pruning deletes run history, and `embedding-health-alarm` deliberately surfaces failures as rows there, so the window must be long enough to notice an alarm. Suggested: a daily pg_cron job `delete from cron.job_run_details where end_time < now() - interval '14 days'` (postgres has DELETE; it cannot VACUUM FULL or index the table, which `supabase_admin` owns). Its full-scan cost was already removed from the health check (migration `20260923093304`) |
-| 2026-09-23 | The 370 load-test accounts can now sign in to production, all with one shared password | Medium | `auth.users` rows `loadtest-%@cosora.test` (250 buyers, 120 vendors) | Open, deliberate and temporary. Until 2026-09-23 every login returned HTTP 500 (NULL GoTrue token columns), so the population was inert. It was repaired on purpose so the Master Prompt 12 load harness can drive real sessions. Consequence: anyone holding the shared password can act as any of them against **real** users (quote real buyers' open RFQs, message them, submit listings and ads, which still go through moderation). The password is in neither repo nor either repo's git history (checked with `git grep` and `git log -S`), but it circulates in prompt text. Closes when the Part G cleanup runs; rotate the password first if testing will run long. Same population as the catalogue flag below. **2026-09-23:** `scripts/loadtest-cleanup.sql` is written and syntax-checked with PostgreSQL's parser, NOT run, and waits for an explicit go |
 | 2026-09-22 | `BUNNY_API_KEY` is rejected by Bunny Stream (401 "Authentication has been denied"), so reconciliation cannot list the library and a vendor delete of a Bunny video cannot remove the paid asset | Low (misconfiguration; cost leak, not access) | Edge-function secret `BUNNY_API_KEY` used by `bunny-reconcile`, `bunny-delete-video`, `bunny-upload-url` | Open. Found during admin-schema separation 5b: as super_admin `bunny-reconcile` passed authz and got 401 from `video.bunnycdn.com`. Most likely a rotated or wrong key. Today 0 `product_videos` rows use the bunny provider, so nothing is leaking yet. If uploads switch to Bunny while the key is bad, each delete fails with `bunny_delete_failed` (the function refuses to report success). Fix: set a valid library API key and re-run `bunny-reconcile`. The key value is not recorded here |
-| 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Open — cleanup belongs to Master Prompt 11 ("Part 3"), on Mitra's decision (2026-09-22). Their review numbers are already corrected. **2026-09-23:** the removal script is written (`scripts/loadtest-cleanup.sql`, Master Prompt 12 Part G), dry-run by default, not run. Counts are now 577 products, 572 RFQs, 1,082 quotes, 221 conversations, 1,321 messages, 24 ads |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
 | 2026-09-22 | Integration option (B), the custom API verifying codes itself with an edge function minting the session, would make that edge function an authentication authority | High (design-time) | Future `otp-verify` edge function (not written); `TODO(otp-integration)` in `src/lib/auth/otp.ts` | Open, design constraint, nothing built. If (B) is chosen, the function must verify the code with the API **server-to-server**, and never trust a client-sent "verified" flag or API response. It must keep the API secret server-side, bind the code to the exact E.164 number, make codes single-use, rate-limit, and create or find the user without letting client metadata set `is_admin` (`handle_new_user()` whitelists `active_role` only; keep it that way). Option (A), Supabase's Send SMS hook, keeps generation and verification inside Supabase and avoids this class entirely |
 | 2026-09-11 | Public vendor profile fills a vendor's empty identity and contact fields with invented values (GSTIN, PAN, owner, phone, email, address) | Medium | `src/pages/VendorProfile.tsx` (`detailRows`, `contactRows`, `contactAddress`, `aboutText`, `bannerSrc`) | Open — logged only, on Mitra's decision (Master Prompt 8) |
@@ -39,6 +40,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-23 | New `faqs` table let anyone, signed out, read `created_by`, which names the admin who wrote each FAQ | Low (would identify super admins, with their contact details via MPF-3's open profiles; no rows carried an admin id yet) | `public.faqs` table-wide SELECT for anon/authenticated, granted by `20260923144549` | Fixed 2026-09-23, same phase: `20260923150408` grants column SELECT without `created_by`. Over HTTP as anon afterwards: the app's query returns 200 with 12 rows, and `created_by` returns 42501. Guarded by `tests/faqs-admin-editable.spec.ts` |
+| 2026-09-23 | The 370 load-test accounts can now sign in to production, all with one shared password | Medium | `auth.users` rows `loadtest-%@cosora.test` (250 buyers, 120 vendors) | Closed 2026-09-23: the accounts no longer exist. `scripts/loadtest-cleanup.sql` was run (dry run, then commit) and deleted all 370 users with their 370 identities and 170 sessions. Afterwards 0 `auth.users` match `@cosora.test` or `loadtest`, so the shared password opens nothing. It was never in either repo or its history. It is still in `.env` as `LOADTEST_PASSWORD` (now unused) and in old prompt text. Until then the flag stood as logged: repaired on purpose for the Master Prompt 12 load harness, the accounts could act towards real users |
+| 2026-09-22 | Load-test fixtures are live in the buyer catalogue: 351 of 377 live products are "[LOADTEST] …" listings, 120 of 130 vendor profiles are "[LOADTEST] Vendor Co N" (40 marked verified), from 370 `loadtest-*@cosora.test` accounts | Medium | `vendor_profiles`, `products`, `profiles`, `auth.users`; created 2026-09-16 17:35–17:39 UTC in the Master Prompt 11 thread (see commit `08a0550`) | Closed 2026-09-23: the population was deleted by `scripts/loadtest-cleanup.sql`: 120 vendor profiles, 577 products, 572 RFQs, 1,082 quotes, 221 conversations, 1,321 messages, 24 ads (and 18 review-log rows), 24 subscriptions, 184 engagement events. Leftover checks are all 0, including every `[LOADTEST]` / `loadtest` text pattern. Real rows are unchanged: 26 live listings, 10 vendor profiles. The 40 unearned verified badges went with their vendors |
 | 2026-09-23 | **Plan caps could be exceeded by sending requests at the same time**: a free vendor at 1/2 listings ended at 6/2, and one at 9/10 leads at 11/10 | Medium (paid-entitlement bypass; needs no privilege, only parallel requests) | `enforce_product_cap()`, `enforce_lead_cap()`: count-then-decide with no lock | Fixed 2026-09-23 (Master Prompt 12, Part E), migration `20260923082118_plan_cap_triggers_serialize_per_vendor`: a per-vendor `pg_advisory_xact_lock` before each count. **Proven both ways over real HTTP** with `scripts/cap-race-check.mjs` (10 simultaneous inserts at one free slot, 5 rounds per cap). Before: the product cap was over in 5/5 rounds (2–5 accepted), the lead cap in 4/5 (2 accepted). After: exactly 1 accepted in all 20 rounds at 10 and at 20 concurrency. The 2026-09-16 findings had reported this as a PASS because their probe ran its inserts sequentially in one SQL session. Any vendor with a script, or a double-tapped submit button, could exceed a free plan's listing or lead limit. Every over-cap row the probes created was deleted by the probe itself |
 | 2026-09-23 | `quotes_insert` did not check the RFQ's status or who it was addressed to: quotes landed on closed requests, and on requests addressed to a different vendor | Low | `quotes_insert` policy on `public.quotes` (`vendor_id = auth.uid() AND account_is_active(auth.uid())`); `quotes_update` let a vendor move a quote to another RFQ | Fixed 2026-09-23, migration `20260923081708_quotes_only_on_rfqs_open_to_the_vendor` (Mitra: "closed RFQs should not receive any quotes"). New definer trigger `trg_quotes_accepting_rfq` on INSERT and on UPDATE of `rfq_id`/`vendor_id`, applied to every role. **The cross-vendor case, suspected when logged, was proven before the fix:** loadtest-vendor-56 quoted a request addressed only to loadtest-vendor-57, and it was accepted. `scripts/quote-rfq-open-check.mjs`: before 2/6 as expected, after 6/6. Closed and post-close revision are refused P0001; other-vendor is refused 42501; an active open RFQ and an active addressed-to-me request are accepted. A rolled-back probe: moving a quote onto a closed RFQ is refused, and the buyer can still accept a quote on a closed RFQ |
 | 2026-09-22 | Privileged writers could still set vendor review numbers — 118 of 130 vendor rows were fabricated again five days after the Master Prompt 8 fix | Medium | `enforce_vendor_profile_admin_fields()` (returned early for every role but `authenticated`) | Fixed 2026-09-22 (Master Prompt 9) — migration `20260922200000_vendor_review_aggregates_single_writer`: computed on INSERT and refused on UPDATE for every role unless `sync_vendor_rating()` is writing; all rows recomputed, mismatched 118 → 0 |
@@ -58,6 +62,53 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-23 — New `faqs` table exposed which admin wrote each FAQ — Severity: Low (fixed the same phase)
+- What was found: Phase 9's migration `20260923144549` granted SELECT on the whole of
+  `public.faqs` to anon and authenticated. The RLS policy limits the rows to active ones, not
+  the columns, so `created_by` was readable without signing in.
+- Where: `public.faqs`, column `created_by` (→ `profiles.id`), set by `admin_faq_add()` to
+  the calling admin.
+- How it was discovered: while documenting Phase 9. A rolled-back probe as anon read
+  `created_by` on all 17 rows. All 17 were seeded rows with a null `created_by`, and the
+  test rows that carried demo-admin's id had already been deleted, so no admin id was ever
+  exposed.
+- Risk / impact if left unaddressed: every FAQ an admin adds would carry their profile id.
+  Profiles are readable signed out (the open High flag on `profiles_select`, MPF-3), so the
+  id resolves to a name, email and phone: a public list of who holds super_admin, which is
+  a ready-made target list for phishing.
+- Fix applied: migration `20260923150408_faqs_hide_created_by_from_clients.sql`.
+  - Clients get column SELECT on every column except `created_by`. It was rehearsed
+    rolled-back against live first. Its self-check asserts the column is unreadable, the
+    content columns are readable, and there is no write grant, for both roles.
+  - After: over HTTP as anon, the app's exact query → 200 with 12 rows, `select=created_by`
+    → 42501, and `select=*` → 42501. No client uses `*`.
+  - The admin still sees creators: `admin_faq_list()` is SECURITY DEFINER, so column grants
+    don't apply to it.
+  - The spec now asserts 42501 on `created_by` for anon and demo-buyer.
+- Lesson for new public tables: table-wide SELECT plus a row policy still exposes every
+  column. Grant columns when a row carries who wrote it.
+
+### 2026-09-23 — Buyer-written `calls` rows feed vendor analytics unchecked — Severity: Low
+- What was found: the only write check on `public.calls` is `buyer_id = auth.uid()`. Every
+  other column is the client's to choose: `vendor_id` (any profile), `created_at`,
+  `product_context` and `direction` within its CHECK list. `calls_write` (FOR ALL) also
+  admits UPDATE and DELETE of the buyer's own rows. Nothing checks `account_is_active()`.
+- Where: `calls_insert`, `calls_write`; read by `callAnalytics.ts` (`useVendorCalls`) and
+  `vendorAnalytics.ts`.
+- How it was discovered: Phase 1 of the profile-stats work read the `calls` policies before
+  counting. The SELECT side is why the Calls stat filters `buyer_id` (see `claude.md`,
+  "A 'my N' count filters on the owner column").
+- Risk / impact if left unaddressed: the vendor's call analytics (count, trend, today, top
+  contexts) can be inflated, backdated or erased by any signed-in buyer with a script. A
+  suspended buyer can keep logging calls. The profile stat can also be inflated, but only
+  for the buyer themselves. Not exercised live, so this is suspected, not proven.
+- Recommended fix: a SECURITY DEFINER `log_call()` as the only insert path (active account,
+  vendor target, server-set `created_at` and `direction`, rate limit); no client
+  UPDATE/DELETE on `calls`.
+- Status: Open
+- Related changelog entry: 2026-09-23 "Profile Calls stat is real". Fuller context, and how to
+  verify a fix: `myprofileflags.md` → MPF-2.
 
 ### 2026-09-23 — Plan caps bypassable by concurrent requests — Severity: Medium (fixed the same day)
 - What was found: `enforce_product_cap()` and `enforce_lead_cap()` count the vendor's rows
@@ -99,6 +150,10 @@ in the next one.
   quotes". Implemented as a trigger rather than the WITH CHECK above, so the vendor gets a
   specific message and every role is covered (migration `20260923081708`). The cross-vendor
   case was proven exploitable before the fix. See the Fixed table.
+- **Update, same day:** (1) closed. `scripts/loadtest-cleanup.sql` was run, dry run then
+  commit, and deleted all 370 accounts with their identities and sessions. The shared
+  password now signs in to nothing. See the Fixed table and the changelog entry "load-test
+  population deleted".
 
 ### 2026-09-22 — Primary login moved to mobile + OTP with delivery stubbed: the risks to settle before go-live — Severity: Medium (High for option B, design-time)
 - What was found: Mobile number + OTP was restored as the primary sign-in and signup (branch
@@ -284,8 +339,13 @@ in the next one.
 - Fix applied: none here. Mitra chose to leave the cleanup to the Master Prompt 11 thread that
   created the data (`08a0550`: "The other 369 are left for Part 3"). Only the review
   numbers were corrected (all 120 now read 0 / 0.0).
-- Status: Open
-- Related changelog entry: 2026-09-22 (Master Prompt 9, buyer-trust thread)
+- **Update 2026-09-23:** removed. `scripts/loadtest-cleanup.sql` (written in Master Prompt 12
+  Part G) was run, dry run then commit. The buyer catalogue is now the 26 real live listings.
+  0 `[LOADTEST]` products, RFQs, quotes, vendors or ads remain, and every real-row count the
+  script tracks is unchanged.
+- Status: Closed 2026-09-23
+- Related changelog entry: 2026-09-22 (Master Prompt 9, buyer-trust thread); 2026-09-23
+  "load-test population deleted"
 
 ### YYYY-MM-DD — <short title> — Severity: Critical / High / Medium / Low
 - What was found:

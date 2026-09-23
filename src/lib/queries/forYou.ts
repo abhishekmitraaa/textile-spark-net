@@ -13,6 +13,8 @@ import { supabase } from "@/lib/supabase";
 // Both halves now come from the database:
 //   * ORDERING  — for_you_products(): taste vector, else onboarding-preference
 //                 centroid, else global popularity. It reports which tier ran.
+//                 On the vector tiers a buyer with a city/state set also gets a
+//                 small same-place boost (2026-09-23): same rows, reordered.
 //   * FILTERING — pref_category_map: preference id → real categories.id.
 // ─────────────────────────────────────────────────────────────
 
@@ -22,7 +24,9 @@ export type ForYouSource = "taste" | "cold_start" | "popularity";
 export interface ForYouRow {
   id: string;
   /** Cosine distance to the buyer's vector; null on the popularity tier, where
-   *  no vector exists. Not 0 — 0 would read as a perfect match. */
+   *  no vector exists. Not 0 — 0 would read as a perfect match. Always the raw
+   *  distance: the location boost changes the row ORDER, not this number, so
+   *  rows are not guaranteed to be sorted by it. */
   distance: number | null;
   source: ForYouSource;
 }

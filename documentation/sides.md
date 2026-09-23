@@ -70,7 +70,59 @@ the demand side of India's fashion and textile supply chain.
 - **Service vendors, freelancers and Cosora Studio** — printers and logistics firms, pattern
   makers / CLO 3D artists / trend researchers, and photographers.
 - **Profile** — interest preferences, social links, regional settings, data export,
-  notifications, help & support chat.
+  notifications, help & support chat. The **Calls** stat counts the buyer's own calls
+  (2026-09-23; it was a hardcoded "0").
+- **Settings** (`/profile/settings`, 2026-09-23): the buyer's account and security page.
+  - It shows the sign-in number and account email, has Log Out, and notes that sign-in is
+    mobile + OTP, so there's no password.
+  - It also links to download your data and to Help & Legal, and has the Delete account
+    entry.
+  - Identity and business details stay on My Profile.
+  - The buyer sidebar's "Settings" now opens it; it used to open `/profile`. `/profile` has
+    an "Account & Security" row that opens it too.
+  - A vendor who refreshes the page starts in buyer mode and sees the buyer sidebar
+    (MPF-13, pre-existing).
+- **Notification settings are honest** (2026-09-23). The email and push switches are saved,
+  but Cosora sends no email or push notifications yet, and nothing notifies a buyer about new
+  quotes, messages or RFQ updates, not even in the app. The page says so up front. The
+  switches are kept for when delivery launches. Vendor Settings still implies live delivery
+  (MPF-12).
+- **Regional Settings is honest about currency and timezone** (2026-09-23). Both are saved,
+  but nothing uses them yet: every price shows in ₹ INR, and times aren't converted. Pick
+  anything else and the page says so, the way an untranslated language already did.
+  Multi-currency pricing is a separate, larger feature that isn't built. The menu drawer
+  still has an unconnected currency picker (MPF-11).
+- **For You nudges nearby sellers up** (2026-09-23). If the buyer has set a city (or a
+  state) on their profile, products from that place rank a little higher in For You. It's a
+  gentle reorder of the same products, never a filter, and a clearly better match still
+  wins. A buyer with no city sees exactly the feed they saw before. Today only one buyer
+  (demo-buyer, Mumbai) has a city set, so for everyone else nothing has changed. The
+  `/profile` "Add city" nudge is what turns it on.
+- **Edit profile** (`/profile/edit`, photo and personal details) and **Business details**
+  (`/profile/business-details`) became real pages on 2026-09-23, replacing the Edit Profile
+  modal. They can be linked and survive a refresh. Email is a plain field; the old fake
+  "Verify" was removed.
+- **Data & Export** (`/profile/data-export`, 2026-09-23). Both buttons used to only show a
+  toast; now they download real files:
+  - **Export RFQ History** is a CSV of the buyer's RFQs, with one row per quote received.
+  - **Export All Data** is a JSON file of the profile, business details, RFQs, quotes
+    received, conversations with their messages, and reviews written.
+  - The page says up front that chats include the seller's messages. Both are built in the
+    browser from the buyer's own rows only.
+- **Delete my account** (`/profile/help`, 2026-09-23):
+  - The buyer confirms with a 6-digit code emailed to the email address on their account.
+    Sign-in itself is not involved: it stays mobile number + OTP only.
+  - The account is deleted 14 days later, and a banner on `/profile` offers Cancel until
+    then.
+  - "Deleted" means anonymized: name, email, phone, photo and business details are removed,
+    and the person can no longer sign in. Their requests, quotes, chats and reviews stay
+    with the sellers, shown as "Deleted user".
+  - Sellers, admins and suspended accounts are sent to support instead.
+- **Help FAQs are managed by the Cosora team** (2026-09-23). The questions on Help & Support
+  come from the admin panel, so they can be corrected without an app release. Several
+  current answers describe things Cosora doesn't do yet (escrow, order tracking, team
+  accounts, shipping addresses, SMS alerts, a refund policy) and need a content review
+  (MPF-14).
 
 ### User journey
 1. Sign in or register with **mobile number + OTP**, the primary path again since 2026-09-22
@@ -88,15 +140,19 @@ the demand side of India's fashion and textile supply chain.
 6. Accept, and track through My Quotes.
 
 ### Known gaps
-- **Most of the live catalogue is load-test data.** 351 of the 377 live products are
-  "[LOADTEST] …" listings from 120 "[LOADTEST] Vendor Co N" vendors (40 marked
-  verified), created 2026-09-16 by the Master Prompt 11 thread and not yet cleaned up. Their
-  review numbers are correct (0) since 2026-09-22; the rows themselves are that thread's to
-  remove (Mitra's decision, Master Prompt 9). **Since 2026-09-23 all 370 of these accounts can
-  sign in** (repaired for the Master Prompt 12 load harness; before, every login returned HTTP
-  500). They share one password, so they stay live only until the Part G cleanup script is run.
-  That script (`scripts/loadtest-cleanup.sql`) is written and not yet run; removing the rows
-  empties most of today's catalogue, which is the honest state.
+- **Delete my account can't send its code yet.** The flow is built and verified end to end,
+  but the email step needs `RESEND_API_KEY`, which isn't set. Until then the dialog says
+  honestly that deletion isn't available online and points to support. With Resend's shared
+  sender, mail reaches only the Resend account owner, so a verified domain is needed before
+  real buyers can use it. Phone-only accounts will have no email to receive a code (see
+  `myprofileflags.md`).
+- **The live catalogue is small: 26 listings, all real.** Until 2026-09-23, 351 of the 377
+  live products were "[LOADTEST] …" listings from 120 "[LOADTEST] Vendor Co N" vendors (40
+  marked verified), created 2026-09-16 by the Master Prompt 11 thread. On 2026-09-23
+  `scripts/loadtest-cleanup.sql` deleted them together with all 370 load-test accounts, which
+  had been able to sign in with one shared password since that morning, and everything those
+  accounts owned. Buyers now see only real listings, and there are 10 vendor profiles in
+  total. That is the honest state, not a regression.
 - **Mobile + OTP sign-in cannot complete yet.** The flow is restored and honest, but no code
   can be delivered until the in-house OTP API is wired into `src/lib/auth/otp.ts`. Google and
   guest browsing are the working routes, and email-only accounts can only get in through Google
@@ -272,6 +328,10 @@ rather than a supplier directory.
   and ad geography. Enforced by `enforce_plan_limits`. Invoices are first-class.
   **No Razorpay Subscriptions API and no autopay** — every billing period is a discrete
   order the vendor pays explicitly.
+  The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
+  button that emails hello@cosora.in. That email is the only real support channel a
+  vendor has: Help & Support opens the buyer help page, and its chat sends canned replies
+  (MPF-15).
 - **Analytics** — every figure counted from the vendor's own rows; no chart fixtures remain.
   Lifetime KPIs (views, inquiries, active products); **Total Order Value**, the platform's
   strongest retention metric, computed from accepted quotes × RFQ quantity and shared with
@@ -391,6 +451,12 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 **Analytics & support**
 - Platform-level analytics; ad impressions and clicks; call records.
 - Support chat, fraud reports, app feedback.
+
+**Content**
+- **FAQs** (`/faqs`, 2026-09-23): the first real admin-editable content. It covers the
+  buyer Help, vendor Subscription and (once placed) seller-registration FAQs. super_admin
+  edits them and support reads them, and changes show on the site with no release.
+- Site content (banners and theme) is still a dev-seed mock with no table.
 
 ### Rules the admin layer must respect
 - **Notifications are written only by `SECURITY DEFINER` functions** — no insert policy for

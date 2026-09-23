@@ -11,10 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { FaqSection } from "@/components/FaqSection";
 import {
   Check, X, Crown, Package, Users, Download, ChevronDown, ChevronUp, Sparkles,
-  Shield, Star, MessageSquare, Clock, Percent, ArrowRight, Loader2, Lock, FileText,
+  Shield, Star, Clock, Percent, ArrowRight, Loader2, Lock, FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -44,14 +44,6 @@ const FEATURE_ROWS: { key: keyof PlanDisplay; label: string }[] = [
   { key: "alerts", label: "Real-time lead alerts" },
   { key: "crm", label: "CRM & lead management" },
   { key: "catalog", label: "Automatic catalog upload" },
-];
-
-const FAQS = [
-  { q: "Can I upgrade or downgrade my plan anytime?", a: "Yes. Upgrading takes effect immediately for the period you pay for. There's no autopay — each period (monthly or yearly) is a one-time payment you make explicitly, so you're always in control." },
-  { q: "How does billing work — is there autopay?", a: "No auto-debit. Every billing period is a discrete payment. When your period nears its end you'll get a renew reminder; if you don't renew, your account falls back to the Free plan." },
-  { q: "What payment methods do you accept?", a: "All major cards, UPI, and net banking via Razorpay. Yearly billing gives you two months free versus paying monthly." },
-  { q: "What happens when I reach my lead or product limit?", a: "You'll be prompted to upgrade at the point of action (quoting a lead or publishing a product). Existing listings and quotes are never removed." },
-  { q: "How is GST handled?", a: "Plan prices are exclusive of GST; 18% GST is added at checkout. Add your GSTIN below and it's recorded on every invoice for your input tax credit." },
 ];
 
 function isNegative(v: string): boolean {
@@ -384,24 +376,20 @@ export default function Subscription() {
           </Card>
         </motion.div>
 
-        {/* FAQ */}
+        {/* FAQ: admin-editable (surface "subscription"), 2026-09-23.
+            "Contact us" is email because it is the one real support channel a
+            vendor has. /help renders the buyer Help page, and its chat is canned
+            replies (see myprofileflags.md, MPF-15). */}
         <motion.div variants={section}>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2"><MessageSquare className="h-5 w-5 text-accent" /><CardTitle>Frequently Asked Questions</CardTitle></div>
-              <CardDescription>Everything you need to know about our plans</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {FAQS.map((faq, i) => (
-                  <AccordionItem key={i} value={`item-${i}`}>
-                    <AccordionTrigger className="text-left text-foreground hover:text-accent">{faq.q}</AccordionTrigger>
-                    <AccordionContent className="text-muted-foreground">{faq.a}</AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
+          <FaqSection
+            surface="subscription"
+            description="Everything you need to know about our plans"
+            contact={{
+              label: "Contact us",
+              href: "mailto:hello@cosora.in?subject=Subscription%20question",
+              hint: "Still have a question about plans or billing?",
+            }}
+          />
         </motion.div>
 
         {/* Billing history — live invoices */}

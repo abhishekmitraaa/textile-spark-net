@@ -1,3 +1,233 @@
+- 2026-09-23 (Phase 9): **FAQs are admin-editable. Buyer Help and the vendor Subscription page now read their FAQs from a new `public.faqs` table, a super_admin edits it on Cosora-Admin's new `/faqs` page, and changes go live with no deploy. This is the first real (non-seed) admin-editable content system in the product: Cosora-Admin's `Content.tsx` (banners and theme) was the only earlier example, and it is still dev-seed dummy data with no table behind it.** A third surface, Seller Registration, is built and tested. It has no content and is on no page yet; both wait on answers (below).
+  - **Migration `20260923144549_faqs_admin_editable.sql`** (live; its whitespace-insensitive md5 `0493a662…` matches):
+    - **Table `public.faqs`:**
+      - columns `surface` (`buyer_help`, `seller_registration` or `subscription`), a nullable `category_label`, `question`, `answer`, `position`, `active`, timestamps, and `created_by` (→ profiles, set null on delete);
+      - policy `faqs_select_active` lets anon and authenticated read active rows, so the FAQs still render signed out;
+      - no INSERT, UPDATE or DELETE grant for any role, service_role included.
+    - **Five RPCs** copying `admin_block_reason_*`: SECURITY DEFINER, `search_path = ''`, EXECUTE for `authenticated` only, and 42501 for anyone else.
+      - `admin_faq_list(p_surface)`: support and super_admin.
+      - `admin_faq_add`, `_update`, `_delete` and `_reorder`: super_admin only.
+      - `add` puts a new row at the surface's max position + 10, under a per-surface advisory lock.
+      - `reorder` swaps places with the row that holds the target position.
+    - **The brief said `search_path = public, extensions`.** The live `admin_block_reason_*` functions pin `''`, so I matched them, since the brief also asked to mirror them exactly. Nothing here uses `extensions`.
+    - **Seeded verbatim,** so both pages look the same on day one:
+      - the 12 buyer Help FAQs from the old hardcoded `faqCategories` in `Help.tsx`, in 4 categories;
+      - the 5 FAQs hardcoded in `Subscription.tsx`.
+
+      The brief asked for content to be seeded through the admin UI. These rows aren't new content: they moved from code into the table unchanged, so no page lost its FAQ during the switch. New seller-registration and subscription content was **not** seeded, because its source document isn't in either repo (below).
+  - **Follow-up migration `20260923150408_faqs_hide_created_by_from_clients.sql`** (live). Found while writing these docs and fixed in the same phase:
+    - **The problem:** the first migration let clients read every column, including `created_by`. Profiles are readable signed out (MPF-3), so once an admin added a row, a signed-out visitor could find out who the super admins are, with their email and phone.
+    - **Proven first:** a rolled-back probe had anon read `created_by` on all 17 rows.
+    - **The fix:** clients now get SELECT on every column except `created_by`. After it, over HTTP as anon, the app's own query returns 12 rows, and `created_by` (and `select=*`) returns 42501. Nothing in either app reads that column.
+    - Logged as fixed in `securityflags.md`.
+  - **Buyer app:**
+    - new `src/lib/queries/faqs.ts`: `useFaqs(surface)` returns the active rows in position order, and `groupFaqs()` groups them;
+    - new reusable `src/components/FaqSection.tsx`: a card and accordion, with an optional contact row;
+    - **`Help.tsx`:** the hardcoded `faqCategories` is replaced by the live `buyer_help` query, grouped by `category_label` and ordered by `position`.
+      - The four known categories keep their icons, and a new category gets `HelpCircle`.
+      - The accordion, search, quick guides and contact rail are unchanged.
+      - The subtitle reads "Loading questions…" until the rows arrive.
+    - **`Subscription.tsx`:** the hardcoded FAQ list is replaced by `<FaqSection surface="subscription">`, ending in **"Contact us"** → `mailto:hello@cosora.in?subject=Subscription%20question`.
+      - As the brief asked, I checked the vendor support destination before wiring the button. There isn't one: `/help` is the buyer Help page, and its chat (`SupportChat`) gives canned replies (MPF-15).
+      - `hello@cosora.in` is the address `VendorLanding.tsx` already gives vendors ("For support, write to…").
+    - `database.types.ts` (both apps): the `faqs` table and the `admin_faq_*` functions.
+  - **Cosora-Admin:**
+    - a new `/faqs` page (`Faqs.tsx`) in the Settings nav group, next to Block reasons;
+    - section `faqs` in `roles.ts`: support and super_admin read, super_admin writes.
+
+    Details are in that repo's CHANGELOG.
+  - **Verified:**
+    - **New `tests/faqs-admin-editable.spec.ts`,** 1/1 against both dev servers, and 1/1 again after the follow-up migration. On each surface, demo-admin adds, edits, moves up and back down, deactivates and deletes an FAQ, and the live page follows each step:
+      - Buyer Help on `/profile/help`, signed out;
+      - Subscription on `/subscription` as demo-vendor, including the Contact us link;
+      - Seller Registration through the anon read `FaqSection` will use, because it's on no page yet.
+    - **Denials:** every `admin_faq_*` RPC returns 42501 for demo-buyer and for anon. A direct insert returns 42501, and so does reading `created_by`.
+    - **Signed out,** Help shows "12 questions across 4 topics".
+    - **Cleanup:** no `[P9TEST` rows remain, and the seeded positions are unchanged.
+    - **Security advisors:** 132, against a baseline of 127. The +5 are the `admin_faq_*` functions under "authenticated can execute SECURITY DEFINER", the same accepted class as `admin_block_reason_*`. None is anon-executable, `faqs` has a policy, and the follow-up migration changed no findings.
+    - **Regression:** buyer-settings and profile-calls-stat, 3/3.
+    - tsc 0 and eslint 0 (buyer app); tsc 0 (admin).
+  - **Waiting on Andy:**
+    1. `seller-registration-and-subscription-faq-content.md`, the source of the 10 seller-registration questions and the new subscription ones, is in neither repo.
+    2. Where the Seller Registration FAQ goes: `Register.tsx`, `RoleSelection.tsx` or `Onboarding.tsx`.
+    3. Should `support` also write FAQs? Today it only reads.
+    4. "Lowest billing plan?" is an unanswered placeholder in the source content.
+  - **Found, not fixed:**
+    - **MPF-14:** the seeded buyer Help answers promise things that don't exist: escrow, "Active Orders" tracking, Team Management, shipping addresses, SMS/email/push alerts and a buyer-protection refund policy. They can now be corrected in the admin, with no deploy.
+    - **MPF-15:** vendors have no real support destination.
+  - Docs: `sitemap.md`, `technicalimplementation.md`, `test.md`, `MIGRATIONS.md`, `claude.md`, `sides.md`, `securityflags.md`, `myprofileflags.md` and `ToDo.md`; Cosora-Admin's `CHANGELOG.md` and `README.md`.
+- 2026-09-23 (Phase 8): **Buyers have a Settings page (`/profile/settings`), and the buyer sidebar's "Settings" opens it instead of `/profile`.** No data change.
+  - **`src/pages/Settings.tsx`** mirrors `VendorSettings.tsx`'s structure (the same section, card and row building blocks, and the staggered fade-in) in `BuyerShell` and the buyer red. Only account and security content is on it:
+    - **Security:** the sign-in number (auth phone; a `.invalid` placeholder email is never shown), the account email, Log Out, and "Cosora uses mobile number and OTP to sign in, so there's no password to manage" (sign-in shown, not changed);
+    - **Your data:** a link to `/profile/data-export`;
+    - **Delete account:** the Phase 2 `DeleteAccountCard`, the same component `/profile/help` uses;
+    - **Help & Legal.**
+
+    Identity and business details stay on My Profile, and notification and regional preferences stay on their own pages.
+  - **Route:** `/profile/settings`, because `/settings` is the vendor's. `App.tsx` +3 lines.
+  - **`DashboardSidebar.tsx`:** the buyer "Settings" href changed from `/profile` to `/profile/settings`. This also ends "My Profile" and "Settings" both highlighting on `/profile`. The seller branch is unchanged.
+  - **`Profile.tsx`:** added an "Account & Security" row. It's a small addition beyond the brief: the sidebar only appears for buyers on `DashboardLayout` pages (effectively `/notifications`), so without it the page would be nearly unreachable on mobile.
+  - **Verified:** new `tests/buyer-settings.spec.ts` (2/2). Clicking Settings in the buyer sidebar on `/notifications` → `/profile/settings`, not `/profile`; the sections and links work; the vendor's Settings → `/settings`.
+  - **Found, not fixed (MPF-13, Medium):** `UserRoleContext` starts every page load as "buyer" and never reads `profiles.active_role`. A vendor who refreshes sees the buyer sidebar and nav until they use the role switcher. The vendor check first failed on exactly that; it now switches role first. The fix sits next to the sign-in flow, so it's left for a go-ahead.
+  - Regression: the calls-stat spec passes 1/1. tsc 0; eslint 0.
+  - Docs: `sitemap.md` (new row; the "known bug" note and the "doesn't exist" entry removed), `sides.md`, `test.md`, `myprofileflags.md`.
+- 2026-09-23 (Phase 7): **`/profile/notifications` stops implying live delivery. Its switches are presented as saved preferences for when email and push launch.** Copy/UI only; no data or behavior change. No delivery pipeline was built (per the brief).
+  - **Checked first:** no sender reads the toggles. `notify()` ignores preferences, and **no quote, message or RFQ event creates any notification, even in-app** (the bell is fed only by moderation, account, ad and certificate events). So the note says nothing is sent, and doesn't point buyers at the bell for these topics.
+  - **`ProfileNotifications.tsx`:**
+    - an amber note ("aren't live yet… nothing is sent today");
+    - section subtitles "Saved for when…";
+    - descriptions reworded from "Get notified…" and "Instant alerts…" to name the event;
+    - the save toast adds "They'll apply when email and push notifications launch".
+    - All of it is gated on one `DELIVERY_LIVE = false` constant, so going live is a one-line flip once a sender honours the keys.
+  - **What a real pipeline would take** (not started, its own master prompt):
+    1. **The email provider.** Phase 2's Resend decision is already made; the domain verification is still outstanding (MPF-4).
+    2. **Web push.** A `push_subscriptions` table, VAPID keys, a service worker, and a permission prompt.
+    3. **A dispatch path.** Triggers or `notify()` extended on the events that matter (quote inserted, message sent, RFQ status change), writing a queue that an edge-function sender drains while honouring these toggles.
+
+    **But sign-in is mobile + OTP only, so real accounts have only placeholder emails.** Email delivery would reach almost no one without a contact-email capture. SMS or WhatsApp may be the realistic channel (a decision).
+  - **Found, not changed (MPF-12):** Vendor Settings' eight notification switches carry the same overclaim, and so does the `/profile` "Notifications · On" label.
+  - Verified by new `tests/profile-notifications-honesty.spec.ts` (1/1, read-only). tsc 0; eslint 0.
+  - Docs: `claude.md`, `sides.md`, `test.md`, `myprofileflags.md`.
+- 2026-09-23 (Phase 6): **Regional Settings stops overclaiming. A currency other than ₹ INR, or a timezone other than IST, now says plainly that it's saved but not used yet.** A copy/UI change only; no data or behavior change.
+  - **Checked first, repo-wide.** Currency and timezone are written and read only by the settings page and its load/save helpers. No price formatter or date renderer reads them. So the brief's honesty patch applied, rather than its "stop, it's partly wired" branch.
+  - **`ProfileAccountPrefs.tsx`:**
+    - An amber note under each picker when the choice can't be honoured, mirroring the existing unsupported-language note.
+    - Toasts now say "saved", not "updated". For a non-default choice they add "Prices still show in ₹ INR for now" or "Times in Cosora aren't converted to it yet".
+    - Defaults come from `DEFAULT_SETTINGS`, so the notes stay hidden for INR and IST.
+  - **Found, not changed (MPF-11):** a second currency picker in the buyer menu drawer (`BuyerTopBar.tsx`). It is an uncontrolled select that saves nothing and resets on close, outside the brief's scope. **Decision (Mitra): leave it for now**, tracked in `myprofileflags.md`.
+  - Verified by new `tests/profile-regional-honesty.spec.ts` (1/1): the notes and toasts appear and disappear correctly, and the choice is really saved. demo-buyer was restored md5-identical. Regression: the data-export spec passes 1/1. tsc 0; eslint 0.
+  - Docs: `claude.md`, `sides.md`, `test.md`, `myprofileflags.md`.
+- 2026-09-23 (Phase 5): **For You gives a small, soft boost to products from the buyer's city (or state). A buyer with no location, or an unmatched one, gets byte-identical results.** Migration `20260923133539_for_you_location_soft_boost` (whitespace-insensitive md5 `4c2abda7…` = live). No OpenAI calls, no re-embedding; `buyer_cold_start_embedding()` and `buyer_taste_embedding()` are untouched.
+  - **What changed in `for_you_products()`:**
+    - On the taste and cold-start tiers, the sort key is `distance − boost`: 0.05 for the same city, 0.02 for the same state.
+    - The candidates are the old query verbatim, as a CTE: the same index-served `<=>` order and the same LIMIT. So the boost reorders the same rows and never adds or drops one.
+    - A buyer with no city and no state runs a verbatim branch of the old query.
+    - The popularity tier is unchanged. The returned `distance` stays raw.
+    - Location resolves like the app shows it: `products.location` ("City, State"), falling back to the vendor's city.
+  - **Kept, and self-asserted by the migration:** the pre-patch md5 (`93714de1…`), SECURITY DEFINER, STABLE, `search_path = public, extensions`, EXECUTE for authenticated and service_role only, and the `auth.uid()` guard.
+  - **Verified**, against a baseline captured before the DDL and after a rolled-back dress rehearsal:
+    - two no-city taste-tier buyers and one popularity-tier buyer are **byte-identical** (md5);
+    - an unmatched city is byte-identical;
+    - demo-buyer's four Mumbai products moved 8/17/18/19 → 5/12/15/16, with all 26 rows kept and the top 4 unmoved;
+    - state-only is gentler (→ 6/16/18/19);
+    - the guard still gives 42501 for another buyer's feed.
+  - **Security advisors: 127 → 127, the identical set.**
+  - **Honest scope:** 1 of 7 buyer profiles has a city, so this is observable for exactly one buyer and a no-op for six.
+  - Code: `forYou.ts` comments only. The boost is invisible to the client except as order.
+  - Docs:
+    - `claude.md` (a business rule);
+    - `technicalimplementation.md`, a new "For You ranking" section: the function had no write-up before;
+    - `sides.md`, `test.md` and `MIGRATIONS.md`.
+- 2026-09-23 (after Phase 4, Mitra): **Sign-in stays mobile number + OTP only (a dummy OTP for now), and must not change. Recorded as a standing rule, and three wrong statements are corrected.** No sign-in code was ever touched in Phases 0–4 (`git status` on the auth files is clean).
+  - Corrected:
+    - the deletion dialog's copy ("the address you sign in with" → "the email address on your account");
+    - `sides.md`;
+    - MPF-10, which had said sign-in uses the account email.
+  - MPF-6 raised to High: with mobile-only sign-in, every account created for real has only a placeholder email, so email-confirmed deletion can't reach it. Fixing that means confirming by the same mobile OTP once delivery is real; left as the owner's decision, since it touches the OTP path.
+  - Docs: `claude.md` (a standing instruction at the top of the OTP section), `sides.md`, `myprofileflags.md`.
+- 2026-09-23 (Phase 4): **`/profile/edit` and `/profile/business-details` are real routes, and the Edit Profile modal is gone.** No database change. `saveProfileFull()` and `uploadAvatar()` are reused unchanged.
+  - **Pattern chosen: routes only.** Every entry point on `/profile` now navigates:
+    - Edit and the camera button → `/profile/edit`;
+    - "Add city" → `/profile/edit?focus=city`, which focuses the City field;
+    - Business Details → `/profile/business-details`.
+
+    One implementation means no drift, and deep links and refresh both work. `Profile.tsx`
+    lost 281 lines: the modal, its `Field` and `inputCls`, its state and handlers, and 17
+    imported symbols (dialog, tabs, two profileStore constants, two React hooks, three icons,
+    and `saveProfileFull` / `uploadAvatar`, which now live behind the hook).
+  - **Code:**
+    - `src/pages/ProfileEdit.tsx`: the Photo section, then Personal.
+    - `src/pages/ProfileBusinessDetails.tsx`: the Business tab.
+    - `src/components/buyer/ProfileEditKit.tsx`: shared parts.
+    - `src/hooks/useEditableProfile.ts`: one hook for both pages. It seeds the form once, and
+      only after the real row loads, because `saveProfileFull()` writes every field and an
+      early save would have written blanks over real data.
+    - `App.tsx`: +5 lines, surgical.
+  - **Deliberately not carried over: the fake email "Verify".** It sent nothing, accepted any 4-digit code, and showed "Verified" for any stored email (`emailVerified = Boolean(email)`). That is a fabricated status on the user's own profile, which this project removes (MPF-10). Email is now a plain field. No DB change, and no `email_verified` column (Phase 0 put it out of scope).
+  - **Verified:**
+    - New `tests/profile-edit-routes.spec.ts`: both URLs work on a direct load and a hard reload with real values, both saves land in `buyer_profiles`, the entry points work, and so do focus=city and the signed-out prompt.
+    - Checked with live SQL (a column diff). The only side effect is `country` NULL → `'India'`, pre-existing data-layer behavior (MPF-9).
+    - demo-buyer restored md5-identical, both by SQL and by the spec's own self-restore.
+    - Regression: the calls-stat and data-export specs pass 2/2.
+    - tsc 0 and eslint 0.
+  - Docs: `sitemap.md` (both rows are real; no longer marked shell), `sides.md`, `technicalimplementation.md`, `test.md`, `myprofileflags.md` (MPF-9, MPF-10). The `profile.ts` header comment was pointed at the new routes.
+- 2026-09-23 (Phase 3): **Data & Export downloads real files. "Export RFQ History" gives a CSV and "Export All Data" gives JSON, built in the browser from the buyer's own rows only.** No database or backend change.
+  - **The brief's premise did not hold, and the build handles it.** The brief said to rely on RLS for "own rows". A live probe as demo-buyer, run before any export code, showed RLS alone reads **other people's data**:
+    - profiles: 20 rows against 1 of its own;
+    - rfqs: 3 against 2, because `rfqs_select` shows every active open RFQ to any signed-in user;
+    - reviews: 9 against 2;
+    - product_reviews: 11 against 3.
+  - So every query filters on its owner column. No RLS blocked a needed read, so no service role or edge function was involved.
+  - **Code:**
+    - `src/lib/queries/dataExport.ts`:
+      - paged, chunked reads;
+      - CSV with one row per quote received, RFC 4180 quoting, a UTF-8 BOM and a formula-injection guard (vendor-written comments);
+      - JSON with one section per table, leaving out RFQ `embedding` and `search_text`;
+      - a Blob download.
+    - `ProfileAccountPrefs.tsx`: busy states, count toasts, and the visible note that chats include the seller's messages.
+  - **Verified:**
+    - New `tests/profile-data-export.spec.ts` (demo-buyer, real downloads) passed 1/1: every row owned, counts equal, no foreign id in either file.
+    - With the RFQ owner filter removed, the same spec **fails** on another buyer's open RFQ (`b74dcea8…`) appearing in the CSV. The code was restored byte-identical.
+  - **Flags:**
+    - MPF-8: "All Data" covers the brief's tables only; the calls, saves, follows and notifications tables are not included.
+    - MPF-3 gains context: open-RFQ visibility plus readable contact columns links any open request to its buyer's email and phone.
+  - Docs: `claude.md` (the owner-filter rule gains the Phase 3 numbers), `technicalimplementation.md` ("Data & Export"), `sides.md`, `test.md`, `myprofileflags.md`.
+- 2026-09-23 (Phase 2): **Delete my account is real: an emailed 6-digit code, a 14-day cooling-off with Cancel, then anonymization by a daily cron job. Nothing is hard-deleted.** Migrations `20260923115507_account_status_deleted` (md5 `d10931d0…`) and `20260923115839_account_deletion_requests` (md5 `ac6abac4…`); both files equal the applied statements. New edge function `account-deletion` (v1). **Email is not live until `RESEND_API_KEY` is set** (MPF-4).
+  - **Decisions (Mitra):**
+    - Provider: Resend.
+    - Confirmation by OTP rather than a link.
+    - Four deviations from the brief, all approved: definer functions only, with no client write policy; a new `anonymize_account()` instead of reusing `set_account_status()`; block signing back in; refuse vendor, admin and suspended accounts.
+  - **Why the deviations:**
+    - `set_account_status()` is admin-only through `is_admin()` → `auth.uid()`, which is null under pg_cron. Its non-'suspended' branch would also have set a deleted account back to 'active'. It is now patched to refuse `'deleted'` both ways, and the migration proves it changed by exactly that block.
+    - A client UPDATE policy would let a stolen session write a past `scheduled_for` and skip both the code and the 14 days.
+    - Revoking sessions alone lets the user sign straight back in with Google or email.
+  - **Checked before designing, in pg_constraint:** RFQs, messages, conversations, calls, follows and saves CASCADE from `profiles`, and the three review tables CASCADE from `auth.users`. So the rows are scrubbed, never deleted. The reviews' own `reviewer_name` / `reviewer_company` copies are scrubbed too; the brief had missed them.
+  - **Code:**
+    - `src/lib/queries/accountDeletion.ts`: the hook, send, confirm and cancel calls, and one wording table for every reason.
+    - `src/components/buyer/DeleteAccountCard.tsx`: replaces the old fake button, which only toasted "Delete account request submitted".
+    - The `Help.tsx` wiring, and the `/profile` banner in `Profile.tsx`.
+    - Hand-added `database.types.ts` entries; the file already lagged the live schema.
+    - A `config.toml` `verify_jwt` stanza.
+  - **Verified with a throwaway buyer**, then cleaned to 0, with demo-vendor's rating restored to 4.4 / 5:
+    - rules probe: rate limit, vendor and admin refused, direct writes refused, lock after 5 wrong codes that holds even for the right code;
+    - UI: not-configured message, cancel path with the account md5 unchanged, confirm path;
+    - sweep: 1 anonymized; every personal field scrubbed; sessions 3→0, refresh tokens 3→0, identities 1→0; RFQ, review and message rows kept with their FKs;
+    - sign-in and refresh refused, and old-token writes refused;
+    - `set_account_status` on the deleted user refused even as super_admin.
+    - Full table in `test.md`.
+  - **Security, found in recon, not fixed:**
+    - **High:** every user's email and phone is readable with the public anon key (`profiles_select` is `true`; proven with ID-only count requests, 20 emails and 7 phones). `securityflags.md`, `myprofileflags.md` MPF-3.
+    - **Low:** what deletion leaves behind (MPF-7).
+  - **Other flags:** MPF-4 (Resend key and domain), MPF-5 (Cosora-Admin shows 'deleted' as "active"), MPF-6 (phone-only accounts can't receive a code).
+  - Security advisors 124 → 127, all three intended: the code table has RLS with no policies, and the two user-facing confirm/cancel RPCs are SECURITY DEFINER. Nothing new is anon-executable.
+  - Docs: `claude.md` (business rule), `technicalimplementation.md` ("Account deletion"), `sides.md`, `securityflags.md`, `myprofileflags.md`, `test.md`, `MIGRATIONS.md`.
+- 2026-09-23 (Phase 1): **Profile Calls stat is real. The `/profile` Calls cell showed a hardcoded "0"; it now shows the buyer's own call count.** No database change.
+  - **Code.**
+    - New `useCallCount()` in `src/lib/queries/calls.ts`, beside `useCalls()`, which powers the Calls tab this stat links to. It is a head-only `count: "exact"` on `calls` with an explicit `.eq("buyer_id", user.id)`.
+    - It is keyed `["calls", userId, "count"]`, so `useCallVendor`'s existing `["calls", userId]` invalidation refreshes it as soon as a call is logged. Inside `useProfileStats` it would have waited out the app's 60-second `staleTime`.
+    - `src/pages/Profile.tsx` renders `String(callCount ?? 0)`.
+  - **Why not the RLS-only pattern the Quotes and Chats cells use.** The brief said to check the policy first, and it does not scope rows to the caller: `calls_select` is `buyer_id = auth.uid() OR vendor_id = auth.uid() OR is_admin()`. A live probe as `authenticated` found the admin account would read 10 calls against its own 8.
+  - **Found, not fixed (outside Phase 1), tracked in `myprofileflags.md` as MPF-1 and MPF-2:**
+    - `useProfileStats()` has the same flaw. For the admin account, Quotes shows 3 against its own 1, and Chats shows 4 against its own 3. It is correct for a plain buyer (demo-buyer: 2 / 2 and 1 / 1).
+    - `calls` writes are only checked for `buyer_id = auth.uid()`, and vendor call analytics trusts them. Logged Low in `securityflags.md`.
+  - **Verified.**
+    - SQL: demo-buyer has 2 calls.
+    - New `tests/profile-calls-stat.spec.ts` checks that the rendered stat equals both the database count and the rows on `/chats?tab=calls`: 1/1 passed.
+    - Run against the old hardcoded "0", the same spec fails (`Expected "2", Received "0"`).
+    - Screenshot: `screenshots/profile-calls-stat.png`.
+    - tsc 0; eslint 0 on the changed files.
+  - Files: `src/lib/queries/calls.ts`, `src/pages/Profile.tsx`, `tests/profile-calls-stat.spec.ts`, `screenshots/profile-calls-stat.png`. Docs: `claude.md` (new convention: a "my N" count filters on the owner column), `securityflags.md`, `test.md`, this entry.
+- 2026-09-23 (Phase 0 ground-truth pass, then the Part G cleanup run): **load-test population deleted. All 370 `loadtest-*@cosora.test` accounts and everything they owned are gone from production, and no real row changed.** No code or schema change, and `scripts/loadtest-cleanup.sql` is unedited.
+  - **Why now:** a Phase 0 read-only pass (verifying a new multi-phase brief against the live repo and database) found the population still live: 370 of 390 profiles, 572 of 576 RFQs, 1,082 of 1,085 quotes. Every row count, and every count-based check in later phases, would have measured synthetic noise. The instruction was to remove them.
+  - **How:** the committed script through MCP `execute_sql`, first unchanged (dry run), then with only the mode set to `'commit'`.
+    - Dry run: every preflight passed, and the report matched the Part G counts exactly: 370 users, profiles and identities; 170 sessions; 120 vendor profiles; 577 products; 572 RFQs; 1,082 quotes; 221 conversations; 1,321 messages; 24 ads and 18 review-log rows; 24 subscriptions; 184 engagement events. 0 notifications, 0 stray quotes, 0 synthetic views of real listings.
+    - Commit run: the same deletes. The script's leftover check and 15-table real-data drift check passed, and its final SELECT returned all zeros.
+  - **Checked independently afterwards:** 0 accounts matching `@cosora.test` or `loadtest`, 0 `loadtest` text anywhere it was tagged, 0 orphaned recompute-queue rows. Real rows equal the pre-run split: 20 accounts, 7 buyer profiles, 10 vendor profiles, 26 live listings, 4 RFQs, 3 quotes, 4 conversations, 10 messages, 9 reviews, 11 product reviews, 10 calls.
+  - **Consequences:**
+    - The shared load-test password now opens nothing. `LOADTEST_PASSWORD` in `.env` is unused and has been left in place.
+    - Everything that signs in as a load-test account fails until a new population exists: `scripts/load/*`, `tests/mp12-sourcing-loop.spec.ts`, `lead-cap-repro`, `targeted-lead-cap-check`, `quote-rfq-open-check`, `cap-race-check`, `loadtest-login-check`.
+  - **Closed:** both load-test flags in `securityflags.md` (moved to Fixed / Closed), and the ToDo task (moved to Completed).
+  - Docs: `ToDo.md`, `securityflags.md`, `sides.md`, `test.md`, `technicalimplementation.md`, `claude.md`.
 - 2026-09-23 (Master Prompt 12, Part G): **The synthetic-data cleanup script is written, checked, and NOT run.** `scripts/loadtest-cleanup.sql` removes the 370 `loadtest-*` accounts and everything they own. It is deliberately not a migration.
   - **Cascade confirmed, not assumed. A one-line `delete from auth.users` is not safe here**, for three reasons:
     - product deletes fire `trg_products_sync_vendor_catalog`, whose insert into `vendor_catalog_recompute_queue` (FK → `vendor_profiles`) can abort the whole cascade;

@@ -2,7 +2,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { ArrowLeft, Globe, Clock, Languages, Download, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, Globe, Clock, Languages, Download, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import {
@@ -14,7 +14,8 @@ import {
   type RegionalSettings,
 } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
-import { useSettings, saveSetting } from "@/lib/queries/profile";
+import { useSettings, saveSetting, DEFAULT_SETTINGS } from "@/lib/queries/profile";
+import { buildRfqHistoryCsv, buildAllDataJson, downloadFile, CHAT_SCOPE_NOTE } from "@/lib/queries/dataExport";
 import { setLang, langCodeFromName, isSupportedLanguageName } from "@/lib/i18n";
 
 function SettingsHeader({ title }: { title: string }) {
@@ -32,6 +33,14 @@ function SettingsHeader({ title }: { title: string }) {
 }
 
 const selectCls = "w-full appearance-none rounded-xl border border-gray-300 bg-white pl-10 pr-9 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#ef4d62] transition-colors";
+
+// Currency and timezone are saved (buyer_profiles.regional) but nothing reads
+// them yet: no price formatter converts currency and no date renders in the
+// chosen zone (checked repo-wide, 2026-09-23). Like an untranslated language,
+// a choice the app can't honour says so. It is never silently ignored.
+// Multi-currency pricing is a separate feature, not a copy fix.
+const PRICE_CURRENCY = DEFAULT_SETTINGS.regional.currency;   // "₹ INR", what every price shows in
+const DEFAULT_TIMEZONE = DEFAULT_SETTINGS.regional.timezone; // "IST (India Standard Time)"
 
 const ProfileAccountPrefs = () => {
   const { user } = useAuth();
@@ -59,6 +68,40 @@ const ProfileAccountPrefs = () => {
     }
   };
 
+  // Both exports are built in the browser from the buyer's own rows and
+  // downloaded directly (lib/queries/dataExport.ts).
+  const [exporting, setExporting] = useState<"all" | "rfqs" | null>(null);
+  const onExportRfqs = async () => {
+    if (!user) { toast("Sign in to export your data"); return; }
+    setExporting("rfqs");
+    try {
+      const out = await buildRfqHistoryCsv(user.id);
+      downloadFile(out.filename, out.csv, "text/csv;charset=utf-8");
+      toast.success("RFQ history downloaded", {
+        description: `${out.rfqs} ${out.rfqs === 1 ? "RFQ" : "RFQs"}, ${out.quotes} ${out.quotes === 1 ? "quote" : "quotes"}`,
+      });
+    } catch (e) {
+      toast.error("Couldn't export your RFQ history", { description: errorMessage(e) });
+    } finally {
+      setExporting(null);
+    }
+  };
+  const onExportAll = async () => {
+    if (!user) { toast("Sign in to export your data"); return; }
+    setExporting("all");
+    try {
+      const out = await buildAllDataJson(user.id);
+      downloadFile(out.filename, out.json, "application/json");
+      toast.success("Your data is downloaded", {
+        description: `${out.counts.rfqs} RFQs, ${out.counts.quotes_received} quotes, ${out.counts.messages} messages, ${out.counts.reviews + out.counts.product_reviews} reviews`,
+      });
+    } catch (e) {
+      toast.error("Couldn't export your data", { description: errorMessage(e) });
+    } finally {
+      setExporting(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       <SettingsHeader title="Regional & Data" />
@@ -73,20 +116,50 @@ const ProfileAccountPrefs = () => {
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Default Currency</label>
               <div className="relative">
                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <select className={selectCls} value={regional.currency} onChange={(e) => { patchRegional({ currency: e.target.value }); toast.success("Currency updated"); }}>
+                <select
+                  className={selectCls}
+                  value={regional.currency}
+                  onChange={(e) => {
+                    const c = e.target.value;
+                    patchRegional({ currency: c });
+                    // Saved, never "updated": nothing converts prices, so the toast
+                    // must not imply the app changed (same honesty as Language).
+                    if (c === PRICE_CURRENCY) toast.success("Currency saved");
+                    else toast.info(`${c} saved`, { description: `Prices still show in ${PRICE_CURRENCY} for now.` });
+                  }}
+                >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+              {regional.currency !== PRICE_CURRENCY && (
+                <p className="mt-1.5 text-[11px] text-amber-600">
+                  Saved, but prices across Cosora still show in {PRICE_CURRENCY}. Other currencies aren&rsquo;t supported yet.
+                </p>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Timezone</label>
               <div className="relative">
                 <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                <select className={selectCls} value={regional.timezone} onChange={(e) => { patchRegional({ timezone: e.target.value }); toast.success("Timezone updated"); }}>
+                <select
+                  className={selectCls}
+                  value={regional.timezone}
+                  onChange={(e) => {
+                    const tz = e.target.value;
+                    patchRegional({ timezone: tz });
+                    if (tz === DEFAULT_TIMEZONE) toast.success("Timezone saved");
+                    else toast.info(`${tz} saved`, { description: "Times in Cosora aren't converted to it yet." });
+                  }}
+                >
                   {TIMEZONES.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
+              {regional.timezone !== DEFAULT_TIMEZONE && (
+                <p className="mt-1.5 text-[11px] text-amber-600">
+                  Saved, but Cosora doesn&rsquo;t use it yet: times aren&rsquo;t converted to this time zone.
+                </p>
+              )}
             </div>
 
             <div>
@@ -137,10 +210,17 @@ const ProfileAccountPrefs = () => {
                 <Download className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900">Export All Data</p>
-                  <p className="text-xs text-gray-500">Download all your RFQs, quotes, and messages</p>
+                  <p className="text-xs text-gray-500">Your profile, RFQs, quotes received, chats and reviews, as a JSON file</p>
+                  {/* Said up front so the seller's messages in the file are no surprise. */}
+                  <p className="text-[11px] text-gray-400 mt-1">{CHAT_SCOPE_NOTE}</p>
                 </div>
               </div>
-              <button onClick={() => toast.success("Preparing your data export")} className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors">
+              <button
+                onClick={onExportAll}
+                disabled={exporting !== null}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors disabled:opacity-60"
+              >
+                {exporting === "all" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Export
               </button>
             </div>
@@ -150,10 +230,15 @@ const ProfileAccountPrefs = () => {
                 <FileSpreadsheet className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900">Export RFQ History</p>
-                  <p className="text-xs text-gray-500">Download your RFQ history as CSV</p>
+                  <p className="text-xs text-gray-500">Your RFQs and every quote received, as a CSV spreadsheet</p>
                 </div>
               </div>
-              <button onClick={() => toast.success("Exporting RFQ history as CSV")} className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors">
+              <button
+                onClick={onExportRfqs}
+                disabled={exporting !== null}
+                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors disabled:opacity-60"
+              >
+                {exporting === "rfqs" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                 Export
               </button>
             </div>

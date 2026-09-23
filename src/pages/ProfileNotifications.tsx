@@ -38,16 +38,25 @@ function ToggleRow({
   );
 }
 
+// These switches are SAVED PREFERENCES ONLY (checked repo-wide, 2026-09-23).
+// Nothing sends email or push from them: there is no push pipeline, and the one
+// email sender (account-deletion) is transactional and ignores them. Nor do they
+// feed the in-app bell, which notify() fills only from moderation, account, ad and
+// certificate events, never from quotes, messages or RFQ updates. So the copy says
+// "saved for when it launches" and names events, not "get notified" or "instant
+// alerts". Set DELIVERY_LIVE to true only once a sender actually reads these keys.
+const DELIVERY_LIVE = false;
+
 const EMAIL_ROWS: { key: keyof NotificationSettings; label: string; description: string }[] = [
-  { key: "emailNewQuote", label: "New Quote Received", description: "Get notified when vendors submit quotes" },
-  { key: "emailNewMessages", label: "New Messages", description: "Get notified when vendors message you" },
-  { key: "emailRfqUpdates", label: "RFQ Updates", description: "Updates on your RFQ status changes" },
+  { key: "emailNewQuote", label: "New Quote Received", description: "When vendors submit quotes on your requests" },
+  { key: "emailNewMessages", label: "New Messages", description: "When vendors message you" },
+  { key: "emailRfqUpdates", label: "RFQ Updates", description: "When the status of your requests changes" },
   { key: "emailNewsletter", label: "Newsletter & Tips", description: "Sourcing tips and platform updates" },
 ];
 
 const PUSH_ROWS: { key: keyof NotificationSettings; label: string; description: string }[] = [
-  { key: "pushQuote", label: "Quote Notifications", description: "Instant alerts for new quotes" },
-  { key: "pushMessages", label: "Message Alerts", description: "Instant alerts for new messages" },
+  { key: "pushQuote", label: "Quote Notifications", description: "New quotes on your requests" },
+  { key: "pushMessages", label: "Message Alerts", description: "New messages from vendors" },
 ];
 
 const ProfileNotifications = () => {
@@ -72,7 +81,9 @@ const ProfileNotifications = () => {
       } else {
         updateNotifications(draft);
       }
-      toast.success("Notification settings saved");
+      toast.success("Notification settings saved", DELIVERY_LIVE ? undefined : {
+        description: "They'll apply when email and push notifications launch.",
+      });
     } catch (e) {
       toast.error("Couldn't save", { description: errorMessage(e) });
     } finally {
@@ -84,10 +95,18 @@ const ProfileNotifications = () => {
     <div className="min-h-screen bg-white">
       <SettingsHeader title="Notifications" />
       <div className="max-w-2xl mx-auto px-4 pt-4 pb-28 space-y-4">
+        {!DELIVERY_LIVE && (
+          <p role="note" className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">
+            Email and push notifications aren&rsquo;t live yet. Your choices here are saved and will apply when they launch. Nothing is sent today.
+          </p>
+        )}
+
         {/* Email */}
         <section className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900">Email Notifications</h2>
-          <p className="text-xs text-gray-500 mt-0.5 mb-1">Manage your email notification preferences</p>
+          <p className="text-xs text-gray-500 mt-0.5 mb-1">
+            {DELIVERY_LIVE ? "Manage your email notification preferences" : "Saved for when Cosora starts sending email"}
+          </p>
           <div className="divide-y divide-gray-100">
             {EMAIL_ROWS.map((r) => (
               <ToggleRow key={r.key} label={r.label} description={r.description} checked={draft[r.key]} onChange={(v) => set(r.key, v)} />
@@ -98,7 +117,9 @@ const ProfileNotifications = () => {
         {/* Push */}
         <section className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900">Push Notifications</h2>
-          <p className="text-xs text-gray-500 mt-0.5 mb-1">Browser and app notifications</p>
+          <p className="text-xs text-gray-500 mt-0.5 mb-1">
+            {DELIVERY_LIVE ? "Browser and app notifications" : "Saved for when browser and app notifications launch"}
+          </p>
           <div className="divide-y divide-gray-100">
             {PUSH_ROWS.map((r) => (
               <ToggleRow key={r.key} label={r.label} description={r.description} checked={draft[r.key]} onChange={(v) => set(r.key, v)} />

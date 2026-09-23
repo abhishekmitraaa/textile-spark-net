@@ -1,0 +1,483 @@
+# My Profile work: flags
+
+Flags raised during the phased My Profile brief (Phase 0 ground-truth pass onward, started
+2026-09-23) that were **found and not fixed** in the phase that found them. Each entry has
+what someone needs to pick it up later without the original conversation.
+
+- Security flags are **also** logged in `securityflags.md`, per the documentation protocol.
+  This file carries more context and cross-references that entry. It doesn't replace it.
+- When a flag is fixed, keep its entry, set Status to `Fixed YYYY-MM-DD`, and add the fix and
+  how it was verified. Don't delete history.
+
+## Open flags
+
+| ID | Found | Title | Type | Severity | Status |
+|---|---|---|---|---|---|
+| MPF-1 | 2026-09-23, Phase 1 | Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin | Correctness | Medium (wrong numbers on the user's own profile; nothing exposed) | Open |
+| MPF-2 | 2026-09-23, Phase 1 | Buyers write their own `calls` rows, and vendor call analytics trusts them | Security (data integrity) | Low | Open, suspected (not exercised live) |
+| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | Open, proven over HTTP |
+| MPF-4 | 2026-09-23, Phase 2 | Deletion emails can't go out yet: no `RESEND_API_KEY`, and no verified sending domain | Setup (blocks the feature for real users) | High for the feature | Open, waiting on setup |
+| MPF-5 | 2026-09-23, Phase 2 | Cosora-Admin shows a deleted account as "active" | Correctness (admin UI, other repo) | Low | Open |
+| MPF-6 | 2026-09-23, Phase 2 | Phone-only accounts will have no email to receive a deletion code, and sign-in is mobile-only, so that becomes every new account | Product gap | **High** once real sign-ups start; nil today | Open, a decision |
+| MPF-7 | 2026-09-23, Phase 2 | What anonymization leaves behind | Privacy | Low | Open, by design for now |
+| MPF-8 | 2026-09-23, Phase 3 | "Export All Data" covers the brief's tables, not every table the buyer owns rows in | Product scope | Low | Open, a decision |
+| MPF-9 | 2026-09-23, Phase 4 | Every profile save rewrites every field; an empty country becomes "India" | Correctness (data layer, pre-existing) | Low | Open |
+| MPF-10 | 2026-09-23, Phase 4 | The fake email "Verify" is gone; nothing verifies a profile email | Product gap (was fabricated UI) | Low | Open, removed rather than carried over |
+| MPF-11 | 2026-09-23, Phase 6 | A second currency picker in the buyer menu drawer saves nothing and converts nothing | Fabricated UI | Low | Open, left as-is by decision (Mitra, 2026-09-23) |
+| MPF-12 | 2026-09-23, Phase 7 | Vendor Settings' notification switches, and the "Notifications: On" label on `/profile`, still imply live delivery | Overclaiming UI | Low | Open |
+| MPF-13 | 2026-09-23, Phase 8 | Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav | Correctness (role state, pre-existing) | Medium | Open |
+| MPF-14 | 2026-09-23, Phase 9 | The seeded buyer Help FAQs promise features that don't exist | Overclaiming content (pre-existing, moved verbatim) | Medium (buyers are told about escrow and refunds that don't exist) | Open, now editable with no deploy |
+| MPF-15 | 2026-09-23, Phase 9 | Vendors have no real support destination; vendor Help is the buyer page and its chat is canned | Product gap (pre-existing) | Medium | Open, a decision |
+
+---
+
+## MPF-1: Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin
+
+- **Where:** `useProfileStats()` in `src/lib/queries/profile.ts` (about lines 200–216). It is
+  rendered by the Quotes and Chats cells of the stats row in `src/pages/Profile.tsx`.
+- **What:** both counts are a bare `select("*", { count: "exact", head: true })` with no
+  filter, relying on RLS to mean "mine". The code comment says as much: "Counts rely on RLS:
+  a buyer only 'sees' quotes on their own RFQs and conversations they're part of". That
+  premise holds for a plain buyer only. The live SELECT policies are:
+  - `quotes_select`: `vendor_id = auth.uid() OR is_admin() OR owns_rfq(rfq_id)`
+  - `conversations_select`: `auth.uid() IN (user_a, user_b) OR (is_admin() AND admin_role() IN ('support','super_admin'))`
+- **Who sees wrong numbers:**
+  - **Any admin:** Quotes counts every quote on the platform.
+  - **A support or super_admin admin:** Chats counts every conversation on the platform.
+  - **A user who also sells:** Quotes adds the quotes they *sent* as a vendor to the quotes
+    they *received*.
+  - A plain buyer's numbers are correct.
+- **Evidence (live, 2026-09-23):** a `DO` block counted as `authenticated` under each user's
+  JWT claims, then raised an error to roll back. The technique is in `test.md`, Phase 1 entry.
+
+  | Account | Quotes: shown (RLS only) / own | Chats: shown (RLS only) / own |
+  |---|---|---|
+  | demo-buyer | 2 / 2 | 1 / 1 |
+  | admin account (`6f66d05d…`, active_role seller) | **3** / 1 | **4** / 3 |
+
+- **How it came up:** Phase 1 asked for the Calls stat to be counted "the same RLS-reliant
+  way quotes/conversations are already counted", after first checking that the `calls`
+  policy scopes rows to the caller. It doesn't, so the Calls count filters `buyer_id`
+  explicitly (`useCallCount()` in `src/lib/queries/calls.ts`). The same probe showed the
+  pattern being copied was itself wrong for these two cells.
+- **Why not fixed:** outside Phase 1's scope, which was the Calls stat only. The brief says to
+  stop at the end of each phase.
+- **Recommended fix:**
+  - **Quotes:** count quotes on RFQs the user owns, e.g.
+    `.from("quotes").select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
+    Decide whether a buyer's "Quotes" means received quotes only; the stat links to
+    `/requirement/my-quotes`, which suggests it does.
+  - **Chats:** `.or(`user_a.eq.${userId},user_b.eq.${userId}`)`.
+  - Then fix the misleading comment. The convention is in `claude.md`: "A 'my N' count
+    filters on the owner column. It never leans on RLS alone".
+- **Verify by:**
+  - Re-run the probe and expect the admin account's figures to become Quotes 1 and Chats 3.
+  - Extend `tests/profile-calls-stat.spec.ts`, or add a sibling spec, so Quotes and Chats
+    must each equal an independent count and the list they link to.
+  - Note that demo-buyer alone can't tell right from wrong here, because its numbers match
+    either way. The check needs an account that is also a vendor or an admin.
+- **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real"; `test.md` Phase 1 entry.
+
+---
+
+## MPF-2: Buyers write their own `calls` rows, and vendor call analytics trusts them
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Low). Keep both entries in
+  step.
+- **Where:**
+  - Write policies on `public.calls`: `calls_insert` and `calls_write` (FOR ALL). Both check
+    only `buyer_id = auth.uid()`.
+  - The client write is in `useCallVendor()` in `src/lib/queries/calls.ts`.
+  - The readers that trust the rows are `useVendorCalls()` and `callAnalyticsForWindow()` in
+    `src/lib/queries/callAnalytics.ts`, and the calls read in `vendorAnalytics.ts`.
+- **What:** everything except `buyer_id` is the client's to choose:
+  - `vendor_id` may be any profile (the FK is to `profiles`, not to vendors).
+  - `created_at` defaults to `now()`, but a client may set it; no trigger overrides it.
+  - `product_context` is free text, shown in the vendor's top call contexts.
+  - `direction` may be any of `outgoing`, `incoming` or `missed`.
+  - There is no `account_is_active()` check. The suspension notice says the user "cannot …
+    place calls", but a suspended buyer can still log calls through the API. The UI's
+    `callGate()` is client-side only.
+  - `calls_write` also allows UPDATE and DELETE of the buyer's own rows after the fact.
+- **Impact:**
+  - Any signed-in buyer with a script can inflate, backdate or erase any vendor's call
+    analytics: count, trend, "N today" on the Advertise strip, and top contexts.
+  - A buyer can also inflate their own Profile Calls stat. That affects only themselves.
+  - Nothing private is exposed.
+- **Evidence:** read from the live policies, the column defaults, the constraints and the
+  absence of triggers on 2026-09-23. **Not exercised**, because proving it means writing
+  fabricated rows to production. Treat it as suspected until someone tests it with a rolled-back
+  insert as `authenticated`.
+- **How it came up:** reading the `calls` policies before writing the Phase 1 count.
+- **Why not fixed:** a policy and RPC change is outside Phase 1, and it changes the call-logging
+  write path used by `useCallVendor()`.
+- **Recommended fix:**
+  - Make a SECURITY DEFINER `log_call(p_vendor_id, p_product_context)` the only insert path.
+    It should require `account_is_active(auth.uid())` and a target with a `vendor_profiles`
+    row, set `created_at = now()` and `direction = 'outgoing'` server-side, trim or limit
+    `product_context`, and rate-limit per buyer.
+  - Revoke client INSERT, UPDATE and DELETE on `calls`, keeping SELECT.
+  - Point `useCallVendor()` at the RPC.
+- **Verify by:**
+  - Before the fix, as `authenticated` and rolled back: a backdated insert against another
+    vendor succeeds.
+  - After the fix: the direct insert, update and delete are refused, and `log_call` works for
+    an active buyer and refuses a suspended one.
+  - `scripts/suspension-gate-check.mjs` is the pattern to extend: run each case active and
+    suspended, and pass only if the answer changes.
+- **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real".
+
+---
+
+## MPF-3: Every user's email and phone is readable without signing in
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, **High**).
+- **Where:** `public.profiles`. The policy `profiles_select` is `USING (true)` for role
+  `public`, and both `anon` and `authenticated` hold column SELECT on everything, including
+  `email` and `phone`. The anon key ships in the app bundle, so it is effectively public.
+- **Evidence (2026-09-23):** real HTTP, with only the anon key and no session.
+  - `GET /rest/v1/profiles?select=id&email=not.is.null` with `Prefer: count=exact` returned
+    `Content-Range: 0-0/20`.
+  - The same with `phone=not.is.null` returned `0-0/7`.
+  - Only ids and counts were requested, so no personal value was read in proving it.
+    `select=email,phone` would return them all.
+- **How it came up:** Phase 2 recon. While designing account anonymization, I checked who can
+  read the identity columns being scrubbed.
+- **Why it matters for Phase 2:** anonymization removes a deleted user's email and phone,
+  but every *active* user's are public until this is fixed.
+- **Why not fixed in Phase 2:** the fix changes read access that live features depend on:
+  - `callGate()` reads `account_status`;
+  - `useCallBuyer()` reads a buyer's `phone` so a vendor can call about an RFQ;
+  - chat, review and quote surfaces read names and avatars.
+
+  Revoking blindly would break them, so it needs its own phase with a regression pass.
+- **Recommended fix:**
+  - Revoke column SELECT on `email` and `phone` from `anon` and `authenticated`, and keep the
+    others.
+  - Add a SECURITY DEFINER read for the user's own contact details.
+  - Move the vendor-calls-buyer phone read into a definer function that applies the same
+    rules as `callGate()`: an RFQ relationship, no suspension, and no chat under review.
+  - Re-run `scripts/contact-gate-check.mjs` and the call and chat specs.
+- **Verify by:** the same two anon count requests must fail on those columns (a 401 or 403,
+  or a column-permission error). The call, chat and profile flows must still pass.
+- **Compounded by (found in Phase 3):** `rfqs_select` lets **any** signed-in user read every
+  active open RFQ, not only vendors. demo-buyer sees another buyer's RFQ. With this flag
+  open, an RFQ's `buyer_id` leads straight to that buyer's email and phone. Open-RFQ
+  visibility is probably intended for the marketplace. The contact columns are the part to
+  close.
+
+---
+
+## MPF-4: Deletion emails can't go out yet
+
+- **Where:** the edge function `account-deletion` (deployed as v1), and its secrets
+  `RESEND_API_KEY` (required) and `RESEND_FROM` (optional).
+- **State on 2026-09-23:** `{action:"status"}` returns `{"configured":false}`. Until the key
+  is set:
+  - `request` answers `not_configured` and mints nothing (verified: 0 request rows);
+  - the dialog says deletion isn't available online yet and points to hello@cosora.in
+    (screenshot `account-deletion-not-configured.png`).
+- **Two setup steps, both for the owner:**
+  1. **Create a Resend account and add `RESEND_API_KEY`** as an edge-function secret, in the
+     Supabase dashboard → Edge Functions → Secrets. It takes effect without a redeploy.
+  2. **Verify a sending domain** (for example `cosora.in`) in Resend, and set `RESEND_FROM`
+     to an address on it (for example `Cosora <no-reply@cosora.in>`). Without this, Resend's
+     shared `onboarding@resend.dev` sender delivers **only to the Resend account owner's
+     own address**, and every other buyer gets `send_failed`.
+- **What is verified and what isn't:**
+  - Verified end to end with a throwaway buyer: everything after the email, with the code
+    issued through SQL in place of the email. That covers code entry, a wrong code, the
+    banner, cancel, schedule, the sweep and anonymization.
+  - **Not yet verified:** a real email arriving through Resend.
+- **Verify by:** with the key set, sign in as a buyer whose confirmed email you can read,
+  request a code, check it arrives, and enter it. Then check the request reads `cooling_off`
+  and cancel it.
+
+---
+
+## MPF-5: Cosora-Admin shows a deleted account as "active"
+
+- **Where:** `cosora-admin`, in `src/pages/Accounts.tsx` (about line 185) and
+  `src/components/AccountStatus.tsx` (about line 136). Both render
+  `account_status === "suspended" ? suspended : active`, so the new `'deleted'` value shows
+  as a green "active".
+- **Effect:**
+  - An admin sees a deleted buyer as active and is offered Suspend.
+  - The database refuses the suspend: `set_account_status()` answers 42501 for a deleted
+    account (verified as super_admin, rolled back). So nothing breaks, but the label is
+    wrong and the error is confusing.
+- **Why not fixed:** it's in the other repo, outside this brief's buyer-app scope.
+- **Fix:** render `deleted` as its own neutral badge with no action buttons, in both places.
+
+---
+
+## MPF-6: Phone-only accounts will have no email to receive a deletion code
+
+- **Where:** `account_deletion_blocker()` returns `no_email` when `auth.users.email` is NULL
+  or a `.invalid` placeholder. The mobile-OTP path (`otp-dev-verify`, parked) creates
+  exactly those placeholders.
+- **Today:** 0 accounts are affected. All 20 real accounts have a confirmed email: they are
+  demo, test and admin accounts created before mobile sign-in.
+- **Why this is not an edge case (Mitra, 2026-09-23):** sign-in is **mobile number + OTP
+  only**, with a dummy OTP for now, and it stays that way. So every account created through
+  the real sign-in has a placeholder email, and every such buyer who presses "Delete my
+  account" will see "We can't confirm this by email" and be sent to support.
+- **Fix, a decision for the owner:** confirm deletion with the same mobile OTP the account
+  signs in with, through the same request, code and confirmation tables; only the delivery
+  channel changes. It can only be real once real OTP delivery exists, since the OTP is a
+  dummy today. Until then the email code serves the existing email-bearing accounts only.
+- **Not done now,** because it would touch the OTP path, and sign-in must not change.
+
+---
+
+## MPF-7: What anonymization leaves behind
+
+- **Kept on purpose**, because other people's history depends on them: RFQs, quotes,
+  conversations, messages, reviews and calls. The identity on them is scrubbed.
+- **Not scrubbed:**
+  - **Message text.** A buyer who typed their phone number into a chat still has it there.
+  - **Avatar image files in Storage.** `avatar_url` is nulled, but SQL cannot delete Storage
+    objects. The files stay reachable by anyone who kept the URL.
+  - **Private activity rows:** saved items and folders, follows, recently viewed,
+    notifications and video likes. They are tied to "Deleted user", which no one can sign in
+    as.
+  - **`auth.audit_log_entries`**, GoTrue's own log, which contains the old email.
+- **Access-token window:** a token issued before the sweep lives up to 1 hour.
+  - Refused with it (verified): INSERTs, profile and buyer-profile writes, and refresh.
+  - Not refused: UPDATEs to the user's own rows elsewhere (an RFQ's description, a review's
+    text) and reads.
+- **Also logged in:** `securityflags.md` (Low).
+- **Fix shape, if wanted:**
+  - Have the sweep call an edge function that deletes the avatar objects through the
+    Storage API.
+  - Delete the private activity rows inside `anonymize_account()`.
+  - Gate own-row UPDATE policies on `account_is_active()`, as INSERTs already are.
+
+---
+
+## MPF-8: "Export All Data" covers the brief's tables, not every table the buyer owns rows in
+
+- **Where:** `buildAllDataJson()` in `src/lib/queries/dataExport.ts`.
+- **What:** the JSON holds exactly the brief's list:
+  - the profile and buyer profile;
+  - RFQs, and the quotes received on them;
+  - conversations and their messages;
+  - reviews and product reviews.
+- **Not in the file**, though the buyer owns rows there:
+  - `calls` (their call log);
+  - `saved_items` and `saved_folders`;
+  - `follows`;
+  - `recently_viewed`;
+  - `video_likes` and `saved_videos`;
+  - `service_reviews`;
+  - `notifications`;
+  - `account_deletion_requests`.
+- **Why it matters:** the button says "All Data". Under an access request, a buyer could
+  reasonably expect the rest.
+- **Why not done:** the brief named its tables, and each addition is a scope decision.
+- **Fix, if wanted:** each is one owner-filtered read and one section, using the same
+  pattern as the existing ones. The spec's ownership checks extend the same way.
+
+---
+
+## MPF-9: Every profile save rewrites every field; an empty country becomes "India"
+
+- **Where:** `saveProfileFull()` in `src/lib/queries/profile.ts`. It was left unchanged on
+  purpose: Phase 4 was a UI relocation. It is used by both new routes through
+  `hooks/useEditableProfile.ts`.
+- **What:** a save writes every column the form holds, not just the edited one:
+  - `profiles`: full_name, email, phone and avatar_url;
+  - `buyer_profiles`: 15 columns.
+- **Side effects of writing every field:**
+  - `EMPTY_PROFILE.country` is `"India"`, so an empty country is saved as `'India'`.
+    Observed live: demo-buyer's `country` went NULL → `'India'` on a job-title save.
+  - `display_name` is overwritten with `full_name`.
+  - An empty avatar adopts the Google picture.
+
+  The removed modal behaved the same way, so nothing changed with the move.
+- **The one real hazard is closed.** A save before the profile loaded would have written
+  blanks over real data. The new pages render no inputs until the row has loaded (the hook's
+  `form` stays null until then).
+- **Fix, if wanted:** send only changed fields (diff the form against the loaded row), and
+  default `country` in the UI rather than in `EMPTY_PROFILE`.
+
+---
+
+## MPF-10: The fake email "Verify" is gone; nothing verifies a profile email
+
+- **What was there:** the modal's Personal tab.
+  - "Verify" toasted "Verification code sent" and sent nothing.
+  - Any 4+ digit code then showed "Email verified".
+  - The "Verified" badge appeared for **any** stored email, because `emailVerified` is
+    `Boolean(p.email)` in `profile.ts`.
+- **What Phase 4 did:** `/profile/edit` shows email as a plain field. This project removes a
+  status nobody earned (see claude.md, "Business Rules — Discovered"), and moving it to a
+  new, deep-linkable page would have spread it further.
+- **Not built:** real verification. Phase 0 marked `email_verified` out of scope, and no
+  column exists. `profiles.email` is a free-text contact field and has **nothing to do
+  with sign-in**.
+  - **Sign-in is mobile number + OTP only, and stays that way.** The OTP is a dummy for now
+    (Mitra's instruction, 2026-09-23). Nothing here may change or add a sign-in method.
+  - Phase 2's deletion codes go to `auth.users.email` (the account's own email, not this
+    field), and never act as a sign-in.
+- **Fix, if wanted:** verify `profiles.email` with an emailed code through the Phase 2
+  Resend path, store the result in a real column, and only then show a badge. That is
+  contact verification, not a sign-in method.
+
+---
+
+## MPF-11: A second currency picker in the buyer menu drawer saves nothing and converts nothing
+
+- **Where:** `src/components/buyer/BuyerTopBar.tsx`, about lines 80–88, the "Default
+  Currency" block at the bottom of the buyer menu drawer.
+- **What:**
+  - It is an uncontrolled `<select>` (₹ INR, $ USD, € EUR, £ GBP) with no `value`, no
+    `onChange` and no read of `buyer_profiles.regional`.
+  - Choosing USD does nothing, and the choice resets when the drawer closes. It isn't even
+    saved, unlike the Regional Settings picker.
+  - It is **not** partial wiring. It is a second, unconnected surface that the Phase 6 brief
+    didn't know about.
+- **How it came up:** the Phase 6 repo-wide search. The brief's own grep missed it because
+  the select holds literal option strings and never names `regional` or `currency`.
+- **Why not changed in Phase 6:** the brief scoped the fix to Regional Settings, and the
+  drawer is a surface it didn't anticipate, so it is reported for a decision rather than
+  changed.
+- **Options:**
+  1. **Remove it** (recommended). Currency lives in Regional Settings, which now says
+     honestly that prices stay in ₹ INR. A picker that does nothing is fabricated UI.
+  2. **Replace it with a link row**, "Currency · ₹ INR ›", to `/profile/regional-settings`,
+     showing the saved value. That needs a settings read in the drawer.
+  3. **Leave it** until multi-currency pricing is built.
+- **Decision (Mitra, 2026-09-23): leave it for now.** It stays in place, unchanged. Revisit
+  when multi-currency pricing is built, or earlier if the drawer is reworked. The
+  honest-copy pattern from Regional Settings, or option 1 or 2 above, is the fix.
+
+---
+
+## MPF-12: Vendor Settings' notification switches, and the "Notifications: On" label on `/profile`, still imply live delivery
+
+- **Context:** Phase 7 made `/profile/notifications` honest. Its switches are saved
+  preferences only, and nothing sends email or push from them. Two surfaces outside that
+  page's scope carry the same overclaim.
+- **Vendor Settings** (`src/pages/VendorSettings.tsx`, `EMAIL_ROWS` / `PUSH_ROWS`):
+  - Eight switches saved to `vendor_profiles.notifications` ("When a buyer posts a
+    requirement in your categories", "When a buyer messages you", …).
+  - Nothing reads them. The in-app bell (`notify()`) is fed only by moderation, account, ad
+    and certificate events. So a vendor who turns on "New requirements (RFQs)" gets nothing,
+    anywhere.
+- **The `/profile` row** "Notifications · On/Off" (`Profile.tsx`) is derived from the saved
+  switches. "On" reads as "you are receiving notifications".
+- **Why not changed in Phase 7:** the brief scoped the fix to the buyer profile's
+  notifications page, and the vendor app is a different surface.
+- **Fix:**
+  - Vendor Settings: the same pattern as `ProfileNotifications.tsx` (a `DELIVERY_LIVE` flag,
+    an amber note, "saved for when it launches" subtitles, event-worded descriptions).
+  - The `/profile` row: show "Saved" or nothing instead of "On", until delivery exists.
+- **Related:** building real delivery is its own master prompt. See the Phase 7 changelog
+  entry for what it would take.
+
+---
+
+## MPF-13: Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav
+
+- **Where:** `src/contexts/UserRoleContext.tsx`. `const [role, setRole] = useState<UserRole>("buyer")`.
+- **What:** `role` only ever changes through `setRole` or `toggleRole`, which are called from
+  `OtpVerify` (at sign-in), `Onboarding`, and the role switchers (`useSwitchRole`). Nothing
+  reads `profiles.active_role` on load. So after any hard load (a refresh, a pasted link, a
+  new tab), a signed-in **vendor** runs in buyer mode:
+  - `DashboardSidebar` renders its buyer branch (My Profile / Settings → `/profile/settings`);
+  - the role-aware bottom nav is the buyer one;
+  - `homeHref` is the buyer home.
+
+  The context already reads `profile.active_role`, but only to set `vendorRegistered`.
+- **How it came up:** the Phase 8 spec's vendor check.
+  - demo-vendor (`active_role = 'seller'`) on a freshly loaded `/notifications` clicked
+    "Settings" and landed on the **buyer** Settings page.
+  - After switching to Seller with the role switcher, as a real vendor does in-session,
+    Settings went to `/settings` as expected, and the spec now does that.
+  - The seller branch of the sidebar was not changed in Phase 8.
+- **Why not fixed:** outside Phase 8. The fix also sits next to the sign-in flow (`OtpVerify`
+  sets the role there), which must not change without a go-ahead.
+- **Fix shape:** seed `role` from `profile.active_role` once the profile loads, in the same
+  effect that sets `vendorRegistered`, and only until the user switches by hand, so a manual
+  switch isn't overridden. Verify with a hard load as demo-vendor on `/seller-home`: the
+  seller sidebar should appear without using the switcher.
+
+---
+
+## MPF-14: The seeded buyer Help FAQs promise features that don't exist
+
+- **Where:** `public.faqs`, surface `buyer_help`, seeded by
+  `20260923144549_faqs_admin_editable.sql`. Shown on `/profile/help` and `/help`. Until
+  Phase 9 this text was the hardcoded `faqCategories` in `src/pages/Help.tsx`, and Phase 9
+  moved it over verbatim.
+- **What:** answers that describe things the product doesn't have. Each claim was checked by
+  searching `src/` and `supabase/migrations/`, and the only match is the seed itself.
+
+  | Question | Claim | Reality |
+  |---|---|---|
+  | How do I track my order status? | Track it "under 'Active Orders'", with "notifications at each stage — from production to shipping to delivery" | No orders route or table (`sitemap.md`, "Routes that do NOT exist"). No quote, message or RFQ event notifies anyone (Phase 7) |
+  | What payment methods are accepted? | "escrow payments for larger orders" | No escrow anywhere |
+  | Is my payment secure? | "escrow services where payment is released to the vendor only after you confirm…" | Same: no escrow |
+  | Can I get a refund if there's an issue with my order? | "Our buyer protection policy covers quality issues and non-delivery… within 7 days" | No buyer-protection policy and no refund flow for buyer orders |
+  | How do I update my business profile? | Edit company info, contact details, "shipping addresses" and notification preferences | No shipping addresses. Editing is `/profile/edit` and `/profile/business-details` (Phase 4) |
+  | Can I have multiple team members on one account? | "Settings > Team Management… permission levels" | No team accounts; one login per account |
+  | How do I change my notification settings? | Choose updates "via email, SMS, or push notifications" | Saved preferences only. Nothing is sent by email, SMS or push (Phase 7) |
+
+- **How it came up:** Phase 9 moved the text as-is, and reading it row by row to seed the
+  table surfaced the claims.
+- **Why not fixed:** rewriting what the product promises is a content decision, not a code
+  one, and the brief moved the content unchanged. It's now a no-deploy fix.
+- **Fix shape:** a super_admin rewrites or deactivates the rows above in Cosora-Admin
+  `/faqs`, then checks the page signed out. `tests/faqs-admin-editable.spec.ts` asserts
+  "12 questions across 4 topics", so update that line if the count changes.
+
+---
+
+## MPF-15: Vendors have no real support destination
+
+- **Where:**
+  - Vendor Settings → "Help Center" (`VendorSettings.tsx`, → `/help`);
+  - both sidebars' "Help & Support" (`DashboardSidebar.tsx`, → `/help`);
+  - `/help` renders the same `Help.tsx` as `/profile/help`.
+- **What:**
+  - A vendor asking for help lands on buyer content: the `buyer_help` FAQ (RFQs, quotes
+    received, paying vendors), and a Delete account card that sends vendors to support.
+  - The page's chat (`SupportChat`, `/profile/help/chat`) answers from a `CANNED` array on
+    a timer. It has no Supabase call, so nothing reaches anyone. The same is true for
+    buyers.
+  - The only real channel is email to `hello@cosora.in`, the address on `VendorLanding.tsx`
+    ("For support, write to…"), `Help.tsx` and `About.tsx`.
+- **How it came up:** Phase 9 item 6 asked to confirm the vendor support destination before
+  wiring the Subscription FAQ's "Contact us", and not to assume `/profile/help` works for a
+  vendor. It doesn't, so the button is
+  `mailto:hello@cosora.in?subject=Subscription%20question`.
+- **Why not fixed:** outside Phase 9. The brief left Help's fake Contact Us chat untouched in
+  this phase.
+- **Fix shape:** a decision first. Either:
+  - a vendor Help page: a `seller_help` surface drops straight into `faqs` and
+    `<FaqSection>`, but it's a new check-constraint value, so a migration; or
+  - honest copy on `/help` for vendors.
+
+  Separately, the canned chat should be labelled as such or removed, on both sides.
+
+---
+
+## Phase 9 decisions waiting on Andy
+
+These aren't defects. They block the rest of Phase 9's content, not its code.
+
+1. **The content file is missing.** The brief cites
+   `seller-registration-and-subscription-faq-content.md` for the 10 seller-registration
+   questions and the new subscription ones. It isn't in either repo or anywhere in the
+   workspace (searched 2026-09-23), so nothing from it is seeded. When it arrives, the
+   content goes in through Cosora-Admin `/faqs`, not a migration, as the brief asked.
+2. **Where Seller Registration goes.** `<FaqSection surface="seller_registration" />` is
+   built, and the read it uses is tested, but it isn't on any page. The candidates are
+   `Register.tsx`, `RoleSelection.tsx` and `Onboarding.tsx`. Placing it is one line plus an
+   import.
+3. **Should `support` write FAQs?** Today support reads (`admin_faq_list`) and only
+   super_admin writes. Widening that means changing the four write RPCs' gates (a migration)
+   **and** `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`. Either change alone is wrong.
+4. **"Lowest billing plan?"** is an unanswered placeholder in the source content. It needs a
+   real answer before it's added to the Subscription FAQ.

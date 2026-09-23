@@ -71,6 +71,9 @@ import FollowingViewAll from "./pages/FollowingViewAll";
 import ProfileNotifications from "./pages/ProfileNotifications";
 import ProfileSocialLinks from "./pages/ProfileSocialLinks";
 import ProfileAccountPrefs from "./pages/ProfileAccountPrefs";
+import ProfileEdit from "./pages/ProfileEdit";
+import ProfileBusinessDetails from "./pages/ProfileBusinessDetails";
+import BuyerSettings from "./pages/Settings";
 import TermsConditions from "./pages/TermsConditions";
 import SavedCollections from "./pages/SavedCollections";
 import SavedCollectionDetail from "./pages/SavedCollectionDetail";
@@ -270,6 +273,11 @@ const App = () => (
             <Route path="/my-payments/receipt/:orderId" element={<AdReceiptDetail />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/profile" element={<Profile />} />
+            {/* Replaced the Edit Profile modal (2026-09-23): real, refresh-safe routes. */}
+            <Route path="/profile/edit" element={<ProfileEdit />} />
+            <Route path="/profile/business-details" element={<ProfileBusinessDetails />} />
+            {/* Buyer account & security settings (2026-09-23). /settings is the vendor's. */}
+            <Route path="/profile/settings" element={<BuyerSettings />} />
             <Route path="/profile/notifications" element={<ProfileNotifications />} />
             <Route path="/profile/social-links" element={<ProfileSocialLinks />} />
             <Route path="/profile/regional-settings" element={<ProfileAccountPrefs />} />

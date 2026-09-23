@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { useFaqs, groupFaqs } from "@/lib/queries/faqs";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -14,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
-import { toast } from "sonner";
+import { DeleteAccountCard } from "@/components/buyer/DeleteAccountCard";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -40,48 +41,16 @@ const listItem = {
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-const faqCategories = [
-  {
-    id: "getting-started",
-    title: "Getting Started",
-    icon: HelpCircle,
-    faqs: [
-      { question: "How do I create my first RFQ (Request for Quote)?", answer: "Navigate to 'Post Requirement' from your dashboard or sidebar. You can choose Quick RFQ for simple requests or create a detailed requirement with specifications like category, quantity, fabric type, and more." },
-      { question: "How do I find the right vendors for my needs?", answer: "Use our smart matching system by posting your requirements. We'll connect you with verified vendors who specialize in your product category. You can also browse vendor profiles and view their ratings and reviews." },
-      { question: "What information should I include in my requirement?", answer: "Include product category, quantity, preferred fabric/material, size range, any specific designs or prints, target price range, and delivery timeline. The more details you provide, the better quotes you'll receive." },
-    ],
-  },
-  {
-    id: "orders-quotes",
-    title: "Orders & Quotes",
-    icon: ShoppingBag,
-    faqs: [
-      { question: "How do I compare quotes from different vendors?", answer: "Go to 'My Quotes' section where you can view all received quotes side by side. Our comparison tool highlights the best price and fastest delivery options to help you make informed decisions." },
-      { question: "Can I negotiate prices with vendors?", answer: "Yes! You can use our integrated chat feature to communicate directly with vendors. Discuss pricing, minimum order quantities, customizations, and delivery terms before finalising your order." },
-      { question: "How do I track my order status?", answer: "Once you've placed an order, you can track it from your dashboard under 'Active Orders'. You'll receive notifications at each stage — from production to shipping to delivery." },
-    ],
-  },
-  {
-    id: "payments",
-    title: "Payments & Billing",
-    icon: CreditCard,
-    faqs: [
-      { question: "What payment methods are accepted?", answer: "We support multiple payment options including bank transfers, credit/debit cards, and escrow payments for larger orders. Payment terms can be negotiated directly with vendors." },
-      { question: "Is my payment secure?", answer: "Yes, all transactions are secured with bank-grade encryption. For added protection, we offer escrow services where payment is released to the vendor only after you confirm receipt of goods." },
-      { question: "Can I get a refund if there's an issue with my order?", answer: "Our buyer protection policy covers quality issues and non-delivery. Contact support within 7 days of delivery with photos/documentation of any issues to initiate a refund or replacement request." },
-    ],
-  },
-  {
-    id: "account",
-    title: "Account Management",
-    icon: User,
-    faqs: [
-      { question: "How do I update my business profile?", answer: "Go to Profile from the sidebar, then click 'Edit Profile'. You can update your company information, contact details, shipping addresses, and notification preferences." },
-      { question: "Can I have multiple team members on one account?", answer: "Yes, business accounts can add team members with different permission levels. Go to Settings > Team Management to invite colleagues and assign roles." },
-      { question: "How do I change my notification settings?", answer: "Navigate to Profile > Notifications. You can customise which updates you receive via email, SMS, or push notifications — including quote alerts, order updates, and promotional offers." },
-    ],
-  },
-];
+// FAQ content lives in public.faqs (surface "buyer_help") and is edited from
+// Cosora-Admin's FAQs page with no deploy (2026-09-23). Only the data source
+// changed here. Each category keeps the icon it had when it was hardcoded, and
+// a category an admin adds later gets HelpCircle.
+const FAQ_CATEGORY_ICONS: Record<string, typeof HelpCircle> = {
+  "Getting Started": HelpCircle,
+  "Orders & Quotes": ShoppingBag,
+  "Payments & Billing": CreditCard,
+  "Account Management": User,
+};
 
 const quickGuides = [
   { title: "How to Complete Verification", icon: FileText },
@@ -268,6 +237,18 @@ const Help = () => {
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Same shape the hardcoded array had, so everything below renders as before.
+  const { data: faqRows, isPending: faqsLoading } = useFaqs("buyer_help");
+  const faqCategories = useMemo(
+    () => groupFaqs(faqRows ?? []).map((g) => ({
+      id: g.label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+      title: g.label,
+      icon: FAQ_CATEGORY_ICONS[g.label] ?? HelpCircle,
+      faqs: g.faqs,
+    })),
+    [faqRows],
+  );
+
   const filteredCategories = faqCategories.map(cat => ({
     ...cat,
     faqs: cat.faqs.filter(
@@ -369,17 +350,9 @@ const Help = () => {
             </a>
           </motion.div>
 
-          {/* ── Delete Account ── */}
-          <motion.div variants={section} className="bg-white rounded-lg border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 mb-2">Do you want to delete your account?</p>
-            <motion.button
-              whileTap={TAP}
-              transition={TAP_T}
-              onClick={() => toast.error("Delete account request submitted")}
-              className="text-sm font-medium text-red-600 hover:text-red-700"
-            >
-              Delete my account
-            </motion.button>
+          {/* ── Delete Account ── emailed code, 14-day cooling-off, then anonymized */}
+          <motion.div variants={section}>
+            <DeleteAccountCard />
           </motion.div>
             </motion.div>{/* /Left rail */}
 
@@ -405,7 +378,9 @@ const Help = () => {
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {faqOpen
                         ? "Click to collapse"
-                        : `${faqCategories.reduce((a, c) => a + c.faqs.length, 0)} questions across ${faqCategories.length} topics`}
+                        : faqsLoading
+                          ? "Loading questions…"
+                          : `${faqCategories.reduce((a, c) => a + c.faqs.length, 0)} questions across ${faqCategories.length} topics`}
                     </p>
                   </div>
                 </div>
@@ -432,10 +407,16 @@ const Help = () => {
                   {(searchQuery ? filteredCategories : faqCategories).length === 0 ? (
                     <div className="py-10 text-center">
                       <HelpCircle className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-                      <p className="text-sm text-muted-foreground">No results for "{searchQuery}"</p>
-                      <button onClick={() => setSearchQuery("")} className="text-sm text-[#256fef] hover:underline mt-1">
-                        Clear search
-                      </button>
+                      {searchQuery ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">No results for "{searchQuery}"</p>
+                          <button onClick={() => setSearchQuery("")} className="text-sm text-[#256fef] hover:underline mt-1">
+                            Clear search
+                          </button>
+                        </>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{faqsLoading ? "Loading questions…" : "No questions yet."}</p>
+                      )}
                     </div>
                   ) : (
                     (searchQuery ? filteredCategories : faqCategories).map((cat, catIdx) => (

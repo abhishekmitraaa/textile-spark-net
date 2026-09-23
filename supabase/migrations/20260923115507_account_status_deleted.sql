@@ -1,0 +1,18 @@
+-- Account deletion, part 1 of 2 (Phase 2 of the My Profile brief, 2026-09-23):
+-- a terminal 'deleted' account status.
+--
+-- A migration of its own because Postgres refuses to USE an enum value inside
+-- the transaction that added it ("unsafe use of new value"), and part 2
+-- (`account_deletion_requests`) compares and writes 'deleted'. apply_migration
+-- runs each migration as one transaction, so the value is committed first.
+--
+-- What 'deleted' means: anonymize_account() (part 2) scrubbed the account at the
+-- end of a user-requested, email-confirmed, 14-day cooling-off. It is terminal.
+-- What already handles it with no change:
+--   * account_is_active() is `account_status = 'active'`, so every INSERT policy
+--     gated on it refuses a deleted account.
+--   * enforce_admin_grants() refuses a signed-in user changing account_status.
+-- What part 2 changes: set_account_status() is taught to refuse 'deleted' in both
+-- directions; its non-'suspended' branch would otherwise set a deleted account
+-- back to 'active'.
+alter type public.account_status_type add value if not exists 'deleted';

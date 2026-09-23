@@ -10,7 +10,8 @@ import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings }
 // Buyer profile — the real, DB-backed identity + business details shown on
 // the My Profile page. Identity fields (name/email/phone/avatar) live on
 // `profiles`; everything else on `buyer_profiles`. Google only provides
-// name/email/avatar at sign-up, so the rest is filled via the Edit modal.
+// name/email/avatar at sign-up, so the rest is filled via /profile/edit and
+// /profile/business-details (hooks/useEditableProfile.ts).
 // ─────────────────────────────────────────────────────────────
 
 // A blank profile used while the real one loads / before anything is filled.

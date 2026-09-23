@@ -16,7 +16,8 @@ import type { CallRecord } from "@/lib/chatData";
 // and falls back to opening the chat thread when the vendor has no number.
 //
 // `useCalls()` reads the signed-in buyer's real call history, grouped
-// Today / Yesterday / <date> for the Messages hub Calls tab.
+// Today / Yesterday / <date> for the Messages hub Calls tab. `useCallCount()`
+// counts the same rows for the Profile page's Calls stat.
 // ─────────────────────────────────────────────────────────────
 
 const telHref = (phone: string) => `tel:${phone.replace(/[^\d+]/g, "")}`;
@@ -309,6 +310,28 @@ export function useCalls() {
   return useQuery({
     queryKey: ["calls", user?.id],
     queryFn: () => fetchCalls(user!.id),
+    enabled: Boolean(user?.id),
+  });
+}
+
+// The buyer's own call count, so it always matches the Calls tab list above.
+// Filtered on buyer_id explicitly, NOT left to RLS like the counts in
+// useProfileStats: calls_select also admits `vendor_id = auth.uid()` and
+// `is_admin()`, so a bare count would add calls made TO a vendor and, for an
+// admin, every call on the platform. Keyed under ["calls", userId] so the
+// invalidation in useCallVendor refreshes it the moment a call is logged.
+export function useCallCount() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["calls", user?.id, "count"],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("calls")
+        .select("*", { count: "exact", head: true })
+        .eq("buyer_id", user!.id);
+      if (error) throw error;
+      return count ?? 0;
+    },
     enabled: Boolean(user?.id),
   });
 }

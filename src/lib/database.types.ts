@@ -13,6 +13,91 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_deletion_otps: {
+        Row: {
+          attempts: number
+          code_hash: string
+          expires_at: string
+          request_id: string
+          sent_at: string
+        }
+        Insert: {
+          attempts?: number
+          code_hash: string
+          expires_at: string
+          request_id: string
+          sent_at?: string
+        }
+        Update: {
+          attempts?: number
+          code_hash?: string
+          expires_at?: string
+          request_id?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_otps_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: true
+            referencedRelation: "account_deletion_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_deletion_requests: {
+        Row: {
+          cancelled_at: string | null
+          code_expires_at: string | null
+          codes_sent: number
+          completed_at: string | null
+          confirmed_at: string | null
+          id: string
+          last_code_sent_at: string | null
+          last_error: string | null
+          requested_at: string
+          scheduled_for: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          code_expires_at?: string | null
+          codes_sent?: number
+          completed_at?: string | null
+          confirmed_at?: string | null
+          id?: string
+          last_code_sent_at?: string | null
+          last_error?: string | null
+          requested_at?: string
+          scheduled_for?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          code_expires_at?: string | null
+          codes_sent?: number
+          completed_at?: string | null
+          confirmed_at?: string | null
+          id?: string
+          last_code_sent_at?: string | null
+          last_error?: string | null
+          requested_at?: string
+          scheduled_for?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_deletion_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ad_orders: {
         Row: {
           amount: number
@@ -590,6 +675,53 @@ export type Database = {
           {
             foreignKeyName: "engagement_events_viewer_id_fkey"
             columns: ["viewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faqs: {
+        Row: {
+          active: boolean
+          answer: string
+          category_label: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          position: number
+          question: string
+          surface: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          answer: string
+          category_label?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position?: number
+          question: string
+          surface: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          answer?: string
+          category_label?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          position?: number
+          question?: string
+          surface?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faqs_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -2228,6 +2360,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      account_deletion_blocker: { Args: { p_user: string }; Returns: string }
       ad_bump_window: { Args: never; Returns: string }
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string; p_session?: string }; Returns: undefined }
@@ -2377,6 +2510,64 @@ export type Database = {
           status: string
           vault_secret_ok: boolean
           videos_missing: number
+        }[]
+      }
+      admin_faq_add: {
+        Args: {
+          p_answer: string
+          p_category_label: string
+          p_position?: number
+          p_question: string
+          p_surface: string
+        }
+        Returns: {
+          active: boolean
+          answer: string
+          category_label: string
+          id: string
+          position: number
+          question: string
+          surface: string
+        }[]
+      }
+      admin_faq_delete: { Args: { p_id: string }; Returns: { id: string }[] }
+      admin_faq_list: {
+        Args: { p_surface?: string }
+        Returns: {
+          active: boolean
+          answer: string
+          category_label: string
+          created_at: string
+          created_by: string
+          creator_email: string
+          creator_full_name: string
+          id: string
+          position: number
+          question: string
+          surface: string
+          updated_at: string
+        }[]
+      }
+      admin_faq_reorder: {
+        Args: { p_id: string; p_position: number }
+        Returns: { id: string; position: number }[]
+      }
+      admin_faq_update: {
+        Args: {
+          p_active?: boolean
+          p_answer?: string
+          p_category_label?: string
+          p_id: string
+          p_question?: string
+        }
+        Returns: {
+          active: boolean
+          answer: string
+          category_label: string
+          id: string
+          position: number
+          question: string
+          surface: string
         }[]
       }
       admin_flag_add: {
@@ -2535,6 +2726,7 @@ export type Database = {
           role: Database["public"]["Enums"]["admin_role_type"]
         }[]
       }
+      anonymize_account: { Args: { p_user: string }; Returns: undefined }
       approve_ad_campaign: {
         Args: { p_ad_id: string; p_note?: string }
         Returns: string
@@ -2561,6 +2753,7 @@ export type Database = {
         Args: { p_embedding: string; p_query: string }
         Returns: boolean
       }
+      cancel_account_deletion: { Args: never; Returns: Json }
       certificate_apply: {
         Args: {
           p_courier?: string
@@ -2598,6 +2791,11 @@ export type Database = {
       certificate_mark_returned: {
         Args: { p_ad_certificate_id: string; p_reason: string }
         Returns: string
+      }
+      confirm_account_deletion: { Args: { p_code: string }; Returns: Json }
+      discard_account_deletion_code: {
+        Args: { p_request: string }
+        Returns: undefined
       }
       drain_vendor_catalog_recompute: {
         Args: { p_limit?: number }
@@ -2685,6 +2883,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
+      issue_account_deletion_code: { Args: { p_user: string }; Returns: Json }
       lead_cap_used: {
         Args: { p_since: string; p_vendor: string }
         Returns: number
@@ -2769,6 +2968,7 @@ export type Database = {
         Args: { p_ad_id: string; p_reason_code?: string }
         Returns: undefined
       }
+      process_due_account_deletions: { Args: never; Returns: number }
       prune_search_query_embeddings: {
         Args: {
           p_max_age_days?: number
@@ -2902,7 +3102,7 @@ export type Database = {
       }
     }
     Enums: {
-      account_status_type: "active" | "suspended"
+      account_status_type: "active" | "suspended" | "deleted"
       admin_role_type:
         | "super_admin"
         | "product_moderator"
@@ -3040,7 +3240,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      account_status_type: ["active", "suspended"],
+      account_status_type: ["active", "suspended", "deleted"],
       admin_role_type: [
         "super_admin",
         "product_moderator",
