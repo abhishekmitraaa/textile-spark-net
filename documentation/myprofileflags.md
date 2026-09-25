@@ -56,14 +56,19 @@ Waiting on Mitra unless marked otherwise.
    The same options apply: delete the 58 events (all dated 2026-09-25 19:20–19:30 UTC
    from those three viewers) and take `views_count` back by 2, or leave it. The ad
    counter can't be put back exactly. Detail: `test.md`, the flag-fix pass entry.
-2. **CI runs the whole test suite against production on every push to `main`.**
-   - `.github/workflows/e2e.yml` builds the buyer app and runs every Playwright spec against
-     the live project, with the demo logins from repository secrets. The last six runs on
-     `main` (2026-09-23) all failed at the test step.
-   - Specs that don't answer the tracking calls in the browser write analytics from CI, the
-     same way decision 1 describes.
-   - **Options:** answer the tracking calls in one shared fixture for every spec, point CI
-     at a Supabase branch database, or stop running it on push.
+2. **CI is set up to run the whole test suite against production on every push to `main`.
+   Today it stops before the first test.**
+   - `.github/workflows/e2e.yml` builds the buyer app and runs Playwright against the live
+     project, with the demo logins from repository secrets.
+   - 33 of the 37 specs read `.env` when they load, and CI has no `.env`, so Playwright stops
+     while loading them. The run for this merge failed that way within 2 seconds and wrote
+     nothing to production: no event, view, impression, recently-viewed or Admin Log row.
+     The six runs on `main` before it (2026-09-23) also failed at the test step.
+   - If the `.env` read is fixed, the suite would run against production. Specs that don't
+     answer the tracking calls in the browser would then write analytics, as decision 1
+     describes.
+   - **Options:** read the logins from the environment only, answer the tracking calls in
+     one shared fixture, point CI at a Supabase branch database, or stop running it on push.
 
    **Merged and deployed (2026-09-26).** Phases 14–26 and the flag-fix pass are merged to
    `main` in both repos. Vercel deploys `main` to Production in both. The branches

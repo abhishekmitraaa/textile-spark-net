@@ -1,6 +1,6 @@
 - 2026-09-25 (flag-fix pass): **Every open My Profile flag is now fixed or moved to `ToDo.md`, following Mitra's instruction for each. Fixed: MPF-12, 18, 22, 23, 25, 26 and 27. Moved to `ToDo.md`, left as they are: MPF-4, 10, 14, 15, 16, 17, 21 and 24. Merged to `main` on 2026-09-26 with Phases 14–26, which Vercel deploys to Production in both apps.**
   - **Removed before the merge:** `otp-dev-verify/index.ts` and `.claude/tmp/phase5-context.md`, which commit `85f4f6a` had added to the branch (`git rm --cached`; the local copies stay). They remain in the history. Both repos are public, and neither file holds a secret value.
-  - **Found while merging:** `.github/workflows/e2e.yml` runs every spec against production on each push to `main` (the last six runs failed at the test step). It is now open decision 2 in `myprofileflags.md`.
+  - **Found while merging:** `.github/workflows/e2e.yml` is set up to run every spec against production on each push to `main`. Today it stops before the first test: 33 of 37 specs read `.env` on load, and CI has none. So the merge's run wrote nothing to production (checked: no event, view, impression or Admin Log row). It is open decision 2 in `myprofileflags.md`.
   - **MPF-12, notifications no longer imply live delivery.**
     - One switch, `NOTIFICATION_DELIVERY_LIVE` (`src/lib/notificationDelivery.ts`), is read by `/profile/notifications`, Vendor Settings, the `/profile` row and the seller home.
     - Vendor Settings has the buyer page's amber note and "saved for when it launches" subtitles.
