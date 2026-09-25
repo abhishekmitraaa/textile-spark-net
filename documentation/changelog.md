@@ -1,3 +1,256 @@
+- 2026-09-25 (Phase 26, the closing regression pass of the My Profile brief): **Phases 11–25 were re-checked together, live against production, in one sitting with four sessions (test buyer, test vendor, support admin, super_admin). 15 of the 16 items were re-confirmed. Item 11 (Phase 21, RFQ and message notifications) was never built. One break turned up in a test's cleanup and is fixed. Everything is committed and pushed.**
+  - **What Phases 11–25 changed, and what the pass confirmed:**
+    - **Phase 11 (MPF-3):** `profiles.email` and `.phone` aren't client-readable; four definer functions serve the legitimate readers. The interim signed-in grant was revoked on 2026-09-24 (MPF-19). *Confirmed:* both proof requests 401/42501; privacy check 24/24.
+    - **Phase 12 (MPF-2):** `calls` is written only by `log_call()`. *Confirmed:* direct writes refused; a real Call Now logged, then rate-limited.
+    - **Phase 13 (MPF-1):** the `/profile` Quotes and Chats stats count only the user's own rows. *Confirmed:* 3/3, including an admin on the seller side.
+    - **Phase 14 (MPF-9, MPF-20):** a save sends only the changed fields, and a signup brand or company is applied once. *Confirmed:* 3/3; fingerprints unchanged.
+    - **Phase 15 (MPF-5):** Cosora-Admin shows a deleted account as deleted, with no actions. *Confirmed on a really deleted account*, as super_admin and as support.
+    - **Phase 16 (MPF-7):** a deletion also removes avatar files and private rows, and a token issued before it can't write. *Confirmed* end to end on a throwaway, through the real sweep.
+    - **Phase 17 (MPF-13):** a page load starts on the account's side, and vendor registration comes from the database. *Confirmed:* 4/4.
+    - **Phase 18 (MPF-6):** a phone-only account's deletion code goes to WhatsApp, dormant until Meta is set up. *Confirmed:* routed to WhatsApp with an honest `not_configured` (MPF-24); 4/4.
+    - **Phase 19 (MPF-8):** the export includes contacted and messaged vendors, saves, recently viewed and follows, each scoped to the buyer. *Confirmed:* 3/3.
+    - **Phase 20 (MPF-11):** currency converts displayed prices, for display only, and GST lives in one shared module. *Confirmed:* 2/2; INR unchanged.
+    - **Phase 21: never ran.** No RFQ, quote or message notifies anyone, and nothing reads the notification toggles. The throwaway's RFQ to demo-vendor added no notification. Building delivery is its own brief.
+    - **Phase 22:** support writes FAQs, and every other admin role is refused. *Confirmed:* gates 5/5; the support and product_moderator specs 2/2.
+    - **Phase 23:** FAQ pages read a Storage CDN snapshot, with the table as the fallback. *Confirmed:* 19/19; 3/3.
+    - **Phase 24:** the Seller Registration and Subscription FAQs are in a migration, and "Contact us" is a mailto link. *Confirmed:* 10 and 8 questions; 2/2. The brief's "9 subscription FAQs" is 8, by the Phase 24 decision.
+    - **Phase 25:** MPF-4, 10, 14 and 15 are logged in `ToDo.md`. *Confirmed* present, and they stay open by design.
+  - **The break, and the fix:** `faqs-admin-editable.spec.ts` left the Subscription FAQ "How is GST handled?" at position 250 instead of 140.
+    - Why: its `adminMove` waited for "networkidle" and not the reorder call, so the "move back down" was cut off. It compared only the visible list, which inactive rows kept looking right.
+    - The row was moved back with `admin_faq_reorder`.
+    - The spec now waits for each reorder response and compares every FAQ's position with a snapshot in `finally` (1/1 twice; positions exact).
+  - **Found:** at the buyer repo root, `npx tsc --noEmit --skipLibCheck` checks nothing: an injected error still reported 0. Use `-p tsconfig.app.json`, which caught it. Both apps typecheck and build clean.
+  - **Left behind:** nothing. Every counter and the demo accounts' fingerprints equal the 08:17 baseline. The throwaway and the run-only admin fixtures are deleted, and re-rendered screenshots were restored. New evidence: `screenshots/p26-admin-deleted-super-admin.png` and `-support.png`.
+  - **Committed and pushed:** Phases 14–26 in both repos, on `my-profile/phase-14` (buyer app) and `my-profile/phase-15` (Cosora-Admin). Not merged to `main` and not deployed. `supabase/functions/otp-dev-verify/` and `.claude/tmp/` stay out.
+  - **Docs:** test.md (the Phase 26 entry, and the spec's suite row), myprofileflags.md (an at-a-glance status table; Open decision 2), myprofileflags-fixed.md (Phase 26 decisions), claude.md (the reorder rule, and the typecheck command).
+
+- 2026-09-25 (Phase 25, docs only): **MPF-4, MPF-10, MPF-14 and MPF-15 now each have a standalone entry in `ToDo.md`. The flags themselves are unchanged, and no code, schema or config was touched.**
+  - **`ToDo.md`:** four new Open entries in the file's current template (Task / Context / Reference / Priority / Status). Each points to its `myprofileflags.md` section rather than copying it:
+    - MPF-4: set up Resend so deletion codes go out by email. Owner setup, not a code change;
+    - MPF-10: decide whether to verify the profile email. Contact verification only, unrelated to sign-in;
+    - MPF-14: the 7 buyer Help answers to fix in Cosora-Admin `/faqs`, listed one by one;
+    - MPF-15: a support destination for vendors (a `seller_help` surface or honest copy, still to be decided), plus labelling or removing the canned chats.
+
+    The Phase 9 FAQ entry now points to the new MPF-14 entry.
+  - **Re-checked before writing (read-only):**
+    - the 7 MPF-14 answers are still live and active, and the page shows 12 questions in 4 topics;
+    - `account-deletion` is deployed as v2;
+    - `emailVerified` is still `Boolean(contact.email)`, and no page renders it;
+    - the FAQ surface names are listed in 6 places (the check constraint, `admin_faq_add()`, `faqs-snapshot`, `faqs.ts`, Cosora-Admin `Faqs.tsx`, the check script).
+  - **A correction to MPF-15:** `/help` has its own canned chat, `ChatModal` in `Help.tsx`, which shows "typing" and never replies. It is separate from `SupportChat` at `/profile/help/chat`, and the flag had named only the latter. `ChatModal` also lacks the legally required chat-monitoring disclosure, which `SupportChat` has. It is noted in the MPF-15 entry, not fixed: this phase changed no code.
+  - **`myprofileflags.md`:** all four stay Open. Each now has a line saying where and when it was logged, and MPF-15 also carries the correction.
+
+- 2026-09-25 (Phase 24, Phase 9 Q4): **Andy's Seller Registration and Subscription FAQs are now in a migration, so a fresh database gets them. Nothing changed on the live database. The Subscription page's "Contact us" button writes to hello@cosora.in instead of opening the buyer Help page.**
+  - **The brief's premise didn't hold.** It asked to seed content that wasn't live; it had been live since 2026-09-23, added through the admin. The phase stopped and asked. Mitra chose:
+    - codify without duplicating;
+    - keep the Phase 9 "Lowest billing plan?" answer;
+    - point "Contact us" at hello@cosora.in;
+    - keep the current 8 Subscription questions in Andy's order.
+  - **Migration `20260925075432_faqs_seed_seller_registration_and_subscription.sql`**, generated from the live rows so the text is identical byte for byte:
+    - moves the five seeded Subscription rows to where they are live (120–140 active; 210 and 240 off);
+    - inserts Andy's 15 questions wherever no active copy exists;
+    - self-check: `20260923144549`'s seed counts, for the new totals (10 Seller Registration active; 8 Subscription active, 10 in all), each question active exactly once, the superseded ones off, and the Subscription order.
+  - **`Subscription.tsx`:** "Contact us" → `mailto:hello@cosora.in?subject=Subscription%20question`. It went to `/help`, as Andy's content asked.
+  - **Verified:**
+    - the 5 seeded rows' live text is identical to what `20260923144549` inserted;
+    - rehearsal on live, rolled back: 0 rows differ, 0 touched, 0 added;
+    - rehearsal from a simulated fresh database (the state `20260923144549` left), rolled back: the result matches live row for row;
+    - applied; md5 matches;
+    - new `tests/faqs-seeded-content.spec.ts` 2/2: `/subscription` signed out and as demo-vendor shows the 8 questions in order, with "Contact us" a mailto link and not a question, and the Phase 9 answer; `/seller` shows Andy's 10 in order;
+    - `faqs-admin-editable` updated for the mailto and re-run; tsc 0, eslint 0.
+  - **Docs:** myprofileflags (Phase 9 Q4 resolved, with the answer used; decisions 2 and 8; MPF-15 update), myprofileflags-fixed (Phase 9 decision 3; Phase 24 decisions), test.md, technicalimplementation, MIGRATIONS.md, sitemap.md, ToDo.md, the FAQ content file.
+
+- 2026-09-24 (Phase 23, Phase 9 Q2): **The FAQ pages read a static file from the Storage CDN instead of the database, so buyer Help, `/seller` and `/subscription` no longer spend a PostgREST request per visit. If the file can't be used they read the table as before. An admin edit reaches every visitor within about a minute.**
+  - **Ideation first** (the brief's order). The table was never the limit (~30 indexed rows). PostgREST is: its pool is ~10 connections, shared with the whole app. Conclusions, all built:
+    - 10-minute `staleTime` for FAQs;
+    - snapshots rebuilt by a database trigger calling an edge function (covers every write path, and only committed writes), not by the admin app;
+    - best-effort trigger, plus an hourly rebuild that raises if it can't run;
+    - anon-read content only; the table as the fallback.
+  - **Database** (migration `20260924174051_faq_snapshots_cdn_cache.sql`):
+    - public bucket `faq-snapshots` (JSON only, 64 KB, no client write policy);
+    - `faqs_queue_snapshot()` and statement trigger `trg_faqs_snapshot`: one pg_net call per transaction, never fails the write;
+    - cron `faq-snapshots-refresh` at :17 hourly;
+    - self-check (bucket, no client write policy, trigger, definer and grants, cron).
+  - **Edge function `faqs-snapshot`** (v2; `verify_jwt` plus a service-role check): reads the active rows with the anon key, uploads `buyer_help.json`, `seller_registration.json` and `subscription.json` with `max-age=300`, and re-reads to catch an edit that lands mid-upload.
+  - **App:** `src/lib/queries/faqs.ts`. `useFaqs()` tries the snapshot (3 s timeout, `cache: "no-cache"`, a shape and version check), then the unchanged table query. `staleTime` is 10 min.
+  - **Cosora-Admin:** the FAQ page says changes reach the live page "within about a minute", not "as soon as they're saved".
+  - **Found while testing:** Storage runs as Smart CDN on this Free-plan project (`x-smart-cdn: true`), although Supabase documents it as Pro only. An overwrite invalidates the edge copy, so the window is ~47 s, not max-age. The first timing test assumed max-age caching and failed; it was rewritten on the measured model.
+  - **Verified:**
+    - rehearsal rolled back: self-check held, and 3 writes in one transaction queued exactly 1 call;
+    - applied; md5 matches;
+    - seed, trigger and cron calls all 200, with 12, 10 and 8 rows;
+    - local function harness 6/6;
+    - new `tests/faqs-snapshot.spec.ts` 3/3:
+      - all three pages render from the snapshot with no table request;
+      - 6 failure modes × 3 pages fall back to the table and render the same questions;
+      - a visible admin edit reaches fresh page loads (first at 5–8 s) and leaves the CDN after deletion within ~50 s;
+    - new `scripts/faq-cdn-propagation.mjs`, 3 content-neutral trials: origin 1.9–2.8 s, last old copy 45.9–46.8 s;
+    - new `scripts/faq-snapshot-check.mjs` 19/19: origin and CDN match the table, headers, public columns only, and anon and signed-in uploads refused;
+    - `faqs-admin-editable` 1/1 (its pages on the table);
+    - tsc 0 (both apps), eslint 0; security advisors 139, unchanged, none at ERROR level.
+  - **Load test** (new `scripts/load/faq-read.k6.js`, k6 v2.3.0):
+    - CDN: 250 → 500 → 1,000 → 2,000 req/s. p95 165 ms and 256 ms at the first two steps with 0 failures; ~940 req/s at p95 1.7 s, where the load machine topped out. The edge logged 50,384 × 200 cache hits, ~15 ms average, and no errors;
+    - table, capped: 25 → 150 req/s at p95 ~360 ms, 0 failures, no pool errors.
+  - **New flag:** MPF-27. Two older cron jobs (`fx-rates-refresh`, `account-deletion-sweep`) would succeed silently without the Vault key. Also in securityflags.
+  - **Docs:** myprofileflags (Phase 9 Q2 resolved, with the numbers; decision 2; MPF-27), myprofileflags-fixed (Phase 23 decisions), securityflags, test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md; Cosora-Admin README and CHANGELOG.
+
+- 2026-09-24 (Phase 22, Phase 9 Q3): **Support admins can now add, edit, deactivate, reorder and delete FAQs, not just read them. Every other admin role is still refused.**
+  - **Database** (migration `20260924170736_faqs_support_can_write.sql`):
+    - `admin_faq_add`, `_update`, `_delete` and `_reorder` are gated on `admin_role() = any (array['support','super_admin'])`, `admin_faq_list`'s predicate character for character, and their 42501 messages name both roles;
+    - nothing else in the four changed. Undoing the gate and the message on the live definitions gives back the old ones exactly. `admin_faq_list` wasn't touched;
+    - the migration restates the grants and runs the original migration's self-check against the new gate: RLS, no direct writes, `created_by` hidden, SECURITY DEFINER with `search_path = ''`, authenticated-only EXECUTE, and every function on the new gate with no super_admin-only gate left;
+    - the table comment now says "support or super_admin".
+  - **Cosora-Admin:** `roles.ts` `SECTION_WRITE.faqs` is `["super_admin", "support"]`. The FAQs page's subtitle and header comment no longer say support only reads.
+  - **Verified:**
+    - rolled-back rehearsals, before and after: before, only super_admin wrote. After, super_admin and support could add, update, reorder, delete and list, and product_moderator, vendor_ops, ads_moderator, finance_admin, an inactive support admin and a non-admin got 42501 from all five functions;
+    - new `scripts/faq-write-gate-check.mjs` (read-only), over HTTP with real sign-ins: before, support was refused all four writes with 42501; after, support passes all five gates, and product_moderator, a non-admin and anon are refused all five;
+    - new `tests/faqs-support-write.spec.ts` 2/2 against Cosora-Admin. As support, add, edit, move up, move down, deactivate and delete on Buyer Help, Subscription and Seller Registration: each call the page made returned 200 and was checked in the database. As product_moderator: no FAQs in the nav, "Section not available" on `/faqs`, and 42501 from all five functions aimed at a real row, which stayed unchanged;
+    - with `SECTION_WRITE.faqs` put back, the support test fails (read-only banner);
+    - `faqs-admin-editable` (super_admin, both apps) 1/1; analytics counters and the `faqs` md5 identical before and after;
+    - tsc 0 (both apps), eslint 0; security advisors 139, as before, none at ERROR level.
+  - **Test accounts:** `rlstest-support` and `rlstest-productmod` were created for the run with a locally generated password (only its bcrypt hash reached the database), and deleted after. 0 left; the admin list is the same 3 super_admins.
+  - **New flag:** MPF-26. FAQ edits and deletes leave no record of who made them, and the page shows the creator as if they were the last editor. Also in securityflags.
+  - **Fixed along the way:** a heading in `test.md` that Phase 20's docs script had doubled.
+  - **Docs:** myprofileflags (decision 7 resolved and removed, the list renumbered; decision 2 updated; MPF-26 and new decision 11), myprofileflags-fixed (Phase 9 decision 4; Phase 22 decisions), securityflags, test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md, ToDo.md; Cosora-Admin README and CHANGELOG.
+
+- 2026-09-24 (Phase 20, MPF-11): **A buyer's currency setting now converts the prices they see (USD, EUR or GBP, at the day's ECB rate), for display only. Prices are still set, quoted, paid and invoiced in INR. The buyer-menu drawer's dead currency picker is now the same setting. GST is one shared function, ready for a buyer-facing charge that doesn't exist yet.**
+  - **Rates:** new `public.fx_rates` (one row, public read) and edge function `fx-rates-refresh`, which pg_cron calls daily at 16:30 UTC (migration `20260924161525`). The source is Frankfurter: free, no key, ECB reference rates, with a v2 fallback.
+  - **Client:**
+    - `src/lib/currency.ts` (`formatInCurrency`; `formatINR` now delegates, with identical output), `useFxRates()`, `DisplayCurrencyContext`, `ConvertedPriceNote` and `useCurrencySetting`;
+    - about 20 buyer price sites (product cards and pages, quotes, budgets) go through `show` / `showText` / `showBoth`;
+    - converted figures are marked "≈", and quotes and the product page's price keep the INR price beside them;
+    - left in INR by design: the invented New Arrivals hero, service-vendor rates, typed amounts, and vendor pages and billing.
+  - **Display only, in the UI:** a note wherever converted prices show; Regional Settings states the rate, and that plans and GST invoices stay in ₹ INR; the drawer picker says it too.
+  - **Part B:** `supabase/functions/_shared/gst.ts` (`gstOn`) replaces the three copies in the subscription functions. Nothing buyer-facing calls it, because buyers pay Cosora nothing today. The three functions aren't redeployed (MPF-25).
+  - **Verified:**
+    - forced refresh: empty → ECB 24 Sep rates. The scheduled run advanced `updated_at`;
+    - INR: 239 "₹" lines on 11 pages identical before and after;
+    - new `tests/display-currency.spec.ts`: in USD, every price line is converted correctly or INR by design; it restores the setting and writes nothing;
+    - `profile-regional-honesty` updated; buyer-settings 2/2; tsc 0;
+    - `scripts/gst-check.mjs` 30/30, and an old-vs-new subscription harness 12/12.
+  - **New flag:** MPF-25, found while checking before a redeploy. The deployed `subscription-create-order` is older than the repo and lacks its `intent_failed` guard. Also in securityflags.
+  - **Docs:** myprofileflags (MPF-11 → the fixed file; MPF-25; open decision 11), myprofileflags-fixed (Phase 20 decisions), securityflags, test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md.
+
+- 2026-09-24 (Phase 19, MPF-8): **"Export All Data" now includes the vendors the buyer contacted and messaged, their saved items and folders, recently viewed products, and the vendors they follow, each with a link to its page.**
+  - `buildAllDataJson()` only; the RFQ CSV is unchanged. Every new read has its own owner filter: `calls.buyer_id`, `saved_items` / `saved_folders` / `recently_viewed` `.buyer_id`, `follows.follower_id`, and `saved_folder_items` through the buyer's own folder ids.
+  - **`vendors_contacted`** is chat counterparts that are vendors, plus called vendors and quoting vendors, deduplicated, as `{vendor_id, brand_name}`. **`vendors_messaged`** is the subset where the buyer sent a message.
+  - Links are `/product/:id` and `/vendor/:id`, made absolute on the site the file was exported from. A product no longer listed, or a vendor that no longer exists, has a null link.
+  - `format_version` is 2; `counts` and `contents` cover the new sections. The page's "Export All Data" subtitle lists them too (one line outside the brief's scope).
+  - **Verified:** `tests/profile-data-export.spec.ts` 3/3:
+    - demo-buyer: every new section matches its owner-filtered rows, and all 11 links open the right page;
+    - demo-admin, whose RLS shows everyone's follows and calls, exports only its own;
+    - both new tests fail on the committed code, and the admin test fails with the owner filters removed;
+    - buyer-settings 2/2; tsc 0.
+  - **A test side effect, not yet reverted:** the first two runs opened product pages signed in as demo-buyer. That wrote 14 product views and 140 ad impressions to the analytics, +2 `views_count` on 7 products, up to +140 `advertisements.impressions`, and one recently-viewed row. The spec now opens links signed out, with every tracking call answered in the browser, and a re-run changed nothing. Cleanup is waiting on a decision.
+  - **Still not exported** (not in the brief): video likes, saved videos, service reviews, notifications, deletion requests, and the call log itself.
+  - **Docs:** myprofileflags (MPF-8 → Fixed; Phase 19 decisions), test.md, technicalimplementation, sides.md, claude.md.
+
+- 2026-09-24 (Phase 18, MPF-6): **An account with no email can delete itself: its code goes to its confirmed phone number on WhatsApp. The WhatsApp send is built but dormant until a Meta Business account and an approved template exist (MPF-24).**
+  - **Step 1's stop:** the repo recorded no Meta Business account and an in-house messaging plan, so the phase stopped and asked. Mitra's choice: build it now, with WhatsApp dormant.
+  - **Database** (migration `20260923213225`):
+    - `account_deletion_requests.channel` (`email` or `whatsapp`), set when a request opens;
+    - `account_deletion_channels()`: a usable email first, then a confirmed phone;
+    - the blocker's `no_email` becomes `no_contact`, only when neither exists;
+    - `issue_account_deletion_code(uid, channels)`: it answers `not_configured` with the channel, writing nothing, when the function has no secrets for it.
+  - **Edge function `account-deletion` v2:**
+    - a WhatsApp branch (Meta Cloud API, copy-code authentication template), gated on `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID`;
+    - `status` reports email and WhatsApp separately (both false today);
+    - the email send is byte-identical to v1.
+  - **App:** the dialog says where the code goes (email or WhatsApp). `no_contact`, `not_configured` and `send_failed` are worded per channel. An email account's wording is unchanged.
+  - **One change for email accounts:** a blocked account (vendor, admin, suspended) now sees its reason where it used to see "isn't available online yet".
+  - **Verified:**
+    - database tests rolled back, before and after applying;
+    - a local edge-function harness, 10/10;
+    - live, a throwaway account: with an email → `not_configured` for email; phone-only → `not_configured` for WhatsApp, with nothing opened. A WhatsApp-channel code issued by SQL was confirmed in the app;
+    - new `tests/account-deletion-channel.spec.ts` 4/4, and against the old app code the 3 WhatsApp tests fail;
+    - buyer-settings 2/2; tsc 0, eslint 0; no new security-advisor findings;
+    - the throwaway was deleted, and every count is 0.
+  - **Not verified:** a real WhatsApp message arriving (MPF-24).
+  - **New flags:** MPF-24 (the Meta setup). In securityflags: Meta's fixed template text doesn't say the code is for deletion.
+  - **Docs:** myprofileflags (MPF-6 → Fixed, WhatsApp unverified; MPF-24; Phase 18 decisions), securityflags, test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md, ToDo.md (the messaging-service entry).
+
+- 2026-09-24 (Phase 17, MPF-13): **A page load starts on the side the account is on, so a vendor who refreshes sees the seller sidebar and nav. Whether someone has registered as a vendor now comes from the database, so a buyer who registered on one device goes straight to the seller side on another.**
+  - `src/contexts/UserRoleContext.tsx`:
+    - `role` is seeded from `profiles.active_role` once the profile loads, once per account per page load. A switch made after that stands until a reload, and signing out goes back to buyer;
+    - `vendorRegistered` is `vendor_profiles.onboarding_complete` (Mitra's choice: that column alone). localStorage is only a per-account hint until the read returns, and is corrected to match it;
+    - `useSwitchRole.ts` is unchanged.
+  - **Consequence:** demo-vendor and 9 other seller-role accounts have no completed registration on file. After switching to Buyer, their Seller switch goes to `/onboarding` (MPF-22).
+  - **Verified:**
+    - new `tests/role-on-load.spec.ts`, 4/4 (vendor hard load, registered buyer on a fresh browser, stale hint, no vendor row). All 4 fail against the old file;
+    - `buyer-settings.spec.ts` no longer needs its role-switch step;
+    - regression 17/17; tsc 0.
+  - **New flags:**
+    - MPF-21: the parked `otp-dev-verify` bypass, from the automated security review; also in securityflags;
+    - MPF-22: the seller-role accounts above;
+    - MPF-23: `log_engagement_event()` swallowing errors.
+  - **Docs:** myprofileflags (MPF-13 → Fixed; MPF-21 to MPF-23; Phase 17 decisions), securityflags, test.md, technicalimplementation, claude.md, sides.md.
+
+- 2026-09-24 (Phase 16, MPF-7): **A deleted account leaves much less behind.** Its photo files are removed from Storage, and its saved items, follows, recently viewed, video likes and notifications are deleted. An access token issued before the deletion can no longer write anything.
+  - **Avatar files:**
+    - The daily `account-deletion-sweep` now posts to a new edge function, `account-deletion-sweep` (pg_cron → pg_net → function, the `embedding-worker` shape).
+    - Per due request, it reads the avatar objects and URL first, anonymizes (`complete_account_deletion()`, which never raises), then deletes `avatars/<user id>/` through the Storage API.
+    - A Storage failure never blocks the anonymization: it is recorded and retried every run.
+    - A SQL backstop in the cron job anonymizes anything a day overdue.
+    - Migration `20260923200739`; `supabase/config.toml` has `verify_jwt = true` for the function.
+  - **Private rows:** `anonymize_account()` deletes saved items and folders (their items cascade), saved videos, follows, recently viewed, video likes and notifications. Analytics events keep their row, with `viewer_id` cleared. Shared history (RFQs, quotes, chats, calls, reviews) stays, scrubbed as before.
+  - **The token window:**
+    - A new `account_not_deleted(auth.uid())` gates all 46 own-row write policies: UPDATE, FOR ALL, DELETE, and the own-folder storage policies (migration `20260923201559`).
+    - It refuses deleted accounts only. Mitra chose it over `account_is_active()`, so suspension still means what it did.
+  - **Verified with a throwaway buyer, end to end:**
+    - after the sweep, its avatar files (both), private rows and notifications were gone, and its RFQ and review kept;
+    - a token captured before the sweep could still edit the RFQ and review and add a saved item before the gate, and was refused after it;
+    - a suspended account can still edit its own rows;
+    - suspension gate 9/9, profile specs 7/7;
+    - everything cleaned up.
+  - **Still there, by design:** message text, and GoTrue's audit log.
+  - **Docs:** myprofileflags (MPF-7 → Fixed; Phase 16 decisions), securityflags (the row → Fixed), test.md, technicalimplementation, MIGRATIONS.md, claude.md, sides.md.
+
+- 2026-09-24 (Phase 15, MPF-5, in Cosora-Admin): **Cosora-Admin shows a deleted account as "deleted", not "active", and offers no Suspend or Reinstate for it.** No database change.
+  - Cosora-Admin has a new `AccountStatusBadge`: active green, suspended red, deleted neutral grey, and any other value shown as itself. It is used in the Accounts table, the Account status card, and the Vendors list (which had the same bug).
+  - A deleted account's card says why nothing can be done (`set_account_status()` refuses it) and keeps its suspension history. Its Accounts row says "View", not "Manage". Cosora-Admin's CHANGELOG has the detail.
+  - **Verified:**
+    - new `tests/admin-deleted-status.spec.ts`, 2/2, against Cosora-Admin. No account is deleted, and deletion is irreversible, so the spec rewrites demo accounts' status in the browser only;
+    - against the old code, both tests fail;
+    - active and suspended are unchanged;
+    - nothing called `set_account_status`.
+  - **Docs:** myprofileflags (MPF-5 → Fixed; Phase 15 decisions), test.md, sides.md; Cosora-Admin CHANGELOG and README.
+
+- 2026-09-24 (Phase 14, MPF-20): **The sign-in step applies a signup brand or company once. A vendor who renames their brand keeps the new name at the next sign-in, and a buyer's cleared company stays cleared.**
+  - `applyPendingSignupProfile()`:
+    - vendor: writes `brand_name` only while none is saved (it used to on every sign-in);
+    - then, for both roles, clears `brand_name` from the auth metadata (`auth.updateUser({ data: { brand_name: null } })`), so no later sign-in re-applies it. Supabase Auth removes a key set to null, and nothing else in the metadata changes;
+    - if the write fails, the metadata is kept for the next sign-in to retry.
+  - Sign-in is otherwise unchanged. This isn't reachable in production until the phone provider is enabled. When it is: 5 seller accounts still carry a signup brand, and 2 of them have since saved a different one, which is now kept.
+  - **Verified:**
+    - `tests/profile-save-diff.spec.ts` 3/3 with real metadata writes (buyer and vendor, including a failed write that keeps the metadata);
+    - with the change reverted, both sign-in tests fail;
+    - both demo accounts' metadata and rows match their original fingerprints afterwards;
+    - regression 6/6; tsc 0, eslint 0.
+  - **Docs:** myprofileflags (MPF-20 → Fixed), test.md, technicalimplementation, claude.md, sides.md.
+
+- 2026-09-24 (Phase 14, MPF-9): **A profile save writes only what the buyer changed. A job-title save no longer turns an empty country into "India", and a cleared field saves as empty.** No database change.
+  - **Before:** `saveProfileFull()` wrote all 4 `profiles` fields and 15 `buyer_profiles` columns on every save. An empty country became "India", the name was copied into `display_name`, and the Google picture became the stored avatar, whatever was edited.
+  - **Fix:**
+    - `useEditableProfile` keeps a baseline (the form as loaded, then as last saved). `save()` sends only the fields that differ, via the new `profileChanges()`. An untouched form sends nothing, and the page says "No changes to save";
+    - `saveProfileFull(userId, changes)` writes only the columns for the fields it's given. A cleared field is a change, saved as NULL;
+    - `EMPTY_PROFILE.country` and `fetchProfileFull()` no longer default to "India". It is the Country field's placeholder;
+    - the "no save before load" guard is unchanged.
+  - **Found and fixed with it:** `applyPendingSignupProfile()`, run after every OTP sign-in, saved a whole `EMPTY_PROFILE`-based object for a buyer with a signup company.
+    - Every sign-in would have blanked the buyer's other fields and set country to "India". For a phone-only account, it would also have blanked a saved email.
+    - It now writes only the company, and only while none is saved.
+    - It wasn't reachable yet: the phone provider is disabled. The vendor-side re-apply is flagged as MPF-20.
+  - **Verified:**
+    - new `tests/profile-save-diff.spec.ts`, 2/2. It records every write:
+      - job title only → one request with just `id` and `job_title`, both rows otherwise unchanged, and the NULL country still NULL;
+      - State cleared → `{id, state: null}`;
+      - untouched form → no request;
+      - the sign-in step → nothing while a company is saved, and just `company` when none is;
+    - against the old code, both tests fail;
+    - live SQL after a kept-marker run: the `profiles` row and the other 19 `buyer_profiles` columns are byte-identical, country is still NULL, and state is NULL;
+    - demo-buyer restored to its original fingerprints;
+    - regression 8/8; tsc 0, eslint 0.
+  - **Docs:** myprofileflags (MPF-9 → Fixed; MPF-20; Phase 14 decisions), test.md, technicalimplementation, claude.md, sides.md.
+
 - 2026-09-24 (deploy; MPF-19 closed): **The My Profile brief is live on `www.cosora.in` and `cosora-admin.vercel.app`, and the interim grant is revoked. No client can read another user's email or phone, signed in or out.**
   - **Merged and pushed on "push and merge to main":**
     - textile-spark-net `main` `d1ff52a`, merging `my-profile/phases-1-9` (`2838382`, `bf03161`);

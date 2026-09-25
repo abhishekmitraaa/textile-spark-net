@@ -27,7 +27,8 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-const GST_RATE = 0.18;
+// GST is computed in one place for all three subscription functions (MPF-11).
+import { gstOn } from "../_shared/gst.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -85,8 +86,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const base = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
   if (!base || base <= 0) return json({ error: "zero_amount" }, 400);
-  const gst = Math.round(base * GST_RATE);
-  const amount = (base + gst) * 100; // paise
+  const { gst, total } = gstOn(base);
+  const amount = total * 100; // paise
 
   // 1) Create the Razorpay order.
   let orderId: string;

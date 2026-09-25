@@ -84,18 +84,21 @@ the demand side of India's fashion and textile supply chain.
   - Identity and business details stay on My Profile.
   - The buyer sidebar's "Settings" now opens it; it used to open `/profile`. `/profile` has
     an "Account & Security" row that opens it too.
-  - A vendor who refreshes the page starts in buyer mode and sees the buyer sidebar
-    (MPF-13, pre-existing).
+  - A page load starts on the side the account is on, so a vendor who refreshes stays on
+    the seller side (fixed 2026-09-24, MPF-13). A buyer who has registered as a vendor goes
+    straight to the seller side on any device.
 - **Notification settings are honest** (2026-09-23). The email and push switches are saved,
   but Cosora sends no email or push notifications yet, and nothing notifies a buyer about new
   quotes, messages or RFQ updates, not even in the app. The page says so up front. The
   switches are kept for when delivery launches. Vendor Settings still implies live delivery
   (MPF-12).
-- **Regional Settings is honest about currency and timezone** (2026-09-23). Both are saved,
-  but nothing uses them yet: every price shows in ₹ INR, and times aren't converted. Pick
-  anything else and the page says so, the way an untranslated language already did.
-  Multi-currency pricing is a separate, larger feature that isn't built. The menu drawer
-  still has an unconnected currency picker (MPF-11).
+- **A buyer can see prices in USD, EUR or GBP** (2026-09-24). Regional Settings' currency, or
+  the same picker in the menu drawer, converts displayed prices at the day's ECB rate:
+  product cards, product pages, quotes and budgets.
+  - It's display only: each converted figure is marked "≈", quotes keep the ₹ price beside
+    it, and a note says vendors quote and are paid in ₹ INR.
+  - Cosora's plans, GST invoices, payments and anything the buyer types stay in ₹ INR.
+  - Timezone is still saved but not used, and the page says so.
 - **For You nudges nearby sellers up** (2026-09-23). If the buyer has set a city (or a
   state) on their profile, products from that place rank a little higher in For You. It's a
   gentle reorder of the same products, never a filter, and a clearly better match still
@@ -106,11 +109,15 @@ the demand side of India's fashion and textile supply chain.
   (`/profile/business-details`) became real pages on 2026-09-23, replacing the Edit Profile
   modal. They can be linked and survive a refresh. Email is a plain field; the old fake
   "Verify" was removed.
+  A save writes only what the buyer changed (2026-09-24). A job-title save used to turn an
+  empty country into "India", and now a cleared field saves as empty.
 - **Data & Export** (`/profile/data-export`, 2026-09-23). Both buttons used to only show a
   toast; now they download real files:
   - **Export RFQ History** is a CSV of the buyer's RFQs, with one row per quote received.
   - **Export All Data** is a JSON file of the profile, business details, RFQs, quotes
-    received, conversations with their messages, and reviews written.
+    received, conversations with their messages, and reviews written. Since 2026-09-24 it
+    also holds the vendors the buyer contacted and messaged, their saved items and folders,
+    recently viewed products and followed vendors, each with a link to its page.
   - The page says up front that chats include the seller's messages. Both are built in the
     browser from the buyer's own rows only.
 - **Delete my account** (`/profile/help`, 2026-09-23):
@@ -121,6 +128,9 @@ the demand side of India's fashion and textile supply chain.
   - "Deleted" means anonymized: name, email, phone, photo and business details are removed,
     and the person can no longer sign in. Their requests, quotes, chats and reviews stay
     with the sellers, shown as "Deleted user".
+  - Since 2026-09-24 the photo files themselves are deleted from storage. So are their
+    saved items, follows, recently viewed, video likes and notifications. A session
+    still open elsewhere can't change anything afterwards.
   - Sellers, admins and suspended accounts are sent to support instead.
 - **Help FAQs are managed by the Cosora team** (2026-09-23). The questions on Help & Support
   come from the admin panel, so they can be corrected without an app release. Several
@@ -145,11 +155,14 @@ the demand side of India's fashion and textile supply chain.
 
 ### Known gaps
 - **Delete my account can't send its code yet.** The flow is built and verified end to end,
-  but the email step needs `RESEND_API_KEY`, which isn't set. Until then the dialog says
-  honestly that deletion isn't available online and points to support. With Resend's shared
-  sender, mail reaches only the Resend account owner, so a verified domain is needed before
-  real buyers can use it. Phone-only accounts will have no email to receive a code (see
-  `myprofileflags.md`).
+  but neither delivery channel is set up:
+  - email needs `RESEND_API_KEY` and a verified sending domain (Resend's shared sender reaches
+    only the Resend account owner);
+  - WhatsApp, which phone-only accounts use (Phase 18), needs a Meta Business account and an
+    approved template (MPF-24).
+
+  Until then the dialog says honestly that deletion isn't available online, names the
+  channel, and points to support.
 - **The live catalogue is small: 26 listings, all real.** Until 2026-09-23, 351 of the 377
   live products were "[LOADTEST] …" listings from 120 "[LOADTEST] Vendor Co N" vendors (40
   marked verified), created 2026-09-16 by the Master Prompt 11 thread. On 2026-09-23
@@ -389,6 +402,8 @@ rather than a supplier directory.
    `/auth/otp-verify`. Signup metadata (role, name, phone, brand) rides on the OTP request.
    `handle_new_user()` applies the role, and `applyPendingSignupProfile()` writes the brand to
    `vendor_profiles` once the code screen has a session; the vendor then goes to `/onboarding`.
+   It is applied once, and only if no brand is saved, so a brand renamed later is never
+   overwritten at sign-in (2026-09-24).
    **Delivery is not live yet**, so the code screen says no code was sent; vendors get in with
    Google meanwhile. The email + password signup and its "check your email" screen are
    removed. `/auth/callback` still finishes Google sign-ins and any old confirmation links.
@@ -457,6 +472,9 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   account-level because the same human is both buyer and vendor. It blocks content
   *creation* only: live content stays up, running ad campaigns keep serving, sessions are
   not ended.
+  A third status, `deleted`, is set only by `anonymize_account()` when a buyer's "Delete my
+  account" cooling-off ends. It is final. The admin shows it as a grey "deleted" and
+  offers no Suspend or Reinstate for it (2026-09-24; it used to show "active").
 - `admin_flags` records flagged entities. `admin_flags_entity_type_check` currently allows
   `vendor`, `product`, `ad` and `conversation` only — **not `video`** — so the Video
   Closeups screen has no flag log until that constraint is widened.
@@ -473,8 +491,10 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 
 **Content**
 - **FAQs** (`/faqs`, 2026-09-23): the first real admin-editable content. It covers the
-  buyer Help, vendor Subscription and seller landing (`/seller`) FAQs. super_admin
-  edits them and support reads them, and changes show on the site with no release.
+  buyer Help, vendor Subscription and seller landing (`/seller`) FAQs. Support and
+  super_admin edit them (support since 2026-09-24), and changes show on the site within
+  about a minute, with no release. The site reads them from a CDN snapshot that every edit
+  rebuilds, with the table as the fallback (2026-09-24).
 - Site content (banners and theme) is still a dev-seed mock with no table.
 
 ### Rules the admin layer must respect

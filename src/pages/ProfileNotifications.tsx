@@ -40,7 +40,8 @@ function ToggleRow({
 
 // These switches are SAVED PREFERENCES ONLY (checked repo-wide, 2026-09-23).
 // Nothing sends email or push from them: there is no push pipeline, and the one
-// email sender (account-deletion) is transactional and ignores them. Nor do they
+// sender (account-deletion: email, or WhatsApp for an account with no email) is
+// transactional and ignores them. Nor do they
 // feed the in-app bell, which notify() fills only from moderation, account, ad and
 // certificate events, never from quotes, messages or RFQ updates. So the copy says
 // "saved for when it launches" and names events, not "get notified" or "instant

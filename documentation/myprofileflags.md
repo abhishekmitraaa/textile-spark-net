@@ -1,315 +1,124 @@
 # My Profile work: flags
 
-Flags raised during the phased My Profile brief (Phase 0 ground-truth pass onward, started
-2026-09-23) that were **found and not fixed** in the phase that found them. Each entry has
-what someone needs to pick it up later without the original conversation.
+Open flags from the phased My Profile brief (Phase 0 ground-truth pass onward, started
+2026-09-23): things **found and not fixed**, and the decisions still waiting on someone.
+Each entry has what someone needs to pick it up later without the original conversation.
 
 - Security flags are **also** logged in `securityflags.md`, per the documentation protocol.
   This file carries more context and cross-references that entry. It doesn't replace it.
-- When a flag is fixed, keep its entry, set Status to `Fixed YYYY-MM-DD`, and add the fix and
-  how it was verified. Don't delete history.
+- **This file holds only what is open** (Mitra, 2026-09-24). When a flag is fixed, move its
+  row and its section to `myprofileflags-fixed.md`, with Status `Fixed YYYY-MM-DD`, the fix
+  and how it was verified. Don't delete it. Each phase's record of the decisions it made goes
+  there too.
+- IDs are never reused. MPF-1, 2, 3, 5, 6, 7, 8, 9, 11, 13, 19 and 20 are fixed and in
+  `myprofileflags-fixed.md`.
+
+### Status at a glance (2026-09-25, after the Phase 26 regression pass)
+
+| Status | IDs | Where |
+|---|---|---|
+| **Fixed**, and re-confirmed live together in Phase 26 | MPF-1, 2, 3, 5, 6, 7, 8, 9, 11, 13, 19, 20 | `myprofileflags-fixed.md` |
+| **Open, logged to `ToDo.md` by design** (Phase 25): not being fixed in this pass | MPF-4, 10, 14, 15 | Below, and their `ToDo.md` entries |
+| **Open by decision:** Andy's FAQ wording, published verbatim | MPF-16, 17 | Below |
+| **Open** | MPF-12, 18, 22, 23, 24, 25, 26, 27 | Below |
+| **Open, parked:** never deploy as it is | MPF-21 | Below |
+
+MPF-6 is fixed, but its WhatsApp send can't be verified until Meta is set up, which is
+MPF-24. Phase 26 found no open flag fixed, and none newly broken.
+
+## Open decisions
+
+Waiting on Mitra unless marked otherwise. Each points to where the detail lives.
+
+1. **The analytics my Phase 19 test runs wrote** (2026-09-24). Before it was fixed, the
+   link check opened product pages signed in as demo-buyer, twice, between 22:06 and 22:11
+   UTC. That wrote:
+   - 14 `product_view` and 140 `ad_impression` events;
+   - `products.views_count` +2 on each of 7 products;
+   - `advertisements.impressions` up to +140;
+   - one extra recently-viewed row for demo-buyer, and 7 refreshed `viewed_at` values.
+
+   **Options:** delete the 154 events and take `views_count` back by exactly 2 on each of the
+   7 products, or leave it all. The ad impression counters and the recently-viewed changes
+   can't be restored exactly: `ad_impression()` is frequency-capped, and the extra row can't
+   be told apart. Detail: `test.md`, the Phase 19 entry.
+2. **Merge and deploy Phases 14–26.**
+   - Committed and pushed on 2026-09-25 (Phase 26): the buyer app on branch
+     `my-profile/phase-14` and Cosora-Admin on `my-profile/phase-15`. Neither is merged to
+     `main` or deployed.
+   - Already live without an app deploy: Phase 16's database changes and sweep function,
+     Phase 18's migration and `account-deletion` v2, Phase 20's `fx_rates`,
+     `fx-rates-refresh` and its cron job, Phase 22's migration, Phase 23's migration,
+     `faqs-snapshot` and its cron job, and Phase 24's migration (which changed no live row).
+   - Until the buyer app is deployed, the live Subscription page's "Contact us" still opens
+     `/help`; the code now writes to hello@cosora.in (Phase 24).
+   - Until the buyer app is deployed, the live site still reads FAQs from the table: the
+     CDN snapshots are built and kept current, but nothing live reads them yet (Phase 23).
+   - Until Cosora-Admin is deployed, the database lets support write FAQs but the live panel
+     still shows support the read-only view (Phase 22).
+   - Until the app is deployed, the live app shows "Something went wrong" for `no_contact`
+     (3 accounts).
+   - Never commit `supabase/functions/otp-dev-verify/` or `.claude/tmp/`.
+3. **Email delivery for deletion codes (MPF-4).** A Resend key and a verified sending domain.
+   Owner setup, not code.
+4. **WhatsApp delivery for deletion codes (MPF-24).** A Meta Business account, a sender
+   number, an approved template and two secrets. Also: whether deletion codes stay on Meta's
+   Cloud API or move to the in-house messaging service when it lands (`ToDo.md`, the
+   messaging-service entry).
+5. **A vendor can set their own quote to "accepted" (MPF-18).** The fix shape. Then, once it
+   is fixed, whether `call_buyer_contact()` should require an accepted quote. Today any quote
+   counts, which was Phase 11 decision 2 in `myprofileflags-fixed.md`.
+6. **Narrow the admin email lookups?** `admin_profile_search()` and `admin_profile_emails()`
+   admit any active admin, which keeps the access every admin role had before MPF-3.
+   Narrowing them to support and super_admin would take emails off Accounts and Chats for
+   product, ads, vendor-ops and finance admins (Phase 11).
+7. **Seller accounts with no completed registration (MPF-22).** 10 accounts go to
+   `/onboarding` when they switch back to Seller. Either complete `/onboarding` for them,
+   which also writes the signed contract, or leave them.
+8. **Where vendors get support (MPF-15).** A vendor Help page (a `seller_help` FAQ surface,
+   so a migration), or honest copy on `/help` for vendors. Since Phase 24 the Subscription
+   page's "Contact us" writes to hello@cosora.in; the sidebars' "Help & Support" still opens
+   the buyer page.
+9. **The FAQ answers that don't match the product (MPF-14, MPF-16, MPF-17), for Andy.**
+   Edit the wording in Cosora-Admin `/faqs` (no deploy), or let the product catch up.
+   MPF-17 also needs the Terms to state the 7-day guarantee, and a working refund path
+   (Razorpay keys or a manual process).
+10. **Redeploy the three subscription payment functions (MPF-25).** The deployed versions
+    are older than the repo, and `subscription-create-order` lacks the `intent_failed` guard.
+    A redeploy also ships the Phase 20 GST extraction, which changes no amount (`gst-check`,
+    and the old-vs-new harness). Diff each deployed source against the repo first.
+11. **An edit history for FAQs (MPF-26)?** Since Phase 22, support edits FAQs as well as
+    super_admin, and an edit or a delete leaves no record of who made it or what the text
+    was before.
+
+Resolved decisions are recorded in `myprofileflags-fixed.md`, under each phase's
+"decisions" heading:
+- Phase 9 Q3 (support writes FAQs): Phase 22;
+- Phase 9 Q2 (the FAQ read path at 10k users, with the measurements): Phase 23;
+- Phase 9 Q4 (the seeded FAQ content and the answer used): Phase 24;
+- how the regression pass ran: Phase 26.
+
+---
 
 ## Open flags
 
 | ID | Found | Title | Type | Severity | Status |
 |---|---|---|---|---|---|
-| MPF-1 | 2026-09-23, Phase 1 | Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin | Correctness | Medium (wrong numbers on the user's own profile; nothing exposed) | **Fixed 2026-09-24** (Phase 13); probe re-run, and the new spec fails on the old code |
-| MPF-2 | 2026-09-23, Phase 1 | Buyers write their own `calls` rows, and vendor call analytics trusts them | Security (data integrity) | Low | **Fixed 2026-09-23** (Phase 12); proven first, rolled back |
-| MPF-3 | 2026-09-23, Phase 2 recon | Every user's email and phone is readable without signing in | Security (PII exposure) | High | **Fixed 2026-09-23** (Phase 11) for signed-out callers; the signed-in half was reopened on purpose until deploy, and closed 2026-09-24 (MPF-19) |
 | MPF-4 | 2026-09-23, Phase 2 | Deletion emails can't go out yet: no `RESEND_API_KEY`, and no verified sending domain | Setup (blocks the feature for real users) | High for the feature | Open, waiting on setup |
-| MPF-5 | 2026-09-23, Phase 2 | Cosora-Admin shows a deleted account as "active" | Correctness (admin UI, other repo) | Low | Open |
-| MPF-6 | 2026-09-23, Phase 2 | Phone-only accounts will have no email to receive a deletion code, and sign-in is mobile-only, so that becomes every new account | Product gap | **High** once real sign-ups start; nil today | Open, a decision |
-| MPF-7 | 2026-09-23, Phase 2 | What anonymization leaves behind | Privacy | Low | Open, by design for now |
-| MPF-8 | 2026-09-23, Phase 3 | "Export All Data" covers the brief's tables, not every table the buyer owns rows in | Product scope | Low | Open, a decision |
-| MPF-9 | 2026-09-23, Phase 4 | Every profile save rewrites every field; an empty country becomes "India" | Correctness (data layer, pre-existing) | Low | Open |
 | MPF-10 | 2026-09-23, Phase 4 | The fake email "Verify" is gone; nothing verifies a profile email | Product gap (was fabricated UI) | Low | Open, removed rather than carried over |
-| MPF-11 | 2026-09-23, Phase 6 | A second currency picker in the buyer menu drawer saves nothing and converts nothing | Fabricated UI | Low | Open, left as-is by decision (Mitra, 2026-09-23) |
 | MPF-12 | 2026-09-23, Phase 7 | Vendor Settings' notification switches, and the "Notifications: On" label on `/profile`, still imply live delivery | Overclaiming UI | Low | Open |
-| MPF-13 | 2026-09-23, Phase 8 | Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav | Correctness (role state, pre-existing) | Medium | Open |
 | MPF-14 | 2026-09-23, Phase 9 | The seeded buyer Help FAQs promise features that don't exist | Overclaiming content (pre-existing, moved verbatim) | Medium (buyers are told about escrow and refunds that don't exist) | Open, now editable with no deploy |
 | MPF-15 | 2026-09-23, Phase 9 | Vendors have no real support destination; vendor Help is the buyer page and its chat is canned | Product gap (pre-existing) | Medium | Open, a decision |
 | MPF-16 | 2026-09-23, Phase 9 content | Andy's Seller Registration and Subscription FAQs promise things the product doesn't do (published verbatim by decision) | Overclaiming content | Medium (vendors are told about proration, alerts and documents that don't match) | Open, by decision |
 | MPF-17 | 2026-09-23, Phase 9 content | The Subscription FAQ promises a 7-day money-back guarantee; the Terms say fees are non-refundable, and no refund can run today | Policy conflict | Medium (a public financial promise the Terms contradict) | Open, published by decision |
 | MPF-18 | 2026-09-23, Phase 11 | A vendor can set their own quote to "accepted" | Security (data integrity) | Low | Open, proven (rolled back) |
-| MPF-19 | 2026-09-23, Phase 11 | Interim: signed-in users can still read every user's email and phone until the new code is deployed | Security (PII exposure), temporary | Medium | **Fixed 2026-09-24**: both front ends deployed, then the grant was revoked (`20260923190354`) |
-
----
-
-## MPF-1: Profile Quotes and Chats stats over-count for anyone who is also a vendor or an admin
-
-- **Where:** `useProfileStats()` in `src/lib/queries/profile.ts` (about lines 200–216). It is
-  rendered by the Quotes and Chats cells of the stats row in `src/pages/Profile.tsx`.
-- **What:** both counts are a bare `select("*", { count: "exact", head: true })` with no
-  filter, relying on RLS to mean "mine". The code comment says as much: "Counts rely on RLS:
-  a buyer only 'sees' quotes on their own RFQs and conversations they're part of". That
-  premise holds for a plain buyer only. The live SELECT policies are:
-  - `quotes_select`: `vendor_id = auth.uid() OR is_admin() OR owns_rfq(rfq_id)`
-  - `conversations_select`: `auth.uid() IN (user_a, user_b) OR (is_admin() AND admin_role() IN ('support','super_admin'))`
-- **Who sees wrong numbers:**
-  - **Any admin:** Quotes counts every quote on the platform.
-  - **A support or super_admin admin:** Chats counts every conversation on the platform.
-  - **A user who also sells:** Quotes adds the quotes they *sent* as a vendor to the quotes
-    they *received*.
-  - A plain buyer's numbers are correct.
-- **Evidence (live, 2026-09-23):** a `DO` block counted as `authenticated` under each user's
-  JWT claims, then raised an error to roll back. The technique is in `test.md`, Phase 1 entry.
-
-  | Account | Quotes: shown (RLS only) / own | Chats: shown (RLS only) / own |
-  |---|---|---|
-  | demo-buyer | 2 / 2 | 1 / 1 |
-  | admin account (`6f66d05d…`, active_role seller) | **3** / 1 | **4** / 3 |
-
-- **How it came up:** Phase 1 asked for the Calls stat to be counted "the same RLS-reliant
-  way quotes/conversations are already counted", after first checking that the `calls`
-  policy scopes rows to the caller. It doesn't, so the Calls count filters `buyer_id`
-  explicitly (`useCallCount()` in `src/lib/queries/calls.ts`). The same probe showed the
-  pattern being copied was itself wrong for these two cells.
-- **Why not fixed:** outside Phase 1's scope, which was the Calls stat only. The brief says to
-  stop at the end of each phase.
-- **Recommended fix:**
-  - **Quotes:** count quotes on RFQs the user owns, e.g.
-    `.from("quotes").select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
-    Decide whether a buyer's "Quotes" means received quotes only; the stat links to
-    `/requirement/my-quotes`, which suggests it does.
-  - **Chats:** `.or(`user_a.eq.${userId},user_b.eq.${userId}`)`.
-  - Then fix the misleading comment. The convention is in `claude.md`: "A 'my N' count
-    filters on the owner column. It never leans on RLS alone".
-- **Verify by:**
-  - Re-run the probe and expect the admin account's figures to become Quotes 1 and Chats 3.
-  - Extend `tests/profile-calls-stat.spec.ts`, or add a sibling spec, so Quotes and Chats
-    must each equal an independent count and the list they link to.
-  - Note that demo-buyer alone can't tell right from wrong here, because its numbers match
-    either way. The check needs an account that is also a vendor or an admin.
-- **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real"; `test.md` Phase 1 entry.
-- **Status: Fixed 2026-09-24 (My Profile Phase 13).**
-- **Fix:** `useProfileStats()` in `src/lib/queries/profile.ts` filters each count on the owner
-  column. No migration: the policies are unchanged, and they are right for the pages that
-  need the wider view (a vendor's own quotes, the admin queues).
-  - **Quotes** = quotes *received* on the user's own RFQs, as recommended above:
-    `.from("quotes").select("id, rfqs!inner(buyer_id)", { count: "exact", head: true }).eq("rfqs.buyer_id", userId)`.
-    That is the set "Total Quotes" on `/requirement/my-quotes` counts, which the stat opens.
-  - **Chats:** ``.or(`user_a.eq.${userId},user_b.eq.${userId}`)``, the same filter as the `/chats` list
-    (`useConversations()`).
-  - Both counts now throw on a read error instead of rendering 0.
-  - The comment that said RLS alone meant "mine" now names the policies that admit more, and
-    points at the `claude.md` rule. The `useCallCount()` comment no longer calls these counts
-    RLS-reliant.
-- **Verified:**
-  - The probe, re-run rolled back (counts as `authenticated` under each user's claims). Bare
-    (the old query) / new query / owned:
-
-    | Account | Quotes | Chats |
-    |---|---|---|
-    | admin account (`6f66d05d…`, super_admin, also a vendor) | 3 / **1** / 1 | 4 / **3** / 3 |
-    | demo-admin (super_admin) | 3 / 0 / 0 | 4 / 0 / 0 |
-    | demo-vendor | 2 / 0 / 0 | 2 / 2 / 2 |
-    | demo-buyer | 2 / 2 / 2 | 1 / 1 / 1 |
-
-  - Over REST with real sign-ins, the two new requests equal an independent owner count for
-    demo-buyer, demo-vendor and demo-admin.
-  - New `tests/profile-quotes-chats-stat.spec.ts`: **2/2**. For demo-admin and demo-buyer, the
-    Quotes and Chats cells must equal an independent owner count (taken by a different route
-    from the app's) and the page each cell opens. demo-admin stands in for `6f66d05d…`, whose
-    password the tests don't hold: RLS shows it 3 quotes and 4 chats while it owns none, and
-    the spec asserts that gap before anything else.
-    - With the old bare counts put back temporarily, demo-admin **failed** (Quotes: expected
-      "0", received "3"), and demo-buyer passed, as the note above predicted.
-    - With only the Chats filter removed, demo-admin **failed** on Chats (expected "0",
-      received "4").
-  - Regression: `profile-calls-stat` and `buyer-settings` with the new spec, 5/5. tsc 0,
-    eslint 0.
-- **Production:** live since the 2026-09-24 deploy (textile-spark-net `main` `d1ff52a`, bundle
-  `index-Clokv8L0.js`). The new spec passes 2/2 against `https://www.cosora.in`.
-
----
-
-## MPF-2: Buyers write their own `calls` rows, and vendor call analytics trusts them
-
-- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Low). Keep both entries in
-  step.
-- **Where:**
-  - Write policies on `public.calls`: `calls_insert` and `calls_write` (FOR ALL). Both check
-    only `buyer_id = auth.uid()`.
-  - The client write is in `useCallVendor()` in `src/lib/queries/calls.ts`.
-  - The readers that trust the rows are `useVendorCalls()` and `callAnalyticsForWindow()` in
-    `src/lib/queries/callAnalytics.ts`, and the calls read in `vendorAnalytics.ts`.
-- **What:** everything except `buyer_id` is the client's to choose:
-  - `vendor_id` may be any profile (the FK is to `profiles`, not to vendors).
-  - `created_at` defaults to `now()`, but a client may set it; no trigger overrides it.
-  - `product_context` is free text, shown in the vendor's top call contexts.
-  - `direction` may be any of `outgoing`, `incoming` or `missed`.
-  - There is no `account_is_active()` check. The suspension notice says the user "cannot …
-    place calls", but a suspended buyer can still log calls through the API. The UI's
-    `callGate()` is client-side only.
-  - `calls_write` also allows UPDATE and DELETE of the buyer's own rows after the fact.
-- **Impact:**
-  - Any signed-in buyer with a script can inflate, backdate or erase any vendor's call
-    analytics: count, trend, "N today" on the Advertise strip, and top contexts.
-  - A buyer can also inflate their own Profile Calls stat. That affects only themselves.
-  - Nothing private is exposed.
-- **Evidence:** read from the live policies, the column defaults, the constraints and the
-  absence of triggers on 2026-09-23. **Not exercised**, because proving it means writing
-  fabricated rows to production. Treat it as suspected until someone tests it with a rolled-back
-  insert as `authenticated`.
-- **How it came up:** reading the `calls` policies before writing the Phase 1 count.
-- **Why not fixed:** a policy and RPC change is outside Phase 1, and it changes the call-logging
-  write path used by `useCallVendor()`.
-- **Recommended fix:**
-  - Make a SECURITY DEFINER `log_call(p_vendor_id, p_product_context)` the only insert path.
-    It should require `account_is_active(auth.uid())` and a target with a `vendor_profiles`
-    row, set `created_at = now()` and `direction = 'outgoing'` server-side, trim or limit
-    `product_context`, and rate-limit per buyer.
-  - Revoke client INSERT, UPDATE and DELETE on `calls`, keeping SELECT.
-  - Point `useCallVendor()` at the RPC.
-- **Verify by:**
-  - Before the fix, as `authenticated` and rolled back: a backdated insert against another
-    vendor succeeds.
-  - After the fix: the direct insert, update and delete are refused, and `log_call` works for
-    an active buyer and refuses a suspended one.
-  - `scripts/suspension-gate-check.mjs` is the pattern to extend: run each case active and
-    suspended, and pass only if the answer changes.
-- **Related:** `changelog.md` 2026-09-23 "Profile Calls stat is real".
-- **Status: Fixed 2026-09-23 (My Profile Phase 12).**
-- **Proven first:** in a `DO` block as `authenticated` under demo-buyer's claims, then rolled
-  back:
-  - a call to demo-vendor dated 400 days ago, with direction `missed`, was accepted;
-  - re-targeting that row to another profile and re-dating it was accepted (1 row);
-  - deleting it was accepted (1 row).
-- **Fix:** migration `20260923182259_calls_writes_only_through_log_call.sql`.
-  - anon and authenticated lose INSERT, UPDATE, DELETE and TRUNCATE on `calls`, and
-    `calls_insert` and `calls_write` are dropped. `calls_select` is unchanged: it already
-    admits the buyer, the vendor and admins, so dropping `calls_write` (FOR ALL) changed no
-    read. The rehearsal counted 2, 3 and 10 visible rows before and after.
-  - `log_call(p_vendor_id, p_product_context)`, SECURITY DEFINER with `search_path = ''`:
-    - refuses `not_signed_in` and `account_not_active` (42501), and `not_a_vendor` and
-      `cannot_call_self` (22023);
-    - sets `buyer_id = auth.uid()`, `direction = 'outgoing'` and `created_at = now()`;
-    - collapses whitespace in `product_context`, trims it, cuts it to 200 characters, and
-      stores empty as null;
-    - rate-limits with the account-deletion idiom: a per-caller advisory lock, then
-      `rate_limited` (with `retry_after_seconds`) within 60 s of the last call to the same
-      vendor, and `too_many_calls` past 5 calls to one vendor in 24 h or 30 calls in an hour.
-      A limit is a status, not an error: the dial has already happened, and the tap just
-      isn't counted.
-  - `useCallVendor()` calls it instead of inserting; logging stays best-effort and the dial
-    goes ahead either way. `qc/pipeline.mjs` (workspace root) was switched too.
-  - It doesn't refuse a suspended *target* vendor: the brief didn't ask for it, and callGate
-    blocks those calls in the UI before logging.
-- **Verified:**
-  - Rehearsal, rolled back: direct INSERT/UPDATE/DELETE → 42501; visible rows unchanged for
-    buyer, vendor and admin; a logged call has the server's buyer, direction and time and a
-    200-character cleaned context; a repeat → `rate_limited` (60 s); non-vendor, self and null
-    target refused; a 6th call to one vendor in 24 h and a 31st call in an hour →
-    `too_many_calls`; suspended buyer → `account_not_active`; anon → 42501.
-  - `scripts/suspension-gate-check.mjs`, extended: 9/9. The `log_call()` pair is ALLOW active
-    and DENY suspended (`account_not_active`). While active, direct INSERT/UPDATE/DELETE
-    return 42501, and a non-vendor target returns `not_a_vendor`.
-    - Its ad case had failed on its own since 2026-09-16, because the expiry sweep marked the
-      demo vendor's gold subscription `expired` and the fixture only moved the date. The
-      fixture now saves and restores the status too.
-  - A real Call Now click as demo-buyer on demo-vendor's profile (a temporary spec, deleted
-    afterwards): the first tap → `logged`, the second → `rate_limited`, the number shown both
-    times, no direct write to `/rest/v1/calls`, exactly one row added.
-  - `profile-calls-stat` and `vendor-analytics`: 6/6.
-  - The test rows (2 from the gate script, 1 from the click) were deleted with SQL, back to
-    the original 10.
-- **Production:** until the 2026-09-24 deploy, the live `cosora.in` bundle's direct insert was
-  refused. It ignored the result and dialled anyway, so calls placed there weren't logged.
-  The deployed bundle (`index-Clokv8L0.js`) calls `log_call()` and has no direct insert
-  (checked in the bundle; not click-tested on production).
-
----
-
-## MPF-3: Every user's email and phone is readable without signing in
-
-- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, **High**).
-- **Where:** `public.profiles`. The policy `profiles_select` is `USING (true)` for role
-  `public`, and both `anon` and `authenticated` hold column SELECT on everything, including
-  `email` and `phone`. The anon key ships in the app bundle, so it is effectively public.
-- **Evidence (2026-09-23):** real HTTP, with only the anon key and no session.
-  - `GET /rest/v1/profiles?select=id&email=not.is.null` with `Prefer: count=exact` returned
-    `Content-Range: 0-0/20`.
-  - The same with `phone=not.is.null` returned `0-0/7`.
-  - Only ids and counts were requested, so no personal value was read in proving it.
-    `select=email,phone` would return them all.
-- **How it came up:** Phase 2 recon. While designing account anonymization, I checked who can
-  read the identity columns being scrubbed.
-- **Why it matters for Phase 2:** anonymization removes a deleted user's email and phone,
-  but every *active* user's are public until this is fixed.
-- **Why not fixed in Phase 2:** the fix changes read access that live features depend on:
-  - `callGate()` reads `account_status`;
-  - `useCallBuyer()` reads a buyer's `phone` so a vendor can call about an RFQ;
-  - chat, review and quote surfaces read names and avatars.
-
-  Revoking blindly would break them, so it needs its own phase with a regression pass.
-- **Recommended fix:**
-  - Revoke column SELECT on `email` and `phone` from `anon` and `authenticated`, and keep the
-    others.
-  - Add a SECURITY DEFINER read for the user's own contact details.
-  - Move the vendor-calls-buyer phone read into a definer function that applies the same
-    rules as `callGate()`: an RFQ relationship, no suspension, and no chat under review.
-  - Re-run `scripts/contact-gate-check.mjs` and the call and chat specs.
-- **Verify by:** the same two anon count requests must fail on those columns (a 401 or 403,
-  or a column-permission error). The call, chat and profile flows must still pass.
-- **Compounded by (found in Phase 3):** `rfqs_select` lets **any** signed-in user read every
-  active open RFQ, not only vendors. demo-buyer sees another buyer's RFQ. With this flag
-  open, an RFQ's `buyer_id` leads straight to that buyer's email and phone. Open-RFQ
-  visibility is probably intended for the marketplace. The contact columns are the part to
-  close.
-- **Status: Fixed 2026-09-23 (My Profile Phase 11)** for signed-out callers, which is the
-  proven leak. The signed-in half was reopened on purpose until the new code was deployed,
-  and closed on 2026-09-24: see MPF-19.
-- **Re-proven first:** at the start of Phase 11, the same two anon-only requests still
-  returned `0-0/20` and `0-0/7`.
-- **Fix:** migration `20260923171821_profiles_contact_columns_private.sql`.
-  - anon and authenticated lose table SELECT on `profiles`. They get column SELECT on the
-    other seven columns: `id`, `full_name`, `avatar_url`, `active_role`, `onboarded`,
-    `account_status` and `created_at`.
-  - UPDATE is unchanged, so a user still edits their own email and phone. A filter or
-    RETURNING on the two columns needs SELECT, so neither can read someone else's.
-  - `my_contact_info()`: the caller's own email and phone. `src/lib/queries/myContact.ts`
-    wraps it for `AuthContext`, `fetchProfileFull()` (`/profile`, `/profile/edit`, the
-    onboarding prefill) and the data export.
-  - `call_buyer_contact(buyer)`: the buyer's phone and name, for `useCallBuyer()`.
-    - It applies callGate's three rules in the database, plus the RFQ relationship: the caller
-      has quoted on one of this buyer's RFQs, in any status (MPF-18 says why not "accepted").
-    - A refusal is a 42501 whose message is the reason, checked in this order:
-      `not_signed_in`, `caller_suspended`, `no_rfq_relationship`, `target_suspended`,
-      `under_review`. The hook maps them to callGate's copy.
-  - `admin_profile_search(term, limit)` and `admin_profile_emails(ids)`: any active admin.
-    Cosora-Admin's Accounts search, Chats search, chat participants and suspension-history
-    actors use them.
-  - Every other `profiles` reader in both repos selects only the other columns. Checked by
-    grepping `from("profiles")` and embedded selects in both repos' `src/`, `scripts/` and
-    `tests/`, and the edge functions, which use the service role and are unaffected.
-  - `rfqs_select` is unchanged, as the brief required.
-- **Verified:**
-  - The two proof requests → HTTP 401, 42501, no `Content-Range`, no rows.
-  - `scripts/profile-contact-privacy-check.mjs` (new, read-only): 24/24 before the interim
-    grant.
-    - Anon: 7 routes to the columns refused, the other columns readable, the 4 functions
-      refused.
-    - demo-buyer: others' columns refused, own row via `my_contact_info()`, admin functions
-      refused.
-    - demo-vendor: the phone of the buyer it quoted, and a refusal for a buyer it never quoted.
-    - demo-admin: emails.
-  - `scripts/contact-gate-check.mjs`, extended: 13/13. Each suspension and lock state is
-    checked for callGate and for `call_buyer_contact()`.
-  - `tests/profile-contact-privacy.spec.ts` (new): 4/4.
-    - A 27-page sweep as buyer, vendor and signed out, with no refused `profiles` read.
-    - A real Call Buyer click: the number is shown, and with the buyer suspended the click is
-      refused with the right copy.
-    - Cosora-Admin's Accounts and Chats.
-  - Regression: 25/25, across:
-    - `profile-edit-routes`, which now also asserts the user's own email and phone;
-    - `profile-data-export`, `profile-calls-stat`, `buyer-settings` and
-      `profile-notifications-honesty`;
-    - `vendor-analytics` and `vendor-my-store`;
-    - `mp8-product-detail-controls` and `mp7-product-detail-real-data` (reviews).
-  - Not runnable: `chat-pipeline`, `admin-chat-moderation` and `mp12-sourcing-loop`. They need
-    fixture accounts that no longer exist: there are 0 `cf00000…` profiles, and the load-test
-    accounts were deleted. Chat and quotes are covered instead by the sweep, the Call Buyer
-    click and the data export.
+| MPF-21 | 2026-09-24, Phase 17 (automated security review) | `otp-dev-verify` is a sign-in bypass, and it is on by default | Security (authentication bypass, parked) | Critical if deployed; nil today (not deployed, never committed) | Open, parked: never deploy it as it is |
+| MPF-22 | 2026-09-24, Phase 17 | 10 seller-role accounts have no completed vendor registration on file, so switching back to Seller sends them to `/onboarding` | Data / product gap | Low (demo and seeded accounts today) | Open, a consequence of the Phase 17 decision |
+| MPF-23 | 2026-09-24, Phase 16 | `log_engagement_event()` swallows every error, so a rejected event disappears with no trace | Correctness (analytics observability) | Low | Open |
+| MPF-24 | 2026-09-24, Phase 18 | WhatsApp deletion codes can't go out yet: no Meta Business account, sender number or approved template | Setup (blocks the channel for phone-only accounts) | High for phone-only accounts once real sign-ups start; nil today | Open, waiting on setup |
+| MPF-25 | 2026-09-24, Phase 20 | The deployed subscription payment functions are older than the repo: `subscription-create-order` lacks the 26 Jul `intent_failed` guard | Security (payment integrity), deploy drift | Medium once Razorpay is live; nil today (demo mode) | Open, a decision: redeploy |
+| MPF-26 | 2026-09-24, Phase 22 | FAQ edits and deletes leave no record of who made them or what the text was | Audit (admin accountability) | Low: public text, and only support and super_admin can edit | Open, a decision: build a history, or accept |
+| MPF-27 | 2026-09-24, Phase 23 | The `fx-rates-refresh` and `account-deletion-sweep` cron jobs would record success while doing nothing if the Vault key went missing | Reliability (the deletion sweep: a privacy promise) | Low: the key is present today | Open: make both raise, as `faq-snapshots-refresh` does |
 
 ---
 
@@ -337,114 +146,10 @@ what someone needs to pick it up later without the original conversation.
 - **Verify by:** with the key set, sign in as a buyer whose confirmed email you can read,
   request a code, check it arrives, and enter it. Then check the request reads `cooling_off`
   and cancel it.
-
----
-
-## MPF-5: Cosora-Admin shows a deleted account as "active"
-
-- **Where:** `cosora-admin`, in `src/pages/Accounts.tsx` (about line 185) and
-  `src/components/AccountStatus.tsx` (about line 136). Both render
-  `account_status === "suspended" ? suspended : active`, so the new `'deleted'` value shows
-  as a green "active".
-- **Effect:**
-  - An admin sees a deleted buyer as active and is offered Suspend.
-  - The database refuses the suspend: `set_account_status()` answers 42501 for a deleted
-    account (verified as super_admin, rolled back). So nothing breaks, but the label is
-    wrong and the error is confusing.
-- **Why not fixed:** it's in the other repo, outside this brief's buyer-app scope.
-- **Fix:** render `deleted` as its own neutral badge with no action buttons, in both places.
-
----
-
-## MPF-6: Phone-only accounts will have no email to receive a deletion code
-
-- **Where:** `account_deletion_blocker()` returns `no_email` when `auth.users.email` is NULL
-  or a `.invalid` placeholder. The mobile-OTP path (`otp-dev-verify`, parked) creates
-  exactly those placeholders.
-- **Today:** 0 accounts are affected. All 20 real accounts have a confirmed email: they are
-  demo, test and admin accounts created before mobile sign-in.
-- **Why this is not an edge case (Mitra, 2026-09-23):** sign-in is **mobile number + OTP
-  only**, with a dummy OTP for now, and it stays that way. So every account created through
-  the real sign-in has a placeholder email, and every such buyer who presses "Delete my
-  account" will see "We can't confirm this by email" and be sent to support.
-- **Fix, a decision for the owner:** confirm deletion with the same mobile OTP the account
-  signs in with, through the same request, code and confirmation tables; only the delivery
-  channel changes. It can only be real once real OTP delivery exists, since the OTP is a
-  dummy today. Until then the email code serves the existing email-bearing accounts only.
-- **Not done now,** because it would touch the OTP path, and sign-in must not change.
-
----
-
-## MPF-7: What anonymization leaves behind
-
-- **Kept on purpose**, because other people's history depends on them: RFQs, quotes,
-  conversations, messages, reviews and calls. The identity on them is scrubbed.
-- **Not scrubbed:**
-  - **Message text.** A buyer who typed their phone number into a chat still has it there.
-  - **Avatar image files in Storage.** `avatar_url` is nulled, but SQL cannot delete Storage
-    objects. The files stay reachable by anyone who kept the URL.
-  - **Private activity rows:** saved items and folders, follows, recently viewed,
-    notifications and video likes. They are tied to "Deleted user", which no one can sign in
-    as.
-  - **`auth.audit_log_entries`**, GoTrue's own log, which contains the old email.
-- **Access-token window:** a token issued before the sweep lives up to 1 hour.
-  - Refused with it (verified): INSERTs, profile and buyer-profile writes, and refresh.
-  - Not refused: UPDATEs to the user's own rows elsewhere (an RFQ's description, a review's
-    text) and reads.
-- **Also logged in:** `securityflags.md` (Low).
-- **Fix shape, if wanted:**
-  - Have the sweep call an edge function that deletes the avatar objects through the
-    Storage API.
-  - Delete the private activity rows inside `anonymize_account()`.
-  - Gate own-row UPDATE policies on `account_is_active()`, as INSERTs already are.
-
----
-
-## MPF-8: "Export All Data" covers the brief's tables, not every table the buyer owns rows in
-
-- **Where:** `buildAllDataJson()` in `src/lib/queries/dataExport.ts`.
-- **What:** the JSON holds exactly the brief's list:
-  - the profile and buyer profile;
-  - RFQs, and the quotes received on them;
-  - conversations and their messages;
-  - reviews and product reviews.
-- **Not in the file**, though the buyer owns rows there:
-  - `calls` (their call log);
-  - `saved_items` and `saved_folders`;
-  - `follows`;
-  - `recently_viewed`;
-  - `video_likes` and `saved_videos`;
-  - `service_reviews`;
-  - `notifications`;
-  - `account_deletion_requests`.
-- **Why it matters:** the button says "All Data". Under an access request, a buyer could
-  reasonably expect the rest.
-- **Why not done:** the brief named its tables, and each addition is a scope decision.
-- **Fix, if wanted:** each is one owner-filtered read and one section, using the same
-  pattern as the existing ones. The spec's ownership checks extend the same way.
-
----
-
-## MPF-9: Every profile save rewrites every field; an empty country becomes "India"
-
-- **Where:** `saveProfileFull()` in `src/lib/queries/profile.ts`. It was left unchanged on
-  purpose: Phase 4 was a UI relocation. It is used by both new routes through
-  `hooks/useEditableProfile.ts`.
-- **What:** a save writes every column the form holds, not just the edited one:
-  - `profiles`: full_name, email, phone and avatar_url;
-  - `buyer_profiles`: 15 columns.
-- **Side effects of writing every field:**
-  - `EMPTY_PROFILE.country` is `"India"`, so an empty country is saved as `'India'`.
-    Observed live: demo-buyer's `country` went NULL → `'India'` on a job-title save.
-  - `display_name` is overwritten with `full_name`.
-  - An empty avatar adopts the Google picture.
-
-  The removed modal behaved the same way, so nothing changed with the move.
-- **The one real hazard is closed.** A save before the profile loaded would have written
-  blanks over real data. The new pages render no inputs until the row has loaded (the hook's
-  `form` stays null until then).
-- **Fix, if wanted:** send only changed fields (diff the form against the loaded row), and
-  default `country` in the UI rather than in `EMPTY_PROFILE`.
+- **Logged to `ToDo.md` (2026-09-25, Phase 25):** "Set up Resend so account-deletion codes
+  can go out by email (MPF-4)". Still open, because logging it doesn't fix it. When that entry
+  was written, `account-deletion` was deployed as v2 (Phase 18), and the two steps above
+  still applied.
 
 ---
 
@@ -468,34 +173,10 @@ what someone needs to pick it up later without the original conversation.
 - **Fix, if wanted:** verify `profiles.email` with an emailed code through the Phase 2
   Resend path, store the result in a real column, and only then show a badge. That is
   contact verification, not a sign-in method.
-
----
-
-## MPF-11: A second currency picker in the buyer menu drawer saves nothing and converts nothing
-
-- **Where:** `src/components/buyer/BuyerTopBar.tsx`, about lines 80–88, the "Default
-  Currency" block at the bottom of the buyer menu drawer.
-- **What:**
-  - It is an uncontrolled `<select>` (₹ INR, $ USD, € EUR, £ GBP) with no `value`, no
-    `onChange` and no read of `buyer_profiles.regional`.
-  - Choosing USD does nothing, and the choice resets when the drawer closes. It isn't even
-    saved, unlike the Regional Settings picker.
-  - It is **not** partial wiring. It is a second, unconnected surface that the Phase 6 brief
-    didn't know about.
-- **How it came up:** the Phase 6 repo-wide search. The brief's own grep missed it because
-  the select holds literal option strings and never names `regional` or `currency`.
-- **Why not changed in Phase 6:** the brief scoped the fix to Regional Settings, and the
-  drawer is a surface it didn't anticipate, so it is reported for a decision rather than
-  changed.
-- **Options:**
-  1. **Remove it** (recommended). Currency lives in Regional Settings, which now says
-     honestly that prices stay in ₹ INR. A picker that does nothing is fabricated UI.
-  2. **Replace it with a link row**, "Currency · ₹ INR ›", to `/profile/regional-settings`,
-     showing the saved value. That needs a settings read in the drawer.
-  3. **Leave it** until multi-currency pricing is built.
-- **Decision (Mitra, 2026-09-23): leave it for now.** It stays in place, unchanged. Revisit
-  when multi-currency pricing is built, or earlier if the drawer is reworked. The
-  honest-copy pattern from Regional Settings, or option 1 or 2 above, is the fix.
+- **Logged to `ToDo.md` (2026-09-25, Phase 25):** "Decide whether to build real verification
+  for the profile email (MPF-10)". Still open, because logging it doesn't fix it. When that
+  entry was written, `emailVerified` in `profile.ts` was still `Boolean(contact.email)`, and no
+  page rendered it.
 
 ---
 
@@ -520,33 +201,6 @@ what someone needs to pick it up later without the original conversation.
   - The `/profile` row: show "Saved" or nothing instead of "On", until delivery exists.
 - **Related:** building real delivery is its own master prompt. See the Phase 7 changelog
   entry for what it would take.
-
----
-
-## MPF-13: Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav
-
-- **Where:** `src/contexts/UserRoleContext.tsx`. `const [role, setRole] = useState<UserRole>("buyer")`.
-- **What:** `role` only ever changes through `setRole` or `toggleRole`, which are called from
-  `OtpVerify` (at sign-in), `Onboarding`, and the role switchers (`useSwitchRole`). Nothing
-  reads `profiles.active_role` on load. So after any hard load (a refresh, a pasted link, a
-  new tab), a signed-in **vendor** runs in buyer mode:
-  - `DashboardSidebar` renders its buyer branch (My Profile / Settings → `/profile/settings`);
-  - the role-aware bottom nav is the buyer one;
-  - `homeHref` is the buyer home.
-
-  The context already reads `profile.active_role`, but only to set `vendorRegistered`.
-- **How it came up:** the Phase 8 spec's vendor check.
-  - demo-vendor (`active_role = 'seller'`) on a freshly loaded `/notifications` clicked
-    "Settings" and landed on the **buyer** Settings page.
-  - After switching to Seller with the role switcher, as a real vendor does in-session,
-    Settings went to `/settings` as expected, and the spec now does that.
-  - The seller branch of the sidebar was not changed in Phase 8.
-- **Why not fixed:** outside Phase 8. The fix also sits next to the sign-in flow (`OtpVerify`
-  sets the role there), which must not change without a go-ahead.
-- **Fix shape:** seed `role` from `profile.active_role` once the profile loads, in the same
-  effect that sets `vendorRegistered`, and only until the user switches by hand, so a manual
-  switch isn't overridden. Verify with a hard load as demo-vendor on `/seller-home`: the
-  seller sidebar should appear without using the switcher.
 
 ---
 
@@ -576,6 +230,10 @@ what someone needs to pick it up later without the original conversation.
 - **Fix shape:** a super_admin rewrites or deactivates the rows above in Cosora-Admin
   `/faqs`, then checks the page signed out. `tests/faqs-admin-editable.spec.ts` asserts
   "12 questions across 4 topics", so update that line if the count changes.
+- **Logged to `ToDo.md` (2026-09-25, Phase 25):** "Fix the buyer Help FAQ answers that
+  describe features Cosora doesn't have (MPF-14)", with the 7 questions listed. Still open,
+  because logging it doesn't fix it. When that entry was written, all 7 rows were live and
+  active, still making their claims, and the page showed 12 questions in 4 topics.
 
 ---
 
@@ -609,6 +267,21 @@ what someone needs to pick it up later without the original conversation.
   "Contact us" to open the Help page, so it now goes to `/help`, the buyer page this flag
   describes. A vendor who taps it gets buyer FAQs, a canned chat, and one real channel: the
   hello@cosora.in email link.
+- **Update (2026-09-25, Phase 24):** Mitra chose the real inbox. The Subscription FAQ's
+  "Contact us" is `mailto:hello@cosora.in?subject=Subscription%20question` again, overriding
+  Andy's "take them to the Help page". The rest of this flag stands: the sidebars' "Help &
+  Support" still opens the buyer Help page, and its chat is still canned.
+- **Logged to `ToDo.md` (2026-09-25, Phase 25):** "Give vendors a real support destination,
+  and stop the canned chats posing as live support (MPF-15)". Still open, because logging it
+  doesn't fix it.
+  - **Correction found while writing it:** there are two canned chats, not one. `/help`
+    and `/profile/help` open `ChatModal` in `Help.tsx` ("Chat with us", "Start Live Chat").
+    It shows a 2-second "typing" indicator and never replies. `SupportChat`
+    (`/profile/help/chat`, from `/profile`'s "Chat with Us") is the one with the `CANNED`
+    replies.
+  - Both present an invented agent, "Abdul". The chat fix covers both.
+  - `ChatModal` also lacks the chat-monitoring disclosure that `claude.md` requires in every
+    chat flow; `SupportChat` has it. Add it if that chat stays.
 
 ---
 
@@ -690,85 +363,189 @@ what someone needs to pick it up later without the original conversation.
 
 ---
 
-## MPF-19: Interim: signed-in users can still read every user's email and phone
+## MPF-21: `otp-dev-verify` is a sign-in bypass, and it is on by default
 
-- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Medium).
-- **Where:** migration `20260923174653_profiles_contact_columns_interim_authenticated.sql`:
-  `grant select (email, phone) on public.profiles to authenticated`.
-- **Why it exists:** the MPF-3 fix went live before the code that uses the new readers. Both
-  production front ends still run the old code:
-  - `cosora.in` (bundle `index-Bl47x8Yt.js`) loads the signed-in user's profile with `email`
-    in the select, and the profile pages read `email` and `phone` directly;
-  - `cosora-admin.vercel.app` (bundle `index-B920YuHP.js`) searches with `email.ilike` and reads
-    participants' emails.
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** `supabase/functions/otp-dev-verify/index.ts`, untracked on purpose: never
+  committed and never deployed. It was not among the project's 16 deployed edge functions on
+  2026-09-24 (`list_edge_functions`). Tracked in `ToDo.md`, "Wire up mobile OTP delivery".
+- **What:** a stand-in for SMS delivery. It accepts any 6 digits for any phone number, creates
+  the account with the service-role key when the number is new, and hands back a session.
+  - `const ENABLED = true`: it is on unless `OTP_DEV_BYPASS=off` is set. Deploying it without
+    that secret switches the bypass on.
+  - CORS is `*`, and there is no allowlist, secret header or environment check.
+  - It still reads `profiles.is_admin` to refuse admin numbers. That column was dropped on
+    2026-09-22, so the check would now error.
+- **How it came up:** the automated security review flagged it as a critical authentication
+  bypass on 2026-09-24. It was already known as unsafe to deploy (ToDo), but it had no flag.
+- **Why not fixed:** it is sign-in code, and sign-in stays as it is (Mitra). Its only
+  protection is staying undeployed.
+- **Fix, before it is ever deployed anywhere:**
+  - off by default, requiring an explicit `OTP_DEV_BYPASS=on`;
+  - refuse the production project ref;
+  - a hardcoded allowlist of dev numbers;
+  - a shared-secret header only the dev harness knows;
+  - CORS limited to the dev app's origin;
+  - rewrite the admin check to use `admin_status_of()`.
 
-  All of that was refused, so profile loading and the admin's Accounts and Chats broke. A
-  profile edit could also have saved blanks over the user's real name, email, phone and photo.
-  Mitra chose to re-open the two columns to signed-in users only (2026-09-23).
-- **What still holds:** signed out stays closed, and both MPF-3 proof requests still return
-  401/42501. The four production queries were checked working again as demo-buyer and
-  demo-admin.
-- **Exposure until closed:** any signed-in account can read any user's email and phone, as
-  that role could before MPF-3.
-- **To close:**
-  1. Deploy the Phase 11 code in both repos, to `cosora.in` and `cosora-admin.vercel.app`.
-  2. Check that the new bundles call `my_contact_info` and `admin_profile_search` and no longer
-     contain the old selects. The check used here fetches each `/assets/*.js` and searches for
-     the old select strings.
-  3. Run `revoke select (email, phone) on public.profiles from authenticated;` as a migration.
-  4. Re-run `scripts/profile-contact-privacy-check.mjs` and expect 24/24. While the grant
-     stands, its four "buyer cannot read / filter" checks fail by design.
-- **Tracked in:** `ToDo.md`.
-- **Status: Fixed 2026-09-24.** Mitra approved the revoke once the deploy was checked. By the
-  migration versions (UTC), the grant was live for about 77 minutes: `20260923174653` to
-  `20260923190354`.
-  1. **Deployed.** textile-spark-net `main` `d1ff52a` is on `www.cosora.in` (bundle
-     `index-Clokv8L0.js`, was `index-Bl47x8Yt.js`). Cosora-Admin `main` `106f84c` is on
-     `cosora-admin.vercel.app` (`index-BzKTnSmz.js`, was `index-B920YuHP.js`).
-  2. **Bundles checked.** The buyer bundle calls `my_contact_info`, `call_buyer_contact` and
-     `log_call`. The admin bundle calls `admin_profile_search` and `admin_profile_emails`.
-     Neither has a `profiles` select string naming `email` or `phone`. Also checked in SQL:
-     no invoker-rights function or view reads the columns. Every edge function that reads
-     `profiles` uses the service role.
-  3. **Revoked** by `20260923190354_profiles_contact_columns_revoke_interim.sql`. Its
-     self-check asserts that neither anon nor authenticated can select the two columns, that
-     the other 7 columns and UPDATE are kept, and that the contact functions are executable.
-  4. **`scripts/profile-contact-privacy-check.mjs` 24/24.**
-  - **Live smoke after the revoke,** against `https://www.cosora.in` and
-    `https://cosora-admin.vercel.app`:
-    - `tests/profile-contact-privacy.spec.ts` 4/4: the 27-page sweep, Call Buyer and its
-      suspended refusal, and the admin's Accounts and Chats;
-    - `tests/profile-edit-routes.spec.ts` 1/1: saves still land.
-    - The demo accounts are back to active, with no open suspension.
+  Better: delete it once real SMS delivery works.
 
 ---
 
-## Phase 9 decisions (2026-09-23)
+## MPF-22: Seller-role accounts with no completed registration go to `/onboarding` when switching back
 
-1. **Content file:** arrived. It's kept as
-   `documentation/seller-registration-and-subscription-faq-content.md` and was loaded
-   through the admin RPCs.
-2. **Seller Registration placement:** the vendor landing page `/seller` (Mitra's choice). It
-   replaces that page's 4 hardcoded questions.
-3. **"Lowest billing plan?":** written in Andy's tone from the live plans (Mitra: "write them
-   up yourself"). It hardcodes ₹699/₹6,990 and the Free and Basic limits, so it needs
-   updating if plan prices change. Worth a read by Andy.
-4. **Should `support` write FAQs?** **Still open.** Today support reads and only super_admin
-   writes. Widening it means changing the four write RPCs' gates (a migration) **and**
-   `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`.
+- **Where:** `profiles.active_role` against `vendor_profiles.onboarding_complete`, read by
+  `UserRoleContext` since Phase 17.
+- **What:** Phase 17 made `vendorRegistered` come from `onboarding_complete` alone, by
+  Mitra's decision. 10 seller-role accounts have no completed registration on file:
+  - 6 with a vendor row whose `onboarding_complete` is false, because they were seeded rather
+    than onboarded: demo-vendor (`22222222…`) and `a0000001…` to `a0000005…`;
+  - 4 with no vendor row at all: `2ff76479…`, `33333333…` (demo-admin), `bfbaf9d0…` and
+    `f2b28c34…`.
+
+  They load on the seller side (their `active_role`) and use it normally. But after switching
+  to Buyer, the Seller switch sends them to `/onboarding`. Before Phase 17,
+  `active_role = 'seller'` counted as registered. Verified for demo-vendor in
+  `tests/role-on-load.spec.ts`.
+- **Same shape, going forward:** a new user who picks Seller in role selection and leaves
+  `/onboarding` part-way has `active_role = 'seller'` with no vendor profile. After a reload
+  they are on the seller side.
+- **Fix, if wanted:** complete `/onboarding` for those accounts. That writes the signed
+  contract too, which keeps "a completed vendor has a contract on file" true. Setting
+  `onboarding_complete = true` directly would not.
 
 ---
 
-## Phase 11 decisions (2026-09-23)
+## MPF-23: `log_engagement_event()` swallows every error
 
-1. **Interim grant:** Mitra chose to re-open `email` and `phone` to signed-in users only until
-   both front ends run the new code (MPF-19). The alternative was leaving production broken
-   until a hotfix deploy.
-2. **What "an RFQ relationship" means for `call_buyer_contact()`:** the caller has a quote, in
-   any status, on one of the buyer's RFQs. My call, not asked. Quote status can't be trusted
-   (MPF-18), so requiring `accepted` would add nothing today. Once MPF-18 is fixed, it can be
-   narrowed to `accepted` if that's the intent; "Call Buyer" only renders on accepted quotes.
-3. **Admin email access:** `admin_profile_search()` and `admin_profile_emails()` admit any
-   active admin. That keeps today's access, because every admin role could read the columns
-   before. Narrowing them to support and super_admin is open: product, ads, vendor-ops and
-   finance admins would then lose emails on Accounts and Chats.
+- **Where:** `public.log_engagement_event()`, which ends in
+  `exception when others then return;`.
+- **What:** any failed insert returns success with nothing written. Found in Phase 16: an
+  event whose `source` was not in `engagement_events_source_check` recorded nothing and
+  returned OK. A new client sending a wrong event type or source would under-count vendors'
+  views and clicks, with no error anywhere.
+- **Fix, if wanted:** narrow the handler to the failures that are expected, or log the
+  failure somewhere an admin can see it, instead of swallowing everything.
+
+---
+
+## MPF-24: WhatsApp deletion codes can't go out yet
+
+- **Where:** the edge function `account-deletion` (v2), and its secrets
+  `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` (both required), plus optional
+  `WHATSAPP_TEMPLATE`, `WHATSAPP_TEMPLATE_LANG` and `WHATSAPP_API_VERSION`.
+- **State on 2026-09-24:** `{action:"status"}` returns
+  `{"configured":{"email":false,"whatsapp":false}}`. A phone-only account's request answers
+  `not_configured` for WhatsApp and mints nothing (verified live: 0 request rows).
+- **Why it is a setup dependency, not code:**
+  - WhatsApp doesn't allow free-form messages from a business, so the code has to go out as
+    a Meta-approved template, and approval can take 1–2 business days.
+  - The repo recorded on 2026-09-12 that this project has none of it: no Meta Business
+    account, no verified sender, no templates (`src/lib/messaging.ts`, `ToDo.md`). Mitra's
+    stated direction then was an in-house messaging service rather than Meta's API.
+  - Phase 18 stopped on that, and the decision was to build the Meta branch now and leave it
+    dormant.
+- **Setup steps, all for the owner:**
+  1. A Meta Business account with a WhatsApp Business account and a verified sender number.
+  2. An **AUTHENTICATION**-category template with a **copy-code** button:
+     - named `account_deletion_code` in English (`en`), or set `WHATSAPP_TEMPLATE` /
+       `WHATSAPP_TEMPLATE_LANG` to match;
+     - with the security recommendation on (`add_security_recommendation`) and a 10-minute
+       expiry (`code_expiration_minutes: 10`).
+
+     Meta fixes the body text as "<code> is your verification code." It can't say
+     "deletion" (see securityflags, 2026-09-24).
+  3. A system-user access token with `whatsapp_business_messaging` permission, set as
+     `WHATSAPP_ACCESS_TOKEN`.
+  4. The sender's **phone number id** (not the number) as `WHATSAPP_PHONE_NUMBER_ID`.
+
+  Secrets are set in Supabase → Edge Functions → Secrets, and take effect without a redeploy.
+- **What "sent" means:** Meta accepted the message, not that it was delivered. A number
+  that isn't on WhatsApp is reported only later, through a webhook this project doesn't
+  have.
+  - So the user sees "We've sent a code to your WhatsApp number", and it never arrives.
+  - "Send a new code" goes the same way. The way out is support.
+  - A delivery webhook would fix that, if it matters.
+- **Cost:** Meta charges per authentication message. Each request allows 5 codes, 60 s apart,
+  and only to the account's own number.
+- **Verify by:**
+  1. With the secrets set, sign in as a phone-only account whose WhatsApp you can read.
+  2. Request a code, check it arrives, and enter it.
+  3. Check the request reads `cooling_off` with `channel = 'whatsapp'`, then cancel it.
+
+---
+
+## MPF-25: The deployed subscription payment functions are older than the repo
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** `subscription-create-order` (deployed v3, 16 Jul 2026),
+  `subscription-verify-payment` (v4, 16 Jul) and `subscription-webhook` (v3, 16 Jul).
+- **What:**
+  - The repo's `subscription-create-order` gained an `intent_failed` guard on 26 Jul (commit
+    `0fc15f6`, "rzr pay setup"). If recording the payment intent in
+    `subscription_payment_orders` fails, it stops before Razorpay Checkout opens.
+  - The deployed v3 predates it. Its source records the intent without checking the result.
+  - Without the guard, a failed intent write still lets the vendor pay. The payment then hits
+    `activateFromOrder`'s "already paid / unknown" branch, which returns ok without
+    activating: the vendor is charged and stays on the old plan (the repo comment's words).
+  - `-verify-payment` and `-webhook` were first committed on 17 Jul, the day after their
+    deploy. Whether their deployed code matches the repo wasn't proven.
+  - The same drift was found and fixed for `razorpay-create-order` on 2026-09-14
+    (securityflags); the subscription copy was missed.
+- **Reachable today?** No. `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are unset, so
+  `subscription-create-order` answers `not_configured` and the app uses its simulated
+  checkout. It matters the day payments go live.
+- **How it came up:** Phase 20 extracted GST into `_shared/gst.ts` and refactored all three
+  functions to import it. Before redeploying, it checked the deploy dates: each repo file
+  changed after its last deploy.
+- **Why not redeployed in Phase 20:** a redeploy ships everything in the repo, including this
+  guard and anything else that differs, into the payment path. That's a decision, not a side
+  effect of a GST refactor.
+- **Fix:** diff each deployed source against the repo, then redeploy all three with
+  `supabase/functions/_shared/gst.ts`. `node scripts/gst-check.mjs` and Phase 20's old-vs-new
+  harness show the GST part changes no amount.
+
+---
+
+## MPF-26: FAQ edits and deletes leave no record of who made them or what the text was
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** `public.faqs`, and `admin_faq_update`, `_delete` and `_reorder`.
+- **What:**
+  - `created_by` records who **added** a row, and nothing else does any recording. An edit
+    overwrites `question` / `answer` / `active` and sets `updated_at`, a delete removes the row,
+    and there is no history table.
+  - The only admin audit table in the project is `admin.ad_review_log`, which is for ads.
+  - So if an answer on the public Help, Subscription or seller page is changed or removed,
+    nobody can tell who did it or what it said before.
+  - Cosora-Admin's FAQ table shows the **creator's** name under the "Updated" date, which reads
+    as the last editor.
+- **Why now:** Phase 22 (migration `20260924170736`) let support write FAQs as well as
+  super_admin, by design. Before it, only the 3 super_admin accounts could change the text.
+- **Not exploitable from outside:** every write needs an active support or super_admin
+  admin, and clients have no write grant on the table.
+- **Fix shape:** a `faq_revisions` table written by the `admin_faq_*` functions themselves
+  (who, when, the old and new text), read through an admin function. Or, at least, an
+  `updated_by` column. Then the page shows the last editor, not the creator.
+- **Not built in Phase 22:** the brief was the gate change only.
+
+---
+
+## MPF-27: Two cron jobs would succeed silently without the Vault key
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** pg_cron `fx-rates-refresh` (Phase 20, `20260924161525`) and
+  `account-deletion-sweep` (Phase 16).
+- **What:** both are `select net.http_post(...) where exists (<Vault service_role_key>)`. If
+  the secret were deleted or renamed, the WHERE would be false, nothing would be sent, and
+  `cron.job_run_details` would record `succeeded` every run. That is the failure
+  `claude.md` describes for the embedding worker (3,960 silent "successful" runs).
+- **Impact if it happened:** FX rates stop refreshing (the rate line shows its date, so it
+  is visible). More seriously, accounts past their 14-day cooling-off are not anonymized,
+  and nobody is told.
+- **How it came up:** Phase 23's `faq-snapshots-refresh` was written to raise instead, and
+  reading the two older jobs for their pattern showed the difference.
+- **Fix shape:** a `do` block that raises when the key is missing, as
+  `faq-snapshots-refresh` does. For the sweep, "nothing is due" must stay a quiet success;
+  only a missing key raises.
+- **Not fixed in Phase 23:** outside the brief.

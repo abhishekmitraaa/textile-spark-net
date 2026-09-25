@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ export default function NewBrandsCarousel({
   sponsored?: ActiveAd[];
 }) {
   const navigate = useNavigate();
+  const { showText } = useDisplayCurrency();
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [active, setActive] = useState(0);
 
@@ -180,7 +182,7 @@ export default function NewBrandsCarousel({
                       <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-left">
                         <p className="text-[10px] font-semibold text-white truncate">{p.name}</p>
-                        <p className="text-[10px] font-bold text-white">{p.price}</p>
+                        <p className="text-[10px] font-bold text-white">{showText(p.price)}</p>
                       </div>
                     </button>
                   ))}
@@ -234,6 +236,7 @@ function SponsoredSlide({
   brand: Brand | undefined;
   onOpen: (ad: ActiveAd) => void;
 }) {
+  const { showText } = useDisplayCurrency();
   const name = ad.vendorName ?? brand?.name ?? "Sponsored brand";
   // The campaign's own creative first, then the promoted product's image. Only
   // tiles that have a real image are rendered — never a placeholder, and never
@@ -278,7 +281,7 @@ function SponsoredSlide({
                 <img src={t.image} alt={t.name} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-left">
                   <p className="truncate text-[10px] font-semibold text-white">{t.name}</p>
-                  {t.price && <p className="text-[10px] font-bold text-white">{t.price}</p>}
+                  {t.price && <p className="text-[10px] font-bold text-white">{showText(t.price)}</p>}
                 </div>
               </button>
             ))}

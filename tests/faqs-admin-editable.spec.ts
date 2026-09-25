@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
  * An admin edits FAQs in Cosora-Admin's FAQs page, and the live pages change
  * with no deploy:
  *   buyer_help           /profile/help, as a SIGNED-OUT visitor
- *   subscription         /subscription, as demo-vendor; "Contact us" opens /help
+ *   subscription         /subscription, as demo-vendor; "Contact us" writes to hello@cosora.in
  *   seller_registration  /seller (the vendor landing page), as a SIGNED-OUT visitor
  * For each: add → appears last; edit → updates; move up → reorders (then moved
  * back); deactivate → disappears; delete → gone from admin. Each page's list is
@@ -24,7 +24,9 @@ import { fileURLToPath } from "node:url";
  *
  * ACCOUNTS: demo-admin (super_admin), demo-vendor, demo-buyer. MUTATING,
  * self-cleaning: every row it creates starts with "[P9TEST" and is deleted in
- * `finally`, and seeded rows it reorders are moved back. Requires BOTH dev
+ * `finally`, and seeded rows it reorders are moved back. Since Phase 26 `finally`
+ * also compares every FAQ with a snapshot taken at the start, positions included, and
+ * moves back any row that isn't where it was. Requires BOTH dev
  * servers: this app on :8080 and Cosora-Admin on :5174 (ADMIN_APP_URL overrides).
  */
 
@@ -59,6 +61,10 @@ async function signIn(email: string) {
 
 async function pageWith(browser: Browser, session: Session | null) {
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  // Since Phase 23 the pages read a CDN snapshot first, which trails an edit by up to
+  // about a minute. This spec checks each edit on the page straight away, so its pages
+  // take the table fallback. The snapshot path is tests/faqs-snapshot.spec.ts.
+  await ctx.route("**/storage/v1/object/public/faq-snapshots/**", (r) => r.abort());
   if (session) {
     await ctx.addInitScript(([k, v]) => window.localStorage.setItem(k as string, v as string), [STORAGE_KEY, JSON.stringify(session)] as const);
   }
@@ -86,11 +92,21 @@ async function adminEdit(page: Page, tab: string, question: string, newQuestion:
   await page.getByRole("button", { name: "Save" }).click();
   await expect(row(page, newQuestion)).toHaveCount(1);
 }
+// Waits for the reorder call itself. "networkidle" returns at once on a page that has
+// already loaded, so the next step's navigation could cut the call off: in Phase 26 a
+// "move back down" never landed and left "How is GST handled?" at 250 instead of 140.
 async function adminMove(page: Page, tab: string, question: string, dir: "up" | "down") {
   await openTab(page, tab);
-  await page.getByRole("button", { name: `Move ${dir}: ${question}` }).click();
-  await page.waitForLoadState("networkidle");
+  const [res] = await Promise.all([
+    page.waitForResponse((r) => r.url().includes("/rest/v1/rpc/admin_faq_reorder") && r.request().method() === "POST"),
+    page.getByRole("button", { name: `Move ${dir}: ${question}` }).click(),
+  ]);
+  expect(res.ok(), `move ${dir}: ${question}`).toBe(true);
 }
+type FaqRow = { id: string; surface: string; category_label: string | null; question: string; answer: string; position: number; active: boolean };
+const shape = (rows: FaqRow[]) => rows
+  .map(({ id, surface, category_label, question, answer, position, active }) => ({ id, surface, category_label, question, answer, position, active }))
+  .sort((a, b) => a.id.localeCompare(b.id));
 async function adminToggle(page: Page, tab: string, question: string, action: "Deactivate" | "Reactivate") {
   await openTab(page, tab);
   await row(page, question).getByRole("button", { name: action }).click();
@@ -139,6 +155,10 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
   const buyer = await signIn(BUYER);
   const anon = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
   const MARK = `[P9TEST ${Date.now()}]`;
+  // Every FAQ as it was, positions included: `finally` puts back anything moved and checks.
+  const start = await admin.db.rpc("admin_faq_list");
+  if (start.error) throw new Error(`admin_faq_list: ${start.error.message}`);
+  const snapshot = shape(start.data as FaqRow[]);
 
   // ── Non-admins get a permission error, at the database ──
   const calls: [string, Record<string, unknown>][] = [
@@ -183,7 +203,8 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     "Do you offer discounts for annual billing?",
     "Lowest billing plan?",
   ]);
-  expect(subBase.contactHref, "Contact us opens the Help page (Andy's content)").toBe("/help");
+  // Andy's content asked for the Help page; Mitra chose the real inbox (2026-09-25, Phase 24).
+  expect(subBase.contactHref, "Contact us writes to hello@cosora.in").toBe("mailto:hello@cosora.in?subject=Subscription%20question");
   {
     const { ctx, page } = await pageWith(browser, vendor.session);
     await page.goto("/subscription", { waitUntil: "networkidle" });
@@ -192,8 +213,8 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     await expect(card.getByText(/₹699\/month/)).toBeVisible();
     await card.scrollIntoViewIfNeeded();
     await card.screenshot({ path: path.join(SHOTS, "faqs-subscription.png") });
-    await card.getByRole("link", { name: /Contact us/ }).click();
-    await expect(page).toHaveURL(/\/help$/);
+    // A mailto: link hands off to the mail client, so it isn't clicked here; the href is checked above.
+    await expect(card.getByRole("link", { name: /Contact us/ })).toBeVisible();
     await ctx.close();
   }
   const sellerBase = await sellerLandingQuestions(browser);
@@ -279,6 +300,15 @@ test("admins edit FAQs on all three surfaces and the live pages follow; non-admi
     for (const r of (left ?? []) as { id: string; question: string }[]) {
       if (r.question.startsWith("[P9TEST")) await admin.db.rpc("admin_faq_delete", { p_id: r.id });
     }
+    // A seeded row whose position changed goes back to it (the page lists only show order).
+    const now = new Map(shape(((await admin.db.rpc("admin_faq_list")).data ?? []) as FaqRow[]).map((r) => [r.id, r]));
+    for (const s of snapshot) {
+      if (now.get(s.id) && now.get(s.id)!.position !== s.position) {
+        await admin.db.rpc("admin_faq_reorder", { p_id: s.id, p_position: s.position });
+      }
+    }
+    const end = shape(((await admin.db.rpc("admin_faq_list")).data ?? []) as FaqRow[]);
+    expect.soft(end, "every FAQ is exactly as it was, positions included").toEqual(snapshot);
     await adminCtx.close();
   }
 });

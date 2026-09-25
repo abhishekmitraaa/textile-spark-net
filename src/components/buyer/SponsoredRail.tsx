@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -55,6 +56,7 @@ export default function SponsoredRail({
 }) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
+  const { showText } = useDisplayCurrency();
   const spec = slot ? AD_SLOTS[slot] : null;
   const { data: window = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES);
   // An untyped rail (ProductDetail) has no slot and so no blocks: it is the
@@ -131,7 +133,7 @@ export default function SponsoredRail({
               <p className="truncate text-[11px] font-bold text-gray-900">{a.productName ?? a.title}</p>
               {a.vendorName && <p className="truncate text-[10px] text-gray-500">{a.vendorName}</p>}
               <div className="mt-0.5 flex items-center justify-between">
-                {a.price && <span className="text-[11px] font-bold text-[#ef4d62]">{a.price}</span>}
+                {a.price && <span className="text-[11px] font-bold text-[#ef4d62]">{showText(a.price)}</span>}
                 <span className="inline-flex items-center gap-0.5 text-[9px] text-gray-400">
                   <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /> Featured
                 </span>

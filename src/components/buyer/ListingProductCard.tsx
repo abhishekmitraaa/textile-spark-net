@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Bookmark, BookmarkCheck, MapPin, Phone, Star } from "lucide-react";
@@ -21,6 +22,7 @@ interface ListingProductCardProps {
 }
 
 const ListingProductCard = ({ product, className }: ListingProductCardProps) => {
+  const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const saved = useSaved();
   const isSaved = Boolean(saved.products[product.id]);
@@ -62,7 +64,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
 
       <div className="p-2 lg:p-3.5 flex flex-col flex-1">
         <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
-          {product.price} | {product.moq} | {product.soldCount}
+          {showText(product.price)} | {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>

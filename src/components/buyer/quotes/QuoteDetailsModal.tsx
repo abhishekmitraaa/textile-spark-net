@@ -1,3 +1,5 @@
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -37,6 +39,7 @@ interface Props {
 }
 
 export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, onCall, onStatus }: Props) {
+  const { showBoth } = useDisplayCurrency();
   const navigate = useNavigate();
   const [paymentTerms, setPaymentTerms] = useState("");
 
@@ -154,14 +157,15 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-2">Vendor Quote</h4>
                 <div className="grid grid-cols-2 gap-2">
-                  <QuoteStat icon={DollarSign} label="Price/Unit" value={fmtMoney(quote.currency, quote.pricePerUnit)} />
+                  <QuoteStat icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
                   <QuoteStat icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} Units`} />
                   <QuoteStat icon={Clock} label="Lead Time" value={quote.leadTime} />
-                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={fmtMoney(quote.currency, quote.sampling)} />
+                  <QuoteStat icon={FlaskConical} label="Sampling Cost" value={showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
                   <QuoteStat icon={Star} label="Rating" value={`${quote.rating} (${quote.ratingCount})`} />
                   <QuoteStat icon={CalendarClock} label="Sample Timeline" value={quote.sampleTimeline} />
                   <QuoteStat icon={Layers} label="Fabric" value={quote.fabric} />
                 </div>
+                <ConvertedPriceNote className="mt-2" />
 
                 {/* Payment terms */}
                 <label className="block text-[11px] font-semibold text-gray-500 mt-3 mb-1">Payment Terms</label>

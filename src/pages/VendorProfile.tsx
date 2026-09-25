@@ -1,3 +1,5 @@
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -120,6 +122,7 @@ type GenderFilter = "Men" | "Women" | "Unisex";
 // MAIN
 // ─────────────────────────────────────────────────────────────
 const VendorProfile = () => {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const { id } = useParams();
   const reduced = useReducedMotion();
@@ -690,6 +693,7 @@ const VendorProfile = () => {
         {/* ══ BRAND'S RECOMMENDATIONS (top enquired items) ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand's Recommendations</h2>
+          <ConvertedPriceNote className="mb-3" />
           <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
             {recommendationsList.map((product) => {
               const isSaved = Boolean(saved.products[product.id]);
@@ -708,7 +712,7 @@ const VendorProfile = () => {
                     </div>
                   </div>
                   <div className="p-1.5">
-                    <p className="text-[10px] font-bold text-[#ef4d62]">{product.price} | MOQ: {product.moq} | {product.sold} sold</p>
+                    <p className="text-[10px] font-bold text-[#ef4d62]">{showText(product.price)} | MOQ: {product.moq} | {product.sold} sold</p>
                     <p className="text-[9px] text-gray-500 truncate">{product.name} | <span className="font-bold">{brandName}</span></p>
                   </div>
                 </motion.div>
@@ -752,7 +756,7 @@ const VendorProfile = () => {
                   </div>
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 py-2">
                     <p className="text-[9px] font-bold text-white truncate">{video.brandLine}</p>
-                    <p className="text-[9px] text-white/85">{video.price}</p>
+                    <p className="text-[9px] text-white/85">{showText(video.price)}</p>
                   </div>
                 </button>
               ))}
@@ -884,7 +888,7 @@ const VendorProfile = () => {
                       </div>
                     )}
                     <p className={cn("font-bold text-[#ef4d62] leading-tight", gridCols === 2 ? "text-xs" : "text-[9px] truncate")}>
-                      {product.price} | MOQ: {product.moq} | {product.sold} sold
+                      {showText(product.price)} | MOQ: {product.moq} | {product.sold} sold
                     </p>
                     <p className={cn("text-gray-600 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>
                       {product.name} | <span className="font-bold">{brandName}</span>

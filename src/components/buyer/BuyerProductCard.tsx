@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion } from "framer-motion";
 import { Bookmark, BookmarkCheck, MapPin, Phone, Star, BadgeCheck } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -33,6 +34,7 @@ interface BuyerProductCardProps {
 }
 
 const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
+  const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
@@ -91,7 +93,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
       <div className="flex flex-col gap-2 p-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="text-lg font-semibold leading-tight text-foreground">{product.price}</p>
+            <p className="text-lg font-semibold leading-tight text-foreground">{showText(product.price)}</p>
             <p className="text-xs text-muted-foreground">{product.moq}</p>
           </div>
           <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium text-muted-foreground">

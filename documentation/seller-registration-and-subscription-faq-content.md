@@ -26,8 +26,12 @@ page uses. No migration was involved.
     admin.
   - **Kept:** three older, accurate rows that Andy's list doesn't cover stay live after his
     (autopay, payment methods and GST).
-- **"Contact us?"** isn't a question. It's the Subscription FAQ's button, which now opens the
-  Help page (`/help`), as Andy asked.
+- **"Contact us?"** isn't a question. It's the Subscription FAQ's button. It opened the Help
+  page (`/help`), as Andy asked, from 2026-09-23. **Since 2026-09-25 (Phase 24, Mitra's
+  choice) it writes to hello@cosora.in** instead, because `/help` is the buyer page and its
+  chat is canned (MPF-15).
+- **Seeded by migration since 2026-09-25:** `20260925075432_faqs_seed_seller_registration_and_subscription.sql` reproduces these rows,
+  as they are live, on a fresh database. "Lowest billing plan?" keeps its 2026-09-23 answer.
 - **Formatting only:** the Markdown bold markers were dropped, `-` bullets are shown as `•`
   on their own lines, and "3 - 5 days" was typeset as "3–5 days". The wording is unchanged.
 - **Decisions (Mitra, 2026-09-23):**

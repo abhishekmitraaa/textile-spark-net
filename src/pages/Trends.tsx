@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
@@ -197,6 +198,7 @@ const HOME_TABS = [
 // ─────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: CompactProduct }) {
+  const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
@@ -238,7 +240,7 @@ function ProductCard({ product }: { product: CompactProduct }) {
 
       <div className="p-2 lg:p-3.5">
         <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
-          {product.price} | {product.moq} | {product.soldCount}
+          {showText(product.price)} | {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5 truncate">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>

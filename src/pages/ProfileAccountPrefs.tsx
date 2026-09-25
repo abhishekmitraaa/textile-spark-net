@@ -17,6 +17,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting, DEFAULT_SETTINGS } from "@/lib/queries/profile";
 import { buildRfqHistoryCsv, buildAllDataJson, downloadFile, CHAT_SCOPE_NOTE } from "@/lib/queries/dataExport";
 import { setLang, langCodeFromName, isSupportedLanguageName } from "@/lib/i18n";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { currencyCodeOf, formatRateDate } from "@/lib/currency";
 
 function SettingsHeader({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -34,12 +36,12 @@ function SettingsHeader({ title }: { title: string }) {
 
 const selectCls = "w-full appearance-none rounded-xl border border-gray-300 bg-white pl-10 pr-9 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#ef4d62] transition-colors";
 
-// Currency and timezone are saved (buyer_profiles.regional) but nothing reads
-// them yet: no price formatter converts currency and no date renders in the
-// chosen zone (checked repo-wide, 2026-09-23). Like an untranslated language,
-// a choice the app can't honour says so. It is never silently ignored.
-// Multi-currency pricing is a separate feature, not a copy fix.
-const PRICE_CURRENCY = DEFAULT_SETTINGS.regional.currency;   // "₹ INR", what every price shows in
+// Currency converts displayed prices (Phase 20, MPF-11: src/lib/currency.ts). It
+// is DISPLAY ONLY, and the page says so: prices are set, quoted, paid and invoiced
+// in INR. Timezone is still saved but not read: no date renders in the chosen
+// zone (checked repo-wide, 2026-09-23). Like an untranslated language, a choice
+// the app can't honour says so. It is never silently ignored.
+const PRICE_CURRENCY = DEFAULT_SETTINGS.regional.currency;   // "₹ INR", what prices are set and paid in
 const DEFAULT_TIMEZONE = DEFAULT_SETTINGS.regional.timezone; // "IST (India Standard Time)"
 
 const ProfileAccountPrefs = () => {
@@ -48,6 +50,9 @@ const ProfileAccountPrefs = () => {
   const { data: settings } = useSettings(user?.id);
   const { regional: storeRegional } = useProfileState();
   const [regional, setRegional] = useState<RegionalSettings>(storeRegional);
+  const display = useDisplayCurrency();
+  const chosenCode = currencyCodeOf(regional.currency);
+  const rate = display.fx?.rates[chosenCode];
 
   useEffect(() => { if (user && settings) setRegional(settings.regional); }, [user, settings]);
 
@@ -121,21 +126,28 @@ const ProfileAccountPrefs = () => {
                   value={regional.currency}
                   onChange={(e) => {
                     const c = e.target.value;
+                    // The same field the buyer menu drawer's picker writes
+                    // (useCurrencySetting). Saved here with the page's other
+                    // regional fields, so a quick currency-then-timezone change
+                    // can't have one save overwrite the other.
                     patchRegional({ currency: c });
-                    // Saved, never "updated": nothing converts prices, so the toast
-                    // must not imply the app changed (same honesty as Language).
                     if (c === PRICE_CURRENCY) toast.success("Currency saved");
-                    else toast.info(`${c} saved`, { description: `Prices still show in ${PRICE_CURRENCY} for now.` });
+                    else toast.success(`${c} saved`, { description: `Prices show converted to ${currencyCodeOf(c)}, for display only. Payments stay in ${PRICE_CURRENCY}.` });
                   }}
                 >
                   {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
               {regional.currency !== PRICE_CURRENCY && (
-                <p className="mt-1.5 text-[11px] text-amber-600">
-                  Saved, but prices across Cosora still show in {PRICE_CURRENCY}. Other currencies aren&rsquo;t supported yet.
+                <p className="mt-1.5 text-[11px] text-amber-700">
+                  {rate
+                    ? <>Prices across Cosora show converted to {chosenCode} at the {display.fx ? formatRateDate(display.fx.ratesDate) : ""} rate (1 {chosenCode} ≈ ₹{(1 / rate).toFixed(2)}), marked ≈.</>
+                    : <>Today&rsquo;s {chosenCode} rate isn&rsquo;t available yet, so prices still show in {PRICE_CURRENCY}.</>}
                 </p>
               )}
+              <p className="mt-1.5 text-[11px] text-gray-500">
+                Display only: vendors quote and are paid in {PRICE_CURRENCY}, and Cosora&rsquo;s plans and GST invoices stay in {PRICE_CURRENCY}. Amounts you type, like an RFQ budget, are in {PRICE_CURRENCY}.
+              </p>
             </div>
 
             <div>
@@ -210,7 +222,7 @@ const ProfileAccountPrefs = () => {
                 <Download className="w-4 h-4 text-gray-500 mt-0.5 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900">Export All Data</p>
-                  <p className="text-xs text-gray-500">Your profile, RFQs, quotes received, chats and reviews, as a JSON file</p>
+                  <p className="text-xs text-gray-500">Your profile, RFQs, quotes received, chats, reviews, saved items, recently viewed, and the vendors you follow or contacted, as a JSON file</p>
                   {/* Said up front so the seller's messages in the file are no surprise. */}
                   <p className="text-[11px] text-gray-400 mt-1">{CHAT_SCOPE_NOTE}</p>
                 </div>

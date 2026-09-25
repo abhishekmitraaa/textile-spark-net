@@ -76,6 +76,25 @@ async function brandNames(ids: string[]): Promise<Map<string, string>> {
   return new Map(rows.map((r) => [String(r.id), String(r.brand_name ?? "")]));
 }
 
+/**
+ * Names of the products the buyer can still open. products_select admits only
+ * `live` products (or one's own), so a product missing here is no longer listed
+ * and gets no link (the same rule as the My Reviews page).
+ */
+async function productNames(ids: string[]): Promise<Map<string, string>> {
+  const rows = await inChunks([...new Set(ids)], async (chunk) => {
+    const { data, error } = await supabase.from("products").select("id, name").in("id", chunk);
+    if (error) throw error;
+    return (data ?? []) as Row[];
+  });
+  return new Map(rows.map((r) => [String(r.id), String(r.name ?? "")]));
+}
+
+/** An absolute link on the site the export was made from, so it opens from the file. */
+function siteLink(path: string): string {
+  return new URL(path, window.location.origin).href;
+}
+
 // ── CSV ──────────────────────────────────────────────────────
 
 // RFC 4180 quoting, plus a guard against spreadsheet formula injection: quote
@@ -200,6 +219,81 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     return { ...c, other_party_id: other, other_party_name: names.get(other) || null };
   });
 
+  // ── Added in Phase 19 (MPF-8): vendors contacted, saved, recently viewed, following ──
+  // Calls this buyer made. Only the vendor ids are exported, for vendors_contacted.
+  const calls = await allPages((from, to) =>
+    supabase.from("calls").select("vendor_id").eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to));
+  const savedItems = await allPages((from, to) =>
+    supabase.from("saved_items").select("product_id, created_at").eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("product_id").range(from, to));
+  const savedFolders = await allPages((from, to) =>
+    supabase.from("saved_folders").select("id, name, created_at").eq("buyer_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to));
+  // saved_folder_items has no owner column: it is filtered to this buyer's own folders.
+  const folderItems = await inChunks(savedFolders.map((f) => String(f.id)), (chunk) =>
+    allPages((from, to) =>
+      supabase.from("saved_folder_items").select("folder_id, product_id, created_at").in("folder_id", chunk)
+        .order("created_at", { ascending: true }).order("folder_id").order("product_id").range(from, to)));
+  const recentlyViewed = await allPages((from, to) =>
+    supabase.from("recently_viewed").select("product_id, viewed_at").eq("buyer_id", userId)
+      .order("viewed_at", { ascending: false }).order("product_id").range(from, to));
+  const follows = await allPages((from, to) =>
+    supabase.from("follows").select("vendor_id, created_at").eq("follower_id", userId)
+      .order("created_at", { ascending: true }).order("vendor_id").range(from, to));
+
+  // A conversation counterpart is a vendor only if it has a vendor_profiles row,
+  // which is exactly what brandNames() returned for them.
+  const conversationVendors = others.filter((id) => names.has(id));
+  const callVendors = calls.map((c) => String(c.vendor_id));
+  const quoteVendors = quotes.map((q) => String(q.vendor_id));
+  const followedVendors = follows.map((f) => String(f.vendor_id));
+  const moreNames = await brandNames([...callVendors, ...quoteVendors, ...followedVendors]);
+  const vendorList = (ids: string[]) =>
+    [...new Set(ids)]
+      .map((id) => ({ vendor_id: id, brand_name: names.get(id) || moreNames.get(id) || null }))
+      .sort((a, b) => (a.brand_name ?? "").localeCompare(b.brand_name ?? "") || a.vendor_id.localeCompare(b.vendor_id));
+
+  // Messaged: a conversation where this buyer sent at least one message, not an empty shell.
+  const sentIn = new Set(messages.filter((m) => m.sender_id === userId).map((m) => String(m.conversation_id)));
+  const messagedVendors = conversations
+    .filter((c) => sentIn.has(String(c.id)))
+    .map((c) => String(c.user_a === userId ? c.user_b : c.user_a))
+    .filter((id) => names.has(id));
+
+  const products = await productNames(
+    [...savedItems, ...folderItems, ...recentlyViewed].map((r) => String(r.product_id)));
+  const product = (id: string) => ({
+    product_id: id,
+    product_name: products.get(id) || null,
+    link: products.has(id) ? siteLink(`/product/${id}`) : null,
+  });
+
+  const saved = {
+    all_saves: savedItems.map((s) => ({ ...product(String(s.product_id)), saved_at: s.created_at })),
+    folders: savedFolders.map((f) => ({
+      id: f.id,
+      name: f.name,
+      created_at: f.created_at,
+      items: folderItems
+        .filter((i) => i.folder_id === f.id)
+        .map((i) => ({ ...product(String(i.product_id)), added_at: i.created_at })),
+    })),
+  };
+  const recentlyViewedOut = recentlyViewed.map((r) => ({ ...product(String(r.product_id)), viewed_at: r.viewed_at }));
+  const following = follows.map((f) => {
+    const id = String(f.vendor_id);
+    return {
+      vendor_id: id,
+      brand_name: moreNames.get(id) || null,
+      // brandNames() only returns vendors that still exist (vendor_profiles is world-readable).
+      link: moreNames.has(id) ? siteLink(`/vendor/${id}`) : null,
+      followed_at: f.created_at,
+    };
+  });
+  const vendorsContacted = vendorList([...conversationVendors, ...callVendors, ...quoteVendors]);
+  const vendorsMessaged = vendorList(messagedVendors);
+
   const counts = {
     rfqs: rfqs.length,
     quotes_received: quotes.length,
@@ -207,14 +301,27 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     messages: messages.length,
     reviews: reviews.length,
     product_reviews: productReviews.length,
+    vendors_contacted: vendorsContacted.length,
+    vendors_messaged: vendorsMessaged.length,
+    saved_items: savedItems.length,
+    saved_folders: savedFolders.length,
+    saved_folder_items: folderItems.length,
+    recently_viewed: recentlyViewed.length,
+    following: following.length,
   };
 
   const doc = {
     export: {
       generated_at: new Date().toISOString(),
       account_id: userId,
-      format_version: 1,
-      contents: "Your profile, business details, RFQs, the quotes you received on them, your conversations and their messages, and the reviews you wrote.",
+      format_version: 2,
+      contents:
+        "Your profile, business details, RFQs, the quotes you received on them, your conversations and their messages, " +
+        "the reviews you wrote, the vendors you contacted (by chat, call or quote) and those you messaged, " +
+        "your saved items and folders, the products you viewed recently, and the vendors you follow.",
+      links:
+        "Links open on the site this file was exported from. A null link means the product is no longer listed " +
+        "or the vendor no longer exists.",
       note: CHAT_SCOPE_NOTE,
       counts,
     },
@@ -226,6 +333,11 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     messages,
     reviews,
     product_reviews: productReviews,
+    vendors_contacted: vendorsContacted,
+    vendors_messaged: vendorsMessaged,
+    saved,
+    recently_viewed: recentlyViewedOut,
+    following,
   };
 
   return {

@@ -1,3 +1,5 @@
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -146,6 +148,7 @@ function brandsFromProducts(rows: RProduct[]): BrandResult[] {
 // Product card
 // ─────────────────────────────────────────────────────────────
 function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; query?: string }) {
+  const { show } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const t = useT();
   const saved = useSaved();
@@ -186,7 +189,7 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
         </div>
       </Link>
       <div className={cn("flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
-        <p className={cn("font-bold text-[#ef4d62] leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>₹{p.priceValue} | {p.moq} | {p.sold}</p>
+        <p className={cn("font-bold text-[#ef4d62] leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq} | {p.sold}</p>
         <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px] lg:text-xs")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className="font-bold hover:underline">{p.manufacturer}</Link></p>
         <div className="flex items-center gap-0.5 mt-0.5">
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5 lg:w-3 lg:h-3")} />
@@ -212,6 +215,7 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
 // with its related product line, follow, and call/chat actions.
 // ─────────────────────────────────────────────────────────────
 function BrandCard({ brand, products }: { brand: BrandResult; products: BrandProduct[] }) {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const t = useT();
   const rail = useDragScroll<HTMLDivElement>();
@@ -263,7 +267,7 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
             <div className="aspect-[3/4] rounded-lg overflow-hidden bg-gray-100">
               <img src={p.image} alt={p.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" draggable={false} />
             </div>
-            <p className="mt-1.5 text-[11px] lg:text-xs font-semibold text-gray-700">{p.price}</p>
+            <p className="mt-1.5 text-[11px] lg:text-xs font-semibold text-gray-700">{showText(p.price)}</p>
           </Link>
         ))}
       </div>
@@ -512,6 +516,7 @@ type Tab = "product" | "brand";
 type Menu = "gender" | "sort" | null;
 
 const SearchResults = () => {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const t = useT();
@@ -993,7 +998,7 @@ const SearchResults = () => {
                         </div>
                         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 right-2 lg:right-3">
                           <p className="text-[10px] lg:text-xs font-bold text-white truncate drop-shadow">{v.category}</p>
-                          <p className="text-[10px] lg:text-xs text-white/90 drop-shadow">{v.price}</p>
+                          <p className="text-[10px] lg:text-xs text-white/90 drop-shadow">{showText(v.price)}</p>
                         </div>
                       </button>
                     ))}
@@ -1035,6 +1040,7 @@ const SearchResults = () => {
                 </div>
               ) : (
                 <>
+                  <ConvertedPriceNote className="mb-3" />
                   {/* Product grid (Submit Requirement card interleaved every 5 rows) */}
                   <motion.div key={`${JSON.stringify(selections)}-${sort}`} variants={reduced ? {} : listContainer} initial="hidden" animate="show"
                     className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>

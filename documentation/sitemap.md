@@ -126,7 +126,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/old-advertisements` | `OldAdvertisements` | |
 | `/advertisement-slideshow` | `AdvertisementSlideshow` | |
 | `/competitor-ads` | `CompetitorAds` | Competitor intelligence loop |
-| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `/help` (2026-09-23) |
+| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `mailto:hello@cosora.in?subject=Subscription%20question` (2026-09-25; it opened `/help` from 2026-09-23) |
 | `/subscription/invoice/:id` | `InvoiceDetail` | |
 
 ### Store & business profile

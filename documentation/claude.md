@@ -76,6 +76,10 @@ Rules decided before or outside of Claude Code sessions.
   `vite.config.ts`'s `__DEMO_PASSWORDS__`, which is `null` in every build. A new fixture
   seed takes its password from `current_setting(...)`, never a literal. After any change
   near auth, build and `grep -rlF` each value over `dist/`: the answer must be 0.
+- **Typecheck the buyer app with `npx tsc --noEmit --skipLibCheck -p tsconfig.app.json`.**
+  At the repo root, a bare `npx tsc --noEmit` checks nothing and exits 0 whatever the code.
+  Phase 26 injected a type error: the root command reported 0, and `-p tsconfig.app.json`
+  reported 1. Cosora-Admin's plain `tsc` does check its code.
 - **Show a caught error with `errorMessage(e)` (`src/lib/errorMessage.ts`), never with
   `e instanceof Error ? e.message : String(e)`** (Master Prompt 12, 2026-09-23). Supabase
   throws plain objects, not `Error`s, so that pattern rendered "[object Object]" in 41
@@ -108,6 +112,16 @@ Rules decided before or outside of Claude Code sessions.
   - Any "my data" read, count or export filters on the owner column: `buyer_id` or `id`, or
     the parent's (quotes by `rfq_id` in my RFQs, messages by `conversation_id` in my
     conversations).
+- **A form save sends only the fields the user changed** (2026-09-24, MPF-9).
+  - Diff against what loaded (`profileChanges()` in `lib/queries/profile.ts`).
+  - An emptied field is a change, saved as NULL.
+  - A default is a placeholder, never a value that gets saved.
+  - Code that runs on every sign-in writes only what it exists to write, never an object
+    built from blanks: `applyPendingSignupProfile()` once saved a whole blank profile on
+    every sign-in.
+  - A signup value that waits in auth metadata is applied once. It is written only where
+    nothing is saved, then cleared from the metadata. Left there, it overwrote a later
+    edit (MPF-20).
 
 ## Business Rules — Discovered/Decided During Development
 
@@ -115,9 +129,11 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
-- **A buyer account is anonymized, never deleted, and only after an emailed code and 14
+- **A buyer account is anonymized, never deleted, and only after a confirmation code and 14
   days** (Phase 2 of the My Profile brief, 2026-09-23; design approved by Mitra).
-  - The flow runs from `/profile/help`: a 6-digit code goes to the **auth** email, then
+  - The flow runs from `/profile/help`: a 6-digit code goes to the **auth** email, or, for an
+    account with no usable email, to the confirmed **auth** phone on WhatsApp (Phase 18). The
+    channel is decided by `account_deletion_channels()` and stored on the request. Then
     `cooling_off`, a `/profile` banner with Cancel, and finally the daily
     `account-deletion-sweep`, which runs `anonymize_account()`.
   - The rows stay, because other people's history hangs off them. RFQs, messages and
@@ -126,27 +142,67 @@ undocumented. Deep technical rationale for each lives in
     three review tables' `reviewer_name`, and `auth.users`. Identities are removed and the
     auth user is banned, so the person cannot sign back in to the scrubbed row.
   - `'deleted'` is terminal. `set_account_status()` refuses it both ways.
+  - The account's private activity (saved items and folders, saved videos, follows,
+    recently viewed, video likes, notifications) is deleted, and its avatar folder is
+    removed by the `account-deletion-sweep` edge function, after the anonymization
+    (Phase 16, 2026-09-24).
+  - **Every own-row write policy carries `account_not_deleted(auth.uid())`** (WITH
+    CHECK for UPDATE/FOR ALL/INSERT, USING for DELETE), so a token issued before the
+    sweep can't write. A new policy of that kind must include it. It refuses deleted
+    accounts only: suspension is `account_is_active()` on content creation (Mitra's
+    call).
   - Vendor, admin and suspended accounts are refused and sent to support.
-  - Every state change is a definer function; clients hold SELECT only. **Email is not live
-    until `RESEND_API_KEY` is set** (the function answers `not_configured`).
+  - Every state change is a definer function; clients hold SELECT only. **Neither channel is live:**
+    email needs `RESEND_API_KEY`, and WhatsApp needs `WHATSAPP_ACCESS_TOKEN` and
+    `WHATSAPP_PHONE_NUMBER_ID` plus a Meta-approved template. The function answers
+    `not_configured` with the channel, and the database mints nothing.
+  - **Things to know about the WhatsApp channel (Phase 18, 2026-09-24):**
+    - **The database answers before `not_configured`.** The function passes the channels it
+      has secrets for, and the database checks the blocker first. So a vendor, admin or
+      suspended account sees its own reason, not "isn't available online yet". demo-buyer
+      has a `vendor_profiles` row, so it sees "Seller accounts can't be deleted here".
+    - **`no_email` is now `no_contact`.** An app build from before Phase 18 doesn't know it
+      and shows "Something went wrong". Until the Phase 14–18 app is deployed, that reaches
+      the 3 real accounts with an unconfirmed email and no phone.
+    - **"Sent" on WhatsApp means Meta accepted it, not that it was delivered.** A number
+      that isn't on WhatsApp is reported only through a webhook this project doesn't have.
+      The user sees "We've sent a code", nothing arrives, "Send a new code" goes the same
+      way, and support is the way out.
+    - **Meta fixes the template text** as "<code> is your verification code.", so it can't
+      say the code deletes the account. That is a small social-engineering risk, logged in
+      `securityflags.md`. Create the template with Meta's security recommendation on and a
+      10-minute expiry (`myprofileflags.md` MPF-24).
   - Detail: `technicalimplementation.md` → "Account deletion".
 - **Notification preferences are stored and read by nothing, and there is no delivery
   pipeline** (checked 2026-09-23).
   - Nothing reads `buyer_profiles.notifications` or `vendor_profiles.notifications` to send
-    anything. There is no push infrastructure. The only email sender (`account-deletion`) is
-    transactional.
+    anything. There is no push infrastructure. The only sender (`account-deletion`: email, or
+    WhatsApp for an account with no email) is transactional.
   - `notify()` fills the in-app bell only from ad, certificate, account, deletion, KYC and
     chat-moderation events. **No quote, message or RFQ event notifies anyone.**
   - `/profile/notifications` says so. Its `DELIVERY_LIVE` flag is the one switch to flip
     once a sender honours the toggles.
   - Building delivery is its own master prompt, not a profile-page change.
-- **`buyer_profiles.regional.currency` and `.timezone` are stored and read by nothing**
-  (checked repo-wide 2026-09-23).
-  - Every price is ₹ INR, and no date renders in the chosen zone.
-  - Regional Settings says so for any non-default choice (an amber note, and a "saved", never
-    "updated", toast).
-  - Don't add a reader casually: multi-currency pricing is its own feature.
-  - Don't claim an effect in copy until one exists.
+- **Currency converts displayed prices, for display only; timezone is still read by nothing**
+  (currency: Phase 20 of the My Profile brief, 2026-09-24, MPF-11).
+  - **Every buyer-facing price goes through `useDisplayCurrency()`:** `show(amountInInr,
+    inrText)`, `showText(inrText)` or `showBoth(...)`.
+    - Each returns the INR text untouched unless a conversion is running, so an INR buyer's
+      page is byte-identical.
+    - **A new buyer-facing price must go through one of them.** Otherwise it silently stays
+      INR beside converted ones, and only its missing "≈" keeps the page honest.
+  - **Never convert:** vendor pages and vendor billing (`formatINR`), amounts a buyer types,
+    and anything stored or sent. Prices are set, quoted, paid, settled and invoiced in INR.
+  - **Rates:** `public.fx_rates`, refreshed daily by `fx-rates-refresh` (ECB via Frankfurter).
+    No key, no secret.
+  - **Timezone:** no date renders in the chosen zone, and Regional Settings says so. Don't claim
+    an effect in copy until one exists.
+- **GST is `supabase/functions/_shared/gst.ts` (`gstOn`).**
+  - Don't write `* 0.18` anywhere. `node scripts/gst-check.mjs` fails if a subscription
+    function keeps its own copy.
+  - A tax figure the browser shows needs a client mirror and a check script, as with
+    `adPricing`.
+  - Nothing buyer-facing charges money today: don't build or simulate a charge to use it.
 - **A buyer's location nudges For You, and never filters it** (Phase 5 of the My Profile
   brief, 2026-09-23).
   - `for_you_products()` subtracts a small boost from the cosine distance, for ordering
@@ -169,9 +225,24 @@ undocumented. Deep technical rationale for each lives in
     read it with `useFaqs(surface)`. A new FAQ block anywhere uses `<FaqSection surface="…">`. Don't add
     another hardcoded array.
   - Clients read active rows (anon too), and every write is an `admin_faq_*` RPC from
-    Cosora-Admin `/faqs`: super_admin writes, support reads. Letting support write means
-    changing the RPC gates **and** `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts`
-    together.
+    Cosora-Admin `/faqs`: support and super_admin write (support since Phase 22,
+    2026-09-24), and every other role is refused. Changing who writes means changing the
+    four RPC gates **and** `SECTION_WRITE.faqs` in Cosora-Admin's `roles.ts` together.
+    Edits keep no history (MPF-26).
+  - **Pages read a CDN snapshot first, the table second** (Phase 23, 2026-09-24).
+    `useFaqs()` fetches `faq-snapshots/<surface>.json` and falls back to the table on any
+    failure. The files are rebuilt after every committed FAQ write (`trg_faqs_snapshot` →
+    `faqs-snapshot`) and hourly. An edit reaches visitors within ~47 s, not instantly.
+    - A new column the pages render must be added to the function's select **and** to
+      `parseFaqSnapshot()`. Otherwise the snapshot lacks it and the pages silently fall back
+      to the table.
+    - Never write to the bucket from a client or by hand; rebuild with the cron command.
+    - A spec that checks an edit on a page at once must block the snapshot URL, as
+      `faqs-admin-editable` does.
+    - A spec that reorders FAQs waits for each `admin_faq_reorder` response, never
+      "networkidle", and compares every row's **position** with a snapshot at the end.
+      The pages hide inactive rows, so a row left out of place still shows the right
+      order. Phase 26 found "How is GST handled?" left at 250 instead of 140 that way.
   - Clients have **column** SELECT on `faqs`, without `created_by`: a new reader names its
     columns, because `select *` fails.
   - The seeded text was moved verbatim and isn't vetted. Several buyer Help answers describe
@@ -375,9 +446,13 @@ undocumented. Deep technical rationale for each lives in
 - **The schema must stay compatible with a future working-capital lending product.** Order
   volume, capacity, reliability, pricing and transaction history are being collected with
   that in mind even though the product does not exist yet.
-- **Known papercut, deliberately unfixed:** `UserRoleContext` initialises to `"buyer"` and
-  never seeds from `profile.active_role`, so signing in as a vendor still starts in buyer
-  mode until the sidebar SWITCH MODE toggle is used.
+- **The side on load is `profiles.active_role`** (MPF-13, fixed 2026-09-24).
+  - `UserRoleContext` seeds `role` from it once per account per page load. A switch after
+    that stands until a reload.
+  - `vendorRegistered` is `vendor_profiles.onboarding_complete` alone (Mitra's call).
+    localStorage holds only a per-account hint until that read returns.
+  - `useSwitchRole` is the one place that decides where a switch goes: Seller → Buyer
+    always; Buyer → Seller through `/onboarding` unless registered.
 - **Search ranking happens in ONE place: `match_products`.** Keyword rank and vector rank
   are fused with RRF (k = 60, the paper's constant, deliberately untuned), and the vendor's
   paid `search_boost_tier` is applied as a multiplication **after** fusion — bounded at
@@ -589,6 +664,19 @@ undocumented. Deep technical rationale for each lives in
   files, so every run leaked an identity scan into the private `business-docs` bucket —
   referenced by nothing and, after the fact, indistinguishable from a real vendor's KYC.
   Storage is not covered by a row delete and there is no cascade.
+- **A spec that opens product or vendor pages writes production analytics.** A product page
+  calls:
+  - `increment_product_view`, an unthrottled `products.views_count + 1`;
+  - `log_engagement_event`;
+  - `ad_impression` for each sponsored card, which also adds to `advertisements.impressions`.
+
+  Signed in, it also writes `recently_viewed`. Phase 19's link check did all of this twice
+  before it was fixed. To check that a page opens, use a signed-out context and answer those
+  RPCs in the browser (`TRACKING` in `tests/profile-data-export.spec.ts`). Snapshot the
+  counters before and after to prove nothing moved.
+- **Cleanup in a spec goes in `afterEach`, not a `finally`.** When a test times out,
+  Playwright cuts its `finally` short; `afterEach` still runs. Phase 19's first run left
+  saves behind that way.
 - **A `<canvas>` inside a vaul `Drawer` needs `data-vaul-no-drag`.** vaul reads a pointer
   drag across drawer content as swipe-to-dismiss. `touch-action: none` defends the touch
   path only — browsers ignore touch-action for a mouse — and Onboarding's `onOpenChange`
@@ -801,6 +889,12 @@ undocumented. Deep technical rationale for each lives in
   logging.** Recording health history and raising an alarm therefore cannot live in the same
   job — `embedding-health-log` (records, never raises) and `embedding-health-alarm` (raises,
   writes nothing) are split for exactly this reason, not for tidiness.
+- **Storage's CDN runs as Smart CDN on this Free-plan project** (measured 2026-09-24, Phase
+  23), although Supabase documents Smart CDN as Pro only. Responses carry `x-smart-cdn: true`;
+  the edge keeps a copy until the object changes, and an overwrite invalidates it in ~47 s
+  (three trials). It serves a cache hit whatever cache headers the client sends, and sends no
+  `Age`. So Cache-Control max-age bounds browsers, not the edge. If Supabase ever turns it off
+  for Free, the edge falls back to max-age. Re-measure with `scripts/faq-cdn-propagation.mjs`.
 - **`pgmq.read()` sets the visibility timeout in the same statement that returns the rows**,
   so concurrent readers get disjoint sets and can safely be run in parallel. Demonstrated on
   this database: with 30 messages queued, two successive `embedding_jobs_read(20, 90)` calls
@@ -1005,9 +1099,10 @@ commit `532cd3e`. **Not pushed:** wait for Mitra's go.
 > the OTP is a dummy for now. Don't change it.** No phase of other work may add, alter or
 > re-route a sign-in method. That includes email sign-in, email-verification flows used as
 > a login, and "just making the OTP real". Features that need to confirm who someone is
-> (for example the Phase 2 deletion code, which goes to the account's email) must not turn
-> into a sign-in path. Every account created through real sign-in has only a placeholder
-> email, which is why account deletion can't reach them yet (`myprofileflags.md`, MPF-6).
+> (for example the deletion code, which goes to the account's email, or to its phone on
+> WhatsApp) must not turn into a sign-in path. Accounts created through real sign-in have no
+> usable email, so their deletion code goes over WhatsApp (Phase 18, `myprofileflags-fixed.md`
+> MPF-6). That is a delivery channel only, and it never signs anyone in.
 
 **Why.** The app was originally OTP-only. Email + password was later made the primary login,
 and phone sign-in was demoted to a disabled "coming soon" row, because this Supabase project
@@ -1155,8 +1250,9 @@ Depth — schema, invariants, integrations, tech debt — lives in
 - Routes/pages: `documentation/sitemap.md`
 - Buyer/Vendor/Admin feature detail: `documentation/sides.md`
 - Security flags & gaps: `documentation/securityflags.md`
-- Flags found and not fixed during the phased My Profile brief (2026-09-23 onward):
-  `documentation/myprofileflags.md`
+- Flags found and not fixed during the phased My Profile brief (2026-09-23 onward), and
+  the decisions still open: `documentation/myprofileflags.md`. Fixed ones, and each phase's
+  decision record: `documentation/myprofileflags-fixed.md`
 - ToDo list: `documentation/ToDo.md`
 - Razorpay runbook: `supabase/RAZORPAY.md`
 

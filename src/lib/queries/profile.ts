@@ -16,10 +16,12 @@ import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings }
 // ─────────────────────────────────────────────────────────────
 
 // A blank profile used while the real one loads / before anything is filled.
+// `country` is blank too. "India" is only the Country field's placeholder on
+// /profile/business-details: a default here was saved as data (MPF-9).
 export const EMPTY_PROFILE: ProfileData = {
   fullName: "", email: "", emailVerified: false, phone: "", city: "", jobTitle: "", department: "", avatar: "",
   businessName: "", businessType: "", website: "", interest: "", industry: "", street: "", businessCity: "",
-  state: "", postalCode: "", country: "India", gstin: "", pan: "", location: "", memberSince: "",
+  state: "", postalCode: "", country: "", gstin: "", pan: "", location: "", memberSince: "",
 };
 
 // The signed-in user's own profile: every caller passes their own id, and the
@@ -27,8 +29,8 @@ export const EMPTY_PROFILE: ProfileData = {
 // (profiles.email and .phone are not client-selectable, MPF-3).
 //
 // Read errors throw rather than falling through to blanks. useEditableProfile
-// seeds its form from the first result and saveProfileFull() writes every field,
-// so a refused read that came back as "" would erase the real values on save.
+// seeds its form, and the baseline a save diffs against, from the first result,
+// so a refused read that came back as "" would show blanks for real values.
 async function fetchProfileFull(userId: string): Promise<ProfileData> {
   const [{ data: p, error: pErr }, contact, { data: bp, error: bErr }] = await Promise.all([
     supabase.from("profiles").select("full_name, avatar_url, created_at").eq("id", userId).maybeSingle(),
@@ -57,7 +59,7 @@ async function fetchProfileFull(userId: string): Promise<ProfileData> {
     businessCity: bp?.business_city ?? "",
     state,
     postalCode: bp?.postal_code ?? "",
-    country: bp?.country ?? "India",
+    country: bp?.country ?? "",
     gstin: bp?.gstin ?? "",
     pan: bp?.pan ?? "",
     location: [city, state].filter(Boolean).join(", "),
@@ -73,26 +75,63 @@ export function useProfileFull(userId: string | undefined) {
   });
 }
 
-// Persist the whole profile: identity → profiles, business/personal → buyer_profiles.
-export async function saveProfileFull(userId: string, f: ProfileData): Promise<void> {
-  const { error: pe } = await supabase
-    .from("profiles")
-    .update({ full_name: f.fullName || null, email: f.email || null, phone: f.phone || null, avatar_url: f.avatar || null })
-    .eq("id", userId);
-  if (pe) throw pe;
+// The form fields a save can write. The rest of ProfileData is derived or
+// display-only (emailVerified, interest, location, memberSince).
+const SAVED_FIELDS = [
+  "fullName", "email", "phone", "avatar",
+  "businessName", "city", "jobTitle", "department", "businessType", "website", "industry",
+  "street", "businessCity", "state", "postalCode", "country", "gstin", "pan",
+] as const;
+export type ProfileChanges = Partial<Pick<ProfileData, (typeof SAVED_FIELDS)[number]>>;
 
-  const { error: be } = await supabase.from("buyer_profiles").upsert(
-    {
-      id: userId,
-      display_name: f.fullName || null, company: f.businessName || null,
-      city: f.city || null, job_title: f.jobTitle || null, department: f.department || null,
-      business_type: f.businessType || null, website: f.website || null, industry: f.industry || null,
-      street: f.street || null, business_city: f.businessCity || null, state: f.state || null,
-      postal_code: f.postalCode || null, country: f.country || null, gstin: f.gstin || null, pan: f.pan || null,
-    },
-    { onConflict: "id" }
-  );
-  if (be) throw be;
+/** The saved fields whose value differs between two versions of the form. */
+export function profileChanges(before: ProfileData, after: ProfileData): ProfileChanges {
+  const changes: ProfileChanges = {};
+  for (const k of SAVED_FIELDS) if (before[k] !== after[k]) changes[k] = after[k];
+  return changes;
+}
+
+// Persist only the fields given: identity → profiles, business/personal →
+// buyer_profiles. A field that isn't in `p` is not written, and a table with
+// nothing to write isn't touched. An empty string is stored as NULL, so
+// clearing a field clears the column.
+//
+// It used to write every field on every save (MPF-9): an empty country became
+// "India", the name was copied into display_name and the Google picture became
+// the stored avatar, whatever the buyer had actually edited.
+export async function saveProfileFull(userId: string, p: ProfileChanges): Promise<void> {
+  const profile: ProfileUpdate = {};
+  if (p.fullName !== undefined) profile.full_name = p.fullName || null;
+  if (p.email !== undefined) profile.email = p.email || null;
+  if (p.phone !== undefined) profile.phone = p.phone || null;
+  if (p.avatar !== undefined) profile.avatar_url = p.avatar || null;
+  if (Object.keys(profile).length) {
+    const { error } = await supabase.from("profiles").update(profile).eq("id", userId);
+    if (error) throw error;
+  }
+
+  // An upsert writes only the columns it is given, so one that exists keeps
+  // the rest; a new row gets NULL for them.
+  const buyer: BuyerProfileInsert = { id: userId };
+  if (p.fullName !== undefined) buyer.display_name = p.fullName || null;
+  if (p.businessName !== undefined) buyer.company = p.businessName || null;
+  if (p.city !== undefined) buyer.city = p.city || null;
+  if (p.jobTitle !== undefined) buyer.job_title = p.jobTitle || null;
+  if (p.department !== undefined) buyer.department = p.department || null;
+  if (p.businessType !== undefined) buyer.business_type = p.businessType || null;
+  if (p.website !== undefined) buyer.website = p.website || null;
+  if (p.industry !== undefined) buyer.industry = p.industry || null;
+  if (p.street !== undefined) buyer.street = p.street || null;
+  if (p.businessCity !== undefined) buyer.business_city = p.businessCity || null;
+  if (p.state !== undefined) buyer.state = p.state || null;
+  if (p.postalCode !== undefined) buyer.postal_code = p.postalCode || null;
+  if (p.country !== undefined) buyer.country = p.country || null;
+  if (p.gstin !== undefined) buyer.gstin = p.gstin || null;
+  if (p.pan !== undefined) buyer.pan = p.pan || null;
+  if (Object.keys(buyer).length > 1) {
+    const { error } = await supabase.from("buyer_profiles").upsert(buyer, { onConflict: "id" });
+    if (error) throw error;
+  }
 }
 
 // Upload a new avatar to the avatars bucket and return its public URL. Files

@@ -10,8 +10,8 @@ import { BUSINESS_TYPES, INDUSTRIES } from "@/lib/profileStore";
 import { errorMessage } from "@/lib/errorMessage";
 
 // /profile/business-details: the Business tab of the former Edit Profile modal,
-// now a real route (2026-09-23). Same fields, same saveProfileFull() write, via
-// the hook ProfileEdit.tsx also uses.
+// now a real route (2026-09-23). Same fields, saved through the hook
+// ProfileEdit.tsx also uses, which writes only the fields that changed.
 
 const ProfileBusinessDetails = () => {
   const navigate = useNavigate();
@@ -22,8 +22,7 @@ const ProfileBusinessDetails = () => {
     if (saving) return;
     setSaving(true);
     try {
-      await save();
-      toast.success("Business details updated");
+      toast.success((await save()) ? "Business details updated" : "No changes to save");
       navigate("/profile");
     } catch (e) {
       toast.error("Couldn't save business details", { description: errorMessage(e) });
@@ -81,7 +80,8 @@ const ProfileBusinessDetails = () => {
                     <input id="bd-postal" className={inputCls} value={form.postalCode} onChange={(e) => set({ postalCode: e.target.value })} />
                   </Field>
                   <Field label="Country" htmlFor="bd-country">
-                    <input id="bd-country" className={inputCls} value={form.country} onChange={(e) => set({ country: e.target.value })} />
+                    {/* A placeholder, not a value: it is never saved (MPF-9). */}
+                    <input id="bd-country" className={inputCls} value={form.country} placeholder="India" onChange={(e) => set({ country: e.target.value })} />
                   </Field>
                 </div>
                 <Field label="GSTIN" htmlFor="bd-gstin">
