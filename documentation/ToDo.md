@@ -47,7 +47,7 @@ with no need to dictate format, context, or reference each time.
 - [ ] Decide whether to restore the rlstest-* / chatfx-* fixtures so the chat specs can run — Added: 2026-09-11 — Context: `tests/chat-pipeline.spec.ts` and `tests/admin-chat-moderation.spec.ts` (and Cosora-Admin's `rls-matrix`, `chat-moderation-matrix`, `chat-pipeline-matrix`, `invite-*` scripts) sign in as `rlstest-*` / `chatfx-*` accounts, which do not exist today. Restoring them means seeding known-password logins in the live database, including a super_admin. They are seeded through Cosora-Admin's `scripts/seed-test-admins.sql` / `seed-chat-fixtures.sql` in the SQL editor, then run, then dropped with `drop-test-admins.sql` as the last step of the same session. Since Master Prompt 8 the seeds take the password from `select set_config('cosora.fixture_password', '<FIXTURE_PASSWORD from .env>', false);`, run first in the same SQL-editor run, and refuse to create anything without it. Reference: Master Prompt 7, Phase 4 (commit `f1533b5`); Master Prompt 8 left the trade-off to Mitra.
 - [ ] Prove the Bunny slow-encode path in the spec when a real slow encode happens — Added: 2026-09-11 — Context: Master Prompt 7 fixed the video spec so the `product_videos` row is inserted before the encode wait, making cleanup possible even when Bunny outlasts the timeout. In the only run since, the encode finished quickly, so the "encode exceeds the timeout → afterAll still deletes the video" path has never actually executed. There is no safe way to force a slow encode just to test it. If a future run times out on encode, check afterward with `bunny-reconcile` that it left no orphan. Reference: Master Prompt 7, Phase 5; Master Prompt 8 "known gap".
 
-- [ ] Integrate Cosora's own messaging service (separate repo) as the messaging provider — Added: 2026-09-12 — Priority: High — Context: Master Prompt "Advertising System v3" Phase 7 asked for buyer→vendor ad contact and admin→vendor campaign-decision notifications over the WhatsApp Business Cloud API. That needs a Meta Business account with a verified WABA, a BSP relationship, and Meta-approved templates per notification type — none of which exist for this project. Mitra's answer: he is building his own messaging software with its own API, in a separate repo, to be consumed here. So `src/lib/messaging.ts` was built as a SEAM, not a stub: `MessagingProvider` is the contract (`kind`, `label`, `canReach`, `open`), `messaging()` selects the provider, and every call site goes through it knowing nothing about which one answered. Today the only provider is `clickToChatProvider` — a REAL per-vendor `wa.me` link built from `vendor_profiles.whatsapp`, which replaced the platform-wide hardcoded `wa.me/918821826465`. It is click-to-chat, not an API: it opens WhatsApp on the buyer's own device and cannot deliver server-side, use templates, or notify anyone not looking at their phone. To integrate: implement `MessagingProvider` against the new service and return it from `messaging()` behind whatever capability check it exposes — no call site changes. Admin→vendor decision notifications currently go through the existing in-app `notify()` from inside `ad_apply_decision()`; route those through the same service when it lands. Reference: Advertising System v3 (2026-09-12), Phase 7; Mitra chose "make a mixture and add this to ToDo.md".
+- [ ] Integrate Cosora's own messaging service (separate repo) as the messaging provider — Added: 2026-09-12 — Priority: High — Context: Master Prompt "Advertising System v3" Phase 7 asked for buyer→vendor ad contact and admin→vendor campaign-decision notifications over the WhatsApp Business Cloud API. That needs a Meta Business account with a verified WABA, a BSP relationship, and Meta-approved templates per notification type — none of which exist for this project. Mitra's answer: he is building his own messaging software with its own API, in a separate repo, to be consumed here. So `src/lib/messaging.ts` was built as a SEAM, not a stub: `MessagingProvider` is the contract (`kind`, `label`, `canReach`, `open`), `messaging()` selects the provider, and every call site goes through it knowing nothing about which one answered. Today the only provider is `clickToChatProvider` — a REAL per-vendor `wa.me` link built from `vendor_profiles.whatsapp`, which replaced the platform-wide hardcoded `wa.me/918821826465`. It is click-to-chat, not an API: it opens WhatsApp on the buyer's own device and cannot deliver server-side, use templates, or notify anyone not looking at their phone. To integrate: implement `MessagingProvider` against the new service and return it from `messaging()` behind whatever capability check it exposes — no call site changes. Admin→vendor decision notifications currently go through the existing in-app `notify()` from inside `ad_apply_decision()`; route those through the same service when it lands. Reference: Advertising System v3 (2026-09-12), Phase 7; Mitra chose "make a mixture and add this to ToDo.md". **UPDATE 2026-09-24 (My Profile Phase 18):** account-deletion codes for phone-only accounts now have a direct Meta Cloud API send path in the `account-deletion` edge function. It is dormant until `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are set and a template is approved (`myprofileflags-fixed.md` MPF-6, and the MPF-24 entry below). Built at Mitra's choice when Phase 18 stopped on the missing Meta setup. When this service lands, decide whether deletion codes move to it: the change is `sendWhatsApp()` in that function.
 - [ ] Build-or-retire decision on the ad types sold with no placement — Added: 2026-09-12, updated 2026-09-13 — Priority: High — **UPDATE 2026-09-13, two of the seven are resolved, five remain:** `searchListing` is now PLACED — Mitra's decision put it on the page the buyer reaches from the Search button (`searchSponsored`, in the scrolled feed) and on the results page (`searchResultsSponsored`), so it delivers for the first time. `verifiedCertificate` was never a placement question at all: it is a printed certificate that gets couriered, so it moved to `FULFILMENT_AD_TYPES` and is now fulfilled through `certificate_orders` instead of waiting for a slot. **Still unplaced and still needing a decision: `directBroadcast`, `webMobileCombo`, `fbInsta`, `googleProduct`, `socialCombo`.** Original context follows. — Context: of the 15 vendor-purchasable ad types, 7 rendered nowhere and 1 (`trustedSeal`) is the product-card badge. The reasons are in `src/lib/adSlots.ts` (`UNPLACED_AD_TYPES`), and `scripts/ad-slot-map-check.mjs` fails if any type is neither placed nor given a stated reason. Each needs a decision: `searchListing` (₹35/day) — a real `SearchResults.tsx` DOES exist, so the blocker is a product decision about sponsored search results, not a missing surface; `directBroadcast` (₹15/msg) — blocked on the messaging service above; `webMobileCombo` (₹129) — a bundle of two types that already share one banner slot, so it would render the same banner twice; `fbInsta` / `googleProduct` / `socialCombo` — off-platform, no honest on-platform slot; `verifiedCertificate` (₹199) — renders the identical badge to `trustedSeal` (₹44) and needs a distinct visual before it can claim to be a different product. Until decided, vendors can buy all seven and receive nothing on-platform. Reference: Advertising System v3 (2026-09-12), Phase 5; the prompt explicitly said to flag rather than invent slots.
 - [ ] Decide whether to collect buyer city, or stop selling city targeting — Added: 2026-09-12 — Priority: High — Context: `target_cities` is sold, stored and now ENFORCED (`ad_targeting_matches` in migration 20260912120300), and it fails closed — a viewer whose city Cosora does not know will not see a city-targeted campaign, because "target Mumbai" cannot honestly be honoured for someone whose city is unknown. But only 1 of 7 `buyer_profiles` rows has a city (it is "mumbai"), and anonymous viewers have none at all, so a vendor buying city targeting today reaches almost nobody. Before this change the column was decorative — stored, billed for, never read — which was worse. Two honest options: collect city from buyers (it is already a first-party field written at onboarding, so this is a prompt/UX change, not new tracking), or remove city targeting from the ad wizard and stop charging for it. Do not leave it half-enforced. Reference: Advertising System v3 (2026-09-12), Phase 3.5, which said "don't leave it silently decorative either way".
 - [ ] Design the New Arrivals top banner slot, or retire websiteBanner/mobileBanner — Added: 2026-09-12 — Context: the placement plan gives New Arrivals a 1216x130 top banner above the category chips for `websiteBanner` (₹89/day) + `mobileBanner` (₹99/day), and said it "reuses the admin's existing unused banner-management table". No such table exists — nothing in the database matches `%banner%`, confirmed live. The slot is defined in `AD_SLOTS.newArrivalsBanner` and is wired to the same eligibility-gated pipeline as every other rail, but it renders as a standard sponsored card rather than a full-width banner creative, because there is no banner asset model (dimensions, click-through URL, separate creative upload) to render. Needs either a real banner creative model (additive table + vendor upload path + a banner component) or these two ad types moved to the unplaced list. Reference: Advertising System v3 (2026-09-12), Phase 5 drift.
@@ -116,8 +116,7 @@ with no need to dictate format, context, or reference each time.
 - Status: Open
 
 ### Finish the Phase 9 FAQ content (seller registration, subscription, buyer Help accuracy) — added 2026-09-23
-- Task: bring the admin-editable FAQs' wording in line with the product, and settle who can
-  edit them.
+- Task: bring the admin-editable FAQs' wording in line with the product.
 - Context: Phase 9 of the My Profile brief made FAQs admin-editable (`public.faqs`,
   `admin_faq_*`, Cosora-Admin `/faqs`).
   - **Done 2026-09-23:**
@@ -125,19 +124,382 @@ with no need to dictate format, context, or reference each time.
       "Contact us" → `/help`;
     - "Lowest billing plan?" is written;
     - verification is quoted as 3–5 days across the app.
+  - **Done 2026-09-24 (Phase 22):** support writes FAQs as well as super_admin (the RPC
+    gates and `roles.ts`, together). Edits keep no history: MPF-26.
+  - **Done 2026-09-25 (Phase 24):** the content is seeded by migration
+    (`20260925075432_faqs_seed_seller_registration_and_subscription.sql`), and the Subscription "Contact us" writes to
+    hello@cosora.in (Mitra's choice over Andy's `/help`).
   - **Left:**
     - Andy to review the answers published verbatim that don't match the product (MPF-16);
     - align the Terms page with the 7-day money-back guarantee, and make refunds workable
       (MPF-17);
-    - a content pass over the buyer Help answers (MPF-14);
-    - decide whether support should also write FAQs (the RPC gates and `roles.ts` change
-      together);
+    - a content pass over the buyer Help answers (MPF-14; its own entry below, since Phase 25);
     - keep the "Lowest billing plan?" prices in step with `subscription_plans`.
 
-  Full context: `documentation/myprofileflags.md`, MPF-14 to MPF-17 and "Phase 9 decisions".
+  Full context: the MPF-14, MPF-16 and MPF-17 entries below (moved here from
+  `myprofileflags.md` on 2026-09-25), and `documentation/myprofileflags-fixed.md`, "Phase 9 decisions".
 - Reference: My Profile brief, Phase 9 (2026-09-23).
 - Priority: Medium (live pages carry claims the product doesn't back)
 - Status: Open (content loaded; accuracy and permissions pending)
+
+### Set up Resend so account-deletion codes can go out by email (MPF-4) — added 2026-09-25
+- Task: owner setup, no code change. (1) Create a Resend account and add its API key as the
+  edge-function secret `RESEND_API_KEY`. (2) Verify a sending domain in Resend and set
+  `RESEND_FROM` to an address on it. Then check that a real code arrives.
+- Context:
+  - **What's broken.** A buyer deletes their account from `/profile/help` (the Delete account
+    card). A 6-digit code goes to the account's auth email (`auth.users.email`), and entering
+    it starts a 14-day cooling-off, after which the account is anonymized. The
+    `account-deletion` edge function (deployed v2) sends that email through Resend, and no
+    Resend key is set. So the function answers `not_configured` and creates no request, and
+    the dialog tells the buyer that deletion isn't available online yet and to write to
+    hello@cosora.in.
+  - **It's setup, not a code gap.** The send path is built. Everything after the email was
+    tested end to end with a throwaway buyer, with the code issued through SQL in place of
+    the email: code entry, a wrong code, the `/profile` banner, cancel, the daily sweep and
+    anonymization. The one thing that has never run is a real email arriving.
+  - **The two steps:**
+    1. Create the Resend account and add `RESEND_API_KEY` in the Supabase dashboard → Edge
+       Functions → Secrets. It takes effect without a redeploy.
+    2. Verify a domain in Resend (for example `cosora.in`) and set `RESEND_FROM` to an
+       address on it (for example `Cosora <no-reply@cosora.in>`). Without this, the function
+       uses Resend's shared `onboarding@resend.dev` sender, which delivers only to the Resend
+       account owner's own address, so every other buyer gets `send_failed`.
+  - **Check it worked.** `{"action":"status"}` on `account-deletion` should report
+    `configured.email: true` (it names no secret value). Then sign in as a buyer whose
+    confirmed email you can read, request a code, check it arrives, and enter it. The
+    request should read `cooling_off`. Cancel it afterwards.
+  - **Who it reaches.** Email serves accounts with a confirmed auth email. Accounts created
+    through mobile-OTP sign-in have none. Their code goes by WhatsApp, which has its own
+    setup (MPF-24, and the messaging-service entry above). Either way the code only
+    confirms a deletion: it never signs anyone in, and sign-in stays mobile number + OTP.
+  - **Not the same as** "Configure a custom SMTP provider for Supabase Auth" (above). That is
+    an Auth setting, and this is a secret on one edge function. One Resend account can serve
+    both, but setting one doesn't set the other.
+- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
+  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
+  itself was found in Phase 2 (2026-09-23), when account deletion was built.
+  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: High for the feature (MPF-4's severity). Until it's done, no buyer can delete an
+  email-based account online.
+- Status: Open
+
+### Decide whether to build real verification for the profile email (MPF-10) — added 2026-09-25
+- Task: nothing checks that the email on a buyer's profile (`profiles.email`) belongs to them.
+  Decide whether that matters. If it does, build contact verification: send a code to that
+  address, record the result in a new column, and only then show a "Verified" badge.
+- Context:
+  - **What was there.** The old profile modal's "Verify" toasted "Verification code sent" but
+    sent nothing. It accepted any 4+ digit code as "Email verified", and showed "Verified" for
+    any stored email. Phase 4 (2026-09-23) removed it rather than move it to `/profile/edit`,
+    which now shows the email as a plain field. The removal was correct: this project doesn't
+    show a status nobody earned. So this is a missing feature, not a bug.
+  - **What's left in the code.** `emailVerified` in `src/lib/queries/profile.ts` is still
+    `Boolean(contact.email)`, which only means "has an email", and no page renders it. There
+    is no `email_verified` column. Don't render `emailVerified` as a badge until real
+    verification exists.
+  - **Fix shape:**
+    - Send the code through the Resend path that `account-deletion` uses. MPF-4's Resend
+      setup (the entry above) comes first.
+    - Do it server-side, in an edge function or a definer function. `profiles.email` isn't
+      client-selectable (the app reads it through `my_contact_info()`), and the server should
+      verify the address it has stored, not one the client sends.
+    - Store the result in a new column. `profiles` has column-level grants, so the migration
+      needs `grant select (<column>)` before the page can read it.
+    - Show the badge from that column only.
+  - **Contact verification only, unrelated to sign-in.** Sign-in stays mobile number + OTP
+    only, with a dummy OTP for now (Mitra, 2026-09-23). This work must not add, change or
+    re-route a sign-in method, and a verified email must never become a way to sign in.
+    Account-deletion codes go to `auth.users.email`, which is a different field.
+- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
+  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
+  itself came from Phase 4 (2026-09-23), when the fake "Verify" was removed from the profile
+  editor.
+  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Low (MPF-10's severity): a missing feature, and nothing false is shown today.
+- Status: Open
+
+### Fix the buyer Help FAQ answers that describe features Cosora doesn't have (MPF-14) — added 2026-09-25
+- Task: in Cosora-Admin `/faqs` (Buyer Help), rewrite or switch off the 7 answers listed
+  below. They describe escrow, order tracking, buyer protection, shipping addresses, team
+  accounts and SMS/push notifications, none of which exist. This is a content edit, with no
+  code change and no deploy.
+- Context:
+  - **Where.** `public.faqs`, surface `buyer_help`, shown on `/help` and `/profile/help`
+    (12 active questions in 4 topics). Seeded by `20260923144549_faqs_admin_editable.sql`,
+    which moved the old hardcoded `Help.tsx` text over verbatim, without vetting it.
+  - **The 7 questions.** All are still live and active (checked 2026-09-25). Each question is
+    followed by what its answer claims and what is actually true:
+    1. "How do I track my order status?" Claims orders can be tracked under "Active Orders",
+       with notifications at each stage. There is no orders feature, and no quote, message or RFQ event notifies
+       anyone.
+    2. "What payment methods are accepted?" Claims escrow for larger orders. Cosora has no
+       escrow.
+    3. "Is my payment secure?" Claims escrow, with payment released after the buyer confirms.
+       Same: no escrow.
+    4. "Can I get a refund if there's an issue with my order?" Claims a buyer-protection
+       policy with claims within 7 days. There is no such policy and no buyer refund flow.
+    5. "How do I update my business profile?" Mentions shipping addresses, which don't exist.
+       Editing is on `/profile/edit` and `/profile/business-details`.
+    6. "Can I have multiple team members on one account?" Claims "Settings > Team
+       Management" with permission levels. There is one login per account.
+    7. "How do I change my notification settings?" Claims email, SMS or push. The switches
+       are saved, and nothing is sent.
+
+    Each claim was checked by searching `src/` and `supabase/migrations/`, and the only
+    match was the seed itself.
+  - **How to fix it.** Since Phase 9 (2026-09-23), FAQs are edited in the admin. A
+    super_admin signs in to Cosora-Admin, opens `/faqs`, and edits or switches off each row.
+    Support can do the same once the Phase 22 admin build is deployed; until then the live
+    panel shows support a read-only view. Changes reach the page within about a minute of
+    saving, with no deploy. Then check `/help` signed out.
+  - **Watch for.**
+    - `tests/faqs-admin-editable.spec.ts` asserts "12 questions across 4 topics", so update
+      it if rows are switched off.
+    - Edits keep no history (MPF-26). Copy the old text first if it might be needed.
+    - The wording is Mitra's or Andy's call.
+  - **Related.**
+    - "Finish the Phase 9 FAQ content" (above) lists this as one of its leftovers. This
+      entry is that item in full.
+    - MPF-16 and MPF-17 are Andy's Seller Registration and Subscription answers, published
+      verbatim by decision. They are separate, so don't fold them in.
+- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
+  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
+  itself came from Phase 9 (2026-09-23), which moved the Help text into the table and read
+  it row by row.
+  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Medium (MPF-14's severity): buyers are told about escrow and refunds that don't
+  exist.
+- Status: Open
+
+### Give vendors a real support destination, and stop the canned chats posing as live support (MPF-15) — added 2026-09-25
+- Task: two separate pieces of work.
+  1. **A decision, then the build.** Decide where a vendor who asks for help should land:
+     either a real vendor Help page (a new `seller_help` FAQ surface), or honest copy on
+     `/help` for vendors. Then build the one chosen.
+  2. **Simpler, and independent of the decision.** Label the canned support chats as not
+     staffed, or remove them. This applies on the buyer side too.
+- Context:
+  - **Where vendors land.** Vendor Settings → "Help Center" (`src/pages/VendorSettings.tsx`)
+    and the seller sidebar's "Help & Support" (`src/components/layout/DashboardSidebar.tsx`)
+    both open `/help`. That is the buyer Help page (`Help.tsx`, also served at
+    `/profile/help`). A vendor gets buyer FAQs about posting RFQs, comparing quotes and paying
+    vendors, plus a Delete account card that sends vendors to support.
+  - **The chats are canned.** Neither one sends anything anywhere: no Supabase call, no API.
+    Both present an invented agent, "Abdul, Cosora support executive".
+    - On `/help` and `/profile/help`, "Contact Us · Chat with us" and "Start Live Chat" open
+      `ChatModal` in `Help.tsx`. It shows a greeting and, after each message, a 2-second
+      "typing" indicator, then never replies.
+    - `/profile/help/chat` (`SupportChat.tsx`, opened from `/profile`'s "Chat with Us")
+      replies on a timer with one of three stock lines from its `CANNED` array.
+  - **The only real channel is email to hello@cosora.in.** It appears as Help's "Email
+    Support", on `VendorLanding.tsx` and `About.tsx`, and, since Phase 24, as the Subscription
+    FAQ's "Contact us" (`mailto:hello@cosora.in?subject=Subscription%20question`). That last
+    one is in the code only: the live site still opens `/help` until the buyer app is
+    deployed. Help also
+    has a Call button (a `tel:` link in `Help.tsx`). Whether anyone answers that number wasn't
+    checked.
+  - **Option (a): a vendor Help page.** FAQs live in `public.faqs` and render with
+    `<FaqSection surface="…">`, so the page itself is small. But the surface names are listed
+    in several places, and `seller_help` has to be added to all of them:
+    - the `faqs_surface_check` constraint and `admin_faq_add()`'s own surface check (a
+      migration);
+    - `SURFACES` in `supabase/functions/faqs-snapshot/index.ts` (redeploy it);
+    - `FaqSurface` in `src/lib/queries/faqs.ts`;
+    - `Surface` and the surface list in Cosora-Admin `src/pages/Faqs.tsx`;
+    - `SURFACES` in `scripts/faq-snapshot-check.mjs`.
+
+    Then point the two vendor links at the new page, and write its content.
+  - **Option (b): honest copy.** When a vendor opens `/help`, say that it is buyer help and
+    give hello@cosora.in as the way to reach support.
+  - **The chat fix, whichever option is chosen.** Either say plainly that nobody answers the
+    chats and give the email address, or remove both chats and the buttons that open them. Any
+    chat that stays must show the chat-monitoring disclosure, which is legally required in
+    every chat flow (`claude.md`). `SupportChat` shows it (`CHAT_MONITORING_NOTICE`), but
+    `ChatModal` in `Help.tsx` doesn't, so it needs adding if that chat stays. A real support
+    chat would be a feature of its own.
+- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
+  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
+  itself came from Phase 9 (2026-09-23), which checked where a vendor's "Contact us" should
+  go. The correction found on 2026-09-25: there are two canned chats, `ChatModal` in `Help.tsx`
+  (never replies, and has no chat-monitoring disclosure) and `SupportChat` at
+  `/profile/help/chat` (canned replies).
+  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Medium (MPF-15's severity)
+- Status: Open (waiting on the decision; the chat fix doesn't need it)
+
+### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
+- Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it
+  in Cosora-Admin `/faqs` (no deploy) or the product changes to match it. Each row in the
+  detail below is independent.
+- Context: Andy's content is published verbatim on `/seller` and `/subscription` by Mitra's decision
+  (2026-09-23), so nobody should "fix" the wording quietly: it is Andy's call.
+- Detail, as the flag recorded it ("Andy's Seller Registration and Subscription FAQs promise things the product doesn't do"):
+
+
+  - **Where:** `public.faqs`, surfaces `seller_registration` (shown on `/seller`) and
+    `subscription` (shown on `/subscription`). Loaded 2026-09-23 from Andy's content
+    (`documentation/seller-registration-and-subscription-faq-content.md`).
+  - **Decision:** Mitra chose to publish the answers **verbatim** (2026-09-23), rather than as
+    corrected versions, and to log each mismatch here. Each claim was checked against the code
+    and the live data before publishing:
+
+    | Answer (surface) | Claim | Reality (checked 2026-09-23) |
+    |---|---|---|
+    | Can I upgrade or downgrade my plan anytime? (subscription) | "the difference will be prorated" | No proration anywhere. `activateSubscription()` in `subscription-verify-payment` charges the plan's full price and starts a fresh period at the moment of payment |
+    | same | "Downgrades will take effect from your next billing cycle" | A lower plan is bought like any other: it starts immediately and replaces the current one. The page enables every plan except the current one and Free |
+    | What happens when I reach my lead limit? (subscription) | "You'll receive notifications as you approach your limit" | Nothing sends a notification about the limit. `/leads` shows "N/cap leads used", and quoting at the cap is refused with an upgrade prompt |
+    | How are leads managed on Cosora? (seller) | Notified "via dashboard, email, or WhatsApp" | No email or WhatsApp is sent, and no in-app notification fires for new RFQs (Phase 7). Leads appear on `/leads` |
+    | What documents are required to register? (seller) | GST, PAN, business registration (or MSME/Udyam), Aadhaar, product catalog | Onboarding requires only PAN; GST and CIN are optional. KYC collects PAN, GST and CIN (`COLLECTED_DOC_TYPES` in `Kyc.tsx`). Aadhaar is deliberately not collected, and there's no MSME/Udyam document type. Catalogues have their own upload page (`UploadCatalogue.tsx`) |
+    | I don't have a GST number… (seller) | Marked "Unverified Seller", which "may affect visibility and lead access" | There's no such label. Searching the SQL and the app found no ranking or lead-access gate on `is_verified`. GST is optional at registration |
+    | Is there any cost to register? (seller) | "Basic registration is free… pay for Premium listings, Pay-per-lead access, Featured vendor badges" | Registration is free (the **Free** plan), but "Basic" is the name of a ₹699/month plan on the Subscription page. Pay-per-lead doesn't exist; Andy's own lead answer calls it future |
+
+  - **Holds up:**
+    - what Cosora is, and who can register;
+    - buyers call or chat;
+    - verification time (now 3–5 days across the app);
+    - no shipping through Cosora;
+    - the annual discount: yearly is 10× monthly, about 16.7%, so "up to 17%" and "2 months
+      free" are right;
+    - editing listings, though the answer doesn't mention that an edit sends a live listing
+      back to review, hidden from buyers until re-approved.
+  - **Fix shape:** Andy edits the wording in Cosora-Admin `/faqs` (no deploy), or the product
+    catches up. Each row is independent.
+
+- Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Medium (vendors are told about proration, alerts and documents that don't match)
+- Status: Open
+
+### Resolve the Subscription FAQ's 7-day money-back promise against the Terms, and make a refund possible (MPF-17) — added 2026-09-25
+- Task: make the public 7-day money-back promise on `/subscription` true: state it in the Terms,
+  and give support a way to refund (Razorpay keys for `admin-refund-payment`, or a written
+  manual process).
+- Context: The promise was published as written by Mitra's decision (2026-09-23). The Terms still
+  say fees are non-refundable, and no refund can run today.
+- Detail, as the flag recorded it ("The Subscription FAQ promises a 7-day money-back guarantee that the Terms contradict"):
+
+
+  - **Where:** the `public.faqs` subscription row "Is there a refund policy?", on
+    `/subscription`: "We offer a 7-day money-back guarantee for first-time subscribers."
+  - **Conflicts:**
+    - `TermsConditions.tsx` says "Fees are non-refundable unless stated otherwise."
+    - No refund can run today. Cosora-Admin's `admin-refund-payment` exists, but its README
+      records that refunds can't execute on this project because the Razorpay keys aren't set.
+    - Nothing tracks "first-time subscriber" or the 7-day window.
+  - **Decision:** Mitra chose to publish it as written (2026-09-23).
+  - **Risk:** it's a public financial promise. A vendor who asks for a refund needs manual
+    handling outside the app, and the Terms say the opposite.
+  - **Fix shape:**
+    - update the Terms to state the guarantee, so "unless stated otherwise" is explicit in the
+      Terms themselves;
+    - then either set the Razorpay keys so `admin-refund-payment` works, or define the manual
+      process support follows.
+
+- Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Medium (a public financial promise the Terms contradict)
+- Status: Open
+
+### Never deploy otp-dev-verify as it is; harden it or delete it once SMS works (MPF-21) — added 2026-09-25
+- Task: keep `supabase/functions/otp-dev-verify/` undeployed and uncommitted. Before it is ever
+  used anywhere, make the changes listed below; better, delete it once real SMS delivery
+  works.
+- Context: It is a sign-in bypass, parked on purpose. Sign-in stays mobile number + OTP only, with a
+  dummy OTP for now (Mitra, 2026-09-23), so this is not being changed. Related: "Wire up
+  mobile OTP delivery (or finish the dev-mode bypass safely)" above.
+- Detail, as the flag recorded it ("`otp-dev-verify` is a sign-in bypass, and it is on by default"):
+
+
+  - **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+  - **Where:** `supabase/functions/otp-dev-verify/index.ts`. Never deployed: it was not among
+    the project's 16 deployed edge functions on 2026-09-24, or its 18 on 2026-09-26
+    (`list_edge_functions`). Tracked in `ToDo.md`, "Wire up mobile OTP delivery".
+  - **Committed on a branch (found 2026-09-26):** it was meant to stay untracked, but commit
+    `85f4f6a` ("index.ts", 2026-09-25 14:56 IST) added it, with `.claude/tmp/phase5-context.md`,
+    to `my-profile/phase-14`, which is pushed. The flag-fix commit removed both again
+    (`git rm --cached`; the local copies stay) before the branch merged to `main` on
+    2026-09-26, so `main`'s files have neither. Both stay in the history, and the repo is
+    public. Neither holds a secret value: the function reads its keys from the environment.
+  - **What:** a stand-in for SMS delivery. It accepts any 6 digits for any phone number, creates
+    the account with the service-role key when the number is new, and hands back a session.
+    - `const ENABLED = true`: it is on unless `OTP_DEV_BYPASS=off` is set. Deploying it without
+      that secret switches the bypass on.
+    - CORS is `*`, and there is no allowlist, secret header or environment check.
+    - It still reads `profiles.is_admin` to refuse admin numbers. That column was dropped on
+      2026-09-22, so the check would now error.
+  - **How it came up:** the automated security review flagged it as a critical authentication
+    bypass on 2026-09-24. It was already known as unsafe to deploy (ToDo), but it had no flag.
+  - **Why not fixed:** it is sign-in code, and sign-in stays as it is (Mitra). Its only
+    protection is staying undeployed.
+  - **Fix, before it is ever deployed anywhere:**
+    - off by default, requiring an explicit `OTP_DEV_BYPASS=on`;
+    - refuse the production project ref;
+    - a hardcoded allowlist of dev numbers;
+    - a shared-secret header only the dev harness knows;
+    - CORS limited to the dev app's origin;
+    - rewrite the admin check to use `admin_status_of()`.
+
+    Better: delete it once real SMS delivery works.
+
+- Reference: found in the automated security review in Phase 17 (2026-09-24). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Critical if deployed; nil today (not deployed, never committed)
+- Status: Open
+
+### Set up Meta WhatsApp so account-deletion codes reach phone-only accounts (MPF-24) — added 2026-09-25
+- Task: owner setup, no code change: a Meta Business account with a verified WhatsApp sender, an
+  approved AUTHENTICATION template, and the two secrets below. Then check a real code
+  arrives.
+- Context: Accounts made through mobile-OTP sign-in have no email, so their deletion code goes by
+  WhatsApp (Phase 18). The send is built and dormant. The email channel has its own setup
+  (MPF-4, above). Whether deletion codes later move to the in-house messaging service is in
+  the messaging-service entry above.
+- Detail, as the flag recorded it ("WhatsApp deletion codes can't go out yet"):
+
+
+  - **Where:** the edge function `account-deletion` (v2), and its secrets
+    `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` (both required), plus optional
+    `WHATSAPP_TEMPLATE`, `WHATSAPP_TEMPLATE_LANG` and `WHATSAPP_API_VERSION`.
+  - **State on 2026-09-24:** `{action:"status"}` returns
+    `{"configured":{"email":false,"whatsapp":false}}`. A phone-only account's request answers
+    `not_configured` for WhatsApp and mints nothing (verified live: 0 request rows).
+  - **Why it is a setup dependency, not code:**
+    - WhatsApp doesn't allow free-form messages from a business, so the code has to go out as
+      a Meta-approved template, and approval can take 1–2 business days.
+    - The repo recorded on 2026-09-12 that this project has none of it: no Meta Business
+      account, no verified sender, no templates (`src/lib/messaging.ts`, `ToDo.md`). Mitra's
+      stated direction then was an in-house messaging service rather than Meta's API.
+    - Phase 18 stopped on that, and the decision was to build the Meta branch now and leave it
+      dormant.
+  - **Setup steps, all for the owner:**
+    1. A Meta Business account with a WhatsApp Business account and a verified sender number.
+    2. An **AUTHENTICATION**-category template with a **copy-code** button:
+       - named `account_deletion_code` in English (`en`), or set `WHATSAPP_TEMPLATE` /
+         `WHATSAPP_TEMPLATE_LANG` to match;
+       - with the security recommendation on (`add_security_recommendation`) and a 10-minute
+         expiry (`code_expiration_minutes: 10`).
+
+       Meta fixes the body text as "<code> is your verification code." It can't say
+       "deletion" (see securityflags, 2026-09-24).
+    3. A system-user access token with `whatsapp_business_messaging` permission, set as
+       `WHATSAPP_ACCESS_TOKEN`.
+    4. The sender's **phone number id** (not the number) as `WHATSAPP_PHONE_NUMBER_ID`.
+
+    Secrets are set in Supabase → Edge Functions → Secrets, and take effect without a redeploy.
+  - **What "sent" means:** Meta accepted the message, not that it was delivered. A number
+    that isn't on WhatsApp is reported only later, through a webhook this project doesn't
+    have.
+    - So the user sees "We've sent a code to your WhatsApp number", and it never arrives.
+    - "Send a new code" goes the same way. The way out is support.
+    - A delivery webhook would fix that, if it matters.
+  - **Cost:** Meta charges per authentication message. Each request allows 5 codes, 60 s apart,
+    and only to the account's own number.
+  - **Verify by:**
+    1. With the secrets set, sign in as a phone-only account whose WhatsApp you can read.
+    2. Request a code, check it arrives, and enter it.
+    3. Check the request reads `cooling_off` with `channel = 'whatsapp'`, then cancel it.
+
+- Reference: found in Phase 18 (2026-09-24). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: High for phone-only accounts once real sign-ups start; nil today
+- Status: Open
 
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
@@ -156,7 +518,7 @@ known, a one-line note on how/where it was done — don't delete history)
     `admin_profile_search` and no longer contains the old selects.
   - After the revoke, `node scripts/profile-contact-privacy-check.mjs` must show 24/24. Its 4
     signed-in checks fail while the grant stands.
-  - Detail: `myprofileflags.md` → MPF-19.
+  - Detail: `myprofileflags-fixed.md` → MPF-19.
   - The same deploy restores call logging on `cosora.in`. Since MPF-2's fix
     (`20260923182259`), the live bundle's direct insert into `calls` is refused. It still
     dials, but those calls aren't recorded until the new code, which uses `log_call()`, is

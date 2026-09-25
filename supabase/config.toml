@@ -71,3 +71,21 @@ verify_jwt = true
 # but the request row and the email would be theirs to trigger).
 [functions.account-deletion]
 verify_jwt = true
+
+# "Delete my account", step 4 (2026-09-24): the daily sweep, posted to by pg_cron
+# with the service-role key from Vault. The handler also requires role =
+# service_role; this gate is what makes that claim trustworthy.
+[functions.account-deletion-sweep]
+verify_jwt = true
+
+# Display-only currency conversion (MPF-11, 2026-09-24): the daily FX-rate refresh,
+# posted to by pg_cron with the service-role key from Vault. The handler also
+# requires role = service_role; this gate is what makes that claim trustworthy.
+[functions.fx-rates-refresh]
+verify_jwt = true
+
+# FAQ snapshots for the Storage CDN (Phase 9 Q2, 2026-09-24): posted to by the
+# trg_faqs_snapshot trigger and the hourly faq-snapshots-refresh cron job, with the
+# service-role key from Vault. The handler also requires role = service_role.
+[functions.faqs-snapshot]
+verify_jwt = true

@@ -1,3 +1,5 @@
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft, BadgeCheck, Star, MapPin, MessageCircle, Phone, Clock, DollarSign,
@@ -59,6 +61,7 @@ interface Props {
 }
 
 export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall, onStatus }: Props) {
+  const { showText, showBoth } = useDisplayCurrency();
   const reduced = useReducedMotion();
   const detail = rfq.direct;
   const vendorName = rfq.targetVendorName ?? "the vendor";
@@ -151,7 +154,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
           )}
           {(rfq.priceMin > 0 || rfq.priceMax > 0) && (
             <DetailRow label="Budget">
-              <span className="font-semibold">₹{rfq.priceMin}–₹{rfq.priceMax}</span> / unit
+              <span className="font-semibold">{showText(`₹${rfq.priceMin}–₹${rfq.priceMax}`)}</span> / unit
             </DetailRow>
           )}
           {detail?.customizationRequested && (
@@ -203,11 +206,12 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
           </div>
 
           <div className="grid grid-cols-2 gap-y-3 gap-x-4 rounded-xl bg-gray-50 p-3 mt-3">
-            <StatCell icon={DollarSign} label="Price/Unit" value={fmtMoney(quote.currency, quote.pricePerUnit)} />
+            <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(quote.pricePerUnit, fmtMoney(quote.currency, quote.pricePerUnit), quote.currency)} />
             <StatCell icon={Package} label="MOQ" value={`${quote.moq.toLocaleString()} units`} />
             <StatCell icon={Clock} label="Lead Time" value={quote.leadTime} />
-            <StatCell icon={FlaskConical} label="Sampling" value={fmtMoney(quote.currency, quote.sampling)} />
+            <StatCell icon={FlaskConical} label="Sampling" value={showBoth(quote.sampling, fmtMoney(quote.currency, quote.sampling), quote.currency)} />
           </div>
+          <ConvertedPriceNote className="mt-2" />
 
           {quote.comment && (
             <p className="mt-3 rounded-lg bg-blue-50/60 px-3 py-2 text-[11px] leading-relaxed text-gray-600">

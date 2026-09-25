@@ -47,8 +47,7 @@ const ProfileEdit = () => {
     if (saving) return;
     setSaving(true);
     try {
-      await save();
-      toast.success("Profile updated");
+      toast.success((await save()) ? "Profile updated" : "No changes to save");
       navigate("/profile");
     } catch (e) {
       toast.error("Couldn't save profile", { description: errorMessage(e) });

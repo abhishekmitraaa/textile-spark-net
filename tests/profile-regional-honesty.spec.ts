@@ -6,11 +6,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Regional Settings says plainly what it can't do (2026-09-23).
+ * Regional Settings says plainly what each choice does (2026-09-23).
  *
- * Currency and timezone are saved but nothing reads them: every price shows in
- * ₹ INR, and no time is converted. Picking anything else must say so, the way an
- * untranslated language already does. Picking the defaults shows no note.
+ * Timezone is saved but nothing reads it: no time is converted, and picking one
+ * other than IST must say so, the way an untranslated language already does.
+ * Currency converts displayed prices since Phase 20 (MPF-11, 2026-09-24): picking
+ * USD states the rate and that it is display only; payments stay in ₹ INR
+ * (tests/display-currency.spec.ts checks the prices themselves). The
+ * display-only line is there whatever is picked. The defaults show no other note.
  *
  * ACCOUNT: demo-buyer@cosora.dev. MUTATING, self-restoring: it snapshots
  * buyer_profiles.regional and writes it back. Requires `npm run dev` on :8080.
@@ -31,7 +34,7 @@ const BUYER = "demo-buyer@cosora.dev";
 
 test.skip(!hasCredentials("DEMO_BUYER_PASSWORD"), "set DEMO_BUYER_PASSWORD in .env (see .env.example)");
 
-test("a currency or timezone the app can't honour says so; the defaults say nothing", async ({ browser }) => {
+test("each regional choice says what it does: currency converts for display only, timezone isn't used yet", async ({ browser }) => {
   const db = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
   const { data: auth, error } = await db.auth.signInWithPassword({ email: BUYER, password: demoPasswordFor(BUYER) });
   if (error) throw new Error(`login failed: ${error.message}`);
@@ -41,7 +44,8 @@ test("a currency or timezone the app can't honour says so; the defaults say noth
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 1000 } });
   await ctx.addInitScript(([k, v]) => window.localStorage.setItem(k as string, v as string), [STORAGE_KEY, JSON.stringify(auth.session)] as const);
   const page = await ctx.newPage();
-  const currencyNote = page.getByText("prices across Cosora still show in ₹ INR");
+  const currencyNote = page.getByText("Prices across Cosora show converted to USD at the");
+  const displayOnly = page.getByText("Display only: vendors quote and are paid in ₹ INR");
   const tzNote = page.getByText("Cosora doesn’t use it yet");
 
   try {
@@ -52,10 +56,12 @@ test("a currency or timezone the app can't honour says so; the defaults say noth
     await timezone.selectOption("IST (India Standard Time)");
     await expect(currencyNote).toHaveCount(0);
     await expect(tzNote).toHaveCount(0);
+    await expect(displayOnly).toBeVisible();
 
     await currency.selectOption("$ USD");
-    await expect(page.getByText("Prices still show in ₹ INR for now.")).toBeVisible();
+    await expect(page.getByText("Prices show converted to USD, for display only. Payments stay in ₹ INR.")).toBeVisible();
     await expect(currencyNote).toBeVisible();
+    await expect(displayOnly).toBeVisible();
 
     await timezone.selectOption("Eastern Time (ET)");
     await expect(page.getByText("Times in Cosora aren't converted to it yet.")).toBeVisible();

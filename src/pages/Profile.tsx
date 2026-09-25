@@ -44,6 +44,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
 const CATEGORY_LABEL: Record<string, string> = {
   tshirts: "T-Shirts", shirts: "Shirts", coords: "Co-ords", dresses: "Dresses",
@@ -156,6 +157,9 @@ const Profile = () => {
   const displayAvatar = view.avatar || googlePicture || noUserPicture;
   const savedCount = Object.keys(saved.products).length;
   const notifOn = settings ? Object.values(settings.notifications).some(Boolean) : true;
+  // "On" would read as "you are receiving notifications", and nothing is sent yet
+  // (MPF-12). Until delivery is live the row says so instead.
+  const notifValue = NOTIFICATION_DELIVERY_LIVE ? (notifOn ? "On" : "Off") : "Not live yet";
 
   // Signed out → prompt to sign in (no fake profile).
   if (!loading && !session) {
@@ -340,7 +344,7 @@ const Profile = () => {
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
           <Row icon={Building2} label="Business Details" onClick={() => navigate("/profile/business-details")} />
           <Row icon={Share2} label="Social media links" onClick={() => navigate("/profile/social-links")} />
-          <Row icon={Bell} label="Notifications" value={notifOn ? "On" : "Off"} onClick={() => navigate("/profile/notifications")} />
+          <Row icon={Bell} label="Notifications" value={notifValue} onClick={() => navigate("/profile/notifications")} />
           <Row icon={Globe} label="Regional Settings" onClick={() => navigate("/profile/regional-settings")} />
           <Row icon={Database} label="Data & Export" onClick={() => navigate("/profile/data-export")} />
           <Row icon={ShieldCheck} label="Account & Security" onClick={() => navigate("/profile/settings")} />

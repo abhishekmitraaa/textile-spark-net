@@ -4,6 +4,8 @@
 // subscription_plans table and the get_vendor_plan() RPC exactly.
 // ─────────────────────────────────────────────────────────────
 
+import { formatCurrency } from "@/lib/currency";
+
 export type PlanId = "free" | "basic" | "silver" | "gold" | "vip";
 
 export type AdLocationScope = "none" | "state_1" | "state_4" | "pan_india" | "global";
@@ -137,10 +139,10 @@ export function adStateAllowance(scope: AdLocationScope): number {
 export const canRunAds = (scope: AdLocationScope): boolean => scope !== "none";
 
 // ── Formatting + pricing ──────────────────────────────────────
+// Vendor billing is INR, always: this never converts (MPF-11's conversion is for
+// buyer-facing product and quote prices only).
 export function formatINR(n: number): string {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 0,
-  }).format(n);
+  return formatCurrency(n, "INR");
 }
 
 // Honest yearly discount vs. 12× monthly (seed uses 10× monthly = ~17%).

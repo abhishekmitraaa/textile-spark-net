@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -62,6 +63,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 
 // ── Card row (image + heart, details, Chat / CALL NOW / instant-delete) ──
 function RecentRow({ p }: { p: RecentProduct }) {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const callVendor = useCallVendor();
   const saved = useSaved();
@@ -105,7 +107,7 @@ function RecentRow({ p }: { p: RecentProduct }) {
           </div>
           <div className="flex items-end justify-between gap-2 mt-1">
             <div>
-              <p className="text-sm font-bold text-gray-900">{p.price}</p>
+              <p className="text-sm font-bold text-gray-900">{showText(p.price)}</p>
               <p className="text-[11px] text-gray-500">{p.moq}</p>
             </div>
             <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">

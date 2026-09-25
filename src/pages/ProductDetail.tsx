@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -329,6 +330,7 @@ function NoPhotos() {
 // MAIN
 // ─────────────────────────────────────────────────────────────
 const ProductDetail = () => {
+  const { active: converting, showText } = useDisplayCurrency();
   const { id } = useParams();
   const navigate = useNavigate();
   const callVendor = useCallVendor();
@@ -534,7 +536,11 @@ const ProductDetail = () => {
           <div className="mt-1.5 flex items-baseline gap-1.5">
             {product.price ? (
               <>
-                <span className="text-2xl font-extrabold text-[#ef4d62]">{product.price}</span>
+                <span className="text-2xl font-extrabold text-[#ef4d62]">{showText(product.price)}</span>
+                  {/* The vendor's own price, beside a converted one (display only, MPF-11). */}
+                  {converting && showText(product.price) !== product.price && (
+                    <span className="text-sm font-semibold text-gray-500">({product.price})</span>
+                  )}
                 {/* Shown only when the vendor gave a unit — "/ Piece" used to be
                     hardcoded on every listing, whatever it sold in. */}
                 {product.unit && <span className="text-sm text-gray-500">/ {product.unit}</span>}

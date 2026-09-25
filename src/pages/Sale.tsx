@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -161,6 +162,7 @@ function Countdown({ target, showDays = false, tone = "light" }: { target: numbe
 // Sale product card
 // ─────────────────────────────────────────────────────────────
 function SaleCard({ product, compact = false }: { product: SaleProduct; compact?: boolean }) {
+  const { show } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const saved = useSaved();
   const isSaved = Boolean(saved.products[product.id]);
@@ -207,8 +209,8 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
       <div className={cn(compact ? "p-2" : "p-2 lg:p-3.5")}>
         {/* Price line: sale + struck-through original + MOQ */}
         <div className="flex items-baseline gap-1.5 flex-wrap">
-          <span className="text-sm lg:text-base font-extrabold text-[#ef4d62] leading-none">₹{product.saleValue}</span>
-          <span className="text-[10px] lg:text-xs text-gray-400 line-through">₹{product.originalValue}</span>
+          <span className="text-sm lg:text-base font-extrabold text-[#ef4d62] leading-none">{show(product.saleValue, `₹${product.saleValue}`)}</span>
+          <span className="text-[10px] lg:text-xs text-gray-400 line-through">{show(product.originalValue, `₹${product.originalValue}`)}</span>
         </div>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1">{product.moq} | {product.soldCount}</p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1">

@@ -23,7 +23,7 @@
  *
  * INTERIM: migration 20260923174653 grants the two columns back to signed-in
  * users until the new code is live in production (see MPF-19 in
- * documentation/myprofileflags.md). While it stands, the four "buyer cannot
+ * documentation/myprofileflags-fixed.md). While it stands, the four "buyer cannot
  * read / filter" checks FAIL, by design; every other check must pass. After
  * `revoke select (email, phone) on public.profiles from authenticated;` all pass.
  *

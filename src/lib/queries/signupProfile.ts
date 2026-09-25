@@ -1,7 +1,7 @@
 import type { User } from "@supabase/supabase-js";
+import { supabase } from "@/lib/supabase";
 import { saveVendorProfile } from "@/lib/queries/vendorStore";
 import { saveProfileFull } from "@/lib/queries/profile";
-import { EMPTY_PROFILE } from "@/lib/queries/profile";
 
 // ─────────────────────────────────────────────────────────────
 // The company/brand name a user typed at signup.
@@ -40,12 +40,19 @@ export function signupMetadata(p: PendingSignupProfile): Record<string, string> 
 }
 
 /**
- * Apply whatever the signup form captured but could not write.
+ * Apply whatever the signup form captured but could not write, once.
  *
- * Idempotent: both underlying writes are upserts keyed on the user id, so
- * running this on every sign-in is harmless. Best-effort by design — a failure
- * here must never block a sign-in, because the same values are re-collected in
- * onboarding (seller) or editable in My Profile (buyer).
+ * It runs on every sign-in, and writes only the name signup captured: the
+ * vendor's brand or the buyer's company, and only while none is saved. Then it
+ * clears `brand_name` from the metadata, because once applied it is no longer
+ * pending. Left there, it was written back on every later sign-in, reverting a
+ * renamed brand or bringing back a company the buyer had cleared (MPF-20).
+ *
+ * Best-effort by design — a failure here must never block a sign-in, because
+ * the same values are re-collected in onboarding (seller) or editable in My
+ * Profile (buyer). If the write fails, the metadata is kept and the next
+ * sign-in tries again. If only the clearing fails, the next sign-in finds the
+ * name saved, writes nothing, and tries the clearing again.
  */
 export async function applyPendingSignupProfile(user: User): Promise<void> {
   const meta = (user.user_metadata ?? {}) as Record<string, unknown>;
@@ -55,16 +62,30 @@ export async function applyPendingSignupProfile(user: User): Promise<void> {
   const role = meta.active_role === "seller" ? "seller" : "buyer";
   try {
     if (role === "seller") {
-      await saveVendorProfile(user.id, { brandName });
+      // Only while no brand is saved: once there is one, it's the vendor's to
+      // rename, and this used to write the signup brand back over it.
+      const { data: vp, error } = await supabase
+        .from("vendor_profiles").select("brand_name").eq("id", user.id).maybeSingle();
+      if (error) throw error;
+      if (!vp?.brand_name) await saveVendorProfile(user.id, { brandName });
     } else {
-      await saveProfileFull(user.id, {
-        ...EMPTY_PROFILE,
-        fullName: typeof meta.full_name === "string" ? meta.full_name : "",
-        email: user.email ?? "",
-        phone: typeof meta.phone === "string" ? meta.phone : "",
-        businessName: brandName,
-      });
+      // This used to save a whole EMPTY_PROFILE-based object, so every sign-in
+      // blanked the buyer's other profile fields and set country to "India"
+      // (MPF-9). The name, email and phone are left out: handle_new_user()
+      // wrote them when the account was created, and re-sending them undid
+      // later edits (a phone-only account's missing email blanked a saved one).
+      // The company is written only while none is saved: once the buyer has
+      // one, it's theirs to change.
+      const { data: bp, error } = await supabase
+        .from("buyer_profiles").select("company").eq("id", user.id).maybeSingle();
+      if (error) throw error;
+      if (!bp?.company) await saveProfileFull(user.id, { businessName: brandName });
     }
+
+    // Applied, or already there: either way it's no longer pending. Only
+    // brand_name changes; updateUser merges into the rest of the metadata.
+    const { error: metaError } = await supabase.auth.updateUser({ data: { brand_name: null } });
+    if (metaError) throw metaError;
   } catch (err) {
     // STILL non-blocking on purpose — see the docblock. A failed write here must
     // never stop someone signing in, and the same values are re-collected in

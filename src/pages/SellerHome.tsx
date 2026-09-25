@@ -16,6 +16,7 @@ import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
 import { useMyProducts } from "@/lib/queries/products";
 import { useOpenRfqs } from "@/lib/queries/rfqs";
 import { useConversations } from "@/lib/queries/chat";
+import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
 // Strong ease-out: starts fast, gives instant perceived feedback
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -230,13 +231,20 @@ const SellerHome = () => {
               </motion.button>
             </Link>
 
-            {/* RFQ alert */}
+            {/* RFQ alert. Nothing sends RFQ alerts yet (MPF-12): until delivery is
+                live this points to where new requirements actually appear. */}
             <div className="rounded-xl border border-accent/20 bg-accent/5 p-3 flex items-center justify-between">
               <div className="flex items-start gap-2.5">
                 <Bell className="w-5 h-5 text-accent mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-gray-900">Get notified for matching RFQs</p>
-                  <p className="text-xs text-gray-500">Set up alerts for your product categories</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {NOTIFICATION_DELIVERY_LIVE ? "Get notified for matching RFQs" : "New RFQs in your categories"}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {NOTIFICATION_DELIVERY_LIVE
+                      ? "Set up alerts for your product categories"
+                      : "They appear on your Leads page. Email and push alerts aren't live yet."}
+                  </p>
                 </div>
               </div>
               <Link to="/leads">
@@ -245,7 +253,7 @@ const SellerHome = () => {
                   transition={TAP_T}
                   className="ml-3 shrink-0 px-4 py-2 rounded-lg border border-accent text-accent text-xs font-bold hover:bg-accent/10 transition-colors"
                 >
-                  Set Alerts
+                  {NOTIFICATION_DELIVERY_LIVE ? "Set Alerts" : "View Leads"}
                 </motion.button>
               </Link>
             </div>

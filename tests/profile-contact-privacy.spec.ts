@@ -66,6 +66,12 @@ async function session(role: "buyer" | "vendor" | "admin") {
   return { db, session: data.session, id: data.user!.id, email };
 }
 
+// The page sweep opens product and vendor pages, which count views and ad
+// impressions and write recently_viewed (claude.md, "A spec that opens product or
+// vendor pages writes production analytics"). Answered in the browser since
+// 2026-09-25: a run had added 2 product views and ~60 ad impressions.
+const TRACKING = /\/rest\/v1\/rpc\/(log_engagement_event|ad_impression|ad_click|increment_product_view|increment_video_view|increment_product_enquiry)(\?|$)/;
+
 async function contextFor(browser: Browser, s: { session: unknown } | null) {
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   if (s) {
@@ -74,6 +80,9 @@ async function contextFor(browser: Browser, s: { session: unknown } | null) {
       [STORAGE_KEY, JSON.stringify(s.session)] as [string, string],
     );
   }
+  await ctx.route(TRACKING, (r) => r.fulfill({ status: 204 }));
+  await ctx.route(/\/rest\/v1\/recently_viewed/, (r) =>
+    r.request().method() === "GET" ? r.continue() : r.fulfill({ status: 201, contentType: "application/json", body: "[]" }));
   return ctx;
 }
 

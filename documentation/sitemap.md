@@ -126,7 +126,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/old-advertisements` | `OldAdvertisements` | |
 | `/advertisement-slideshow` | `AdvertisementSlideshow` | |
 | `/competitor-ads` | `CompetitorAds` | Competitor intelligence loop |
-| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `/help` (2026-09-23) |
+| `/subscription` | `Subscription` | Basic / Silver / Gold. The FAQ is `public.faqs` (`subscription`) via `<FaqSection>`, ending in "Contact us" → `mailto:hello@cosora.in?subject=Subscription%20question` (2026-09-25; it opened `/help` from 2026-09-23) |
 | `/subscription/invoice/:id` | `InvoiceDetail` | |
 
 ### Store & business profile
@@ -180,6 +180,9 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 `/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and on
 the seller landing page `/seller` (`seller_registration`). super_admin writes and
 support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no deploy.
+
+**`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
+`admin.audit_log` in this project's database, for super_admin and the Manager role only.
 
 ---
 

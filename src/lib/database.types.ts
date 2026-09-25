@@ -48,6 +48,7 @@ export type Database = {
       account_deletion_requests: {
         Row: {
           cancelled_at: string | null
+          channel: string
           code_expires_at: string | null
           codes_sent: number
           completed_at: string | null
@@ -58,10 +59,13 @@ export type Database = {
           requested_at: string
           scheduled_for: string | null
           status: string
+          storage_cleaned_at: string | null
+          storage_error: string | null
           user_id: string
         }
         Insert: {
           cancelled_at?: string | null
+          channel?: string
           code_expires_at?: string | null
           codes_sent?: number
           completed_at?: string | null
@@ -72,10 +76,13 @@ export type Database = {
           requested_at?: string
           scheduled_for?: string | null
           status?: string
+          storage_cleaned_at?: string | null
+          storage_error?: string | null
           user_id: string
         }
         Update: {
           cancelled_at?: string | null
+          channel?: string
           code_expires_at?: string | null
           codes_sent?: number
           completed_at?: string | null
@@ -86,6 +93,8 @@ export type Database = {
           requested_at?: string
           scheduled_for?: string | null
           status?: string
+          storage_cleaned_at?: string | null
+          storage_error?: string | null
           user_id?: string
         }
         Relationships: [
@@ -760,6 +769,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      fx_rates: {
+        Row: {
+          base_currency: string
+          rates: Json
+          rates_date: string
+          source: string
+          updated_at: string
+        }
+        Insert: {
+          base_currency?: string
+          rates: Json
+          rates_date: string
+          source: string
+          updated_at?: string
+        }
+        Update: {
+          base_currency?: string
+          rates?: Json
+          rates_date?: string
+          source?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       messages: {
         Row: {
@@ -2909,7 +2942,10 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_conversation_member: { Args: { cid: string }; Returns: boolean }
-      issue_account_deletion_code: { Args: { p_user: string }; Returns: Json }
+      issue_account_deletion_code: {
+        Args: { p_channels: string[]; p_user: string }
+        Returns: Json
+      }
       lead_cap_used: {
         Args: { p_since: string; p_vendor: string }
         Returns: number

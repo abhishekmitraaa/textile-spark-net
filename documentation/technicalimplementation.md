@@ -117,7 +117,7 @@ TypeScript path alias `@/*` maps to `src/*` (configured in tsconfig.json and vit
 ## Data Model
 
 Supabase Postgres. Generated types live in `src/lib/database.types.ts`; migrations in
-`supabase/migrations/` (113 as of 2026-09-24, after the My Profile brief's MPF-19 revoke). **The Cosora-Admin repo owns some migrations
+`supabase/migrations/` (115 as of 2026-09-24, after the My Profile brief's Phase 16). **The Cosora-Admin repo owns some migrations
 against the same Supabase project** (`resolve_conversation_review`, `regex_probe`, the
 `admin_flags` CHECK) — check both `supabase/migrations/` directories before assuming a
 function is missing.
@@ -1125,25 +1125,41 @@ Rules:
 
 Phase 2 of the My Profile brief. Migrations `20260923115507_account_status_deleted` and
 `20260923115839_account_deletion_requests` (the second one's header lists every design
-decision and each deviation from the brief).
+decision and each deviation from the brief). Phase 18 (MPF-6) added the WhatsApp channel:
+`20260923213225_account_deletion_whatsapp_channel`.
 
 **Flow.**
 1. `/profile/help` → `DeleteAccountCard` → edge function `account-deletion` `{action:"request"}`.
-   The function calls `issue_account_deletion_code(uid)` as service_role, then emails the
-   code through Resend.
+   The function calls `issue_account_deletion_code(uid, channels)` as service_role, passing
+   the channels it holds secrets for. It sends the code by email through Resend, or, for an
+   account with no usable email and a confirmed phone, by WhatsApp through Meta's Cloud API
+   (Phase 18). The database picks the channel.
 2. The user types the code: `confirm_account_deletion(code)` → `cooling_off`,
    `scheduled_for = now() + 14 days`, plus an in-app notification. `/profile` shows a banner
    with Cancel.
 3. `cancel_account_deletion()` works any time before the sweep.
-4. pg_cron `account-deletion-sweep` runs daily at 03:41 UTC. It calls
-   `process_due_account_deletions()`, which runs `anonymize_account()` on each due row and
-   then marks it `completed`.
+4. pg_cron `account-deletion-sweep` runs daily at 03:41 UTC (Phase 16, 2026-09-24).
+   - When there is work and the Vault secret exists, it posts to the
+     `account-deletion-sweep` edge function, with the service-role key from Vault.
+   - Per due request the function:
+     1. reads the avatar objects and `avatar_url` (`account_deletion_sweep_list()`);
+     2. anonymizes (`complete_account_deletion()`: lock, re-check, `anonymize_account()`,
+        `completed`; it never raises);
+     3. then deletes `avatars/<user id>/` through the Storage API, and reports through
+        `record_account_storage_cleanup()`, which re-lists the folder itself.
+   - The same job then runs `process_due_account_deletions(interval '1 day')` as a SQL
+     backstop for anything the function missed.
 
 **Data.**
 - **`account_deletion_requests`:** status `pending_confirmation | cooling_off | cancelled |
   completed`. There is a partial unique index allowing one open request per user.
+  - `channel` (`email` | `whatsapp`, Phase 18) is set when the request opens. Every code
+    for it goes the same way. If that channel stops reaching the account, the next request
+    closes it and opens a new one.
   - Also stored: `codes_sent`, `last_code_sent_at`, `code_expires_at` (not secret) and
     `last_error` (set by the sweep).
+  - `storage_cleaned_at` and `storage_error` (Phase 16) record the avatar-file cleanup. A
+    completed request with no `storage_cleaned_at` is retried on every run.
   - Clients hold SELECT only; the policy admits the owner and support/super_admin. There is
     no client INSERT, UPDATE or DELETE.
 - **`account_deletion_otps`:** `sha256(request_id || ':' || code)`, `expires_at` (10 minutes)
@@ -1151,10 +1167,14 @@ decision and each deviation from the brief).
   (service_role included) has its privileges revoked.
 
 **Rules worth knowing before touching it.**
-- **The code goes to `auth.users.email`, never `profiles.email`.** Users can edit
-  `profiles.email`, so a hijacked session could redirect the code there first.
-  `account_deletion_blocker()` requires a confirmed address that is not a `.invalid`
-  placeholder.
+- **The code goes to `auth.users`, never to `profiles`.** Users can edit `profiles.email`
+  and `profiles.phone`, so a hijacked session could redirect the code there first.
+  - `account_deletion_channels()` decides: a confirmed `auth.users.email` that is not a
+    `.invalid` placeholder → `email`; otherwise a confirmed `auth.users.phone` → `whatsapp`
+    (Phase 18). Email wins when both exist.
+  - With neither, `account_deletion_blocker()` answers `no_contact` (it was `no_email`).
+  - `issue_account_deletion_code()` answers `not_configured` with the channel, writing
+    nothing, when the edge function can't deliver on it.
 - **A wrong code returns a status and never raises.** A RAISE would roll back the attempt
   counter it had just incremented, and the lock would never trigger. The same reasoning
   explains why the sweep records failures in `last_error` and never raises: a pg_cron job
@@ -1162,12 +1182,17 @@ decision and each deviation from the brief).
 - **Every writer takes `pg_advisory_xact_lock(hashtext('account_deletion:'||uid))`**, the
   plan-cap idiom. So a double tap, or a cancel racing the sweep, is serialized. The sweep
   re-reads the row under the lock.
-- **Refused:** accounts with a `vendor_profiles` row, admins (any `admin.admin_users` row) and
-  suspended accounts ("contact support"). `anonymize_account()` re-checks all three at sweep
+- **Refused:** accounts with a `vendor_profiles` row, admins (any `admin.admin_users` row),
+  suspended accounts ("contact support"), and accounts with neither a usable email nor a
+  confirmed phone (`no_contact`). `anonymize_account()` re-checks all three at sweep
   time.
-- **Never delete the rows.** `rfqs`, `messages`, `conversations`, `calls`, `follows` and
-  saved items CASCADE from `profiles`; the three review tables CASCADE from `auth.users`.
-  `anonymize_account()` scrubs instead:
+- **Never delete the account's rows; delete only its private activity.** `rfqs`,
+  `messages`, `conversations` and `calls` CASCADE from `profiles`, and the three review
+  tables CASCADE from `auth.users`, so the account is never deleted.
+  - Its private activity *is* deleted (Phase 16): saved items and folders, saved videos,
+    follows it made, recently viewed, video likes and notifications.
+  - `engagement_events` keep their row with `viewer_id` cleared.
+  - `anonymize_account()` scrubs the rest:
   - **profiles:** name becomes "Deleted user"; email, phone and avatar are nulled; status
     becomes `'deleted'`.
   - **buyer_profiles:** every descriptive or identifying column is nulled, and `social` is
@@ -1190,29 +1215,44 @@ decision and each deviation from the brief).
   - `guard_deleted_account()` (BEFORE UPDATE on `profiles`, BEFORE INSERT/UPDATE on
     `buyer_profiles`, signed-in callers only) stops a still-valid access token from writing
     a name back.
+  - `account_not_deleted(auth.uid())` (Phase 16) closes the rest of that window.
+    - It is on all 46 own-row write policies: WITH CHECK on UPDATE and FOR ALL, USING on
+      DELETE, and the own-folder storage policies.
+    - It refuses `'deleted'` only; suspension is `account_is_active()`'s job.
+    - **A new own-row write policy must include it.**
 
 **Edge function `account-deletion`** (`verify_jwt = true`; the manual JWT decode depends on
 that).
-- `{action:"status"}` → `{configured}`.
-- `{action:"request"}` → `sent | not_configured | send_failed | <blocker reason>`.
+- `{action:"status"}` → `{configured: {email, whatsapp}}`.
+- `{action:"request"}` → `sent | not_configured | send_failed | <blocker reason>`. `sent`,
+  `not_configured` and `send_failed` carry `channel`; `sent` carries the masked address or
+  number as `to`.
 - It always answers 200 for business outcomes, because `functions.invoke()` drops a non-2xx
   body.
 - Secrets:
-  - `RESEND_API_KEY` is required. Until it is set, `request` answers `not_configured` and
-    mints nothing.
+  - Email: `RESEND_API_KEY` is required. Until it is set, an email account's `request`
+    answers `not_configured` and mints nothing.
+  - WhatsApp (Phase 18): `WHATSAPP_ACCESS_TOKEN` and `WHATSAPP_PHONE_NUMBER_ID` are
+    required. The optional `WHATSAPP_TEMPLATE` (`account_deletion_code`),
+    `WHATSAPP_TEMPLATE_LANG` (`en`) and `WHATSAPP_API_VERSION` (`v25.0`) name the approved
+    copy-code **authentication** template and the Graph version. The code goes in the body
+    and the button parameter. Meta fixes the text ("<code> is your verification code.").
+    A 200 from Meta means accepted, not delivered.
   - `RESEND_FROM` is optional. The default `onboarding@resend.dev` only delivers to the
     Resend account owner's address, so real users need a verified sending domain.
 - On a failed send, the function discards the code and lifts the 60-second resend cooldown.
 
+**Edge function `account-deletion-sweep`** (`verify_jwt = true`, and the handler also
+requires role `service_role`). It is posted to by pg_cron only, returns a summary
+(`due`, `completed`, `storage_cleaned`, ...), and needs no secret beyond the platform's.
+
 **Known limits (tracked in `myprofileflags.md`):**
-- No email is sent until the key is set.
-- Phone-only accounts have no address to receive a code.
-- Avatar files stay in Storage.
-- An access token lives up to 1 hour after the sweep. INSERTs are refused through
-  `account_is_active()`, and so are writes to the identity rows. Updates to the user's own
-  rows elsewhere (an RFQ's description, a review's text) are not refused, and neither are
-  reads.
-- Cosora-Admin shows a deleted account as "active".
+- No email is sent until the key is set (MPF-4).
+- A phone-only account's code goes over WhatsApp (Phase 18), which isn't set up yet
+  (MPF-24).
+- A stale access token can still **read** for up to its hour. Every write is refused
+  (MPF-7, fixed 2026-09-24).
+- Message text and GoTrue's audit log keep what they held, by design.
 
 ---
 
@@ -1224,14 +1264,32 @@ deleted. There is one form implementation: the shared parts are in
 `components/buyer/ProfileEditKit.tsx`, and the state and save are in
 `hooks/useEditableProfile.ts`.
 
-- **The data layer is unchanged:** `saveProfileFull()` and `uploadAvatar()` in
+- **Data layer:** `saveProfileFull()`, `profileChanges()` and `uploadAvatar()` in
   `lib/queries/profile.ts`.
-- **Seed once, after the load.** `saveProfileFull()` writes every field (MPF-9), so the hook
-  keeps `form` null until `useProfileFull` resolves, and the pages render no inputs until
-  then. It never re-seeds, so a refetch can't wipe typing in progress.
-- **Same semantics as the modal.** A photo uploads immediately and applies on Save. An empty
-  avatar adopts the Google picture on save. Both pages go back to `/profile` on save or
-  cancel.
+- **Seed once, after the load.** The hook keeps `form` null until `useProfileFull` resolves,
+  and the pages render no inputs until then. It never re-seeds, so a refetch can't wipe
+  typing in progress.
+- **A save sends only what changed** (MPF-9, Phase 14, 2026-09-24).
+  - The hook seeds a `baseline` with the form, and re-baselines after each save.
+  - `save()` passes `profileChanges(baseline, form)` to `saveProfileFull()`. That function
+    writes only the columns for the fields it is given, and skips a table with nothing to
+    write. `buyer_profiles` is upserted, and an upsert updates only the columns it is sent.
+  - An emptied field is a change, stored as NULL. An untouched form sends nothing, and the
+    pages say "No changes to save".
+  - `country` has no default: "India" is the field's placeholder.
+- **Photos.** A photo uploads immediately and applies on Save. The Google picture shows
+  when none is stored, but it is in the baseline, so it is saved only if the buyer picks a
+  photo. Both pages go back to `/profile` on save or cancel.
+- **The sign-in step** (`applyPendingSignupProfile()`) applies a signup name once (MPF-9,
+  MPF-20).
+  - It writes the buyer's company (`saveProfileFull()` with just `{ businessName }`) or the
+    vendor's brand, and only while none is saved.
+  - It then clears `brand_name` from the auth metadata with
+    `auth.updateUser({ data: { brand_name: null } })`. Supabase Auth removes a key set to
+    null.
+  - If the write fails, the metadata is kept for the next sign-in.
+  - It used to pass a whole `EMPTY_PROFILE`-based object for a buyer, and write a vendor's
+    signup brand, on every sign-in.
 - **`?focus=city`** autofocuses City. The `/profile` "Add city" nudge links there.
 - **Email is a plain field.** The modal's fake verify flow was dropped (MPF-10).
 
@@ -1250,6 +1308,11 @@ no service role, no job queue. Revisit that only if one buyer's own rows grow la
   - `conversations` by `or(user_a, user_b)`, and `messages` by `conversation_id` in those
     conversations;
   - `reviews` and `product_reviews` by `buyer_id`, and the two profile rows by `id`.
+  - Phase 19 (MPF-8): `calls`, `saved_items`, `saved_folders` and `recently_viewed` by
+    `buyer_id`; `follows` by `follower_id`; and `saved_folder_items`, which has no owner
+    column, by `folder_id` in the buyer's own folders. For a buyer these tables' RLS is
+    owner-only already. `follows_select` and `calls_select` also admit admins, and the spec
+    proves the filters with demo-admin.
 
   Probe numbers are in `test.md`.
 - **Complete reads.** `allPages()` pages by 1,000 (PostgREST's cap) and orders by
@@ -1262,15 +1325,93 @@ no service role, no job queue. Revisit that only if one buyer's own rows grow la
   - Formula-injection guard: vendors write quote comments, so a string cell starting with
     `= + - @` (or a tab or CR) gets a leading `'`. Numbers are untouched.
 - **JSON** (`cosora-data-export-YYYY-MM-DD.json`):
-  - An `export` header (generated_at, account_id, format_version 1, contents, the chat-scope
-    note, counts), then one section per table.
+  - An `export` header (generated_at, account_id, `format_version` 2 since Phase 19,
+    contents, the `links` note, the chat-scope note, counts), then one section per table.
+  - Phase 19 added five sections:
+    - `vendors_contacted`: chat counterparts with a `vendor_profiles` row, plus called and
+      quoting vendors, deduplicated, as `{vendor_id, brand_name}`;
+    - `vendors_messaged`: the vendors whose conversation has a message the buyer sent;
+    - `saved`: `all_saves`, and `folders` with their items;
+    - `recently_viewed` and `following`.
+  - Product and vendor rows carry an absolute `link` on the exporting site (`/product/:id`,
+    `/vendor/:id`). The link is null when the product isn't `live` or the vendor row is
+    gone, the My Reviews rule.
   - `embedding` and `search_text` are left out of RFQs: they're the search index, not buyer
     data.
   - Each conversation gets `other_party_name` (a brand name only, never contact details).
 - **Filenames** use the IST date. Blob URLs are revoked 1 second after the click; revoking
   in the same tick can cancel the download.
-- **Scope:** the brief's table list. The other tables the buyer owns rows in are not
-  exported yet (MPF-8).
+- **Scope:** the brief's tables, plus the Phase 19 sections. Not exported: video likes,
+  saved videos, service reviews, notifications, deletion requests, and the call log itself.
+
+---
+
+## Display currency — converted for display, never for money (2026-09-24)
+
+Phase 20 of the My Profile brief (MPF-11). A buyer's Regional Settings currency (₹ INR, $ USD,
+€ EUR, £ GBP) converts the INR prices the buyer app shows. Nothing is priced, quoted, paid,
+settled or invoiced in another currency.
+
+- **Rates.**
+  - `public.fx_rates` is one row, base INR: `rates` = units of each currency per rupee,
+    `rates_date` = the day the source published them, `updated_at` = the last refresh.
+    Everyone can read it, signed out too; no client role can write.
+  - pg_cron `fx-rates-refresh` (16:30 UTC daily) posts to the edge function `fx-rates-refresh`
+    with the Vault service-role key: `verify_jwt = true`, and the handler requires
+    `service_role`.
+  - The function reads Frankfurter's v1 endpoint (the ECB's euro reference rates; free, no
+    key), falling back to v2 (multi-source).
+  - It computes INR rates from the EUR ones, since asking for an INR base returns 5-decimal
+    numbers. It rejects an INR-per-EUR outside 40–400 and keeps the old row on any failure.
+  - Migration `20260924161525`.
+- **Client.**
+  - `src/lib/currency.ts`:
+    - `currencyCodeOf("$ USD")` → "USD";
+    - `formatCurrency(amount, code)`: INR is `formatINR`'s exact shape, and `formatINR` now
+      calls it; other currencies show 2 decimals, en-US;
+    - `formatInCurrency(amountInInr, code, rates)`;
+    - `convertInrText(text, code, rates)`, which converts every "₹n" in text the app built.
+  - `useFxRates(enabled)`: react-query `["fx_rates"]`, a 1-hour stale time, and disabled for an
+    INR buyer.
+  - `DisplayCurrencyContext`, mounted in `App.tsx`:
+    - the code comes from `buyer_profiles.regional.currency` (signed in) or the device's
+      Regional Settings (signed out);
+    - `show(amountInInr, inrText, sourceCurrency?)`, `showText(inrText)`, and `showBoth(...)`
+      ("≈ $5.20 (₹499)");
+    - each returns `inrText` exactly unless a conversion is active (a non-INR code with rates
+      loaded). That is what keeps an INR buyer's page byte-identical;
+    - a price in another source currency is never converted.
+  - `ConvertedPriceNote` renders only while converting. It's under `BuyerTopBar`, and on search
+    results, the vendor profile and the quote screens.
+  - `useCurrencySetting` is the drawer picker's read and write of the same field.
+- **Not converted, on purpose:**
+  - vendor pages and vendor billing (`formatINR`);
+  - amounts a buyer types (RFQ budgets);
+  - the invented New Arrivals hero and the static service-vendor rates, which are unmarked;
+  - anything stored or sent.
+
+## GST — one formula, ready for a buyer charge that doesn't exist yet (2026-09-24)
+
+Phase 20, MPF-11 part B. `supabase/functions/_shared/gst.ts`:
+`gstOn(baseRupees, rate = GST_RATE)` → `{ base, rate, gst, total }`.
+
+- **The formula, as found in the three copies it replaced** (`subscription-create-order`,
+  `-verify-payment`, `-webhook`):
+  - 18% flat on the whole-rupee plan price;
+  - `Math.round` to the rupee;
+  - total = base + gst, and the Razorpay amount is total × 100 paise.
+  - It has no per-category rate and no CGST/SGST vs IGST split. The vendor's GSTIN is only
+    recorded.
+- **All three functions import it now.** `node scripts/gst-check.mjs` proves the same results
+  (every plan, ₹0–₹1,00,000, the x.5 edges) and fails if any function keeps its own copy.
+- **Not redeployed,** because the deployed functions are older than the repo (MPF-25).
+- **Nothing buyer-facing calls it.** Buyers pay Cosora nothing today: plans, ads and
+  certificates are all vendor purchases. When a real buyer-facing paid feature exists:
+  - its edge function imports `gstOn()`, passing its own rate if its service differs;
+  - a tax figure the browser shows before payment needs a client mirror kept in step by a
+    check script, as `src/lib/adPricing.ts` is by `scripts/ad-pricing-check.mjs`.
+
+  Don't build or simulate a charge just to call it.
 
 ---
 
@@ -1300,7 +1441,12 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
   - No client role, and not service_role, can write.
   - The partial index `faqs_surface_order (surface, position, created_at) where active`
     matches the one query the apps make.
-- **Writes** are super_admin only; `admin_faq_list` also admits support.
+- **Writes and the list admit support and super_admin**, with one predicate:
+  `admin_role() = any (array['support','super_admin'])`. Writes were super_admin only until
+  Phase 22 (2026-09-24, migration `20260924170736`). Every other admin role, an inactive admin,
+  a non-admin and anon get 42501.
+  - `created_by` records who **added** a row. An edit sets only `updated_at`, and there is no
+    history (MPF-26).
   - `admin_faq_add(surface, category, question, answer, position default null)`:
     - an unknown surface raises 22023;
     - text is trimmed, and a blank category is stored as null;
@@ -1342,10 +1488,11 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
   - `FaqSection` and `/seller` render answers with `whitespace-pre-line`, so an answer written
     as lines (`•` bullets) keeps them. Buyer Help doesn't yet, because its answers are single
     paragraphs.
-- **Freshness:** query key `["faqs", surface]` and the app-wide 60 s `staleTime`. An admin
-  edit shows up on the next page load, or within a minute in a tab that's already open,
-  with no deploy. There's no realtime subscription: FAQ edits are rare, and an accordion
-  rearranging under the reader would be worse than a minute's lag.
+- **Freshness (since Phase 23):** query key `["faqs", surface]`, `staleTime` 10 min,
+  `gcTime` 30 min. An admin edit reaches every new page load within ~47 s (see "FAQ read
+  path" below). A tab already open keeps its list for up to 10 minutes. There's no realtime
+  subscription: FAQ edits are rare, and an accordion rearranging under the reader would be
+  worse than the lag.
 - **Seed:** the 17 hardcoded rows moved over verbatim (12 buyer_help, 5 subscription). The
   text wasn't edited on the way, so the inaccuracies in MPF-14 moved with it.
 - **Andy's content (2026-09-23)** went in through the `admin_faq_*` RPCs as demo-admin, not a
@@ -1356,6 +1503,15 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
   - the two superseded rows deactivated at 210 and 240.
 
   Source and decisions: `documentation/seller-registration-and-subscription-faq-content.md`.
+- **Seeded by migration since Phase 24 (2026-09-25):** `20260925075432_faqs_seed_seller_registration_and_subscription.sql`
+  reproduces the rows above on a fresh database, generated from the live rows so the text is
+  identical. On the live database it changed nothing. Every statement is conditional:
+  - seeded rows are matched on question **and** their original answer, so an admin-edited
+    row is left alone;
+  - an insert is skipped when an active copy of the question is already on the surface.
+
+  If an admin later edits one of these rows, the live text and the migration's text
+  diverge; the migration is the starting state, not a mirror.
   The "Lowest billing plan?" answer hardcodes plan prices; it isn't derived from
   `subscription_plans`.
 - **Cosora-Admin `src/pages/Faqs.tsx`** has:
@@ -1367,8 +1523,74 @@ clients read the table directly, and Cosora-Admin writes to it through RPCs. Mig
   - up/down arrows that swap with the previous or next row **of the same visibility** in
     its group. A live row steps past hidden ones, so every press changes the live page.
 
-  Every mutation goes through `assertWrote`. For support, `canWrite(role, "faqs")` disables
-  the controls under the standard read-only banner. The database gate is the real one.
+  Every mutation goes through `assertWrote`. `canWrite(role, "faqs")` admits the same two
+  roles as the RPCs, so no role that can open the page sees the read-only banner today. The
+  database gate is the real one: widen or narrow both together.
+
+### FAQ read path — Storage CDN snapshots, table fallback (2026-09-24, Phase 23)
+
+Phase 9 Q2: the FAQ read path at 10k concurrent users. Migration
+`20260924174051_faq_snapshots_cdn_cache.sql`, edge function `faqs-snapshot`.
+
+- **Why:** the table was never the limit (~30 indexed rows, a boolean RLS check). PostgREST
+  is: ~10 pool connections for the whole app, and every FAQ page load spent a request on
+  content that changes a few times a month. From India that request also takes ~325 ms (the
+  database is in Sydney); a CDN hit takes ~100 ms.
+- **Files:** public bucket `faq-snapshots` (JSON only, 64 KB limit, **no storage policy**, so
+  no client writes). `buyer_help.json`, `seller_registration.json`, `subscription.json`:
+  `{ version: 1, surface, generated_at, count, rows: [{ id, category_label, question,
+  answer, position }] }`, rows in display order.
+- **Writer: `faqs-snapshot`** (verify_jwt plus a service-role check, no imports):
+  - reads the active rows with the **anon key**, so RLS and the column grant apply (no
+    inactive rows, never `created_by`);
+  - uploads all three with `x-upsert` and `cache-control: max-age=300`;
+  - re-reads, and runs up to 3 passes if an edit landed mid-upload (409 `unsettled` after
+    that; the next call rebuilds). 502 on any read or upload error.
+- **Callers, with the Vault `service_role_key` through pg_net:**
+  - `trg_faqs_snapshot`, AFTER INSERT/UPDATE/DELETE/TRUNCATE, FOR EACH STATEMENT, calls
+    `faqs_queue_snapshot()` (definer, `search_path ''`, EXECUTE revoked).
+    - One call per transaction: the transaction-local setting `cosora.faqs_snapshot_queued`
+      survives the definer function's exit, because the function's SET clause only restores
+      `search_path` (proved in the rehearsal: 3 writes → 1 call).
+    - pg_net queues inside the transaction, so a rolled-back write sends nothing.
+    - Never raises: a missing key or a pg_net error is a WARNING, and the admin's write goes
+      through.
+  - cron `faq-snapshots-refresh`, `17 * * * *`: a `do` block that **raises** if the key is
+    missing (so `cron.job_run_details` shows it), else posts. Bounds a lost trigger call to
+    an hour, and doubles as a re-invalidation.
+- **Reader: `useFaqs()`** (`src/lib/queries/faqs.ts`):
+  - `fetch(publicUrl, { cache: "no-cache" })` with a 3 s AbortController;
+  - `parseFaqSnapshot()` needs version 1, the right surface, `count === rows.length`, and
+    typed fields on every row;
+  - anything else (network, non-200, bad JSON, wrong shape) → the unchanged table query.
+  - `no-cache` because the CDN sends no `Age` header: a browser caching on its own could
+    keep a copy for a full max-age after the edge's copy was already old. The CDN ignores
+    client cache headers (HIT with `max-age=0`, `no-cache` or `Pragma`), so revalidating
+    costs a CDN hit, never an origin or database read.
+- **The CDN is Smart CDN here, whatever the docs say about Free.** Responses carry
+  `x-smart-cdn: true`. Supabase documents Smart CDN (edge copy kept until the object
+  changes, invalidated on overwrite, "up to 60 s") as Pro only, and this org is Free. Measured:
+  - the edge keeps a copy well past max-age: HIT for over 6 minutes without a change;
+  - an overwrite is at the origin in 2–3 s. Every request has it within ~47 s (three
+    trials, 45.9–46.8 s); in between, about a third of requests still get the old copy;
+  - so the window is the invalidation spreading, not max-age. `max-age=300` bounds browsers,
+    and would bound the edge if Supabase ever turned Smart CDN off for this plan.
+  - Measure it again with `node scripts/faq-cdn-propagation.mjs`.
+- **Capacity measured** (`scripts/load/faq-read.k6.js`, one load machine, Mumbai edge):
+  - CDN: 500 req/s at p95 256 ms with 0 failures. ~940 req/s at p95 1.7 s is where the load
+    machine gave out: the edge answered all 50,384 requests it received with 200, as cache
+    hits, in ~15 ms.
+  - Table fallback: flat p95 ~360 ms from 25 to 150 req/s, 0 failures (not pushed further,
+    because that pool serves the whole app).
+  - 10k concurrent users each opening an FAQ page every 20 s is 500 req/s.
+- **Egress:** a CDN hit is ~1.9 KB on the wire and counts against the Free plan's separate
+  5 GB cached-egress quota, not the shared 5 GB uncached one. The load test used ~125 MB.
+- **Tests:** `tests/faqs-snapshot.spec.ts` (snapshot path, six fallbacks, edit timing);
+  `scripts/faq-snapshot-check.mjs` (consistency and write refusal). The Phase 9 spec's pages
+  block the snapshot and read the table, because it checks each edit at once.
+- **The migration's header** says an edit reaches visitors "within 5 minutes". That was
+  written from the docs' Free-plan claim before the measurement. The file stays as applied;
+  this section is the correction.
 
 ---
 
@@ -1412,8 +1634,9 @@ client-selectable. The migrations are `20260923171821_profiles_contact_columns_p
   - `useCallVendor()` keeps the client gate, because a vendor's business phone
     (`vendor_profiles.phone`) is public by design.
 - **`fetchProfileFull()` throws on a read error.** It used to return blanks, and
-  `useEditableProfile` seeds its form from the first result while `saveProfileFull()` writes
-  every field (MPF-9). A refused read could have been saved over real values.
+  `useEditableProfile` seeds its form from the first result, and while `saveProfileFull()`
+  wrote every field (MPF-9, fixed 2026-09-24) a refused read could have been saved over real
+  values. It still matters: blanks would show in place of real values.
 - **Tests:**
   - `scripts/profile-contact-privacy-check.mjs`: every role, over HTTP;
   - `scripts/contact-gate-check.mjs`: the client and server gates in every state;
@@ -1472,6 +1695,95 @@ Phase 13 of the My Profile brief (MPF-1). No migration.
   demo-buyer can't. `tests/profile-calls-stat.spec.ts` covers Calls.
 
 ---
+
+## Flag-fix pass (2026-09-25): quote roles, the Admin Log, refused events, cron alarms
+
+### Quotes: who changes what (MPF-18)
+- `trg_quotes_update_roles`: BEFORE UPDATE on `public.quotes`, running
+  `enforce_quote_update_roles()`. It is SECURITY INVOKER on purpose, because its first test
+  is `current_user <> 'authenticated'`, the plan-cap triggers' idiom, and a definer function
+  would always see its owner.
+- Order of checks:
+  1. an admin passes;
+  2. id, rfq_id, vendor_id or created_at changing → 42501;
+  3. the vendor (`old.vendor_id = auth.uid()`) changing anything but `status`, when it is
+     not also the RFQ owner → `new.status := 'pending'`;
+  4. a status change by someone who isn't the owner, other than the vendor moving to
+     pending → 42501;
+  5. a non-vendor changing anything but `status` → 42501.
+- Terms are compared as `to_jsonb(new) - 'status'` against the old row, so a column added
+  later is covered without editing the trigger.
+- `submitQuote()` already upserts with `status: 'pending'`, so the vendor app needed no
+  change. `setQuoteStatusDb()` (the buyer's) is unaffected.
+- Check: `node scripts/quote-status-roles-check.mjs`.
+
+### The Admin Log (MPF-26)
+- **Table.** `admin.audit_log`, keyed by an identity column. Columns: `at`, `actor_id`, and
+  `actor_role` and `actor_name`, snapshotted at write time so a later change doesn't
+  rewrite history. Then `action` (insert, update, delete, sign_in, sign_out, invite,
+  refund), `target_table` (`schema.table`), `target_id`, `own_row`, `changes` jsonb and
+  `source`.
+- **What `changes` holds.** An update stores `{"col": {"from": …, "to": …}}` for the changed
+  columns; an insert or delete stores the row.
+- **Append-only.** No grants, RLS on with no policy, and `trg_audit_log_append_only`
+  refusing UPDATE and DELETE even for postgres.
+- **`admin.audit_row_change(owner_col)`**, AFTER ROW, SECURITY DEFINER. It returns at once
+  unless `auth.uid()` is an active admin and `pg_trigger_depth() = 1`.
+  - Depth 1 is what makes the log show what an admin did, not its side effects. A definer
+    RPC's own statements run at depth 1; a trigger reacting to them runs at 2.
+  - Counters and derived columns are removed before comparing. An update touching only
+    those is skipped, which is how an admin viewing a product (`views_count`) logs nothing.
+- **Attached as `trg_admin_audit` to:**
+  - FAQs and account status: `faqs`, `admin.account_suspensions`, and
+    `profiles.account_status` (the trigger is `AFTER UPDATE OF account_status` there);
+  - chat moderation: `conversations`, `admin.conversation_reviews`,
+    `admin.keyword_blocklist`, `admin.flag_patterns`, `admin.admin_flags`,
+    `admin.chat_block_reasons`;
+  - vendors and catalogue: `vendor_documents`, `vendor_profiles`, `vendor_subscriptions`,
+    `products`, `product_videos`, `catalogues`;
+  - ads and fulfilment: `advertisements`, `certificate_orders`;
+  - admin access: `admin.admin_users`.
+
+  That is every table Cosora-Admin's RPCs and direct updates write. `admin.ad_review_log`
+  is left out, being a log itself.
+- **Edge functions.** Writes made with the service-role key have no JWT user, so
+  `admin-invite` and `admin-refund-payment` call
+  `admin_audit_record(actor, 'invite'|'refund', table, id, changes, source)`, which is
+  service_role only. It is best effort: a failed record is logged in the function and
+  never fails the invite or refund.
+- **Readers.** `admin_audit_log_list(p_actor, p_table, p_action, p_from, p_to, p_before_id,
+  p_limit ≤ 500)` pages by id, and `admin_audit_log_actors()` fills the admin filter. Both
+  require super_admin or manager.
+- **Cosora-Admin.**
+  - `pages/AdminLog.tsx` renders times with `Intl` in `Asia/Kolkata` and shows each update
+    as `field: before → after`, with the full record behind "Full record".
+  - `Login.tsx` and `useAdminSession.signOut` call `admin_audit_session()`, best effort.
+
+### Refused analytics events (MPF-23)
+- `log_engagement_event()` keeps its signature, defaults and grants. Its handler became:
+  - `when foreign_key_violation then return` (junk ids);
+  - `when others`: an upsert into `admin.engagement_event_failures` keyed by
+    `(date_trunc('hour'), error_code, constraint_name)`, which counts, keeps the latest
+    message and event type and source, and prunes rows older than 30 days. It sits inside
+    its own `exception when others then null`, so recording can never fail the page.
+- The key never holds client data, so a flood of bad calls grows a count, not the table.
+- `admin_engagement_event_failures(p_days)` (super_admin, vendor_ops) feeds System Health.
+- Check: `node scripts/engagement-event-failures-check.mjs`. It leaves one marked row, to
+  remove with SQL.
+
+### Cron alarms (MPF-27)
+- `fx-rates-refresh` is a DO block like `faq-snapshots-refresh`: read the Vault key, raise if
+  it's missing, otherwise `perform net.http_post`.
+- `account-deletion-sweep` is unchanged. A multi-statement pg_cron command runs in one
+  implicit transaction, so a raise there would undo `process_due_account_deletions(interval
+  '1 day')`. `account-deletion-sweep-alarm` (`43 3 * * *`) raises on its own when the key is
+  missing.
+
+### Subscription functions redeployed (MPF-25)
+- Deployed through the MCP with `<name>/index.ts` and `_shared/gst.ts` as the file paths,
+  entrypoint `<name>/index.ts`, which resolves the `../_shared/gst.ts` import.
+- Versions: `create-order` v4, `verify-payment` v5, `webhook` v4 (`verify_jwt` false, as
+  before).
 
 ## Integrations
 
@@ -1842,7 +2154,11 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **Settings Page (vendor)**: `/settings` is the **vendor** Settings page (`VendorSettings.tsx`) — Business (→`/business-profile`), Notifications (email/push toggles), Language, Security (email/phone + Log Out), Help & Legal. Both seller "Settings" entry points (sidebar secondaryNav + the MyStore App-and-User-Setting menu row) point here. The **buyer** side still has no dedicated Settings page — buyer sidebar "Settings" links to `/profile` (known bug, out of scope until a buyer pass).
 - **No Orders Page**: There is no `/orders` route. "Track Orders" maps to `/requirement/my-quotes`; "View Order Details" maps to `/chat`.
 - **`accent` / `primary` tokens are the BUYER coral, not vendor blue**: in `src/index.css` both `--accent` and `--primary` are `352 85% 62%` (`#ef4d62`). So `bg-accent`, `bg-primary`, `text-accent`, and a default shadcn `<Button>` all render coral. On a **vendor** page that silently breaks the brand rule (vendor CTAs must be `#256fef`). Vendor pages therefore hardcode `bg-[#256fef]` / `text-[#256fef]` (hover `#1d5ed6`). If a vendor page looks pink, this is why. `/cosora-studio` was fixed this way on 2026-07-26.
-- **Role context does not follow the signed-in account**: `UserRoleContext` initialises `role` to `"buyer"` and never seeds it from `profile.active_role`. Signing in as a vendor still starts the UI in buyer mode until the sidebar SWITCH MODE toggle is used, so role-aware links (e.g. `ChatThread`'s `goQuote`, the quote cards) resolve to the buyer target until then. Known papercut, deliberately not fixed (2026-07-27).
+- **Role context follows the signed-in account (fixed 2026-09-24, MPF-13).** Until then, `UserRoleContext` started every page load as `"buyer"`, so a vendor was in buyer mode until they used the switcher. Now:
+  - `role` is seeded from `profiles.active_role` when the profile loads, once per account per page load. A switch after that stands until a reload. A role set before the profile arrived (OtpVerify at sign-in) is kept. Signing out goes back to buyer.
+  - `vendorRegistered` is `vendor_profiles.onboarding_complete` (react-query `["vendor_registered", id]`). localStorage `cosora.vendorRegistered.<id>` is only a hint until the read returns, and is corrected to match it.
+  - Onboarding's `setVendorRegistered(true)` updates the cached answer after its own write.
+  - Tested by `tests/role-on-load.spec.ts`. Seller-role accounts without a completed registration go to `/onboarding` when switching back (MPF-22).
 - **Shared page, two navs**: `/cosora-studio` is listed in **both** `buyerNavigation` and `sellerNavigation` in `DashboardSidebar.tsx`. It is styled vendor-blue, so in buyer mode the coral sidebar sits beside a blue page. Deliberate, not a regression.
 
 - **`memory/` does not exist in this repo (found 2026-09-05).** The previous CLAUDE.md

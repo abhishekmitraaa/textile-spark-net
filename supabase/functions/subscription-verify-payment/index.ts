@@ -20,7 +20,8 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "content-type": "application/json" } });
 }
 
-const GST_RATE = 0.18;
+// GST is computed in one place for all three subscription functions (MPF-11).
+import { gstOn } from "../_shared/gst.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -70,7 +71,7 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
   // Admins provision VIP directly; the self-serve activation path must refuse it.
   if (plan.is_invite_only) return { ok: false, error: "invite_only" };
   const base = input.billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
-  const gst = Math.round(base * GST_RATE);
+  const { gst } = gstOn(base);
 
   const start = new Date();
   const end = new Date(start);

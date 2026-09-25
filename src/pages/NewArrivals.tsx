@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
@@ -138,6 +139,7 @@ const HOME_TABS = [
 // ─────────────────────────────────────────────────────────────
 
 function ProductCard({ product }: { product: Product }) {
+  const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const savedState = useSaved();
   const saved = Boolean(savedState.products[product.id]);
@@ -187,7 +189,7 @@ function ProductCard({ product }: { product: Product }) {
 
       <div className="p-2 lg:p-3.5 flex flex-col flex-1">
         <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
-          {product.price} | MOQ: {product.moq} | {product.soldCount}
+          {showText(product.price)} | MOQ: {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
@@ -226,6 +228,7 @@ function ProductCard({ product }: { product: Product }) {
 // vendor's reach or ship a rail desktop mice cannot move.
 // ─────────────────────────────────────────────────────────────
 function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd) => void }) {
+  const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const drag = useDragScroll<HTMLDivElement>();
   const logged = useRef<Set<string>>(new Set());
@@ -273,7 +276,7 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
               </div>
               <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.productName ?? a.title}</p>
               <p className="text-[10px] lg:text-sm font-semibold text-gray-700 truncate">{a.categoryName ?? a.vendorName ?? ""}</p>
-              <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{a.price ?? ""}</p>
+              <p className="text-[10px] lg:text-sm font-semibold text-gray-700">{showText(a.price ?? "")}</p>
             </button>
             <button
               onClick={() => { if (a.vendorId) void callVendor(a.vendorId, a.productName ?? a.title); }}
@@ -294,6 +297,7 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
 // ─────────────────────────────────────────────────────────────
 
 const NewArrivals = () => {
+  const { showText } = useDisplayCurrency();
   const t = useT();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -643,7 +647,7 @@ const NewArrivals = () => {
                 </div>
                 <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 right-2 lg:right-3">
                   <p className="text-[10px] lg:text-xs font-bold text-white truncate drop-shadow">{v.category}</p>
-                  <p className="text-[10px] lg:text-xs text-white/90 drop-shadow">{v.price}</p>
+                  <p className="text-[10px] lg:text-xs text-white/90 drop-shadow">{showText(v.price)}</p>
                 </div>
               </button>
             ))}
@@ -668,7 +672,7 @@ const NewArrivals = () => {
                   </div>
                 </div>
                 <div className="p-1.5 lg:p-2.5">
-                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{item.price} | MOQ: {item.moq}</p>
+                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{showText(item.price)} | MOQ: {item.moq}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">{item.name} | <span className="font-bold">Manufacturer</span></p>
                   <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">

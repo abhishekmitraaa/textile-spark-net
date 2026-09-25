@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { DisplayCurrencyProvider } from "./contexts/DisplayCurrencyContext";
 import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import StoreSync from "./components/StoreSync";
 import AuthCallback from "./pages/AuthCallback";
@@ -206,6 +207,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
     <UserRoleProvider>
+    <DisplayCurrencyProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -342,6 +344,7 @@ const App = () => (
           <DevAccountSwitcher />
         </BrowserRouter>
       </TooltipProvider>
+    </DisplayCurrencyProvider>
     </UserRoleProvider>
     </AuthProvider>
   </QueryClientProvider>

@@ -9,6 +9,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useProfileState, updateNotifications, type NotificationSettings } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting } from "@/lib/queries/profile";
+import { NOTIFICATION_DELIVERY_LIVE as DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
 function SettingsHeader({ title }: { title: string }) {
   const navigate = useNavigate();
@@ -40,12 +41,13 @@ function ToggleRow({
 
 // These switches are SAVED PREFERENCES ONLY (checked repo-wide, 2026-09-23).
 // Nothing sends email or push from them: there is no push pipeline, and the one
-// email sender (account-deletion) is transactional and ignores them. Nor do they
+// sender (account-deletion: email, or WhatsApp for an account with no email) is
+// transactional and ignores them. Nor do they
 // feed the in-app bell, which notify() fills only from moderation, account, ad and
 // certificate events, never from quotes, messages or RFQ updates. So the copy says
 // "saved for when it launches" and names events, not "get notified" or "instant
-// alerts". Set DELIVERY_LIVE to true only once a sender actually reads these keys.
-const DELIVERY_LIVE = false;
+// alerts". The switch is NOTIFICATION_DELIVERY_LIVE in lib/notificationDelivery.ts,
+// shared with Vendor Settings and the /profile row (MPF-12).
 
 const EMAIL_ROWS: { key: keyof NotificationSettings; label: string; description: string }[] = [
   { key: "emailNewQuote", label: "New Quote Received", description: "When vendors submit quotes on your requests" },

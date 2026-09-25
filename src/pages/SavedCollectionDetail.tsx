@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
@@ -51,6 +52,7 @@ const SORTS: { key: SortKey; label: string }[] = [
 function GridCard({ p, folderId, selected, onToggleSelect }: {
   p: SavedProduct; folderId: string; selected: boolean; onToggleSelect: () => void;
 }) {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const callVendor = useCallVendor();
   return (
@@ -75,7 +77,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
         </div>
       </Link>
       <div className="p-2">
-        <p className="text-xs font-bold text-[#ef4d62]">{p.price} | {p.moq}</p>
+        <p className="text-xs font-bold text-[#ef4d62]">{showText(p.price)} | {p.moq}</p>
         <p className="text-[10px] text-gray-600 mt-1 truncate">{p.name} | <span className="font-bold">{p.manufacturer}</span></p>
         <div className="flex items-center gap-0.5 mt-1 text-[10px] text-gray-500">
           <MapPin className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{p.location}</span>
@@ -95,6 +97,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
 
 // ── List row (matches the wishlist list-view reference) ──
 function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const callVendor = useCallVendor();
   return (
@@ -123,7 +126,7 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
             <span className="font-bold">{p.rating.toFixed(1)}</span>
             <span className="text-gray-400">({p.reviews} reviews)</span>
           </div>
-          <p className="text-sm font-bold text-gray-900 mt-1">{p.price}</p>
+          <p className="text-sm font-bold text-gray-900 mt-1">{showText(p.price)}</p>
           <div className="flex items-center gap-2 text-[11px] text-gray-500">
             <span>{p.moq}</span>
             <span className="inline-flex items-center gap-0.5"><Clock className="w-3 h-3" /> {p.timeAgo}</span>

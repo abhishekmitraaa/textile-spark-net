@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCallVendor } from "@/lib/queries/calls";
 import { motion, AnimatePresence } from "framer-motion";
@@ -311,6 +312,7 @@ interface VideoSlideProps {
 }
 
 function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
+  const { showText } = useDisplayCurrency();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /**
    * Real playback state, and the ONE thing the tap overlay reads. Covers two
@@ -568,7 +570,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
             <p className="text-xs font-bold text-gray-900 truncate">{video.brandName}</p>
             <p className="text-[11px] text-gray-500 truncate">{video.brandLine}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm font-bold text-[#ef4d62]">{video.price}</span>
+              <span className="text-sm font-bold text-[#ef4d62]">{showText(video.price)}</span>
               <span className="text-[10px] text-gray-400">MOQ: {video.moq}</span>
               <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
                 <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" /> {video.rating} · {video.reviews}

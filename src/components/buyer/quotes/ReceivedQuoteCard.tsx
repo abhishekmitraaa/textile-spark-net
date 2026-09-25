@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import {
   BadgeCheck, Star, MapPin, Clock, DollarSign, Package, FlaskConical,
   MessageCircle, Phone, Eye, X, Star as StarIcon, Check,
@@ -38,6 +39,7 @@ interface Props {
 export default function ReceivedQuoteCard({
   quote: q, forProduct, compareMode, selected, onToggleSelect, onChat, onCall, onDetails, onStatus,
 }: Props) {
+  const { showBoth } = useDisplayCurrency();
   const status = STATUS_STYLES[q.status];
 
   return (
@@ -89,10 +91,10 @@ export default function ReceivedQuoteCard({
 
       {/* Quote grid */}
       <div className="grid grid-cols-2 gap-y-3 gap-x-4 rounded-xl bg-gray-50 p-3 mt-3">
-        <StatCell icon={DollarSign} label="Price/Unit" value={fmtMoney(q.currency, q.pricePerUnit)} />
+        <StatCell icon={DollarSign} label="Price/Unit" value={showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)} />
         <StatCell icon={Package} label="MOQ" value={`${q.moq.toLocaleString()} units`} />
         <StatCell icon={Clock} label="Lead Time" value={q.leadTime} />
-        <StatCell icon={FlaskConical} label="Sampling" value={fmtMoney(q.currency, q.sampling)} />
+        <StatCell icon={FlaskConical} label="Sampling" value={showBoth(q.sampling, fmtMoney(q.currency, q.sampling), q.currency)} />
       </div>
 
       {/* Comment */}

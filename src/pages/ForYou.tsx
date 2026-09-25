@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -168,6 +169,7 @@ const PRODUCTS_PER_RECENT_VIEW = 16; // 8 mobile rows / 4 desktop rows
 // empty cell that consumes a `gap` row, which reads as an unexplained blank
 // band in the middle of the feed.
 function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
+  const { showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const logged = useRef<Set<string>>(new Set());
 
@@ -227,7 +229,7 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
             <div className="absolute bottom-1.5 right-1.5 lg:bottom-2 lg:right-2 text-[8px] lg:text-[10px] font-semibold text-white/70 bg-black/30 px-1.5 py-0.5 rounded">COSORA</div>
             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 lg:p-3">
               <p className="text-[11px] lg:text-sm font-semibold text-white truncate">{a.productName ?? a.title}</p>
-              {a.price && <p className="text-[11px] lg:text-sm font-bold text-white">{a.price}</p>}
+              {a.price && <p className="text-[11px] lg:text-sm font-bold text-white">{showText(a.price)}</p>}
             </div>
           </button>
         ))}

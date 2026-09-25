@@ -14,7 +14,9 @@ import {
   confirmDeletion,
   cancelDeletion,
   deletionCopy,
+  expectedDeletionChannel,
   formatDeletionDate,
+  type DeletionChannel,
   type DeletionCopy,
 } from "@/lib/queries/accountDeletion";
 
@@ -24,6 +26,10 @@ import {
 // States: signed out → sign in first. Scheduled → the date and a Cancel button
 // (the same banner lives on /profile). A code already sent → the dialog opens on
 // the code step. Otherwise → an explanation first, then the code.
+//
+// The code goes by email, or by WhatsApp for an account with no email (MPF-6).
+// Before sending, the wording follows expectedDeletionChannel(); after, it
+// follows the channel the server actually used.
 
 const CODE_LENGTH = 6;
 
@@ -36,6 +42,7 @@ export function DeleteAccountCard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [step, setStep] = useState<"explain" | "code">("explain");
   const [sentTo, setSentTo] = useState<string | null>(null);
+  const [sentChannel, setSentChannel] = useState<DeletionChannel | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<DeletionCopy | null>(null);
@@ -62,6 +69,7 @@ export function DeleteAccountCard() {
       const r = await sendDeletionCode();
       if (r.status === "sent") {
         setSentTo(r.to ?? null);
+        setSentChannel(r.channel === "whatsapp" ? "whatsapp" : "email");
         setCode("");
         setStep("code");
         void refresh();
@@ -114,6 +122,9 @@ export function DeleteAccountCard() {
     }
   };
 
+  const expected = expectedDeletionChannel(user);
+  const codeChannel: DeletionChannel = sentChannel ?? open?.channel ?? "email";
+
   if (user && !isPending && open?.status === "cooling_off") {
     return (
       <div className="bg-white rounded-lg border border-red-200 p-4">
@@ -152,7 +163,13 @@ export function DeleteAccountCard() {
 
           {step === "explain" ? (
             <ul className="space-y-2 text-sm text-gray-700 list-disc pl-5">
-              <li>We'll email a 6-digit code to the email address on your account. Enter it to confirm.</li>
+              <li>
+                {expected === "whatsapp"
+                  ? "We'll send a 6-digit code to your phone number on WhatsApp. Enter it to confirm."
+                  : expected === "email"
+                    ? "We'll email a 6-digit code to the email address on your account. Enter it to confirm."
+                    : "We'll send a 6-digit code to the email address or phone number on your account. Enter it to confirm."}
+              </li>
               <li>Your account is deleted <span className="font-semibold">14 days</span> after that. Until then you can cancel from your profile.</li>
               <li>Deleting removes your name, email, phone, photo and business details, and signs you out everywhere.</li>
               <li>Your requests, quotes, chats and reviews stay with the sellers you dealt with, shown as “Deleted user”.</li>
@@ -160,7 +177,16 @@ export function DeleteAccountCard() {
           ) : (
             <div>
               <p className="text-sm text-gray-700 mb-4">
-                We sent a code to <span className="font-semibold">{sentTo ?? "your email"}</span>. It expires in 10 minutes.
+                {codeChannel === "whatsapp" ? (
+                  <>
+                    We've sent a code to your WhatsApp number
+                    {sentTo && <> <span className="font-semibold">{sentTo}</span></>}. It expires in 10 minutes.
+                  </>
+                ) : (
+                  <>
+                    We sent a code to <span className="font-semibold">{sentTo ?? "your email"}</span>. It expires in 10 minutes.
+                  </>
+                )}
               </p>
               <InputOTP
                 maxLength={CODE_LENGTH}
@@ -218,7 +244,8 @@ export function DeleteAccountCard() {
                 disabled={busy}
                 className="inline-flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-bold text-white hover:bg-red-700 disabled:opacity-60"
               >
-                {busy && <Loader2 className="w-4 h-4 animate-spin" />} Email me a code
+                {busy && <Loader2 className="w-4 h-4 animate-spin" />}{" "}
+                {expected === "whatsapp" ? "Send code on WhatsApp" : expected === "email" ? "Email me a code" : "Send me a code"}
               </button>
             ) : (
               <button

@@ -1,3 +1,4 @@
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +61,7 @@ function StatCard({ icon: Icon, value, label, tint, badge }: {
 }
 
 const MyQuotes = () => {
+  const { show, showText } = useDisplayCurrency();
   const navigate = useNavigate();
   const callVendor = useCallVendor();
   const reduced = useReducedMotion();
@@ -220,7 +222,7 @@ const MyQuotes = () => {
                             )}
                           </div>
                           <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">{r.units} units • ₹{r.priceMin} - ₹{r.priceMax}/unit</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{r.units} units • {showText(`₹${r.priceMin} - ₹${r.priceMax}/unit`)}</p>
                         </div>
                         <img src={r.image} alt={r.title} className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
                       </div>
@@ -231,13 +233,13 @@ const MyQuotes = () => {
                           <span className="inline-flex items-center gap-1">
                             <MessageCircle className="w-3.5 h-3.5" />
                             {rq.length > 0
-                              ? <>Quoted <span className="font-bold text-gray-800">₹{r.lowest}</span></>
+                              ? <>Quoted <span className="font-bold text-gray-800">{show(r.lowest, `₹${r.lowest}`)}</span></>
                               : "Awaiting reply"}
                           </span>
                         ) : (
                           <>
                             <span className="inline-flex items-center gap-1"><MessageCircle className="w-3.5 h-3.5" /> {rq.length} quotes</span>
-                            <span>Lowest: <span className="font-bold text-gray-800">₹{r.lowest}</span></span>
+                            <span>Lowest: <span className="font-bold text-gray-800">{show(r.lowest, `₹${r.lowest}`)}</span></span>
                           </>
                         )}
                         <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {r.date}</span>
@@ -312,7 +314,7 @@ const MyQuotes = () => {
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <div className="rounded-xl border border-blue-100 bg-blue-50/50 p-3">
                   <p className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-500"><Award className="w-3.5 h-3.5" /> Best Price</p>
-                  <p className="text-base font-extrabold text-gray-900 mt-0.5">{best ? `${fmtMoney(best.currency, best.pricePerUnit)}/unit` : "—"}</p>
+                  <p className="text-base font-extrabold text-gray-900 mt-0.5">{best ? `${show(best.pricePerUnit, fmtMoney(best.currency, best.pricePerUnit), best.currency)}/unit` : "—"}</p>
                   <p className="text-[11px] text-gray-500 truncate">{best?.vendorName ?? "No quotes yet"}</p>
                 </div>
                 <div className="rounded-xl border border-amber-100 bg-amber-50/50 p-3">

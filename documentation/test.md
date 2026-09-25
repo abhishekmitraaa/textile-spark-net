@@ -14,13 +14,22 @@ Last updated: 2026-09-09
 | Spec | Covers | Accounts |
 |---|---|---|
 | `new-arrivals.spec.ts` | Buyer New Arrivals tabs render (>=5) and the active route's tab is marked selected | anon |
-| `faqs-admin-editable.spec.ts` | Admin-editable FAQs across both apps. **The real content first:** the 12 Help FAQs signed out, then Andy's 5 Subscription questions and his 10 Seller Registration questions in his order. It also checks that "Contact us" goes to `/help` (clicked through) and that a bulleted answer renders as lines. **Then the edit flow:** in Cosora-Admin (:5174), demo-admin adds, edits, moves up then back down, deactivates and deletes an FAQ on each surface, and the live page follows each step with no deploy. That's Buyer Help on `/profile/help` signed out, Subscription on `/subscription` as demo-vendor, and Seller Registration on `/seller` signed out. Each page must end exactly as it started. **Permissions:** demo-buyer and anon get 42501 from every `admin_faq_*` RPC, from a direct insert, and from reading `created_by`. **Mutating, self-cleaning:** the rows it creates start with `[P9TEST` and are deleted in `finally`. Needs both dev servers (`ADMIN_APP_URL` overrides :5174) | `demo-admin`, `demo-vendor`, `demo-buyer`, anon |
-| `buyer-settings.spec.ts` | The buyer sidebar's "Settings", clicked from `/notifications` (the buyer page that renders `DashboardSidebar`), lands on `/profile/settings`, not `/profile`. The page shows account and security content only, with the delete-account entry and no profile forms. "Download your data" and `/profile` → "Account & Security" work, and "My Profile" still goes to `/profile`. As demo-vendor (after switching to Seller, per MPF-13), Settings still goes to `/settings` | `demo-buyer`, `demo-vendor` (read-only) |
-| `profile-notifications-honesty.spec.ts` | `/profile/notifications` presents its switches as saved preferences. It checks the amber "aren't live yet" note, the "Saved for when…" subtitles, that no "Instant alerts" or "Get notified" copy remains, and that all 6 switches render with the newsletter switch showing the saved value | `demo-buyer` (read-only) |
-| `profile-regional-honesty.spec.ts` | Regional Settings on `/profile/regional-settings`. Choosing a currency other than ₹ INR, or a timezone other than IST, shows the amber "saved, but not used yet" note and an honest toast; the defaults show no note. It also checks the choice really is saved to `buyer_profiles.regional` | `demo-buyer` (**mutating, self-restoring**: snapshots and restores `regional`) |
+| `faqs-admin-editable.spec.ts` | Admin-editable FAQs across both apps. **The real content first:** the 12 Help FAQs signed out, then Andy's 5 Subscription questions and his 10 Seller Registration questions in his order. It also checks the Subscription "Contact us" link (`mailto:hello@cosora.in?subject=Subscription%20question` since Phase 24; it went to `/help` before) and that a bulleted answer renders as lines. **Then the edit flow:** in Cosora-Admin (:5174), demo-admin adds, edits, moves up then back down, deactivates and deletes an FAQ on each surface, and the live page follows each step with no deploy. That's Buyer Help on `/profile/help` signed out, Subscription on `/subscription` as demo-vendor, and Seller Registration on `/seller` signed out. Each page must end exactly as it started. **Permissions:** demo-buyer and anon get 42501 from every `admin_faq_*` RPC, from a direct insert, and from reading `created_by`. **Mutating, self-cleaning:** the rows it creates start with `[P9TEST` and are deleted in `finally`. **Since Phase 26, `finally` also compares every FAQ with a snapshot taken at the start, positions included, and moves back any row out of place.** Each move waits for its own `admin_faq_reorder` response. **Since Phase 23 its pages block the CDN snapshot URL and read the table**, so each step shows at once (the snapshot trails an edit by up to about a minute). Needs both dev servers (`ADMIN_APP_URL` overrides :5174) | `demo-admin`, `demo-vendor`, `demo-buyer`, anon |
+| `faqs-support-write.spec.ts` | Phase 22 (Phase 9 Q3): **support writes FAQs.** In Cosora-Admin as a support admin: no read-only banner, and on Buyer Help, Subscription and Seller Registration it adds, edits, moves up, moves down, deactivates and deletes an FAQ. Each `admin_faq_*` call the page makes must return 200 and is checked in the database: the creator is the support admin, anon reads the row while active and not after, and the swap lands. **product_moderator is still refused:** no FAQs in its nav, "Section not available for your role" on `/faqs`, and 42501 from all five RPCs aimed at a real row, which is unchanged afterwards. **Mutating, self-cleaning:** rows start with `[P22TEST`; `afterEach` deletes them, moves any reordered row back, and checks every FAQ against the start. Needs Cosora-Admin on :5174 only | run-only `rlstest-support` and `rlstest-productmod` (`FIXTURE_PASSWORD`; seed, then drop), `demo-admin` (snapshot and cleanup) |
+| `faqs-snapshot.spec.ts` | Phase 23 (Phase 9 Q2): the FAQ pages read the CDN snapshot. **1:** `/profile/help` and `/seller` signed out and `/subscription` as demo-vendor render the snapshot's questions in order, the snapshot matches the table, and there is **no** request to `/rest/v1/faqs`. **2:** the snapshot broken six ways (network error, HTTP 500, invalid JSON, version 2, another surface's file, a 4.5 s stall past the 3 s timeout) on each page: the page reads the table (200) and renders the same questions. **3:** prime the CDN, add an FAQ on Subscription as demo-admin, measure when the origin file changes, load the page fresh every few seconds until 4 loads in a row show it, then delete it and wait until no request gets it; each must land within max-age (300 s). Tracking RPCs are answered in the browser. Run 1 and 2 at least a minute after an FAQ edit | `demo-vendor`, `demo-admin` (test 3 adds and deletes one `[P23TEST` FAQ; `afterEach` removes leftovers). Buyer app on :8080 |
+| `faqs-seeded-content.spec.ts` | Phase 24 (Phase 9 Q4), read-only. The table's active Subscription and Seller Registration FAQs are exactly the lists the seeding migration produces, in order. `/subscription` signed out **and** as demo-vendor shows the 8 Subscription questions in order (Andy's 5, then autopay, payment methods, GST); "Contact us" is one link to `mailto:hello@cosora.in?subject=Subscription%20question` and not a question; "Lowest billing plan?" opens the Phase 9 answer. `/seller` signed out shows Andy's 10 in order. Tracking RPCs answered in the browser | anon, `demo-vendor` |
+| `buyer-settings.spec.ts` | The buyer sidebar's "Settings", clicked from `/notifications` (the buyer page that renders `DashboardSidebar`), lands on `/profile/settings`, not `/profile`. The page shows account and security content only, with the delete-account entry and no profile forms. "Download your data" and `/profile` → "Account & Security" work, and "My Profile" still goes to `/profile`. As demo-vendor, whose page load now starts on the seller side (MPF-13, fixed 2026-09-24), Settings goes to `/settings` | `demo-buyer`, `demo-vendor` (read-only) |
+| `profile-notifications-honesty.spec.ts` | `/profile/notifications` presents its switches as saved preferences: the amber "aren't live yet" note, the "Saved for when…" subtitles, no "Instant alerts" or "Get notified" copy, and all 6 switches with the newsletter switch showing the saved value. **Since MPF-12 (2026-09-25):** the `/profile` row says "Not live yet"; Vendor Settings shows the same note and subtitles, and 9 switches with saved values; the seller home's RFQ card points to Leads, with no "Set Alerts". All read `NOTIFICATION_DELIVERY_LIVE`, and setting it true fails the test | `demo-buyer`, `demo-vendor` (read-only) |
+| `profile-regional-honesty.spec.ts` | Regional Settings on `/profile/regional-settings`. Timezone: a zone other than IST shows the amber "saved, but not used yet" note and an honest toast. Currency (since Phase 20): USD shows the rate line ("Prices across Cosora show converted to USD at the …") and a display-only toast. The "Display only: vendors quote and are paid in ₹ INR" line shows whatever is picked, and the defaults show no other note. It also checks the choice is saved to `buyer_profiles.regional` | `demo-buyer` (**mutating, self-restoring**: snapshots and restores `regional`) |
+| `display-currency.spec.ts` | MPF-11 (Phase 20). As demo-buyer with no currency set, every line with "₹" on 11 buyer pages is captured. Then "$ USD" is picked in the real Regional Settings picker and the pages are captured again. Every line must be unchanged (the INR-by-design lines: the invented New Arrivals hero, service-vendor rates) or that line converted at the cached `fx_rates` rate, worked out independently in the test, marked "≈", optionally with the INR price beside it. There must be conversions on every product page. Also: the display-only note, Regional Settings' rate line, the drawer picker showing the same setting, a received quote "≈ $x (₹y)", and no `fx_rates` read for an INR buyer. Tracking and recently-viewed writes are answered in the browser | `demo-buyer` (**mutating, self-restoring**: `regional` put back exactly, in `afterEach`) |
 | `profile-edit-routes.spec.ts` | `/profile/edit` and `/profile/business-details` as real routes. Each is loaded straight from its URL, then hard-reloaded, and must render the buyer's real values, including the email and phone, which it reads through `my_contact_info()` (MPF-3). A save on each lands in `buyer_profiles` (read back from the database), and the second save keeps the first's change. It also checks the `/profile` entry points (Edit, camera, Business Details), that `?focus=city` focuses City, the signed-out prompt on both, and that the fake email "Verify" is gone | `demo-buyer` (**mutating, self-restoring**: snapshots and restores every column `saveProfileFull()` writes; `KEEP_EDIT_MARKERS=1` leaves them for a SQL check) |
+| `admin-deleted-status.spec.ts` | MPF-5, in Cosora-Admin (:5174, or `ADMIN_APP_URL`). No account is deleted, and `'deleted'` can't be undone, so the spec rewrites the admin's own `account_status` reads in the browser only: demo-buyer reads as deleted, demo-vendor as suspended, and demo-admin stays active. **Accounts:** the deleted row has a grey "deleted" badge and "View", not "Manage". Its card shows the deleted note, no Suspend or Reinstate button and no "What suspending actually stops", and the ledger still loads. The suspended and active rows and cards are unchanged. **Vendors:** the list shows "deleted", never "active"; the vendor page's card has no status button. Asserts that nothing called `set_account_status` | `demo-admin` (read-only). Needs Cosora-Admin's dev server |
+| `admin-log.spec.ts` | MPF-26, in Cosora-Admin (:5174). **super_admin:** signs in through the real login form, changes an FAQ answer and puts it back through `admin_faq_update`; `/admin-log` shows both changes (name, role, IST date and time, answer before → after) and the sign-in, and signing out adds a sign-out row; the database recorded exactly sign_in, update, update, sign_out. **Manager:** the Admin Log is in its nav and moderation sections aren't; the page lists entries; `/faqs` is not available. **product_moderator:** `/admin-log` not available, the RPC 42501. Writes two self-restoring FAQ edits, and log rows (permanent by design) | `demo-admin`, fixtures `rlstest-manager`, `rlstest-productmod` |
+| `role-on-load.spec.ts` | MPF-13 and MPF-22. The side a page load starts on, a database-backed `vendorRegistered`, and who may switch. **demo-vendor, nothing stored (its real row: never onboarded):** hard loads of `/seller-home` and `/notifications` show the seller sidebar with no switching, and Settings opens `/settings`. Switch to Buyer goes to `/onboarding` with "Finish your seller registration to use the buyer side", and the account stays on the seller side (MPF-22). **demo-vendor with the registration answered as complete:** Buyer stands in-app, Seller goes straight back to `/seller-home`, and a reload is seller. **demo-buyer with a completed registration on file** (answered in the browser): Seller → `/seller-home`, the hint is corrected to "true", it stays seller in-app, and a reload is buyer. **A stale "true" hint over the real row (false):** `/onboarding`, and the hint is corrected. **No vendor row:** `/onboarding` | `demo-vendor`, `demo-buyer` (read-only) |
+| `account-deletion-channel.spec.ts` | MPF-6 (Phase 18). "Delete my account" is worded for the channel the code goes to. **Email account:** unchanged ("Email me a code", "We sent a code to d****@…"). **Phone-only account** (a session user with a confirmed phone and no email): "Send code on WhatsApp", then "We've sent a code to your WhatsApp number +91 …". **Every non-success answer, per channel:** `not_configured` (WhatsApp and email), `no_contact` and the old `no_email`, `send_failed` (WhatsApp and email). **A code already sent:** the dialog opens on the code step, worded from the open request's `channel`. The function and the open-request read are answered in the browser | `demo-buyer` (read-only) |
+| `profile-save-diff.spec.ts` | MPF-9. A profile save writes only what changed. It records every write request to `profiles` and `buyer_profiles`. **Job title only:** one request carrying just `id` and `job_title`; both rows otherwise unchanged, and a NULL country stays NULL. **State cleared:** `{id, state: null}`, saved as NULL. Country shows "India" only as a placeholder. **Untouched form:** no request, and "No changes to save". **The sign-in step** (`applyPendingSignupProfile()`, imported from the dev server), MPF-20, with real metadata writes. Buyer: with a company saved, only the metadata request, `data: {brand_name: null}`, and the metadata exactly as before. If the write fails, the metadata is kept. With no company, `{id, company}` then the metadata. A company cleared afterwards stays cleared. Vendor: the same with `brand_name`. Contact details and metadata are compared, never printed | `demo-buyer`, `demo-vendor` (**mutating, self-restoring**: rows put back in full, and a pending `brand_name` removed; `KEEP_DIFF_MARKERS=1` keeps test 1's markers for a SQL check). Needs the dev server, not a build |
 | `profile-contact-privacy.spec.ts` | MPF-3. **Signed out, over HTTP:** both proof requests and 5 other routes to `profiles.email`/`phone` are refused 401/42501 with no count, and the other columns still read. **A 27-page sweep** as demo-buyer, demo-vendor and signed out: no `profiles` read or contact RPC is refused, and `/profile` and `/profile/edit` show the buyer's own email and phone. **A real Call Buyer click:** the number comes from `call_buyer_contact()` (200). With the buyer suspended, the database refuses it (403, `target_suspended`) and the page shows "Calling is unavailable". **Cosora-Admin:** Accounts finds demo-buyer by email and the suspension history names the admin; the Chats search, a thread and the review queue resolve people | `demo-buyer`, `demo-vendor`, `demo-admin`, anon (**mutating, self-restoring**: accepts one demo-vendor quote and suspends demo-buyer, then restores both; each run leaves a suspension-ledger row and two notifications). Needs Cosora-Admin on :5174 |
-| `profile-data-export.spec.ts` | Both Data & Export buttons on `/profile/data-export`, through the real downloads. Before clicking, it proves the buyer can see foreign rows under RLS (so a missing owner filter would fail rather than pass by luck). Then: every CSV and JSON row is owned by the buyer (quotes on its RFQs, messages in its conversations), counts equal its own rows, no foreign RFQ, review or product-review id appears anywhere in either file, no `embedding` column, and the chat-scope note is on screen | `demo-buyer` (read-only) |
+| `profile-data-export.spec.ts` | Both Data & Export buttons on `/profile/data-export`, through the real downloads. Before clicking, it proves the buyer can see foreign rows under RLS (so a missing owner filter would fail rather than pass by luck). Then: every CSV and JSON row is owned by the buyer (quotes on its RFQs, messages in its conversations), counts equal its own rows, no foreign RFQ, review or product-review id appears anywhere in either file, no `embedding` column, and the chat-scope note is on screen. **Phase 19 (MPF-8):** `vendors_contacted`, `vendors_messaged`, `saved`, `recently_viewed` and `following` equal demo-buyer's owner-filtered rows. The called vendor is contacted, messaged is a subset of contacted, and the counts match. An unlisted product has no name or link. Every product and vendor link opens the right page, in a signed-out context with every tracking call answered in the browser, so nothing is counted. **demo-admin**, whose RLS shows everyone's follows and calls, exports only its own | `demo-buyer` (creates 2 saves and a folder, removed in `afterEach`), `demo-admin` (read-only) |
 | `profile-calls-stat.spec.ts` | The `/profile` Calls stat is counted, not hardcoded. Three numbers must agree: the buyer's own `calls` rows (counted with a `buyer_id` filter), the rendered stat, and the rows `/chats?tab=calls` lists (a separate query). It refuses to pass on a buyer with 0 calls, because "0" is what the bug hardcoded | `demo-buyer` (read-only; needs call history) |
 | `profile-quotes-chats-stat.spec.ts` | MPF-1. The `/profile` Quotes and Chats stats count the user's own rows. For each account three numbers must agree: an independent owner count taken by a different route from the app's (the user's RFQ ids, then their quotes; conversation ids from separate `user_a` and `user_b` filters), the rendered stats, and the page each stat opens ("Total Quotes" on `/requirement/my-quotes`, "N Conversations" on `/chats`). It waits for the count responses first, because every cell shows 0 while loading. demo-admin is the account that can catch the bug: the test first asserts that RLS shows it more quotes and chats than it owns. demo-buyer keeps a non-zero case. The screenshots show the stats row only | `demo-admin`, `demo-buyer` (read-only) |
 | `mp12-sourcing-loop.spec.ts` | The core loop through the real UI, and the rules fixed around it. F1: a vendor quotes an open request on `/leads`, and the "N/10 leads used" counter equals `get_vendor_plan()` before and after (findings §2 regression). F2: the buyer accepts it in My Quotes. F3: at the cap, open requests show "Upgrade to quote" while a request addressed to the vendor is still answered and uses no lead. F4: a request closed while the vendor is replying is refused, with the reason on screen | `loadtest-buyer-1`, `loadtest-vendor-64`, `loadtest-vendor-3`; writes `[LOADTEST]` rows only. **Cannot run since 2026-09-23:** these accounts were deleted by the cleanup |
@@ -88,6 +97,11 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
+| `faq-write-gate-check.mjs` | Phase 22, read-only: who passes each `admin_faq_*` gate, over HTTP with real sign-ins. Calls that pass the gate but change nothing: add with an unknown surface (22023 = admitted), update, delete and reorder on an id that doesn't exist. Expected: super_admin and support pass all five; product_moderator, demo-buyer and anon get 42501 from all five. `--expect-before` checks the pre-Phase-22 state (support: list only). The two `rlstest-*` rows are skipped without `FIXTURE_PASSWORD` |
+| `quote-status-roles-check.mjs` | MPF-18, over HTTP as the real accounts, on a demo-vendor quote on a demo-buyer RFQ. The vendor gets 42501 for accepted, shortlisted and rejected; the buyer gets 42501 for the price, the comment and the vendor; the buyer can shortlist and accept; a vendor price rise on the accepted quote puts it back to pending. Mutating, self-restoring: it fails unless the quote ends as it started |
+| `engagement-event-failures-check.mjs` | MPF-23. Signed out, an event with a bad source still returns OK, and the failure is counted (`admin_engagement_event_failures`, as demo-admin) with this run's marker; an unknown vendor id stays quiet; demo-buyer and anon can't read the failures. Writes no event, but leaves one marked failure row: remove it with the SQL in its header |
+| `faq-snapshot-check.mjs` | Phase 23. Per surface: the origin file (cache-busting query) and the CDN copy match the table's active rows exactly, 200 JSON with `max-age=300`, only the public columns, version 1 with a matching count. A CDN copy behind the table is a note, not a failure (it can trail an edit by about a minute). Then anon and demo-buyer each try to upload a probe and to overwrite `buyer_help.json`: both must be refused |
+| `faq-cdn-propagation.mjs` | Phase 23: how long after an FAQ edit every request gets the new file. Each trial is a content-neutral admin edit (`admin_faq_update` with `p_active` unchanged: only `updated_at` moves, but the trigger rebuilds all three files). It measures the origin, the first new copy on the plain URL, and the last old one, across 3 files × 3 request styles every 2 s, until 5 clean rounds. `node scripts/faq-cdn-propagation.mjs [trials]` |
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
 | `bunny-config-check.mjs` | Whether Bunny is configured on the project, via `bunny-upload-url`'s `{"probe":true}` branch — answers `supabase secrets list` without a management token, and **creates no Bunny video**. Prints secret *names*, never values |
 | `bunny-e2e-check.mjs` | Phase 8 API layer, 20 assertions: slot minting (and that the response carries no API key), TUS upload, encode, that the chosen rendition is one Bunny actually built, hotlink protection both ways, the moderation trigger, and real deletion at Bunny confirmed via its API |
@@ -101,6 +115,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `loadtest-login-check.mjs` | Real password-grant logins for named `loadtest-*` accounts. Prints GoTrue's HTTP status, then does one authenticated own-profile read so a 200 proves a usable JWT |
 | `quote-rfq-open-check.mjs` | A quote needs an RFQ open to that vendor, 6 cases through the app's own upsert. Accepted: an active open RFQ, and an active request addressed to the vendor. Refused: a closed open RFQ, a closed addressed request, a request addressed to another vendor (`--other`), and re-submitting after the buyer closed. Prints each result against its expectation. Exit 1 on any mismatch |
 | `load/mint-tokens.mjs` → `load/marketplace.k6.js` → `load/analyze.mjs` | The k6 load harness: sign-ins outside k6, stepped VU levels running the app's own queries, then a per-level and per-endpoint summary. Its safety rules are in `technicalimplementation.md` → "Load testing". Needs the k6 binary. Tokens stay out of the repo |
+| `load/faq-read.k6.js` | Phase 23: the FAQ read path, anonymous and read-only. `MODE=cdn` fetches the snapshots as the browser does; `MODE=table` makes the fallback query. Arrival-rate steps (`RATES`, `STEP`, `GAP`), one scenario per level, and a per-level summary: requests, achieved req/s, failures, dropped iterations, p50/p95/p99/max, CDN hit %. The table mode aborts at p95 > 2 s or > 1% failures; the CDN mode at > 5% failures |
 | `cap-race-check.mjs` | Real concurrent HTTP inserts at a plan cap with one free slot (`--kind=product` or `--kind=quote`, `--n` at once, `--rounds`). Tops the vendor up to cap−1 with `[LOADTEST]` fillers, warms N connections, fires N inserts together, reports how many were accepted, then deletes them so the next round starts at cap−1. Exit 1 if any round accepted more than one. **The only instrument here that can show a race:** a single SQL session runs "concurrent" statements one after another |
 | `debug_page.cjs` / `debug_page.js` | Ad-hoc page debugging helpers, not assertions |
 
@@ -143,6 +158,701 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-25/26 — Flag-fix pass: MPF-12, 18, 22, 23, 25, 26, 27 fixed (six migrations rehearsed and applied, md5s match; quote roles 11/11; refused events 5/5; subscription smoke 3/3; specs 7/7 + mutation checks; regression 44/44)
+
+- **Migrations.** Each was rehearsed in one transaction ended by an exception (the migration
+  plus its tests), then applied. Each file's whitespace-insensitive md5 equals
+  `schema_migrations`.
+  - `20260925172634` (MPF-27): the alarm is quiet with the Vault secret; with the name
+    swapped for one that doesn't exist, both jobs raise their message and `fx` queues no
+    request; the sweep keeps its fallback.
+  - `20260925173024` (MPF-18): 20 cases as demo-vendor, demo-buyer, demo-admin and postgres.
+    The first rehearsal failed one case: the vendor raised the price of a quote the buyer had
+    accepted, and it stayed accepted. The trigger now resets revised terms to pending.
+  - `20260925173423` (MPF-23):
+    - as anon: a bad source twice counts 2; a bad event type gets its own row; an unknown
+      vendor stays quiet; failing calls write no event; a valid view writes one;
+    - readers: demo-admin 2, demo-buyer 42501, anon 42501, the table unreachable.
+    - The first rehearsal recorded nothing: a column named `sqlstate` fails inside a
+      PL/pgSQL exception handler, and the inner handler swallowed it. It was renamed
+      `error_code`.
+  - `20260925173658` (MPF-26 part 1): `manager` added to `admin_role_type`.
+  - `20260925174031` (MPF-26 part 2), 9 cases:
+    - an FAQ edit logged with its answer before and after;
+    - an admin viewing a product logs 0 rows, and a vendor editing its own product 0 rows;
+    - suspend and reinstate log `profiles.account_status` and both suspension rows;
+    - sign-in logged for an admin, not a non-admin;
+    - the recorder refuses an admin and admits the service role;
+    - the list admits super_admin and manager, and refuses support, a non-admin and anon;
+    - `admin_set_role` support → manager logged;
+    - UPDATE and DELETE refused.
+
+    After applying, a rolled-back run on the live triggers: an admin moderating a vendor's
+    product is logged with `own_row` false, and an admin who is also a vendor editing their
+    own product with `own_row` true.
+- **Live checks:**
+  - `scripts/quote-status-roles-check.mjs` 11/11, and the quote ended exactly as it started;
+  - `scripts/engagement-event-failures-check.mjs` 5/5. Its marker row: deleted with SQL after the System Health check, leaving 0 failure rows;
+  - MPF-25 smoke 3/3, nothing activated: `create-order` → `not_configured`,
+    `verify-payment` (free plan) → `bad_plan`, `webhook` → `not_configured`;
+  - `node scripts/gst-check.mjs` consistent.
+- **MPF-25 diffs.** All three deployed sources were fetched and compared with the repo history
+  before deploying. Each equals commit `40c4611` exactly, so the redeploy shipped the
+  `intent_failed` guard and the GST import only. `admin-invite` and `admin-refund-payment`
+  were also compared: invite is identical to HEAD, refund differs only by two em dashes in
+  error strings.
+- **Specs** (buyer app :8080, Cosora-Admin :5174):
+  - `profile-notifications-honesty` 2/2 and `role-on-load` 5/5.
+  - Mutation checks, each file restored with `cmp`: `NOTIFICATION_DELIVERY_LIVE` set true
+    makes the MPF-12 test fail; the HEAD `useSwitchRole` makes the MPF-22 test fail.
+  - `tests/admin-log.spec.ts` 3/3 in Cosora-Admin, with run-only fixtures. super_admin's real sign-in, two FAQ edits and sign-out were recorded in exactly that order (sign_in, update, update, sign_out), and the page shows each with the name, role, IST time and before → after. The manager sees the Admin Log and no moderation section. The product_moderator is refused in the panel and by the RPC (42501). With the `admin-log` section limited to super_admin, the manager test fails. Screenshots `mpf26-admin-log-faq.png`, `mpf26-admin-log-manager.png`.
+  - Phase 22 regression with the Admin Log trigger now on `faqs`: `faq-write-gate-check.mjs` 5/5 and `faqs-support-write.spec.ts` 2/2. Support's test writes and restores produced 24 Admin Log rows.
+- **Regression, 44/44 across 14 specs:**
+  - account-deletion-channel 4, admin-deleted-status 2, buyer-settings 2;
+  - faqs-admin-editable 1: its edits now also land in the Admin Log;
+  - faqs-seeded-content 2, profile-calls-stat 1;
+  - profile-contact-privacy 4: Call Buyer accepts a quote as the buyer, under the new
+    trigger;
+  - profile-data-export 3, profile-notifications-honesty 2, profile-quotes-chats-stat 2,
+    profile-save-diff 3, role-on-load 5, vendor-analytics 5, vendor-my-store 8.
+- **Analytics my runs wrote, found and fixed.** The regression's page visits wrote to production
+  between 19:20 and 19:30 UTC. The counters snapshot caught it: events 1,562 → 1,620.
+  - 58 events in all:
+    - demo-vendor 27 ad impressions, from my new `role-on-load` test landing on
+      `/home/new-arrivals` (three runs);
+    - demo-buyer 1 product view and 10 ad impressions, from the existing
+      `profile-contact-privacy` page sweep;
+    - signed out, 1 product view and 19 ad impressions, from the same spec.
+  - `products.views_count` +2, `advertisements.impressions` +61 (the counter is
+    frequency-capped, so it doesn't match the events one for one), and one `viewed_at`
+    refreshed in demo-buyer's recently viewed. Clicks were unchanged.
+  - Both specs now answer the tracking RPCs and `recently_viewed` writes in the browser.
+    `role-on-load`, `profile-contact-privacy` and `buyer-settings` were re-run, 11/11, and
+    every counter stayed exactly where it was.
+  - **Not reverted:** a decision for Mitra, added to `myprofileflags.md` open decision 1
+    alongside Phase 19's.
+- **Security advisors:** 146 findings.
+  - Expected:
+    - two "RLS enabled, no policy" for the new admin tables, where no client access is the
+      point;
+    - four "authenticated can execute" for the new definer RPCs, each gated inside.
+  - One real: `admin.audit_log_append_only()` had no pinned `search_path`. It was fixed by
+    `20260925201948_admin_audit_log_guard_search_path.sql` (rehearsed, applied, md5 matches;
+    the guard still refuses UPDATE).
+- **Checks:**
+  - buyer app `tsc -p tsconfig.app.json` 0, and Cosora-Admin `npm run typecheck` 0;
+  - eslint 0 on the changed files, including `Profile.tsx`;
+  - both builds exit 0, and 0 files in `dist/` hold a test password;
+  - the edited edge functions have no new `tsc` errors; `admin-invite` keeps its two
+    `grantAdmin` narrowing errors, the same as HEAD.
+- **Screenshots:** the re-rendered ones were restored from a backup. New:
+  `mpf12-vendor-settings-notifications.png`, `mpf22-switch-to-buyer-unregistered.png`
+  , `mpf23-system-health-refused-events.png`, `mpf26-admin-log-faq.png`, `mpf26-admin-log-manager.png`.
+- **Cleanup:** The three run-only fixtures (manager, support, product_moderator) were deleted. Their password was generated locally, and only its bcrypt hash was sent. That leaves 0 `rlstest-*` users or identities and 0 orphans; the admin roster is the same 3 super_admins, and there are 20 users. The fixtures' 24 Admin Log rows stay, because the log is append-only. 0 test FAQ rows remain, and the FAQ content md5s equal Phase 24's. The three quotes are pending at their original prices. The demo accounts are active, with 0 open suspensions and 0 locked chats. The temporary specs and the scratch credentials were removed.
+
+### 2026-09-25 — Phase 26: regression pass over Phases 11–25 (15 of 16 items re-confirmed live; item 11 never built; one break found and fixed; cleaned back to the baseline)
+
+- **One sitting, against production,** 08:17–09:18 UTC. The buyer app ran on :8080 and
+  Cosora-Admin on :5174.
+- **Four sessions:**
+  - demo-buyer (test buyer) and demo-vendor (test vendor);
+  - `rlstest-support` (support admin) and demo-admin (super_admin).
+
+  Also `rlstest-productmod` (item 12), and a throwaway buyer `zz-phase26-deltest@cosora.in`
+  (items 5, 6 and 8). The fixtures and the throwaway were created as postgres. Their passwords
+  were generated locally, and only bcrypt hashes were sent. All were deleted at the end.
+- **Baseline at 08:17:**
+  - counters: events 1,562, product views 84, ad impressions 2,940, ad clicks 133, recently
+    viewed 17, calls 10, notifications 79, RFQs 4, follows 11, FAQs 32;
+  - accounts: 20 users, 3 super_admins, 0 deletion requests;
+  - fingerprints of demo-buyer's, demo-vendor's and demo-admin's `profiles`,
+    `buyer_profiles` and `vendor_profiles` rows and their auth metadata.
+
+  **At 09:18 every counter and fingerprint was identical.**
+
+| # | Phase | What ran | Result |
+|---|---|---|---|
+| 1 | 11 | The two MPF-3 proof requests (anon key); `profile-contact-privacy-check.mjs` | 401 / 42501, no count; 24/24 |
+| 2 | 12 | As demo-buyer: direct INSERT, UPDATE and DELETE on `calls`; as anon: `log_call`. Call Now tapped twice on demo-vendor's profile (temporary spec) | All 42501. `logged`, then `rate_limited`; the number shown; 0 direct writes. The 1 row was deleted |
+| 3 | 13 | `profile-quotes-chats-stat` (demo-admin, a super_admin on the seller side, and demo-buyer); `profile-calls-stat` | 3/3 |
+| 4 | 14 | `profile-save-diff` | 3/3, fingerprints unchanged |
+| 5 | 15 | `admin-deleted-status` (status simulated in the browser). Then the throwaway, really deleted, searched by id in Cosora-Admin as super_admin and as support (temporary spec) | 2/2. Both roles: "deleted", "View", no Suspend or Reinstate, no `set_account_status` call (`p26-admin-deleted-super-admin.png`, `-support.png`) |
+| 6 | 16 | The full deletion flow on the throwaway (below) | Sweep 200 `{due 1, completed 1, storage_cleaned 1, errors 0}`; files, private rows and token window as below |
+| 7 | 17 | `role-on-load` | 4/4 |
+| 8 | 18 | The throwaway with a confirmed email, through the deployed function; then made phone-only (synthetic `910000026099`) and again; `account-deletion-channel` | `not_configured` / `email`, then `not_configured` / `whatsapp`, 0 request rows each time (no Meta setup, MPF-24); 4/4 |
+| 9 | 19 | `profile-data-export` | 3/3; 154 tracking calls answered in the browser |
+| 10 | 20 | `display-currency`, `profile-regional-honesty` | 2/2. USD converted on 9 pages, the drawer shows the same setting, and an INR buyer's lines are unchanged |
+| 11 | 21 | Trigger inventory on `rfqs`, `quotes`, `messages` and `conversations`; demo-vendor's notifications around the throwaway's RFQ | **Not built.** No trigger notifies about an RFQ, quote or message; the one that calls `notify()` is the moderation lock on flagged messages. Nothing reads the preference columns. 32 → 32 |
+| 12 | 22 | `faq-write-gate-check`; `faqs-support-write`; `faqs-admin-editable` | 5/5; 2/2; 1/1 |
+| 13 | 23 | `faq-snapshot-check`, before and after the writes; `faqs-snapshot` | 19/19 both times; 3/3. All 18 broken-snapshot cases fall back to the table; an edit showed on fresh loads at 5.3 s; a delete settled at 40.4 s |
+| 14 | 24 | `faqs-seeded-content` | 2/2: 10 Seller Registration and 8 Subscription questions (8, not 9, by the Phase 24 decision); Contact us is a mailto link |
+| 15 | 25 | The four ToDo entries | Present, each with all five fields |
+| 16 | — | tsc and build, both repos | 0 errors; builds exit 0 (see below) |
+
+- **Item 6, the deletion flow** (throwaway `29b3b9d1…`):
+  - **Seeded through its own session:** 2 avatar files (one saved as `avatar_url`), a saved
+    item, a folder with an item, a saved video, a video like, a follow of demo-vendor, a
+    recently viewed product, and an RFQ addressed to demo-vendor.
+  - **Code and confirmation:** a WhatsApp-channel code was issued by SQL, and its hash was
+    swapped for a locally made code, so the real code was never printed. A wrong code gave
+    `invalid`. The right one gave `scheduled`, 14 days out, with the code row gone and one
+    in-app notice.
+  - **The sweep:** `scheduled_for` was moved a minute back and a token was captured. Then cron
+    job 14's own command was fired. The permission system refused it at 08:24, and it ran at
+    09:16 with Mitra's go-ahead.
+  - **After:** the request is `completed`, with storage cleaned. The account is `deleted`,
+    "Deleted user", its auth email and phone scrubbed, banned, with 0 identities. Both avatar
+    files are gone (their URLs answer 400). All private rows are 0. The RFQ is kept, and the
+    video's like count is back to 1.
+  - **The pre-deletion token:**
+    - `profiles` and `buyer_profiles` UPDATE: 42501 "this account has been deleted";
+    - the RFQ UPDATE, saved-item INSERT and follow INSERT: 42501;
+    - the avatar upload: 403;
+    - the RFQ DELETE matched 0 rows, and the refresh token was refused.
+- **Item 7, second half:** "a fresh buyer switched to seller goes through onboarding once, then
+  freely". Test 3 reads a real unregistered account from the database and goes to
+  `/onboarding`. Test 2's "registered" state is answered in the browser. Completing a real
+  onboarding would write a signed contract, which no one can delete.
+- **Broke under the combined changes, and fixed.** After `faqs-admin-editable` ran, the
+  Subscription FAQ "How is GST handled?" sat at position 250 instead of 140.
+  - **Cause:** the spec's `adminMove` waited for "networkidle", which returns at once on a
+    loaded page. The next step's navigation cut off the "move back down" call.
+  - **Why the spec still passed:** it compared only the visible list, and since Phase 24 two
+    inactive rows (210, 240) sit between the old and new positions, so the list looked right.
+  - **Data:** moved back with `admin_faq_reorder` as demo-admin.
+  - **Spec:** each move now waits for its RPC response, and `finally` compares every FAQ with a
+    snapshot, positions included, and moves back anything out of place. Run twice: 1/1 both
+    times.
+  - **Checked afterwards:** all three surfaces' content md5s match the Phase 24 capture for
+    Subscription and Seller Registration, Buyer Help's positions match Phase 25's reading, and
+    0 test rows are left.
+- **Type checks:**
+  - At the buyer repo root, `npx tsc --noEmit --skipLibCheck` (the brief's command) exits 0 but
+    **checks nothing**: with a type error injected it still reported 0.
+  - `npx tsc --noEmit --skipLibCheck -p tsconfig.app.json` caught the error (1), and is 0
+    without it.
+  - Cosora-Admin's `tsc` catches it.
+  - Both builds exit 0, with only the chunk-size warning. 0 files in `dist/` contain a `.env`
+    test password. ESLint on the changed spec: 0.
+- **Screenshots:** both repos were backed up first. The 15 re-rendered ones were restored byte
+  for byte. The two `p26-admin-deleted-*.png` are new.
+- **Cleanup:**
+  - the throwaway and both fixtures are deleted: users, identities, profiles, `admin_users`;
+  - 0 orphans; the throwaway's RFQ and request rows are gone;
+  - the admin roster is the same 3 super_admins;
+  - the Call Now row was deleted; the temporary spec and scratch credentials were removed.
+
+### 2026-09-25 — Phase 24: FAQ content codified by migration (both rehearsals rolled back; applied, no live row changed; spec 2/2; Phase 9 spec 1/1)
+
+- **Ground truth, over the API** (demo-admin's `admin_faq_list`; `subscription_plans`, which is public):
+  - Andy's 10 Seller Registration and 5 Subscription questions were already live, added by
+    demo-admin on 2026-09-23.
+  - The 5 rows `20260923144549` seeded are at 120–140 (live) and 210/240 (off). Their text is
+    identical to that migration's.
+  - Plan prices match both the brief's wording and the kept answer: Basic ₹699/₹6,990, 150
+    leads, 10 listings, the verified badge; Free 10 leads and 2 listings.
+- **Generated, not typed:** the migration's 20 texts come from the live rows, and none
+  contains the `$q$` quote marker.
+- **Rehearsal A, on live, rolled back:** the self-check passed. 0 rows differ from live, 0
+  touched (`updated_at` unchanged), 0 added.
+- **Rehearsal B, from a simulated fresh database, rolled back:** the table was set back to
+  what `20260923144549` left (no Seller Registration rows; the 5 seeded Subscription rows
+  active at 10–50), then the migration ran. 0 rows differ from live; 8 active Subscription,
+  10 Seller Registration.
+- **Applied** as `20260925075432`:
+  - whitespace-insensitive md5 `fa73f7ea…` matches the file;
+  - both surfaces' fingerprints (ids, text, positions, active, `updated_at`) are identical
+    before and after (`a798196b…`, `73cd99a6…`);
+  - the statements fired one snapshot rebuild (200, 12/10/8 rows).
+- **`tests/faqs-seeded-content.spec.ts`, 2/2,** before and after the apply:
+  - `/subscription` signed out and as demo-vendor: 8 questions in order, "Contact us" →
+    `mailto:hello@cosora.in?subject=Subscription%20question`, and the Phase 9 "Lowest
+    billing plan?" answer;
+  - `/seller` signed out: Andy's 10 in order.
+  - The first run's `/seller` test timed out waiting for `networkidle`, because the landing
+    page keeps media requests going. It now waits for the DOM and then for the list itself.
+  - Screenshots: `p24-subscription-faq-vendor.png`, `p24-seller-faq.png`.
+- **`faqs-admin-editable.spec.ts` 1/1** after its "Contact us" check became the mailto href
+  (a mailto link isn't clicked in the test).
+- **Checks:** tsc 0, eslint 0 on the changed files; secret scan 0.
+
+### 2026-09-24 — Phase 23: FAQ read path on the Storage CDN (rehearsal rolled back; harness 6/6; spec 3/3; propagation 3 trials; check 19/19; k6 CDN + table)
+
+- **Ground truth before building:**
+  - `useFaqs()` used the app-wide 60 s `staleTime`.
+  - Every storage write policy is pinned to its own bucket.
+  - The org is on the Free plan, and the Vault key exists.
+  - The files would be 4.4, 3.0 and 2.4 KB, and 1.9 KB on the wire gzipped.
+  - The previous k6 run's PostgREST ceiling was ~128 req/s.
+- **Rehearsal, rolled back:**
+  - The first attempt failed in its own self-check: a loop variable `p` shadowed the `pg_proc p` alias. Renamed.
+  - The second passed. 3 writes in one transaction queued exactly 1 call to `faqs-snapshot`, which confirms the per-transaction flag outlives the definer function's own settings.
+  - Afterwards: no bucket, trigger, function or cron job left.
+- **Applied** as `20260924174051`; whitespace-insensitive md5 `7e1f04e7…` matches.
+- **Function:**
+  - v1 deployed, then v2 (a comment-only correction). A v2 smoke call returned 200 with 12/10/8 rows.
+  - Seed call 200 (12/10/8). The 18:17 cron run: `succeeded`, and the function answered 200.
+  - Local harness 6/6: anon and authenticated JWTs get 403; the service role writes three files, reading with the anon key (active rows only, no `created_by`), `max-age=300`, upsert; an empty surface gets `rows: []`; an edit mid-upload triggers a second pass; still changing after 3 passes → 409; a failed read → 502 with nothing uploaded.
+- **Headers:** `Cache-Control: public, max-age=300`, gzip, CORS `*`, **`x-smart-cdn: true`**, and no `Age`.
+- **The CDN ignores client cache headers:** requests with no header, `max-age=0`, `no-cache` and `Pragma: no-cache` all got HIT. So `cache: "no-cache"` in the browser never reaches the origin.
+- **`tests/faqs-snapshot.spec.ts`, 3/3** in one run (3.3 min):
+  - **Test 1:** 12, 10 and 8 questions from the snapshot (200), 0 table requests.
+  - **Test 2:** all 18 fallbacks read the table (200) and rendered the same questions (after raising its timeout from the default 60 s: 18 page loads, six with a deliberate 4.5 s stall).
+  - **Test 3:** origin 2.7 s. Fresh page loads at 5.1, 11.3, 16.8 and 22.4 s all showed the edit. After the delete, the last request still serving it was at +28.6 s, settled at +43 s. An earlier run: origin 1.9 s, first page 7.5 s, last stale after the delete +50.1 s.
+  - Screenshots: `p23-help-from-snapshot.png`, `p23-help-fallback.png`, `p23-subscription-after-edit.png`.
+- **The first version of test 3 failed, and that is how Smart CDN was found:**
+  - It waited for this machine's CDN copy to be refilled, expecting max-age expiry. It saw HIT for over 6 minutes.
+  - It added an FAQ and expected a fresh page load to still show the old list. The page already showed the new question.
+  - Headers then showed `x-smart-cdn: true`, and one request variant 42 s after a delete still got the previous version. The test was rewritten on the measured model.
+- **`scripts/faq-cdn-propagation.mjs`, 3 trials** (content-neutral admin edits):
+
+  | trial | origin | first new | last old | old responses |
+  |---|---|---|---|---|
+  | 1 | 2.8 s | 3.7 s | 46.5 s | 81 of 234 |
+  | 2 | 1.9 s | 3.0 s | 46.8 s | 83 of 234 |
+  | 3 | 2.8 s | 4.6 s | 45.9 s | 87 of 225 |
+
+  All primed as HIT with `x-smart-cdn: true`. The no-op updates moved one Subscription FAQ's `updated_at` (Cosora-Admin shows today's date on it). Nothing else changed.
+- **`scripts/faq-snapshot-check.mjs` 19/19:** origin and CDN match the table on all three files, the headers, public columns only, version 1. Anon and demo-buyer upload and overwrite attempts are refused ("new row violates row-level security policy").
+- **k6 v2.3.0** (official Windows zip, SHA-256 checked, run from the scratchpad), `scripts/load/faq-read.k6.js`:
+
+  CDN, 20 s per level, from one machine on the Mumbai edge:
+
+  | target | achieved | failed | dropped | p50 | p95 | p99 | max | CDN hits |
+  |---|---|---|---|---|---|---|---|---|
+  | 250/s | 246.3/s | 0% | 75 | 95 ms | 165 ms | 976 ms | 5.2 s | 100% |
+  | 500/s | 496.4/s | 0% | 74 | 100 ms | 256 ms | 504 ms | 1.1 s | 99.98% |
+  | 1,000/s | 939.8/s | 0.01% | 1,200 | 433 ms | 1.7 s | 3.1 s | 18.3 s | 99.99% |
+  | 2,000/s | 833.9/s | 0.98% | 22,678 | 1.45 s | 12.0 s | 19.9 s | 27.7 s | 99.01% |
+
+  50,327 requests, 125 MB received.
+  - **Server side** (edge logs, the same window): 50,384 × 200 cache HIT at BOM, averaging 14.8 ms, 5 MISS (the 18:17 hourly rebuild landed mid-run), no errors. 191 Storage-origin log lines, 2 PostgREST.
+  - So the failures and dropped iterations above ~900 req/s never reached the edge: they were this machine's own connection errors ("http2: client conn could not be established", "unexpected EOF"). The ceiling is the load generator's.
+
+  Table (the fallback), capped, production:
+
+  | target | achieved | failed | p50 | p95 | p99 |
+  |---|---|---|---|---|---|
+  | 25/s | 25.1/s | 0% | 329 ms | 361 ms | 790 ms |
+  | 50/s | 49.9/s | 0% | 328 ms | 361 ms | 786 ms |
+  | 100/s | 99/s | 0% | 325 ms | 363 ms | 793 ms |
+  | 150/s | 149.3/s | 0% | 324 ms | 358 ms | 777 ms |
+
+  6,465 requests; the edge logged 6,428 × 200 for `/rest/v1/faqs`, and `postgrest_logs` shows no PGRST003. It wasn't pushed to saturation on purpose: that pool serves the whole app.
+- **Regression:** `faqs-admin-editable.spec.ts` 1/1, its pages on the table. Its 18 writes each fired the trigger, and all 18 rebuilds returned 200.
+- **Analytics:**
+  - Unchanged through every FAQ spec and script run until the regression run: events 1460, views 82, impressions 2856.
+  - During that run they moved by one signed-out browser session (a single session id) over 2.5 min: 82 ad impressions, a search, a search click and a product view. The specs open each page in a fresh context and never search; the same spec left every counter unchanged in Phase 22. So it was a real visitor at the same time, not the test.
+  - `faqs` md5 `1ba4d16f…` unchanged; 0 test rows.
+- **Checks:** tsc 0 (both apps), eslint 0. Security advisors: 139, unchanged, 0 at ERROR level; nothing mentions the new trigger function or bucket.
+
+### 2026-09-24 — Phase 22: support writes FAQs (rehearsals rolled back; gate check before and after; spec 2/2, fails with the old `roles.ts`; super_admin regression 1/1; fixtures dropped to 0)
+
+- **Accounts:** `rlstest-support` (support) and `rlstest-productmod` (product_moderator),
+  created for this run the way `cosora-admin/scripts/seed-test-admins.sql` does it. The
+  password was a throwaway generated locally, and only its bcrypt hash was sent to the
+  database. Also demo-admin (super_admin) and demo-buyer.
+- **Before the migration:**
+  - `node scripts/faq-write-gate-check.mjs --expect-before` 5/5: support listed 32 rows and got
+    42501 from add, update, delete and reorder; product_moderator, demo-buyer and anon got
+    42501 from all five.
+  - The admin page as support: the read-only banner ("Changes here require Super admin"),
+    "Add FAQ" disabled and 12 "Edit" buttons disabled (`screenshots/p22-support-faqs-before.png`).
+  - A rolled-back role matrix in SQL (each role set in `admin.admin_users` on a fixture, then
+    calls as `authenticated`): super_admin wrote; support listed only; product_moderator,
+    vendor_ops, ads_moderator, finance_admin, an inactive support admin and a non-admin got
+    42501 from all five.
+- **Rehearsal, rolled back:** the migration, then a check that undoing the gate and message on
+  each new definition gives back the old one exactly, then the matrix. Support and
+  super_admin: add, update (deactivating), reorder, delete and list all ok. The other six
+  callers: 42501 from all five. After the rollback, all five md5s were the old ones.
+- **Applied** as `20260924170736`. The file's whitespace-insensitive md5 matches the live
+  record (`8e97c92b…`). The same undo check on the live definitions matched the old md5s, and
+  `admin_faq_list`'s md5 is unchanged (`eb9765c3…`).
+- **After:** `faq-write-gate-check.mjs` 5/5: support passes all five gates (add → 22023,
+  update/delete/reorder → 0 rows); product_moderator, demo-buyer and anon → 42501 from all five.
+- **`tests/faqs-support-write.spec.ts`, 2/2** (new; see the table):
+  - support, on all three surfaces: every add, edit, move up, move down, deactivate and delete
+    returned 200 from the page's own call and was checked in the database;
+  - product_moderator: no FAQs in the nav, "Section not available" on `/faqs`
+    (`screenshots/p22-productmod-faqs-refused.png`), 42501 from all five RPCs on the first
+    Subscription FAQ, which is unchanged;
+  - `afterEach` matched every FAQ with the start both times;
+  - the first run failed on a race: a move-up was read before its call had finished.
+    `waitForLoadState("networkidle")` returns at once on a page that has already loaded. Each
+    write now waits for its own RPC response.
+- **Mutation check:** `SECTION_WRITE.faqs` put back to `["super_admin"]` in Cosora-Admin, and
+  the support test failed at "no read-only banner" (found 1). Restored; `roles.ts`'s diff is
+  as before.
+- **Regression:** `tests/faqs-admin-editable.spec.ts` (demo-admin, both apps) 1/1.
+- **Nothing else moved:** engagement events 1460, product views 82, ad impressions 2856, ad
+  clicks 133, recently viewed 17, and `faqs` 32 rows with md5 `1ba4d16f…`, the same before and
+  after the regression run. 0 `[P22` or `[P9TEST` rows.
+- **Cleanup:** both fixtures deleted (admin_users, profiles, identities, users): 0 left, 0
+  orphaned admin rows, and `admin.admin_users` is the same 3 active super_admins.
+- **Checks:** tsc 0 (buyer app, `tsconfig.app.json`; Cosora-Admin `npm run typecheck`), eslint 0
+  on the new spec and script. Security advisors: 139, the same total as before, none at ERROR
+  level. The five `admin_faq_*` functions appear only under "authenticated can execute a
+  definer function", as since Phase 9, and none under anon.
+
+### 2026-09-24 — Phase 20: MPF-11 fixed (INR byte-identical 239/239; USD spec 1/1; forced + scheduled FX refresh; GST check 30/30 and harness 12/12; MPF-25 found)
+
+- **Read first:**
+  - no FX integration anywhere in the repo (a repo-wide search found only "conversion rate"
+    analytics copy);
+  - the picker lists ₹ INR, $ USD, € EUR and £ GBP;
+  - `formatINR` is used only on vendor billing pages;
+  - every live product and quote is in "₹";
+  - of 7 `buyer_profiles`, one has `regional.currency` "₹ INR" and six (demo-buyer among them)
+    have it unset;
+  - GST: three copies of `Math.round(base * 0.18)` in the subscription functions; the client
+    never computes it.
+- **INR baseline** (a temporary spec, deleted): every line with "₹" on 11 buyer pages as
+  demo-buyer, captured twice before any display change. The two captures were identical
+  (239 lines).
+- **Migration `20260924161525`,** rehearsed rolled back (the self-check covers the cron job,
+  public read, no client writes, and an INR-only base), then applied. Its whitespace-insensitive
+  md5 equals the live one (`aff62040…`).
+- **`fx-rates-refresh`:** local harness (Deno shim, real Frankfurter plus fakes) 6/6:
+  - anon and authenticated get 403;
+  - the v1 cross rates equal the ECB's INR rates within v1's own rounding;
+  - a second run advances `updated_at` with `changed: false`;
+  - v1 down → the v2 fallback;
+  - both sources down → 502, row untouched;
+  - a nonsense rate is rejected.
+
+  Deployed as v1.
+- **Forced refresh** (`execute` of the cron job's own command) into an empty table: one row,
+  ECB 24 Sep, 1 INR = 0.010421031 USD / 0.0091677935 EUR / 0.007883019 GBP, `changed: true`.
+  The scheduled job then ran at 16:30:00 UTC: succeeded, `updated_at` 16:17:21 → 16:30:02, same
+  rates, `changed: false` (the ECB publishes once per working day).
+- **After the display change, INR again:** 239/239 lines identical to the baseline, on all 11
+  pages.
+- **`tests/display-currency.spec.ts`**, **1/1** (run twice: before and after moving Regional
+  Settings back to its own save path).
+  - New Arrivals 38 converted, 8 left in INR (the invented hero);
+  - Trends 10; Sale 32; Following 62; search 33; product page 26; vendor profile 12;
+    recently viewed 7; My Quotes 4; services 0 converted, 7 left in INR (static rates);
+    For You shows no prices;
+  - a received quote "≈ $x (₹y)" checked arithmetically;
+  - an INR buyer made 0 `fx_rates` requests.
+  - The counters were the same before and after (events 1,460, views 82, impressions 2,856,
+    recently viewed 17), and demo-buyer's `regional` is back to NULL (md5 `7df10…`).
+- **A race found and removed during the build:** Regional Settings' currency save briefly
+  merged the server's copy while the timezone save merged the page's. A quick
+  currency-then-timezone change could have overwritten one of them. The page saves currency
+  with its own regional fields again; the drawer uses `useCurrencySetting`.
+- **Regression:** `profile-regional-honesty` (updated to the new copy) 1/1, buyer-settings 2/2,
+  tsc 0. ESLint: every finding predates this phase, except the new context's fast-refresh
+  warning, the same as `UserRoleContext`'s.
+- **GST:**
+  - `node scripts/gst-check.mjs` 30/30: every plan and cycle, ₹0–₹1,00,000, the x.5 edges, and
+    no function keeping its own copy;
+  - with `subscription-webhook` put back to its committed inline copy, 2 checks fail;
+  - old (HEAD) vs refactored `subscription-create-order` and `-verify-payment`, Deno shim with
+    fake PostgREST and Razorpay: 12/12 with an identical response and writes (e.g. Basic
+    monthly 82,500 paise, invoice GST ₹126).
+- **Not redeployed:** the three subscription functions (MPF-25). Their repo files all changed
+  after their last deploy (16 Jul).
+
+### 2026-09-24 — Phase 19: MPF-8 fixed (spec 3/3; both new tests fail on the old code, the admin test fails without the owner filters; a link-check side effect awaiting cleanup)
+
+- **Read first:**
+  - routes `/product/:id` and `/vendor/:id` (`App.tsx`, and what the app's cards link to);
+  - the tables' columns and primary keys;
+  - `saved_folder_items` has no owner column;
+  - `calls` holds only `outgoing` rows, from buyer to vendor;
+  - RLS: `saved_*` and `recently_viewed` are owner-only; `follows_select` and `calls_select`
+    also admit admins; `products_select` admits `live` only.
+  - Data:
+    - demo-buyer: 2 calls (to demo-vendor), 1 conversation with a message it sent, 4 follows,
+      7 recently viewed (one not live), no saves;
+    - nobody had saves;
+    - demo-admin (super_admin): no follows or calls of its own.
+- **`tests/profile-data-export.spec.ts`**, two new tests:
+  - demo-buyer's sections;
+  - demo-admin's scoping.
+- **Run 1:** the new demo-buyer test timed out (60 s) while opening links. The timeout cut its
+  `finally` short, which left 2 saves and the test folder. They were removed by SQL (exactly
+  those: demo-buyer had none before, and the folder carries the test's name). Cleanup moved
+  to `afterEach`, which runs after a timeout, and the test got 240 s.
+- **Run 3: 3/3.**
+  - Counts:
+    `{vendors_contacted 1, vendors_messaged 1, saved_items 2, saved_folders 1,
+    saved_folder_items 1, recently_viewed 8, following 4}`.
+  - 7 product links and 4 vendor links opened.
+  - Admin: 0 following against 11 foreign follows visible; 0 vendors contacted against 10
+    foreign calls visible.
+- **The link check wrote to production in runs 1 and 3**, because it opened the pages signed
+  in as demo-buyer. Between 22:06 and 22:11 UTC:
+  - 14 `product_view` and 140 `ad_impression` events (viewer demo-buyer);
+  - `products.views_count` +2 on each of the 7 opened products (`increment_product_view` is
+    unthrottled);
+  - `advertisements.impressions` up to +140. `ad_impression()` is frequency-capped and
+    throttled, so the exact increase isn't recoverable;
+  - demo-buyer's recently viewed: one row added (one of the two saved products; which one
+    can't be told) and 7 rows' `viewed_at` refreshed.
+
+  **Not reverted:** a decision for Mitra.
+- **Fixed in the spec:** links now open in a **signed-out** context, and the six tracking RPCs
+  are answered in the browser: `log_engagement_event`, `ad_impression`, `ad_click`,
+  `increment_product_view`, `increment_video_view` and `increment_product_enquiry`.
+  - Re-run: **3/3**, with **154 tracking calls answered in the browser**, which matches the
+    14 + 140 above.
+  - Snapshot before and after: events 1,435 = 1,435, `views_count` 81 = 81, ad impressions
+    2,832 = 2,832, clicks 133 = 133, recently viewed 17 = 17, saves 0 = 0.
+- **Mutations** (each file restored and checked with `cmp`):
+  - the committed `dataExport.ts`: both new tests **fail** (`vendors_contacted` undefined);
+    `afterEach` still removed the saves;
+  - the `calls` and `follows` owner filters removed: the admin test **fails**, with 9 foreign
+    vendors in `following`.
+- **Regression:** buyer-settings 2/2; tsc 0. ESLint on the spec: the one error is the existing
+  BOM-regex line from Phase 3, also in the committed file.
+- **Screenshot:** `profile-data-export.png` was re-rendered with the new subtitle.
+
+### 2026-09-24 — Phase 18: MPF-6 fixed, WhatsApp dormant (database tests rolled back; harness 10/10; live throwaway; spec 4/4, the 3 WhatsApp tests fail on the old code; cleaned to 0)
+
+- **Read first:**
+  - of 20 real accounts, 0 have a phone on `auth.users` and 3 have an unconfirmed email;
+  - 0 deletion requests existed;
+  - the deployed function (v1) answered `{"configured":false}`;
+  - the repo records no Meta Business account (`messaging.ts`, `ToDo.md`), so step 1's stop
+    applied and the decision was asked (build it, WhatsApp dormant).
+- **Migration `20260923213225`, rehearsed rolled back** (the migration plus the tests in one
+  transaction, ended by an exception), then applied.
+  - The first rehearsal's self-check was wrong, not the function: demo-buyer has a vendor
+    row, so it is blocked (`vendor`). It was replaced by a check over every account: whoever
+    the old rule accepted on email still gets email first, and no one else does.
+  - Whitespace-insensitive md5 of the file = `schema_migrations` (`3ca8de95…`).
+- **Database tests** (`scratchpad/phase18_tests.sql`), synthetic accounts, rolled back, run
+  in the rehearsal and again after applying: **10 groups passed**.
+  - Eligibility and channels:
+    - phone-only → `whatsapp`; email-only → `email`; both → `email`;
+    - neither → `no_contact`;
+    - a `.invalid` placeholder with a confirmed phone → `whatsapp`;
+    - an unknown id → `not_found`.
+  - `not_configured` names the channel and opens nothing, for no channels, NULL and the
+    other channel alike.
+  - A phone-only account:
+    - gets a code on WhatsApp, with the destination its phone;
+    - a wrong code as itself → `invalid`; the right one → `scheduled`;
+    - then `already_scheduled`.
+  - An email account: `rate_limited` as before.
+  - Channel changes:
+    - both → email; the email unconfirmed → a `not_configured` answer closes nothing, and a
+      deliverable request cancels the email one and opens a WhatsApp one;
+    - a WhatsApp request keeps its channel after an email is confirmed (same request,
+      `codes_sent` 2).
+  - A `channel` of `sms` is refused (check violation).
+  - Grants: the app can SELECT `channel`, can't UPDATE it, and can't mint.
+- **Edge function, locally** (`scratchpad/phase18_edge_harness.mjs`: Node with a Deno shim;
+  PostgREST, Resend and Graph API faked), **10/10**:
+  - `status` per channel (a token alone isn't enough);
+  - 401 without a user;
+  - `p_channels` passed as configured;
+  - the exact Cloud API request: v25.0, the copy-code template, the code in the body and
+    the button, the number reduced to digits, the reply masked `+91 *******210`, and the
+    code not in the response;
+  - the secret overrides;
+  - a missing template, a bad token and a 500 each discard the code and pass Meta's reason on;
+  - the **email send is byte-identical to the committed v1's**, in success and failure;
+  - reasons and RPC errors pass through.
+
+  Deployed as **v2** right after the migration. The live `status` answers
+  `{"configured":{"email":false,"whatsapp":false}}`, and the anon key → 401.
+- **Live, throwaway account** `60692300…`, created as postgres (GoTrue token columns `''`,
+  email identity). Only the bcrypt hash went into SQL; the password and session stayed in
+  scratch files, deleted after.
+  - **With a confirmed email:** the deployed function → `{"status":"not_configured",
+    "channel":"email"}`, 0 request rows.
+  - **Made phone-only** (email null; a confirmed phone, `910000018099`, synthetic and not a
+    valid Indian mobile; the session refreshed): → `{"status":"not_configured",
+    "channel":"whatsapp"}`, 0 request rows.
+  - **In the app (temporary spec, deleted):** the WhatsApp wording, the real answer's copy
+    (`mpf6-whatsapp-not-configured.png`).
+  - Then a WhatsApp-channel code was issued by SQL, in place of Meta. Its hash was replaced
+    with a known test code, and the real one was never printed.
+    - The dialog opened on the code step: "We've sent a code to your WhatsApp number"
+      (`mpf6-whatsapp-code-step.png`).
+    - A wrong code → "That code isn't right"; the right one → `/profile` with the scheduled
+      banner.
+    - In the database: `cooling_off`, `channel` `whatsapp`, 14 days out, code row gone, one
+      in-app notice.
+  - **Cleanup:** the auth user was deleted. Every count is 0 (users, identities, sessions,
+    profiles, buyer_profiles, requests, code rows, notifications, `zz-phase18` leftovers).
+    Real users are back to 20.
+- **`tests/account-deletion-channel.spec.ts`** (new): **4/4**.
+  - **Against the old app code** (`git show HEAD:` for `accountDeletion.ts` and
+    `DeleteAccountCard.tsx`): the email test **passed**, so its wording is unchanged, and
+    the 3 WhatsApp tests **failed**. The files were restored.
+  - `mpf6-whatsapp-code-sent.png` is from this spec (mocked "sent").
+- **Regression:** buyer-settings 2/2 (the same card on `/profile/settings`); tsc 0; eslint 0.
+- **Security advisors:** no finding names `account_deletion_channels` or the new
+  `issue_account_deletion_code`. The only deletion entries are Phase 2's intended ones:
+  `account_deletion_otps` has no policy, and confirm/cancel are callable by signed-in users.
+- **Not verified:** a real WhatsApp message arriving (MPF-24).
+
+### 2026-09-24 — Phase 17: MPF-13 closed (spec 4/4, all 4 fail on the old file; regression 17/17)
+
+- **Data read first:** seller-role accounts by `onboarding_complete`.
+  - 3 have it true, 6 false (demo-vendor and the five seeded vendors), and 4 have no vendor
+    row.
+  - No buyer-role account has a completed registration.
+  - `active_role` only allows `buyer` and `seller`.
+  - This is what the Phase 17 decision and MPF-22 rest on.
+- **`tests/role-on-load.spec.ts`** (new), dev server on :8080: **4/4** on the first run.
+- **Against the old `UserRoleContext.tsx`** (`git show HEAD:…`): all 4 **failed**.
+  - Test 1: "hard load of /seller-home: the seller sidebar" was not found; it showed the
+    buyer sidebar.
+  - Tests 2–4 timed out waiting for the registration read, which the old code never makes.
+
+  The fix was restored byte for byte (`cmp`).
+- **Regression:**
+  - `buyer-settings` 2/2, with the vendor case no longer switching first;
+  - `vendor-analytics` 5/5 and `vendor-my-store` 8/8;
+  - `profile-contact-privacy`, the page sweep and Call Buyer, 2/2. Call Buyer was included by
+    the filter. It is self-restoring: demo-buyer is active with no open suspension, and its
+    demo-vendor quotes are pending again;
+  - tsc 0. ESLint shows one warning, the same `react-refresh/only-export-components` warning
+    the original file had (the `useUserRole` export).
+- **Screenshots:**
+  - The vendor-page screenshots re-rendered by `vendor-analytics` and `vendor-my-store` were
+    **kept**. The committed ones showed the buyer menu on demo-vendor's pages, which was this
+    bug.
+  - `mpf13-vendor-hard-load.png` is new.
+  - `buyer-settings.png` was restored.
+
+### 2026-09-24 — Phase 16: MPF-7 closed (throwaway buyer end to end; stale token refused after the gate; regression 9/9 + 7/7; cleaned to 0)
+
+- **Before building:**
+  - listed every FK into `profiles`, `buyer_profiles` and `auth.users`;
+  - listed every UPDATE, FOR ALL and DELETE policy using `auth.uid()`, and the own-folder
+    storage policies;
+  - checked the embedding-worker cron shape and that the Vault secret exists.
+- **Edge function `account-deletion-sweep`** deployed (`verify_jwt = true`), and the deployed
+  source matches the repo file. No auth → 401, the anon key → 403, and a service-role call
+  with no work → 200 with all zeros.
+- **Migration `20260923200739`:** rehearsed rolled back first (self-check passed), then
+  applied.
+  - **A throwaway buyer** (`e7492f53…`, created as postgres, the way Phase 2 did) was seeded
+    through its own session:
+    - two avatar files, one saved as `avatar_url` and one never saved;
+    - a saved item, a saved folder with an item, a saved video, a video like and a follow of
+      demo-vendor;
+    - a recently-viewed product and a product-view event;
+    - an RFQ addressed to demo-vendor, and a review of demo-vendor.
+  - **The deletion flow:** code issued by SQL (no email, MPF-4), confirmed as the user
+    (`scheduled`), `scheduled_for` moved 1 minute into the past. An access token was captured
+    by a fresh sign-in, and then the cron job's own `net.http_post` was fired.
+  - **After the sweep:**
+    - the function answered 200 `{due 1, completed 1, storage_cleaned 1}`;
+    - the request is `completed`, with storage confirmed and no errors;
+    - both avatar files are gone (the public URL answers 400);
+    - saved items, saved folders and their items, saved videos, video likes, follows,
+      recently viewed and notifications are all 0 for the account;
+    - the product-view event is kept, with `viewer_id` NULL;
+    - the video's like count is back to 1;
+    - the RFQ and the review are kept.
+  - **The stale token, before part 3:**
+    - `profiles` and `buyer_profiles` UPDATE were refused (42501, the Phase 2 triggers);
+    - but the RFQ UPDATE, the review UPDATE and a saved-item INSERT **succeeded**.
+  - **The same token after part 3:** the RFQ UPDATE, review UPDATE and saved-item INSERT
+    got 42501; the avatar upload got 403; the RFQ and review DELETEs matched 0 rows, and
+    both rows are still there.
+  - **Rolled back, as demo-buyer:** suspended, its own-RFQ UPDATE still works (1 row);
+    marked deleted, the same UPDATE is 42501 and its DELETE matches 0 rows.
+  - **The function's own gate:** no auth → 401, the anon key → 403.
+  - **Regression:**
+    - `scripts/suspension-gate-check.mjs` 9/9, suspension unchanged;
+    - `profile-save-diff`, `profile-edit-routes`, `buyer-settings` and `profile-calls-stat`,
+      7/7: active buyers and vendors still write their own rows.
+  - **Advisors:** 139 security findings, was 137. The +2 is `account_not_deleted()`
+    executable by anon and by authenticated, by design (RLS calls it, as it does
+    `account_is_active()`).
+  - **Cleanup:** the auth user was deleted, which cascaded its rows, and the test event and
+    the gate script's tagged call were deleted.
+    - Nothing references the account, in any table or bucket.
+    - `calls` is back to 10 rows, and demo-vendor's rating back to 4.4 / 5.
+    - The scratch credentials and token were deleted.
+- **Migration `20260923201559`** was applied between the two stale-token runs, inside the
+  token's hour. Its self-check found 46 gated policies and none left.
+- **Found on the way:**
+  - `log_engagement_event()` swallows errors: a `source` outside its CHECK list inserted
+    nothing and returned OK. The test event was inserted as postgres instead.
+  - The first run of one SQL check failed on a typo of mine. One `execute_sql` call lost
+    its connection, and its UPDATE was checked, found not applied, and re-run.
+
+### 2026-09-24 — Phase 15: MPF-5 closed (spec 2/2, and it fails on the old code; admin regression 1/1)
+
+- **No deleted account exists** (20 profiles, all active), and one can't be made for a test:
+  `'deleted'` is terminal, and `guard_deleted_account()` refuses every signed-in write to
+  the account. So the spec rewrites `account_status` in Cosora-Admin's own responses
+  (`admin_profile_search()` and the `profiles` selects), in the browser only.
+- **`tests/admin-deleted-status.spec.ts`** (new), Cosora-Admin on :5174: **2/2**.
+  - The first run failed on the spec: its card locator matched the card's header row, not
+    the card. Fixed to the heading's grandparent.
+  - A later run added a wait for the ledger before the card screenshot.
+- **Against the old code** (`git stash push -- src` in Cosora-Admin): both tests **failed**.
+  - Accounts: the deleted row read "active" (expected "deleted").
+  - Vendors: the row had no "deleted".
+
+  The fix was restored with `git stash pop`.
+- **Regression:** `profile-contact-privacy.spec.ts`, "Cosora-Admin still finds accounts by
+  email and resolves chat participants": 1/1. Cosora-Admin `tsc --noEmit --skipLibCheck` 0.
+  Cosora-Admin has no ESLint config.
+- **Screenshots:** `screenshots/mpf5-admin-accounts-deleted.png` (the three rows) and
+  `mpf5-admin-account-card-deleted.png` (the deleted card with its ledger).
+  `mpf3-admin-accounts.png`, re-rendered, was restored.
+
+### 2026-09-24 — MPF-20 closed (spec 3/3 with real metadata writes; both sign-in tests fail without the fix; fingerprints identical)
+
+- **Fingerprinted first** (SQL `md5`): demo-buyer's and demo-vendor's auth metadata and their
+  `profiles`, `buyer_profiles` and `vendor_profiles` rows. Neither account's metadata had a
+  `brand_name`.
+- **`tests/profile-save-diff.spec.ts`: 3/3.** The first run failed on the spec, not the code:
+  the metadata request carries two top-level fields that supabase-js adds, so the check now
+  looks at `body.data`.
+- **Supabase Auth removes a key set to null:** after each clearing, the metadata equals its
+  snapshot exactly.
+- **Without the fix** (the vendor check and the clearing removed, Phase 14's buyer fix kept),
+  both sign-in tests **failed**:
+  - the buyer's name was never cleared ("no profile write, only the metadata");
+  - the vendor's signup brand was written over the saved one ("no vendor write, only the
+    metadata").
+
+  The fix was restored byte for byte (`cmp`).
+- **After all runs:** every fingerprint matches, and neither account has a `brand_name` key.
+- **Regression:** `profile-save-diff` (3), `profile-edit-routes` and `buyer-settings` (2):
+  **6/6**. tsc 0; eslint 0.
+
+### 2026-09-24 — Phase 14: MPF-9 closed (spec 2/2, and it fails on the old code; live SQL byte-identical; regression 8/8)
+
+- **demo-buyer's starting state:** country NULL, state set, no stored avatar. Both rows were
+  fingerprinted (`md5(row::text)`) before anything ran.
+- **`tests/profile-save-diff.spec.ts`** (new), dev server on :8080: **2/2**.
+- **Against the old code** (`git stash push -- src`, spec unchanged): both tests **failed**.
+  - The job-title save sent 2 writes, the second to `profiles`.
+  - With a company saved, the sign-in step sent both writes with the whole blank profile.
+
+  The fix was restored with `git stash pop`. The spec restored both rows in full, and both
+  fingerprints matched the originals.
+- **Live SQL,** after `KEEP_DIFF_MARKERS=1` (job title changed, then State cleared):
+  - `profiles` row byte-identical: **true**;
+  - the other 19 `buyer_profiles` columns byte-identical: **true**;
+  - country still NULL, state NULL, job title the marker: **true**.
+
+  Restored with SQL; the `buyer_profiles` fingerprint matched the original.
+- **Regression:** `profile-edit-routes` (mutating, self-restoring), `buyer-settings`,
+  `profile-quotes-chats-stat` and `profile-calls-stat`, with the new spec: **8/8**. Afterwards
+  both demo-buyer rows matched their original fingerprints.
+- **Screenshots:**
+  - `screenshots/profile-save-diff-country.png` (new): the Business Address section, with
+    Country empty and "India" as its placeholder.
+  - `profile-business-details.png` was re-rendered and kept: Country used to show "India" as
+    a value for a NULL country.
+  - `profile-calls-stat.png` was restored.
+- **Checks:** tsc 0; eslint 0 on the five changed files and the spec.
 
 ### 2026-09-24 — Deploy, then MPF-19 closed (live bundles checked; production specs 3/3 before the revoke and 5/5 after; privacy check 24/24)
 

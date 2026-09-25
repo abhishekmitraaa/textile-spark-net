@@ -84,11 +84,9 @@ test("buyer sidebar Settings opens the buyer Settings page, not /profile", async
 test("vendor sidebar Settings still opens the vendor Settings page", async ({ browser }) => {
   const { ctx, page } = await pageAs(browser, VENDOR);
   await page.goto("/notifications", { waitUntil: "networkidle" });
-  // UserRoleContext starts every page load as "buyer" and never reads
-  // profiles.active_role (pre-existing; MPF-13). A vendor reaches seller mode
-  // in-session through the role switcher, so the test does the same.
-  await page.getByRole("button", { name: "Seller", exact: true }).first().click();
-  await page.waitForURL("**/seller-home");
+  // A vendor's page load starts on the seller side (profiles.active_role,
+  // MPF-13 fixed in Phase 17), so no switching is needed first.
+  await expect(page.getByRole("link", { name: "Upload Product", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "Settings", exact: true }).click();
   await page.waitForURL(/\/settings$/);
   expect(new URL(page.url()).pathname).toBe("/settings");

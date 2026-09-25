@@ -1,3 +1,5 @@
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Star, MessageCircle, Phone } from "lucide-react";
 import { fmtMoney, type VendorQuote } from "@/lib/quotesData";
@@ -12,6 +14,7 @@ interface Props {
 // Rows requested in the reference note: Vendor, Price/unit, MOQ, Lead time,
 // Fabric, Rating, Action.
 export default function CompareTable({ quotes, onClose, onChat, onCall }: Props) {
+  const { showBoth } = useDisplayCurrency();
   return (
     <AnimatePresence>
       {quotes.length > 0 && (
@@ -33,6 +36,7 @@ export default function CompareTable({ quotes, onClose, onChat, onCall }: Props)
               </button>
             </div>
 
+            <ConvertedPriceNote className="mx-4 mb-2" />
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -45,7 +49,7 @@ export default function CompareTable({ quotes, onClose, onChat, onCall }: Props)
                 </thead>
                 <tbody className="text-xs">
                   <Row label="Price/Unit">
-                    {quotes.map((q) => <td key={q.id} className="px-4 py-3 font-bold text-[#ef4d62] whitespace-nowrap">{fmtMoney(q.currency, q.pricePerUnit)}</td>)}
+                    {quotes.map((q) => <td key={q.id} className="px-4 py-3 font-bold text-[#ef4d62] whitespace-nowrap">{showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)}</td>)}
                   </Row>
                   <Row label="MOQ">
                     {quotes.map((q) => <td key={q.id} className="px-4 py-3 text-gray-700 whitespace-nowrap">{q.moq.toLocaleString()} units</td>)}

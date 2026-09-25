@@ -6,12 +6,21 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { useSwitchRole } from "@/hooks/useSwitchRole";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useT } from "@/lib/i18n";
+import { toast } from "sonner";
+import { CURRENCIES } from "@/lib/profileStore";
+import { errorMessage } from "@/lib/errorMessage";
+import { useCurrencySetting } from "@/hooks/useCurrencySetting";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 
 function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
   const navigate = useNavigate();
   const { role } = useUserRole();
   const switchRole = useSwitchRole();
   const t = useT();
+  // The same setting as Regional Settings (MPF-11). This picker used to be an
+  // uncontrolled <select> that saved nothing.
+  const currency = useCurrencySetting();
 
   const menuItems = [
     { label: "Home",              href: "/home/new-arrivals" },
@@ -80,12 +89,23 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             {/* Currency */}
             <div className="px-5 py-3 border-t border-gray-100">
               <p className="text-xs text-gray-400 mb-1.5">{t("Default Currency")}</p>
-              <select className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none">
-                <option>₹ INR</option>
-                <option>$ USD</option>
-                <option>€ EUR</option>
-                <option>£ GBP</option>
+              <select
+                className="w-full text-sm border border-gray-200 rounded-lg px-2.5 py-2 focus:outline-none disabled:opacity-60"
+                value={currency.value}
+                disabled={!currency.ready}
+                onChange={async (e) => {
+                  const c = e.target.value;
+                  try {
+                    await currency.save(c);
+                    toast.success(`${c} saved`, { description: "Prices convert for display only. Vendors are paid in ₹ INR." });
+                  } catch (err) {
+                    toast.error("Couldn't save", { description: errorMessage(err) });
+                  }
+                }}
+              >
+                {CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
+              <p className="mt-1.5 text-[11px] text-gray-400">{t("Converts prices for display only. Payments stay in ₹ INR.")}</p>
             </div>
 
             {/* Support */}
@@ -104,6 +124,7 @@ export default function BuyerTopBar() {
   const navigate = useNavigate();
   const t = useT();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { active: converting } = useDisplayCurrency();
 
   return (
     <>
@@ -137,6 +158,12 @@ export default function BuyerTopBar() {
           </button>
         </div>
       </div>
+      {/* Only while prices are converted (MPF-11): nothing renders for INR. */}
+      {converting && (
+        <div className="px-4 lg:px-6 pt-2">
+          <ConvertedPriceNote className="max-w-2xl lg:max-w-6xl mx-auto" />
+        </div>
+      )}
 
       <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </>
