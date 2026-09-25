@@ -19,12 +19,13 @@ Last updated: 2026-09-09
 | `faqs-snapshot.spec.ts` | Phase 23 (Phase 9 Q2): the FAQ pages read the CDN snapshot. **1:** `/profile/help` and `/seller` signed out and `/subscription` as demo-vendor render the snapshot's questions in order, the snapshot matches the table, and there is **no** request to `/rest/v1/faqs`. **2:** the snapshot broken six ways (network error, HTTP 500, invalid JSON, version 2, another surface's file, a 4.5 s stall past the 3 s timeout) on each page: the page reads the table (200) and renders the same questions. **3:** prime the CDN, add an FAQ on Subscription as demo-admin, measure when the origin file changes, load the page fresh every few seconds until 4 loads in a row show it, then delete it and wait until no request gets it; each must land within max-age (300 s). Tracking RPCs are answered in the browser. Run 1 and 2 at least a minute after an FAQ edit | `demo-vendor`, `demo-admin` (test 3 adds and deletes one `[P23TEST` FAQ; `afterEach` removes leftovers). Buyer app on :8080 |
 | `faqs-seeded-content.spec.ts` | Phase 24 (Phase 9 Q4), read-only. The table's active Subscription and Seller Registration FAQs are exactly the lists the seeding migration produces, in order. `/subscription` signed out **and** as demo-vendor shows the 8 Subscription questions in order (Andy's 5, then autopay, payment methods, GST); "Contact us" is one link to `mailto:hello@cosora.in?subject=Subscription%20question` and not a question; "Lowest billing plan?" opens the Phase 9 answer. `/seller` signed out shows Andy's 10 in order. Tracking RPCs answered in the browser | anon, `demo-vendor` |
 | `buyer-settings.spec.ts` | The buyer sidebar's "Settings", clicked from `/notifications` (the buyer page that renders `DashboardSidebar`), lands on `/profile/settings`, not `/profile`. The page shows account and security content only, with the delete-account entry and no profile forms. "Download your data" and `/profile` → "Account & Security" work, and "My Profile" still goes to `/profile`. As demo-vendor, whose page load now starts on the seller side (MPF-13, fixed 2026-09-24), Settings goes to `/settings` | `demo-buyer`, `demo-vendor` (read-only) |
-| `profile-notifications-honesty.spec.ts` | `/profile/notifications` presents its switches as saved preferences. It checks the amber "aren't live yet" note, the "Saved for when…" subtitles, that no "Instant alerts" or "Get notified" copy remains, and that all 6 switches render with the newsletter switch showing the saved value | `demo-buyer` (read-only) |
+| `profile-notifications-honesty.spec.ts` | `/profile/notifications` presents its switches as saved preferences: the amber "aren't live yet" note, the "Saved for when…" subtitles, no "Instant alerts" or "Get notified" copy, and all 6 switches with the newsletter switch showing the saved value. **Since MPF-12 (2026-09-25):** the `/profile` row says "Not live yet"; Vendor Settings shows the same note and subtitles, and 9 switches with saved values; the seller home's RFQ card points to Leads, with no "Set Alerts". All read `NOTIFICATION_DELIVERY_LIVE`, and setting it true fails the test | `demo-buyer`, `demo-vendor` (read-only) |
 | `profile-regional-honesty.spec.ts` | Regional Settings on `/profile/regional-settings`. Timezone: a zone other than IST shows the amber "saved, but not used yet" note and an honest toast. Currency (since Phase 20): USD shows the rate line ("Prices across Cosora show converted to USD at the …") and a display-only toast. The "Display only: vendors quote and are paid in ₹ INR" line shows whatever is picked, and the defaults show no other note. It also checks the choice is saved to `buyer_profiles.regional` | `demo-buyer` (**mutating, self-restoring**: snapshots and restores `regional`) |
 | `display-currency.spec.ts` | MPF-11 (Phase 20). As demo-buyer with no currency set, every line with "₹" on 11 buyer pages is captured. Then "$ USD" is picked in the real Regional Settings picker and the pages are captured again. Every line must be unchanged (the INR-by-design lines: the invented New Arrivals hero, service-vendor rates) or that line converted at the cached `fx_rates` rate, worked out independently in the test, marked "≈", optionally with the INR price beside it. There must be conversions on every product page. Also: the display-only note, Regional Settings' rate line, the drawer picker showing the same setting, a received quote "≈ $x (₹y)", and no `fx_rates` read for an INR buyer. Tracking and recently-viewed writes are answered in the browser | `demo-buyer` (**mutating, self-restoring**: `regional` put back exactly, in `afterEach`) |
 | `profile-edit-routes.spec.ts` | `/profile/edit` and `/profile/business-details` as real routes. Each is loaded straight from its URL, then hard-reloaded, and must render the buyer's real values, including the email and phone, which it reads through `my_contact_info()` (MPF-3). A save on each lands in `buyer_profiles` (read back from the database), and the second save keeps the first's change. It also checks the `/profile` entry points (Edit, camera, Business Details), that `?focus=city` focuses City, the signed-out prompt on both, and that the fake email "Verify" is gone | `demo-buyer` (**mutating, self-restoring**: snapshots and restores every column `saveProfileFull()` writes; `KEEP_EDIT_MARKERS=1` leaves them for a SQL check) |
 | `admin-deleted-status.spec.ts` | MPF-5, in Cosora-Admin (:5174, or `ADMIN_APP_URL`). No account is deleted, and `'deleted'` can't be undone, so the spec rewrites the admin's own `account_status` reads in the browser only: demo-buyer reads as deleted, demo-vendor as suspended, and demo-admin stays active. **Accounts:** the deleted row has a grey "deleted" badge and "View", not "Manage". Its card shows the deleted note, no Suspend or Reinstate button and no "What suspending actually stops", and the ledger still loads. The suspended and active rows and cards are unchanged. **Vendors:** the list shows "deleted", never "active"; the vendor page's card has no status button. Asserts that nothing called `set_account_status` | `demo-admin` (read-only). Needs Cosora-Admin's dev server |
-| `role-on-load.spec.ts` | MPF-13. The side a page load starts on, and a database-backed `vendorRegistered`. **demo-vendor, nothing stored:** hard loads of `/seller-home` and `/notifications` show the seller sidebar with no switching, and Settings opens `/settings`. Switched to Buyer, it stays buyer while navigating in-app (history pushState), and a reload is seller again. Switching back to Seller goes to `/onboarding` (MPF-22). **demo-buyer with a completed registration on file** (the `onboarding_complete` read answered in the browser): Seller → `/seller-home`, and the hint is corrected to "true". It stays seller in-app, and a reload is buyer. **A stale "true" hint over the real row (false):** `/onboarding`, and the hint is corrected. **No vendor row:** `/onboarding` | `demo-vendor`, `demo-buyer` (read-only) |
+| `admin-log.spec.ts` | MPF-26, in Cosora-Admin (:5174). **super_admin:** signs in through the real login form, changes an FAQ answer and puts it back through `admin_faq_update`; `/admin-log` shows both changes (name, role, IST date and time, answer before → after) and the sign-in, and signing out adds a sign-out row; the database recorded exactly sign_in, update, update, sign_out. **Manager:** the Admin Log is in its nav and moderation sections aren't; the page lists entries; `/faqs` is not available. **product_moderator:** `/admin-log` not available, the RPC 42501. Writes two self-restoring FAQ edits, and log rows (permanent by design) | `demo-admin`, fixtures `rlstest-manager`, `rlstest-productmod` |
+| `role-on-load.spec.ts` | MPF-13 and MPF-22. The side a page load starts on, a database-backed `vendorRegistered`, and who may switch. **demo-vendor, nothing stored (its real row: never onboarded):** hard loads of `/seller-home` and `/notifications` show the seller sidebar with no switching, and Settings opens `/settings`. Switch to Buyer goes to `/onboarding` with "Finish your seller registration to use the buyer side", and the account stays on the seller side (MPF-22). **demo-vendor with the registration answered as complete:** Buyer stands in-app, Seller goes straight back to `/seller-home`, and a reload is seller. **demo-buyer with a completed registration on file** (answered in the browser): Seller → `/seller-home`, the hint is corrected to "true", it stays seller in-app, and a reload is buyer. **A stale "true" hint over the real row (false):** `/onboarding`, and the hint is corrected. **No vendor row:** `/onboarding` | `demo-vendor`, `demo-buyer` (read-only) |
 | `account-deletion-channel.spec.ts` | MPF-6 (Phase 18). "Delete my account" is worded for the channel the code goes to. **Email account:** unchanged ("Email me a code", "We sent a code to d****@…"). **Phone-only account** (a session user with a confirmed phone and no email): "Send code on WhatsApp", then "We've sent a code to your WhatsApp number +91 …". **Every non-success answer, per channel:** `not_configured` (WhatsApp and email), `no_contact` and the old `no_email`, `send_failed` (WhatsApp and email). **A code already sent:** the dialog opens on the code step, worded from the open request's `channel`. The function and the open-request read are answered in the browser | `demo-buyer` (read-only) |
 | `profile-save-diff.spec.ts` | MPF-9. A profile save writes only what changed. It records every write request to `profiles` and `buyer_profiles`. **Job title only:** one request carrying just `id` and `job_title`; both rows otherwise unchanged, and a NULL country stays NULL. **State cleared:** `{id, state: null}`, saved as NULL. Country shows "India" only as a placeholder. **Untouched form:** no request, and "No changes to save". **The sign-in step** (`applyPendingSignupProfile()`, imported from the dev server), MPF-20, with real metadata writes. Buyer: with a company saved, only the metadata request, `data: {brand_name: null}`, and the metadata exactly as before. If the write fails, the metadata is kept. With no company, `{id, company}` then the metadata. A company cleared afterwards stays cleared. Vendor: the same with `brand_name`. Contact details and metadata are compared, never printed | `demo-buyer`, `demo-vendor` (**mutating, self-restoring**: rows put back in full, and a pending `brand_name` removed; `KEEP_DIFF_MARKERS=1` keeps test 1's markers for a SQL check). Needs the dev server, not a build |
 | `profile-contact-privacy.spec.ts` | MPF-3. **Signed out, over HTTP:** both proof requests and 5 other routes to `profiles.email`/`phone` are refused 401/42501 with no count, and the other columns still read. **A 27-page sweep** as demo-buyer, demo-vendor and signed out: no `profiles` read or contact RPC is refused, and `/profile` and `/profile/edit` show the buyer's own email and phone. **A real Call Buyer click:** the number comes from `call_buyer_contact()` (200). With the buyer suspended, the database refuses it (403, `target_suspended`) and the page shows "Calling is unavailable". **Cosora-Admin:** Accounts finds demo-buyer by email and the suspension history names the admin; the Chats search, a thread and the review queue resolve people | `demo-buyer`, `demo-vendor`, `demo-admin`, anon (**mutating, self-restoring**: accepts one demo-vendor quote and suspends demo-buyer, then restores both; each run leaves a suspension-ledger row and two notifications). Needs Cosora-Admin on :5174 |
@@ -97,6 +98,8 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
 | `faq-write-gate-check.mjs` | Phase 22, read-only: who passes each `admin_faq_*` gate, over HTTP with real sign-ins. Calls that pass the gate but change nothing: add with an unknown surface (22023 = admitted), update, delete and reorder on an id that doesn't exist. Expected: super_admin and support pass all five; product_moderator, demo-buyer and anon get 42501 from all five. `--expect-before` checks the pre-Phase-22 state (support: list only). The two `rlstest-*` rows are skipped without `FIXTURE_PASSWORD` |
+| `quote-status-roles-check.mjs` | MPF-18, over HTTP as the real accounts, on a demo-vendor quote on a demo-buyer RFQ. The vendor gets 42501 for accepted, shortlisted and rejected; the buyer gets 42501 for the price, the comment and the vendor; the buyer can shortlist and accept; a vendor price rise on the accepted quote puts it back to pending. Mutating, self-restoring: it fails unless the quote ends as it started |
+| `engagement-event-failures-check.mjs` | MPF-23. Signed out, an event with a bad source still returns OK, and the failure is counted (`admin_engagement_event_failures`, as demo-admin) with this run's marker; an unknown vendor id stays quiet; demo-buyer and anon can't read the failures. Writes no event, but leaves one marked failure row: remove it with the SQL in its header |
 | `faq-snapshot-check.mjs` | Phase 23. Per surface: the origin file (cache-busting query) and the CDN copy match the table's active rows exactly, 200 JSON with `max-age=300`, only the public columns, version 1 with a matching count. A CDN copy behind the table is a note, not a failure (it can trail an edit by about a minute). Then anon and demo-buyer each try to upload a probe and to overwrite `buyer_help.json`: both must be refused |
 | `faq-cdn-propagation.mjs` | Phase 23: how long after an FAQ edit every request gets the new file. Each trial is a content-neutral admin edit (`admin_faq_update` with `p_active` unchanged: only `updated_at` moves, but the trigger rebuilds all three files). It measures the origin, the first new copy on the plain URL, and the last old one, across 3 files × 3 request styles every 2 s, until 5 clean rounds. `node scripts/faq-cdn-propagation.mjs [trials]` |
 | `notifications-check.mjs` | That `notifications` is unwritable by any client role and that moderation functions write it |
@@ -155,6 +158,98 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-25/26 — Flag-fix pass: MPF-12, 18, 22, 23, 25, 26, 27 fixed (six migrations rehearsed and applied, md5s match; quote roles 11/11; refused events 5/5; subscription smoke 3/3; specs 7/7 + mutation checks; regression 44/44)
+
+- **Migrations.** Each was rehearsed in one transaction ended by an exception (the migration
+  plus its tests), then applied. Each file's whitespace-insensitive md5 equals
+  `schema_migrations`.
+  - `20260925172634` (MPF-27): the alarm is quiet with the Vault secret; with the name
+    swapped for one that doesn't exist, both jobs raise their message and `fx` queues no
+    request; the sweep keeps its fallback.
+  - `20260925173024` (MPF-18): 20 cases as demo-vendor, demo-buyer, demo-admin and postgres.
+    The first rehearsal failed one case: the vendor raised the price of a quote the buyer had
+    accepted, and it stayed accepted. The trigger now resets revised terms to pending.
+  - `20260925173423` (MPF-23):
+    - as anon: a bad source twice counts 2; a bad event type gets its own row; an unknown
+      vendor stays quiet; failing calls write no event; a valid view writes one;
+    - readers: demo-admin 2, demo-buyer 42501, anon 42501, the table unreachable.
+    - The first rehearsal recorded nothing: a column named `sqlstate` fails inside a
+      PL/pgSQL exception handler, and the inner handler swallowed it. It was renamed
+      `error_code`.
+  - `20260925173658` (MPF-26 part 1): `manager` added to `admin_role_type`.
+  - `20260925174031` (MPF-26 part 2), 9 cases:
+    - an FAQ edit logged with its answer before and after;
+    - an admin viewing a product logs 0 rows, and a vendor editing its own product 0 rows;
+    - suspend and reinstate log `profiles.account_status` and both suspension rows;
+    - sign-in logged for an admin, not a non-admin;
+    - the recorder refuses an admin and admits the service role;
+    - the list admits super_admin and manager, and refuses support, a non-admin and anon;
+    - `admin_set_role` support → manager logged;
+    - UPDATE and DELETE refused.
+
+    After applying, a rolled-back run on the live triggers: an admin moderating a vendor's
+    product is logged with `own_row` false, and an admin who is also a vendor editing their
+    own product with `own_row` true.
+- **Live checks:**
+  - `scripts/quote-status-roles-check.mjs` 11/11, and the quote ended exactly as it started;
+  - `scripts/engagement-event-failures-check.mjs` 5/5. Its marker row: deleted with SQL after the System Health check, leaving 0 failure rows;
+  - MPF-25 smoke 3/3, nothing activated: `create-order` → `not_configured`,
+    `verify-payment` (free plan) → `bad_plan`, `webhook` → `not_configured`;
+  - `node scripts/gst-check.mjs` consistent.
+- **MPF-25 diffs.** All three deployed sources were fetched and compared with the repo history
+  before deploying. Each equals commit `40c4611` exactly, so the redeploy shipped the
+  `intent_failed` guard and the GST import only. `admin-invite` and `admin-refund-payment`
+  were also compared: invite is identical to HEAD, refund differs only by two em dashes in
+  error strings.
+- **Specs** (buyer app :8080, Cosora-Admin :5174):
+  - `profile-notifications-honesty` 2/2 and `role-on-load` 5/5.
+  - Mutation checks, each file restored with `cmp`: `NOTIFICATION_DELIVERY_LIVE` set true
+    makes the MPF-12 test fail; the HEAD `useSwitchRole` makes the MPF-22 test fail.
+  - `tests/admin-log.spec.ts` 3/3 in Cosora-Admin, with run-only fixtures. super_admin's real sign-in, two FAQ edits and sign-out were recorded in exactly that order (sign_in, update, update, sign_out), and the page shows each with the name, role, IST time and before → after. The manager sees the Admin Log and no moderation section. The product_moderator is refused in the panel and by the RPC (42501). With the `admin-log` section limited to super_admin, the manager test fails. Screenshots `mpf26-admin-log-faq.png`, `mpf26-admin-log-manager.png`.
+  - Phase 22 regression with the Admin Log trigger now on `faqs`: `faq-write-gate-check.mjs` 5/5 and `faqs-support-write.spec.ts` 2/2. Support's test writes and restores produced 24 Admin Log rows.
+- **Regression, 44/44 across 14 specs:**
+  - account-deletion-channel 4, admin-deleted-status 2, buyer-settings 2;
+  - faqs-admin-editable 1: its edits now also land in the Admin Log;
+  - faqs-seeded-content 2, profile-calls-stat 1;
+  - profile-contact-privacy 4: Call Buyer accepts a quote as the buyer, under the new
+    trigger;
+  - profile-data-export 3, profile-notifications-honesty 2, profile-quotes-chats-stat 2,
+    profile-save-diff 3, role-on-load 5, vendor-analytics 5, vendor-my-store 8.
+- **Analytics my runs wrote, found and fixed.** The regression's page visits wrote to production
+  between 19:20 and 19:30 UTC. The counters snapshot caught it: events 1,562 → 1,620.
+  - 58 events in all:
+    - demo-vendor 27 ad impressions, from my new `role-on-load` test landing on
+      `/home/new-arrivals` (three runs);
+    - demo-buyer 1 product view and 10 ad impressions, from the existing
+      `profile-contact-privacy` page sweep;
+    - signed out, 1 product view and 19 ad impressions, from the same spec.
+  - `products.views_count` +2, `advertisements.impressions` +61 (the counter is
+    frequency-capped, so it doesn't match the events one for one), and one `viewed_at`
+    refreshed in demo-buyer's recently viewed. Clicks were unchanged.
+  - Both specs now answer the tracking RPCs and `recently_viewed` writes in the browser.
+    `role-on-load`, `profile-contact-privacy` and `buyer-settings` were re-run, 11/11, and
+    every counter stayed exactly where it was.
+  - **Not reverted:** a decision for Mitra, added to `myprofileflags.md` open decision 1
+    alongside Phase 19's.
+- **Security advisors:** 146 findings.
+  - Expected:
+    - two "RLS enabled, no policy" for the new admin tables, where no client access is the
+      point;
+    - four "authenticated can execute" for the new definer RPCs, each gated inside.
+  - One real: `admin.audit_log_append_only()` had no pinned `search_path`. It was fixed by
+    `20260925201948_admin_audit_log_guard_search_path.sql` (rehearsed, applied, md5 matches;
+    the guard still refuses UPDATE).
+- **Checks:**
+  - buyer app `tsc -p tsconfig.app.json` 0, and Cosora-Admin `npm run typecheck` 0;
+  - eslint 0 on the changed files, including `Profile.tsx`;
+  - both builds exit 0, and 0 files in `dist/` hold a test password;
+  - the edited edge functions have no new `tsc` errors; `admin-invite` keeps its two
+    `grantAdmin` narrowing errors, the same as HEAD.
+- **Screenshots:** the re-rendered ones were restored from a backup. New:
+  `mpf12-vendor-settings-notifications.png`, `mpf22-switch-to-buyer-unregistered.png`
+  , `mpf23-system-health-refused-events.png`, `mpf26-admin-log-faq.png`, `mpf26-admin-log-manager.png`.
+- **Cleanup:** The three run-only fixtures (manager, support, product_moderator) were deleted. Their password was generated locally, and only its bcrypt hash was sent. That leaves 0 `rlstest-*` users or identities and 0 orphans; the admin roster is the same 3 super_admins, and there are 20 users. The fixtures' 24 Admin Log rows stay, because the log is append-only. 0 test FAQ rows remain, and the FAQ content md5s equal Phase 24's. The three quotes are pending at their original prices. The demo accounts are active, with 0 open suspensions and 0 locked chats. The temporary specs and the scratch credentials were removed.
 
 ### 2026-09-25 — Phase 26: regression pass over Phases 11–25 (15 of 16 items re-confirmed live; item 11 never built; one break found and fixed; cleaned back to the baseline)
 

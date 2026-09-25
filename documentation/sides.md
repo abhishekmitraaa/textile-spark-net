@@ -196,6 +196,15 @@ the demand side of India's fashion and textile supply chain.
   About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
   decision (Master Prompt 8).
 
+### Fixed 2026-09-25 (flag-fix pass)
+- **A buyer's decision on a quote is theirs alone** (MPF-18). Only the buyer who posted the
+  request can shortlist, accept or reject; the vendor can't mark its own quote accepted, and
+  can't raise the price of an accepted quote without it going back to the buyer. The buyer
+  can no longer edit a vendor's price either.
+- **Switching sides needs a completed seller registration both ways** (MPF-22): a seller
+  who hasn't finished onboarding is sent to `/onboarding` from Switch to Buyer.
+- **`/profile`'s Notifications row says "Not live yet"** instead of "On" (MPF-12).
+
 ### Fixed 2026-09-24 (My Profile brief)
 - **Other users' email and phone are private, signed in or out.** Signed out since 2026-09-23
   (MPF-3). The signed-in grant that kept the old live code working was revoked once the new
@@ -423,6 +432,17 @@ rather than a supplier directory.
 
 ---
 
+### Fixed 2026-09-25 (flag-fix pass)
+- **Vendor Settings is honest about notifications** (MPF-12): the same "aren't live yet"
+  note and "saved for when it launches" subtitles as the buyer page. The switches still
+  save. The seller home's "Set Alerts" card, which only opened Leads, says new RFQs
+  appear on Leads and alerts aren't live yet.
+- **Switch to Buyer needs a completed registration** (MPF-22, Mitra: onboarding collects
+  everything the buyer side needs). A seller-role account that hasn't finished onboarding
+  goes to `/onboarding` with a note, and stays a seller.
+- **A quote's terms are the vendor's, its status the buyer's** (MPF-18). Revising the terms
+  of a shortlisted, accepted or rejected quote puts it back to pending.
+
 ## Admin Side
 
 **Built, but in a separate repo: `Cosora-Admin`**, running against the same Supabase
@@ -496,6 +516,16 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   about a minute, with no release. The site reads them from a CDN snapshot that every edit
   rebuilds, with the table as the fallback (2026-09-24).
 - Site content (banners and theme) is still a dev-seed mock with no table.
+
+### Added 2026-09-25 (flag-fix pass)
+- **Admin Log** (`/admin-log`, MPF-26): every change an admin makes (who, role, what,
+  before → after, IST date and time), every sign-in and sign-out, and the invite and refund
+  edge functions' actions. Filters by admin, area, action and date. Written by the database,
+  append-only.
+- **Manager role:** reads the Admin Log (with super_admin), and sees no moderation or
+  commerce section.
+- **System Health → Analytics events refused** (MPF-23): events `log_engagement_event()`
+  couldn't record, per hour, with the error and the last event type and source.
 
 ### Rules the admin layer must respect
 - **Notifications are written only by `SECURITY DEFINER` functions** — no insert policy for

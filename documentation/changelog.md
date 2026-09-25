@@ -1,3 +1,53 @@
+- 2026-09-25 (flag-fix pass): **Every open My Profile flag is now fixed or moved to `ToDo.md`, following Mitra's instruction for each. Fixed: MPF-12, 18, 22, 23, 25, 26 and 27. Moved to `ToDo.md`, left as they are: MPF-4, 10, 14, 15, 16, 17, 21 and 24. Merged to `main` on 2026-09-26 with Phases 14–26, which Vercel deploys to Production in both apps.**
+  - **Removed before the merge:** `otp-dev-verify/index.ts` and `.claude/tmp/phase5-context.md`, which commit `85f4f6a` had added to the branch (`git rm --cached`; the local copies stay). They remain in the history. Both repos are public, and neither file holds a secret value.
+  - **Found while merging:** `.github/workflows/e2e.yml` runs every spec against production on each push to `main` (the last six runs failed at the test step). It is now open decision 2 in `myprofileflags.md`.
+  - **MPF-12, notifications no longer imply live delivery.**
+    - One switch, `NOTIFICATION_DELIVERY_LIVE` (`src/lib/notificationDelivery.ts`), is read by `/profile/notifications`, Vendor Settings, the `/profile` row and the seller home.
+    - Vendor Settings has the buyer page's amber note and "saved for when it launches" subtitles.
+    - `/profile` says "Not live yet" instead of "On".
+    - The seller home's "Set Alerts" card, which only opened Leads, now says RFQs appear on Leads and alerts aren't live yet.
+  - **MPF-18, the buyer decides a quote's status and the vendor sets its terms.** Migration `20260925173024_quotes_status_and_terms_by_role.sql`, `trg_quotes_update_roles`.
+    - A vendor can't accept, shortlist or reject.
+    - A vendor's revised terms put a decided quote back to pending, so it can't raise the price of an accepted quote.
+    - The buyer can't touch the vendor's price, a mirror hole found while fixing.
+    - Only an admin changes a quote's request, vendor or creation time.
+  - **MPF-22, Seller → Buyer needs a completed registration** (Mitra: onboarding collects everything the buyer side needs). `useSwitchRole` sends an unregistered seller to `/onboarding` with "Finish your seller registration to use the buyer side", which Mitra chose over hiding the toggle.
+  - **MPF-23, a refused analytics event leaves a trace.** Migration `20260925173423_engagement_event_failures_recorded.sql`.
+    - An unknown id stays quiet.
+    - Any other failure is counted in `admin.engagement_event_failures`, per hour and error.
+    - Cosora-Admin's System Health page has a new "Analytics events refused" panel.
+    - The call still returns normally.
+  - **MPF-25, the three subscription payment functions are redeployed.**
+    - Deployed sources were diffed first: all three were commit `40c4611`.
+    - The redeploy shipped `create-order`'s `intent_failed` guard and the `gstOn()` import, with identical arithmetic.
+    - Now `create-order` v4, `verify-payment` v5 and `webhook` v4.
+  - **MPF-26, the Admin Log**, visible to super_admin and a new **Manager** role (Mitra's choice).
+    - Migrations `20260925173658_admin_role_manager.sql` and `20260925174031_admin_audit_log.sql`.
+    - `admin.audit_log` is append-only. A trigger on each of the 17 tables the panel writes, plus `profiles.account_status`, records every admin change: who, role, IST date and time, and the fields before → after.
+    - Panel sign-in and sign-out are recorded, and so are the invite and refund edge functions (`admin-invite` v7, `admin-refund-payment` v5).
+    - Cosora-Admin gets an `/admin-log` page with filters, a nav item, and `roles.ts` entries for Manager and `admin-log`.
+  - **MPF-27, silent cron jobs now fail loudly.** Migration `20260925172634_cron_jobs_raise_without_vault_key.sql`.
+    - `fx-rates-refresh` raises without the Vault key.
+    - A separate `account-deletion-sweep-alarm` does the same for the sweep, so the sweep's SQL fallback can't be rolled back.
+  - **One more migration,** `20260925201948_admin_audit_log_guard_search_path.sql`: the security advisor flagged the Admin Log's append-only guard for an unpinned `search_path`, and it is pinned now.
+  - **Analytics my test runs wrote, now stopped.** The regression wrote 58 engagement events, product views +2 and ad impressions +61 to production:
+    - my new `role-on-load` test, 27 ad impressions as demo-vendor;
+    - the existing `profile-contact-privacy` page sweep, 2 product views and 29 impressions.
+
+    Both specs now answer the tracking calls in the browser, and a re-run moved nothing. Not reverted: a decision for Mitra (open decision 1).
+  - **Verified:**
+    - Every migration (six) was rehearsed in a rolled-back transaction, then applied, and each file's md5 matches its live record.
+    - The MPF-18 rehearsal caught the accepted-price hole, and the MPF-23 rehearsal caught a silent `sqlstate` column failure. Both were fixed before applying.
+    - Live checks: `quote-status-roles-check.mjs` 11/11; `engagement-event-failures-check.mjs` 5/5; subscription smoke 3/3 with nothing activated; `gst-check` consistent.
+    - Specs: `profile-notifications-honesty` 2/2 and `role-on-load` 5/5. Each new test fails on the old code.
+    - `admin-log.spec.ts` 3/3 (super_admin, manager, product_moderator); it fails when the manager's access is removed.
+    - Regression 44/44 across 14 specs.
+    - tsc 0 and builds 0 in both apps; eslint 0 on changed files; 0 test passwords in `dist/`.
+  - **Docs:**
+    - `myprofileflags.md` now holds only open decisions; the fixed flags are in `myprofileflags-fixed.md` with their fixes and a "Flag-fix pass decisions" record.
+    - `ToDo.md` holds the moved flags' full records.
+    - Also updated: `claude.md` (the quote, switch, notification and Admin Log rules; the `SQLSTATE` trap), test.md, technicalimplementation, sides, sitemap, securityflags (MPF-18, 25, 26 and 27 closed), MIGRATIONS.md, and Cosora-Admin's CHANGELOG and README.
+
 - 2026-09-25 (Phase 26, the closing regression pass of the My Profile brief): **Phases 11–25 were re-checked together, live against production, in one sitting with four sessions (test buyer, test vendor, support admin, super_admin). 15 of the 16 items were re-confirmed. Item 11 (Phase 21, RFQ and message notifications) was never built. One break turned up in a test's cleanup and is fixed. Everything is committed and pushed.**
   - **What Phases 11–25 changed, and what the pass confirmed:**
     - **Phase 11 (MPF-3):** `profiles.email` and `.phone` aren't client-readable; four definer functions serve the legitimate readers. The interim signed-in grant was revoked on 2026-09-24 (MPF-19). *Confirmed:* both proof requests 401/42501; privacy check 24/24.

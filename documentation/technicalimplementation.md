@@ -1696,6 +1696,95 @@ Phase 13 of the My Profile brief (MPF-1). No migration.
 
 ---
 
+## Flag-fix pass (2026-09-25): quote roles, the Admin Log, refused events, cron alarms
+
+### Quotes: who changes what (MPF-18)
+- `trg_quotes_update_roles`: BEFORE UPDATE on `public.quotes`, running
+  `enforce_quote_update_roles()`. It is SECURITY INVOKER on purpose, because its first test
+  is `current_user <> 'authenticated'`, the plan-cap triggers' idiom, and a definer function
+  would always see its owner.
+- Order of checks:
+  1. an admin passes;
+  2. id, rfq_id, vendor_id or created_at changing → 42501;
+  3. the vendor (`old.vendor_id = auth.uid()`) changing anything but `status`, when it is
+     not also the RFQ owner → `new.status := 'pending'`;
+  4. a status change by someone who isn't the owner, other than the vendor moving to
+     pending → 42501;
+  5. a non-vendor changing anything but `status` → 42501.
+- Terms are compared as `to_jsonb(new) - 'status'` against the old row, so a column added
+  later is covered without editing the trigger.
+- `submitQuote()` already upserts with `status: 'pending'`, so the vendor app needed no
+  change. `setQuoteStatusDb()` (the buyer's) is unaffected.
+- Check: `node scripts/quote-status-roles-check.mjs`.
+
+### The Admin Log (MPF-26)
+- **Table.** `admin.audit_log`, keyed by an identity column. Columns: `at`, `actor_id`, and
+  `actor_role` and `actor_name`, snapshotted at write time so a later change doesn't
+  rewrite history. Then `action` (insert, update, delete, sign_in, sign_out, invite,
+  refund), `target_table` (`schema.table`), `target_id`, `own_row`, `changes` jsonb and
+  `source`.
+- **What `changes` holds.** An update stores `{"col": {"from": …, "to": …}}` for the changed
+  columns; an insert or delete stores the row.
+- **Append-only.** No grants, RLS on with no policy, and `trg_audit_log_append_only`
+  refusing UPDATE and DELETE even for postgres.
+- **`admin.audit_row_change(owner_col)`**, AFTER ROW, SECURITY DEFINER. It returns at once
+  unless `auth.uid()` is an active admin and `pg_trigger_depth() = 1`.
+  - Depth 1 is what makes the log show what an admin did, not its side effects. A definer
+    RPC's own statements run at depth 1; a trigger reacting to them runs at 2.
+  - Counters and derived columns are removed before comparing. An update touching only
+    those is skipped, which is how an admin viewing a product (`views_count`) logs nothing.
+- **Attached as `trg_admin_audit` to:**
+  - FAQs and account status: `faqs`, `admin.account_suspensions`, and
+    `profiles.account_status` (the trigger is `AFTER UPDATE OF account_status` there);
+  - chat moderation: `conversations`, `admin.conversation_reviews`,
+    `admin.keyword_blocklist`, `admin.flag_patterns`, `admin.admin_flags`,
+    `admin.chat_block_reasons`;
+  - vendors and catalogue: `vendor_documents`, `vendor_profiles`, `vendor_subscriptions`,
+    `products`, `product_videos`, `catalogues`;
+  - ads and fulfilment: `advertisements`, `certificate_orders`;
+  - admin access: `admin.admin_users`.
+
+  That is every table Cosora-Admin's RPCs and direct updates write. `admin.ad_review_log`
+  is left out, being a log itself.
+- **Edge functions.** Writes made with the service-role key have no JWT user, so
+  `admin-invite` and `admin-refund-payment` call
+  `admin_audit_record(actor, 'invite'|'refund', table, id, changes, source)`, which is
+  service_role only. It is best effort: a failed record is logged in the function and
+  never fails the invite or refund.
+- **Readers.** `admin_audit_log_list(p_actor, p_table, p_action, p_from, p_to, p_before_id,
+  p_limit ≤ 500)` pages by id, and `admin_audit_log_actors()` fills the admin filter. Both
+  require super_admin or manager.
+- **Cosora-Admin.**
+  - `pages/AdminLog.tsx` renders times with `Intl` in `Asia/Kolkata` and shows each update
+    as `field: before → after`, with the full record behind "Full record".
+  - `Login.tsx` and `useAdminSession.signOut` call `admin_audit_session()`, best effort.
+
+### Refused analytics events (MPF-23)
+- `log_engagement_event()` keeps its signature, defaults and grants. Its handler became:
+  - `when foreign_key_violation then return` (junk ids);
+  - `when others`: an upsert into `admin.engagement_event_failures` keyed by
+    `(date_trunc('hour'), error_code, constraint_name)`, which counts, keeps the latest
+    message and event type and source, and prunes rows older than 30 days. It sits inside
+    its own `exception when others then null`, so recording can never fail the page.
+- The key never holds client data, so a flood of bad calls grows a count, not the table.
+- `admin_engagement_event_failures(p_days)` (super_admin, vendor_ops) feeds System Health.
+- Check: `node scripts/engagement-event-failures-check.mjs`. It leaves one marked row, to
+  remove with SQL.
+
+### Cron alarms (MPF-27)
+- `fx-rates-refresh` is a DO block like `faq-snapshots-refresh`: read the Vault key, raise if
+  it's missing, otherwise `perform net.http_post`.
+- `account-deletion-sweep` is unchanged. A multi-statement pg_cron command runs in one
+  implicit transaction, so a raise there would undo `process_due_account_deletions(interval
+  '1 day')`. `account-deletion-sweep-alarm` (`43 3 * * *`) raises on its own when the key is
+  missing.
+
+### Subscription functions redeployed (MPF-25)
+- Deployed through the MCP with `<name>/index.ts` and `_shared/gst.ts` as the file paths,
+  entrypoint `<name>/index.ts`, which resolves the `../_shared/gst.ts` import.
+- Versions: `create-order` v4, `verify-payment` v5, `webhook` v4 (`verify_jwt` false, as
+  before).
+
 ## Integrations
 
 ### Supabase

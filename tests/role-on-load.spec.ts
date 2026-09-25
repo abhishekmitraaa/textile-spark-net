@@ -16,10 +16,15 @@ import { fileURLToPath } from "node:url";
  *
  *   1. demo-vendor (active_role 'seller'), a browser with nothing stored: hard
  *      loads of /seller-home and /notifications show the seller sidebar with no
- *      switching. Switch to Buyer and move around in-app: it stays buyer. Reload:
- *      seller again. demo-vendor's onboarding_complete is false (seeded, never
- *      onboarded), so switching back to Seller goes to /onboarding: Mitra chose
- *      onboarding_complete alone as the signal (Phase 17).
+ *      switching. demo-vendor's onboarding_complete is false (seeded, never
+ *      onboarded), and since MPF-22 (2026-09-25) only a seller who completed
+ *      onboarding may use the buyer side: Switch to Buyer goes to /onboarding with
+ *      "Finish your seller registration to use the buyer side", and the account
+ *      stays on the seller side. Mitra chose onboarding_complete alone as the
+ *      signal (Phase 17).
+ *   1b. demo-vendor with the registration answered as complete: Switch to Buyer
+ *      stands while moving around in-app, Seller goes straight back to
+ *      /seller-home, and a reload is the seller side again.
  *   2. demo-buyer with a completed registration on file: Seller goes straight to
  *      /seller-home, and the hint is corrected to "true". It stays seller while
  *      moving around in-app; a reload is buyer again (its active_role).
@@ -28,7 +33,7 @@ import { fileURLToPath } from "node:url";
  *      corrected to "false".
  *   4. demo-buyer with no vendor_profiles row: Seller goes to /onboarding.
  *
- * Cases 2 and 4 answer the app's onboarding_complete read in the browser. No
+ * Cases 1b, 2 and 4 answer the app's onboarding_complete read in the browser. No
  * buyer-role account has a completed registration, and setting one on demo-buyer
  * would list it as a vendor and break the "a completed vendor has a signed
  * contract" rule. Read-only: nothing is written to the database.
@@ -49,6 +54,7 @@ const SHOTS = path.join(REPO_ROOT, "screenshots");
 const hintKey = (id: string) => `cosora.vendorRegistered.${id}`;
 // UserRoleContext's own read, and only that one (other vendor_profiles reads select more columns).
 const REGISTRATION_READ = /\/rest\/v1\/vendor_profiles\?select=onboarding_complete&id=eq\./;
+const TRACKING = /\/rest\/v1\/rpc\/(log_engagement_event|ad_impression|ad_click|increment_product_view|increment_video_view|increment_product_enquiry)(\?|$)/;
 
 test.skip(!hasCredentials("DEMO_BUYER_PASSWORD", "DEMO_VENDOR_PASSWORD"), "set DEMO_BUYER_PASSWORD and DEMO_VENDOR_PASSWORD in .env");
 
@@ -62,6 +68,12 @@ async function pageAs(browser: Browser, role: "buyer" | "vendor", hints: Record<
   await ctx.addInitScript(([entries]) => {
     for (const [k, v] of Object.entries(entries as Record<string, string>)) window.localStorage.setItem(k, v);
   }, [{ [STORAGE_KEY]: JSON.stringify(data.session), ...hints }] as const);
+  // Switching to Buyer lands on /home/new-arrivals, whose sponsored rail counts ad
+  // impressions. Answered in the browser so the spec writes no analytics (a run on
+  // 2026-09-25 had added 27 impressions as demo-vendor).
+  await ctx.route(TRACKING, (r) => r.fulfill({ status: 204 }));
+  await ctx.route(/\/rest\/v1\/recently_viewed/, (r) =>
+    r.request().method() === "GET" ? r.continue() : r.fulfill({ status: 201, contentType: "application/json", body: "[]" }));
   return { ctx, page: await ctx.newPage(), id: data.user.id };
 }
 
@@ -93,10 +105,12 @@ const switchTo = (page: Page, side: "Buyer" | "Seller") =>
   sidebar(page).getByRole("button", { name: side, exact: true }).click();
 const hintOf = (page: Page, id: string) => page.evaluate((k) => window.localStorage.getItem(k), hintKey(id));
 
-test("a vendor's hard load is the seller side; an in-app switch lasts until a reload", async ({ browser }) => {
+test("a vendor's hard load is the seller side; an unregistered seller can't switch to Buyer (MPF-22)", async ({ browser }) => {
   const { ctx, page } = await pageAs(browser, "vendor");
   try {
+    const read = waitForRegistration(page);
     await page.goto("/seller-home", { waitUntil: "networkidle" });
+    expect((await (await read).json())[0]?.onboarding_complete, "demo-vendor's real row: never onboarded").toBe(false);
     await expectSide(page, "seller", "hard load of /seller-home");
     await page.screenshot({ path: path.join(SHOTS, "mpf13-vendor-hard-load.png") });
 
@@ -106,21 +120,44 @@ test("a vendor's hard load is the seller side; an in-app switch lasts until a re
     await sidebar(page).getByRole("link", { name: "Settings", exact: true }).click();
     await page.waitForURL(/\/settings$/);
 
+    // MPF-22: only a seller who completed onboarding may use the buyer side.
+    await switchTo(page, "Buyer");
+    await page.waitForURL("**/onboarding");
+    await expect(page.getByText("Finish your seller registration to use the buyer side")).toBeVisible();
+    await page.waitForTimeout(800); // let the page's fade-in finish before the screenshot
+    await page.screenshot({ path: path.join(SHOTS, "mpf22-switch-to-buyer-unregistered.png") });
+    await spaNavigate(page, "/notifications");
+    await expectSide(page, "seller", "still the seller side after the refused switch");
+  } finally {
+    await ctx.close();
+  }
+});
+
+test("a seller with a completed registration switches to Buyer and back freely; a reload is the seller side", async ({ browser }) => {
+  const { ctx, page } = await pageAs(browser, "vendor");
+  try {
+    await answerRegistration(page, [{ onboarding_complete: true }]);
+    const read = waitForRegistration(page);
+    await page.goto("/notifications", { waitUntil: "networkidle" });
+    await read;
+    await expectSide(page, "seller", "a registered seller's hard load");
+
     // A switch to Buyer stands while moving around in-app...
     await switchTo(page, "Buyer");
     await page.waitForURL("**/home/new-arrivals");
     await spaNavigate(page, "/notifications");
     await expectSide(page, "buyer", "after switching to Buyer, in-app");
+    // ...back to Seller goes straight to the dashboard...
+    await switchTo(page, "Seller");
+    await page.waitForURL("**/seller-home");
+    await spaNavigate(page, "/notifications");
+    await expectSide(page, "seller", "after switching back to Seller");
     // ...and a reload seeds from active_role again.
-    await page.reload({ waitUntil: "networkidle" });
-    await expectSide(page, "seller", "after a reload");
-
-    // onboarding_complete is false for demo-vendor, so Buyer → Seller now goes to /onboarding.
     await switchTo(page, "Buyer");
     await page.waitForURL("**/home/new-arrivals");
+    await page.reload({ waitUntil: "networkidle" });
     await spaNavigate(page, "/notifications");
-    await switchTo(page, "Seller");
-    await page.waitForURL("**/onboarding");
+    await expectSide(page, "seller", "after a reload");
   } finally {
     await ctx.close();
   }

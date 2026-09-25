@@ -181,6 +181,9 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 the seller landing page `/seller` (`seller_registration`). super_admin writes and
 support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no deploy.
 
+**`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
+`admin.audit_log` in this project's database, for super_admin and the Manager role only.
+
 ---
 
 ## Shared / Cross-role

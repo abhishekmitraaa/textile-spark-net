@@ -16,6 +16,7 @@ import {
 } from "@/lib/queries/vendorStore";
 import { useLang, setLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 import {
   ChevronLeft, ChevronRight, Building2, Mail, Smartphone,
   ShieldCheck, Phone, LogOut, Headphones, FileText,
@@ -40,7 +41,9 @@ const section = {
 // ─────────────────────────────────────────────────────────────
 // Notification rows — plain-language description of what each toggle controls.
 // Honest by design: these persist a preference; nothing yet *sends* on them
-// (no delivery pipeline). So copy describes the event, never promises an email.
+// (no delivery pipeline). So copy describes the event, never promises an email,
+// and while NOTIFICATION_DELIVERY_LIVE is false the section says so (MPF-12, the
+// same wording as the buyer's /profile/notifications).
 // ─────────────────────────────────────────────────────────────
 const EMAIL_ROWS: { key: keyof VendorNotificationSettings; label: string; description: string }[] = [
   { key: "emailNewRfq",        label: "New requirements (RFQs)", description: "When a buyer posts a requirement in your categories" },
@@ -228,11 +231,20 @@ const VendorSettings = () => {
           <motion.section variants={section} className="space-y-2">
             <SectionLabel>Notifications</SectionLabel>
             <Card>
-              <p className="px-4 pt-4 text-xs text-gray-500">
-                Choose what you'd like to be notified about.
-              </p>
+              {NOTIFICATION_DELIVERY_LIVE ? (
+                <p className="px-4 pt-4 text-xs text-gray-500">
+                  Choose what you'd like to be notified about.
+                </p>
+              ) : (
+                <p role="note" className="mx-4 mt-4 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">
+                  Email and push notifications aren&rsquo;t live yet. Your choices here are saved and will apply when they launch. Nothing is sent today.
+                </p>
+              )}
 
               <SubgroupHeader icon={Mail} label="Email" />
+              {!NOTIFICATION_DELIVERY_LIVE && (
+                <p className="px-4 text-xs text-gray-400">Saved for when Cosora starts sending email</p>
+              )}
               <div className="divide-y divide-gray-100">
                 {EMAIL_ROWS.map((r) => (
                   <ToggleRow key={r.key} label={r.label} description={r.description}
@@ -243,6 +255,9 @@ const VendorSettings = () => {
               <div className="border-t border-gray-100" />
 
               <SubgroupHeader icon={Smartphone} label="Push" />
+              {!NOTIFICATION_DELIVERY_LIVE && (
+                <p className="px-4 text-xs text-gray-400">Saved for when browser and app notifications launch</p>
+              )}
               <div className="divide-y divide-gray-100">
                 {PUSH_ROWS.map((r) => (
                   <ToggleRow key={r.key} label={r.label} description={r.description}

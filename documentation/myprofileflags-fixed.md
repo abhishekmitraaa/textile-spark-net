@@ -22,9 +22,16 @@ the decisions each phase recorded.
 | MPF-8 | 2026-09-23, Phase 3 | "Export All Data" covers the brief's tables, not every table the buyer owns rows in | Product scope | Low | **Fixed 2026-09-24** (Phase 19): vendors contacted and messaged, saved, recently viewed and following are in the file. Still out, by the brief's scope: video likes, saved videos, service reviews, notifications, deletion requests and the call log itself |
 | MPF-9 | 2026-09-23, Phase 4 | Every profile save rewrites every field; an empty country becomes "India" | Correctness (data layer, pre-existing) | Low | **Fixed 2026-09-24** (Phase 14), with a sign-in step that blanked the whole profile |
 | MPF-11 | 2026-09-23, Phase 6 | A second currency picker in the buyer menu drawer saves nothing and converts nothing | Fabricated UI | Low | **Fixed 2026-09-24** (Phase 20): the drawer picker is the same setting as Regional Settings, and the setting converts displayed prices (display only). GST extracted to `_shared/gst.ts`, uncalled by anything buyer-facing |
+| MPF-12 | 2026-09-23, Phase 7 | Vendor Settings' notification switches, and the "Notifications: On" label on `/profile`, still imply live delivery | Overclaiming UI | Low | **Fixed 2026-09-25** (flag-fix pass): one delivery switch; Vendor Settings, the `/profile` row and the seller home say nothing is sent yet |
 | MPF-13 | 2026-09-23, Phase 8 | Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav | Correctness (role state, pre-existing) | Medium | **Fixed 2026-09-24** (Phase 17) |
+| MPF-18 | 2026-09-23, Phase 11 | A vendor can set their own quote to "accepted" (and a buyer could rewrite the vendor's price) | Security (data integrity) | Low | **Fixed 2026-09-25** (`20260925173024`): the buyer decides the status, the vendor sets the terms |
 | MPF-19 | 2026-09-23, Phase 11 | Interim: signed-in users can still read every user's email and phone until the new code is deployed | Security (PII exposure), temporary | Medium | **Fixed 2026-09-24**: both front ends deployed, then the grant was revoked (`20260923190354`) |
 | MPF-20 | 2026-09-24, Phase 14 | The sign-in step re-applies a signup name: a vendor's brand on every sign-in, and a buyer's company once it has been cleared | Correctness (pre-existing) | Low (not reachable until OTP sign-in is live) | **Fixed 2026-09-24** (Phase 14, on request) |
+| MPF-22 | 2026-09-24, Phase 17 | 10 seller-role accounts have no completed vendor registration on file, so switching back to Seller sends them to `/onboarding` | Data / product gap | Low | **Fixed 2026-09-25** (Mitra's rule): only a seller who completed onboarding may switch to Buyer |
+| MPF-23 | 2026-09-24, Phase 16 | `log_engagement_event()` swallows every error, so a rejected event disappears with no trace | Correctness (analytics observability) | Low | **Fixed 2026-09-25** (`20260925173423`): failures are recorded and shown on System Health |
+| MPF-25 | 2026-09-24, Phase 20 | The deployed subscription payment functions are older than the repo: `subscription-create-order` lacks the `intent_failed` guard | Security (payment integrity), deploy drift | Medium once Razorpay is live | **Fixed 2026-09-25**: diffed, then redeployed from the repo |
+| MPF-26 | 2026-09-24, Phase 22 | FAQ edits and deletes leave no record of who made them or what the text was | Audit (admin accountability) | Low | **Fixed 2026-09-25** (`20260925173658`, `20260925174031`): the Admin Log, for super_admin and the new Manager role |
+| MPF-27 | 2026-09-24, Phase 23 | The `fx-rates-refresh` and `account-deletion-sweep` cron jobs would record success while doing nothing if the Vault key went missing | Reliability | Low | **Fixed 2026-09-25** (`20260925172634`): both now fail loudly without the key |
 
 ---
 
@@ -829,6 +836,46 @@ the decisions each phase recorded.
 
 ---
 
+## MPF-12: Vendor Settings' notification switches, and the "Notifications: On" label on `/profile`, still imply live delivery
+
+
+- **Context:** Phase 7 made `/profile/notifications` honest. Its switches are saved
+  preferences only, and nothing sends email or push from them. Two surfaces outside that
+  page's scope carry the same overclaim.
+- **Vendor Settings** (`src/pages/VendorSettings.tsx`, `EMAIL_ROWS` / `PUSH_ROWS`):
+  - Eight switches saved to `vendor_profiles.notifications` ("When a buyer posts a
+    requirement in your categories", "When a buyer messages you", …).
+  - Nothing reads them. The in-app bell (`notify()`) is fed only by moderation, account, ad
+    and certificate events. So a vendor who turns on "New requirements (RFQs)" gets nothing,
+    anywhere.
+- **The `/profile` row** "Notifications · On/Off" (`Profile.tsx`) is derived from the saved
+  switches. "On" reads as "you are receiving notifications".
+- **Why not changed in Phase 7:** the brief scoped the fix to the buyer profile's
+  notifications page, and the vendor app is a different surface.
+- **Fix:**
+  - Vendor Settings: the same pattern as `ProfileNotifications.tsx` (a `DELIVERY_LIVE` flag,
+    an amber note, "saved for when it launches" subtitles, event-worded descriptions).
+  - The `/profile` row: show "Saved" or nothing instead of "On", until delivery exists.
+- **Related:** building real delivery is its own master prompt. See the Phase 7 changelog
+  entry for what it would take.
+- **Fixed 2026-09-25** (flag-fix pass; Mitra: "fix this yourself"):
+  - One switch: `NOTIFICATION_DELIVERY_LIVE` in `src/lib/notificationDelivery.ts`, read by
+    `/profile/notifications`, Vendor Settings, the `/profile` row and the seller home. It is
+    false until a sender reads the saved keys.
+  - Vendor Settings shows the buyer page's amber note ("aren't live yet… Nothing is sent
+    today") and "Saved for when…" subtitles under Email and Push. The switches still save.
+  - The `/profile` row says "Not live yet" instead of "On" / "Off".
+  - The seller home's "Get notified for matching RFQs / Set Alerts" card only ever opened
+    `/leads`. It now says "New RFQs in your categories. They appear on your Leads page. Email
+    and push alerts aren't live yet." with "View Leads". It is the same overclaim, found
+    while fixing.
+- **Verified:** `tests/profile-notifications-honesty.spec.ts` 2/2. The new test covers the
+  `/profile` row, the Vendor Settings note, subtitles and 9 switches with their saved
+  values, and the seller home card. With the switch set to true, the new test fails.
+  Screenshot `mpf12-vendor-settings-notifications.png`.
+
+---
+
 ## MPF-13: Every page load starts in buyer mode, so a vendor who refreshes sees the buyer sidebar and nav
 
 - **Where:** `src/contexts/UserRoleContext.tsx`. `const [role, setRole] = useState<UserRole>("buyer")`.
@@ -897,6 +944,53 @@ the decisions each phase recorded.
     - tsc 0.
   - **Screenshots:** the vendor-page screenshots were re-rendered and kept. The committed
     ones had captured this bug: the buyer menu on demo-vendor's pages.
+
+---
+
+## MPF-18: A vendor can set their own quote to "accepted"
+
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-23, Low).
+- **Where:** `quotes_update` on `public.quotes`. It is
+  `vendor_id = auth.uid() OR owns_rfq(rfq_id) OR is_admin()` for both USING and WITH CHECK, and
+  no trigger guards `status`. The two quote triggers watch `rfq_id`/`vendor_id` and the lead
+  cap.
+- **Evidence (2026-09-23):** a `DO` block as `authenticated`, under demo-vendor's claims,
+  updated its own pending quote to `accepted` (1 row), then raised to roll back.
+- **Impact:**
+  - a buyer's quote list can show a quote as accepted that they never accepted;
+  - the vendor's acceptance rate and Total Order Value (Analytics and the Quotes page) count
+    it;
+  - nothing is exposed: `call_buyer_contact()` ignores quote status on purpose.
+- **How it came up:** Phase 11. "Call Buyer" only renders on accepted quotes, so "accepted"
+  looked like the natural server rule. The probe showed that it would add nothing over "has
+  quoted".
+- **Recommended fix:** a BEFORE UPDATE trigger that lets only the RFQ owner, or an admin,
+  change `status`, and lets the vendor change only the quote's own terms. After that,
+  `call_buyer_contact()` can require `accepted`, if that's the intended rule.
+- **Verify by:** as demo-vendor, the self-accept is refused. As demo-buyer, accept, shortlist
+  and reject still work (the `setQuoteStatusDb()` path).
+- **Fixed 2026-09-25:** migration `20260925173024_quotes_status_and_terms_by_role.sql`,
+  trigger `trg_quotes_update_roles` (BEFORE UPDATE, SECURITY INVOKER,
+  `enforce_quote_update_roles()`). For a signed-in caller:
+  - the buyer who owns the request may change only `status`;
+  - the vendor who wrote the quote may change its terms, and may move `status` only to
+    pending. A change to the terms of a quote that isn't pending puts it back to pending, so
+    a vendor can't raise the price of a quote the buyer accepted;
+  - only an admin changes `id`, `rfq_id`, `vendor_id` or `created_at`;
+  - admins, the service role and migrations are unaffected.
+
+  It also closes the mirror hole found while fixing: `quotes_update` let the buyer rewrite
+  the vendor's price and terms.
+- **Verified:**
+  - Rehearsal rolled back, 20 cases. The first rehearsal showed a vendor could raise the
+    price of an accepted quote while it stayed accepted, so the reset to pending was added.
+  - Applied; the file's md5 matches the live record.
+  - Live: `scripts/quote-status-roles-check.mjs` 11/11, self-restoring.
+  - Regression: `profile-contact-privacy` 4/4 (Call Buyer accepts a quote as the buyer) and
+    `vendor-analytics` 5/5.
+- **Still a decision:** whether `call_buyer_contact()` should now require an accepted quote,
+  since only the buyer can accept (`myprofileflags.md`, open decisions).
 
 ---
 
@@ -1003,6 +1097,234 @@ the decisions each phase recorded.
   - **Afterwards:** SQL fingerprints of both demo accounts (auth metadata, `profiles`,
     `buyer_profiles`, `vendor_profiles`) match the originals, and no `brand_name` key is left.
   - Regression 6/6; tsc 0, eslint 0.
+
+---
+
+## MPF-22: Seller-role accounts with no completed registration go to `/onboarding` when switching back
+
+
+- **Where:** `profiles.active_role` against `vendor_profiles.onboarding_complete`, read by
+  `UserRoleContext` since Phase 17.
+- **What:** Phase 17 made `vendorRegistered` come from `onboarding_complete` alone, by
+  Mitra's decision. 10 seller-role accounts have no completed registration on file:
+  - 6 with a vendor row whose `onboarding_complete` is false, because they were seeded rather
+    than onboarded: demo-vendor (`22222222…`) and `a0000001…` to `a0000005…`;
+  - 4 with no vendor row at all: `2ff76479…`, `33333333…` (demo-admin), `bfbaf9d0…` and
+    `f2b28c34…`.
+
+  They load on the seller side (their `active_role`) and use it normally. But after switching
+  to Buyer, the Seller switch sends them to `/onboarding`. Before Phase 17,
+  `active_role = 'seller'` counted as registered. Verified for demo-vendor in
+  `tests/role-on-load.spec.ts`.
+- **Same shape, going forward:** a new user who picks Seller in role selection and leaves
+  `/onboarding` part-way has `active_role = 'seller'` with no vendor profile. After a reload
+  they are on the seller side.
+- **Fix, if wanted:** complete `/onboarding` for those accounts. That writes the signed
+  contract too, which keeps "a completed vendor has a contract on file" true. Setting
+  `onboarding_complete = true` directly would not.
+- **Fixed 2026-09-25**, by Mitra's rule: "the seller who has gone through the complete seller
+  onboarding are the sellers who can switch to buyer side, because the seller while
+  onboarding has given all the details which are required to become the buyer".
+  - `useSwitchRole`: Seller → Buyer only when `vendorRegistered`
+    (`vendor_profiles.onboarding_complete`).
+  - Otherwise the switch goes to `/onboarding` with "Finish your seller registration to use
+    the buyer side". Mitra chose that over hiding the toggle.
+  - The 10 accounts stay on the seller side until they finish onboarding, so the round trip
+    that sent them to `/onboarding` on the way back can no longer start.
+  - Buyer → Seller is unchanged.
+- **Verified:** `tests/role-on-load.spec.ts` 5/5.
+  - New: an unregistered seller's switch goes to `/onboarding` and the account stays a seller
+    (demo-vendor's real row).
+  - New: a registered seller switches to Buyer and back freely, and a reload is the seller
+    side.
+  - With the old switch, the first new test fails.
+  - Screenshot `mpf22-switch-to-buyer-unregistered.png`.
+
+---
+
+## MPF-23: `log_engagement_event()` swallows every error
+
+
+- **Where:** `public.log_engagement_event()`, which ends in
+  `exception when others then return;`.
+- **What:** any failed insert returns success with nothing written. Found in Phase 16: an
+  event whose `source` was not in `engagement_events_source_check` recorded nothing and
+  returned OK. A new client sending a wrong event type or source would under-count vendors'
+  views and clicks, with no error anywhere.
+- **Fix, if wanted:** narrow the handler to the failures that are expected, or log the
+  failure somewhere an admin can see it, instead of swallowing everything.
+- **Fixed 2026-09-25:** migration `20260925173423_engagement_event_failures_recorded.sql`.
+  - A foreign-key failure (an unknown product, ad or vendor id) stays quiet: that is junk a
+    client can send.
+  - Any other failure is recorded in `admin.engagement_event_failures`: one row per hour per
+    error, with a count and the last event type and source. The call still returns normally.
+  - The table's key is not client data, and rows older than 30 days are removed as new ones
+    arrive.
+  - `admin_engagement_event_failures()` (super_admin and vendor_ops, like the embedding
+    health reader) feeds a new "Analytics events refused" panel on Cosora-Admin's System
+    Health page.
+- **Verified:**
+  - Rehearsal rolled back: a bad source twice counts 2; a bad event type gets its own row;
+    an unknown vendor stays quiet; failing calls write no event; a valid view writes one.
+    demo-admin can read the failures; demo-buyer and anon get 42501, and clients can't reach
+    the table.
+  - The rehearsal also caught a trap: inside a PL/pgSQL exception handler, `SQLSTATE` is a
+    special variable, so a column named `sqlstate` made the recording insert fail silently.
+    The column is `error_code`.
+  - Applied; md5 matches.
+  - Live: `scripts/engagement-event-failures-check.mjs` 5/5. Its marker row was then removed
+    with SQL.
+  - The new panel on System Health, as super_admin, showed the marker failure: `engagement_events_source_check`, count 1, with its event type and source. Checked with a temporary spec, since deleted. Screenshot `mpf23-system-health-refused-events.png`.
+
+---
+
+## MPF-25: The deployed subscription payment functions are older than the repo
+
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** `subscription-create-order` (deployed v3, 16 Jul 2026),
+  `subscription-verify-payment` (v4, 16 Jul) and `subscription-webhook` (v3, 16 Jul).
+- **What:**
+  - The repo's `subscription-create-order` gained an `intent_failed` guard on 26 Jul (commit
+    `0fc15f6`, "rzr pay setup"). If recording the payment intent in
+    `subscription_payment_orders` fails, it stops before Razorpay Checkout opens.
+  - The deployed v3 predates it. Its source records the intent without checking the result.
+  - Without the guard, a failed intent write still lets the vendor pay. The payment then hits
+    `activateFromOrder`'s "already paid / unknown" branch, which returns ok without
+    activating: the vendor is charged and stays on the old plan (the repo comment's words).
+  - `-verify-payment` and `-webhook` were first committed on 17 Jul, the day after their
+    deploy. Whether their deployed code matches the repo wasn't proven.
+  - The same drift was found and fixed for `razorpay-create-order` on 2026-09-14
+    (securityflags); the subscription copy was missed.
+- **Reachable today?** No. `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` are unset, so
+  `subscription-create-order` answers `not_configured` and the app uses its simulated
+  checkout. It matters the day payments go live.
+- **How it came up:** Phase 20 extracted GST into `_shared/gst.ts` and refactored all three
+  functions to import it. Before redeploying, it checked the deploy dates: each repo file
+  changed after its last deploy.
+- **Why not redeployed in Phase 20:** a redeploy ships everything in the repo, including this
+  guard and anything else that differs, into the payment path. That's a decision, not a side
+  effect of a GST refactor.
+- **Fix:** diff each deployed source against the repo, then redeploy all three with
+  `supabase/functions/_shared/gst.ts`. `node scripts/gst-check.mjs` and Phase 20's old-vs-new
+  harness show the GST part changes no amount.
+- **Fixed 2026-09-25:**
+  - All three deployed sources were fetched and diffed first. `subscription-create-order` v3,
+    `-verify-payment` v4 and `-webhook` v3 were exactly commit `40c4611`.
+  - So the redeploy shipped two things only: `create-order`'s `intent_failed` guard (commit
+    `0fc15f6`), and the Phase 20 `gstOn()` import in all three, with identical arithmetic.
+  - Deployed from the repo with `_shared/gst.ts` bundled: `create-order` v4, `verify-payment`
+    v5, `webhook` v4. `verify_jwt` is unchanged (true, true, false).
+- **Verified:**
+  - Live smoke 3/3, nothing activated or charged: `create-order` → `not_configured`;
+    `verify-payment` with the free plan → `bad_plan`; `webhook` without a signature →
+    `not_configured`. That also proves the shared import resolved.
+  - `node scripts/gst-check.mjs`: one formula, the same amounts as the three copies it
+    replaced.
+
+---
+
+## MPF-26: FAQ edits and deletes leave no record of who made them or what the text was
+
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** `public.faqs`, and `admin_faq_update`, `_delete` and `_reorder`.
+- **What:**
+  - `created_by` records who **added** a row, and nothing else does any recording. An edit
+    overwrites `question` / `answer` / `active` and sets `updated_at`, a delete removes the row,
+    and there is no history table.
+  - The only admin audit table in the project is `admin.ad_review_log`, which is for ads.
+  - So if an answer on the public Help, Subscription or seller page is changed or removed,
+    nobody can tell who did it or what it said before.
+  - Cosora-Admin's FAQ table shows the **creator's** name under the "Updated" date, which reads
+    as the last editor.
+- **Why now:** Phase 22 (migration `20260924170736`) let support write FAQs as well as
+  super_admin, by design. Before it, only the 3 super_admin accounts could change the text.
+- **Not exploitable from outside:** every write needs an active support or super_admin
+  admin, and clients have no write grant on the table.
+- **Fix shape:** a `faq_revisions` table written by the `admin_faq_*` functions themselves
+  (who, when, the old and new text), read through an admin function. Or, at least, an
+  `updated_by` column. Then the page shows the last editor, not the creator.
+- **Not built in Phase 22:** the brief was the gate change only.
+- **Fixed 2026-09-25**, with the fix Mitra described: an Admin Log in Cosora-Admin, seen only
+  by a managerial role, tracking each admin's activity and changes with date and time.
+  Mitra chose a new **Manager** role, which sees the log alongside Super admin.
+  - `20260925173658_admin_role_manager.sql` adds `manager` to `admin_role_type`.
+  - `20260925174031_admin_audit_log.sql` adds `admin.audit_log`, which is append-only: no
+    client grant, RLS with no policy, and a trigger refusing UPDATE and DELETE.
+    `20260925201948_admin_audit_log_guard_search_path.sql` pins that trigger function's
+    `search_path`, which the security advisor flagged.
+  - An AFTER ROW trigger `trg_admin_audit` sits on the 17 tables the panel writes, plus
+    `profiles.account_status`. It records every insert, update or delete by an active admin,
+    whatever path made it, with the actor, role, time, and changed columns (before → after).
+  - It skips non-admins, writes with no JWT user, changes made by another trigger, and
+    counters or derived columns, so an admin browsing the site isn't logged.
+  - `own_row` marks an admin changing their own row.
+  - `admin_audit_session()` records panel sign-in and sign-out.
+  - `admin_audit_record()`, service role only, records invites and refunds from
+    `admin-invite` (v7) and `admin-refund-payment` (v5). Those two write with the
+    service-role key, so the trigger can't see who asked.
+  - `admin_audit_log_list()` and `admin_audit_log_actors()` admit super_admin and manager
+    only.
+  - Cosora-Admin: an `/admin-log` page with filters (admin, area, action, dates), IST times,
+    before → after, and older entries on demand. Also an "Admin Log" nav item, and
+    `roles.ts`: Manager, plus the `admin-log` section. A manager sees no moderation or
+    commerce section.
+- **Verified:**
+  - Rehearsal rolled back:
+    - an FAQ edit through `admin_faq_update` is logged with its answer before and after;
+    - an admin viewing a product logs nothing, and a vendor editing its own product logs
+      nothing;
+    - suspend and reinstate log `profiles.account_status` and the suspension rows;
+    - sign-in is logged for an admin, not a non-admin;
+    - the recorder refuses an admin and admits the service role;
+    - the list admits super_admin and manager, and refuses support, a non-admin and anon;
+    - `admin_set_role` support → manager is logged;
+    - UPDATE and DELETE on the log are refused.
+  - A second rolled-back check on the live triggers: an admin moderating a vendor's product
+    is logged, and an admin who is also a vendor editing their own product is logged with
+    `own_row`.
+  - Applied; both md5s match.
+  - The edge-function records were checked through the rehearsal's service-role call, not
+    live: a live invite creates an account and sends an email, and a refund can't run
+    without the Razorpay keys.
+  - `tests/admin-log.spec.ts` 3/3 in Cosora-Admin, with run-only fixtures. super_admin's real sign-in, two FAQ edits and sign-out were recorded in exactly that order (sign_in, update, update, sign_out), and the page shows each with the name, role, IST time and before → after. The manager sees the Admin Log and no moderation section. The product_moderator is refused in the panel and by the RPC (42501). With the `admin-log` section limited to super_admin, the manager test fails. Screenshots `mpf26-admin-log-faq.png`, `mpf26-admin-log-manager.png`.
+
+---
+
+## MPF-27: Two cron jobs would succeed silently without the Vault key
+
+
+- **Also logged in:** `securityflags.md` (Open Flags, 2026-09-24).
+- **Where:** pg_cron `fx-rates-refresh` (Phase 20, `20260924161525`) and
+  `account-deletion-sweep` (Phase 16).
+- **What:** both are `select net.http_post(...) where exists (<Vault service_role_key>)`. If
+  the secret were deleted or renamed, the WHERE would be false, nothing would be sent, and
+  `cron.job_run_details` would record `succeeded` every run. That is the failure
+  `claude.md` describes for the embedding worker (3,960 silent "successful" runs).
+- **Impact if it happened:** FX rates stop refreshing (the rate line shows its date, so it
+  is visible). More seriously, accounts past their 14-day cooling-off are not anonymized,
+  and nobody is told.
+- **How it came up:** Phase 23's `faq-snapshots-refresh` was written to raise instead, and
+  reading the two older jobs for their pattern showed the difference.
+- **Fix shape:** a `do` block that raises when the key is missing, as
+  `faq-snapshots-refresh` does. For the sweep, "nothing is due" must stay a quiet success;
+  only a missing key raises.
+- **Not fixed in Phase 23:** outside the brief.
+- **Fixed 2026-09-25:** migration `20260925172634_cron_jobs_raise_without_vault_key.sql`.
+  - `fx-rates-refresh` is now a DO block that raises when the Vault secret is missing, like
+    `faq-snapshots-refresh`.
+  - `account-deletion-sweep` keeps its command, because a raise in the same job would roll
+    back `process_due_account_deletions()`, the fallback that anonymizes overdue requests.
+    Instead, a new job `account-deletion-sweep-alarm` (03:43 UTC daily) raises when the
+    secret is missing. "Nothing is due" stays a quiet success.
+- **Verified:** rehearsal rolled back:
+  - the alarm is quiet with the secret;
+  - with the secret name swapped for one that doesn't exist, both jobs raise their message,
+    and `fx` queues no request;
+  - the sweep still has its fallback.
+
+  Applied; md5 matches. The first runs under the new commands come after this pass: `account-deletion-sweep-alarm` at 03:43 UTC and `fx-rates-refresh` at 16:30 UTC on 2026-09-26. Not observed yet.
 
 ---
 
@@ -1310,3 +1632,31 @@ results are in `test.md`, in the Phase 26 entry.
    reorder and checks every position.
 6. **Committed and pushed on the phase branches, on Mitra's "push everything to repo".** Not
    merged to `main` and not deployed.
+
+---
+
+## Flag-fix pass decisions (2026-09-25)
+
+Mitra's instruction for each open flag, and what was decided while carrying them out.
+
+1. **Moved to `ToDo.md`, left as they are:** MPF-4, 10, 14, 15, 16, 17, 21 and 24 ("leave it
+   alone, shift it to todo.md"; also "anything about OTP/email: add those tasks to todo.md").
+   Their records now live in `ToDo.md`. The OTP and email items there are MPF-4, 10, 21 and
+   24, plus the existing "Wire up mobile OTP delivery" and "Configure a custom SMTP provider"
+   entries.
+2. **Fixed:** MPF-12, 18, 22, 23, 25, 26 and 27.
+3. **MPF-26's role:** a new Manager role, which Mitra chose over "Super admin only" and
+   "Super admin + Support". Super admin keeps access too.
+4. **MPF-22, when an unregistered seller taps Switch to Buyer:** send them to `/onboarding`
+   with a note (Mitra), rather than hiding the toggle.
+5. **MPF-18 went beyond the flag in two ways, both closing holes found while fixing:**
+   - a buyer can no longer rewrite a vendor's price;
+   - a vendor's revised terms reset the quote to pending.
+6. **MPF-12 went one surface further:** the seller home's "Set Alerts" card had the same
+   overclaim, and now points to Leads.
+7. **MPF-23:** unknown ids stay quiet. Failures surface on the existing System Health page,
+   behind its existing gate.
+8. **MPF-27:** the sweep's alarm is a separate job, so its SQL fallback can't be rolled back.
+9. **MPF-26's scope:** every table the panel writes, sign-ins and sign-outs, and the two edge
+   functions. Counters and trigger side effects are left out, so the log shows what admins
+   did, not what the site did.

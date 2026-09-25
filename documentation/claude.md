@@ -35,7 +35,8 @@ Rules decided before or outside of Claude Code sessions.
   Vendor Dashboard Home and the Buyer Homepage. Nowhere else.
 - **Authentication is OTP-only** — phone number + one-time password, no passwords. Google
   OAuth is a secondary option. A vendor-first user lands on the vendor dashboard after
-  login; a buyer-first user lands on the buyer homepage. Vendor → Buyer is a direct toggle;
+  login; a buyer-first user lands on the buyer homepage. Vendor → Buyer is a direct toggle
+  for a vendor who completed onboarding (Mitra, 2026-09-25, MPF-22);
   **Buyer → Vendor requires completing full vendor onboarding first.**
   > **This is the product INTENT and is not what ships today (as of 2026-09-08).** No SMS
   > provider is configured — `signInWithOtp({ phone })` returns `phone_provider_disabled` —
@@ -180,8 +181,11 @@ undocumented. Deep technical rationale for each lives in
     WhatsApp for an account with no email) is transactional.
   - `notify()` fills the in-app bell only from ad, certificate, account, deletion, KYC and
     chat-moderation events. **No quote, message or RFQ event notifies anyone.**
-  - `/profile/notifications` says so. Its `DELIVERY_LIVE` flag is the one switch to flip
-    once a sender honours the toggles.
+  - Every surface that shows the switches, or a summary of them, says so:
+    `/profile/notifications`, Vendor Settings, the `/profile` row ("Not live yet") and the
+    seller home's RFQ card. They all read `NOTIFICATION_DELIVERY_LIVE` in
+    `src/lib/notificationDelivery.ts`: the one switch to flip once a sender honours the
+    toggles (MPF-12, 2026-09-25). A new surface that mentions notifications reads it too.
   - Building delivery is its own master prompt, not a profile-page change.
 - **Currency converts displayed prices, for display only; timezone is still read by nothing**
   (currency: Phase 20 of the My Profile brief, 2026-09-24, MPF-11).
@@ -451,8 +455,12 @@ undocumented. Deep technical rationale for each lives in
     that stands until a reload.
   - `vendorRegistered` is `vendor_profiles.onboarding_complete` alone (Mitra's call).
     localStorage holds only a per-account hint until that read returns.
-  - `useSwitchRole` is the one place that decides where a switch goes: Seller → Buyer
-    always; Buyer → Seller through `/onboarding` unless registered.
+  - `useSwitchRole` is the one place that decides where a switch goes, and both directions
+    need a completed registration.
+    - Buyer → Seller goes through `/onboarding` unless registered.
+    - Seller → Buyer is only for a registered seller (Mitra, 2026-09-25, MPF-22:
+      onboarding collects everything the buyer side needs). Anyone else goes to
+      `/onboarding` with "Finish your seller registration to use the buyer side".
 - **Search ranking happens in ONE place: `match_products`.** Keyword rank and vector rank
   are fused with RRF (k = 60, the paper's constant, deliberately untuned), and the vendor's
   paid `search_boost_tier` is applied as a multiplication **after** fusion — bounded at
@@ -621,6 +629,22 @@ undocumented. Deep technical rationale for each lives in
   - `admin.shadow_admin_columns()` survives as a no-op: its profiles write is guarded by a
     column-exists check. `enforce_admin_grants()` now guards only `account_status`.
   - Embedding-health alerts go to the active `admin_users` rows.
+  - **Manager** (`manager`, 2026-09-25) is an admin role for reading the Admin Log. It sees
+    no moderation or commerce section. A super admin grants it on the Admins page.
+- **Every admin change goes in the Admin Log, which is append-only** (MPF-26, 2026-09-25).
+  - `admin.audit_log` is written by three things:
+    - `trg_admin_audit`, on each table the admin panel writes;
+    - `admin_audit_session()`, for panel sign-in and sign-out;
+    - `admin_audit_record()`, service role only, for the invite and refund edge functions.
+  - Only super_admin and manager read it (`admin_audit_log_list()`), and nobody updates or
+    deletes a row.
+  - **A new table the admin panel writes gets `trg_admin_audit`**
+    (`admin.audit_row_change('<owner column>')`). A new edge function that writes with the
+    service-role key for an admin calls `admin_audit_record()`. Otherwise its changes never
+    reach the log.
+  - Counters and derived columns are left out (views, impressions, clicks, likes, ratings,
+    embeddings, search text, `updated_at`). A new counter column goes on that list in
+    `admin.audit_row_change()`, or an admin browsing the site shows up as changing rows.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
@@ -717,6 +741,13 @@ undocumented. Deep technical rationale for each lives in
   an existing quote after the buyer closed the request. Enforced by `trg_quotes_accepting_rfq`
   (migration `20260923081708`), which fires before the lead cap so a closed request reports
   "closed", not a cap hit. Accepting or rejecting a quote is unaffected.
+- **The buyer decides a quote's status; the vendor sets its terms** (MPF-18, 2026-09-25,
+  `trg_quotes_update_roles`).
+  - The RFQ's owner may change only `status`.
+  - The quote's vendor may change its terms, and may move `status` only to pending.
+    Changing the terms of a quote that isn't pending puts it back to pending.
+  - Only an admin changes `id`, `rfq_id`, `vendor_id` or `created_at`.
+  - So `accepted` means the buyer accepted these terms, and Total Order Value can trust it.
 - **A plan cap must hold under concurrent requests, not just sequential ones.**
   `enforce_product_cap()` and `enforce_lead_cap()` take
   `pg_advisory_xact_lock(hashtext(vendor_id::text))` before they count (`20260923082118`).
@@ -889,6 +920,13 @@ undocumented. Deep technical rationale for each lives in
   logging.** Recording health history and raising an alarm therefore cannot live in the same
   job — `embedding-health-log` (records, never raises) and `embedding-health-alarm` (raises,
   writes nothing) are split for exactly this reason, not for tidiness.
+  `account-deletion-sweep` and `account-deletion-sweep-alarm` are split the same way (MPF-27,
+  2026-09-25): a raise in the sweep would roll back its SQL fallback.
+- **Inside a PL/pgSQL exception handler, `SQLSTATE` and `SQLERRM` are variables.** A
+  statement there that names a column `sqlstate` fails, and a nested
+  `exception when others` then swallows that too: a failure log that records nothing. The
+  MPF-23 rehearsal caught exactly that on 2026-09-25. Call such a column something else
+  (`error_code`).
 - **Storage's CDN runs as Smart CDN on this Free-plan project** (measured 2026-09-24, Phase
   23), although Supabase documents Smart CDN as Pro only. Responses carry `x-smart-cdn: true`;
   the edge keeps a copy until the object changes, and an overwrite invalidates it in ~47 s
@@ -929,6 +967,12 @@ because none of it can be read off the schema:
 - `src/lib/database.types.ts` was hand-written before access returned. It was diffed
   token-for-token against `generate_typescript_types` — **171/171 and 24/24 tokens
   identical**, so no regeneration was needed. Diff it again after any change here.
+
+**A refused event is recorded, not lost** (MPF-23, 2026-09-25). `log_engagement_event()`
+still returns normally, but any failure other than an unknown id is counted in
+`admin.engagement_event_failures`, and Cosora-Admin's System Health page shows it. A new
+event type or source must be added to `engagement_events`' CHECK constraints first, or
+every such event lands there.
 
 **The two `security_definer_function_executable` warnings on `log_engagement_event` are
 expected and must not be "fixed".** `get_advisors` flags that `anon` and `authenticated`
