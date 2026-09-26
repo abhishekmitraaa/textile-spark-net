@@ -161,6 +161,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-26 — Scheduled jobs removed (migration applied, md5 matches; 0 jobs left)
+
+- **Before:** 12 jobs in `cron.job`. A pattern check found no literal key in any command,
+  without reading the commands out.
+- **Applied** `20260926082046_unschedule_all_cron_jobs`, whose self-check raises if a job
+  remains. After: `cron.job` has 0 rows. The file's whitespace-insensitive md5 matches
+  `schema_migrations` (379ebf36…).
+- **Claude Code's own** scheduled tasks (`CronList`) and remote triggers: none.
+
 ### 2026-09-26 — Managers assign teammates' roles (migration rehearsed 28/28 and applied, md5 matches; live check 35/35; specs 5/5 + a mutation check; fixtures dropped)
 
 - **Migration `20260925210601_admin_manager_assigns_team_roles`.**

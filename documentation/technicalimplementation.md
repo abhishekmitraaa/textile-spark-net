@@ -1792,6 +1792,18 @@ Phase 13 of the My Profile brief (MPF-1). No migration.
 - **Admin Log.** A manager's changes arrive through `trg_admin_audit` on `admin.admin_users`,
   with `actor_role = 'manager'`.
 
+### Scheduled jobs removed (2026-09-26)
+- `20260926082046_unschedule_all_cron_jobs.sql` calls `cron.unschedule()` on every row of
+  `cron.job` and raises if any remains. On 2026-09-26 that was twelve jobs. `cron.job` is now
+  empty, and `cron.job_run_details` keeps their history.
+- The functions and edge functions the jobs called are unchanged and still work when
+  called: `drain_vendor_catalog_recompute`, `prune_search_query_embeddings`,
+  `record_embedding_pipeline_health`, `sweep_ad_schedules`, `expire_subscriptions`,
+  `process_due_account_deletions`, and the edge functions they posted to. The Vault secret
+  `service_role_key` stays.
+- Each job, what it did and the migrations that define it: `ToDo.md`, "Restore the
+  scheduled jobs".
+
 ### Refused analytics events (MPF-23)
 - `log_engagement_event()` keeps its signature, defaults and grants. Its handler became:
   - `when foreign_key_violation then return` (junk ids);
