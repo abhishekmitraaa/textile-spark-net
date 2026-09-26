@@ -1759,6 +1759,39 @@ Phase 13 of the My Profile brief (MPF-1). No migration.
     as `field: before → after`, with the full record behind "Full record".
   - `Login.tsx` and `useAdminSession.signOut` call `admin_audit_session()`, best effort.
 
+### Managers assign teammates' roles (2026-09-26)
+- **Team roles.** `admin.is_team_role(admin_role_type)` (immutable, `search_path = ''`, no
+  client grant) is true for product_moderator, vendor_ops, ads_moderator, finance_admin and
+  support. They are listed by name, so a role added later isn't assignable by a manager
+  until it is added there, and to `TEAM_ROLES` in Cosora-Admin's `roles.ts` and in
+  `admin-invite`.
+- **The four functions** (migration `20260925210601`) keep their signatures, grants and
+  super_admin behaviour. The caller check is now: the service role, or an active admin
+  whose `admin_role()` is super_admin or manager. For a manager:
+  - `admin_set_role`: the target's current role and the new role are team roles, and the
+    target isn't the caller;
+  - `admin_grant`: the new role is a team role, the target isn't the caller, and an active
+    admin target already holds a team role (a grant to an active admin is a role change);
+  - `admin_revoke`: the target isn't the caller, and an active admin target holds a team
+    role;
+  - `admin_search_candidates`: admitted, because adding an existing account needs it.
+
+  Refusals are 42501, with a message naming the rule. The last-super-admin guard is
+  unchanged.
+- **`admin-invite` v8.** `admin_status_of()` must say super_admin or manager. For a manager,
+  a non-team role is refused (403), and so is an existing account that is the caller, a
+  super admin or a manager, all before the invite or the recovery email. `admin_grant` is
+  then called with the caller's own `Authorization` header and the anon key, not the service
+  role, so its rule applies to every invite and `trg_admin_audit` logs the grant with the
+  real actor. `admin_audit_record()` still adds the invite's outcome.
+- **Cosora-Admin.** `roles.ts` has `TEAM_ROLES` and `assignableRoles(role)` (super_admin: every
+  role; manager: the team roles; anyone else: none), and `admins` in `SECTION_READ` and
+  `SECTION_WRITE` for manager. `Admins.tsx` offers `assignableRoles` in every role picker.
+  For a manager it shows super admins, other managers and the manager's own row as text,
+  with Remove disabled.
+- **Admin Log.** A manager's changes arrive through `trg_admin_audit` on `admin.admin_users`,
+  with `actor_role = 'manager'`.
+
 ### Refused analytics events (MPF-23)
 - `log_engagement_event()` keeps its signature, defaults and grants. Its handler became:
   - `when foreign_key_violation then return` (junk ids);

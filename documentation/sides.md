@@ -527,6 +527,13 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **System Health → Analytics events refused** (MPF-23): events `log_engagement_event()`
   couldn't record, per hour, with the error and the last event type and source.
 
+### Added 2026-09-26
+- **Managers manage the team** on the Admins page: they add teammates (invite by email, or
+  grant an existing account), change their role and remove them, in the five team roles:
+  Product moderator, Vendor ops, Ads moderator, Finance admin and Support. Super admins,
+  other managers and a manager's own access stay with a super admin. Each change is in the
+  Admin Log as the manager's.
+
 ### Rules the admin layer must respect
 - **Notifications are written only by `SECURITY DEFINER` functions** — no insert policy for
   any role. Copy is read by buyers and vendors, never admins, so it must never name the

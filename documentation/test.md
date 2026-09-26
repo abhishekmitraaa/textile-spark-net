@@ -24,7 +24,8 @@ Last updated: 2026-09-09
 | `display-currency.spec.ts` | MPF-11 (Phase 20). As demo-buyer with no currency set, every line with "₹" on 11 buyer pages is captured. Then "$ USD" is picked in the real Regional Settings picker and the pages are captured again. Every line must be unchanged (the INR-by-design lines: the invented New Arrivals hero, service-vendor rates) or that line converted at the cached `fx_rates` rate, worked out independently in the test, marked "≈", optionally with the INR price beside it. There must be conversions on every product page. Also: the display-only note, Regional Settings' rate line, the drawer picker showing the same setting, a received quote "≈ $x (₹y)", and no `fx_rates` read for an INR buyer. Tracking and recently-viewed writes are answered in the browser | `demo-buyer` (**mutating, self-restoring**: `regional` put back exactly, in `afterEach`) |
 | `profile-edit-routes.spec.ts` | `/profile/edit` and `/profile/business-details` as real routes. Each is loaded straight from its URL, then hard-reloaded, and must render the buyer's real values, including the email and phone, which it reads through `my_contact_info()` (MPF-3). A save on each lands in `buyer_profiles` (read back from the database), and the second save keeps the first's change. It also checks the `/profile` entry points (Edit, camera, Business Details), that `?focus=city` focuses City, the signed-out prompt on both, and that the fake email "Verify" is gone | `demo-buyer` (**mutating, self-restoring**: snapshots and restores every column `saveProfileFull()` writes; `KEEP_EDIT_MARKERS=1` leaves them for a SQL check) |
 | `admin-deleted-status.spec.ts` | MPF-5, in Cosora-Admin (:5174, or `ADMIN_APP_URL`). No account is deleted, and `'deleted'` can't be undone, so the spec rewrites the admin's own `account_status` reads in the browser only: demo-buyer reads as deleted, demo-vendor as suspended, and demo-admin stays active. **Accounts:** the deleted row has a grey "deleted" badge and "View", not "Manage". Its card shows the deleted note, no Suspend or Reinstate button and no "What suspending actually stops", and the ledger still loads. The suspended and active rows and cards are unchanged. **Vendors:** the list shows "deleted", never "active"; the vendor page's card has no status button. Asserts that nothing called `set_account_status` | `demo-admin` (read-only). Needs Cosora-Admin's dev server |
-| `admin-log.spec.ts` | MPF-26, in Cosora-Admin (:5174). **super_admin:** signs in through the real login form, changes an FAQ answer and puts it back through `admin_faq_update`; `/admin-log` shows both changes (name, role, IST date and time, answer before → after) and the sign-in, and signing out adds a sign-out row; the database recorded exactly sign_in, update, update, sign_out. **Manager:** the Admin Log is in its nav and moderation sections aren't; the page lists entries; `/faqs` is not available. **product_moderator:** `/admin-log` not available, the RPC 42501. Writes two self-restoring FAQ edits, and log rows (permanent by design) | `demo-admin`, fixtures `rlstest-manager`, `rlstest-productmod` |
+| `admins-manager.spec.ts` | Managers assign teammates' roles (2026-09-26), in Cosora-Admin (:5174). **Manager:** Admins is in its nav and moderation isn't; super admins and the other manager are read-only ("Super admin only", Remove disabled), and so is its own row; the teammate's role, the invite role and the grant role offer the five team roles only; it changes a teammate's role and back, and the Admin Log shows the change as the manager's. **Super admin:** all seven roles offered, own row locked. Writes one role change and its undo. Fixtures rlstest-manager, -manager2 and -support (FIXTURE_PASSWORD), created for the run. The screenshot masks every admin row but demo-admin and the fixtures. |
+| `admin-log.spec.ts` | MPF-26, in Cosora-Admin (:5174). **super_admin:** signs in through the real login form, changes an FAQ answer and puts it back through `admin_faq_update`; `/admin-log` shows both changes (name, role, IST date and time, answer before → after) and the sign-in, and signing out adds a sign-out row; the database recorded exactly sign_in, update, update, sign_out. **Manager:** the Admin Log and (since 2026-09-26) Admins are in its nav and moderation sections aren't; the page lists entries; `/faqs` is not available. **product_moderator:** `/admin-log` not available, the RPC 42501. Writes two self-restoring FAQ edits, and log rows (permanent by design) | `demo-admin`, fixtures `rlstest-manager`, `rlstest-productmod` |
 | `role-on-load.spec.ts` | MPF-13 and MPF-22. The side a page load starts on, a database-backed `vendorRegistered`, and who may switch. **demo-vendor, nothing stored (its real row: never onboarded):** hard loads of `/seller-home` and `/notifications` show the seller sidebar with no switching, and Settings opens `/settings`. Switch to Buyer goes to `/onboarding` with "Finish your seller registration to use the buyer side", and the account stays on the seller side (MPF-22). **demo-vendor with the registration answered as complete:** Buyer stands in-app, Seller goes straight back to `/seller-home`, and a reload is seller. **demo-buyer with a completed registration on file** (answered in the browser): Seller → `/seller-home`, the hint is corrected to "true", it stays seller in-app, and a reload is buyer. **A stale "true" hint over the real row (false):** `/onboarding`, and the hint is corrected. **No vendor row:** `/onboarding` | `demo-vendor`, `demo-buyer` (read-only) |
 | `account-deletion-channel.spec.ts` | MPF-6 (Phase 18). "Delete my account" is worded for the channel the code goes to. **Email account:** unchanged ("Email me a code", "We sent a code to d****@…"). **Phone-only account** (a session user with a confirmed phone and no email): "Send code on WhatsApp", then "We've sent a code to your WhatsApp number +91 …". **Every non-success answer, per channel:** `not_configured` (WhatsApp and email), `no_contact` and the old `no_email`, `send_failed` (WhatsApp and email). **A code already sent:** the dialog opens on the code step, worded from the open request's `channel`. The function and the open-request read are answered in the browser | `demo-buyer` (read-only) |
 | `profile-save-diff.spec.ts` | MPF-9. A profile save writes only what changed. It records every write request to `profiles` and `buyer_profiles`. **Job title only:** one request carrying just `id` and `job_title`; both rows otherwise unchanged, and a NULL country stays NULL. **State cleared:** `{id, state: null}`, saved as NULL. Country shows "India" only as a placeholder. **Untouched form:** no request, and "No changes to save". **The sign-in step** (`applyPendingSignupProfile()`, imported from the dev server), MPF-20, with real metadata writes. Buyer: with a company saved, only the metadata request, `data: {brand_name: null}`, and the metadata exactly as before. If the write fails, the metadata is kept. With no company, `{id, company}` then the metadata. A company cleared afterwards stays cleared. Vendor: the same with `brand_name`. Contact details and metadata are compared, never printed | `demo-buyer`, `demo-vendor` (**mutating, self-restoring**: rows put back in full, and a pending `brand_name` removed; `KEEP_DIFF_MARKERS=1` keeps test 1's markers for a SQL check). Needs the dev server, not a build |
@@ -99,6 +100,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
 | `faq-write-gate-check.mjs` | Phase 22, read-only: who passes each `admin_faq_*` gate, over HTTP with real sign-ins. Calls that pass the gate but change nothing: add with an unknown surface (22023 = admitted), update, delete and reorder on an id that doesn't exist. Expected: super_admin and support pass all five; product_moderator, demo-buyer and anon get 42501 from all five. `--expect-before` checks the pre-Phase-22 state (support: list only). The two `rlstest-*` rows are skipped without `FIXTURE_PASSWORD` |
 | `quote-status-roles-check.mjs` | MPF-18, over HTTP as the real accounts, on a demo-vendor quote on a demo-buyer RFQ. The vendor gets 42501 for accepted, shortlisted and rejected; the buyer gets 42501 for the price, the comment and the vendor; the buyer can shortlist and accept; a vendor price rise on the accepted quote puts it back to pending. Mutating, self-restoring: it fails unless the quote ends as it started |
+| `manager-team-roles-check.mjs` | Managers assign teammates' roles (2026-09-26), over HTTP with real sign-ins. As a manager: moves a teammate between team roles, adds, changes and removes an account, and gets 42501 for everything else (Super admin or Manager, a super admin, another manager, itself). `admin-invite` returns 403 for those before creating anything, and promotes an existing account into a team role. Support is refused all of it, and demo-admin's invite still works. Checks the manager's Admin Log rows. Self-restoring. Fixtures rlstest-manager, -manager2, -support and -teamadd (FIXTURE_PASSWORD). |
 | `engagement-event-failures-check.mjs` | MPF-23. Signed out, an event with a bad source still returns OK, and the failure is counted (`admin_engagement_event_failures`, as demo-admin) with this run's marker; an unknown vendor id stays quiet; demo-buyer and anon can't read the failures. Writes no event, but leaves one marked failure row: remove it with the SQL in its header |
 | `faq-snapshot-check.mjs` | Phase 23. Per surface: the origin file (cache-busting query) and the CDN copy match the table's active rows exactly, 200 JSON with `max-age=300`, only the public columns, version 1 with a matching count. A CDN copy behind the table is a note, not a failure (it can trail an edit by about a minute). Then anon and demo-buyer each try to upload a probe and to overwrite `buyer_help.json`: both must be refused |
 | `faq-cdn-propagation.mjs` | Phase 23: how long after an FAQ edit every request gets the new file. Each trial is a content-neutral admin edit (`admin_faq_update` with `p_active` unchanged: only `updated_at` moves, but the trigger rebuilds all three files). It measures the origin, the first new copy on the plain URL, and the last old one, across 3 files × 3 request styles every 2 s, until 5 clean rounds. `node scripts/faq-cdn-propagation.mjs [trials]` |
@@ -158,6 +160,59 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-26 — Managers assign teammates' roles (migration rehearsed 28/28 and applied, md5 matches; live check 35/35; specs 5/5 + a mutation check; fixtures dropped)
+
+- **Migration `20260925210601_admin_manager_assigns_team_roles`.**
+  - Rehearsed in one transaction ended by an exception. demo-vendor was made a manager and
+    demo-buyer a support teammate, and two other accounts became a second manager and a
+    non-admin to add. All of it rolled back.
+  - 28 cases. The manager moved the teammate between team roles, added the non-admin as
+    finance_admin, changed it to support, removed it and added it back, and searched
+    accounts. It got 42501 for: a teammate to manager or super_admin; the super admin's,
+    the other manager's or its own role; granting super_admin or manager; granting to the
+    super admin, the other manager or itself; removing the super admin, the other manager
+    or itself. Support was refused search, set_role, grant and revoke, and anon search. The
+    super admin and the service role still changed anything.
+  - The Admin Log had the manager's five changes as `manager`, the first as
+    `admin_role: support → vendor_ops`, and nothing from the refused calls.
+  - Applied. The file's whitespace-insensitive md5 matches `schema_migrations` (32b842cb…).
+- **`admin-invite` v8.** Type-checks with 0 errors (the committed version had 2, from the
+  `grantAdmin` declaration). Deployed with `verify_jwt` true.
+- **Live check** `scripts/manager-team-roles-check.mjs`, 35/35, with the run-only fixtures
+  rlstest-manager, -manager2, -support and -teamadd:
+  - the manager's allowed RPCs worked, and every other one got 42501 (the rehearsal's
+    cases, over HTTP);
+  - `admin-invite` as the manager: 403 for a new account as super_admin or manager, and for
+    the super admin, the other manager and itself. Nothing was created: `rlstest-noexist`
+    never existed. An existing account with a password as ads_moderator: 200 `promoted`,
+    no email;
+  - as support: 403. As demo-admin: an existing account as product_moderator, 200
+    `promoted`, so a super admin's invite works with the caller-token grant;
+  - the Admin Log: the manager's seven rows, all as `manager`, including the invite's own
+    grant, which the trigger now logs because the grant runs with the caller's token;
+  - it ended as it started: the support fixture back to support, the added account with no
+    admin access, demo-admin a super admin.
+- **Specs** (Cosora-Admin :5174): `admins-manager.spec.ts` 2/2 and `admin-log.spec.ts` 3/3
+  (its manager test now expects Admins in the nav; fixture rlstest-productmod too).
+  - As the manager: Admins in the nav, moderation not. demo-admin and the other manager are
+    read-only ("Super admin only", Remove disabled), and so is its own row. The teammate's
+    role, the invite role and the grant role offer the five team roles only. The
+    teammate's role changed and back, and the Admin Log shows it as the manager's.
+    Screenshot `mgr-admins-manager.png`, with every admin row but demo-admin and the
+    fixtures masked.
+  - As the super admin: all seven roles offered, and their own row locked.
+  - Mutation check: with the committed `Admins.tsx`, the manager test fails (demo-admin's
+    role is editable). Restored with `cmp`.
+- **Checks:** Cosora-Admin typecheck 0 and build 0 (it has no ESLint setup); eslint 0 on the
+  new spec and script. Security advisors: 145, no new finding. The four changed functions
+  were already "authenticated can execute", and each checks the caller inside.
+- **Cron, first runs:** `account-deletion-sweep` at 03:41 UTC and the new
+  `account-deletion-sweep-alarm` at 03:43 UTC on 2026-09-26 both succeeded; the alarm stayed
+  quiet because the Vault key is present. `fx-rates-refresh` runs at 16:30 UTC.
+- **Cleanup:** the five `rlstest-*` fixtures were dropped (0 left; the roster is 3 super
+  admins). The Admin Log keeps the 16 rows these runs made, being append-only. The two
+  re-rendered Admin Log screenshots were restored (md5s match), and no FAQ marker is left.
 
 ### 2026-09-25/26 — Flag-fix pass: MPF-12, 18, 22, 23, 25, 26, 27 fixed (six migrations rehearsed and applied, md5s match; quote roles 11/11; refused events 5/5; subscription smoke 3/3; specs 7/7 + mutation checks; regression 44/44)
 

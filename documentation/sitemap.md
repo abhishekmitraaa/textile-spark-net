@@ -184,6 +184,9 @@ support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no
 **`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
 `admin.audit_log` in this project's database, for super_admin and the Manager role only.
 
+**`/admins`** is for super_admin and, since 2026-09-26, the Manager role, which adds, changes
+and removes teammates in the five team roles only (migration `20260925210601`).
+
 ---
 
 ## Shared / Cross-role

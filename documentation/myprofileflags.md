@@ -104,8 +104,12 @@ Waiting on Mitra unless marked otherwise.
    admit any active admin, which keeps the access every admin role had before MPF-3. That
    now includes the new Manager role. Narrowing them to support and super_admin would take
    emails off Accounts and Chats for product, ads, vendor-ops and finance admins (Phase 11).
-5. **Who holds the Manager role?** It exists (MPF-26), and nobody holds it yet. A super
-   admin grants it on the Admins page.
+   Separately, since 2026-09-26 a manager can search accounts by email on the Admins page
+   (`admin_search_candidates()`: 3+ characters, 10 rows, non-admins only), which adding a
+   teammate needs.
+5. **Who holds the Manager role?** Mitra will grant it (2026-09-26); nobody holds it yet. A
+   super admin grants it on the Admins page. A manager then adds, changes and removes
+   teammates in the five team roles, and nothing else (migration `20260925210601`).
 
 Resolved decisions are recorded in `myprofileflags-fixed.md`, under each phase's
 "decisions" heading:
