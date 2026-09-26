@@ -1286,8 +1286,8 @@ The verified-code → session step can only run once an SMS provider or the cust
 
 ## Architecture Snapshot
 
-- **Repo**: `textile-spark-net` (`github.com/abhishekmitraaa/textile-spark-net`), built with
-  Lovable.dev, ported from the Next.js source `cosorawork/client-cosora-vendor-frontend`.
+- **Repo**: `textile-spark-net` (`github.com/abhishekmitraaa/textile-spark-net`), ported
+  from the Next.js source `cosorawork/client-cosora-vendor-frontend`.
 - **Stack**: Vite + React 18 + TypeScript + shadcn-ui + Tailwind + React Router v6 +
   React Query + Framer Motion, on **Supabase** (Postgres/Auth/Storage/Edge Functions/
   Realtime), with **Razorpay** payments, deployed to **Vercel**.
