@@ -17,8 +17,8 @@ import { fileURLToPath } from "node:url";
  *      page's own RPC), and the log shows both changes with the admin's name and
  *      role, the IST date and time, and the answer before and after. Signing out
  *      from the panel adds a "Signed out" row.
- *   2. manager: sees the Admin Log in the nav and no moderation section; the page
- *      lists the entries; /faqs is not available to it.
+ *   2. manager: sees the Admin Log and Admins in the nav and no moderation
+ *      section; the page lists the entries; /faqs is not available to it.
  *   3. product_moderator: /admin-log is not available, and the RPC refuses it.
  *
  * ACCOUNTS: demo-admin, and the run-only fixtures rlstest-manager and
@@ -138,7 +138,10 @@ test("manager: the Admin Log is its section, and moderation isn't", async ({ bro
     await page.goto(`${ADMIN_URL}/`, { waitUntil: "networkidle" });
     const nav = page.locator("aside");
     await expect(nav.getByRole("link", { name: "Admin Log" })).toBeVisible();
-    for (const hidden of ["Products", "FAQs", "Admins", "Accounts", "Subscriptions"]) {
+    // Since 2026-09-26 a manager also manages teammates on the Admins page
+    // (tests/admins-manager.spec.ts).
+    await expect(nav.getByRole("link", { name: "Admins", exact: true })).toBeVisible();
+    for (const hidden of ["Products", "FAQs", "Accounts", "Subscriptions"]) {
       await expect(nav.getByRole("link", { name: hidden, exact: true }), `${hidden} is hidden from a manager`).toHaveCount(0);
     }
     await expect(nav).toContainText("Manager");

@@ -623,14 +623,25 @@ undocumented. Deep technical rationale for each lives in
   - Read: `is_admin()` / `admin_role()` for the caller (RLS, triggers, the main app's `isAdmin`);
     `admin_whoami()` for the panel's identity; `admin_status_of(uuid)` for service-role edge
     functions authorizing a decoded caller; `admin_list_admins()` for the roster.
-  - Write: only `admin_grant` / `admin_set_role` / `admin_revoke` (super_admin or service_role).
+  - Write: only `admin_grant` / `admin_set_role` / `admin_revoke` (super_admin or service_role;
+    a manager for teammates in the team roles, below).
     They refuse (42501) to leave zero active super_admins; the escape hatch is SQL as postgres on
     `admin.admin_users`. Dev seed and cleanup scripts write that table directly.
   - `admin.shadow_admin_columns()` survives as a no-op: its profiles write is guarded by a
     column-exists check. `enforce_admin_grants()` now guards only `account_status`.
   - Embedding-health alerts go to the active `admin_users` rows.
-  - **Manager** (`manager`, 2026-09-25) is an admin role for reading the Admin Log. It sees
-    no moderation or commerce section. A super admin grants it on the Admins page.
+  - **Manager** (`manager`, 2026-09-25) reads the Admin Log and, since 2026-09-26 (Mitra),
+    manages the team: it adds, changes and removes teammates in the five **team roles**
+    (`admin.is_team_role()`: product_moderator, vendor_ops, ads_moderator, finance_admin,
+    support). It never grants Super admin or Manager, and never changes a super admin, another
+    manager or itself. It sees no moderation or commerce section. A super admin grants
+    Manager on the Admins page.
+    - The rule is in the database (migration `20260925210601`): `admin_set_role`,
+      `admin_grant`, `admin_revoke` and `admin_search_candidates` admit a manager on those
+      terms. `admin-invite` (v8) refuses anything else before creating an account or sending
+      an email, then grants with the caller's token, so `admin_grant` decides.
+    - **A new admin role is not a team role until it is added to `admin.is_team_role()` on
+      purpose**, and to `TEAM_ROLES` in Cosora-Admin's `roles.ts` and in `admin-invite`.
 - **Every admin change goes in the Admin Log, which is append-only** (MPF-26, 2026-09-25).
   - `admin.audit_log` is written by three things:
     - `trg_admin_audit`, on each table the admin panel writes;
