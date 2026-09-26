@@ -27,7 +27,7 @@ Last updated: 2026-09-07
 
 **Tooling / infra**
 - ESLint (`eslint.config.js`), Playwright for E2E
-- Vercel for hosting, Lovable.dev as a secondary sync target
+- Vercel for hosting
 - Dev server on `localhost:8080` (non-standard, set in `vite.config.ts`)
 - TypeScript path alias `@/*` → `src/*` (tsconfig.json + vite.config.ts)
 
@@ -1901,9 +1901,6 @@ root (requires Vercel CLI login). GitHub auto-deploy is connected via `vercel gi
 — pushing to `main` on `github.com/abhishekmitraaa/textile-spark-net` deploys to
 production; other branches get preview deploys.
 
-**Secondary — Lovable.dev**: syncs from the git repo automatically. Custom domains
-configurable in Lovable project settings.
-
 ### Admin panel
 Built, but in a **separate repo (`Cosora-Admin`)** against the same Supabase project.
 
@@ -2143,7 +2140,6 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **`profiles_id_fkey` makes `handle_new_user`'s conflict path unreachable — and `information_schema` will not tell you that (2026-09-09).** The constraint is `FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE`, so a `profiles` row cannot pre-exist its auth user and a deleted auth user takes its profile with it. A query against `information_schema.constraint_column_usage` filtered to `table_schema='public'` returns **nothing** for it, because the referenced table lives in the `auth` schema — that produced a wrong conclusion once. **Use `pg_constraint` for cross-schema foreign keys.** The handler's `on conflict do update` is defence in depth, not a live fix: it can only fill nulls, and only overwrites `active_role` when signup metadata explicitly named a whitelisted role. (`active_role` is `NOT NULL DEFAULT 'buyer'`, so "update it when null" is not a thing that can happen.)
 - **`src/components/buyer/BuyerHomeTabs.tsx` is dead code and cost a test a false diagnosis (2026-09-09).** Nothing imports it. `tests/new-arrivals.spec.ts` was written against it and timed out on `[role="tab"]`, which looked like a stale selector; the real strip is inline in `NewArrivals.tsx` and had no tablist semantics and an active state **hardcoded** to `/home/new-arrivals` rather than derived from the route. The inline strip now carries `role="tablist"`/`role="tab"`/`aria-selected` and derives selection from `useLocation()`. The dead component is intentionally left in place for now — deleting it while another session was active in the repo was the riskier move — but it is a duplicate that will drift again.
 - **Relaxed TypeScript Config**: `noImplicitAny` and `noUnusedLocals` are disabled; enforce stricter checks before production if needed.
-- **Lovable Integration**: The project uses Lovable's `componentTagger` plugin in dev mode for component metadata.
 - **Port**: Dev server runs on `localhost:8080` (non-standard, configured in vite.config.ts).
 - **Current Phase**: Porting and correcting Vendor and Buyer UIs (from Next.js source to Vite/TSX). The admin panel **is** built — it is a separate repo (`Cosora-Admin`) against the same Supabase project, and it owns some of this project's migrations (`resolve_conversation_review`, `regex_probe`, the `admin_flags` CHECK). Check both `supabase/migrations/` directories before assuming a function is missing.
 - **Bundle Size Warning**: JS bundle is ~1.9MB (522KB gzip). Not an error but worth code-splitting before scaling.
