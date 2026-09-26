@@ -822,6 +822,13 @@ undocumented. Deep technical rationale for each lives in
   migration that changes a function's parameter list must `drop function` the old
   signature explicitly, and that drop must be in the migration file or a fresh deploy
   recreates the ambiguity. Dropping also discards grants, so re-assert them after.
+- **No scheduled job runs** (Mitra, 2026-09-26). All twelve pg_cron jobs were deleted by
+  `20260926082046_unschedule_all_cron_jobs.sql`: the account-deletion sweep and its alarm,
+  subscription expiry, the ad schedule sweep, the embedding worker and its health log and
+  alarm, the vendor catalogue recompute, two prune jobs, FX rates and FAQ snapshots. Nothing
+  that depended on them happens by itself until they are restored (`ToDo.md`, "Restore the
+  scheduled jobs"). A stale value from one of them is not a bug in that feature. Don't
+  re-create a job without Mitra's say-so.
 - **A SQL statement that does nothing still SUCCEEDS — that is how a cron job lies.**
   The embedding worker was `select net.http_post(...) where exists (<vault secret>)`.
   With the secret absent the WHERE was false, zero rows came back, and pg_cron recorded

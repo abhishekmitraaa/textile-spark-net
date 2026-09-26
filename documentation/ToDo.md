@@ -15,6 +15,42 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Restore the scheduled jobs (all 12 were deleted on 2026-09-26) — added 2026-09-26
+- Task: decide which scheduled jobs come back, and re-create them. Until then, none of the
+  work below happens on its own.
+- Context: Mitra asked to "remove all the scheduled tasks". Claude Code had none of its own,
+  so this meant the database's pg_cron jobs. Told what would stop, Mitra chose to delete all
+  twelve permanently rather than pause them or remove only the My Profile ones. Migration
+  `20260926082046_unschedule_all_cron_jobs.sql` removed them; `cron.job_run_details` keeps
+  their history.
+
+| Job | Ran | What stops | Migrations that schedule, alter or name it |
+|---|---|---|---|
+| `account-deletion-sweep` | daily 03:41 UTC | Due account-deletion requests are not processed (the edge function and its SQL fallback). | `20260923115839`, `20260923200739`, `20260925172634` |
+| `account-deletion-sweep-alarm` | daily 03:43 UTC | Nothing raises if the sweep can't authenticate. | `20260925172634` |
+| `subscription-expiry-sweep` | daily 03:29 UTC | Paid subscriptions past their end date don't expire. | `20260916180244` |
+| `ads-schedule-sweep` | every 5 minutes | Scheduled ads don't start or end on time. | `20260912120200` |
+| `embedding-worker` | every minute | New or edited products get no search embedding, so search and image search miss them. | `20260906150000`, `20260909130000`, `20260910140000`, `20260923093304`, `20260923094728` |
+| `vendor-catalog-recompute` | every minute | Vendor catalogue figures stop being recomputed. | `20260910130000` |
+| `embedding-health-log` | every 10 minutes | The embedding pipeline's health history stops. | `20260910170000` |
+| `embedding-health-alarm` | every 10 minutes | No alarm when the embedding pipeline fails. | `20260910170000` |
+| `prune-query-embedding-cache` | daily 03:17 UTC | The search query cache is not pruned. | `20260910160000` |
+| `prune-embed-rate-limit` | daily 03:23 UTC | Old rate-limit rows are not pruned. | `20260910160000` |
+| `fx-rates-refresh` | daily 16:30 UTC | Display-currency rates stop refreshing. | `20260924161525`, `20260925172634` |
+| `faq-snapshots-refresh` | hourly at :17 | The FAQ CDN snapshot is rebuilt only when an FAQ is edited. | `20260924174051` |
+
+  To restore a job, re-run the most recent `cron.schedule(...)` or `cron.alter_job(...)`
+  statement for it from those files, as a new migration. Some of the files only mention the
+  job by name. The jobs that call edge functions read the Vault secret `service_role_key` at
+  run time, and it is still there. The commands were not copied out of the database: the
+  permission classifier blocked that read because they reference Vault secrets, and the
+  migrations hold them anyway.
+- Reference: 2026-09-26, right after the managers-assign-teammates work. Mitra: "remove all
+  the scheduled tasks"; offered pause all, delete all, only the four My Profile jobs, or keep
+  them, Mitra picked "Delete all 12 permanently".
+- Priority: High (account deletions and subscription expiry depend on it)
+- Status: Open
+
 ### Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
 - Task: configure the `embedding_alert_webhook_url` Vault secret so CRITICAL pipeline alerts
   reach a human outside the app.

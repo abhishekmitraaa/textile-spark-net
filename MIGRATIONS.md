@@ -78,6 +78,7 @@ runs **both ways**.
 | `20260925174031_admin_audit_log.sql` | Flag-fix pass (MPF-26, part 2). `admin.audit_log` (append-only: no grants, RLS, a trigger refusing UPDATE/DELETE); `admin.audit_row_change()` attached as `trg_admin_audit` to the 17 tables the admin panel writes and `profiles.account_status`; `admin_audit_session()`, `admin_audit_record()` (service_role), `admin_audit_log_list()` and `admin_audit_log_actors()` (super_admin, manager). Self-check. |
 | `20260925201948_admin_audit_log_guard_search_path.sql` | Flag-fix pass (MPF-26, part 3). Pins `search_path = ''` on `admin.audit_log_append_only()`, which the security advisor flagged. Self-check. |
 | `20260925210601_admin_manager_assigns_team_roles.sql` | Managers assign teammates' roles (Mitra, 2026-09-26). `admin.is_team_role()` names the five team roles. `admin_set_role`, `admin_grant`, `admin_revoke` and `admin_search_candidates` admit a manager for teammates in team roles only: never Super admin or Manager, never a super admin, another manager or the caller. Self-check. |
+| `20260926082046_unschedule_all_cron_jobs.sql` | Mitra, 2026-09-26: "remove all the scheduled tasks". Calls `cron.unschedule()` on every job (twelve that day) and raises if any remains. What stopped, and which migrations define each job: `documentation/ToDo.md`, "Restore the scheduled jobs". |
 
 ---
 

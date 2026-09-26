@@ -82,11 +82,14 @@ Waiting on Mitra unless marked otherwise.
    - **Live before it, without an app deploy:**
      - Phase 16's database changes and sweep function;
      - Phase 18's migration and `account-deletion` v2;
-     - Phase 20's `fx_rates`, `fx-rates-refresh` and its cron job;
-     - Phase 22's and Phase 23's migrations, `faqs-snapshot` and its cron job;
+     - Phase 20's `fx_rates` and `fx-rates-refresh` (its cron job was deleted on 2026-09-26,
+       with every other scheduled job);
+     - Phase 22's and Phase 23's migrations and `faqs-snapshot` (its cron job was deleted on
+       2026-09-26);
      - Phase 24's migration (which changed no live row);
      - the flag-fix pass's six migrations: the quote rule, refused-event recording, the
-       Manager role, the Admin Log (and its guard's search_path) and the cron alarms;
+       Manager role, the Admin Log (and its guard's search_path) and the cron alarms (the
+       alarms and the jobs they watched were deleted on 2026-09-26);
      - `admin-invite` v7, `admin-refund-payment` v5, and the three subscription functions.
    - **`otp-dev-verify` and `.claude/tmp/`,** which are never to be committed:
      - Commit `85f4f6a` ("index.ts", 2026-09-25 14:56 IST, before the flag-fix pass) added
@@ -110,6 +113,9 @@ Waiting on Mitra unless marked otherwise.
 5. **Who holds the Manager role?** Mitra will grant it (2026-09-26); nobody holds it yet. A
    super admin grants it on the Admins page. A manager then adds, changes and removes
    teammates in the five team roles, and nothing else (migration `20260925210601`).
+6. **Which scheduled jobs come back?** All twelve were deleted on 2026-09-26 (Mitra), so
+   account deletions, subscription expiry, ad schedules, search embeddings and the rest no
+   longer run on their own. `ToDo.md`, "Restore the scheduled jobs", lists each one.
 
 Resolved decisions are recorded in `myprofileflags-fixed.md`, under each phase's
 "decisions" heading:
