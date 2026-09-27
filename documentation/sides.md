@@ -560,6 +560,27 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   other managers and a manager's own access stay with a super admin. Each change is in the
   Admin Log as the manager's.
 
+### Added 2026-09-27 (admin completion, Phases 1–3)
+- **Every admin write is checked by role in the database** (Phase 1), not only hidden in the
+  panel.
+- **Scheduled jobs are back**, and System Health lists each job's last run (Phase 2).
+- **Chat review: Block is one step.** It suspends the participant and closes the review
+  together, or does neither.
+- **Video Closeups: "Approve all videos for vendor"** approves that vendor's pending videos only.
+- **Ads:** Pause and Reject pick a reason from the same list as the review queue, plus an
+  optional note. Request changes needs a note.
+- **Subscriptions:**
+  - Changing a plan or canceling asks for a reason, keeps the vendor's trust seal and boost in
+    step, and notifies the vendor.
+  - Both lists load 50 at a time.
+- **Reports:**
+  - Computed in the database.
+  - Revenue net of GST, with GST shown separately.
+  - Demo-mode income (no gateway payment) is flagged.
+  - A revenue window: all time, 30 days, 90 days or 12 months.
+- **Admin Log:** shows the reason an admin gave, where one was required.
+- **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
 ### Rules the admin layer must respect
 - **Notifications are written only by `SECURITY DEFINER` functions** — no insert policy for
   any role. Copy is read by buyers and vendors, never admins, so it must never name the

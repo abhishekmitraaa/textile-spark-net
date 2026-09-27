@@ -1932,6 +1932,97 @@ by design, logged in `securityflags.md`.
 
 **Tests.** `tests/dummy-otp-login.spec.ts` covers Login and Register with the probe number
 +1 555-010-0001.
+## Admin write model: roles live in the database (admin completion, 2026-09-27)
+
+Cosora-Admin's `roles.ts` decides which buttons render. The database decides what a write
+does. Phase 1 of the admin-completion plan made the two agree for **writes**; Phase 11
+narrows **reads** once the pages that read these tables call RPCs.
+
+**RLS admin arms name their roles.** A write policy's admin arm is
+`is_admin() and admin_role() = any (array[...])`, never a bare `is_admin()`:
+
+| Table | Admin writes | Other arms |
+|---|---|---|
+| `subscription_plans` | super_admin, finance_admin (with `trg_admin_audit`) | public read |
+| `quotes` update/delete | super_admin | vendor and RFQ owner unchanged |
+| `product_videos`, `catalogues` | super_admin, product_moderator | own-row vendor |
+| `advertisements` | **none**: admins act only through the review RPCs (definer, `ad_apply_decision`) | own-row vendor |
+| `vendor_documents` | none (reviews via `set_vendor_document_verified()`); SELECT for every admin | own-row vendor ALL |
+| `buyer_profiles` | none; SELECT for super_admin and support | own-row buyer ALL |
+| `profiles` | delete super_admin; update super_admin and support; insert own row only | own row |
+| `engagement_events` | none (writes only via `log_engagement_event()`) | vendor reads own |
+
+**Column guards in the BEFORE triggers** (all INVOKER; each returns early unless
+`current_user = 'authenticated'`, so definer functions and the service role pass through):
+- `enforce_products_moderation` / `enforce_product_videos_moderation`:
+  - A non-owner admin may change only `status` and `rejection_reason`. The comparison is
+    `to_jsonb(new)` against `to_jsonb(old)`, minus those two and minus every generated column.
+    A BEFORE trigger doesn't see generated values, so they must be skipped or every update
+    would look like an edit.
+  - A move to `rejected` needs `btrim(rejection_reason) <> ''`. `reject_vendor_content()`
+    applies the same rule for products and videos.
+- `enforce_vendor_profile_admin_fields`:
+  - `is_verified` → super_admin, vendor_ops;
+  - `plan_id`/`plan_expires_at` → super_admin, finance_admin;
+  - `ad_verified_until` → super_admin.
+  - On INSERT, each is reset unless the caller holds its roles.
+- `enforce_ads_moderation`:
+  - `impressions`/`clicks` refuse any client change, owner included, and a client insert starts
+    them at 0. Only `ad_impression()`/`ad_click()` (definer) move them.
+- `guard_ad_deletion`: no admin bypass. A reviewed campaign is never deleted through the API.
+
+**RPC guards:**
+- `set_account_status()` refuses the caller's own account, and refuses an active admin's account
+  unless the caller is super_admin.
+- `request_ad_changes()` needs a note.
+- `certificate_dispatch()` checks `certificate_fulfiller()` before any business rule.
+- `admin_list_admins()` → super_admin, manager.
+- `admin.flag_pattern_breadth_problem(text)` (no client grant) backs `admin_flag_pattern_add` and
+  `_update` (when switching a pattern on). It refuses a pattern that matches `''` (so every
+  message), or 2 or more of 12 ordinary sourcing messages, and caps length at 200. The 3 live
+  patterns (email, Indian mobile, off-platform apps) match none.
+  - A malformed regex is left to the table's CHECK, so its message is still Postgres's own.
+  - To change the sample set, keep it free of contact details and app names, or the live
+    patterns start failing their own check.
+
+**Grants:** anon and authenticated hold no TRUNCATE (not subject to RLS), TRIGGER or REFERENCES
+on any public table. `alter default privileges for role postgres` revokes them for new tables
+too. A table created through the dashboard (as `supabase_admin`) still gets them, so revoke
+by hand there.
+
+**Admin RPCs that are whole (Phase 3, 2026-09-27):**
+- `block_account_from_review(review, profile, side, reason, resume)`: row-locks the review, checks the profile is a participant and the reason is an active block reason, then calls `set_account_status()` and `resolve_conversation_review()` in one transaction.
+- `approve_vendor_videos_bulk(vendor) returns int`: videos only. It replaces `approve_vendor_content_bulk()`, which also published products and catalogues.
+- **Ad reasons** live in `admin.ad_reason_codes` (code, label, active, sort), read through `admin_ad_reason_codes()`.
+  - `ad_apply_decision()` stores `reason_code` and `note` in `admin.ad_review_log`, and `moderation_reason` as `"<code> <note>"`. The panel shows the code's label.
+  - Vendor notices use the note, else the label.
+- **Reasons in the Admin Log:** an RPC calls `set_config('cosora.audit_reason', <reason>, true)` before its writes. `admin.audit_row_change()` copies it into `admin.audit_log.reason` for every audited row in that transaction, and the RPC clears it afterwards.
+- **Subscriptions:** `admin_subscription_change_plan()` and `admin_subscription_cancel()` keep `vendor_subscriptions` and `vendor_profiles.plan_id`/`plan_expires_at` in step, the same pair the payment functions write on activation.
+- **Reports:** `admin_report_summary(from, to)` aggregates in SQL and returns paise. Invoice amounts are rupees ex-GST, ad orders are paise, and IST days are used for grouping.
+
+**How it was verified:** `scripts/admin-completion/01`–`04`, see `test.md` (2026-09-27).
+
+## Scheduled jobs: what runs, and the bounded history (2026-09-27)
+
+Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 2026-09-27 restore
+(`20260927153142`):
+
+| Job | Schedule (UTC) | Does |
+|---|---|---|
+| `account-deletion-sweep` | 03:41 daily | Posts to `account-deletion-sweep` when work is due, then the SQL backstop `process_due_account_deletions('1 day')` |
+| `account-deletion-sweep-alarm` | 03:43 daily | Raises if the Vault `service_role_key` is missing (split from the sweep so a raise can't roll back its fallback) |
+| `subscription-expiry-sweep` | 03:29 daily | `expire_subscriptions()` |
+| `ads-schedule-sweep` | every 5 min | `sweep_ad_schedules()`: scheduled → active at `starts_at`, and to expired at `ends_at` |
+| `faq-snapshots-refresh` | :17 hourly | Rebuilds the FAQ CDN files; raises without the Vault key |
+| `embedding-health-log` | every 10 min | `record_embedding_pipeline_health()` (System Health's history) |
+| `fx-rates-refresh` | 16:30 daily | Posts to `fx-rates-refresh`; raises without the Vault key |
+| `cron-history-prune` | 03:11 daily | Deletes `cron.job_run_details` rows older than 14 days |
+
+- **Why the prune exists:** `cron.job_run_details` is never pruned by pg_cron and has no jobid index. It was 60,950 rows and 145 MB of the 212 MB database on 2026-09-27. At today's ~460 runs a day it now holds about 6,500 rows.
+- **Reading it:** walk the `runid` primary key (`order by runid desc limit …`, or `runid > max(runid) - N`). `admin_cron_status()` does both.
+- **Adding or changing a job** needs Mitra's say-so. A job whose work is conditional must RAISE when it can't do the work (see "A SQL statement that does nothing still SUCCEEDS" in `claude.md`).
+- **Off:** `embedding-worker`, `vendor-catalog-recompute`, `embedding-health-alarm`, `prune-query-embedding-cache`, `prune-embed-rate-limit` (`ToDo.md`).
+
 ## Integrations
 
 ### Supabase

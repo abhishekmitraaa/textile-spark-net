@@ -380,9 +380,11 @@ undocumented. Deep technical rationale for each lives in
 - **Signed-out / loading / error / empty must stay four distinct states** on any surface
   that reads from Supabase. Collapsing them is how a broken page passes for an empty one.
 - **Vendor contact details are gated by the same rule as calling** — one resolution, many
-  consumers, and a skeleton (never real rows) while the gate resolves. **Known open
-  decision:** `vendor_profiles` is world-readable including `phone`, so the gate is a UI
-  rule only. Closing it is a marketplace-discovery decision, not a bug fix.
+  consumers, and a skeleton (never real rows) while the gate resolves. **Decided (Mitra,
+  2026-09-27):** PAN, owner email, phone, WhatsApp and street address become private
+  (GSTIN and CIN stay public). Admin-completion Phase 4 ships the new readers to both apps
+  first, then revokes the columns. Until then `vendor_profiles` is still world-readable,
+  and the gate is a UI rule only.
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the
@@ -683,6 +685,41 @@ undocumented. Deep technical rationale for each lives in
     embeddings, search text, `updated_at`). A new counter column goes on that list in
     `admin.audit_row_change()`, or an admin browsing the site shows up as changing rows.
 
+- **An admin's writes follow the admin's role in the database** (admin completion Phase 1,
+  2026-09-27). `roles.ts` in Cosora-Admin only hides buttons; the policies and triggers decide.
+  Mechanism: `technicalimplementation.md` → "Admin write model".
+  - **A write policy's admin arm names its roles:** `is_admin() and admin_role() = any (...)`.
+    A bare `is_admin()` is for admin READ policies only.
+  - **Admins change a campaign only through the review RPCs.** `advertisements` has no admin
+    write arm, so every admin decision lands in `admin.ad_review_log`. Nobody deletes a
+    reviewed campaign through the API, admins included.
+  - **Impressions and clicks** are moved only by `ad_impression()`/`ad_click()`. No client sets
+    them, not even the campaign's owner.
+  - **A moderator changes a listing's or video's `status` and `rejection_reason`, nothing
+    else.** Its content is the vendor's.
+  - **A rejection needs a reason** in the database, not just in the panel's textarea.
+  - **`vendor_profiles` admin columns** belong to fixed roles:
+    - `is_verified`: super_admin, vendor_ops;
+    - `plan_id`/`plan_expires_at`: super_admin, finance_admin;
+    - `ad_verified_until`: super_admin.
+    - A plan change belongs to the subscription system and finance, not to vendor ops.
+  - **Account status:** no admin changes their own account's status, and only a super admin
+    changes another admin's.
+  - **The admin roster** (`admin_list_admins()`) is for super admins and managers.
+  - **A chat flag pattern that matches ordinary messages is refused** (Phase 1c,
+    `admin.flag_pattern_breadth_problem`). One `.*` would lock every chat on the platform.
+  - **New public tables:** anon and authenticated get no TRUNCATE, TRIGGER or REFERENCES
+    (default privileges, for tables created by postgres).
+  - **An admin action that has to say why records it in the Admin Log.** The RPC sets the
+    transaction-local `cosora.audit_reason`, and `audit_row_change()` copies it onto every
+    audited row (`admin.audit_log.reason`). Plan changes and cancels do this. A new
+    reason-bearing admin RPC should too.
+  - **Ad moderation reasons are one list, `admin.ad_reason_codes`.** Both ad screens read it,
+    and the vendor reads the label. Add a reason there, never as a UI constant.
+  - **An admin's plan change or cancel goes through `admin_subscription_change_plan()` /
+    `admin_subscription_cancel()`.** Never write `vendor_subscriptions` directly: the cached
+    `vendor_profiles.plan_id`/`plan_expires_at` must move with it.
+
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
   The brand name (seller) or company (buyer) typed at signup lives only in
@@ -848,13 +885,22 @@ undocumented. Deep technical rationale for each lives in
   migration that changes a function's parameter list must `drop function` the old
   signature explicitly, and that drop must be in the migration file or a fresh deploy
   recreates the ambiguity. Dropping also discards grants, so re-assert them after.
-- **No scheduled job runs** (Mitra, 2026-09-26). All twelve pg_cron jobs were deleted by
-  `20260926082046_unschedule_all_cron_jobs.sql`: the account-deletion sweep and its alarm,
-  subscription expiry, the ad schedule sweep, the embedding worker and its health log and
-  alarm, the vendor catalogue recompute, two prune jobs, FX rates and FAQ snapshots. Nothing
-  that depended on them happens by itself until they are restored (`ToDo.md`, "Restore the
-  scheduled jobs"). A stale value from one of them is not a bug in that feature. Don't
-  re-create a job without Mitra's say-so.
+- **Eight scheduled jobs run** (Mitra, 2026-09-27). All twelve pg_cron jobs were deleted on
+  2026-09-26 (`20260926082046`). The essential ones came back on 2026-09-27
+  (`20260927153142_restore_essential_cron_jobs.sql`), each from its latest definition:
+  - `account-deletion-sweep` (03:41 UTC) and its alarm (03:43);
+  - `subscription-expiry-sweep` (03:29);
+  - `ads-schedule-sweep` (every 5 minutes);
+  - `faq-snapshots-refresh` (hourly at :17);
+  - `embedding-health-log` (every 10 minutes);
+  - `fx-rates-refresh` (16:30);
+  - a new `cron-history-prune` (03:11), which deletes `cron.job_run_details` rows older than
+    14 days. That table was 145 MB of a 212 MB database.
+
+  Still off, on purpose: `embedding-worker` and `vendor-catalog-recompute` (the two every-minute
+  jobs; embeddings need OpenAI billing), `embedding-health-alarm`, and the two cache/rate-limit
+  prunes (`ToDo.md`). Admins see every job's last run on Cosora-Admin's System Health page
+  (`admin_cron_status()`). Don't add or re-create a job without Mitra's say-so.
 - **A SQL statement that does nothing still SUCCEEDS — that is how a cron job lies.**
   The embedding worker was `select net.http_post(...) where exists (<vault secret>)`.
   With the secret absent the WHERE was false, zero rows came back, and pg_cron recorded

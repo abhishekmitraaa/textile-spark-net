@@ -1,3 +1,73 @@
+- 2026-09-27 (admin completion, Phase 3: admin correctness): **Admin review actions are whole, bulk approval stays on its own screen, ad reasons have one vocabulary, plan changes keep the seal consistent, and Reports is computed in the database.**
+  - **Chat review block is atomic** (`block_account_from_review()`, migration `20260927182120`). Blocking a participant used to be two requests. A failure between them left an account suspended with its review still pending, and the panel had to ask the admin to fix the queue by hand. One transaction now; `set_account_status()` is still the ledger's only writer.
+  - **"Approve all for vendor" on Video Closeups approves videos only** (`approve_vendor_videos_bulk()`, which returns the count). The old function also put that vendor's pending products and catalogues live, which nobody had reviewed on that screen. The old function is dropped once the new panel is in production.
+  - **One ad-reason vocabulary** (`admin.ad_reason_codes`, `admin_ad_reason_codes()`). Pause and Reject on the campaign tabs used free text as the "reason code"; they now pick from the same 8 codes as the review queue, with an optional note. `pause_ad_campaign_by_admin` gained the note. The vendor reads the code's label ("Image or copy quality"), not "poor_creative". The database refuses unlisted codes once the new panel is live.
+  - **The Admin Log records why** (`admin.audit_log.reason`, migration `20260927182524`). An admin RPC that must say why sets `cosora.audit_reason`, and every audited row in that transaction carries it.
+  - **Plan changes and cancels are RPCs** (`admin_subscription_change_plan()`, `admin_subscription_cancel()`; reason required; the vendor is notified).
+    - The panel used to write `vendor_subscriptions` directly, leaving `vendor_profiles.plan_id`/`plan_expires_at` (the trust seal and search boost) on the old plan. A cancel left the seal on until the old expiry.
+    - "Cancel at period end" isn't offered: renewals are paid by hand, so it would change nothing.
+  - **Reports is one database call** (`admin_report_summary()`, migration `20260927182703`). It was six whole tables pulled into the browser.
+    - Revenue is net of GST, with GST shown separately.
+    - The ₹56,031 on record (₹47,483 net + ₹8,548 GST) has no gateway payment id at all: demo-mode activations, not money received. The page says so.
+  - **Verified:**
+    - Harness `05`, rehearsed and then live: block 5/5 cases (the atomic block and all four refusals), videos-only bulk 2/2 (1 video live, the same vendor's pending product untouched), reason codes 2/2, pause with and without a note 2/2.
+    - Harness `06`, rehearsed: 8/8. Plan change updates both tables, writes 2 reasoned audit rows and 1 notice; every refusal behaves; cancel ends the plan and the seal; the Admin Log returns the reason.
+    - The report RPC reconciles with the invoices. All three migrations have matching md5s.
+  - **Files:** the three migrations, `scripts/admin-completion/05`–`06`, `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `securityflags.md`, `test.md`, this file. Cosora-Admin changes are in its CHANGELOG.
+
+- 2026-09-27 (admin completion, Phase 2: scheduled jobs): **The essential scheduled jobs run again, job history is pruned daily, and admins can see every job's last run.** Mitra chose "restore the essentials + prune"; all twelve jobs had been deleted on 2026-09-26.
+  - **Restored**, each verbatim from its latest migration (`20260927153142_restore_essential_cron_jobs.sql`):
+    - `account-deletion-sweep` 03:41 UTC, with its 1-day SQL backstop, and `account-deletion-sweep-alarm` 03:43;
+    - `subscription-expiry-sweep` 03:29;
+    - `ads-schedule-sweep` every 5 minutes. Without it an approved, scheduled campaign never started, because `is_ad_eligible()` needs `status = 'active'`;
+    - `faq-snapshots-refresh` hourly at :17;
+    - `embedding-health-log` every 10 minutes;
+    - `fx-rates-refresh` 16:30, in its raising form.
+  - **New:** `cron-history-prune`, daily 03:11 UTC. It deletes `cron.job_run_details` rows older than 14 days. The table was 60,950 rows and 145 MB of a 212 MB database. The first prune removed 16,975 rows; the rest ages out by 2026-10-10.
+  - **Left off on purpose (`ToDo.md`):**
+    - `embedding-worker` and `vendor-catalog-recompute`: the every-minute jobs, which need OpenAI billing;
+    - `embedding-health-alarm`: it would raise every 10 minutes while the worker is off;
+    - the two cache and rate-limit prunes.
+  - **Nothing was overdue** when the jobs came back: 0 scheduled campaigns due, 0 subscriptions past their end, 0 deletions due. So no catch-up run was needed.
+  - **Seen from the admin panel:** `admin_cron_status()` (`20260927154047`; super_admin and vendor_ops) returns each job's schedule, last run and 24-hour runs and failures. Cosora-Admin's System Health page shows it (see that repo's CHANGELOG).
+  - **Verified:**
+    - Both migrations were rehearsed and rolled back, then applied; the md5s match.
+    - In the rehearsal, super_admin and vendor_ops read 8 jobs; support and anon got 42501.
+    - Minutes after applying, `ads-schedule-sweep` had succeeded twice and `embedding-health-log` once, in production.
+  - **Files:** the two migrations, `MIGRATIONS.md`, `ToDo.md` ("Restore the scheduled jobs" → Completed; a new item for the five left off), `claude.md`, `technicalimplementation.md`, `test.md`, this file.
+
+- 2026-09-27 (admin completion, Phase 1: database write hardening): **An admin's writes now follow the admin's role in the database, not only in the admin panel's UI.** It is Phase 1 of the admin-completion plan Mitra approved on 2026-09-27; the research doc of 2026-09-26/27 found the gaps, and a live check added more.
+  - **What was open (all confirmed live before the fix, `scripts/admin-completion/01`–`03`, baseline runs):**
+    - Every admin role, Support and Manager included, could:
+      - reprice or delete a subscription plan;
+      - delete any user's `profiles` row;
+      - edit any quote;
+      - rewrite a vendor's KYC review fields directly;
+      - edit or delete any Video Closeup;
+      - insert, update or delete `engagement_events`.
+    - An ads moderator could switch a campaign on with a plain UPDATE, skipping the review RPCs and `admin.ad_review_log`.
+    - A product moderator could rename or reprice a vendor's listing in the same UPDATE that approved it, and reject it with a blank reason (both paths).
+    - vendor_ops could extend a vendor's plan, which also grants the trust seal and the search boost, and could set the ad badge.
+    - A vendor could set their own campaign's impressions and clicks.
+    - Support could suspend a super admin, or its own account.
+    - `.*` was accepted as a chat flag pattern (it locks every chat).
+    - `certificate_dispatch()` told an unauthorised caller whether a vendor had an address.
+    - Every admin role could read the admin roster.
+  - **Fixed, four migrations (rehearsed in a rolled-back transaction first, applied, md5s match):**
+    - `20260927145549_admin_write_role_separation.sql`: the RLS write policies name their roles.
+    - `20260927150304_moderation_and_campaign_guards.sql`: listing and video content stays the vendor's; a rejection needs a reason; plan and badge columns follow their roles; no API deletion of a reviewed campaign; ad counters only through the ad server.
+    - `20260927150657_admin_rpc_guards.sql`: the account-status, request-changes, flag-pattern breadth, dispatch-order and roster guards, and `ad_bump_window()`'s search_path.
+    - `20260927150904_revoke_unused_table_privileges.sql`: anon and authenticated lose TRUNCATE (which bypasses RLS), TRIGGER and REFERENCES on every public table.
+  - **Not changed on purpose:**
+    - Admin **reads**: narrowed in Phase 11, after the pages that read those tables move to RPCs.
+    - `set_account_status()` still records a second suspension row if an already-suspended account is blocked again from another chat review. It links that review, and reinstating clears every active row.
+  - **Verified:**
+    - Harness `01` (10 personas × 14 write checks), `02` (moderation and campaign guards), `03` (RPC guards): each run before, in the rehearsal and live; every live cell equals the rehearsal.
+    - Harness `04`: 12 ordinary app paths still work live. These include anon analytics, the ad server's impression and click counters, ad approval and suspension, KYC review, buyer and vendor own-row edits, and a moderator approving a listing.
+    - Security advisor: `function_search_path_mutable` is gone; nothing new.
+  - **No app code changed in this phase.** The admin panel's existing actions all still pass for the roles that have them.
+  - **Files:** `supabase/migrations/2026092714*`–`2026092715*` (4), `scripts/admin-completion/01`–`04`, `MIGRATIONS.md`, this file, `securityflags.md`, `test.md`, `technicalimplementation.md`, `claude.md`.
+
 - 2026-09-27 (dummy OTP signs in; Google sign-in cause found): **Typing any 6 digits on the code screen now signs in, as Mitra asked, until SMS delivery exists. Google sign-in on cosora.in was returning people to the vercel.app site; the fix is a Supabase setting, not code.** Mitra: "the google verification isnt working and the otp isnt letting me log in … just typing any otp for now should let me log in".
   - **Why the OTP stopped everyone:** the project has no SMS provider, so `sendOtp()` got `phone_provider_disabled` and the code screen, correctly, said no code was sent. There was nothing to verify. The parked `otp-dev-verify` function, which accepts any code, had never been deployed.
   - **Dummy OTP:** `otp-dev-verify` hardened and deployed (version 1, JWT gate on). In `otp.ts`, when the send is refused, `sendOtp()` asks the function whether test mode is on and returns `test_mode`. `verifyOtp()` then gets the session from the function and applies it with `setSession()`. The code screen says "Test mode. SMS delivery isn't live yet, so no code was sent. For now, type any 6 digits to continue." and shows no timer or resend. Once real SMS works the send succeeds and this branch is never reached. Kill switch: the secret `OTP_DEV_BYPASS=off`.
