@@ -89,3 +89,11 @@ verify_jwt = true
 # service-role key from Vault. The handler also requires role = service_role.
 [functions.faqs-snapshot]
 verify_jwt = true
+
+# Dummy OTP for mobile sign-in (2026-09-27): accepts any 6 digits and returns a
+# session, until SMS delivery exists. A sign-in bypass by design, logged in
+# documentation/securityflags.md. Called from the signed-out browser with the
+# anon key, so this gate only keeps out callers without the project's key; the
+# kill switch is the OTP_DEV_BYPASS=off secret.
+[functions.otp-dev-verify]
+verify_jwt = true

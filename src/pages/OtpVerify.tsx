@@ -114,7 +114,10 @@ const OtpVerify = () => {
     setVerifying(true);
     setError(null);
 
-    const result = await verifyOtp(state.e164, otp);
+    const result = await verifyOtp(state.e164, otp, {
+      delivery: delivery.status,
+      signupData: state.signup?.data,
+    });
     if (result.status !== "verified") {
       setVerifying(false);
       setError(result.message);
@@ -189,6 +192,18 @@ const OtpVerify = () => {
             </p>
           </div>
         )}
+        {/* Dummy OTP: nothing was sent and any 6 digits sign in. Say exactly that. */}
+        {delivery.status === "test_mode" && (
+          <div
+            data-testid="otp-test-mode"
+            className="mb-6 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-left"
+          >
+            <MessageSquareOff className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+            <p className="text-xs text-gray-700">
+              <span className="font-semibold">Test mode.</span> {delivery.message}
+            </p>
+          </div>
+        )}
         {delivery.status === "error" && !error && (
           <div className="mb-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-left">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
@@ -227,8 +242,9 @@ const OtpVerify = () => {
           </div>
         )}
 
-        {/* Timer: only a code that was really sent can expire. */}
-        <p className="text-xs text-gray-400 mb-1">
+        {/* Timer: only a code that was really sent can expire. In test mode
+            there is nothing to resend. */}
+        {delivery.status !== "test_mode" && <p className="text-xs text-gray-400 mb-1">
           {sent && timer > 0
             ? <>The OTP will expire in <span className="font-semibold text-gray-600">{timer} seconds</span></>
             : (
@@ -236,7 +252,7 @@ const OtpVerify = () => {
                 {resending ? "Sending…" : sent ? "Resend OTP" : "Try sending the code again"}
               </button>
             )}
-        </p>
+        </p>}
       </motion.div>
 
       {/* Bottom nav buttons — pinned, and lifted above the keyboard when it opens */}
