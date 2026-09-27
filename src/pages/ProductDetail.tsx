@@ -256,7 +256,7 @@ function ReviewCard({ review }: { review: Review }) {
         <span className="inline-flex h-5 items-center gap-0.5 rounded bg-gray-900 px-1.5 text-[10px] font-semibold text-white">{review.rating}<Star className="h-2.5 w-2.5 fill-white text-white" /></span>
         <span className="text-xs text-gray-400">{review.date}</span>
       </div>
-      {review.comment && <p className="mt-1.5 text-sm text-gray-700 leading-relaxed">{review.comment}</p>}
+      {review.comment && <p data-no-translate className="mt-1.5 text-sm text-gray-700 leading-relaxed">{review.comment}</p>}
       {review.sizeBought && <p className="mt-1.5 inline-block rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Size bought: {review.sizeBought}</p>}
       <ReviewPhotoStrip photos={review.photos} className="mt-2.5" />
     </div>

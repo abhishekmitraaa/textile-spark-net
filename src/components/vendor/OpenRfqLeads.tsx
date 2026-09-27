@@ -116,7 +116,7 @@ export default function OpenRfqLeads() {
                     <Sparkles className="h-3 w-3" /> Strong match
                   </span>
                 ) : null}
-                <p className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
+                <p data-no-translate className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5 lg:text-[13px]">
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}
                   {r.priceMin || r.priceMax ? `₹${r.priceMin}–₹${r.priceMax}/unit · ` : ""}{r.date}

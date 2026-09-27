@@ -1,21 +1,23 @@
 import { useEffect } from "react";
-import { useLang, lookup, type Lang } from "@/lib/i18n";
+import { useLang, useCatalogVersion, lookup, type Lang } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // Global DOM auto-translator.
 //
-// The dictionary approach (`useT`) only translates strings a component
-// explicitly wraps. To make the language switch apply EVERYWHERE without
-// touching every component, this walks the rendered DOM and translates any
-// text node / placeholder whose English text is in the dictionary. It:
-//   • re-applies on language change and on route/content changes (MutationObserver)
+// `useT()` only translates strings a component explicitly wraps. To make the
+// language switch apply EVERYWHERE without touching every component, this walks
+// the rendered DOM and translates any text node, and the placeholder, title,
+// aria-label and alt attributes, whose English text is in the catalogue
+// (src/i18n/*.json, exact or placeholder keys). It:
+//   • re-applies on language change, when the catalogue arrives, and on
+//     route/content changes (MutationObserver)
 //   • remembers each node's original English so it can restore on switch back
-//   • leaves untranslated (dictionary-missing) strings as English
+//   • leaves strings with no catalogue entry as they are
 //   • is idempotent, so React re-renders that reset text get re-translated
 //
-// Dynamic data (product names, user/chat text) simply won't match a dictionary
-// entry and is left untouched — matching the agreed "chrome only" scope, just
-// applied globally instead of per-component.
+// Anything inside [data-no-translate] is left alone: what people type (chat,
+// reviews, requirements) and language names in the pickers. Mark user content
+// that way, or a message that happens to read "Yes" is shown as "हाँ".
 // ─────────────────────────────────────────────────────────────
 
 // Per node: the original English source, and the exact string we last wrote.
@@ -24,14 +26,22 @@ import { useLang, lookup, type Lang } from "@/lib/i18n";
 // from the stored English rather than from the other language's text.
 const ORIG_TEXT = new WeakMap<Text, string>();
 const LAST_SET_TEXT = new WeakMap<Text, string>();
-const ORIG_ATTR = new WeakMap<Element, string>();
-const LAST_SET_ATTR = new WeakMap<Element, string>();
+const ORIG_ATTR = new WeakMap<Element, Map<string, string>>();
+const LAST_SET_ATTR = new WeakMap<Element, Map<string, string>>();
 
+const ATTRS = ["placeholder", "title", "aria-label", "alt"];
+const ATTR_SELECTOR = ATTRS.map((a) => `[${a}]`).join(",");
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
 
 function skip(el: Element | null): boolean {
   if (!el) return true;
   if (SKIP_TAGS.has(el.tagName)) return true;
+  return !!el.closest("[data-no-translate], [contenteditable='true']");
+}
+
+// Attributes: a <textarea>'s content is what someone typed, but its placeholder
+// is ours, so only data-no-translate opts an element's attributes out.
+function skipAttrs(el: Element): boolean {
   return !!el.closest("[data-no-translate]");
 }
 
@@ -59,23 +69,29 @@ function applyText(node: Text, lang: Lang) {
   LAST_SET_TEXT.set(node, next);
 }
 
-function applyPlaceholder(el: Element, lang: Lang) {
-  const cur = el.getAttribute("placeholder");
+function applyAttr(el: Element, name: string, lang: Lang) {
+  const cur = el.getAttribute(name);
   if (cur == null) return;
   const trimmed = cur.trim();
   if (!trimmed) return;
 
-  const tracked = ORIG_ATTR.get(el);
-  const en = tracked !== undefined && cur === LAST_SET_ATTR.get(el) ? tracked : trimmed;
-  ORIG_ATTR.set(el, en);
+  if (!ORIG_ATTR.has(el)) { ORIG_ATTR.set(el, new Map()); LAST_SET_ATTR.set(el, new Map()); }
+  const orig = ORIG_ATTR.get(el)!;
+  const last = LAST_SET_ATTR.get(el)!;
+  const tracked = orig.get(name);
+  const en = tracked !== undefined && cur === last.get(name) ? tracked : trimmed;
+  orig.set(name, en);
 
   const tr = lang === "en" ? en : (lookup(lang, en) ?? en);
-  if (cur !== tr) el.setAttribute("placeholder", tr);
-  LAST_SET_ATTR.set(el, tr);
+  if (cur !== tr) el.setAttribute(name, tr);
+  last.set(name, tr);
+}
+
+function applyAttrs(el: Element, lang: Lang) {
+  for (const a of ATTRS) if (el.hasAttribute(a)) applyAttr(el, a, lang);
 }
 
 function walk(root: Node, lang: Lang) {
-  // Text nodes
   const tw = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => (skip((n as Text).parentElement) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
@@ -83,17 +99,13 @@ function walk(root: Node, lang: Lang) {
   for (let n = tw.nextNode(); n; n = tw.nextNode()) texts.push(n as Text);
   for (const t of texts) applyText(t, lang);
 
-  // Placeholders
-  if (root.nodeType === Node.ELEMENT_NODE) {
-    const el = root as Element;
-    if (el.hasAttribute?.("placeholder") && !skip(el)) applyPlaceholder(el, lang);
-  }
-  const withPh = (root as Element).querySelectorAll?.("[placeholder]");
-  withPh?.forEach((el) => { if (!skip(el)) applyPlaceholder(el, lang); });
+  if (root.nodeType === Node.ELEMENT_NODE && !skipAttrs(root as Element)) applyAttrs(root as Element, lang);
+  (root as Element).querySelectorAll?.(ATTR_SELECTOR).forEach((el) => { if (!skipAttrs(el)) applyAttrs(el, lang); });
 }
 
 export default function AutoTranslate() {
   const lang = useLang();
+  const catalogVersion = useCatalogVersion();
 
   useEffect(() => {
     let raf = 0;
@@ -104,7 +116,8 @@ export default function AutoTranslate() {
       const roots = [...queue];
       queue.clear();
       for (const r of roots) {
-        if (r.nodeType === Node.TEXT_NODE) applyText(r as Text, lang);
+        if (!r.isConnected) continue;
+        if (r.nodeType === Node.TEXT_NODE) { if (!skip((r as Text).parentElement)) applyText(r as Text, lang); }
         else walk(r, lang);
       }
     };
@@ -113,20 +126,20 @@ export default function AutoTranslate() {
       if (!raf) raf = requestAnimationFrame(flush);
     };
 
-    // Initial full pass.
+    // Full pass: on a language change, and again when its catalogue arrives.
     walk(document.body, lang);
 
     const obs = new MutationObserver((muts) => {
       for (const m of muts) {
         if (m.type === "characterData") {
-          if (!skip((m.target as Text).parentElement)) schedule(m.target);
+          schedule(m.target);
         } else if (m.type === "childList") {
           m.addedNodes.forEach((nd) => {
             if (nd.nodeType === Node.TEXT_NODE || nd.nodeType === Node.ELEMENT_NODE) schedule(nd);
           });
-        } else if (m.type === "attributes" && m.attributeName === "placeholder") {
+        } else if (m.type === "attributes" && m.attributeName) {
           const el = m.target as Element;
-          if (!skip(el)) applyPlaceholder(el, lang);
+          if (!skipAttrs(el)) applyAttr(el, m.attributeName, lang);
         }
       }
     });
@@ -135,14 +148,14 @@ export default function AutoTranslate() {
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ["placeholder"],
+      attributeFilter: ATTRS,
     });
 
     return () => {
       obs.disconnect();
       if (raf) cancelAnimationFrame(raf);
     };
-  }, [lang]);
+  }, [lang, catalogVersion]);
 
   return null;
 }

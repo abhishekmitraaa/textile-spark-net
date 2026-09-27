@@ -253,7 +253,8 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
                   {(m.kind === "quote_request" || m.kind === "quote_reply") && (
                     <QuoteCard message={m} />
                   )}
-                  {(!m.kind || m.kind === "text") && <p className="text-sm leading-relaxed">{m.text}</p>}
+                  {/* What people type stays as typed (AutoTranslate). */}
+                  {(!m.kind || m.kind === "text") && <p data-no-translate className="text-sm leading-relaxed">{m.text}</p>}
                   <div className={cn("mt-0.5 flex items-center gap-1", m.sender === "user" ? "justify-end" : "")}>
                     <span className={cn("text-[10px]", m.sender === "user" ? "text-white/70" : "text-gray-400")}>{m.time}</span>
                     {m.sender === "user" && (m.status === "read"

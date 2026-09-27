@@ -221,7 +221,7 @@ const MyQuotes = () => {
                               </span>
                             )}
                           </div>
-                          <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
+                          <h3 data-no-translate className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{r.units} units • {showText(`₹${r.priceMin} - ₹${r.priceMax}/unit`)}</p>
                         </div>
                         <img src={r.image} alt={r.title} className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
@@ -299,7 +299,7 @@ const MyQuotes = () => {
 
               {/* Selected RFQ banner */}
               <div className="rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/15 px-3.5 py-2.5 mb-4">
-                <p className="text-sm font-bold text-gray-900">{rfq.title}</p>
+                <p data-no-translate className="text-sm font-bold text-gray-900">{rfq.title}</p>
               </div>
 
               {/* Stats 2x2 */}

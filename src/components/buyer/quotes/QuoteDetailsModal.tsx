@@ -180,7 +180,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
               {/* Vendor notes */}
               <div>
                 <h4 className="text-sm font-bold text-gray-900 mb-2">Vendor Notes</h4>
-                <p className="rounded-xl bg-blue-50/60 px-3 py-2.5 text-xs leading-relaxed text-gray-600">{quote.comment}</p>
+                <p data-no-translate className="rounded-xl bg-blue-50/60 px-3 py-2.5 text-xs leading-relaxed text-gray-600">{quote.comment}</p>
               </div>
 
               {/* Chat with vendor */}
