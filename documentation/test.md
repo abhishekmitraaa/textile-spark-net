@@ -96,6 +96,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -161,6 +162,69 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-27 — Admin completion Phase 1: database write hardening (4 migrations rehearsed and applied, md5s match; harness 01 140/140, 02 78/78, 03 66/66 as designed; regression 12/12)
+
+- **Harnesses** (`scripts/admin-completion/`, each one SQL statement that never commits; run with
+  MCP `execute_sql`):
+  - `01_write_matrix.sql`: 10 personas × 14 write checks.
+    - The personas: super_admin (demo-admin); each team role on a buyer-only account promoted
+      inside the rolled-back subtransaction (`a5900467…`); a buyer (`cee2058e…`); demo-vendor; anon.
+    - The targets are other people's rows (quote `ecc604d8…`, video `35783726…`, ad `565979ce…`,
+      KYC doc `b33a850f…`, buyer profile `8f36cfbe…`, profile `948b930b…`, event `2ad74c5f…`),
+      plus the vendor's own ad `9b3a4d18…`.
+  - `02_guards_matrix.sql`: 6 personas × 13 checks. It covers:
+    - moderators approving, editing or rejecting a listing, including a blank reason and the RPC;
+    - plan, badge and verify columns by role;
+    - a vendor's own ad counters, and deleting a reviewed campaign;
+    - a paid vendor's insert with `impressions=999`.
+  - `03_rpc_guards_matrix.sql`: 6 personas × 11 checks. It covers:
+    - suspending yourself, another admin and a buyer;
+    - requesting changes with and without a note;
+    - four flag patterns (`.*`, `\d+`, `\ybank transfer\y`, `(`);
+    - dispatch with a blank courier;
+    - the admin roster.
+  - `04_app_paths_regression.sql`: 12 ordinary app paths, each as the persona that uses it.
+- **Baseline (before), then rehearsal (same transaction as the migration), then live:**
+  - `01` baseline: every admin role =1 on plans, other quote, video, KYC doc, other buyer
+    profile, profile delete and engagement event. After: exactly the intended roles (for
+    example, plans only super_admin and finance_admin; profile delete only super_admin; KYC
+    doc and engagement event 0 for everyone; profile insert ->42501 for everyone). The live
+    run equals the rehearsal, cell for cell.
+  - `02` baseline:
+    - moderators could rename while approving (=1) and reject blank (=1);
+    - vendor_ops could set `plan_expires_at` and `ad_verified_until` (=1);
+    - the vendor could set its own impressions (=1).
+  - `02` after, the same live and in the rehearsal:
+    - rename ->42501; blank ->22023; RPC null reason ->22023;
+    - vendor_ops ->42501 on both columns, and `is_verified` still =1;
+    - vendor impressions ->42501; the insert stores 0.
+  - `03` baseline:
+    - support could suspend itself and a super admin (=1);
+    - a note-less change request passed;
+    - `.*` and `\d+` were accepted;
+    - every role got 22023 from dispatch;
+    - every admin role read the roster.
+  - `03` after, the same live and in the rehearsal:
+    - self ->42501; another admin ->42501 for support (=1 for super_admin);
+    - no note ->22023;
+    - `.*` and `\d+` ->22023; bank transfer =1; `(` ->2201B (the table CHECK);
+    - dispatch ->42501 for every role but super_admin and finance_admin;
+    - roster only super_admin and manager.
+  - `04` live: 12/12 ok.
+    - Anon: `log_engagement_event` wrote a row; `ad_impression` 26 -> 27; `ad_click` 1 -> 2;
+      `increment_product_view` 6 -> 7.
+    - Admins: approve -> active; suspend ok; support KYC verify ok.
+    - Buyer: `buyer_profiles` upsert ok; RFQ post ok.
+    - Vendor: profile rename ok; own campaign rename ok.
+    - Moderator: approve ok.
+- **Migration files** equal the applied statements (whitespace-insensitive md5): `bdab0118…`,
+  `f2f9b096…`, `69ae2c55…`, `dbf21015…`.
+- **Security advisor** after the run: `function_search_path_mutable` (ad_bump_window) is gone. The
+  remaining lints predate this change and are documented as expected (pg_net in public, the
+  definer-executable functions, leaked-password protection).
+- **Production after the runs:** unchanged. Every check rolled back, and the promoted persona
+  never committed an `admin.admin_users` row.
 
 ### 2026-09-27 — Dummy OTP signs in (function probe 5/5; spec 2/2; language regression 4/4)
 

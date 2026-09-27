@@ -1,3 +1,35 @@
+- 2026-09-27 (admin completion, Phase 1: database write hardening): **An admin's writes now follow the admin's role in the database, not only in the admin panel's UI.** It is Phase 1 of the admin-completion plan Mitra approved on 2026-09-27; the research doc of 2026-09-26/27 found the gaps, and a live check added more.
+  - **What was open (all confirmed live before the fix, `scripts/admin-completion/01`–`03`, baseline runs):**
+    - Every admin role, Support and Manager included, could:
+      - reprice or delete a subscription plan;
+      - delete any user's `profiles` row;
+      - edit any quote;
+      - rewrite a vendor's KYC review fields directly;
+      - edit or delete any Video Closeup;
+      - insert, update or delete `engagement_events`.
+    - An ads moderator could switch a campaign on with a plain UPDATE, skipping the review RPCs and `admin.ad_review_log`.
+    - A product moderator could rename or reprice a vendor's listing in the same UPDATE that approved it, and reject it with a blank reason (both paths).
+    - vendor_ops could extend a vendor's plan, which also grants the trust seal and the search boost, and could set the ad badge.
+    - A vendor could set their own campaign's impressions and clicks.
+    - Support could suspend a super admin, or its own account.
+    - `.*` was accepted as a chat flag pattern (it locks every chat).
+    - `certificate_dispatch()` told an unauthorised caller whether a vendor had an address.
+    - Every admin role could read the admin roster.
+  - **Fixed, four migrations (rehearsed in a rolled-back transaction first, applied, md5s match):**
+    - `20260927145549_admin_write_role_separation.sql`: the RLS write policies name their roles.
+    - `20260927150304_moderation_and_campaign_guards.sql`: listing and video content stays the vendor's; a rejection needs a reason; plan and badge columns follow their roles; no API deletion of a reviewed campaign; ad counters only through the ad server.
+    - `20260927150657_admin_rpc_guards.sql`: the account-status, request-changes, flag-pattern breadth, dispatch-order and roster guards, and `ad_bump_window()`'s search_path.
+    - `20260927150904_revoke_unused_table_privileges.sql`: anon and authenticated lose TRUNCATE (which bypasses RLS), TRIGGER and REFERENCES on every public table.
+  - **Not changed on purpose:**
+    - Admin **reads**: narrowed in Phase 11, after the pages that read those tables move to RPCs.
+    - `set_account_status()` still records a second suspension row if an already-suspended account is blocked again from another chat review. It links that review, and reinstating clears every active row.
+  - **Verified:**
+    - Harness `01` (10 personas × 14 write checks), `02` (moderation and campaign guards), `03` (RPC guards): each run before, in the rehearsal and live; every live cell equals the rehearsal.
+    - Harness `04`: 12 ordinary app paths still work live. These include anon analytics, the ad server's impression and click counters, ad approval and suspension, KYC review, buyer and vendor own-row edits, and a moderator approving a listing.
+    - Security advisor: `function_search_path_mutable` is gone; nothing new.
+  - **No app code changed in this phase.** The admin panel's existing actions all still pass for the roles that have them.
+  - **Files:** `supabase/migrations/2026092714*`–`2026092715*` (4), `scripts/admin-completion/01`–`04`, `MIGRATIONS.md`, this file, `securityflags.md`, `test.md`, `technicalimplementation.md`, `claude.md`.
+
 - 2026-09-27 (dummy OTP signs in; Google sign-in cause found): **Typing any 6 digits on the code screen now signs in, as Mitra asked, until SMS delivery exists. Google sign-in on cosora.in was returning people to the vercel.app site; the fix is a Supabase setting, not code.** Mitra: "the google verification isnt working and the otp isnt letting me log in … just typing any otp for now should let me log in".
   - **Why the OTP stopped everyone:** the project has no SMS provider, so `sendOtp()` got `phone_provider_disabled` and the code screen, correctly, said no code was sent. There was nothing to verify. The parked `otp-dev-verify` function, which accepts any code, had never been deployed.
   - **Dummy OTP:** `otp-dev-verify` hardened and deployed (version 1, JWT gate on). In `otp.ts`, when the send is refused, `sendOtp()` asks the function whether test mode is on and returns `test_mode`. `verifyOtp()` then gets the session from the function and applies it with `setSession()`. The code screen says "Test mode. SMS delivery isn't live yet, so no code was sent. For now, type any 6 digits to continue." and shows no timer or resend. Once real SMS works the send succeeds and this branch is never reached. Kill switch: the secret `OTP_DEV_BYPASS=off`.

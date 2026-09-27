@@ -380,9 +380,11 @@ undocumented. Deep technical rationale for each lives in
 - **Signed-out / loading / error / empty must stay four distinct states** on any surface
   that reads from Supabase. Collapsing them is how a broken page passes for an empty one.
 - **Vendor contact details are gated by the same rule as calling** — one resolution, many
-  consumers, and a skeleton (never real rows) while the gate resolves. **Known open
-  decision:** `vendor_profiles` is world-readable including `phone`, so the gate is a UI
-  rule only. Closing it is a marketplace-discovery decision, not a bug fix.
+  consumers, and a skeleton (never real rows) while the gate resolves. **Decided (Mitra,
+  2026-09-27):** PAN, owner email, phone, WhatsApp and street address become private
+  (GSTIN and CIN stay public). Admin-completion Phase 4 ships the new readers to both apps
+  first, then revokes the columns. Until then `vendor_profiles` is still world-readable,
+  and the gate is a UI rule only.
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the
@@ -682,6 +684,32 @@ undocumented. Deep technical rationale for each lives in
   - Counters and derived columns are left out (views, impressions, clicks, likes, ratings,
     embeddings, search text, `updated_at`). A new counter column goes on that list in
     `admin.audit_row_change()`, or an admin browsing the site shows up as changing rows.
+
+- **An admin's writes follow the admin's role in the database** (admin completion Phase 1,
+  2026-09-27). `roles.ts` in Cosora-Admin only hides buttons; the policies and triggers decide.
+  Mechanism: `technicalimplementation.md` → "Admin write model".
+  - **A write policy's admin arm names its roles:** `is_admin() and admin_role() = any (...)`.
+    A bare `is_admin()` is for admin READ policies only.
+  - **Admins change a campaign only through the review RPCs.** `advertisements` has no admin
+    write arm, so every admin decision lands in `admin.ad_review_log`. Nobody deletes a
+    reviewed campaign through the API, admins included.
+  - **Impressions and clicks** are moved only by `ad_impression()`/`ad_click()`. No client sets
+    them, not even the campaign's owner.
+  - **A moderator changes a listing's or video's `status` and `rejection_reason`, nothing
+    else.** Its content is the vendor's.
+  - **A rejection needs a reason** in the database, not just in the panel's textarea.
+  - **`vendor_profiles` admin columns** belong to fixed roles:
+    - `is_verified`: super_admin, vendor_ops;
+    - `plan_id`/`plan_expires_at`: super_admin, finance_admin;
+    - `ad_verified_until`: super_admin.
+    - A plan change belongs to the subscription system and finance, not to vendor ops.
+  - **Account status:** no admin changes their own account's status, and only a super admin
+    changes another admin's.
+  - **The admin roster** (`admin_list_admins()`) is for super admins and managers.
+  - **A chat flag pattern that matches ordinary messages is refused** (Phase 1c,
+    `admin.flag_pattern_breadth_problem`). One `.*` would lock every chat on the platform.
+  - **New public tables:** anon and authenticated get no TRUNCATE, TRIGGER or REFERENCES
+    (default privileges, for tables created by postgres).
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
