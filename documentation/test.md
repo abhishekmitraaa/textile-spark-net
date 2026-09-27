@@ -163,6 +163,16 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-27 — Admin completion Phase 2: scheduled jobs restored (2 migrations rehearsed and applied, md5s match; 8 jobs active; RPC gate 4/4; first production runs succeeded)
+
+- **Rehearsal** (same transaction, rolled back):
+  - 8 jobs scheduled with the expected schedules and commands;
+  - the prune left 43,975 of 60,950 history rows;
+  - `admin_cron_status()` returned 8 rows to super_admin and vendor_ops, and 42501 to support and anon.
+- **Live after applying:** `cron.job` holds exactly the 8 intended jobs, all active. The history table has 43,975 rows, none older than 14 days.
+- **First production runs:** within minutes, `ads-schedule-sweep` recorded `succeeded` twice and `embedding-health-log` once (read through `admin_cron_status()` in the rehearsal).
+- **Admin panel:** `npm run typecheck` 0 and `npm run build` 0 for the System Health changes. The page itself needs a signed-in super_admin or vendor_ops session to view (pending, with Mitra).
+
 ### 2026-09-27 — Admin completion Phase 1: database write hardening (4 migrations rehearsed and applied, md5s match; harness 01 140/140, 02 78/78, 03 66/66 as designed; regression 12/12)
 
 - **Harnesses** (`scripts/admin-completion/`, each one SQL statement that never commits; run with

@@ -1,3 +1,24 @@
+- 2026-09-27 (admin completion, Phase 2: scheduled jobs): **The essential scheduled jobs run again, job history is pruned daily, and admins can see every job's last run.** Mitra chose "restore the essentials + prune"; all twelve jobs had been deleted on 2026-09-26.
+  - **Restored**, each verbatim from its latest migration (`20260927153142_restore_essential_cron_jobs.sql`):
+    - `account-deletion-sweep` 03:41 UTC, with its 1-day SQL backstop, and `account-deletion-sweep-alarm` 03:43;
+    - `subscription-expiry-sweep` 03:29;
+    - `ads-schedule-sweep` every 5 minutes. Without it an approved, scheduled campaign never started, because `is_ad_eligible()` needs `status = 'active'`;
+    - `faq-snapshots-refresh` hourly at :17;
+    - `embedding-health-log` every 10 minutes;
+    - `fx-rates-refresh` 16:30, in its raising form.
+  - **New:** `cron-history-prune`, daily 03:11 UTC. It deletes `cron.job_run_details` rows older than 14 days. The table was 60,950 rows and 145 MB of a 212 MB database. The first prune removed 16,975 rows; the rest ages out by 2026-10-10.
+  - **Left off on purpose (`ToDo.md`):**
+    - `embedding-worker` and `vendor-catalog-recompute`: the every-minute jobs, which need OpenAI billing;
+    - `embedding-health-alarm`: it would raise every 10 minutes while the worker is off;
+    - the two cache and rate-limit prunes.
+  - **Nothing was overdue** when the jobs came back: 0 scheduled campaigns due, 0 subscriptions past their end, 0 deletions due. So no catch-up run was needed.
+  - **Seen from the admin panel:** `admin_cron_status()` (`20260927154047`; super_admin and vendor_ops) returns each job's schedule, last run and 24-hour runs and failures. Cosora-Admin's System Health page shows it (see that repo's CHANGELOG).
+  - **Verified:**
+    - Both migrations were rehearsed and rolled back, then applied; the md5s match.
+    - In the rehearsal, super_admin and vendor_ops read 8 jobs; support and anon got 42501.
+    - Minutes after applying, `ads-schedule-sweep` had succeeded twice and `embedding-health-log` once, in production.
+  - **Files:** the two migrations, `MIGRATIONS.md`, `ToDo.md` ("Restore the scheduled jobs" → Completed; a new item for the five left off), `claude.md`, `technicalimplementation.md`, `test.md`, this file.
+
 - 2026-09-27 (admin completion, Phase 1: database write hardening): **An admin's writes now follow the admin's role in the database, not only in the admin panel's UI.** It is Phase 1 of the admin-completion plan Mitra approved on 2026-09-27; the research doc of 2026-09-26/27 found the gaps, and a live check added more.
   - **What was open (all confirmed live before the fix, `scripts/admin-completion/01`–`03`, baseline runs):**
     - Every admin role, Support and Manager included, could:

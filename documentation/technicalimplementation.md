@@ -1992,6 +1992,27 @@ by hand there.
 
 **How it was verified:** `scripts/admin-completion/01`–`04`, see `test.md` (2026-09-27).
 
+## Scheduled jobs: what runs, and the bounded history (2026-09-27)
+
+Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 2026-09-27 restore
+(`20260927153142`):
+
+| Job | Schedule (UTC) | Does |
+|---|---|---|
+| `account-deletion-sweep` | 03:41 daily | Posts to `account-deletion-sweep` when work is due, then the SQL backstop `process_due_account_deletions('1 day')` |
+| `account-deletion-sweep-alarm` | 03:43 daily | Raises if the Vault `service_role_key` is missing (split from the sweep so a raise can't roll back its fallback) |
+| `subscription-expiry-sweep` | 03:29 daily | `expire_subscriptions()` |
+| `ads-schedule-sweep` | every 5 min | `sweep_ad_schedules()`: scheduled → active at `starts_at`, and to expired at `ends_at` |
+| `faq-snapshots-refresh` | :17 hourly | Rebuilds the FAQ CDN files; raises without the Vault key |
+| `embedding-health-log` | every 10 min | `record_embedding_pipeline_health()` (System Health's history) |
+| `fx-rates-refresh` | 16:30 daily | Posts to `fx-rates-refresh`; raises without the Vault key |
+| `cron-history-prune` | 03:11 daily | Deletes `cron.job_run_details` rows older than 14 days |
+
+- **Why the prune exists:** `cron.job_run_details` is never pruned by pg_cron and has no jobid index. It was 60,950 rows and 145 MB of the 212 MB database on 2026-09-27. At today's ~460 runs a day it now holds about 6,500 rows.
+- **Reading it:** walk the `runid` primary key (`order by runid desc limit …`, or `runid > max(runid) - N`). `admin_cron_status()` does both.
+- **Adding or changing a job** needs Mitra's say-so. A job whose work is conditional must RAISE when it can't do the work (see "A SQL statement that does nothing still SUCCEEDS" in `claude.md`).
+- **Off:** `embedding-worker`, `vendor-catalog-recompute`, `embedding-health-alarm`, `prune-query-embedding-cache`, `prune-embed-rate-limit` (`ToDo.md`).
+
 ## Integrations
 
 ### Supabase

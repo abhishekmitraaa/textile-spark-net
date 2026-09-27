@@ -876,13 +876,22 @@ undocumented. Deep technical rationale for each lives in
   migration that changes a function's parameter list must `drop function` the old
   signature explicitly, and that drop must be in the migration file or a fresh deploy
   recreates the ambiguity. Dropping also discards grants, so re-assert them after.
-- **No scheduled job runs** (Mitra, 2026-09-26). All twelve pg_cron jobs were deleted by
-  `20260926082046_unschedule_all_cron_jobs.sql`: the account-deletion sweep and its alarm,
-  subscription expiry, the ad schedule sweep, the embedding worker and its health log and
-  alarm, the vendor catalogue recompute, two prune jobs, FX rates and FAQ snapshots. Nothing
-  that depended on them happens by itself until they are restored (`ToDo.md`, "Restore the
-  scheduled jobs"). A stale value from one of them is not a bug in that feature. Don't
-  re-create a job without Mitra's say-so.
+- **Eight scheduled jobs run** (Mitra, 2026-09-27). All twelve pg_cron jobs were deleted on
+  2026-09-26 (`20260926082046`). The essential ones came back on 2026-09-27
+  (`20260927153142_restore_essential_cron_jobs.sql`), each from its latest definition:
+  - `account-deletion-sweep` (03:41 UTC) and its alarm (03:43);
+  - `subscription-expiry-sweep` (03:29);
+  - `ads-schedule-sweep` (every 5 minutes);
+  - `faq-snapshots-refresh` (hourly at :17);
+  - `embedding-health-log` (every 10 minutes);
+  - `fx-rates-refresh` (16:30);
+  - a new `cron-history-prune` (03:11), which deletes `cron.job_run_details` rows older than
+    14 days. That table was 145 MB of a 212 MB database.
+
+  Still off, on purpose: `embedding-worker` and `vendor-catalog-recompute` (the two every-minute
+  jobs; embeddings need OpenAI billing), `embedding-health-alarm`, and the two cache/rate-limit
+  prunes (`ToDo.md`). Admins see every job's last run on Cosora-Admin's System Health page
+  (`admin_cron_status()`). Don't add or re-create a job without Mitra's say-so.
 - **A SQL statement that does nothing still SUCCEEDS — that is how a cron job lies.**
   The embedding worker was `select net.http_post(...) where exists (<vault secret>)`.
   With the secret absent the WHERE was false, zero rows came back, and pg_cron recorded

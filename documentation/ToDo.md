@@ -15,6 +15,27 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Decide on the five scheduled jobs left off in the 2026-09-27 restore — added 2026-09-27
+- Task: decide whether each of these comes back, and when:
+  - `embedding-worker` and `vendor-catalog-recompute` (every minute);
+  - `embedding-health-alarm` (every 10 minutes);
+  - `prune-query-embedding-cache` (daily 03:17 UTC) and `prune-embed-rate-limit` (daily 03:23 UTC).
+- Context:
+  - Admin completion, Phase 2, restored the essential jobs plus a daily history prune
+    (`20260927153142`). These five stayed off on purpose:
+    - The worker only does work once OpenAI billing is on, and the recompute follows it.
+    - The alarm would raise every 10 minutes while the worker is off. Each raise also adds a
+      failed row to `cron.job_run_details`.
+    - The two prunes keep `search_query_embeddings` and `embed_query_rate_limit` bounded. Both
+      tables grow only on search-cache misses and photo searches.
+  - Restore each from the migrations named in "Restore the scheduled jobs" (Completed). When the
+    worker comes back, bring the alarm back too, and put the two every-minute jobs on
+    `cron-history-prune`'s budget (together they write ~2,900 rows a day).
+- Reference: 2026-09-27, admin completion Phase 2, Mitra's choice of "Restore essentials +
+  prune".
+- Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
+- Status: Open
+
 ### Add cosora.in to Supabase Auth's redirect URLs, so Google sign-in comes back to the site — added 2026-09-27
 - Task: in the Supabase dashboard (project `vxdhhgdfubqedfpwfyrb`), open Authentication → URL
   Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**`
@@ -90,42 +111,6 @@ with no need to dictate format, context, or reference each time.
     reviewed first; invented "success stories" with names.
   - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
 - Reference: 2026-09-26, the language-translation fix.
-- Status: Open
-
-### Restore the scheduled jobs (all 12 were deleted on 2026-09-26) — added 2026-09-26
-- Task: decide which scheduled jobs come back, and re-create them. Until then, none of the
-  work below happens on its own.
-- Context: Mitra asked to "remove all the scheduled tasks". Claude Code had none of its own,
-  so this meant the database's pg_cron jobs. Told what would stop, Mitra chose to delete all
-  twelve permanently rather than pause them or remove only the My Profile ones. Migration
-  `20260926082046_unschedule_all_cron_jobs.sql` removed them; `cron.job_run_details` keeps
-  their history.
-
-| Job | Ran | What stops | Migrations that schedule, alter or name it |
-|---|---|---|---|
-| `account-deletion-sweep` | daily 03:41 UTC | Due account-deletion requests are not processed (the edge function and its SQL fallback). | `20260923115839`, `20260923200739`, `20260925172634` |
-| `account-deletion-sweep-alarm` | daily 03:43 UTC | Nothing raises if the sweep can't authenticate. | `20260925172634` |
-| `subscription-expiry-sweep` | daily 03:29 UTC | Paid subscriptions past their end date don't expire. | `20260916180244` |
-| `ads-schedule-sweep` | every 5 minutes | Scheduled ads don't start or end on time. | `20260912120200` |
-| `embedding-worker` | every minute | New or edited products get no search embedding, so search and image search miss them. | `20260906150000`, `20260909130000`, `20260910140000`, `20260923093304`, `20260923094728` |
-| `vendor-catalog-recompute` | every minute | Vendor catalogue figures stop being recomputed. | `20260910130000` |
-| `embedding-health-log` | every 10 minutes | The embedding pipeline's health history stops. | `20260910170000` |
-| `embedding-health-alarm` | every 10 minutes | No alarm when the embedding pipeline fails. | `20260910170000` |
-| `prune-query-embedding-cache` | daily 03:17 UTC | The search query cache is not pruned. | `20260910160000` |
-| `prune-embed-rate-limit` | daily 03:23 UTC | Old rate-limit rows are not pruned. | `20260910160000` |
-| `fx-rates-refresh` | daily 16:30 UTC | Display-currency rates stop refreshing. | `20260924161525`, `20260925172634` |
-| `faq-snapshots-refresh` | hourly at :17 | The FAQ CDN snapshot is rebuilt only when an FAQ is edited. | `20260924174051` |
-
-  To restore a job, re-run the most recent `cron.schedule(...)` or `cron.alter_job(...)`
-  statement for it from those files, as a new migration. Some of the files only mention the
-  job by name. The jobs that call edge functions read the Vault secret `service_role_key` at
-  run time, and it is still there. The commands were not copied out of the database: the
-  permission classifier blocked that read because they reference Vault secrets, and the
-  migrations hold them anyway.
-- Reference: 2026-09-26, right after the managers-assign-teammates work. Mitra: "remove all
-  the scheduled tasks"; offered pause all, delete all, only the four My Profile jobs, or keep
-  them, Mitra picked "Delete all 12 permanently".
-- Priority: High (account deletions and subscription expiry depend on it)
 - Status: Open
 
 ### Configure the embedding_alert_webhook_url Vault secret — added 2026-09-10
@@ -617,6 +602,47 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Restore the scheduled jobs (all 12 were deleted on 2026-09-26) — added 2026-09-26
+- Task: decide which scheduled jobs come back, and re-create them. Until then, none of the
+  work below happens on its own.
+- Context: Mitra asked to "remove all the scheduled tasks". Claude Code had none of its own,
+  so this meant the database's pg_cron jobs. Told what would stop, Mitra chose to delete all
+  twelve permanently rather than pause them or remove only the My Profile ones. Migration
+  `20260926082046_unschedule_all_cron_jobs.sql` removed them; `cron.job_run_details` keeps
+  their history.
+
+| Job | Ran | What stops | Migrations that schedule, alter or name it |
+|---|---|---|---|
+| `account-deletion-sweep` | daily 03:41 UTC | Due account-deletion requests are not processed (the edge function and its SQL fallback). | `20260923115839`, `20260923200739`, `20260925172634` |
+| `account-deletion-sweep-alarm` | daily 03:43 UTC | Nothing raises if the sweep can't authenticate. | `20260925172634` |
+| `subscription-expiry-sweep` | daily 03:29 UTC | Paid subscriptions past their end date don't expire. | `20260916180244` |
+| `ads-schedule-sweep` | every 5 minutes | Scheduled ads don't start or end on time. | `20260912120200` |
+| `embedding-worker` | every minute | New or edited products get no search embedding, so search and image search miss them. | `20260906150000`, `20260909130000`, `20260910140000`, `20260923093304`, `20260923094728` |
+| `vendor-catalog-recompute` | every minute | Vendor catalogue figures stop being recomputed. | `20260910130000` |
+| `embedding-health-log` | every 10 minutes | The embedding pipeline's health history stops. | `20260910170000` |
+| `embedding-health-alarm` | every 10 minutes | No alarm when the embedding pipeline fails. | `20260910170000` |
+| `prune-query-embedding-cache` | daily 03:17 UTC | The search query cache is not pruned. | `20260910160000` |
+| `prune-embed-rate-limit` | daily 03:23 UTC | Old rate-limit rows are not pruned. | `20260910160000` |
+| `fx-rates-refresh` | daily 16:30 UTC | Display-currency rates stop refreshing. | `20260924161525`, `20260925172634` |
+| `faq-snapshots-refresh` | hourly at :17 | The FAQ CDN snapshot is rebuilt only when an FAQ is edited. | `20260924174051` |
+
+  To restore a job, re-run the most recent `cron.schedule(...)` or `cron.alter_job(...)`
+  statement for it from those files, as a new migration. Some of the files only mention the
+  job by name. The jobs that call edge functions read the Vault secret `service_role_key` at
+  run time, and it is still there. The commands were not copied out of the database: the
+  permission classifier blocked that read because they reference Vault secrets, and the
+  migrations hold them anyway.
+- Reference: 2026-09-26, right after the managers-assign-teammates work. Mitra: "remove all
+  the scheduled tasks"; offered pause all, delete all, only the four My Profile jobs, or keep
+  them, Mitra picked "Delete all 12 permanently".
+- Priority: High (account deletions and subscription expiry depend on it)
+- Status: Completed
+- Completed: 2026-09-27. Mitra chose "restore the essentials + a daily history prune"
+  (admin completion, Phase 2). Migration `20260927153142_restore_essential_cron_jobs.sql`
+  re-created seven jobs from their latest definitions and added `cron-history-prune`;
+  `20260927154047_admin_cron_status.sql` shows them on Cosora-Admin's System Health page.
+  The five jobs left off are the new item "Decide on the five scheduled jobs left off".
 
 ### Deploy the MPF-3 code, then revoke the interim signed-in grant — added 2026-09-23
 - Task: deploy the Phase 11 code to `cosora.in` and `cosora-admin.vercel.app`, then run
