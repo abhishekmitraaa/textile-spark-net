@@ -710,6 +710,15 @@ undocumented. Deep technical rationale for each lives in
     `admin.flag_pattern_breadth_problem`). One `.*` would lock every chat on the platform.
   - **New public tables:** anon and authenticated get no TRUNCATE, TRIGGER or REFERENCES
     (default privileges, for tables created by postgres).
+  - **An admin action that has to say why records it in the Admin Log.** The RPC sets the
+    transaction-local `cosora.audit_reason`, and `audit_row_change()` copies it onto every
+    audited row (`admin.audit_log.reason`). Plan changes and cancels do this. A new
+    reason-bearing admin RPC should too.
+  - **Ad moderation reasons are one list, `admin.ad_reason_codes`.** Both ad screens read it,
+    and the vendor reads the label. Add a reason there, never as a UI constant.
+  - **An admin's plan change or cancel goes through `admin_subscription_change_plan()` /
+    `admin_subscription_cancel()`.** Never write `vendor_subscriptions` directly: the cached
+    `vendor_profiles.plan_id`/`plan_expires_at` must move with it.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.

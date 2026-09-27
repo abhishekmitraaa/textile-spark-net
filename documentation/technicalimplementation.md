@@ -1990,6 +1990,16 @@ on any public table. `alter default privileges for role postgres` revokes them f
 too. A table created through the dashboard (as `supabase_admin`) still gets them, so revoke
 by hand there.
 
+**Admin RPCs that are whole (Phase 3, 2026-09-27):**
+- `block_account_from_review(review, profile, side, reason, resume)`: row-locks the review, checks the profile is a participant and the reason is an active block reason, then calls `set_account_status()` and `resolve_conversation_review()` in one transaction.
+- `approve_vendor_videos_bulk(vendor) returns int`: videos only. It replaces `approve_vendor_content_bulk()`, which also published products and catalogues.
+- **Ad reasons** live in `admin.ad_reason_codes` (code, label, active, sort), read through `admin_ad_reason_codes()`.
+  - `ad_apply_decision()` stores `reason_code` and `note` in `admin.ad_review_log`, and `moderation_reason` as `"<code> <note>"`. The panel shows the code's label.
+  - Vendor notices use the note, else the label.
+- **Reasons in the Admin Log:** an RPC calls `set_config('cosora.audit_reason', <reason>, true)` before its writes. `admin.audit_row_change()` copies it into `admin.audit_log.reason` for every audited row in that transaction, and the RPC clears it afterwards.
+- **Subscriptions:** `admin_subscription_change_plan()` and `admin_subscription_cancel()` keep `vendor_subscriptions` and `vendor_profiles.plan_id`/`plan_expires_at` in step, the same pair the payment functions write on activation.
+- **Reports:** `admin_report_summary(from, to)` aggregates in SQL and returns paise. Invoice amounts are rupees ex-GST, ad orders are paise, and IST days are used for grouping.
+
 **How it was verified:** `scripts/admin-completion/01`–`04`, see `test.md` (2026-09-27).
 
 ## Scheduled jobs: what runs, and the bounded history (2026-09-27)

@@ -163,6 +163,22 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-27 — Admin completion Phase 3: admin correctness (3 migrations rehearsed and applied, md5s match; harness 05 11/11 live; harness 06 8/8 rehearsed; report reconciles)
+
+- **Harness `05_review_rpcs.sql`** (fixtures created inside each rolled-back subtransaction; no pending review existed in production):
+  - Block as support: review `buyer_blocked`, account `suspended`, 1 active suspension linked to the review.
+  - Refusals: a second block P0002; a non-participant 22023; no reason 22023; product_moderator 42501.
+  - Videos-only bulk as product_moderator: 1 video live, and the same vendor's pending product stayed pending (1 → 1). As vendor_ops: 42501.
+  - Reason codes: ads_moderator gets 8; buyer 42501.
+  - Pause with a note: `paused_by_admin`, the log has the code and the note, and the notice is the note. Without a note, the notice is the label "Image or copy quality".
+- **Harness `06_subscription_rpcs.sql`** (rehearsed with the migration):
+  - A plan change basic → silver moved `vendor_subscriptions` and `vendor_profiles` together, with 2 audit rows carrying the reason and 1 vendor notice.
+  - Refusals: blank reason 22023; support 42501; to Free 22023; the same plan P0001.
+  - A cancel set `canceled`, ended the period now and turned the seal off, with 2 reasoned audit rows. An expired subscription P0001.
+  - `admin_audit_log_list()` returns the reason.
+- **`admin_report_summary()`:** vendors 10; products 26 live / 3 draft / 3 under review / 1 rejected; 16 categories; 4 revenue days. Totals: net ₹47,483, GST ₹8,548, unverified ₹56,031 (all of it), ads ₹0. A buyer gets 42501.
+- **Admin panel:** `npm run typecheck` 0 and `npm run build` 0, with `database.types.ts` regenerated from the live schema (additive, 223 lines).
+
 ### 2026-09-27 — Admin completion Phase 2: scheduled jobs restored (2 migrations rehearsed and applied, md5s match; 8 jobs active; RPC gate 4/4; first production runs succeeded)
 
 - **Rehearsal** (same transaction, rolled back):

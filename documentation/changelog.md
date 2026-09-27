@@ -1,3 +1,20 @@
+- 2026-09-27 (admin completion, Phase 3: admin correctness): **Admin review actions are whole, bulk approval stays on its own screen, ad reasons have one vocabulary, plan changes keep the seal consistent, and Reports is computed in the database.**
+  - **Chat review block is atomic** (`block_account_from_review()`, migration `20260927182120`). Blocking a participant used to be two requests. A failure between them left an account suspended with its review still pending, and the panel had to ask the admin to fix the queue by hand. One transaction now; `set_account_status()` is still the ledger's only writer.
+  - **"Approve all for vendor" on Video Closeups approves videos only** (`approve_vendor_videos_bulk()`, which returns the count). The old function also put that vendor's pending products and catalogues live, which nobody had reviewed on that screen. The old function is dropped once the new panel is in production.
+  - **One ad-reason vocabulary** (`admin.ad_reason_codes`, `admin_ad_reason_codes()`). Pause and Reject on the campaign tabs used free text as the "reason code"; they now pick from the same 8 codes as the review queue, with an optional note. `pause_ad_campaign_by_admin` gained the note. The vendor reads the code's label ("Image or copy quality"), not "poor_creative". The database refuses unlisted codes once the new panel is live.
+  - **The Admin Log records why** (`admin.audit_log.reason`, migration `20260927182524`). An admin RPC that must say why sets `cosora.audit_reason`, and every audited row in that transaction carries it.
+  - **Plan changes and cancels are RPCs** (`admin_subscription_change_plan()`, `admin_subscription_cancel()`; reason required; the vendor is notified).
+    - The panel used to write `vendor_subscriptions` directly, leaving `vendor_profiles.plan_id`/`plan_expires_at` (the trust seal and search boost) on the old plan. A cancel left the seal on until the old expiry.
+    - "Cancel at period end" isn't offered: renewals are paid by hand, so it would change nothing.
+  - **Reports is one database call** (`admin_report_summary()`, migration `20260927182703`). It was six whole tables pulled into the browser.
+    - Revenue is net of GST, with GST shown separately.
+    - The ₹56,031 on record (₹47,483 net + ₹8,548 GST) has no gateway payment id at all: demo-mode activations, not money received. The page says so.
+  - **Verified:**
+    - Harness `05`, rehearsed and then live: block 5/5 cases (the atomic block and all four refusals), videos-only bulk 2/2 (1 video live, the same vendor's pending product untouched), reason codes 2/2, pause with and without a note 2/2.
+    - Harness `06`, rehearsed: 8/8. Plan change updates both tables, writes 2 reasoned audit rows and 1 notice; every refusal behaves; cancel ends the plan and the seal; the Admin Log returns the reason.
+    - The report RPC reconciles with the invoices. All three migrations have matching md5s.
+  - **Files:** the three migrations, `scripts/admin-completion/05`–`06`, `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `securityflags.md`, `test.md`, this file. Cosora-Admin changes are in its CHANGELOG.
+
 - 2026-09-27 (admin completion, Phase 2: scheduled jobs): **The essential scheduled jobs run again, job history is pruned daily, and admins can see every job's last run.** Mitra chose "restore the essentials + prune"; all twelve jobs had been deleted on 2026-09-26.
   - **Restored**, each verbatim from its latest migration (`20260927153142_restore_essential_cron_jobs.sql`):
     - `account-deletion-sweep` 03:41 UTC, with its 1-day SQL backstop, and `account-deletion-sweep-alarm` 03:43;
