@@ -380,11 +380,31 @@ undocumented. Deep technical rationale for each lives in
 - **Signed-out / loading / error / empty must stay four distinct states** on any surface
   that reads from Supabase. Collapsing them is how a broken page passes for an empty one.
 - **Vendor contact details are gated by the same rule as calling** — one resolution, many
-  consumers, and a skeleton (never real rows) while the gate resolves. **Decided (Mitra,
-  2026-09-27):** PAN, owner email, phone, WhatsApp and street address become private
-  (GSTIN and CIN stay public). Admin-completion Phase 4 ships the new readers to both apps
-  first, then revokes the columns. Until then `vendor_profiles` is still world-readable,
-  and the gate is a UI rule only.
+  consumers, and a skeleton (never real rows) while the gate resolves.
+- **A vendor's PAN, owner email, phone, WhatsApp and street address (`address_line`, `area`,
+  `landmark`, `postal_code`) are private** (Mitra, 2026-09-27; admin completion Phase 4).
+  GSTIN, CIN, owner name, city, state, country and website stay public.
+  - Never select, filter or order on them from `vendor_profiles`, in either app, and never
+    `select("*")` it. Read them through:
+    - `my_vendor_private()` for the signed-in vendor's own (`fetchMyVendorPrivate()`,
+      `useMyVendorProfile`, `fetchBillTo()`, the profile score);
+    - `call_vendor_contact()` for a buyer reaching a vendor (`useCallVendor`,
+      `useVendorContact`): signed in only, callGate's three rules enforced in the database,
+      and at most 30 different vendors an hour and 100 a day per account;
+    - `admin_vendor_private()` in Cosora-Admin (super_admin, vendor_ops, support,
+      finance_admin).
+  - A number is revealed only when the buyer asks (Show phone number, Call Now, WhatsApp),
+    never on page load, so browsing sellers never uses up the limit. `has_phone` /
+    `has_whatsapp` say a number is on file without revealing it.
+  - An empty field on the public vendor page reads "Not provided" or is left out. Never fall
+    back to a demo value: the page used to invent an owner, phone, email, address, GSTIN
+    and PAN for every vendor that hadn't filled them in.
+  - Specs and scripts read a vendor's own row with `readOwnVendorRow()`
+    (`scripts/lib/vendor-row.mjs`).
+  - Order (the MPF-19 rule): Phase 4a shipped the readers; Phase 4b revokes the table-wide
+    SELECT only after both apps are live without the old reads. Until 4b, the columns are
+    still readable through PostgREST.
+  - Detail: `technicalimplementation.md` → "Vendor private fields".
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the

@@ -4,12 +4,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { differenceInCalendarMonths, formatDistanceToNowStrict } from "date-fns";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useMyVendorProfile, saveVendorProfile, uploadVendorGalleryImage, uploadVendorImage,
 } from "@/lib/queries/vendorStore";
+import { memberSinceLabel } from "@/lib/memberSince";
 import { useVendorReviews } from "@/lib/queries/reviews";
 import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
 import { useMyCatalogues } from "@/lib/queries/catalogues";
@@ -643,18 +643,9 @@ const BusinessProfile = () => {
   }, [myProducts, productSearch, genderFilter, sortBy]);
 
   // "Cosora Member Since", derived from the real signup date rather than the
-  // literal string "1 Year" every vendor used to see.
-  const memberSince = useMemo(() => {
-    if (!store?.createdAt) return null;
-    const created = new Date(store.createdAt);
-    if (Number.isNaN(created.getTime())) return null;
-    // Under a month reads better as "New this month" than "0 months".
-    if (differenceInCalendarMonths(new Date(), created) < 1) return "New this month";
-    return formatDistanceToNowStrict(created, { unit: "month", roundingMethod: "floor" })
-      .replace(/^(\d+) months?$/, (_m, n) => (Number(n) >= 12
-        ? formatDistanceToNowStrict(created, { unit: "year", roundingMethod: "floor" })
-        : `${n} month${Number(n) === 1 ? "" : "s"}`));
-  }, [store?.createdAt]);
+  // literal string "1 Year" every vendor used to see. The public vendor page
+  // shows the same label (lib/memberSince.ts).
+  const memberSince = useMemo(() => memberSinceLabel(store?.createdAt), [store?.createdAt]);
 
   const detailRows = useMemo(() => [
     { label: "Business Type",          value: vendorTypeLabel || "Not set" },

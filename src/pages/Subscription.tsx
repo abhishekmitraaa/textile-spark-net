@@ -19,6 +19,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription } from "@/lib/queries/subscriptions";
+import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
 import {
   formatINR, tierStyle, isUnlimited, usagePct, yearlySavingsPct, yearlySavingsAmount,
   type Plan, type PlanId, type PlanDisplay,
@@ -80,8 +81,13 @@ export default function Subscription() {
   const [pan, setPan] = useState("");
   useEffect(() => {
     if (!user) return;
-    supabase.from("vendor_profiles").select("gstin, pan").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) { setGstin(data.gstin ?? ""); setPan(data.pan ?? ""); } });
+    // GSTIN is a public column; PAN is private (admin completion Phase 4) and
+    // comes from my_vendor_private(), the vendor's own row only.
+    supabase.from("vendor_profiles").select("gstin").eq("id", user.id).maybeSingle()
+      .then(({ data }) => { if (data) setGstin(data.gstin ?? ""); });
+    fetchMyVendorPrivate(user.id)
+      .then((priv) => { if (priv) setPan(priv.pan ?? ""); })
+      .catch(() => { /* the field stays empty; saving still works */ });
   }, [user]);
 
   const saveTax = async (patch: { gstin?: string; pan?: string }) => {

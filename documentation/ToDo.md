@@ -36,6 +36,42 @@ with no need to dictate format, context, or reference each time.
 - Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
 - Status: Open
 
+### Revoke the vendor private columns (admin completion Phase 4b) — added 2026-09-28
+- Task: once both apps run the Phase 4a code in production, replace table SELECT on
+  `vendor_profiles` for anon and authenticated with column SELECT on every column except `pan`,
+  `owner_email`, `phone`, `whatsapp`, `address_line`, `area`, `landmark`, `postal_code` (and
+  `catalog_embedding` / `catalog_embedding_updated_at`, which no client reads). Self-check with
+  `has_column_privilege`, then run `scripts/contact-gate-check.mjs` (R-18 must pass) and close
+  the securityflags Open row.
+- Context: Phase 4a (migrations `20260927184250`, `20260927185902`) moved every reader to
+  `my_vendor_private()`, `call_vendor_contact()` and `admin_vendor_private()`. Revoking before
+  the apps deploy would break the live vendor page and store screens, as MPF-19 did for
+  `profiles`. Rehearse the INSERT ... ON CONFLICT upserts from `vendorStore.ts` and
+  `vendorOnboarding.ts` as `authenticated` after the revoke: they write the private columns and
+  must keep working.
+- Reference: 2026-09-28, admin completion Phase 4a.
+- Status: Open (waits for the Phase 4a merge)
+
+### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
+- Task: make the vendor's Advertise page show the reason an admin gave in words. Today
+  `advertisements.moderation_reason` stores `<code> <note>` (for example
+  `misleading_claims Please fix the headline`), and `runStateOf()` (`src/lib/campaignRunState.ts`)
+  prints it as is: "Not approved: misleading_claims Please fix the headline".
+- Context: admin completion Phase 3 made every admin pause, rejection and suspension pick one of
+  the 8 codes in `admin.ad_reason_codes`. The notification already reads the label (its body falls
+  back to the label when there's no note), but the card doesn't. Options:
+  - `ad_apply_decision()` stores the label instead of the code (the code stays in
+    `admin.ad_review_log.reason_code`), and Cosora-Admin's `describeModerationReason()` reads both
+    shapes;
+  - or a public `ad_reason_labels()` that the vendor's ads query maps through.
+  - Don't copy the list into the app as a constant (`claude.md`: one list).
+  - No live campaign carries a code yet (checked 2026-09-28: every `moderation_reason` is a seed
+    approval note), so no data needs fixing.
+- Reference: 2026-09-28, found while adding the Phase 3 notification texts to the i18n
+  catalogues during admin completion Phase 4a.
+- Priority: Medium (the first admin rejection will show it)
+- Status: Open
+
 ### Add cosora.in to Supabase Auth's redirect URLs, so Google sign-in comes back to the site — added 2026-09-27
 - Task: in the Supabase dashboard (project `vxdhhgdfubqedfpwfyrb`), open Authentication → URL
   Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**`
@@ -110,6 +146,10 @@ with no need to dictate format, context, or reference each time.
   - `/advertisements`: the FAQ says an ad "goes live instantly. No approval delays", but ads are
     reviewed first; invented "success stories" with names.
   - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
+  - `/vendor/:id` (`VendorProfile.tsx`), added 2026-09-28: the same content for every vendor in
+    four places: the category tiles, the office pictures (stock photos, though vendors can
+    upload their own `office_photos`), the demo catalogues shown until a vendor uploads one,
+    and the "Sells" chips. Phase 4a removed the invented identity and contact details, not these.
 - Reference: 2026-09-26, the language-translation fix.
 - Status: Open
 

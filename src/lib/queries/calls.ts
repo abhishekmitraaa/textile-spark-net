@@ -11,10 +11,11 @@ import type { CallRecord } from "@/lib/chatData";
 // ─────────────────────────────────────────────────────────────
 // Click-to-call.
 //
-// `useCallVendor()` returns a handler that opens the phone's native dialer
-// pre-filled with the vendor's number (via a `tel:` URL — a web app cannot
-// auto-place a call), logs the outgoing call through log_call() for signed-in
-// buyers, and falls back to opening the chat thread when the vendor has no number.
+// `useCallVendor()` returns a handler that asks call_vendor_contact() for the
+// vendor's number, opens the phone's native dialer pre-filled with it (via a
+// `tel:` URL — a web app cannot auto-place a call), logs the outgoing call
+// through log_call(), and falls back to opening the chat thread when the vendor
+// has no number. Signed in only: a vendor's number is private.
 //
 // `useCalls()` reads the signed-in buyer's real call history, grouped
 // Today / Yesterday / <date> for the Messages hub Calls tab. `useCallCount()`
@@ -56,12 +57,14 @@ export function demoPhone(seed: string): string {
 // one would silently miss the check.
 //
 // Unlike messaging, placing a call is a `tel:` URL, not a write, so no policy can
-// stop the dial itself. This is a client-side gate over data the DB owns, which
-// is why it re-reads that data on every attempt rather than trusting anything
-// cached. What the database CAN guard is the number: a buyer's phone is only
-// released by call_buyer_contact(), which applies these same rules server-side
-// (useCallBuyer below). A vendor's business phone is public by design (R-18 in
-// scripts/contact-gate-check.mjs), so for useCallVendor this gate stays advisory.
+// stop the dial itself. What the database guards is the number: a buyer's phone
+// is released only by call_buyer_contact() (useCallBuyer below) and a vendor's
+// only by call_vendor_contact() (admin completion Phase 4 made a vendor's phone
+// and WhatsApp private). Both apply these same three rules server-side and
+// refuse with the reason code. callGate() is the client's copy of the rules,
+// for deciding what a contact card may render before anyone asks for a number
+// (useContactGate). It re-reads the data on every attempt rather than trusting
+// anything cached.
 // ─────────────────────────────────────────────────────────────
 
 // Why the gate said no. The gate reports the REASON and each surface writes its
@@ -160,29 +163,166 @@ export function useContactGate(otherId: string | undefined): { loading: boolean;
   };
 }
 
+// ─────────────────────────────────────────────────────────────
+// A vendor's phone and WhatsApp (admin completion Phase 4, Mitra 2026-09-27).
+//
+// Both are private columns. call_vendor_contact() hands them to a signed-in,
+// active account under callGate's three rules, and limits the reveal: 30
+// different vendors an hour and 100 a day per account. A vendor already revealed
+// that day is served again without counting. A refusal is a 42501 whose message
+// is the reason code.
+//
+// Every reveal of one vendor to one viewer uses one cache entry, so a Call Now
+// tap, a WhatsApp tap and the contact card share an answer instead of asking
+// again.
+// ─────────────────────────────────────────────────────────────
+
+export interface VendorNumbers {
+  phone: string | null;
+  whatsapp: string | null;
+  brandName: string | null;
+}
+
+/** Why the server refused a reveal. Anything else (network, an unexpected error) is thrown. */
+export type VendorContactRefusal = CallBlockReason | "rate_limited" | "not_signed_in" | "not_a_vendor";
+
+// Nullable fields rather than a discriminated union: strictNullChecks is off
+// (see CallBlock above), so a union would not narrow.
+export interface VendorContactResult {
+  numbers: VendorNumbers | null;
+  refusal: VendorContactRefusal | null;
+}
+
+const REFUSALS: ReadonlySet<string> = new Set<VendorContactRefusal>([
+  "caller_suspended", "target_suspended", "under_review", "rate_limited", "not_signed_in", "not_a_vendor",
+]);
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// A reveal stays on screen for the page's life. A tap on Call Now asks again
+// (staleTime 0), because moderation can change between two taps.
+const REVEAL_STALE_MS = 10 * 60_000;
+
+const vendorContactKey = (viewerId: string | null | undefined, vendorId: string | null | undefined) =>
+  ["vendor-contact", viewerId ?? null, vendorId ?? null] as const;
+
+async function fetchVendorContact(vendorId: string): Promise<VendorContactResult> {
+  // A demo or slug id names no vendor, and would only fail on the uuid cast.
+  if (!UUID_RE.test(vendorId)) return { numbers: null, refusal: "not_a_vendor" };
+  const { data, error } = await supabase.rpc("call_vendor_contact", { p_vendor_id: vendorId });
+  if (error) {
+    if (REFUSALS.has(error.message)) return { numbers: null, refusal: error.message as VendorContactRefusal };
+    throw error;
+  }
+  const row = data?.[0];
+  return {
+    numbers: { phone: row?.phone ?? null, whatsapp: row?.whatsapp ?? null, brandName: row?.brand_name ?? null },
+    refusal: null,
+  };
+}
+
+// A refused tap on Call Now. The moderation reasons keep the words the button
+// has always used.
+const CALL_REFUSAL_COPY: Record<VendorContactRefusal, BlockCopy> = {
+  ...CALL_BLOCK_COPY,
+  rate_limited: {
+    title: "Contact numbers are limited right now",
+    description: "You've opened many sellers' numbers in a short time. Try again later, or message the seller in chat.",
+  },
+  not_signed_in: { title: "Sign in to call sellers", description: "Contact numbers are shared with signed-in Cosora accounts." },
+  not_a_vendor: { title: "Calling is unavailable", description: "This account isn't a seller on Cosora." },
+};
+
+/** The same refusals, worded for a contact card or a WhatsApp tap. */
+export const CONTACT_REFUSAL_COPY: Record<VendorContactRefusal, BlockCopy> = {
+  ...CONTACT_BLOCK_COPY,
+  rate_limited: {
+    title: "Contact numbers are limited right now",
+    description: "You've viewed many sellers' numbers in a short time. Try again later, or message this seller in chat.",
+  },
+  not_signed_in: { title: "Sign in to see contact numbers", description: "Contact numbers are shared with signed-in Cosora accounts." },
+  not_a_vendor: { title: "Contact numbers aren't available for this seller" },
+};
+
+/**
+ * A vendor's numbers for a contact card. Nothing is fetched on render: a reveal
+ * counts against the viewer's hourly limit, so it runs only when they ask —
+ * `reveal()`, or a Call Now or WhatsApp tap, which fill the same cache entry.
+ */
+export function useVendorContact(vendorId: string | undefined) {
+  const { user } = useAuth();
+  const query = useQuery({
+    queryKey: vendorContactKey(user?.id, vendorId),
+    queryFn: () => fetchVendorContact(vendorId as string),
+    enabled: false,
+    staleTime: REVEAL_STALE_MS,
+    gcTime: 30 * 60_000,
+    retry: false,
+  });
+  const { refetch } = query;
+  const reveal = useCallback(() => {
+    void refetch();
+  }, [refetch]);
+  return {
+    numbers: query.data?.numbers ?? null,
+    refusal: query.data?.refusal ?? null,
+    /** errorMessage() of a failed reveal that wasn't a refusal. */
+    failed: query.error ? errorMessage(query.error) : null,
+    revealing: query.isFetching,
+    reveal,
+  };
+}
+
+/**
+ * A reveal for a tap: the cached answer when there is a fresh one, otherwise a
+ * new one. `fresh` skips the cache. Throws when the request itself fails.
+ */
+export function useRevealVendorContact() {
+  const { user } = useAuth();
+  const qc = useQueryClient();
+  return useCallback(
+    (vendorId: string, fresh = false) =>
+      qc.fetchQuery({
+        queryKey: vendorContactKey(user?.id, vendorId),
+        queryFn: () => fetchVendorContact(vendorId),
+        staleTime: fresh ? 0 : REVEAL_STALE_MS,
+      }),
+    [user?.id, qc],
+  );
+}
+
 export function useCallVendor() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const reveal = useRevealVendorContact();
 
   return useCallback(
     async (vendorId: string, productContext?: string) => {
-      // Runs before the phone lookup on purpose: a blocked attempt should not
-      // reveal a number, log a `calls` row, or fall back to opening the chat.
-      const blocked = await callGate(user?.id, vendorId);
-      if (blocked) {
-        const copy = CALL_BLOCK_COPY[blocked];
-        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+      // A vendor's number is shared with signed-in accounts only.
+      if (!user) {
+        const copy = CALL_REFUSAL_COPY.not_signed_in;
+        toast.info(copy.title, { description: copy.description, action: { label: "Sign in", onClick: () => navigate("/login") } });
         return;
       }
 
-      // Look up the vendor's number + brand (only fires on click, not per render).
-      const { data: v } = await supabase
-        .from("vendor_profiles")
-        .select("phone, brand_name")
-        .eq("id", vendorId)
-        .maybeSingle();
-      const phone = v?.phone ?? null;
+      // One server call decides: callGate's three rules, the reveal limit, and
+      // the number. Asked afresh on every tap, because moderation can change
+      // between two taps. A refused tap reveals nothing, logs nothing and opens
+      // no chat.
+      let result: VendorContactResult;
+      try {
+        result = await reveal(vendorId, true);
+      } catch (e) {
+        toast.error("Couldn't get the seller's number", { description: errorMessage(e) });
+        return;
+      }
+      if (result.refusal) {
+        const copy = CALL_REFUSAL_COPY[result.refusal];
+        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+        return;
+      }
+      const phone = result.numbers?.phone ?? null;
 
       if (!phone) {
         // Keep Call Now useful: open the chat thread instead.
@@ -196,21 +336,19 @@ export function useCallVendor() {
       // buyer_id, direction and created_at, checks the caller is active and the
       // target is a vendor, and rate-limits. Logging is best-effort on purpose:
       // the dial below goes ahead either way, and a refused or rate-limited log
-      // only means this tap isn't counted. Signed-in only.
-      if (user) {
-        void supabase
-          .rpc("log_call", { p_vendor_id: vendorId, p_product_context: productContext ?? null })
-          .then(({ data, error }) => {
-            if (!error && (data as { status?: string } | null)?.status === "logged") {
-              void qc.invalidateQueries({ queryKey: ["calls", user.id] });
-            }
-          });
-      }
+      // only means this tap isn't counted.
+      void supabase
+        .rpc("log_call", { p_vendor_id: vendorId, p_product_context: productContext ?? null })
+        .then(({ data, error }) => {
+          if (!error && (data as { status?: string } | null)?.status === "logged") {
+            void qc.invalidateQueries({ queryKey: ["calls", user.id] });
+          }
+        });
 
       // Mobile → dial; desktop → show the number on screen.
-      placeCall(v?.brand_name ?? "vendor", phone);
+      placeCall(result.numbers?.brandName ?? "vendor", phone);
     },
-    [user, navigate, qc],
+    [user, navigate, qc, reveal],
   );
 }
 
@@ -220,9 +358,8 @@ export function useCallVendor() {
 // That column is not client-selectable (MPF-3): the number comes from
 // call_buyer_contact(), which applies callGate's three rules ON THE SERVER, plus
 // the relationship this button implies (the caller has quoted on one of this
-// buyer's RFQs). Unlike a vendor's public business number, a buyer's phone is
-// private, so the gate here is enforced rather than advisory. A refusal is a
-// 42501 whose message is the reason code; the copy is the same as callGate's.
+// buyer's RFQs). A refusal is a 42501 whose message is the reason code; the copy
+// is the same as callGate's.
 //
 // Deliberately does NOT log to `calls`: the only write path, log_call(), records
 // a call BY the signed-in user TO a vendor (buyer_id = auth.uid()), and here

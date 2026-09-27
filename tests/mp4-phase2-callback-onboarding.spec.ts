@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Locator, type Browser, type BrowserContext } from "@playwright/test";
 import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
+import { readOwnVendorRow } from "../scripts/lib/vendor-row.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -305,7 +306,7 @@ test("MP4 P2 — a brand-new confirmed vendor completes /onboarding and every fi
   // ── 2.3 — the assertions that matter, against the database ──
   const db = await signedInDb();
 
-  const { data: vp } = await db.from("vendor_profiles").select("*").eq("id", VENDOR_ID).maybeSingle();
+  const vp = await readOwnVendorRow(db, VENDOR_ID);
   expect(vp, "vendor_profiles row exists").toBeTruthy();
   expect(vp!.brand_name).toBe(FORM.businessName);
   expect(vp!.pan).toBe(FORM.pan);

@@ -1,5 +1,6 @@
 import { test, expect, type Browser, type Page, type Request } from "@playwright/test";
 import { hasCredentials, demoPasswordFor } from "../scripts/lib/test-credentials.mjs";
+import { readOwnVendorRow } from "../scripts/lib/vendor-row.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -291,8 +292,8 @@ test("the sign-in step applies a vendor's signup brand once, and only while none
   test.skip(!hasCredentials("DEMO_VENDOR_PASSWORD"), "set DEMO_VENDOR_PASSWORD in .env (see .env.example)");
   const { db, session, uid } = await signIn(VENDOR);
   const vendorRow = async () => {
-    const { data, error } = await db.from("vendor_profiles").select("*").eq("id", uid).single();
-    if (error) throw error;
+    const data = await readOwnVendorRow(db, uid);
+    if (!data) throw new Error("demo-vendor has no vendor_profiles row");
     return data as Row;
   };
   const original = await vendorRow();

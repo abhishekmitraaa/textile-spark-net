@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Printer, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { fetchAdReceipt, type AdReceipt } from "@/lib/queries/vendorPayments";
 import { formatINR } from "@/lib/plan";
+import { fetchBillTo, type BillTo } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
 // Printable receipt for an advertising purchase (/my-payments/receipt/:orderId).
@@ -25,12 +25,6 @@ import { formatINR } from "@/lib/plan";
 // Logged in ToDo.md as a real gap: ad purchases need GST treatment and an
 // invoice series of their own.
 // ─────────────────────────────────────────────────────────────
-
-interface BillTo {
-  brand_name: string | null; owner_name: string | null; owner_email: string | null;
-  address_line: string | null; area: string | null; city: string | null; state: string | null;
-  postal_code: string | null; gstin: string | null; pan: string | null;
-}
 
 /** Display names for the placement ids stored in the order spec. */
 const PLACEMENT_LABELS: Record<string, string> = {
@@ -61,11 +55,11 @@ export default function AdReceiptDetail() {
       if (!active) return;
       setReceipt(r);
       if (r && user?.id) {
-        const { data: vp } = await supabase.from("vendor_profiles")
-          .select("brand_name, owner_name, owner_email, address_line, area, city, state, postal_code, gstin, pan")
-          .eq("id", user.id).maybeSingle();
+        // The PAN, email and street address are private columns: fetchBillTo()
+        // reads them through my_vendor_private(), the vendor's own row only.
+        const vp = await fetchBillTo(user.id).catch(() => null);
         if (!active) return;
-        setBillTo((vp as BillTo) ?? null);
+        setBillTo(vp);
       }
       setLoading(false);
     })();

@@ -67,8 +67,36 @@ export interface VendorStoreData {
   createdAt: string;
 }
 
+// Every column the store screens show, named. Not `*`: that pulled the 1,536-
+// dimension catalog_embedding into every store screen, and it will fail outright
+// once the private columns lose their table-wide grant (admin completion Phase 4b).
+const MY_STORE_COLUMNS = `id, brand_name, about, city, state, country, business_type, website, logo_url, banner_url,
+  owner_name, gstin, cin, is_verified, plan_expires_at, ad_verified_until, followers_count, rating_avg, reviews_count,
+  profile_score, onboarding_complete, category, office_photos, year_established, employee_count, annual_turnover,
+  capacity, social, recommended_product_ids, created_at`;
+
+/** The vendor's eight private fields. */
+export type VendorPrivate = Database["public"]["Functions"]["my_vendor_private"]["Returns"][number];
+
+/**
+ * The signed-in vendor's own private fields: PAN, email, phone, WhatsApp and
+ * street address (admin completion Phase 4). my_vendor_private() only ever
+ * returns the caller's row, so anyone else's id gets null rather than the
+ * caller's own details under another vendor's name.
+ */
+export async function fetchMyVendorPrivate(vendorId: string): Promise<VendorPrivate | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session || session.user.id !== vendorId) return null;
+  const { data, error } = await supabase.rpc("my_vendor_private");
+  if (error) throw error;
+  return data?.[0] ?? null;
+}
+
 async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null> {
-  const { data, error } = await supabase.from("vendor_profiles").select("*").eq("id", id).maybeSingle();
+  const [{ data, error }, priv] = await Promise.all([
+    supabase.from("vendor_profiles").select(MY_STORE_COLUMNS).eq("id", id).maybeSingle(),
+    fetchMyVendorPrivate(id),
+  ]);
   if (error) throw error;
   if (!data) return null;
   return {
@@ -80,17 +108,17 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     country: data.country ?? "India",
     businessType: data.business_type ?? "",
     website: data.website ?? "",
-    phone: data.phone ?? "",
-    whatsapp: data.whatsapp ?? "",
+    phone: priv?.phone ?? "",
+    whatsapp: priv?.whatsapp ?? "",
     logoUrl: data.logo_url,
     bannerUrl: data.banner_url,
-    addressLine: data.address_line ?? "",
-    area: data.area ?? "",
-    postalCode: data.postal_code ?? "",
-    landmark: data.landmark ?? "",
+    addressLine: priv?.address_line ?? "",
+    area: priv?.area ?? "",
+    postalCode: priv?.postal_code ?? "",
+    landmark: priv?.landmark ?? "",
     ownerName: data.owner_name ?? "",
-    ownerEmail: data.owner_email ?? "",
-    pan: data.pan ?? "",
+    ownerEmail: priv?.owner_email ?? "",
+    pan: priv?.pan ?? "",
     gstin: data.gstin ?? "",
     cin: data.cin ?? "",
     isVerified: data.is_verified,
@@ -110,6 +138,32 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     social: (data.social as Record<string, string[]> | null) ?? {},
     recommendedProductIds: data.recommended_product_ids ?? [],
     createdAt: data.created_at,
+  };
+}
+
+/** An invoice's or receipt's "Bill to": the vendor's public identity and their private address, email and PAN. */
+export interface BillTo {
+  brand_name: string | null; owner_name: string | null; owner_email: string | null;
+  address_line: string | null; area: string | null; city: string | null; state: string | null;
+  postal_code: string | null; gstin: string | null; pan: string | null;
+}
+
+/**
+ * "Bill to" for one of the signed-in vendor's own invoices or receipts. The
+ * private half comes from my_vendor_private(), so it is filled in only when
+ * `vendorId` is the caller; anyone else gets the public half.
+ */
+export async function fetchBillTo(vendorId: string): Promise<BillTo | null> {
+  const [{ data, error }, priv] = await Promise.all([
+    supabase.from("vendor_profiles").select("brand_name, owner_name, city, state, gstin").eq("id", vendorId).maybeSingle(),
+    fetchMyVendorPrivate(vendorId),
+  ]);
+  if (error) throw error;
+  if (!data) return null;
+  return {
+    brand_name: data.brand_name, owner_name: data.owner_name, city: data.city, state: data.state, gstin: data.gstin,
+    owner_email: priv?.owner_email ?? null, address_line: priv?.address_line ?? null, area: priv?.area ?? null,
+    postal_code: priv?.postal_code ?? null, pan: priv?.pan ?? null,
   };
 }
 

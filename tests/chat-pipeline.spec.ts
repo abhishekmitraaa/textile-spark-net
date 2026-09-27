@@ -309,9 +309,12 @@ test("T9.2/9.3/9.4 signed-in clear vs blocked, registry data survives", async ({
   const buyer = await contextAs(browser, LOGIN.buyerA);
   const page = await buyer.ctx.newPage();
 
-  // 9.2 clear
+  // 9.2 clear. The number is private since admin completion Phase 4: nothing
+  // shows it until the buyer asks, and call_vendor_contact() answers.
   await page.goto(`/vendor/${F.vendorA}`);
   await page.waitForLoadState("networkidle");
+  expect(await page.locator("body").innerText(), "no number before the buyer asks").not.toContain("90000 00003");
+  await page.getByRole("button", { name: "Show phone number" }).click();
   await expect(page.getByText("+91 90000 00003")).toBeVisible();
   await page.screenshot({ path: path.join(SHOTS, "T9-02-clear.png"), fullPage: true });
 

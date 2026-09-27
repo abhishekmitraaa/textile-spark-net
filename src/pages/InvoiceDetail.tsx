@@ -4,6 +4,7 @@ import { ArrowLeft, Printer, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { fetchInvoiceById, type SubscriptionInvoice } from "@/lib/queries/subscriptions";
 import { formatINR } from "@/lib/plan";
+import { fetchBillTo, type BillTo } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
 // Printable subscription invoice (/subscription/invoice/:id).
@@ -13,12 +14,6 @@ import { formatINR } from "@/lib/plan";
 // (no DashboardLayout) so the print output is clean; a print stylesheet hides
 // the on-screen controls. subscription_invoices.pdf_url stays null for now.
 // ─────────────────────────────────────────────────────────────
-
-interface BillTo {
-  brand_name: string | null; owner_name: string | null; owner_email: string | null;
-  address_line: string | null; area: string | null; city: string | null; state: string | null;
-  postal_code: string | null; gstin: string | null; pan: string | null;
-}
 
 export default function InvoiceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -35,16 +30,16 @@ export default function InvoiceDetail() {
       if (!active) return;
       setInvoice(inv);
       if (inv) {
-        const [{ data: vp }, { data: plan }] = await Promise.all([
-          supabase.from("vendor_profiles")
-            .select("brand_name, owner_name, owner_email, address_line, area, city, state, postal_code, gstin, pan")
-            .eq("id", inv.vendorId).maybeSingle(),
+        // The PAN, email and street address are private columns: fetchBillTo()
+        // reads them through my_vendor_private(), the vendor's own row only.
+        const [vp, { data: plan }] = await Promise.all([
+          fetchBillTo(inv.vendorId).catch(() => null),
           inv.planId
             ? supabase.from("subscription_plans").select("name").eq("id", inv.planId).maybeSingle()
             : Promise.resolve({ data: null }),
         ]);
         if (!active) return;
-        setBillTo((vp as BillTo) ?? null);
+        setBillTo(vp);
         setPlanName((plan as { name?: string } | null)?.name ?? inv.planId ?? "Subscription");
       }
       setLoading(false);
