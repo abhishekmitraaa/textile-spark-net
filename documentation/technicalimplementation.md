@@ -1830,6 +1830,108 @@ Phase 13 of the My Profile brief (MPF-1). No migration.
 - Versions: `create-order` v4, `verify-payment` v5, `webhook` v4 (`verify_jwt` false, as
   before).
 
+## UI language — catalogues, the page translator, the account setting (2026-09-26)
+
+### Catalogues
+- `src/i18n/hi.json`, `src/i18n/gu.json`: flat `{ "<English>": "<translation>" }`, the same keys in
+  both (7,056 on 2026-09-26). Loaded by dynamic import in `lib/i18n.ts` (`loadCatalog`), so each is
+  its own chunk (~166 KB gzipped) and an English session loads neither. `main.tsx` waits up to 3 s
+  for the saved language's catalogue before the first render.
+- Keys are whitespace-collapsed English. A key may hold `{0}`…`{9}`: `"{0}/{1} leads used"`. The
+  pattern allows an empty value, so `"{0} minute{1} ago"` matches "1 minute ago". A translation
+  may leave a placeholder out (the English plural `s`), never add one. A caught value is itself
+  looked up, one level deep (`"MOQ: {0}"` + `"{0} pieces"`), and capitalised if needed.
+- Dates: `"4 Jul 2026"`, `"Jul 4, 2026"`, `"Jan 2025"` keep their numbers and translate the month
+  name (`DATE_RE`, `MONTHS`). The bare text nodes `s` and `es` map to `""`.
+- `lookup()` caches misses and hits per language (5,000 entries, then cleared).
+
+### The page translator (`components/i18n/AutoTranslate.tsx`)
+- Walks text nodes and the `placeholder`, `title`, `aria-label` and `alt` attributes, remembers each
+  node's English, and re-runs on language change, on catalogue arrival and on DOM mutations.
+- Skips `SCRIPT/STYLE/NOSCRIPT/TEXTAREA/CODE/PRE` text, `contenteditable`, and anything under
+  `[data-no-translate]`. A `<textarea>`'s placeholder is translated; its content never is.
+- No code reads rendered text back (`textContent`/`innerText`), so translating the page can't
+  change behaviour; option values and data stay English.
+
+### The coverage check (`scripts/i18n-coverage-check.mjs`, `npm run i18n:check`)
+- Parses every file reachable from `src/main.tsx` with the TypeScript API and collects JSX text,
+  display attributes, object values under non-technical keys, array elements, return values,
+  `toast()`/`new Error()` messages, display-named variables, and template literals as `{n}` keys.
+  Filters: class lists (only when every word is a class), paths, URLs, MIME types, CSS values,
+  emails, file names, snake/camel identifiers (lowercase words are allowed where JSX renders them).
+- Adds `src/i18n/external-strings.json` (notifications, FAQs, categories, plans, dates, data words).
+- Fails on any string missing from either catalogue, or a translation with a placeholder its key
+  lacks. `--write-missing out.json` lists them with their files. Skipped on purpose: `lib/i18n.ts`,
+  `AutoTranslate.tsx`, `lib/supplierAgreement.ts` (English only), generated types.
+
+### The account setting (`lib/languagePreference.ts`, `components/i18n/LanguageSync.tsx`)
+- `ui_language` in `auth.users.raw_user_meta_data`, written with `supabase.auth.updateUser({ data })`
+  (merges; `null` removes the key). Private to the user and arrives with the session, so no table,
+  grant or extra request.
+- `chooseLang(l)`: switches the device, then saves to the account if signed in; signed out, it
+  records the pick in `sessionStorage` (`cosora.lang.pickedSignedOut`).
+- `LanguageSync` runs `syncLanguageForUser()` once per account per page load: a signed-out pick in
+  this tab is newer, so it is applied and saved; otherwise the account's language is applied; an
+  account with none keeps the device's (nothing written).
+- The device's language stays in `localStorage` (`cosora.lang`), so the sign-in screen after a
+  sign-out is in the last language.
+- `buyer_profiles.regional.language` and `vendor_profiles.regional.language` are no longer read or
+  written for language (one buyer row held "English"; no vendor row held any).
+
+### Glossary kept across both catalogues
+| English | Hindi | Gujarati |
+|---|---|---|
+| Cosora | कोसोरा | કોસોરા |
+| Buyer / Seller, Vendor | खरीदार / विक्रेता | ખરીદદાર / વિક્રેતા |
+| Quote | कोटेशन | ક્વોટ |
+| Requirement | आवश्यकता | જરૂરિયાત |
+| Lead | लीड | લીડ |
+| Product | उत्पाद | ઉત્પાદન |
+| Campaign / Ad | अभियान / विज्ञापन | ઝુંબેશ / જાહેરાત |
+| Verified | सत्यापित | ચકાસાયેલ |
+| Under review | समीक्षाधीन | સમીક્ષા હેઠળ |
+| Video Closeup | वीडियो क्लोज़-अप | વિડિયો ક્લોઝ-અપ |
+| Total Order Value | कुल ऑर्डर मूल्य | કુલ ઓર્ડર મૂલ્ય |
+| RFQ, MOQ, GSM, GST, PAN, KYC, TrustedSEAL, TradeSEAL | unchanged | unchanged |
+
+## Dummy OTP: mobile sign-in without SMS (2026-09-27)
+
+Until SMS delivery exists, any 6 digits sign in (Mitra's instruction). It is a sign-in bypass
+by design, logged in `securityflags.md`.
+
+**Client (`src/lib/auth/otp.ts`, still the only OTP seam).**
+- `sendOtp()` calls `signInWithOtp` as before.
+  - Accepted: `sent`.
+  - Refused with `phone_provider_disabled`: it asks `otp-dev-verify` for `{ action: "status" }`
+    and returns `test_mode` when enabled, otherwise `not_live`.
+  - Once real SMS works, the send succeeds and the function is never asked.
+- `verifyOtp(phone, code, { delivery, signupData })`: with `delivery = "test_mode"`, it posts
+  `{ action: "verify", phone, code, data }` to the function and applies the tokens with
+  `supabase.auth.setSession()`. The code screen passes `delivery` from its route state, so it
+  survives a reload.
+- `OtpVerify.tsx` shows a "Test mode" notice and hides the timer and resend link.
+
+**Function (`supabase/functions/otp-dev-verify/index.ts`, JWT gate on).** Any 6 digits, then:
+1. **Create the account** with the service-role key: placeholder email
+   `p<digits>@phone.cosora.invalid`, `phone` confirmed, whitelisted `user_metadata`, and
+   `app_metadata.created_by = "otp-dev-verify"`.
+   - `email_exists` means the number was seen before.
+   - `phone_exists` means another account owns the number, so it is refused.
+2. **Generate a magic-link token** for the placeholder email (no email is sent). The account
+   must carry the `created_by` tag, or it is refused.
+3. **Check admin status:** `admin_status_of(user_id)` must answer `is_admin = false`. Anything
+   else refuses.
+4. **New account:** clear `profiles.email`, which `handle_new_user()` copied from the
+   placeholder.
+5. **Redeem the token** at `/auth/v1/verify` and return `access_token` and `refresh_token`.
+
+**Switches.**
+- Set the secret `OTP_DEV_BYPASS=off` to turn it off at once; `status` then reports
+  `enabled: false` and the app shows "No code was sent".
+- Or set `ENABLED = false` and redeploy.
+
+**Tests.** `tests/dummy-otp-login.spec.ts` covers Login and Register with the probe number
++1 555-010-0001.
 ## Integrations
 
 ### Supabase

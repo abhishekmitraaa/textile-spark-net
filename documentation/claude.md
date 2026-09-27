@@ -187,6 +187,24 @@ undocumented. Deep technical rationale for each lives in
     `src/lib/notificationDelivery.ts`: the one switch to flip once a sender honours the
     toggles (MPF-12, 2026-09-25). A new surface that mentions notifications reads it too.
   - Building delivery is its own master prompt, not a profile-page change.
+- **The UI language (English, Hindi, Gujarati) covers all platform text and follows the account**
+  (Mitra, 2026-09-26).
+  - Translations are two catalogues keyed by the English text, `src/i18n/hi.json` and `gu.json`,
+    applied to the rendered page by `AutoTranslate`. **A new string the app renders needs an entry
+    in both: run `npm run i18n:check`**, which fails otherwise. Text that comes from the database or
+    a library (a `notify()` title, an FAQ, a plan feature, a category) goes in
+    `src/i18n/external-strings.json` first. An admin-edited FAQ shows in English until its new text
+    is added there and translated.
+  - **What people type is never translated:** chat, reviews, quote comments, requirement titles
+    carry `data-no-translate`. A new surface that shows user-written text must too. Vendors' own
+    product and business names stay as entered.
+  - **The Supplier Agreement stays English** in every language: it is signed and stored by
+    `SUPPLIER_AGREEMENT_VERSION`, and a translation would be wording the record doesn't name.
+  - The choice is `ui_language` in the user's auth metadata. Every picker calls `chooseLang()`
+    (`lib/languagePreference.ts`); `LanguageSync` applies it at sign-in. Don't read or write the
+    old `regional.language` JSON fields. This is a preference read after sign-in; it never changes
+    how anyone signs in.
+  - The translations are machine-quality and unreviewed (`ToDo.md`).
 - **Currency converts displayed prices, for display only; timezone is still read by nothing**
   (currency: Phase 20 of the My Profile brief, 2026-09-24, MPF-11).
   - **Every buyer-facing price goes through `useDisplayCurrency()`:** `show(amountInInr,
@@ -607,6 +625,14 @@ undocumented. Deep technical rationale for each lives in
   `otp.ts` only: its TODO records the open choice between an Auth "Send SMS hook" (otp.ts
   unchanged) and API-side verification with an edge function minting the session.
   Onboarding's phone field is still a plain contact field.
+- **Dummy OTP (Mitra, 2026-09-27): any 6 digits sign in while SMS isn't live.** When the send
+  is refused, `sendOtp()` asks the `otp-dev-verify` edge function whether test mode is on and
+  returns `test_mode`. The code screen then says no code was sent and any 6 digits work, and
+  `verifyOtp()` takes the session from that function. It is a sign-in bypass by design
+  (`securityflags.md`, 2026-09-27). It signs in only to accounts it created
+  (`app_metadata.created_by`) and never to an admin. Don't widen it: it must never open a
+  Google or email account by its number. Switch it off with the secret `OTP_DEV_BYPASS=off`,
+  and delete it when real SMS works.
 - **Email confirmation is ON, so a signup has no session.** `auth.signUp()` returns a user and
   `session: null`. Register.tsx therefore ends on a "check your email" screen rather than
   routing to a dashboard the account cannot load. `active_role` is carried in
@@ -1165,6 +1191,10 @@ commit `532cd3e`. **Not pushed:** wait for Mitra's go.
 > WhatsApp) must not turn into a sign-in path. Accounts created through real sign-in have no
 > usable email, so their deletion code goes over WhatsApp (Phase 18, `myprofileflags-fixed.md`
 > MPF-6). That is a delivery channel only, and it never signs anyone in.
+>
+> **Update (Mitra, 2026-09-27):** the dummy OTP now signs in with any 6 digits ("just typing
+> any otp for now should let me log in"). See the "Dummy OTP" rule above and
+> `securityflags.md`. The rest of this instruction stands.
 
 **Why.** The app was originally OTP-only. Email + password was later made the primary login,
 and phone sign-in was demoted to a disabled "coming soon" row, because this Supabase project

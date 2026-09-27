@@ -196,6 +196,19 @@ the demand side of India's fashion and textile supply chain.
   About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
   decision (Master Prompt 8).
 
+### Fixed 2026-09-27 (sign-in)
+- **Mobile sign-in works again, in test mode.** No SMS is sent yet, so the code screen says so,
+  and any 6 digits sign in. This is a sign-in bypass on purpose until SMS delivery exists
+  (`securityflags.md`).
+- **Google sign-in on cosora.in** still returns people to the vercel.app site until cosora.in is
+  added to Supabase's redirect URLs (`ToDo.md`).
+### Fixed 2026-09-26 (language)
+- **Hindi and Gujarati cover the whole buyer side**, not just the navigation: pages, forms,
+  filters, empty states, toasts, FAQs, notifications, plan details, categories and dates.
+  What people type and vendors' product names stay as entered.
+- **The language follows the buyer's account.** Picked on the sign-in screen or in Regional
+  Settings, it is saved and applied at the next sign-in on any device.
+
 ### Fixed 2026-09-25 (flag-fix pass)
 - **A buyer's decision on a quote is theirs alone** (MPF-18). Only the buyer who posted the
   request can shortlist, accept or reject; the vendor can't mark its own quote accepted, and
@@ -431,6 +444,19 @@ rather than a supplier directory.
   token; hardcode `#256fef` (hover `#1d5ed6`).
 
 ---
+
+### Fixed 2026-09-27 (sign-in)
+- **Seller signup and sign-in by mobile number work again, in test mode.** No SMS is sent yet,
+  so the code screen says so, and any 6 digits sign in. This is a sign-in bypass on purpose
+  until SMS delivery exists (`securityflags.md`).
+- **Google sign-in on cosora.in** still returns people to the vercel.app site until cosora.in is
+  added to Supabase's redirect URLs (`ToDo.md`).
+### Fixed 2026-09-26 (language)
+- **Hindi and Gujarati cover the whole vendor side**: dashboard, uploads, product forms and
+  their category fields, leads, quotes, analytics, ads, subscription and payments. The Supplier
+  Agreement clauses stay in English (they are signed by version).
+- **The language follows the vendor's account.** Vendor Settings no longer puts English back on
+  open; the choice made there or in My Store is saved and applied at sign-in on any device.
 
 ### Fixed 2026-09-25 (flag-fix pass)
 - **Vendor Settings is honest about notifications** (MPF-12): the same "aren't live yet"

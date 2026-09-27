@@ -1,3 +1,46 @@
+- 2026-09-27 (dummy OTP signs in; Google sign-in cause found): **Typing any 6 digits on the code screen now signs in, as Mitra asked, until SMS delivery exists. Google sign-in on cosora.in was returning people to the vercel.app site; the fix is a Supabase setting, not code.** Mitra: "the google verification isnt working and the otp isnt letting me log in … just typing any otp for now should let me log in".
+  - **Why the OTP stopped everyone:** the project has no SMS provider, so `sendOtp()` got `phone_provider_disabled` and the code screen, correctly, said no code was sent. There was nothing to verify. The parked `otp-dev-verify` function, which accepts any code, had never been deployed.
+  - **Dummy OTP:** `otp-dev-verify` hardened and deployed (version 1, JWT gate on). In `otp.ts`, when the send is refused, `sendOtp()` asks the function whether test mode is on and returns `test_mode`. `verifyOtp()` then gets the session from the function and applies it with `setSession()`. The code screen says "Test mode. SMS delivery isn't live yet, so no code was sent. For now, type any 6 digits to continue." and shows no timer or resend. Once real SMS works the send succeeds and this branch is never reached. Kill switch: the secret `OTP_DEV_BYPASS=off`.
+  - **Hardening:**
+    - It signs in only to accounts it created (`app_metadata.created_by`, which users can't write). A Google or email account with the same number is refused, and so is an email signup that took the placeholder address first.
+    - It refuses admins through `admin_status_of()` and fails closed. The parked version read the dropped `profiles.is_admin`, and that check would have failed open.
+    - The metadata whitelist and the `.invalid` placeholder email are unchanged.
+  - **Google:** Supabase Auth's redirect allow list has only `textile-spark-net.vercel.app` (the Site URL) and `localhost:8080`.
+    - A Google sign-in started on `www.cosora.in` or `cosora.in` is sent back to `https://textile-spark-net.vercel.app`, so the person ends up signed in on the other site, not the one they were on. The auth logs show Mitra's 2026-09-26 sign-in going this way.
+    - The Google client itself works.
+    - **Fix, in the dashboard:** Authentication → URL Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**` and `https://cosora.in/**` to Redirect URLs, and keep `https://textile-spark-net.vercel.app/**` and `http://localhost:8080/**`.
+    - Not done yet: this machine has no Supabase management token (`ToDo.md`).
+  - **Security:** logged in `securityflags.md` (Open, 2026-09-27): anyone can sign in as any phone number's account.
+  - **Verified:**
+    - A probe against the deployed function:
+      - a new number got a session;
+      - the same number with a different code got the same account;
+      - 5 digits and a bad number were refused;
+      - an `is_admin` key in the signup data was dropped.
+    - `tests/dummy-otp-login.spec.ts` 2/2 and `language-follows-account` 4/4.
+    - Typecheck 0, eslint clean, `i18n:check` 6,951/6,951.
+    - **Not tested live:**
+      - The two refusals (untagged account; number on another account). Staging them needs direct `auth.users` edits, which the session's safety check blocked.
+      - The admin refusal was checked through `admin_status_of()`, not end to end, to keep test rows out of the admin audit log.
+  - **Left in production:** one probe account for +1 555-010-0001 (a fictional range), which the spec reuses.
+  - **Files:**
+    - `supabase/functions/otp-dev-verify/index.ts`: the app now calls it, so it should be committed with this change.
+    - `supabase/config.toml`.
+    - `src/lib/auth/otp.ts`, `src/pages/OtpVerify.tsx`, and `Login.tsx` and `Register.tsx` (comments only).
+    - `src/i18n/hi.json`, `gu.json` and `external-strings.json`.
+    - `tests/dummy-otp-login.spec.ts` (new).
+  - **Not committed or pushed.** The function is live now, but www.cosora.in keeps the "No code was sent" screen until the app change is deployed.
+- 2026-09-26 (language covers the platform and follows the account): **Choosing Hindi or Gujarati now translates the whole platform, buyer and vendor side, and the choice is saved to the account and applied at sign-in on any device.** Mitra: the translation "was selective but it is supposed to translate the entire main platform ... at the time of login the user should see the site in which they configured the language while they used it the last time".
+  - **Why it was selective:** `lib/i18n.ts` held a 370-entry dictionary, and `AutoTranslate` swaps a text node only when its whole text is a key. The code renders ~6,300 strings, so 4.5% were covered, and text with a value in it (`Show ${n} results`) could never match. Measured in a browser over 47 pages (signed out, demo-buyer, demo-vendor): 26% of visible text was Hindi before, 79% after. The rest is vendor data (product and business names, cities, review text, invoice and quote numbers), which stays as entered.
+  - **Why sign-in didn't bring it back:** the language lived only in this browser's `localStorage`. Buyer Regional Settings saved `buyer_profiles.regional.language`, which nothing read; Vendor Settings read `vendor_profiles.regional.language` on its own page only, and a vendor who had saved nothing got the default, English, over the language they had picked.
+  - **Catalogues:** `src/i18n/hi.json` and `gu.json`, 7,056 entries each, loaded on demand (~166 KB gzipped each; an English session downloads neither; `main.tsx` waits up to 3 s for the saved language's so the page doesn't flash English). Keys may hold `{0}` placeholders; a caught value is translated too, one level deep. Month names inside dates and date-fns relative times translate. English plural endings (`s`, `es`) map to nothing.
+  - **Account:** the choice is `ui_language` in the user's auth metadata (private to them, no migration, arrives with the session). Every picker (Login, Regional Settings, Vendor Settings, My Store) calls `chooseLang()` (`lib/languagePreference.ts`); `LanguageSync` applies the account's language at sign-in; a pick made on the sign-in screen is saved at sign-in; an account with nothing saved keeps the device's language and nothing is written for it. Sign-in itself is unchanged.
+  - **Guard:** `npm run i18n:check` (`scripts/i18n-coverage-check.mjs`) lists every string the code can render and fails when either catalogue lacks it. `src/i18n/external-strings.json` adds text that lives outside the code: `notify()` titles and bodies, FAQs, plans, categories, dates. Fixed while building it: a sentence containing a word like "hidden" or "order" was being dropped as a list of CSS classes.
+  - **Left in English on purpose:** what people type (chat bubbles, reviews, quote comments, requirement titles: `data-no-translate`); vendors' own product and business names; the Supplier Agreement clauses, which are signed and stored by version (`data-no-translate` in `Onboarding.tsx`).
+  - **Fixed on the way:** the seller landing page printed `Women&apos;s, men&apos;s …` literally; `<textarea>` placeholders were never translated.
+  - **Not reviewed:** the translations are Claude's, not a native speaker's or a lawyer's. The Terms pages and FAQs especially need a review (`ToDo.md`).
+  - **Verified:** typecheck 0 errors (an injected error reports 1); build passes, 0 credential values in `dist/`; `i18n:check` 6,943/6,943 in both; `tests/language-follows-account.spec.ts` 4/4, and fails when `LanguageSync` is disabled; `profile-regional-honesty`, `buyer-settings` and `display-currency` pass. No analytics or recently-viewed rows written; the demo accounts' `ui_language` removed afterwards.
+  - **Files:** `src/lib/i18n.ts`, `src/lib/languagePreference.ts` (new), `src/components/i18n/AutoTranslate.tsx`, `LanguageSync.tsx` (new), `src/i18n/*.json` (new), `src/main.tsx`, `src/App.tsx`, `Login`, `ProfileAccountPrefs`, `VendorSettings`, `MyStore`, `Onboarding`, `VendorLanding`, user-content markers in `ChatThread`, `VendorChatModal`, `DirectRequestThread`, `QuoteDetailsModal`, `ReceivedQuoteCard`, `OpenRfqLeads`, `MyQuotes`, `MyReviews`, `ProductDetail`, `Reviews`, `VendorProfile`; `scripts/i18n-coverage-check.mjs`, `package.json`, `tsconfig.app.json`; the spec.
 - 2026-09-26 (Lovable traces removed): **The public repo and site no longer show that the front end started as a Lovable template.** Mitra saw LinkedIn preview cosora.in with Lovable's banner. The live `index.html` has pointed `og:image` at `/og-image.png` (the Cosora logo) since 2026-09-25; LinkedIn was showing its cached scrape of the old template tags. Refresh it with LinkedIn's Post Inspector (linkedin.com/post-inspector).
   - Removed the dev-only `lovable-tagger` package and its `componentTagger()` plugin from `vite.config.ts` (never ran in production builds). `package-lock.json` and `bun.lock` updated; `bun.lockb` is binary and was left alone.
   - Package renamed from the template's `vite_react_shadcn_ts` to `cosora`. README rewritten. Deleted `tmp_page.html`, an old snapshot of the live page that still carried Lovable's image tags. Lovable mentions dropped from claude.md and technicalimplementation.
