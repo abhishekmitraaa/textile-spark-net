@@ -20,6 +20,16 @@ import { supabase } from "@/lib/supabase";
 //   server's answer, not from a flag, so there is no switch for anyone to
 //   forget to flip.
 //
+// DUMMY OTP (2026-09-27, Mitra: "just typing any otp for now should let me log
+//   in"). When the send is refused as above, sendOtp() asks the
+//   `otp-dev-verify` edge function whether test mode is on. If it is, the send
+//   returns { status: "test_mode" }, the code screen says no SMS was sent and
+//   any 6 digits work, and verifyOtp() gets the session from that function
+//   instead of Supabase's verify. It is a sign-in bypass by design, logged in
+//   documentation/securityflags.md; turning it off (OTP_DEV_BYPASS=off) brings
+//   back "not_live". Once real SMS is live the send succeeds, this branch is
+//   never reached, and the function should be deleted.
+//
 // TODO(otp-integration): the in-house OTP/verification API plugs in HERE.
 //   Decision still open, to be settled on integration day:
 //
@@ -53,6 +63,8 @@ export const OTP_LENGTH = 6;
 export type SendOtpResult =
   /** The server accepted the send. Only this state may say "code sent". */
   | { status: "sent" }
+  /** Nothing was sent, and the dummy OTP is on: any 6 digits sign in. The UI must say so. */
+  | { status: "test_mode"; message: string }
   /** No SMS delivery exists yet, so nothing was sent. The UI must say so. */
   | { status: "not_live"; message: string }
   | { status: "error"; message: string };
@@ -78,6 +90,17 @@ export const OTP_NOT_LIVE_MESSAGE =
   "SMS delivery isn't live yet, so no code has been sent to this number. " +
   "Mobile sign-in will work once it is. For now, continue with Google or explore as a guest.";
 
+export const OTP_TEST_MODE_MESSAGE =
+  "SMS delivery isn't live yet, so no code was sent. For now, type any 6 digits to continue.";
+
+const DUMMY_OTP_FUNCTION = "otp-dev-verify";
+
+/** Whether the dummy OTP is switched on (the function answers, not a flag here). */
+async function dummyOtpEnabled(): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke(DUMMY_OTP_FUNCTION, { body: { action: "status" } });
+  return !error && data?.enabled === true;
+}
+
 /**
  * What the last send for each number actually did. It lets verifyOtp() say
  * "nothing was sent" instead of a misleading "code expired". It is memory
@@ -101,7 +124,9 @@ export async function sendOtp(phone: string, options: SendOtpOptions = {}): Prom
   let result: SendOtpResult;
   if (!error) result = { status: "sent" };
   else if (error.code === "phone_provider_disabled" || /unsupported phone provider/i.test(error.message)) {
-    result = { status: "not_live", message: OTP_NOT_LIVE_MESSAGE };
+    result = (await dummyOtpEnabled())
+      ? { status: "test_mode", message: OTP_TEST_MODE_MESSAGE }
+      : { status: "not_live", message: OTP_NOT_LIVE_MESSAGE };
   } else if (error.code === "over_sms_send_rate_limit" || /rate limit/i.test(error.message)) {
     result = { status: "error", message: "Too many codes requested for this number. Please wait a minute and try again." };
   } else {
@@ -111,11 +136,23 @@ export async function sendOtp(phone: string, options: SendOtpOptions = {}): Prom
   return result;
 }
 
+export interface VerifyOtpOptions {
+  /**
+   * What the send did, from the code screen's state (which survives a reload,
+   * unlike `lastSend`).
+   */
+  delivery?: SendOtpResult["status"];
+  /** Signup metadata, for a new account created by the dummy OTP. */
+  signupData?: Record<string, string>;
+}
+
 /** Check `code` for `phone`. On success a real Supabase session exists. */
-export async function verifyOtp(phone: string, code: string): Promise<VerifyOtpResult> {
-  if (lastSend.get(phone) === "not_live") {
+export async function verifyOtp(phone: string, code: string, options: VerifyOtpOptions = {}): Promise<VerifyOtpResult> {
+  const delivery = options.delivery ?? lastSend.get(phone);
+  if (delivery === "not_live") {
     return { status: "not_live", message: OTP_NOT_LIVE_MESSAGE };
   }
+  if (delivery === "test_mode") return verifyDummyOtp(phone, code, options.signupData);
 
   const { data, error } = await supabase.auth.verifyOtp({ phone, token: code, type: "sms" });
 
@@ -129,4 +166,29 @@ export async function verifyOtp(phone: string, code: string): Promise<VerifyOtpR
     return { status: "error", message: "The code was accepted but no session was returned. Please try again." };
   }
   return { status: "verified", user: data.user, session: data.session };
+}
+
+/** The dummy OTP: the edge function accepts any 6 digits and returns a session. */
+async function verifyDummyOtp(phone: string, code: string, signupData?: Record<string, string>): Promise<VerifyOtpResult> {
+  const { data, error } = await supabase.functions.invoke(DUMMY_OTP_FUNCTION, {
+    body: { action: "verify", phone, code, data: signupData },
+  });
+  if (error) {
+    // A refusal carries its reason in the response body.
+    const body = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    if (body?.status === "disabled") return { status: "not_live", message: OTP_NOT_LIVE_MESSAGE };
+    if (body?.status === "invalid") return { status: "invalid", message: body.message };
+    return { status: "error", message: body?.message ?? "Couldn't sign you in. Please try again." };
+  }
+  if (data?.status !== "verified" || !data.access_token || !data.refresh_token) {
+    return { status: "error", message: "Couldn't sign you in. Please try again." };
+  }
+  const { data: set, error: setError } = await supabase.auth.setSession({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+  });
+  if (setError || !set.session || !set.user) {
+    return { status: "error", message: setError?.message ?? "Couldn't sign you in. Please try again." };
+  }
+  return { status: "verified", user: set.user, session: set.session };
 }

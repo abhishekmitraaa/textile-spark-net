@@ -7,7 +7,8 @@ import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
-import { useLang, setLang, langCodeFromName, LANG_OPTIONS } from "@/lib/i18n";
+import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
+import { chooseLang } from "@/lib/languagePreference";
 import { COUNTRY_CODES, PHONE_DIGITS, cleanPhoneDigits, toE164, type CountryCode } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
@@ -29,7 +30,7 @@ const LANGUAGES = LANG_OPTIONS;
 
 function LanguageModal({
   isOpen, onClose, selected, onSelect,
-}: { isOpen: boolean; onClose: () => void; selected: string; onSelect: (l: string) => void }) {
+}: { isOpen: boolean; onClose: () => void; selected: Lang; onSelect: (l: Lang) => void }) {
   return (
     <AnimatePresence>
       {isOpen && (
@@ -51,14 +52,15 @@ function LanguageModal({
               {LANGUAGES.map(lang => (
                 <button
                   key={lang.code}
-                  onClick={() => { onSelect(lang.label); onClose(); }}
+                  onClick={() => { onSelect(lang.code); onClose(); }}
                   className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <span className={cn("text-sm", selected === lang.label ? "text-[#a4172c] font-semibold" : "text-gray-700")}>
+                  {/* Language names stay as written, in every UI language. */}
+                  <span data-no-translate className={cn("text-sm", selected === lang.code ? "text-[#a4172c] font-semibold" : "text-gray-700")}>
                     {lang.label}
                     {lang.native !== lang.label && <span className="ml-2 text-gray-400">{lang.native}</span>}
                   </span>
-                  {selected === lang.label && <span className="text-[#a4172c]">✓</span>}
+                  {selected === lang.code && <span className="text-[#a4172c]">✓</span>}
                 </button>
               ))}
             </div>
@@ -122,13 +124,10 @@ const Login = () => {
   const { signInWithGoogle } = useAuth();
   const lang = useLang();
   const [googleLoading, setGoogleLoading] = useState(false);
-  // Derived from the active language code so Gujarati doesn't load showing
-  // "English" — the old check only special-cased Hindi.
-  const [selectedLang, setSelectedLang] = useState(
-    () => LANG_OPTIONS.find((l) => l.code === lang)?.label ?? "English",
-  );
-  // Selecting a language here also switches the whole app's UI language.
-  const handleSelectLang = (l: string) => { setSelectedLang(l); setLang(langCodeFromName(l)); };
+  // Selecting a language here switches the whole app. Signed out, it is
+  // remembered for this tab and saved to the account at sign-in
+  // (languagePreference.ts).
+  const handleSelectLang = (l: Lang) => { void chooseLang(l); };
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [phone, setPhone] = useState("");
   const [selectedCountry, setSelectedCountry] = useState(COUNTRY_CODES[0]);
@@ -177,8 +176,9 @@ const Login = () => {
     const delivery = await sendOtp(e164);
     setSending(false);
 
-    // A plain failure (bad number, rate limit) stays on this screen. "sent"
-    // and "not_live" both continue: the code screen tells them apart honestly.
+    // A plain failure (bad number, rate limit) stays on this screen. "sent",
+    // "test_mode" (the dummy OTP) and "not_live" continue: the code screen
+    // tells them apart honestly.
     if (delivery.status === "error") { setError(delivery.message); return; }
 
     const state: OtpVerifyState = { phone, countryCode: selectedCountry.code, e164, delivery };
@@ -194,7 +194,7 @@ const Login = () => {
           className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:bg-gray-50 transition-colors"
         >
           <Globe className="w-3.5 h-3.5" />
-          {selectedLang}
+          <span data-no-translate>{LANG_OPTIONS.find((l) => l.code === lang)?.native ?? "English"}</span>
           <ChevronDown className="w-3 h-3 text-gray-400" />
         </button>
       </div>
@@ -301,7 +301,7 @@ const Login = () => {
       <LanguageModal
         isOpen={langModalOpen}
         onClose={() => setLangModalOpen(false)}
-        selected={selectedLang}
+        selected={lang}
         onSelect={handleSelectLang}
       />
       <CountryModal

@@ -66,8 +66,8 @@ const Register = () => {
     const delivery = await sendOtp(e164, { signupData: data });
     setSubmitting(false);
 
-    // "sent" and "not_live" both continue: the code screen says which one it
-    // was. Only a plain failure stays here.
+    // "sent", "test_mode" and "not_live" all continue: the code screen says
+    // which one it was. Only a plain failure stays here.
     if (delivery.status === "error") { setError(delivery.message); return; }
 
     const state: OtpVerifyState = {

@@ -300,7 +300,7 @@ const MyReviews = () => {
                   </div>
                 </div>
 
-                {r.text && <p className="text-sm text-gray-600 leading-relaxed mt-3">{r.text}</p>}
+                {r.text && <p data-no-translate className="text-sm text-gray-600 leading-relaxed mt-3">{r.text}</p>}
 
                 <ReviewPhotoStrip photos={r.photos} className="mt-3" />
 

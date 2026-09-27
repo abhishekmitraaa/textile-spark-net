@@ -15,6 +15,83 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Add cosora.in to Supabase Auth's redirect URLs, so Google sign-in comes back to the site — added 2026-09-27
+- Task: in the Supabase dashboard (project `vxdhhgdfubqedfpwfyrb`), open Authentication → URL
+  Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**`
+  and `https://cosora.in/**` to Redirect URLs, and keep `https://textile-spark-net.vercel.app/**`
+  and `http://localhost:8080/**`.
+- Context:
+  - **What happens:** Google sign-in on www.cosora.in finishes on textile-spark-net.vercel.app.
+    Only that host (the Site URL) and `localhost:8080` are allowed as return addresses, and
+    Supabase sends any other one to the Site URL.
+  - **Confirmed from the auth logs (2026-09-27):**
+    - `https://www.cosora.in/auth/callback` and `https://cosora.in/auth/callback` resolve to
+      `https://textile-spark-net.vercel.app`.
+    - The vercel.app and localhost callbacks resolve to themselves.
+    - Mitra's Google sign-in on 2026-09-26 went this way.
+  - **What already works:** the Google OAuth client (Google's sign-in page opens). The app
+    already asks to come back to `<current site>/auth/callback`, so no code changes.
+  - **Why it wasn't done in a session:** this machine has no Supabase management token.
+  - **Side effect:** changing the Site URL also changes where Supabase's own emails link to,
+    such as admin invites.
+- Reference: 2026-09-27 session, "the google verification isnt working"; `changelog.md`
+  2026-09-27.
+- Priority: High (Google sign-in doesn't work on the real domain)
+- Status: Open
+### Have a native speaker review the Hindi and Gujarati translations — added 2026-09-26
+- Task: a Hindi and a Gujarati speaker read `src/i18n/hi.json` and `gu.json` (7,056 entries each)
+  in context, starting with the buyer home, sign-in, onboarding, subscription and ads pages, and
+  correct wording. The legal pages (`/terms`, `TermsConditions.tsx`, `Terms.tsx`) and the FAQs need
+  a lawyer's review too, and probably a line saying the English version governs.
+- Context: the whole platform was translated on 2026-09-26 by Claude, not by a translator.
+  Fragments of sentences split around links or values read stiffly in Hindi and Gujarati word
+  order. Edit the JSON values only; `npm run i18n:check` must still pass.
+- Reference: 2026-09-26, the language-translation fix ("the translation was selective").
+- Status: Open
+
+### Store FAQ translations with the FAQ, so admin edits stay translated — added 2026-09-26
+- Task: give `public.faqs` per-language question/answer columns (or a translations table),
+  editable on Cosora-Admin `/faqs`, and have `useFaqs()` return the viewer's language.
+- Context: FAQs are translated today through the static catalogues (`src/i18n/external-strings.json`,
+  "faqs"). An FAQ edited in the admin shows in English until its new text is added there and
+  translated in code. The same applies to `subscription_plans.display` values and `notify()` texts.
+- Reference: 2026-09-26, the language-translation fix.
+- Status: Open
+
+### Decide whether the Supplier Agreement gets a reviewed translation — added 2026-09-26
+- Task: if vendors should read the agreement in Hindi or Gujarati, have the text translated and
+  legally reviewed, and store the language with `agreement_version` so the record names what was
+  signed.
+- Context: the clauses (`lib/supplierAgreement.ts`) are English in every language on purpose
+  (`data-no-translate` in `Onboarding.tsx`); they are also marked "not legally reviewed" in English.
+- Reference: 2026-09-26, the language-translation fix.
+- Status: Open
+
+### Run `npm run i18n:check` in CI — added 2026-09-26
+- Task: add the check to the GitHub workflow (it needs no secrets and no network), so a new
+  English string can't ship untranslated.
+- Context: today it is a script run by hand. `.github/workflows/e2e.yml` exists but stops before its
+  specs (they read `.env` at load); a separate job for this check would not be affected.
+- Reference: 2026-09-26, the language-translation fix.
+- Status: Open
+
+### Remove invented claims and real brand names still on live pages — added 2026-09-26
+- Task: decide what replaces each, under the "no invented endorsements" and "no mock data in
+  production" rules in `claude.md`.
+- Context: found while translating every page on 2026-09-26; none is dev-only:
+  - `/seller` (`VendorLanding.tsx`): a "Trusted by brands" logo wall of real Korean fashion brands
+    (Hotping, Style Nanda, Chuu …), "Trusted by over 1 million users", "Trusted by 95% of shopping
+    malls", named testimonials; its documents list asks for an Aadhaar card, which the app must not
+    collect; it says "0% commission" while the Supplier Agreement mentions Cosora's commission.
+  - `/cosora-studio/:id` (`PhotographerProfile.tsx`): invented studios with real brands as clients
+    (Levi's India, UCB, Allen Solly, Sabyasachi, FabIndia) and "Featured in Vogue India".
+  - `/dashboard` (`Index.tsx`): invented figures ("+18% vs last month", "$24.99/yard", vendors).
+  - `/advertisements`: the FAQ says an ad "goes live instantly. No approval delays", but ads are
+    reviewed first; invented "success stories" with names.
+  - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
+- Reference: 2026-09-26, the language-translation fix.
+- Status: Open
+
 ### Restore the scheduled jobs (all 12 were deleted on 2026-09-26) — added 2026-09-26
 - Task: decide which scheduled jobs come back, and re-create them. Until then, none of the
   work below happens on its own.
@@ -149,7 +226,7 @@ with no need to dictate format, context, or reference each time.
   admin-schema separation Phase 5 work (which is what surfaced the stale `is_admin` reference
   in the untracked bypass function).
 - Priority: Medium (blocks real phone sign-in; Google/guest cover the gap for now)
-- Status: Open
+- Status: Open for real delivery. The dev-mode bypass is finished and has been live since 2026-09-27, as Mitra asked ("just typing any otp for now should let me log in"). See the MPF-21 entry below and `securityflags.md`, 2026-09-27.
 
 ### Finish the Phase 9 FAQ content (seller registration, subscription, buyer Help accuracy) — added 2026-09-23
 - Task: bring the admin-editable FAQs' wording in line with the product.
@@ -477,8 +554,8 @@ with no need to dictate format, context, or reference each time.
     Better: delete it once real SMS delivery works.
 
 - Reference: found in the automated security review in Phase 17 (2026-09-24). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
-- Priority: Critical if deployed; nil today (not deployed, never committed)
-- Status: Open
+- Priority: High. It has been deployed and on since 2026-09-27, on Mitra's instruction ("just typing any otp for now should let me log in").
+- Status: Open. Hardened and deployed on 2026-09-27: it signs in only to accounts it created, and it refuses admins through `admin_status_of()`, failing closed. Still to do: switch it off (`OTP_DEV_BYPASS=off`) and delete it once real SMS works, and deal with the accounts it created (`securityflags.md`, 2026-09-27). The "never commit it" rule no longer applies: the app calls it now, so it belongs in the repo.
 
 ### Set up Meta WhatsApp so account-deletion codes reach phone-only accounts (MPF-24) — added 2026-09-25
 - Task: owner setup, no code change: a Meta Business account with a verified WhatsApp sender, an

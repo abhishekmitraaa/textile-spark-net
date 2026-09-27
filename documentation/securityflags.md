@@ -12,8 +12,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-27 | **Dummy OTP is live: any 6 digits sign in as any phone number's account** | High (accepted for now, on Mitra's instruction; Critical once real users hold phone accounts) | `supabase/functions/otp-dev-verify/index.ts` (deployed 2026-09-27, version 1), called by `src/lib/auth/otp.ts` when Supabase refuses to send an SMS | Open, on purpose. Mitra asked for it on 2026-09-27 while SMS delivery isn't live. Anyone who types a number is signed in as that number's account, and accounts can be created without limit. It signs in only to accounts it created itself (never a Google or email account, never an admin, and it fails closed). Kill switch: the secret `OTP_DEV_BYPASS=off`. Switch it off or delete it before real users sign up by phone, then review the accounts with `app_metadata.created_by = otp-dev-verify`. Log entry below |
 | 2026-09-24 | WhatsApp account-deletion codes will arrive as Meta's fixed text, "<code> is your verification code.", which doesn't say the code deletes the account | Low (social engineering; dormant until WhatsApp is configured) | `supabase/functions/account-deletion/index.ts` (`sendWhatsApp`) and the Meta template it names (`WHATSAPP_TEMPLATE`) | Open, setup guidance. Someone holding a stolen session could request a deletion, then ask the owner for "the verification code"; the email version says what the code is for, and Meta's authentication templates can't. Create the template with Meta's security recommendation ("For your security, do not share this code.") and a 10-minute expiry. Already in place: the code only confirms a deletion and signs no one in, deletion waits 14 days with Cancel on `/profile`, and scheduling posts an in-app notification. My Profile Phase 18; `myprofileflags.md` MPF-24 |
-| 2026-09-24 | The parked `otp-dev-verify` edge function signs anyone in as any phone number with any code, and is on by default | Critical if deployed; nil today (not deployed) | `supabase/functions/otp-dev-verify/index.ts`. Committed to branch `my-profile/phase-14` by `85f4f6a` (2026-09-25) and removed again before the merge to `main` (2026-09-26), so it is in the public history but not in `main`'s files. Not deployed: not among the 16 functions on 2026-09-24 or the 18 on 2026-09-26 (`list_edge_functions`) | Open, parked. Flagged by the automated security review on 2026-09-24. `ENABLED = true`, turned off only by `OTP_DEV_BYPASS=off`; it creates accounts with the service-role key, allows CORS `*`, and has no allowlist or secret. Never deploy it as it is, and never commit it. Before any use: off by default, refuse the production project ref, a dev-number allowlist, a shared-secret header, restricted CORS, and an admin check that doesn't read the dropped `profiles.is_admin`. Better: delete it once real SMS delivery works. `ToDo.md`: the MPF-21 entry (moved there from `myprofileflags.md` on 2026-09-25, left as it is on Mitra's instruction) and "Wire up mobile OTP delivery" |
+| 2026-09-24 | The parked `otp-dev-verify` edge function signs anyone in as any phone number with any code, and is on by default | Critical if deployed; nil today (not deployed) | `supabase/functions/otp-dev-verify/index.ts`. Committed to branch `my-profile/phase-14` by `85f4f6a` (2026-09-25) and removed again before the merge to `main` (2026-09-26), so it is in the public history but not in `main`'s files. Not deployed: not among the 16 functions on 2026-09-24 or the 18 on 2026-09-26 (`list_edge_functions`) | **Superseded on 2026-09-27** by the dummy-OTP row above: now deployed on purpose. Of the fixes listed here, the admin check was rewritten to use `admin_status_of()` and fails closed. Off by default, refusing the production ref, a number allowlist, a secret header and restricted CORS were not applied, because each would stop the dummy OTP working on the live site. As first recorded: open, parked. Flagged by the automated security review on 2026-09-24. `ENABLED = true`, turned off only by `OTP_DEV_BYPASS=off`; it creates accounts with the service-role key, allows CORS `*`, and has no allowlist or secret. Never deploy it as it is, and never commit it. Before any use: off by default, refuse the production project ref, a dev-number allowlist, a shared-secret header, restricted CORS, and an admin check that doesn't read the dropped `profiles.is_admin`. Better: delete it once real SMS delivery works. `ToDo.md`: the MPF-21 entry (moved there from `myprofileflags.md` on 2026-09-25, left as it is on Mitra's instruction) and "Wire up mobile OTP delivery" |
 | 2026-09-23 | pg_cron's run history is 63% of the database and grows without limit toward the free plan's 500 MB cap, which makes the project read-only | Medium (availability) | `cron.job_run_details`: 120 MB, 50,692 rows since 2026-09-06, ~3,000 rows/day from two every-minute jobs | Open, a decision for the owner. Pruning deletes run history, and `embedding-health-alarm` deliberately surfaces failures as rows there, so the window must be long enough to notice an alarm. Suggested: a daily pg_cron job `delete from cron.job_run_details where end_time < now() - interval '14 days'` (postgres has DELETE; it cannot VACUUM FULL or index the table, which `supabase_admin` owns). Its full-scan cost was already removed from the health check (migration `20260923093304`) |
 | 2026-09-22 | `BUNNY_API_KEY` is rejected by Bunny Stream (401 "Authentication has been denied"), so reconciliation cannot list the library and a vendor delete of a Bunny video cannot remove the paid asset | Low (misconfiguration; cost leak, not access) | Edge-function secret `BUNNY_API_KEY` used by `bunny-reconcile`, `bunny-delete-video`, `bunny-upload-url` | Open. Found during admin-schema separation 5b: as super_admin `bunny-reconcile` passed authz and got 401 from `video.bunnycdn.com`. Most likely a rotated or wrong key. Today 0 `product_videos` rows use the bunny provider, so nothing is leaking yet. If uploads switch to Bunny while the key is bad, each delete fails with `bunny_delete_failed` (the function refuses to report success). Fix: set a valid library API key and re-run `bunny-reconcile`. The key value is not recorded here |
 | 2026-09-22 | Mobile + OTP is the primary login but has no delivery yet. When the in-house OTP API is wired, OTP brute-force and SMS-pumping (toll-fraud) protection must exist before it goes live | Medium | `src/lib/auth/otp.ts` (the single OTP seam); Supabase Auth phone settings / the future `otp-verify` edge function | Open, suspected gap, not exploitable today. Nothing is sent now: `phone_provider_disabled`. Once live, an unauthenticated caller can make the platform send SMS to any number, and a 6-digit code is guessable without attempt limits. The seam only surfaces the server's rate-limit error; it does not enforce one. Before go-live: per-number and per-IP send limits, a verify-attempt cap with lockout, code expiry, and ideally a CAPTCHA on send |
@@ -70,6 +71,61 @@ in the next one.
 
 ## Log
 
+### 2026-09-27 — Dummy OTP switched on: any 6 digits sign in as any phone number — Severity: High (accepted for now)
+- What was found: Nothing new was discovered. This is a deliberate change that opens a hole.
+  Mitra (2026-09-27): "just typing any otp for now should let me log in", and asked for it to
+  be logged here. No SMS can be sent yet, so the parked `otp-dev-verify` edge function was
+  hardened and deployed, and `src/lib/auth/otp.ts` uses it whenever Supabase refuses to send
+  an SMS. Any 6 digits return a real session for the typed number.
+- Where: `supabase/functions/otp-dev-verify/index.ts` (deployed 2026-09-27, version 1, JWT
+  gate on); `src/lib/auth/otp.ts` (`sendOtp` returns `test_mode`, `verifyOtp` calls
+  `verifyDummyOtp`); `src/pages/OtpVerify.tsx` (the "Test mode" notice).
+- How it was discovered: requested by Mitra, after the code screen stopped everyone at "No
+  code was sent".
+- Risk / impact if left unaddressed:
+  - **Anyone can be anyone with a phone account.** Typing a number signs in as that number's
+    account, so a phone account has no protection at all. Whoever knows or guesses the number
+    can read its chats, quotes and requirements, and act as it.
+  - **Unlimited accounts.** A script can create an account per number, with no rate limit or
+    CAPTCHA, and post requirements or messages from them.
+  - **Squatted numbers carry over.** The accounts are created with `auth.users.phone` set, so
+    they are the same accounts real SMS sign-in will open later. Someone who signed in as a
+    number now still holds a refresh token then.
+  - The anon key is public, so the JWT gate only turns away callers who lack it.
+- What limits it:
+  - It signs in only to accounts it created. They carry `app_metadata.created_by =
+    "otp-dev-verify"`, which users can't write. A Google or email account with the same
+    number is refused (`phone_exists`), and so is an email signup that claimed the
+    `p<digits>@phone.cosora.invalid` address first.
+  - It never signs in to an admin. `admin_status_of()` must answer `is_admin = false`, and any
+    failure refuses. The parked version read `profiles.is_admin`, which was dropped on
+    2026-09-22, so its query would have errored and the check would have been skipped (fail
+    open).
+  - New accounts take only `full_name`, `phone`, `active_role` and `brand_name` from the
+    request, and `handle_new_user()` limits `active_role` to buyer or seller.
+  - No email is sent: the magic-link token is generated and redeemed inside the function.
+  - The code screen says no SMS was sent and that any 6 digits work. There is no timer and no
+    "code sent".
+- Tested:
+  - Against the deployed function: a new number got a session and a tagged account; the same
+    number with another code got the same account; 5 digits and a number without `+` were
+    refused; an `is_admin` key in the signup data was dropped.
+  - `admin_status_of()` answers true for demo-admin and false for the probe account.
+  - Not staged live: the untagged-account and number-on-another-account refusals, which need
+    direct `auth.users` edits that the session's safety check blocked; and an admin-number
+    refusal end to end, which would write test rows to the admin audit log.
+- Fix applied (or recommended fix):
+  - Applied: the limits above.
+  - Not applied, because each would stop the dummy OTP working on the live site: off by
+    default, refusing the production project, a number allowlist, a secret header, and CORS
+    limited to the app.
+  - To switch it off at once: set the secret `OTP_DEV_BYPASS=off` (Supabase → Edge Functions →
+    Secrets). The app goes back to "No code was sent".
+  - Before real users sign up by phone, or on the day SMS delivery works: switch it off and
+    delete the function. Then review the accounts with `created_by = otp-dev-verify`, and sign
+    them out or delete them.
+- Status: Open (accepted risk, on Mitra's instruction, 2026-09-27)
+- Related changelog entry: 2026-09-27 "dummy OTP signs in" in documentation/changelog.md
 ### 2026-09-23 — Every user's email and phone readable with the public anon key — Severity: High (fixed; the signed-in half closed 2026-09-24)
 - What was found: `profiles_select` is `USING (true)`, and anon and authenticated held
   table-wide SELECT, so `email` and `phone` were readable by anyone with the anon key, which

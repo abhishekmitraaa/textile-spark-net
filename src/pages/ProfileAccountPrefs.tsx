@@ -10,13 +10,13 @@ import {
   updateRegional,
   CURRENCIES,
   TIMEZONES,
-  LANGUAGES,
   type RegionalSettings,
 } from "@/lib/profileStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSettings, saveSetting, DEFAULT_SETTINGS } from "@/lib/queries/profile";
 import { buildRfqHistoryCsv, buildAllDataJson, downloadFile, CHAT_SCOPE_NOTE } from "@/lib/queries/dataExport";
-import { setLang, langCodeFromName, isSupportedLanguageName } from "@/lib/i18n";
+import { useLang, isLang, LANG_OPTIONS } from "@/lib/i18n";
+import { chooseLang } from "@/lib/languagePreference";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { currencyCodeOf, formatRateDate } from "@/lib/currency";
 
@@ -51,6 +51,7 @@ const ProfileAccountPrefs = () => {
   const { regional: storeRegional } = useProfileState();
   const [regional, setRegional] = useState<RegionalSettings>(storeRegional);
   const display = useDisplayCurrency();
+  const lang = useLang();
   const chosenCode = currencyCodeOf(regional.currency);
   const rate = display.fx?.rates[chosenCode];
 
@@ -178,34 +179,25 @@ const ProfileAccountPrefs = () => {
               <label className="block text-xs font-semibold text-gray-700 mb-1.5">Language</label>
               <div className="relative">
                 <Languages className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                {/* The language the app is in. Saved to the account when signed in
+                    and applied at sign-in on any device (languagePreference.ts).
+                    buyer_profiles.regional.language is no longer read. */}
                 <select
                   className={selectCls}
-                  value={regional.language}
+                  value={lang}
+                  data-no-translate
                   onChange={(e) => {
-                    const name = e.target.value;
-                    patchRegional({ language: name });
-                    setLang(langCodeFromName(name));
-                    if (isSupportedLanguageName(name)) toast.success("Language updated");
-                    // Never fail silently: a language with no dictionary reads
-                    // as "translation is broken" if we just show English.
-                    else toast.info(`${name} isn't available yet`, { description: "Showing English for now." });
+                    const code = e.target.value;
+                    if (!isLang(code)) return;
+                    chooseLang(code)
+                      .then(() => toast.success("Language updated"))
+                      .catch((err) => toast.error("Couldn't save your language to your account", { description: errorMessage(err) }));
                   }}
                 >
-                  {LANGUAGES.map((l) => <option key={l} value={l}>{l}</option>)}
-                  {/* A previously-saved language we no longer offer (e.g. Tamil)
-                      would otherwise render as a blank select. Show it, disabled
-                      and labelled, so the state is legible rather than missing. */}
-                  {!isSupportedLanguageName(regional.language) && (
-                    <option value={regional.language} disabled>
-                      {regional.language} (not available yet)
-                    </option>
-                  )}
+                  {LANG_OPTIONS.map((l) => (
+                    <option key={l.code} value={l.code}>{l.native === l.label ? l.label : `${l.native} (${l.label})`}</option>
+                  ))}
                 </select>
-                {!isSupportedLanguageName(regional.language) && (
-                  <p className="mt-1.5 text-[11px] text-amber-600">
-                    {regional.language} isn&rsquo;t translated yet, so the app is showing English. Pick another language to change it.
-                  </p>
-                )}
               </div>
             </div>
           </div>

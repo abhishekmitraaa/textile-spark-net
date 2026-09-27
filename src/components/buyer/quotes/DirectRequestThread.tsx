@@ -214,7 +214,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
           <ConvertedPriceNote className="mt-2" />
 
           {quote.comment && (
-            <p className="mt-3 rounded-lg bg-blue-50/60 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
+            <p data-no-translate className="mt-3 rounded-lg bg-blue-50/60 px-3 py-2 text-[11px] leading-relaxed text-gray-600">
               {quote.comment}
             </p>
           )}

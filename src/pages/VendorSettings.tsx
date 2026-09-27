@@ -1,5 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -14,7 +14,8 @@ import {
   DEFAULT_VENDOR_NOTIFICATIONS,
   type VendorNotificationSettings,
 } from "@/lib/queries/vendorStore";
-import { useLang, setLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
+import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
+import { chooseLang } from "@/lib/languagePreference";
 import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 import {
@@ -147,17 +148,6 @@ const VendorSettings = () => {
   const [notif, setNotif] = useState<VendorNotificationSettings>(DEFAULT_VENDOR_NOTIFICATIONS);
   useEffect(() => { if (settings) setNotif(settings.notifications); }, [settings]);
 
-  // A vendor's saved language should follow them across devices: on first load,
-  // if the DB preference differs from this device's local language, apply it once
-  // (guarded so it never fights a manual change on a later refetch).
-  const appliedDbLang = useRef(false);
-  useEffect(() => {
-    const dbLang = settings?.regional.language;
-    if (!dbLang || appliedDbLang.current) return;
-    appliedDbLang.current = true;
-    if (dbLang !== lang) setLang(dbLang);
-  }, [settings, lang]);
-
   const toggleNotif = async (key: keyof VendorNotificationSettings, v: boolean) => {
     if (!user) { toast.error("Sign in to change notification settings"); return; }
     const prev = notif;
@@ -172,14 +162,15 @@ const VendorSettings = () => {
     }
   };
 
+  // The language follows the account and is applied at sign-in on any device
+  // (languagePreference.ts). This page used to apply vendor_profiles.regional
+  // .language on open, and a vendor who had never saved one got the default,
+  // English, over the language they had picked. That column is no longer read.
   const changeLang = async (code: Lang) => {
-    setLang(code); // update the UI immediately, like everywhere else
-    if (!user) return;
     try {
-      await saveVendorSetting(user.id, "regional", { language: code });
-      qc.invalidateQueries({ queryKey: ["vendor_settings", user.id] });
+      await chooseLang(code); // switches the UI at once, then saves
     } catch (e) {
-      toast.error("Couldn't save language", { description: errorMessage(e) });
+      toast.error("Couldn't save your language to your account", { description: errorMessage(e) });
     }
   };
 
@@ -286,7 +277,7 @@ const VendorSettings = () => {
                             ? "border-2 border-[#256fef] text-[#256fef] bg-[#256fef]/10"
                             : "border border-gray-300 text-gray-700 hover:bg-gray-50"
                         )}>
-                        {l.native}
+                        <span data-no-translate>{l.native}</span>
                       </motion.button>
                     ))}
                   </div>

@@ -96,6 +96,7 @@ import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
 import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
 import CallNumberModal from "./components/buyer/CallNumberModal";
 import AutoTranslate from "./components/i18n/AutoTranslate";
+import LanguageSync from "./components/i18n/LanguageSync";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
 import UploadCatalogue from "./pages/UploadCatalogue";
 const UploadVideo = lazy(() => import("./pages/UploadVideo"));
@@ -213,6 +214,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AutoTranslate />
+          <LanguageSync />
           {/* Covers the lazily-loaded routes below. Deliberately a blank div
               rather than a spinner: these chunks are small and load in a frame
               or two on any reasonable connection, and a flashed spinner reads

@@ -220,7 +220,7 @@ const Reviews = () => {
                         </div>
                       </div>
 
-                      {review.body && <p className="text-sm text-gray-600 leading-relaxed">{review.body}</p>}
+                      {review.body && <p data-no-translate className="text-sm text-gray-600 leading-relaxed">{review.body}</p>}
 
                       {review.replyBody && (
                         <div className="mt-3 bg-blue-50 rounded-lg p-3 border-l-2 border-[#256fef]">

@@ -46,6 +46,7 @@ Last updated: 2026-09-09
 | `mp4-phase2-callback-onboarding.spec.ts` | Part 2: `/auth/callback` writes the signup brand name to `vendor_profiles` (session injected directly, never via `/login`, whose own call would prove the wrong site); then the full 9-step onboarding with a **drawn** signature, asserting every column, the signed-URL read of the private KYC path, and the `vendor_contracts` row; then that the score stored at submit equals the score `/business-profile-score` displays | `zz-mp4-vendor@cosora.in` (**left in place** — it is the evidence) |
 | `mp4-phase5-kyc-review.spec.ts` | The vendor-facing half of the KYC review loop: a rejected vendor sees the reason on `/kyc` and opens the scan through a freshly minted signed URL | `zz-mp4-vendor@cosora.in` (read-only) |
 | `mp5-phase4-confirmation-link.spec.ts` | The signup brand name reaching the database via the CONFIRMATION-LINK landing URL — a cold browser context with asserted-empty `localStorage`, navigated to `/auth/callback#access_token=…`, so Login.tsx cannot mask the bug | creates `zz-mp5-link@cosora.in` |
+| `dummy-otp-login.spec.ts` | Dummy OTP (2026-09-27). Login and Register with +1 555-010-0001: the code screen shows the "Test mode" notice, and there is no "You will receive an OTP" and no resend. Next stays disabled until 6 digits. Any 6 digits land on a signed-in route with a session for `p15550100001@phone.cosora.invalid`, tagged `created_by = otp-dev-verify`. Screenshots `dummy-otp-login.png` and `dummy-otp-register.png` | the probe phone account (created by the first run, reused after) |
 
 **Three of these are one-shot by nature and `test.skip()` rather than fail once their
 precondition is consumed** — a signup-metadata write proves itself once, onboarding cannot
@@ -160,6 +161,60 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-27 — Dummy OTP signs in (function probe 5/5; spec 2/2; language regression 4/4)
+
+- **Function probe:** a scratch script against the deployed `otp-dev-verify` that prints
+  statuses only.
+  - `status` answered enabled.
+  - `+15550100001` with `123456`: verified, a new tagged account, `auth.users.phone` set.
+  - The same number with `999999`: verified, the same account.
+  - `12345`: 400 invalid. `5550100001` (no `+`): 400 error.
+  - The request's `is_admin: "true"` did not reach the account's metadata.
+  - Profile: email cleared, phone and name from the request, role buyer.
+- **Admin lookup:** `admin_status_of()` answers true for demo-admin and false for the probe
+  account.
+- **Not run:**
+  - The untagged-account and number-on-another-account refusals. They need direct
+    `auth.users` edits, which the session's safety check blocked.
+  - An admin refusal end to end, which would add rows to the admin audit log.
+- **`tests/dummy-otp-login.spec.ts`**: 2/2. The first run was 1/2 because the Register test
+  hadn't filled the required Brand Name, a fault in the test.
+- **Regression:** `language-follows-account` 4/4.
+- **Checks:** typecheck 0; eslint clean on the changed files; `i18n:check` 6,951/6,951 in both
+  catalogues.
+- **Production after the runs:**
+  - One probe account (+1 555-010-0001, a fictional range) remains; the spec reuses it.
+  - No `engagement_events` or `recently_viewed` rows were written in the last 2 hours.
+  - No account holds `ui_language`.
+### 2026-09-26 — Language covers the platform and follows the account (check 6,943/6,943; spec 4/4 + a mutation check; 26% → 79% in a browser)
+
+- **Browser measure** (scratch crawler, not committed): 47 pages as signed-out, demo-buyer and
+  demo-vendor with the language set, counting visible text nodes and placeholders in Devanagari or
+  Gujarati script. Tracking RPCs, table writes and edge-function calls were answered in the browser
+  (89 of them). Hindi: 1,359/5,149 (26%) before; 4,027/5,127 (79%) after; Gujarati 79%. What stays
+  English is vendor data (product and business names, cities, review text, invoice and quote
+  numbers, people's names) and codes kept as-is (MOQ, GSM, initials).
+- **`npm run i18n:check`**: 6,943/6,943 strings in both catalogues, 0 placeholder mismatches, 243
+  files. Its extractor was itself checked against the crawl: three misses it had (text built from
+  values, display text under unlisted keys, sentences dropped as CSS classes) were fixed.
+- **Lookup behaviour** (scratch vite-node run): "6/2 products used", "1 minute ago", "5 minutes ago",
+  "about 2 hours ago", "4 Jul 2026", "Jul 4, 2026", "Jan 2025", "MOQ: 100 pieces", "any vendors"
+  all translate; "Mayfair Silk 2026" and "Floral Wrap Dress by Acme" don't.
+- **`tests/language-follows-account.spec.ts`** (demo-buyer, demo-vendor), 4/4:
+  1. Hindi picked on Regional Settings is saved (`ui_language`); a fresh browser set to Gujarati
+     signs in and opens in Hindi ("नए आगमन", no "New Arrivals").
+  2. Gujarati picked on Vendor Settings is saved; reopening Settings keeps it; a fresh browser
+     opens the seller home in Gujarati ("ડેશબોર્ડ").
+  3. Hindi picked on the sign-in screen, signed out, is kept and saved when the tab signs in.
+  4. An account with nothing saved keeps the device's Gujarati and nothing is written.
+  - **Mutation:** with `LanguageSync` disabled, test 1 fails (received "gu", expected "hi").
+  - Screenshots `lang-buyer-home-hi.png`, `lang-vendor-home-gu.png`.
+- **Regression:** `profile-regional-honesty` 1/1, `buyer-settings` 2/2, `display-currency` 1/1.
+- **Build:** typecheck 0 (an injected error reports 1); `vite build` passes, the catalogues are
+  separate chunks; 8 credential values from `.env` found 0 times in `dist/`.
+- **Production after the runs:** 0 `engagement_events` and 0 `recently_viewed` rows written; no
+  account holds `ui_language` (the demo accounts' key removed in `afterEach`).
 
 ### 2026-09-26 — Scheduled jobs removed (migration applied, md5 matches; 0 jobs left)
 

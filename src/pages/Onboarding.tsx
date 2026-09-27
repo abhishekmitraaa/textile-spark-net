@@ -1084,8 +1084,11 @@ export default function Onboarding() {
             </DialogHeader>
             {/* Rendered from the SAME constant whose version is written to
                 vendor_contracts.agreement_version, so the record always names
-                the wording the vendor actually read. */}
-            <div className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-[#363636]">
+                the wording the vendor actually read. For that reason the
+                clauses stay in English whatever the app language: a Hindi or
+                Gujarati rendering would be wording the record doesn't name, and
+                no translation of it has been reviewed (2026-09-26). */}
+            <div data-no-translate className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-[#363636]">
               {SUPPLIER_AGREEMENT_CLAUSES.map((clause) => <p key={clause}>{clause}</p>)}
               <p className="pt-1 text-xs text-[#363636]/60">Version {SUPPLIER_AGREEMENT_VERSION}</p>
             </div>

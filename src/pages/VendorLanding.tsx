@@ -519,7 +519,7 @@ const VendorLanding = () => {
               },
               {
                 title: "A wide range of fashion items",
-                desc: "Women&apos;s, men&apos;s, and children&apos;s clothing. Over 60,000 items updated daily.",
+                desc: "Women's, men's, and children's clothing. Over 60,000 items updated daily.",
               },
               {
                 title: "Trusted by 95% of shopping malls",

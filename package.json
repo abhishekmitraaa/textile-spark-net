@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "playwright:install": "npx playwright install --with-deps",
     "test:e2e": "npx playwright test",
-    "check:fields": "node scripts/check-seller-fields.mjs"
+    "check:fields": "node scripts/check-seller-fields.mjs",
+    "i18n:check": "node scripts/i18n-coverage-check.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

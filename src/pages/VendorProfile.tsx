@@ -544,7 +544,7 @@ const VendorProfile = () => {
                       <span className="text-[10px] text-gray-400">{fmtReviewDate(r.createdAt)}</span>
                     </div>
                   </div>
-                  {r.body && <p className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>}
+                  {r.body && <p data-no-translate className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>}
                   {r.replyBody && (
                     <div className="mt-2.5 rounded-lg border-l-2 border-[#ef4d62] bg-white p-2.5">
                       <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from {brandName}</p>
