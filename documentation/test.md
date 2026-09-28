@@ -96,7 +96,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -162,6 +162,25 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-28 — Admin completion Phase 5: payments ledger (migration rehearsed and applied, md5 matches; harness 09 19/19 rehearsed and live)
+
+- **Harness `09_payments_ledger.sql`** (fixtures exist only inside their rolled-back case):
+  - **Who reads:** super_admin, finance_admin and support get 9 rows. product_moderator, vendor_ops, ads_moderator, manager and a buyer get 42501; anon gets 42501 (no EXECUTE).
+  - **Production rows:** 9 rows, all paid subscriptions, 0 gateway-verified, every row named. Newest first: INV-2026-000009 > …08 > …07.
+  - **Agrees with Reports** (ledger/reports, paise):
+    - all time: net 4748300/4748300, GST 854800/854800, ads 0/0, unverified 5603100/5603100;
+    - window 2026-07-17 → 2026-09-01: net 229900/229900, GST 41400/41400, unverified 271300/271300.
+  - **Paging:** limit 4 gives pages 4+4+1, 9 rows, 9 distinct.
+  - **Search:** `INV-2026-000009` finds 1 row; a literal `%` finds 0. Half a cursor gives 22023.
+  - **Fixtures:**
+    - certificate/paid 19900; ad_purchase/paid with certificate 85900; ad_purchase/abandoned 15400 (30 hours old); subscription checkout/pending 82500; refund/refunded −82500;
+    - the refund trigger stamped `refund_requested_at`; the summary counts 1 refund, 82500 refunded, 1 abandoned;
+    - with fixtures, ads 105800/105800 and net 4748300/4748300 (ledger/reports).
+- **Cosora-Admin:**
+  - `npm run typecheck` 0, `npm run build` 0.
+  - The bundle calls `admin_payments_ledger`, and none of the payments fixture strings are in `dist/`. "Rathi Textiles" is still in Content's fixture (Phase 9).
+- **Not run:** a browser walk-through of the page. It needs an admin sign-in, which is Mitra's to do in the Browser pane.
 
 ### 2026-09-28 — Phase 4b applied: vendor private columns revoked (md5 matches; harness 08 18/18 live; signed-out HTTP proof; 21/21 app selects replayed)
 

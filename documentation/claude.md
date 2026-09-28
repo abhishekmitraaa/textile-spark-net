@@ -745,6 +745,13 @@ undocumented. Deep technical rationale for each lives in
   - **An admin's plan change or cancel goes through `admin_subscription_change_plan()` /
     `admin_subscription_cancel()`.** Never write `vendor_subscriptions` directly: the cached
     `vendor_profiles.plan_id`/`plan_expires_at` must move with it.
+  - **The payments ledger is `admin.payment_entries`** (admin completion Phase 5,
+    `20260928043917`), read through `admin_payments_ledger()` / `admin_payments_summary()`.
+    - Every amount is converted to paise there, once.
+    - A new table that records money becomes one more branch of that view, with the same
+      columns and status vocabulary. Don't add a second ledger in a page.
+    - The summary's paid totals must keep matching `admin_report_summary()`; harness `09`
+      checks it.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
