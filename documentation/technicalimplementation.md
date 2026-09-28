@@ -1693,6 +1693,18 @@ to `vendor_profiles`, in the same order (MPF-19): readers and code first, the re
 - **The public page (`/vendor/:id`)** selects public columns only, and answers "not found" for
   an id that isn't a uuid without a request. Loading, failed and not found are separate
   states. An empty field reads "Not provided", or the row is left out (CIN).
+- **Writes: never an updating upsert.** The Phase 4b rehearsal showed that
+  `INSERT ... ON CONFLICT (id) DO UPDATE SET pan = EXCLUDED.pan` needs SELECT on `pan`, so the
+  `.upsert()` the store save, Vendor Settings and onboarding used would be refused after the
+  revoke. `writeOwnVendorRow(row)`:
+  - UPDATEs the row (`.update(patch).eq("id", id).select("id")`);
+  - when that matched nothing, INSERTs with `ON CONFLICT DO NOTHING` (`ignoreDuplicates`) and
+    `RETURNING id`;
+  - if the insert found a row created in between, applies the update again;
+  - throws if RLS refused the row twice, so a refused save never reads as saved.
+
+  None of these needs SELECT on the columns written. `scripts/admin-completion/08` proves
+  both the refusal and the new shapes.
 - **The vendor's own screens** no longer `select("*")`: `MY_STORE_COLUMNS` names the columns
   (the old `*` also pulled the 1,536-number `catalog_embedding`), and the eight private fields
   are merged from `my_vendor_private()`. `fetchMyVendorPrivate(id)` returns null unless `id` is

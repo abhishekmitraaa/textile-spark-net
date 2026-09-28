@@ -163,6 +163,27 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-28 — Phase 4b rehearsal: the revoke rehearsed and rolled back; one blocker found and fixed in code (harness 08 18/18 as designed)
+
+- **The migration** (`vendor_profiles` column grants) was rehearsed with its self-check and `scripts/admin-completion/08_vendor_columns_revoke.sql` in one transaction that raised at the end. Nothing was applied.
+- **Blocker found:** the first run refused the upsert shape the app uses (`INSERT ... ON CONFLICT (id) DO UPDATE SET <private col> = EXCLUDED.<private col>`) with 42501.
+  - A probe isolated the cause: DO UPDATE from EXCLUDED on a private column → 42501. The same from a literal → ok. DO NOTHING → ok. A public column only → ok.
+  - Fixed in code: `writeOwnVendorRow()` (changelog, same date).
+- **Harness 08, second run, 18/18 as designed:**
+  - anon:
+    - public columns: ok (10 rows);
+    - `phone`, `select *`, a filter on `pan`, an INSERT: 42501;
+    - `count(*)`: ok.
+  - A buyer: `owner_email` and `catalog_embedding` 42501; products joined to their vendor ok (26); `call_vendor_contact()` served.
+  - The vendor:
+    - `my_vendor_private()` 1 row;
+    - PATCH-shaped update of all eight private fields: 1 row;
+    - the old upsert shape: 42501 (2 cases);
+    - the insert-only upsert of an existing row: 0 rows, no error.
+  - A buyer's first vendor save: 1 row.
+  - super_admin: `is_verified` toggle with `RETURNING id` 1 row; `admin_vendor_private()` 1 row.
+- Buyer app: `tsc` 0, build 0, `i18n:check` 6973/6973.
+
 ### 2026-09-28 — Admin completion Phase 4a: vendor private-field readers (2 migrations rehearsed and applied, md5s match; harness 07 25/25 as expected, rehearsed and live; both apps typecheck and build; i18n 6972/6972)
 
 - **Harness `07_vendor_contact.sql`** (rehearsed together with `20260927185902`, then run again against the applied schema: the same 25 results):

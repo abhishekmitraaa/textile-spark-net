@@ -2,6 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { resolveCategoryId } from "@/lib/queries/products";
 import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { syncProfileScore } from "@/lib/queries/vendorDashboard";
+import { writeOwnVendorRow } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
 // Persist the vendor registration (8-step Onboarding) to the DB.
@@ -133,7 +134,9 @@ export async function replaceVendorDocuments(
 }
 
 export async function saveVendorOnboarding(vendorId: string, p: VendorOnboardingPayload): Promise<void> {
-  const { error: pe } = await supabase.from("vendor_profiles").upsert(
+  // An update, or an insert on a first registration, never an updating upsert:
+  // the private columns written here aren't client-readable (writeOwnVendorRow).
+  await writeOwnVendorRow(
     {
       id: vendorId,
       brand_name: p.businessName || null,
@@ -159,9 +162,7 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
       ...(p.officePhotos ? { office_photos: p.officePhotos } : {}),
       onboarding_complete: true,
     },
-    { onConflict: "id" }
   );
-  if (pe) throw pe;
 
   // Record which KYC documents were supplied, with the uploaded scan where
   // there is one. `verified` stays false: an admin flips it after review — this
