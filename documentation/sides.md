@@ -195,6 +195,11 @@ the demand side of India's fashion and textile supply chain.
   catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-09-29 (reviews)
+- **My Reviews shows the seller's reply** under each store and product review, and so does the product page.
+- **A seller can't review their own store or products.** The Write-a-Review button is hidden there, and the database refuses it.
+- A refused edit or delete now says why, instead of reporting success or a generic error.
+
 ### Changed 2026-09-28 (admin completion, Phase 8: analytics)
 - **The Terms page says what is recorded.** A new "Analytics and session replay" section says
   which products, storefronts and searches are viewed is recorded, linked to the account when
@@ -467,6 +472,11 @@ rather than a supplier directory.
   token; hardcode `#256fef` (hover `#1d5ed6`).
 
 ---
+
+### Changed 2026-09-29 (reviews)
+- **`/reviews` has Store reviews and Product reviews tabs.** Reviews left on any of the vendor's listings (whatever its status) show with the product's name and photo and the buyer's photos. The vendor can reply once to each, as with store reviews. The buyer sees the reply on My Reviews and on the product page.
+- With no reviews, the rating reads "–" and "No reviews yet", not "0/5 POOR". Loading, a failed read and an empty list look different.
+- The Report button is gone: it did nothing (ToDo).
 
 ### Fixed 2026-09-28 (admin completion, Phase 4a: private business details)
 - **Your PAN, business email, phone, WhatsApp and street address are private.** Buyers no

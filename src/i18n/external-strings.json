@@ -444,5 +444,11 @@
   "This number can't sign in this way.",
   "This number is linked to an account that signs in another way.",
   "Could not start the session."
+ ],
+ "reviews_server_source": "Messages raised by the review functions and guard_review_write() (migration 20260928190320_review_replies_and_self_review_guard.sql), shown in the review and reply toasts through errorMessage().",
+ "reviews_server": [
+  "You can't review your own business",
+  "A reply can't be empty",
+  "not authorized to reply to this review"
  ]
 }

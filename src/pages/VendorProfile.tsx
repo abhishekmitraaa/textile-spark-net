@@ -140,7 +140,9 @@ const VendorProfile = () => {
   // Real vendor identity + catalogue + reels.
   const { data: vendor, isPending: vendorPending, isError: vendorFailed, refetch: refetchVendor } = useVendorProfile(id);
   const { data: catalogues = [] } = useVendorCatalogues(id);
-  const { data: reviewData } = useVendorReviews(id);
+  // The resolved vendor_profiles id, never the route param: a slug would only
+  // fail on the uuid cast (the same rule as the submit below).
+  const { data: reviewData } = useVendorReviews(vendor?.id);
   const { submit: submitReview } = useReviewMutations();
   const { user } = useAuth();
   const [showAllReviews, setShowAllReviews] = useState(false);
@@ -244,7 +246,9 @@ const VendorProfile = () => {
   // Reviews can only be written against a real vendor_profiles row. Mock/demo
   // vendor pages (slug ids) have no such row, so the CTA is hidden rather than
   // offering an action whose insert can only fail.
-  const canReview = Boolean(vendor?.id);
+  // A seller can't review their own store (guard_review_write refuses it), so
+  // the CTA is hidden on it rather than offered and refused.
+  const canReview = Boolean(vendor?.id) && vendor?.id !== user?.id;
   const myReview = reviewList.find((r) => r.buyerId && r.buyerId === user?.id);
   const fmtReviewDate = (iso: string) =>
     new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
@@ -642,7 +646,7 @@ const VendorProfile = () => {
                   {r.replyBody && (
                     <div className="mt-2.5 rounded-lg border-l-2 border-[#ef4d62] bg-white p-2.5">
                       <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from {brandName}</p>
-                      <p className="text-xs leading-relaxed text-gray-600">{r.replyBody}</p>
+                      <p data-no-translate className="text-xs leading-relaxed text-gray-600">{r.replyBody}</p>
                     </div>
                   )}
                 </div>

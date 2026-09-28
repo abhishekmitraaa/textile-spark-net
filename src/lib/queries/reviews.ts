@@ -100,6 +100,9 @@ export interface ProductReview {
   reviewerName: string;
   sizeBought: string | null;
   photos: string[];
+  /** The seller's reply, written only through `reply_to_product_review`. */
+  replyBody: string | null;
+  repliedAt: string | null;
   createdAt: string;
 }
 
@@ -118,13 +121,15 @@ interface RawProductReview {
   reviewer_name: string | null;
   size_bought: string | null;
   photos: string[] | null;
+  reply_body: string | null;
+  replied_at: string | null;
   created_at: string;
 }
 
 async function fetchProductReviews(productId: string): Promise<ProductReviewsData> {
   const { data, error } = await supabase
     .from("product_reviews")
-    .select("id, rating, body, buyer_id, reviewer_name, size_bought, photos, created_at")
+    .select("id, rating, body, buyer_id, reviewer_name, size_bought, photos, reply_body, replied_at, created_at")
     .eq("product_id", productId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -137,6 +142,8 @@ async function fetchProductReviews(productId: string): Promise<ProductReviewsDat
     reviewerName: r.reviewer_name ?? "Cosora Buyer",
     sizeBought: r.size_bought,
     photos: r.photos ?? [],
+    replyBody: r.reply_body,
+    repliedAt: r.replied_at,
     createdAt: r.created_at,
   }));
   const ratings = rows.map((r) => r.rating);
@@ -149,6 +156,56 @@ export function useProductReviews(productId: string | undefined) {
     queryKey: ["product_reviews", productId],
     queryFn: () => fetchProductReviews(productId as string),
     enabled: Boolean(productId),
+  });
+}
+
+// ── Reviews of a vendor's own products (vendor Reviews page, Products tab) ──
+export interface VendorProductReview extends ProductReview {
+  productId: string;
+  productName: string;
+  productImage: string | null;
+}
+
+interface RawVendorProductReview extends RawProductReview {
+  product_id: string;
+  products: { name: string | null; product_images: { url: string; position: number }[] | null } | null;
+}
+
+async function fetchVendorProductReviews(vendorId: string): Promise<VendorProductReview[]> {
+  // product_reviews has no vendor_id, so scope through the product with an
+  // inner join. Every status, not only live: a review on a listing that was
+  // later unlisted is still the vendor's to read and answer, and
+  // products_select admits the vendor's own rows whatever their status.
+  const { data, error } = await supabase
+    .from("product_reviews")
+    .select(
+      "id, product_id, rating, body, buyer_id, reviewer_name, size_bought, photos, reply_body, replied_at, created_at, products!inner ( name, vendor_id, product_images ( url, position ) )",
+    )
+    .eq("products.vendor_id", vendorId)
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return ((data ?? []) as unknown as RawVendorProductReview[]).map((r) => ({
+    id: r.id,
+    rating: r.rating,
+    body: r.body,
+    buyerId: r.buyer_id,
+    reviewerName: r.reviewer_name ?? "Cosora Buyer",
+    sizeBought: r.size_bought,
+    photos: r.photos ?? [],
+    replyBody: r.reply_body,
+    repliedAt: r.replied_at,
+    createdAt: r.created_at,
+    productId: r.product_id,
+    productName: r.products?.name ?? "Product",
+    productImage: [...(r.products?.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url ?? null,
+  }));
+}
+
+export function useVendorProductReviews(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["product_reviews", "vendor", vendorId],
+    queryFn: () => fetchVendorProductReviews(vendorId as string),
+    enabled: Boolean(vendorId),
   });
 }
 
@@ -217,6 +274,9 @@ export interface MyReviewItem {
   subtitle: string;
   image: string | null;
   photos: string[];
+  /** The seller's reply (vendor and product reviews; services have none). */
+  replyBody: string | null;
+  repliedAt: string | null;
   /** Route back to the reviewed entity, or null when it's no longer reachable. */
   href: string | null;
   /** True when the subject row didn't come back (deleted, or no longer live). */
@@ -228,17 +288,21 @@ interface RawMyVendorReview {
   rating: number;
   body: string | null;
   created_at: string;
+  reply_body: string | null;
+  replied_at: string | null;
   vendor_id: string;
-  vendor_profiles: { brand_name: string | null; city: string | null; business_type: string | null; logo_url: string | null } | null;
+  vendor_profiles:{ brand_name: string | null; city: string | null; business_type: string | null; logo_url: string | null } | null;
 }
 interface RawMyProductReview {
   id: string;
   rating: number;
   body: string | null;
   created_at: string;
+  reply_body: string | null;
+  replied_at: string | null;
   product_id: string;
   photos: string[] | null;
-  products: { name: string | null; location: string | null; product_images: { url: string; position: number }[] | null } | null;
+  products:{ name: string | null; location: string | null; product_images: { url: string; position: number }[] | null } | null;
 }
 interface RawMyServiceReview {
   id: string;
@@ -266,11 +330,11 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
   const [{ data: vendorRows, error: ve }, { data: productRows, error: pe }, { data: serviceRows, error: se }] = await Promise.all([
     supabase
       .from("reviews")
-      .select("id, rating, body, created_at, vendor_id, vendor_profiles ( brand_name, city, business_type, logo_url )")
+      .select("id, rating, body, created_at, reply_body, replied_at, vendor_id, vendor_profiles ( brand_name, city, business_type, logo_url )")
       .eq("buyer_id", buyerId),
     supabase
       .from("product_reviews")
-      .select("id, rating, body, created_at, product_id, photos, products ( name, location, product_images ( url, position ) )")
+      .select("id, rating, body, created_at, reply_body, replied_at, product_id, photos, products ( name, location, product_images ( url, position ) )")
       .eq("buyer_id", buyerId),
     supabase
       .from("service_reviews")
@@ -294,6 +358,8 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
       subtitle: [r.vendor_profiles?.business_type, r.vendor_profiles?.city].filter(Boolean).join(" · ") || "Vendor",
       image: r.vendor_profiles?.logo_url ?? null,
       photos: [],
+      replyBody: r.reply_body,
+      repliedAt: r.replied_at,
       href: gone ? null : `/vendor/${r.vendor_id}`,
       unavailable: gone,
     };
@@ -316,6 +382,8 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
       subtitle: r.products?.location || "Product",
       image: cover,
       photos: r.photos ?? [],
+      replyBody: r.reply_body,
+      repliedAt: r.replied_at,
       href: gone ? null : `/product/${r.product_id}`,
       unavailable: gone,
     };
@@ -331,6 +399,8 @@ async function fetchMyReviews(buyerId: string): Promise<MyReviewItem[]> {
     subtitle: SERVICE_LABEL[r.service_kind] ?? "Service",
     image: null,
     photos: [],
+    replyBody: null,
+    repliedAt: null,
     href: SERVICE_ROUTE[r.service_kind] ? `${SERVICE_ROUTE[r.service_kind]}/${r.service_id}` : null,
     unavailable: false,
   }));
@@ -388,6 +458,16 @@ async function uploadReviewPhotos(buyerId: string, photos: ReviewPhotoInput[]): 
 }
 
 // ── Mutations ────────────────────────────────────────────────────────────
+
+// An update or delete that RLS refuses matches zero rows and still returns no
+// error, so without this a refused edit would toast "Review updated". Ask for
+// the ids back and treat an empty answer as the refusal it is.
+function assertChanged(data: { id: string }[] | null, what: "updated" | "deleted") {
+  if (!data?.length) {
+    throw new Error(what === "updated" ? "This review couldn't be updated." : "This review couldn't be deleted.");
+  }
+}
+
 export function useReviewMutations() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -441,8 +521,9 @@ export function useReviewMutations() {
 
   const updateReview = useCallback(
     async (id: string, rating: number, body: string) => {
-      const { error } = await supabase.from("reviews").update({ rating, body: body.trim() || null }).eq("id", id);
+      const { data, error } = await supabase.from("reviews").update({ rating, body: body.trim() || null }).eq("id", id).select("id");
       if (error) throw error;
+      assertChanged(data, "updated");
       invalidate();
     },
     [invalidate],
@@ -450,8 +531,9 @@ export function useReviewMutations() {
 
   const removeReview = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("reviews").delete().eq("id", id);
+      const { data, error } = await supabase.from("reviews").delete().eq("id", id).select("id");
       if (error) throw error;
+      assertChanged(data, "deleted");
       invalidate();
     },
     [invalidate],
@@ -486,11 +568,13 @@ export function useReviewMutations() {
     async (id: string, rating: number, body: string, photos?: ReviewPhotoInput[]) => {
       if (!user) throw new Error("Please sign in to edit your review");
       const uploaded = photos ? await uploadReviewPhotos(user.id, photos) : undefined;
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("product_reviews")
         .update({ rating, body: body.trim() || null, ...(uploaded ? { photos: uploaded } : {}) })
-        .eq("id", id);
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      assertChanged(data, "updated");
       invalidate();
     },
     [user, invalidate],
@@ -498,8 +582,9 @@ export function useReviewMutations() {
 
   const removeProductReview = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("product_reviews").delete().eq("id", id);
+      const { data, error } = await supabase.from("product_reviews").delete().eq("id", id).select("id");
       if (error) throw error;
+      assertChanged(data, "deleted");
       invalidate();
     },
     [invalidate],
@@ -529,8 +614,9 @@ export function useReviewMutations() {
 
   const updateServiceReview = useCallback(
     async (id: string, rating: number, body: string) => {
-      const { error } = await supabase.from("service_reviews").update({ rating, body: body.trim() || null }).eq("id", id);
+      const { data, error } = await supabase.from("service_reviews").update({ rating, body: body.trim() || null }).eq("id", id).select("id");
       if (error) throw error;
+      assertChanged(data, "updated");
       invalidate();
     },
     [invalidate],
@@ -538,8 +624,9 @@ export function useReviewMutations() {
 
   const removeServiceReview = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("service_reviews").delete().eq("id", id);
+      const { data, error } = await supabase.from("service_reviews").delete().eq("id", id).select("id");
       if (error) throw error;
+      assertChanged(data, "deleted");
       invalidate();
     },
     [invalidate],
@@ -556,10 +643,22 @@ export function useReviewMutations() {
     [invalidate],
   );
 
+  // Vendor replies to a review of one of their products. Same shape as `reply`:
+  // reply_to_product_review() checks the product is the caller's and is the only
+  // writer of product_reviews.reply_body (guard_review_write keeps it otherwise).
+  const replyToProduct = useCallback(
+    async (reviewId: string, replyBody: string) => {
+      const { error } = await supabase.rpc("reply_to_product_review", { review_id: reviewId, reply: replyBody });
+      if (error) throw error;
+      invalidate();
+    },
+    [invalidate],
+  );
+
   return {
     submit, updateReview, removeReview,
     submitProductReview, updateProductReview, removeProductReview,
     submitServiceReview, updateServiceReview, removeServiceReview,
-    reply, signedIn,
+    reply, replyToProduct, signedIn,
   };
 }

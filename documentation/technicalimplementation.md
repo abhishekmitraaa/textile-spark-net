@@ -147,6 +147,19 @@ are named by their live version.
 | Moderation & safety | `admin_flags`, `account_suspensions`, `notifications` |
 | Telemetry | `engagement_events` (visit-level event log — see below), `calls`, `ad_click`, `ad_impression` |
 
+### Reviews: who writes what (2026-09-29, migration `20260928190320`)
+
+- **Tables:** `reviews` (buyer → vendor, unique per vendor+buyer), `product_reviews` (unique per product+buyer, with photos) and `service_reviews` (mock service entities; text `service_id`, no FK, no replies). All three are `SELECT true`. Insert, update and delete are own-row only, with `account_is_active` / `account_not_deleted`. Admins may delete.
+- **Aggregates:** `sync_vendor_rating()` and `sync_product_rating()` are AFTER triggers. They are the only writers of `rating_avg` / `reviews_count`.
+- **Seller replies:** `reviews` and `product_reviews` each carry `reply_body` / `replied_at`.
+  - They are written only by `reply_to_review(review_id, reply)` and `reply_to_product_review(review_id, reply)`: SECURITY DEFINER, authenticated only.
+  - Each checks the caller owns the vendor or the product, refuses a suspended account and an empty reply, and sets the transaction-local `cosora.review_reply = 'on'` around its UPDATE.
+- **`guard_review_write()`** is BEFORE INSERT/UPDATE on `reviews` and `product_reviews`. It is SECURITY DEFINER so the product-owner lookup doesn't depend on the caller's RLS, and it is executable by no client role.
+  - INSERT: refuses a self-review with 42501, "You can't review your own business"; the product's owner is looked up for `product_reviews`.
+  - UPDATE: `buyer_id` and the subject can't change. A moved review would leave the old subject's aggregate stale, because the sync triggers recompute only `coalesce(new, old)`.
+  - The reply columns revert to the stored value (NULL on insert) unless the flag is on. A buyer's forged reply is dropped silently rather than raising, so a normal edit that happens to send them still works.
+- **Client:** `src/lib/queries/reviews.ts` is the only module that reads or writes these tables. `fetchMyReviews` powers `/profile/reviews`, filtering on `buyer_id` and never on RLS. `fetchVendorProductReviews` scopes `product_reviews` with a `products!inner` join on `vendor_id`. Updates and deletes `.select("id")` and throw on zero rows (`assertChanged`).
+
 ### Notable functions / RPCs
 
 `approve_vendor_content`, `approve_vendor_content_bulk`, `reject_vendor_content`,
@@ -157,7 +170,7 @@ are named by their live version.
 `increment_product_view`, `increment_product_enquiry`, `increment_video_view`,
 `log_engagement_event` (the only write path into `engagement_events`),
 `sync_video_likes_count` (trigger fn), `next_invoice_number`,
-`reply_to_review`, `user_has_password`.
+`reply_to_review`, `reply_to_product_review`, `guard_review_write` (trigger fn), `user_has_password`.
 
 Enforcement pattern used throughout: **RLS decides who may touch a row; BEFORE triggers
 decide which state transitions are legal.** Moderation RPCs are `SECURITY DEFINER` and

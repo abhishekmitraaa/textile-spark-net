@@ -969,6 +969,8 @@ export type Database = {
           photos: string[]
           product_id: string
           rating: number
+          replied_at: string | null
+          reply_body: string | null
           reviewer_name: string | null
           size_bought: string | null
           updated_at: string
@@ -981,6 +983,8 @@ export type Database = {
           photos?: string[]
           product_id: string
           rating: number
+          replied_at?: string | null
+          reply_body?: string | null
           reviewer_name?: string | null
           size_bought?: string | null
           updated_at?: string
@@ -993,6 +997,8 @@ export type Database = {
           photos?: string[]
           product_id?: string
           rating?: number
+          replied_at?: string | null
+          reply_body?: string | null
           reviewer_name?: string | null
           size_bought?: string | null
           updated_at?: string
@@ -3384,6 +3390,10 @@ export type Database = {
           id: string
           is_fallback: boolean
         }[]
+      }
+      reply_to_product_review: {
+        Args: { reply: string; review_id: string }
+        Returns: undefined
       }
       reply_to_review: {
         Args: { reply: string; review_id: string }

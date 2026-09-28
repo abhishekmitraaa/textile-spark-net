@@ -1,3 +1,36 @@
+- 2026-09-29 (reviews pipeline): **Vendors now see and answer reviews of their products, buyers see the seller's replies on My Reviews, and nobody can review their own business.**
+  - **Audit first.** Mitra asked whether the buyer's My Reviews page works and whether reviews reach both sides. The buyer half already did: `/profile/reviews` reads all three review tables by `buyer_id`, and every review surface writes and invalidates correctly. The gaps were:
+    - a vendor never saw reviews of their products, only store reviews, and couldn't answer them (`product_reviews` had no reply columns);
+    - a buyer never saw the seller's reply on My Reviews;
+    - any seller could switch to buyer and review their own store or products;
+    - `reviews_update_own` let a buyer write a fake "seller reply" onto their own review;
+    - refusals showed as generic toasts (`e instanceof Error`), and the vendor page showed "0/5 POOR" with no reviews, merged loading, error and empty into one state, and had a Report button that did nothing.
+  - **Migration `20260928190320_review_replies_and_self_review_guard.sql`:**
+    - `product_reviews.reply_body` / `replied_at`.
+    - `reply_to_product_review(review_id, reply)`, SECURITY DEFINER, the product's vendor only. `reply_to_review` is replaced with the same signature. Both refuse suspended accounts and empty replies. Execute is granted to authenticated only.
+    - `guard_review_write()` BEFORE INSERT/UPDATE on `reviews` and `product_reviews`:
+      - no self-review (42501, "You can't review your own business");
+      - a review's author and subject are fixed;
+      - the reply columns keep their value unless a reply RPC sets `cosora.review_reply`.
+    - `anonymize_account()` is unaffected: it changes `reviewer_name` only.
+  - **Buyer side:**
+    - My Reviews and the product page show "Reply from the seller".
+    - The vendor page reads reviews by the resolved vendor id, not the route param.
+    - The Write-a-Review CTA is hidden on the viewer's own store and products.
+    - Review toasts use `errorMessage()`.
+    - Edits and deletes check that a row really changed (`assertChanged`), so an RLS refusal no longer toasts "Review updated".
+  - **Vendor side (`/reviews`):**
+    - Store / Product tabs, with a Reply flow on both.
+    - Signed-out, loading, error and empty are four distinct states.
+    - "–" and "No reviews yet" instead of "0/5 POOR".
+    - The dead Report button is removed (ToDo).
+  - **Verified:** 14 rolled-back SQL cases as real users, a new `tests/reviews-pipeline.spec.ts` (passes, and leaves the database as it found it), `mp7-product-detail-real-data` and `profile-data-export` (8/8), typecheck 0, i18n 6,987/6,987, build. The md5 matches.
+  - **Files:**
+    - DB and types: the migration, `src/lib/database.types.ts`, `src/lib/queries/reviews.ts`.
+    - Pages and components: `src/pages/MyReviews.tsx`, `src/pages/Reviews.tsx`, `src/pages/ProductDetail.tsx`, `src/pages/VendorProfile.tsx`, `src/components/reviews/WriteReviewModal.tsx`.
+    - i18n: `src/i18n/hi.json`, `src/i18n/gu.json`, `src/i18n/external-strings.json`.
+    - Tests: `tests/reviews-pipeline.spec.ts`.
+    - Docs.
 - 2026-09-28 (admin completion, Phase 8: live activity and Clarity): **Cosora-Admin's Live Activity page shows the buyer site's traffic from Cosora's own event log, and the buyer site can load Microsoft Clarity with its sensitive screens masked.** It is Mitra's "native dashboard + install Clarity" choice. Clarity stays off until its project id is set.
   - **Migration `20260928145827_admin_live_activity.sql`:**
     - `admin_live_activity(minutes)` reads `engagement_events`, which `log_engagement_event()` already writes. It returns:

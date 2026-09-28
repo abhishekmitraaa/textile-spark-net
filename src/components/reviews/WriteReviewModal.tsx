@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { errorMessage } from "@/lib/errorMessage";
 import { X } from "lucide-react";
 import { StarPicker } from "./StarRating";
 import { ReviewPhotoPicker, type ReviewPhoto } from "./ReviewPhotoPicker";
@@ -64,7 +65,9 @@ export function WriteReviewModal({
       toast.success(isEdit ? "Your review has been updated" : "Thanks! Your review has been submitted");
       onClose();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not submit your review");
+      // errorMessage, not instanceof Error: a database refusal (your own
+      // business, a suspended account) is a plain object and its reason matters.
+      toast.error(errorMessage(e) || "Could not submit your review");
       setSaving(false);
     }
   };
