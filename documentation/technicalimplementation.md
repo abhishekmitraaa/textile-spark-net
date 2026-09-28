@@ -1775,6 +1775,58 @@ Migration `20260928043917_payments_ledger.sql`. Cosora-Admin's Payments page rea
 
 ---
 
+## Customers — a summary refreshed on demand (admin completion Phase 6, 2026-09-28)
+
+Migration `20260928070410_customers.sql`. Cosora-Admin's Customers page reads it
+(`src/lib/customers.ts`).
+
+- **`admin.customer_summary`** (a materialized view; no client grants):
+  - One row per `profiles` row that isn't `deleted` and has no active `admin.admin_users`
+    row.
+  - `kind`: vendor when a `vendor_profiles` row exists, else buyer.
+  - `name`: the vendor's brand, else the buyer's company, full name or display name.
+  - `city`: the vendor's, else the buyer's (`city`, then `business_city`).
+  - `last_engaged_at`: the latest message sent, RFQ posted or quote sent.
+    `last_active_at`: that, or `auth.users.last_sign_in_at`.
+  - `interactions`: conversations (either side) + RFQs + quotes.
+  - `spend_paise`: paid invoices × 100 (with GST) + paid `ad_orders.amount` − processed
+    refunds (`refunded_amount`). `payments` counts the paid invoices and orders.
+  - A unique index on `id`, for `REFRESH ... CONCURRENTLY`. Sort indexes on spend and on
+    last-active.
+- **`admin.customer_rows`** adds the segments, computed with `now()` at read time:
+
+  | Segment | Rule |
+  |---|---|
+  | new | joined in the last 30 days |
+  | active | engaged in the last 30 days |
+  | high value | spend ≥ ₹25,000 |
+  | at risk | last engaged 60 to 120 days ago |
+  | dormant | last active (or joined, if never) more than 120 days ago |
+  | never transacted | no paid invoice or ad order |
+
+- **`admin_customer_refresh()`:**
+  - Returns `fresh` when the last rebuild (`admin.customer_summary_meta`) was under 10
+    minutes ago, and `busy` when another rebuild holds the advisory lock.
+  - Otherwise it runs `refresh materialized view concurrently` inside the RPC (proven in
+    harness 10), so reads never block.
+- **Tags:** `admin.customer_tags` (unique label `^[a-z0-9][a-z0-9-]{0,31}$`) and
+  `admin.profile_tags` (unique per profile and tag; cascades from both), each with
+  `trg_admin_audit`. Create is idempotent: it lowercases, trims, and returns the existing id
+  for a label that already exists.
+- **Reads:** `admin_customer_list(kind, segment, tag, search, sort, offset, limit)` returns the
+  rows with segments and tags, and the filtered `total_count` / `total_spend_paise` as window
+  values.
+  - Search is literal: name, email, city or a tag label.
+  - Sorts: spend, recent, joined, name.
+  - `limit` is at most 200. An unknown kind, segment or sort is 22023.
+  - A phone sign-in account's placeholder email (`@phone.cosora.invalid`) is returned as
+    "Phone sign-in".
+- **Gates:** `admin.customers_can_read()` (super_admin, support, finance_admin) and
+  `admin.customers_can_write()` (super_admin, support), called by every RPC.
+- **Tests:** `scripts/admin-completion/10_customers.sql`.
+
+---
+
 ## Calls — one write path, `log_call()` (2026-09-23)
 
 Phase 12 of the My Profile brief (MPF-2). Migration

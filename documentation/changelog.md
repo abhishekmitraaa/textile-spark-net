@@ -1,3 +1,27 @@
+- 2026-09-28 (admin completion, Phase 6: customers): **Cosora-Admin's Customers page reads real customers, segments and tags from the database, replacing a dev-seed fixture.**
+  - **Migration `20260928070410_customers.sql`:**
+    - `admin.customer_summary`, a materialized view, one row per account that isn't deleted or active Cosora staff:
+      - name (brand, company or full name), email, city;
+      - joined and last-active times (sign-in, message, RFQ, quote);
+      - interactions (conversations, RFQs, quotes);
+      - lifetime spend in paise: paid subscription invoices with GST plus paid ad orders, less processed refunds.
+    - `admin.customer_rows` computes the six segments at read time, so they're never stale: new, active, high value, at risk, dormant, never transacted.
+    - `admin_customer_refresh()` rebuilds the view concurrently, at most once every 10 minutes and one at a time. The page calls it on open: no scheduled job, per Mitra's rule.
+    - Tags: `admin.customer_tags` (lowercase labels, 1 to 32 characters) and `admin.profile_tags`, both with the Admin Log trigger.
+    - RPCs: `admin_customer_list()` (filters, literal search including tags, four sorts, offset paging with the filtered totals) and `admin_customer_segment_counts()`, plus create, delete, apply and remove for tags. Reads are for super_admin, support and finance_admin; tag writes for super_admin and support.
+  - **Cosora-Admin:** Customers reads the RPCs, with a tag editor, "Data as of" and Refresh. `devSeed/customers.ts` is deleted. See that repo's CHANGELOG.
+  - **Verified:**
+    - Harness `scripts/admin-completion/10_customers.sql`, rehearsed and live: 21/21.
+      - Access: the three reading roles get 20 rows; every other role and anon is refused.
+      - Population: 20 customers (9 vendors, 11 buyers), and no active staff listed.
+      - The paying customer's spend equals the payments ledger's paid total less refunds.
+      - Sorting, paging (20 rows, 20 distinct), search and the bad-input errors behave.
+      - Tags: the whole cycle works, two spellings resolve to one tag, finance_admin is refused, a bad label is refused, and there are 4 Admin Log rows.
+      - A refresh skips fresh data and rebuilds stale data concurrently.
+      - Planted RFQs make one quiet buyer "at risk" and another "active".
+    - The md5 matches.
+  - **Files:** the migration, `scripts/admin-completion/10_customers.sql`, `src/lib/database.types.ts` (regenerated, additive), `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `test.md`, this file.
+
 - 2026-09-28 (admin completion, Phase 5: payments ledger): **Cosora-Admin's Payments page is a real ledger computed in the database, replacing a dev-seed fixture, and its totals agree with Reports.**
   - **Migration `20260928043917_payments_ledger.sql`:**
     - `admin.payment_entries`, a view with one row per money movement:

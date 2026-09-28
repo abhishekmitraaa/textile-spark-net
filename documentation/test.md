@@ -96,7 +96,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -162,6 +162,25 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-28 — Admin completion Phase 6: customers (migration rehearsed and applied, md5 matches; harness 10 21/21 rehearsed and live)
+
+- **Harness `10_customers.sql`** (fixtures and tags exist only inside their rolled-back case):
+  - **Who reads:** super_admin, support and finance_admin get 20 rows. product_moderator, vendor_ops, ads_moderator, manager and a buyer get 42501; anon gets 42501 (no EXECUTE).
+  - **Population:** 20 customers (expected 20), 9 vendors + 11 buyers, spend 5,249,300 paise. No active staff listed.
+  - **Spend:** 1 of 1 paying customers matches `admin_payments_summary(p_vendor)` paid less refunded.
+  - **Order and paging:** the first row has the most spend; limit 5 pages 20 rows, 20 distinct, `total_count` 20.
+  - **Search and inputs:** a literal `%` finds 0; "Demo" finds 2; an unknown segment, sort or kind gives 22023 each.
+  - **Tags:**
+    - as support: `h10-test` and `  H10-Test ` are the same tag; applied twice, it's on 1 row, found by tag search, 1 use; after remove, 0 rows; then deleted; 4 Admin Log rows;
+    - finance_admin creating one gets 42501; "Bad Label!" gets 22023.
+  - **Refresh:** fresh data isn't rebuilt (reason `fresh`); data 11 minutes old is rebuilt concurrently (`refreshed: true`).
+  - **Segments:** an RFQ 90 days old makes buyer 948b930b `new+at_risk+never_transacted`; one 5 days old makes bfbaf9d0 `new+active+never_transacted`.
+  - The first rehearsal's case 11 failed on the harness, not the function: it read `admin.admin_users` as a client role. Fixed to collect ids and check them as the owner.
+- **Cosora-Admin:**
+  - `npm run typecheck` 0, `npm run build` 0.
+  - The bundle calls `admin_customer_list`, and no customer fixture string is in `dist/`.
+- **Not run:** a browser walk-through, which needs an admin sign-in.
 
 ### 2026-09-28 — Admin completion Phase 5: payments ledger (migration rehearsed and applied, md5 matches; harness 09 19/19 rehearsed and live)
 
