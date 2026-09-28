@@ -46,11 +46,11 @@ with no need to dictate format, context, or reference each time.
 - Context: Phase 4a (migrations `20260927184250`, `20260927185902`) moved every reader to
   `my_vendor_private()`, `call_vendor_contact()` and `admin_vendor_private()`. Revoking before
   the apps deploy would break the live vendor page and store screens, as MPF-19 did for
-  `profiles`. Rehearse the INSERT ... ON CONFLICT upserts from `vendorStore.ts` and
-  `vendorOnboarding.ts` as `authenticated` after the revoke: they write the private columns and
-  must keep working.
-- Reference: 2026-09-28, admin completion Phase 4a.
-- Status: Open (waits for the Phase 4a merge)
+  `profiles`. The rehearsal (2026-09-28) found that the old upserts from `vendorStore.ts` and
+  `vendorOnboarding.ts` would be refused; `writeOwnVendorRow()` replaced them and must be live
+  first. The migration and `scripts/admin-completion/08` are ready.
+- Reference: 2026-09-28, admin completion Phase 4a and the Phase 4b rehearsal.
+- Status: Open (Phase 4a is live; waits for the `writeOwnVendorRow()` deploy)
 
 ### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
 - Task: make the vendor's Advertise page show the reason an admin gave in words. Today

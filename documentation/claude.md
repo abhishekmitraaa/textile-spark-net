@@ -399,6 +399,10 @@ undocumented. Deep technical rationale for each lives in
   - An empty field on the public vendor page reads "Not provided" or is left out. Never fall
     back to a demo value: the page used to invent an owner, phone, email, address, GSTIN
     and PAN for every vendor that hadn't filled them in.
+  - **Every client write to `vendor_profiles` goes through `writeOwnVendorRow()`**
+    (`src/lib/queries/vendorStore.ts`): an UPDATE, or an insert-only upsert on a first save.
+    Never `.upsert()` that updates: `ON CONFLICT DO UPDATE SET col = EXCLUDED.col` needs
+    SELECT on `col`, which clients don't have for the private columns.
   - Specs and scripts read a vendor's own row with `readOwnVendorRow()`
     (`scripts/lib/vendor-row.mjs`).
   - Order (the MPF-19 rule): Phase 4a shipped the readers; Phase 4b revokes the table-wide
@@ -898,6 +902,12 @@ undocumented. Deep technical rationale for each lives in
   execute grant** — low impact (its output is anonymised peer aggregates) but it is the same
   hole, left alone here rather than changed underneath `CompetitorAds.tsx`. Any new
   self-guarded function must coalesce.
+- **`INSERT ... ON CONFLICT DO UPDATE SET c = EXCLUDED.c` needs SELECT privilege on `c`**
+  (found in the admin completion Phase 4b rehearsal, 2026-09-28). That is what supabase-js
+  `.upsert()` sends. On a table with column grants, an upsert that writes a column the caller
+  can't read fails with 42501, even on the caller's own row. A plain UPDATE or INSERT, a SET
+  from a literal, and `ON CONFLICT DO NOTHING` need no SELECT on the columns they write.
+  Before revoking a column, rehearse every write path that touches it as `authenticated`.
 - **`create or replace function` with an ADDED parameter does not replace — it OVERLOADS.**
   Adding `max_distance` to `match_products` left the old 4-arg version in place; both
   accepted the 3-arg call `search_products` makes, Postgres raised

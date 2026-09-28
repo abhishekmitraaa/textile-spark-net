@@ -2,8 +2,44 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
 
-/** The exact shape `vendor_profiles.upsert()` accepts. */
+/** The exact shape a `vendor_profiles` insert accepts. */
 type VendorProfileInsert = Database["public"]["Tables"]["vendor_profiles"]["Insert"];
+
+/**
+ * Write the signed-in vendor's own `vendor_profiles` row: UPDATE it, or INSERT it
+ * on a first save. Every client write to the table goes through here.
+ *
+ * Never an upsert that updates. `INSERT ... ON CONFLICT DO UPDATE SET col =
+ * EXCLUDED.col` needs SELECT on every column it copies, and a vendor's PAN, email,
+ * phone, WhatsApp and street address aren't client-readable (admin completion
+ * Phase 4b): the Phase 4b rehearsal refused exactly that with 42501. A plain UPDATE
+ * or INSERT, and `ON CONFLICT DO NOTHING`, need no SELECT on what they write.
+ */
+export async function writeOwnVendorRow(row: VendorProfileInsert): Promise<void> {
+  const { id, ...patch } = row;
+  const hasPatch = Object.keys(patch).length > 0;
+  if (hasPatch) {
+    const { data, error } = await supabase.from("vendor_profiles").update(patch).eq("id", id).select("id");
+    if (error) throw error;
+    if (data && data.length > 0) return;
+  }
+  // No row yet: this save creates it. ON CONFLICT DO NOTHING returns no row when
+  // another save created it in between, and then the patch goes to that row.
+  const { data: inserted, error: insertError } = await supabase
+    .from("vendor_profiles")
+    .upsert(row, { onConflict: "id", ignoreDuplicates: true })
+    .select("id");
+  if (insertError) throw insertError;
+  if ((inserted && inserted.length > 0) || !hasPatch) return;
+  const { data: again, error: againError } = await supabase
+    .from("vendor_profiles")
+    .update(patch)
+    .eq("id", id)
+    .select("id");
+  if (againError) throw againError;
+  // Zero rows twice means RLS refused the row: never report that as saved.
+  if (!again || again.length === 0) throw new Error("Couldn't save your business profile. Please try again.");
+}
 
 // ─────────────────────────────────────────────────────────────
 // The vendor's OWN store profile (vendor_profiles row) — read + write.
@@ -235,8 +271,7 @@ export async function saveVendorProfile(id: string, p: VendorStorePatch): Promis
   if (p.capacity !== undefined) row.capacity = p.capacity;
   if (p.social !== undefined) row.social = p.social;
   if (p.recommendedProductIds !== undefined) row.recommended_product_ids = p.recommendedProductIds;
-  const { error } = await supabase.from("vendor_profiles").upsert(row, { onConflict: "id" });
-  if (error) throw error;
+  await writeOwnVendorRow(row);
 }
 
 // Upload a store asset (logo/banner) to the public product-images bucket under
@@ -341,6 +376,5 @@ export async function saveVendorSetting(
     key === "notifications"
       ? { id, notifications: value as VendorNotificationSettings }
       : { id, regional: value as VendorRegionalSettings };
-  const { error } = await supabase.from("vendor_profiles").upsert(row, { onConflict: "id" });
-  if (error) throw error;
+  await writeOwnVendorRow(row);
 }
