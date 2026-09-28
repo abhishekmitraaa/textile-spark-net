@@ -59,7 +59,7 @@ function FolderCard({ folder }: { folder: Folder }) {
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => { deleteFolder(folder.id); toast(`Deleted "${folder.name}"`); }}
-                className="gap-2 text-sm text-[#ef4d62] focus:text-[#ef4d62]"
+                className="gap-2 text-sm text-brand-buyer focus:text-brand-buyer"
               >
                 <Trash2 className="w-4 h-4" /> Delete Folder
               </DropdownMenuItem>
@@ -83,12 +83,12 @@ function FolderCard({ folder }: { folder: Folder }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") { renameFolder(folder.id, name); setRenaming(false); } }}
-            className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#ef4d62]"
+            className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-buyer"
             placeholder="Folder name"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => setRenaming(false)} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">Cancel</button>
-            <button onClick={() => { renameFolder(folder.id, name); setRenaming(false); toast.success("Folder renamed"); }} className="px-5 py-2 rounded-xl bg-[#ef4d62] text-white text-sm font-bold">Save</button>
+            <button onClick={() => { renameFolder(folder.id, name); setRenaming(false); toast.success("Folder renamed"); }} className="px-5 py-2 rounded-xl bg-brand-buyer text-white text-sm font-bold">Save</button>
           </div>
         </DialogContent>
       </Dialog>
@@ -118,7 +118,7 @@ const SavedCollections = () => {
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Your Collections</p>
           <button
             onClick={() => setCreating(true)}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#ef4d62] hover:bg-[#ef4d62]/90 px-3.5 py-2 text-xs font-bold text-white transition-colors active:scale-95"
+            className="inline-flex items-center gap-1.5 rounded-full bg-brand-buyer hover:bg-brand-buyer/90 px-3.5 py-2 text-xs font-bold text-white transition-colors active:scale-95"
           >
             <FolderPlus className="w-3.5 h-3.5" /> New Folder
           </button>
@@ -139,11 +139,11 @@ const SavedCollections = () => {
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") submitCreate(); }}
             placeholder="Folder name"
-            className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#ef4d62]"
+            className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:border-brand-buyer"
           />
           <div className="flex justify-end gap-2">
             <button onClick={() => { setCreating(false); setName(""); }} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">Cancel</button>
-            <button onClick={submitCreate} className="px-5 py-2 rounded-xl bg-[#ef4d62] text-white text-sm font-bold">Create</button>
+            <button onClick={submitCreate} className="px-5 py-2 rounded-xl bg-brand-buyer text-white text-sm font-bold">Create</button>
           </div>
         </DialogContent>
       </Dialog>

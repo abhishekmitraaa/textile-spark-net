@@ -102,7 +102,7 @@ export default function SponsoredRail({
   return (
     <section className={className}>
       <div className="flex items-center gap-1.5 mb-3">
-        <Megaphone className="h-4 w-4 text-[#ef4d62]" />
+        <Megaphone className="h-4 w-4 text-brand-buyer" />
         <h2 className="text-sm font-bold text-gray-900">{heading}</h2>
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
@@ -124,7 +124,7 @@ export default function SponsoredRail({
                   everything else should be visible as such rather than
                   silently privileged — the buyer can see why it is first. */}
               {a.isBumped && (
-                <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-[#ef4d62] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
+                <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand-buyer px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
                   <ArrowUp className="h-2.5 w-2.5" /> Bumped
                 </span>
               )}
@@ -133,7 +133,7 @@ export default function SponsoredRail({
               <p className="truncate text-[11px] font-bold text-gray-900">{a.productName ?? a.title}</p>
               {a.vendorName && <p className="truncate text-[10px] text-gray-500">{a.vendorName}</p>}
               <div className="mt-0.5 flex items-center justify-between">
-                {a.price && <span className="text-[11px] font-bold text-[#ef4d62]">{showText(a.price)}</span>}
+                {a.price && <span className="text-[11px] font-bold text-brand-buyer">{showText(a.price)}</span>}
                 <span className="inline-flex items-center gap-0.5 text-[9px] text-gray-400">
                   <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /> Featured
                 </span>

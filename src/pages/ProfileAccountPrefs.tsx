@@ -34,7 +34,7 @@ function SettingsHeader({ title }: { title: string }) {
   );
 }
 
-const selectCls = "w-full appearance-none rounded-xl border border-gray-300 bg-white pl-10 pr-9 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-[#ef4d62] transition-colors";
+const selectCls = "w-full appearance-none rounded-xl border border-gray-300 bg-white pl-10 pr-9 py-2.5 text-sm text-gray-900 focus:outline-none focus:border-brand-buyer transition-colors";
 
 // Currency converts displayed prices (Phase 20, MPF-11: src/lib/currency.ts). It
 // is DISPLAY ONLY, and the page says so: prices are set, quoted, paid and invoiced

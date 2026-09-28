@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -21,7 +22,7 @@ import { capReached, isUnlimited, remaining } from "@/lib/plan";
 // blocked once the plan's monthly lead allowance is used up (Part 3).
 // ─────────────────────────────────────────────────────────────
 
-const BLUE = "#256fef";
+const BLUE = brand("vendor");
 
 export default function OpenRfqLeads() {
   const { user } = useAuth();
@@ -67,14 +68,14 @@ export default function OpenRfqLeads() {
     }
   };
 
-  const input = "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm transition-colors focus:outline-none focus:border-[#256fef] focus:ring-1 focus:ring-[#256fef]/20";
+  const input = "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm transition-colors focus:outline-none focus:border-brand-vendor focus:ring-1 focus:ring-brand-vendor/20";
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 lg:p-5">
       <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex items-center gap-2">
           <h2 className="text-sm font-bold text-gray-900 lg:text-base">Buyer Requirements</h2>
-          <span className="rounded-full bg-[#256fef]/10 text-[#256fef] text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{rfqs.length} live</span>
+          <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{rfqs.length} live</span>
         </div>
         {vplan && (
           <span className={`text-[11px] font-semibold lg:text-xs ${capHit ? "text-red-600" : "text-gray-500"}`}>
@@ -97,7 +98,7 @@ export default function OpenRfqLeads() {
       {/* One column on mobile; two across once there is real width to spend. */}
       <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {rfqs.map((r) => (
-          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched || r.strongMatch ? "border-[#256fef]/40 bg-[#256fef]/[0.03] lg:hover:border-[#256fef]/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
+          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched || r.strongMatch ? "border-brand-vendor/40 bg-brand-vendor/[0.03] lg:hover:border-brand-vendor/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {/* Two distinct claims, deliberately not merged into one badge.
@@ -108,11 +109,11 @@ export default function OpenRfqLeads() {
                     category badge's. The category badge wins when both hold,
                     being the more specific claim. */}
                 {r.matched ? (
-                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-bold text-[#256fef]">
+                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
                     <Sparkles className="h-3 w-3" /> Matches your category
                   </span>
                 ) : r.strongMatch ? (
-                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-bold text-[#256fef]">
+                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
                     <Sparkles className="h-3 w-3" /> Strong match
                   </span>
                 ) : null}
@@ -151,7 +152,7 @@ export default function OpenRfqLeads() {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#256fef]/5" style={{ borderColor: BLUE, color: BLUE }}>
+              <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="w-3.5 h-3.5" /> Submit Quote
               </button>
             )}

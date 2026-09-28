@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -23,7 +24,7 @@ const listItem = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.3 } },
 };
 
-const CORAL = "#ef4d62";
+const CORAL = brand("buyer");
 
 type ReviewType = "Product" | "Vendor" | "Service";
 
@@ -64,7 +65,7 @@ function mapMyReview(r: MyReviewItem): MyReview {
 }
 
 const TYPE_META: Record<ReviewType, { icon: typeof Store; tint: string }> = {
-  Vendor: { icon: Store, tint: "bg-[#ef4d62]/10 text-[#ef4d62]" },
+  Vendor: { icon: Store, tint: "bg-brand-buyer/10 text-brand-buyer" },
   Product: { icon: Package, tint: "bg-blue-50 text-blue-600" },
   Service: { icon: Sparkles, tint: "bg-violet-50 text-violet-600" },
 };
@@ -181,8 +182,8 @@ const MyReviews = () => {
     if (signedOut) {
       return (
         <div className="mt-16 flex flex-col items-center text-center px-6">
-          <div className="w-16 h-16 rounded-full bg-[#ef4d62]/10 flex items-center justify-center mb-4">
-            <LogIn className="w-7 h-7 text-[#ef4d62]" />
+          <div className="w-16 h-16 rounded-full bg-brand-buyer/10 flex items-center justify-center mb-4">
+            <LogIn className="w-7 h-7 text-brand-buyer" />
           </div>
           <p className="text-base font-bold text-gray-900">Sign in to see your reviews</p>
           <p className="text-sm text-gray-500 mt-1 max-w-xs">
@@ -225,8 +226,8 @@ const MyReviews = () => {
     if (visible.length === 0) {
       return (
         <div className="mt-16 flex flex-col items-center text-center px-6">
-          <div className="w-16 h-16 rounded-full bg-[#ef4d62]/10 flex items-center justify-center mb-4">
-            <MessageSquarePlus className="w-7 h-7 text-[#ef4d62]" />
+          <div className="w-16 h-16 rounded-full bg-brand-buyer/10 flex items-center justify-center mb-4">
+            <MessageSquarePlus className="w-7 h-7 text-brand-buyer" />
           </div>
           <p className="text-base font-bold text-gray-900">No reviews here yet</p>
           <p className="text-sm text-gray-500 mt-1 max-w-xs">
@@ -308,8 +309,8 @@ const MyReviews = () => {
                 <ReviewPhotoStrip photos={r.photos} className="mt-3" />
 
                 {r.replyBody && (
-                  <div className="mt-3 rounded-lg border-l-2 border-[#ef4d62] bg-[#ef4d62]/5 p-2.5">
-                    <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from the seller</p>
+                  <div className="mt-3 rounded-lg border-l-2 border-brand-buyer bg-brand-buyer/5 p-2.5">
+                    <p className="mb-0.5 text-[11px] font-bold text-brand-buyer">Reply from the seller</p>
                     <p data-no-translate className="text-xs leading-relaxed text-gray-600">{r.replyBody}</p>
                   </div>
                 )}
@@ -317,7 +318,7 @@ const MyReviews = () => {
                 {r.href && (
                   <button
                     onClick={() => navigate(r.href!)}
-                    className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-[#ef4d62] hover:underline"
+                    className="mt-3 inline-flex items-center gap-0.5 text-xs font-semibold text-brand-buyer hover:underline"
                   >
                     View {r.type.toLowerCase()} <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -421,7 +422,7 @@ const MyReviews = () => {
                 value={draftText}
                 onChange={(e) => setDraftText(e.target.value)}
                 rows={4}
-                className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 focus:outline-none focus:border-[#ef4d62] resize-none"
+                className="w-full rounded-xl border border-gray-200 p-3 text-sm text-gray-800 focus:outline-none focus:border-brand-buyer resize-none"
                 placeholder="Share your experience…"
               />
 

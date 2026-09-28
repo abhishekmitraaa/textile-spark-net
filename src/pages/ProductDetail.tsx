@@ -47,7 +47,6 @@ function cardToListing(p: ProductCardData): ListingProduct {
   };
 }
 
-const CORAL = "#ef4d62";
 const COLOR_HEX: Record<string, string> = {
   Beige: "#E8D5B7", Navy: "#1B2A4A", Olive: "#6B7A3D", Black: "#1A1A1A", White: "#F5F5F5",
   Grey: "#9E9E9E", Red: "#C0392B", Green: "#2D6A4F", Blue: "#2471A3",
@@ -223,7 +222,7 @@ function MediaCarousel({ media, rating, hasTrustSeal }: { media: MediaItem[]; ra
       <div className="flex items-center justify-center gap-1.5 py-3">
         {media.map((_, i) => (
           <button key={i} onClick={() => setActive(i)} aria-label={`Slide ${i + 1}`}
-            className={cn("h-1.5 rounded-full transition-all", i === active ? "w-5 bg-[#ef4d62]" : "w-1.5 bg-gray-300 hover:bg-gray-400")} />
+            className={cn("h-1.5 rounded-full transition-all", i === active ? "w-5 bg-brand-buyer" : "w-1.5 bg-gray-300 hover:bg-gray-400")} />
         ))}
       </div>
     </div>
@@ -260,8 +259,8 @@ function ReviewCard({ review }: { review: Review }) {
       {review.sizeBought && <p className="mt-1.5 inline-block rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Size bought: {review.sizeBought}</p>}
       <ReviewPhotoStrip photos={review.photos} className="mt-2.5" />
       {review.replyBody && (
-        <div className="mt-2.5 rounded-lg border-l-2 border-[#ef4d62] bg-gray-50 p-2.5">
-          <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from the seller</p>
+        <div className="mt-2.5 rounded-lg border-l-2 border-brand-buyer bg-gray-50 p-2.5">
+          <p className="mb-0.5 text-[11px] font-bold text-brand-buyer">Reply from the seller</p>
           <p data-no-translate className="text-xs leading-relaxed text-gray-600">{review.replyBody}</p>
         </div>
       )}
@@ -286,7 +285,7 @@ function ProductNotFound() {
       </p>
       <button
         onClick={() => navigate("/search")}
-        className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90 active:scale-[0.98]"
+        className="mt-6 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-buyer/90 active:scale-[0.98]"
       >
         Browse products
       </button>
@@ -311,7 +310,7 @@ function ProductLoadError({ onRetry }: { onRetry: () => void }) {
       </p>
       <button
         onClick={onRetry}
-        className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90 active:scale-[0.98]"
+        className="mt-6 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-buyer/90 active:scale-[0.98]"
       >
         Retry
       </button>
@@ -461,7 +460,7 @@ const ProductDetail = () => {
     return (
       <BuyerShell>
         <div className="max-w-2xl mx-auto px-4 py-24 flex justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-[#ef4d62]" />
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-buyer" />
         </div>
       </BuyerShell>
     );
@@ -535,7 +534,7 @@ const ProductDetail = () => {
             <h1 className="flex-1 text-lg font-bold leading-snug text-gray-900 sm:text-xl">{product.name}</h1>
             <div className="flex shrink-0 items-center gap-0.5">
               <button onClick={saveProduct} aria-label={isSaved ? "Edit saved folders" : "Save product"} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
-                {isSaved ? <BookmarkCheck className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
+                {isSaved ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
               </button>
               <button aria-label="Share" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
                 <Share2 className="h-4 w-4 text-gray-500" />
@@ -545,7 +544,7 @@ const ProductDetail = () => {
           <div className="mt-1.5 flex items-baseline gap-1.5">
             {product.price ? (
               <>
-                <span className="text-2xl font-extrabold text-[#ef4d62]">{showText(product.price)}</span>
+                <span className="text-2xl font-extrabold text-brand-buyer">{showText(product.price)}</span>
                   {/* The vendor's own price, beside a converted one (display only, MPF-11). */}
                   {converting && showText(product.price) !== product.price && (
                     <span className="text-sm font-semibold text-gray-500">({product.price})</span>
@@ -569,11 +568,11 @@ const ProductDetail = () => {
         <motion.div variants={sect} onClick={() => navigate(`/vendor/${product.vendor.id}`)}
           className={cn(card, "cursor-pointer transition-shadow hover:shadow-md")}>
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#ef4d62]/15 text-sm font-bold text-[#ef4d62]">{product.vendor.initials}</div>
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-buyer/15 text-sm font-bold text-brand-buyer">{product.vendor.initials}</div>
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-sm font-bold text-gray-900">{product.vendor.name}</span>
-                {product.vendor.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-[#ef4d62]" />}
+                {product.vendor.verified && <BadgeCheck className="h-4 w-4 shrink-0 text-brand-buyer" />}
               </div>
               <div className="mt-0.5 flex items-center gap-0.5 text-xs text-gray-500">
                 {vendorReviews === undefined ? (
@@ -593,7 +592,7 @@ const ProductDetail = () => {
               )}
             </div>
             <button onClick={(e) => { e.stopPropagation(); if (isFollowingVendor(product.vendor.id)) unfollow(product.vendor.id); else follow(product.vendor.id); }}
-              className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowingVendor(product.vendor.id) ? "border-gray-200 text-gray-600" : "border-[#ef4d62] text-[#ef4d62] hover:bg-[#ef4d62]/5")}>
+              className={cn("h-8 shrink-0 rounded-full border px-3 text-xs font-semibold transition-colors active:scale-95", isFollowingVendor(product.vendor.id) ? "border-gray-200 text-gray-600" : "border-brand-buyer text-brand-buyer hover:bg-brand-buyer/5")}>
               {isFollowingVendor(product.vendor.id) ? "Following" : "+ Follow"}
             </button>
           </div>
@@ -610,7 +609,7 @@ const ProductDetail = () => {
         <motion.div variants={sect} className="flex rounded-xl border border-gray-200 p-1">
           {(["details", "reviews"] as const).map((t) => (
             <button key={t} onClick={() => setTab(t)} className="relative flex-1 rounded-lg py-2 text-sm font-semibold capitalize">
-              {tab === t && <motion.span layoutId="pd-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+              {tab === t && <motion.span layoutId="pd-tab" className="absolute inset-0 rounded-lg bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
               <span className={cn("relative z-10", tab === t ? "text-white" : "text-gray-500")}>{t}</span>
             </button>
           ))}
@@ -629,7 +628,7 @@ const ProductDetail = () => {
                 {product.availableColors.map((c) => (
                   <button key={c} onClick={() => setSelectedColor(c)}
                     className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-                      activeColor === c ? "border-[#ef4d62] bg-[#ef4d62]/5 text-[#ef4d62]" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                      activeColor === c ? "border-brand-buyer bg-brand-buyer/5 text-brand-buyer" : "border-gray-200 text-gray-600 hover:border-brand-buyer/40")}>
                     <span className="h-3.5 w-3.5 rounded-full border border-black/10" style={{ background: COLOR_HEX[c] ?? "#ccc" }} />{c}
                   </button>
                 ))}
@@ -646,17 +645,17 @@ const ProductDetail = () => {
                 {product.availableSizes.map((s) => (
                   <button key={s} onClick={() => setSelectedSize((cur) => (cur === s ? null : s))}
                     className={cn("flex h-9 min-w-[38px] items-center justify-center rounded-lg border px-2 text-sm font-medium transition-all active:scale-95",
-                      selectedSize === s ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-800 hover:border-[#ef4d62]/40")}>{s}</button>
+                      selectedSize === s ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-800 hover:border-brand-buyer/40")}>{s}</button>
                 ))}
               </div>
             </div>
 
             {/* Chat + Call Now (inline, per reference) */}
             <div className="flex items-center gap-2">
-              <button onClick={() => setChatOptionsOpen(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
+              <button onClick={() => setChatOptionsOpen(true)} className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3 text-sm font-bold transition-colors active:scale-[0.98]">
                 <MessageCircle className="h-4 w-4" /> Chat
               </button>
-              <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors active:scale-[0.98]">
+              <button onClick={() => callVendor(product.vendor.id, product.name)} className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors active:scale-[0.98]">
                 <Phone className="h-4 w-4" /> Call Now
               </button>
             </div>
@@ -757,7 +756,7 @@ const ProductDetail = () => {
                           <span className="w-2.5 text-xs text-gray-500">{star}</span>
                           <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
                           <div className="flex-1 h-1.5 overflow-hidden rounded-full bg-gray-100">
-                            <motion.div className="h-full rounded-full bg-[#ef4d62]" initial={reduced ? false : { width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: E }} />
+                            <motion.div className="h-full rounded-full bg-brand-buyer" initial={reduced ? false : { width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.6, ease: E }} />
                           </div>
                         </div>
                       );
@@ -779,7 +778,7 @@ const ProductDetail = () => {
                       });
                       setReviewOpen(true);
                     }}
-                    className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90"
+                    className="rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-buyer/90"
                   >
                     {myReview ? "Edit your Review" : "Write a Review"}
                   </button>

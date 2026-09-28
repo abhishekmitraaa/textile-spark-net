@@ -65,7 +65,7 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                 </button>
                 <button
                   onClick={() => { onClose(); switchRole("seller"); }}
-                  className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-colors ${role === "seller" ? "bg-white text-[#256fef] shadow-sm" : "text-gray-500"}`}
+                  className={`flex-1 py-1.5 text-xs font-semibold rounded-full transition-colors ${role === "seller" ? "bg-white text-brand-vendor shadow-sm" : "text-gray-500"}`}
                 >
                   {t("Seller")}
                 </button>

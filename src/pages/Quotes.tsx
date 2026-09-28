@@ -132,11 +132,11 @@ function MetricsRail({ stats, perf, onSwitchToRequests }: { stats: Stats; perf: 
               the metrics read as one strip; the mobile placement stays below. */}
           <div className="hidden lg:block min-[1400px]:hidden">
             <p className="text-xs text-gray-500">Total Order Value</p>
-            <p className="text-lg font-bold text-[#ef4d62]">{formatInrCompact(perf.totalOrderValue)}</p>
+            <p className="text-lg font-bold text-brand-buyer">{formatInrCompact(perf.totalOrderValue)}</p>
           </div>
           <div className="hidden lg:flex lg:items-end min-[1400px]:hidden">
             <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
-              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors">
+              className="w-full flex items-center justify-center gap-1.5 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors">
               Browse RFQs <ChevronRight className="w-3.5 h-3.5" />
             </motion.button>
           </div>
@@ -144,10 +144,10 @@ function MetricsRail({ stats, perf, onSwitchToRequests }: { stats: Stats; perf: 
         <div className="flex items-center justify-between gap-3 lg:hidden min-[1400px]:flex">
           <div>
             <p className="text-xs text-gray-500">Total Order Value</p>
-            <p className="text-lg font-bold text-[#ef4d62]">{formatInrCompact(perf.totalOrderValue)}</p>
+            <p className="text-lg font-bold text-brand-buyer">{formatInrCompact(perf.totalOrderValue)}</p>
           </div>
           <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors whitespace-nowrap">
+            className="flex items-center gap-1.5 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors whitespace-nowrap">
             Browse RFQs <ChevronRight className="w-3.5 h-3.5" />
           </motion.button>
         </div>
@@ -216,7 +216,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                 ].map(o => (
                   <button key={o.v} onClick={() => { setSort(o.v); setSortOpen(false); }}
                     className={cn("w-full text-left px-4 py-2.5 text-sm hover:bg-gray-50 flex items-center gap-2",
-                      sort === o.v ? "text-[#ef4d62] font-semibold" : "text-gray-700")}>
+                      sort === o.v ? "text-brand-buyer font-semibold" : "text-gray-700")}>
                     {sort === o.v && <CheckCircle2 className="w-3.5 h-3.5" />}
                     {o.l}
                   </button>
@@ -273,7 +273,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                     <p className="text-xs text-gray-400 lg:text-[13px]">{q.buyerName}</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-lg font-bold text-[#ef4d62] lg:text-xl lg:tabular-nums">₹ {q.pricePerUnit}</p>
+                    <p className="text-lg font-bold text-brand-buyer lg:text-xl lg:tabular-nums">₹ {q.pricePerUnit}</p>
                     <p className="text-[10px] text-gray-400 lg:text-xs">per unit</p>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                     on desktop so a 900px card isn't one giant button. */}
                 {q.status === "in_negotiation" && (
                   <motion.button whileTap={TAP} transition={TAP_T} onClick={() => openChat(q.buyerId)}
-                    className="w-full py-3 bg-[#ef4d62] text-white text-sm font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors flex items-center justify-center gap-2 lg:w-auto lg:px-6 lg:py-2.5">
+                    className="w-full py-3 bg-brand-buyer text-white text-sm font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors flex items-center justify-center gap-2 lg:w-auto lg:px-6 lg:py-2.5">
                     <MessageSquare className="w-4 h-4" /> Continue Chat
                   </motion.button>
                 )}
@@ -367,7 +367,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
             <p className="text-sm font-semibold text-gray-900 lg:text-base">No quotes submitted yet</p>
             <p className="text-xs text-gray-400 mt-1 lg:text-sm lg:max-w-sm lg:mx-auto">Respond to open buyer requirements to see your quotes here.</p>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={onSwitchToRequests}
-              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-[#ef4d62] px-4 py-2 text-xs font-bold text-white hover:bg-[#ef4d62]/90 transition-colors lg:text-sm lg:px-5 lg:py-2.5">
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-brand-buyer px-4 py-2 text-xs font-bold text-white hover:bg-brand-buyer/90 transition-colors lg:text-sm lg:px-5 lg:py-2.5">
               Browse open RFQs <ChevronRight className="w-4 h-4" />
             </motion.button>
           </div>
@@ -450,7 +450,7 @@ const Quotes = () => {
                 <p className="text-xs text-gray-400 lg:text-sm">Track all your submitted quotes and buyer responses</p>
               </div>
               <div className="relative lg:hidden">
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4d62] rounded-full text-[9px] text-white font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-buyer rounded-full text-[9px] text-white font-bold flex items-center justify-center">
                   {stats.negotiating}
                 </span>
                 <Bell className="w-5 h-5 text-gray-500" />

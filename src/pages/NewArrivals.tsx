@@ -177,7 +177,7 @@ function ProductCard({ product }: { product: Product }) {
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
           aria-label={saved ? "Edit saved folders" : "Save product"}
         >
-          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
         </button>
 
         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
@@ -188,7 +188,7 @@ function ProductCard({ product }: { product: Product }) {
       </Link>
 
       <div className="p-2 lg:p-3.5 flex flex-col flex-1">
-        <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
+        <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | MOQ: {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
@@ -206,7 +206,7 @@ function ProductCard({ product }: { product: Product }) {
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>
@@ -280,7 +280,7 @@ function BrandPicksRail({ ads, onOpen }: { ads: ActiveAd[]; onOpen: (a: ActiveAd
             </button>
             <button
               onClick={() => { if (a.vendorId) void callVendor(a.vendorId, a.productName ?? a.title); }}
-              className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded"
+              className="mt-1.5 lg:mt-2.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded"
             >
               <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
             </button>
@@ -544,7 +544,7 @@ const NewArrivals = () => {
                 className={cn(
                   "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
                   isActive
-                    ? "text-[#ef4d62] border-[#ef4d62]"
+                    ? "text-brand-buyer border-brand-buyer"
                     : "text-gray-400 border-transparent hover:text-gray-600"
                 )}
               >
@@ -672,10 +672,10 @@ const NewArrivals = () => {
                   </div>
                 </div>
                 <div className="p-1.5 lg:p-2.5">
-                  <p className="text-[9px] lg:text-xs font-bold text-[#ef4d62] leading-tight">{showText(item.price)} | MOQ: {item.moq}</p>
+                  <p className="text-[9px] lg:text-xs font-bold text-brand-buyer leading-tight">{showText(item.price)} | MOQ: {item.moq}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">{item.name} | <span className="font-bold">Manufacturer</span></p>
-                  <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-[#ef4d62] text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
+                  <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
                     <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
                   </button>
                 </div>
@@ -698,13 +698,13 @@ const NewArrivals = () => {
             <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
               <button
                 onClick={() => setViewMode("2-col")}
-                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "2-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}
+                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "2-col" ? "bg-brand-buyer text-white" : "text-gray-400")}
               >
                 <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
               </button>
               <button
                 onClick={() => setViewMode("3-col")}
-                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "3-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}
+                className={cn("p-1.5 lg:p-2 rounded-md transition-colors", viewMode === "3-col" ? "bg-brand-buyer text-white" : "text-gray-400")}
               >
                 <Grid3X3 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
               </button>
@@ -772,7 +772,7 @@ const NewArrivals = () => {
                 {v.imageUrl && <img src={v.imageUrl} alt={v.brandName} className="w-full h-full object-cover" loading="lazy" />}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
                 {v.verified && (
-                  <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold text-[#14ae5c]">
+                  <span className="absolute top-2 left-2 inline-flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5 text-[9px] lg:text-[10px] font-bold text-brand-success">
                     <BadgeCheck className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Verified
                   </span>
                 )}

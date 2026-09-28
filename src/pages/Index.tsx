@@ -1,7 +1,7 @@
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { StatsCard } from "@/components/dashboard/StatsCard";
 import { ProductCard } from "@/components/dashboard/ProductCard";
-import { PromoBanner } from "@/components/dashboard/PromoBanner";
+import { VendorDashboardBanners } from "@/components/dashboard/VendorDashboardBanners";
 import { BusinessProfileScore } from "@/components/dashboard/BusinessProfileScore";
 import { SellerQuickActionsGrid } from "@/components/dashboard/SellerQuickActionsGrid";
 import { Card, CardContent } from "@/components/ui/card";
@@ -208,7 +208,7 @@ const Index = () => {
         {/* Seller-specific promo and profile section */}
         {role === "seller" && (
           <motion.div variants={section} className="mb-6 space-y-4 lg:mb-8">
-            <PromoBanner />
+            <VendorDashboardBanners />
             <BusinessProfileScore />
           </motion.div>
         )}

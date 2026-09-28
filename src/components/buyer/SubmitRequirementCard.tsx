@@ -29,8 +29,8 @@ export default function SubmitRequirementCard({
   return (
     <div className={cn("relative overflow-hidden rounded-2xl border border-gray-200 bg-white p-6 text-center lg:p-8", className)}>
       {/* Coral corner accents */}
-      <span className="pointer-events-none absolute top-0 left-0 border-t-[28px] border-r-[28px] border-t-[#ef4d62] border-r-transparent" />
-      <span className="pointer-events-none absolute top-0 right-0 border-t-[28px] border-l-[28px] border-t-[#ef4d62] border-l-transparent" />
+      <span className="pointer-events-none absolute top-0 left-0 border-t-[28px] border-r-[28px] border-t-brand-buyer border-r-transparent" />
+      <span className="pointer-events-none absolute top-0 right-0 border-t-[28px] border-l-[28px] border-t-brand-buyer border-l-transparent" />
 
       {/* On desktop the quick-action variant splits into two columns (intro |
           actions) so it fills the width instead of a tall left-aligned stack. */}
@@ -41,7 +41,7 @@ export default function SubmitRequirementCard({
           <Link to="/requirement/post-requirement" className="block">
             <motion.span
               whileTap={reduced ? undefined : { scale: 0.98 }}
-              className="block w-full rounded-xl bg-[#ef4d62] py-3 text-center text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90"
+              className="block w-full rounded-xl bg-brand-buyer py-3 text-center text-sm font-bold text-white transition-colors hover:bg-brand-buyer/90"
             >
               {t("Submit Requirement")}
             </motion.span>
@@ -57,11 +57,11 @@ export default function SubmitRequirementCard({
         <div className="mt-4 border-t border-gray-100 pt-1 text-left lg:mt-0 lg:border-t-0 lg:border-l lg:border-gray-100 lg:pl-8 lg:pt-0">
           <button onClick={onQuickRfq} className="flex w-full items-center justify-between border-b border-gray-100 py-2.5 text-left">
             <div className="flex items-center gap-2.5">
-              <Zap className="h-4 w-4 shrink-0 fill-[#ef4d62] text-[#ef4d62]" />
+              <Zap className="h-4 w-4 shrink-0 fill-brand-buyer text-brand-buyer" />
               <div>
                 <div className="flex items-center gap-1.5">
                   <p className="text-sm font-semibold text-gray-900">Quick RFQ</p>
-                  <span className="rounded bg-[#ef4d62]/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#ef4d62]">Fast</span>
+                  <span className="rounded bg-brand-buyer/10 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-brand-buyer">Fast</span>
                 </div>
                 <p className="text-xs text-gray-400">Just upload an image + quantity. Get quotes in minutes!</p>
               </div>

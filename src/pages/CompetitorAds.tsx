@@ -45,7 +45,7 @@ function BenchmarkBar({ label, yours, peer, unit = "" }: { label: string; yours:
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
       <p className="text-sm font-bold text-gray-900 mb-3">{label}</p>
       <div className="space-y-3">
-        <Row who="You" val={yours} color="bg-[#ef4d62]" />
+        <Row who="You" val={yours} color="bg-brand-buyer" />
         <Row who="Category average" val={peer} color="bg-gray-300" />
       </div>
     </div>
@@ -118,7 +118,7 @@ const CompetitorAds = () => {
                     <motion.div key={c.category_id} variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-bold text-gray-900">{c.category_name}</p>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#ef4d62]/10 text-[#ef4d62] text-[10px] font-bold px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-buyer/10 text-brand-buyer text-[10px] font-bold px-2 py-0.5">
                           You: {c.your_products} product{c.your_products === 1 ? "" : "s"}
                         </span>
                       </div>
@@ -150,7 +150,7 @@ const CompetitorAds = () => {
                     {/* Additive: the link still does exactly what it did. */}
                     <motion.button whileTap={TAP} transition={TAP_T}
                       onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "ask_more_reviews", vendorId: user?.id })}
-                      className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Ask for Reviews</motion.button>
+                      className="shrink-0 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-lg hover:bg-brand-buyer/90 transition-colors">Ask for Reviews</motion.button>
                   </Link>
                 </div>
 
@@ -160,7 +160,7 @@ const CompetitorAds = () => {
                   <Link to="/products">
                     <motion.button whileTap={TAP} transition={TAP_T}
                       onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "upload_more_photos", vendorId: user?.id })}
-                      className="shrink-0 px-4 py-2 bg-[#ef4d62] text-white text-xs font-bold rounded-lg hover:bg-[#ef4d62]/90 transition-colors">Add Photos</motion.button>
+                      className="shrink-0 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-lg hover:bg-brand-buyer/90 transition-colors">Add Photos</motion.button>
                   </Link>
                 </div>
               </motion.div>
@@ -178,7 +178,7 @@ const CompetitorAds = () => {
           {/* Advertise Now */}
           <motion.div variants={section}>
             <Link to="/advertisements">
-              <motion.button whileTap={TAP} transition={TAP_T} className="w-full py-3.5 bg-[#256fef] hover:bg-[#256fef]/90 text-white text-sm font-bold rounded-xl transition-colors inline-flex items-center justify-center gap-2">
+              <motion.button whileTap={TAP} transition={TAP_T} className="w-full py-3.5 bg-brand-vendor hover:bg-brand-vendor/90 text-white text-sm font-bold rounded-xl transition-colors inline-flex items-center justify-center gap-2">
                 <ShieldCheck className="w-4 h-4" /> Advertise to get ahead
               </motion.button>
             </Link>

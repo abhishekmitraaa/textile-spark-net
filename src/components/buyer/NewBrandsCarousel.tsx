@@ -163,7 +163,7 @@ export default function NewBrandsCarousel({
                     onClick={() => { if (!following) { onFollow(brand); toast.success(`Following ${brand.name}`); } }}
                     className={cn(
                       "shrink-0 flex items-center gap-1 text-xs font-bold px-3 py-1.5 rounded-full transition-colors",
-                      following ? "bg-gray-100 text-gray-500" : "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+                      following ? "bg-gray-100 text-gray-500" : "bg-brand-buyer hover:bg-brand-buyer/90 text-white"
                     )}
                   >
                     {following ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
@@ -204,7 +204,7 @@ export default function NewBrandsCarousel({
                 if (el) el.scrollTo({ left: i * el.clientWidth, behavior: "smooth" });
               }}
               aria-label={`Go to brand ${i + 1}`}
-              className={cn("h-1.5 rounded-full transition-all", i === active ? "w-4 bg-[#ef4d62]" : "w-1.5 bg-gray-400/60")}
+              className={cn("h-1.5 rounded-full transition-all", i === active ? "w-4 bg-brand-buyer" : "w-1.5 bg-gray-400/60")}
             />
           ))}
         </div>
@@ -268,7 +268,7 @@ function SponsoredSlide({
           </button>
           <button
             onClick={() => onOpen(ad)}
-            className="shrink-0 rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-[#ef4d62]/90"
+            className="shrink-0 rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-brand-buyer/90"
           >
             Visit
           </button>

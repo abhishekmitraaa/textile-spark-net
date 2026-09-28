@@ -63,7 +63,7 @@ const TYPE_ICON: Record<NotifType, typeof Bell> = {
 // Restrained, meaning-first palette. Brand blue leads; the rest fire only when
 // they carry real state (money won, needs attention), so the eye lands right.
 const TONE_STYLE: Record<NotifTone, { fg: string; bg: string }> = {
-  brand: { fg: "text-[#256fef]", bg: "bg-[#256fef]/10" },
+  brand: { fg: "text-brand-vendor", bg: "bg-brand-vendor/10" },
   positive: { fg: "text-emerald-600", bg: "bg-emerald-500/10" },
   warning: { fg: "text-amber-600", bg: "bg-amber-500/10" },
   neutral: { fg: "text-slate-500", bg: "bg-slate-500/10" },
@@ -107,7 +107,7 @@ function RequirementChips({ meta }: { meta: NonNullable<VendorNotification["requ
           {c.text}
         </span>
       ))}
-      <span className="inline-flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2.5 py-1 text-[11px] font-bold text-[#256fef]">
+      <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2.5 py-1 text-[11px] font-bold text-brand-vendor">
         <Clock className="h-3 w-3" strokeWidth={2} />
         {meta.deadline}
       </span>
@@ -141,14 +141,14 @@ function NotificationCard({
       className={cn(
         "group relative rounded-2xl border transition-all duration-200",
         "hover:border-gray-300 hover:shadow-[0_4px_16px_-6px_rgba(16,24,40,0.12)]",
-        n.read ? "border-gray-200 bg-white" : "border-[#256fef]/25 bg-[#256fef]/[0.035]",
+        n.read ? "border-gray-200 bg-white" : "border-brand-vendor/25 bg-brand-vendor/[0.035]",
       )}
     >
       {/* Full-card click target (stretched-link pattern). */}
       <button
         onClick={open}
         aria-label={`Open notification: ${n.title}`}
-        className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#256fef]/45 focus-visible:ring-offset-1"
+        className="absolute inset-0 z-0 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-vendor/45 focus-visible:ring-offset-1"
       />
 
       {/* Hover controls (above the stretched target). */}
@@ -158,7 +158,7 @@ function NotificationCard({
             onClick={() => onRead(n.id)}
             aria-label="Mark as read"
             title="Mark as read"
-            className="pointer-events-auto rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-[#256fef]"
+            className="pointer-events-auto rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-vendor"
           >
             <Check className="h-4 w-4" strokeWidth={2.2} />
           </button>
@@ -177,7 +177,7 @@ function NotificationCard({
         {/* Unread marker + icon tile */}
         <div className="relative shrink-0">
           {!n.read && (
-            <span className="absolute -left-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-[#256fef]" />
+            <span className="absolute -left-2 top-1/2 h-2 w-2 -translate-y-1/2 rounded-full bg-brand-vendor" />
           )}
           <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl", tone.bg)}>
             <Icon className={cn("h-[18px] w-[18px]", tone.fg)} strokeWidth={2} />
@@ -211,7 +211,7 @@ function NotificationCard({
               className={cn(
                 "pointer-events-auto inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-xs font-bold transition-all active:translate-y-px",
                 primary
-                  ? "bg-[#256fef] text-white shadow-sm hover:bg-[#256fef]/90"
+                  ? "bg-brand-vendor text-white shadow-sm hover:bg-brand-vendor/90"
                   : "border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50",
               )}
             >
@@ -293,7 +293,7 @@ const Notifications = () => {
             <h1 className="flex items-center gap-2.5 text-xl font-semibold text-foreground lg:text-2xl">
               Notifications
               {unread > 0 && (
-                <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-[#256fef] px-1.5 text-xs font-bold text-white">
+                <span className="inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-brand-vendor px-1.5 text-xs font-bold text-white">
                   {unread}
                 </span>
               )}
@@ -321,9 +321,9 @@ const Notifications = () => {
             variants={section}
             onClick={() => setTab("requirements")}
             whileTap={reduced ? undefined : { scale: 0.995 }}
-            className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl border border-[#256fef]/25 bg-gradient-to-r from-[#256fef]/[0.08] to-[#256fef]/[0.02] p-4 text-left transition-colors hover:border-[#256fef]/40"
+            className="group mt-4 flex w-full items-center gap-3.5 rounded-2xl border border-brand-vendor/25 bg-gradient-to-r from-brand-vendor/[0.08] to-brand-vendor/[0.02] p-4 text-left transition-colors hover:border-brand-vendor/40"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#256fef] text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-vendor text-white">
               <Sparkles className="h-5 w-5" strokeWidth={2} />
             </div>
             <div className="min-w-0 flex-1">
@@ -332,7 +332,7 @@ const Notifications = () => {
               </p>
               <p className="mt-0.5 text-xs text-gray-500">Quote early to get ahead of other vendors.</p>
             </div>
-            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-[#256fef]">
+            <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-brand-vendor">
               Review
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" strokeWidth={2.4} />
             </span>
@@ -356,7 +356,7 @@ const Notifications = () => {
                   className={cn(
                     "inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold transition-colors",
                     active
-                      ? "bg-[#256fef] text-white"
+                      ? "bg-brand-vendor text-white"
                       : "border border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50",
                   )}
                 >
@@ -365,7 +365,7 @@ const Notifications = () => {
                     <span
                       className={cn(
                         "inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold",
-                        active ? "bg-white/25 text-white" : "bg-[#256fef]/10 text-[#256fef]",
+                        active ? "bg-white/25 text-white" : "bg-brand-vendor/10 text-brand-vendor",
                       )}
                     >
                       {badge}
@@ -398,8 +398,8 @@ const Notifications = () => {
             variants={section}
             className="mt-5 rounded-2xl border border-dashed border-gray-200 bg-white p-12 text-center"
           >
-            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#256fef]/10">
-              <Bell className="h-6 w-6 text-[#256fef]" strokeWidth={2} />
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-vendor/10">
+              <Bell className="h-6 w-6 text-brand-vendor" strokeWidth={2} />
             </div>
             <p className="text-base font-bold text-gray-900">You're all caught up</p>
             <p className="mx-auto mt-1.5 max-w-sm text-sm text-gray-500">

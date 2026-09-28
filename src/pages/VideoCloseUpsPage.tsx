@@ -123,7 +123,7 @@ export default function VideoCloseUpsPage() {
               </p>
               <button
                 onClick={goBack}
-                className="mt-6 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white active:scale-[0.99]"
+                className="mt-6 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white active:scale-[0.99]"
               >
                 Back to browsing
               </button>

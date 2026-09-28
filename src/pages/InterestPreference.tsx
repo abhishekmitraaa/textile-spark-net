@@ -69,7 +69,7 @@ const InterestPreference = () => {
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-6 active:scale-[0.99]",
             isValid
-              ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+              ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >

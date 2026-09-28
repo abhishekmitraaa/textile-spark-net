@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
@@ -25,7 +26,7 @@ import { errorMessage } from "@/lib/errorMessage";
 // ─────────────────────────────────────────────────────────────
 
 // Buyer accent (red). The vendor app's settings use blue.
-const ACCENT = "#ef4d62";
+const ACCENT = brand("buyer");
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -54,7 +55,7 @@ function NavRow({
   return (
     <motion.button whileTap={TAP} transition={TAP_T} onClick={onClick}
       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${ACCENT}1a` }}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: brand("buyer", 0x1a) }}>
         <Icon className="w-5 h-5" style={{ color: ACCENT }} />
       </div>
       <div className="min-w-0 flex-1">
@@ -115,7 +116,7 @@ const Settings = () => {
           <p className="mt-1 text-sm text-gray-500">Sign in to manage your account settings.</p>
           <button
             onClick={() => navigate("/login")}
-            className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#ef4d62] px-6 py-3 text-sm font-bold text-white hover:bg-[#ef4d62]/90 transition-colors"
+            className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-buyer px-6 py-3 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors"
           >
             Sign In
           </button>

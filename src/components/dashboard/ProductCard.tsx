@@ -71,7 +71,7 @@ export const ProductCard = ({
           className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
         >
           {bookmarked
-            ? <BookmarkCheck className="w-3.5 h-3.5 text-[#256fef] fill-blue-100" />
+            ? <BookmarkCheck className="w-3.5 h-3.5 text-brand-vendor fill-blue-100" />
             : <Bookmark className="w-3.5 h-3.5 text-gray-500" />}
         </button>
 
@@ -122,7 +122,7 @@ export const ProductCard = ({
         </div>
 
         {/* Price | MOQ | Sold */}
-        <p className="text-xs font-bold text-[#ef4d62] leading-snug">
+        <p className="text-xs font-bold text-brand-buyer leading-snug">
           {price} | MOQ: {moq} | {sold} sold
         </p>
 
@@ -146,7 +146,7 @@ export const ProductCard = ({
         <p className="text-[10px] text-gray-500 mt-0.5">Fit Type: {fitType}</p>
 
         {/* Call Now — always at bottom */}
-        <button className="mt-2 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs font-bold py-2 rounded-lg transition-colors">
+        <button className="mt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs font-bold py-2 rounded-lg transition-colors">
           <Phone className="w-3 h-3" /> Call Now
         </button>
       </div>

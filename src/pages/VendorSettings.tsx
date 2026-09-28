@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -24,7 +25,7 @@ import {
 } from "lucide-react";
 
 // Vendor accent (blue), matching the rest of the vendor app — never the buyer red.
-const ACCENT = "#256fef";
+const ACCENT = brand("vendor");
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -81,7 +82,7 @@ function NavRow({
   return (
     <motion.button whileTap={TAP} transition={TAP_T} onClick={onClick}
       className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-gray-50 transition-colors text-left">
-      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: `${ACCENT}1a` }}>
+      <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: brand("vendor", 0x1a) }}>
         <Icon className="w-5 h-5" style={{ color: ACCENT }} />
       </div>
       <div className="min-w-0 flex-1">
@@ -116,7 +117,7 @@ function ToggleRow({
         <p className="text-sm font-semibold text-gray-900">{label}</p>
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-[#256fef] mt-0.5 shrink-0" />
+      <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-brand-vendor mt-0.5 shrink-0" />
     </div>
   );
 }
@@ -274,7 +275,7 @@ const VendorSettings = () => {
                         className={cn(
                           "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
                           lang === l.code
-                            ? "border-2 border-[#256fef] text-[#256fef] bg-[#256fef]/10"
+                            ? "border-2 border-brand-vendor text-brand-vendor bg-brand-vendor/10"
                             : "border border-gray-300 text-gray-700 hover:bg-gray-50"
                         )}>
                         <span data-no-translate>{l.native}</span>

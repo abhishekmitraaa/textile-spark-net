@@ -34,7 +34,7 @@ function ToggleRow({
         <p className="text-sm font-semibold text-gray-900">{label}</p>
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-[#ef4d62] mt-0.5 shrink-0" />
+      <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-brand-buyer mt-0.5 shrink-0" />
     </div>
   );
 }
@@ -132,7 +132,7 @@ const ProfileNotifications = () => {
         <button
           onClick={onSave}
           disabled={saving}
-          className="w-full py-3 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
+          className="w-full py-3 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save Notification Settings"}
         </button>

@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -8,7 +9,7 @@ import {
 import { CHAT_MONITORING_NOTICE } from "@/lib/chatData";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
-const CORAL = "#ef4d62";
+const CORAL = brand("buyer");
 
 interface Msg {
   id: number;
@@ -214,8 +215,8 @@ const SupportChat = () => {
                         ) : (
                           <a href={m.fileUrl} target="_blank" rel="noopener noreferrer"
                             className="flex items-center gap-3 p-3 pr-4 hover:bg-gray-50 transition-colors">
-                            <span className="w-10 h-10 rounded-xl bg-[#ef4d62]/10 grid place-items-center shrink-0">
-                              <FileText className="w-5 h-5 text-[#ef4d62]" />
+                            <span className="w-10 h-10 rounded-xl bg-brand-buyer/10 grid place-items-center shrink-0">
+                              <FileText className="w-5 h-5 text-brand-buyer" />
                             </span>
                             <span className="min-w-0">
                               <span className="block text-sm font-medium text-gray-900 truncate max-w-[180px]">{m.fileName}</span>
@@ -228,7 +229,7 @@ const SupportChat = () => {
                         )}
                         <div className="flex items-center justify-end gap-1 px-3 pb-2 -mt-0.5">
                           <span className="text-[10px] text-gray-400">{fmt(m.timestamp)}</span>
-                          {isUser && <CheckCheck className="w-3.5 h-3.5 text-[#ef4d62]" />}
+                          {isUser && <CheckCheck className="w-3.5 h-3.5 text-brand-buyer" />}
                         </div>
                       </div>
                     ) : (
@@ -241,7 +242,7 @@ const SupportChat = () => {
                         }`}
                         style={isUser ? { background: "linear-gradient(180deg, #da3651 0%, #c62f49 100%)" } : undefined}
                       >
-                        {!isUser && <p className="text-[11px] font-bold text-[#ef4d62] mb-0.5">{AGENT.name}</p>}
+                        {!isUser && <p className="text-[11px] font-bold text-brand-buyer mb-0.5">{AGENT.name}</p>}
                         <p className="leading-relaxed whitespace-pre-wrap break-words">{m.text}</p>
                         <div className={`flex items-center justify-end gap-1 mt-1 ${isUser ? "text-white/75" : "text-gray-400"}`}>
                           <span className="text-[10px]">{fmt(m.timestamp)}</span>
@@ -300,7 +301,7 @@ const SupportChat = () => {
                   <div className="flex gap-2 pb-3 overflow-x-auto scrollbar-hide">
                     {QUICK_PROMPTS.map((q) => (
                       <button key={q} onClick={() => send(q)}
-                        className="shrink-0 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:border-[#ef4d62]/50 hover:text-[#ef4d62] active:scale-95 transition">
+                        className="shrink-0 px-3 py-1.5 rounded-full border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:border-brand-buyer/50 hover:text-brand-buyer active:scale-95 transition">
                         {q}
                       </button>
                     ))}
@@ -323,8 +324,8 @@ const SupportChat = () => {
                     {attachItems.map(({ label, ref, type, accept, capture, Icon }) => (
                       <button key={label} onClick={() => ref.current?.click()}
                         className="flex flex-col items-center gap-1.5 py-2 rounded-xl hover:bg-gray-50 active:scale-95 transition">
-                        <span className="w-12 h-12 rounded-2xl bg-[#ef4d62]/10 flex items-center justify-center hover:bg-[#ef4d62]/20 transition-colors">
-                          <Icon className="w-5 h-5 text-[#ef4d62]" />
+                        <span className="w-12 h-12 rounded-2xl bg-brand-buyer/10 flex items-center justify-center hover:bg-brand-buyer/20 transition-colors">
+                          <Icon className="w-5 h-5 text-brand-buyer" />
                         </span>
                         <span className="text-[11px] text-gray-600">{label}</span>
                         <input ref={ref} type="file" className="hidden" accept={accept}
@@ -338,7 +339,7 @@ const SupportChat = () => {
 
             <div className="flex items-center gap-2 pb-1">
               <button onClick={() => setShowAttach((p) => !p)}
-                className={`p-2.5 rounded-full transition-colors active:scale-95 ${showAttach ? "text-[#ef4d62] bg-[#ef4d62]/10" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
+                className={`p-2.5 rounded-full transition-colors active:scale-95 ${showAttach ? "text-brand-buyer bg-brand-buyer/10" : "text-gray-500 hover:text-gray-700 hover:bg-gray-100"}`}
                 aria-label="Attach a file">
                 <Paperclip className="w-5 h-5" />
               </button>
@@ -347,7 +348,7 @@ const SupportChat = () => {
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
                 placeholder="Type your message…"
-                className="flex-1 min-w-0 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-[#ef4d62]/25 transition"
+                className="flex-1 min-w-0 px-4 py-2.5 bg-gray-100 rounded-full text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-brand-buyer/25 transition"
               />
               <motion.button
                 onClick={() => send()} disabled={!message.trim()}

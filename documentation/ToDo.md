@@ -21,6 +21,24 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-09-29, the reviews-pipeline audit and fix (My Reviews and vendor replies).
 - Status: Open
 
+### Let the rest of the palette follow the site theme — added 2026-09-29
+- Task: decide how far the Content page's theme should reach, then do it:
+  - shadcn's `primary` (and `accent`, `ring`, `--gradient-pink`), 27 class uses in 11 files: an HSL
+    near-copy of the buyer coral (240 76 98 against 239 77 98). Pointing it at `--brand-buyer` moves
+    those pixels by one step at the default theme.
+  - Derived shades written as their own hex: a darker coral for hovers (`#a4172c` ×27, `#c8102e` ×19,
+    `#8c1325` ×4), lighter corals (`#f75f71` ×26, `#ff6b6b` ×26, `#ff2160` ×9), darker blues
+    (`#1d5ed6` ×15, `#1f5fe0` ×9). They could be computed from the theme (`color-mix()`), or dropped
+    for the brand colour with an opacity.
+- Context: admin completion Phase 9 made the five brand colours a theme (`--brand-*`, Tailwind
+  `brand-*`, `brand()`), swapping 1,334 hex classes with `scripts/theme-codemod.mjs`, and kept the
+  default theme pixel-identical. These were left on purpose, because changing them changes pixels
+  today. Until then a changed buyer accent leaves these parts in today's coral, and the Theme tab says
+  so.
+- Reference: 2026-09-29, admin completion Phase 9 (site content: vendor banners and a live theme).
+- Priority: Low (only matters once someone changes the theme)
+- Status: Open
+
 ### Switch on Microsoft Clarity, after a legal read of the notice — added 2026-09-28
 - Task:
   1. Have the Terms page's "Analytics and session replay" section read for legal wording, and

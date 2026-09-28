@@ -23,6 +23,15 @@ export default {
         display: ["Playfair Display", "Georgia", "serif"],
       },
       colors: {
+        // The site theme's brand colours (admin completion Phase 9). The channels live in
+        // index.css (--brand-*), so opacity modifiers work: bg-brand-buyer/10.
+        brand: {
+          vendor: "rgb(var(--brand-vendor) / <alpha-value>)",
+          buyer: "rgb(var(--brand-buyer) / <alpha-value>)",
+          success: "rgb(var(--brand-success) / <alpha-value>)",
+          border: "rgb(var(--brand-border) / <alpha-value>)",
+          ink: "rgb(var(--brand-ink) / <alpha-value>)",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

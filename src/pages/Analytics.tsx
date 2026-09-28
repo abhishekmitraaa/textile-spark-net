@@ -519,7 +519,7 @@ const Analytics = () => {
         {/* ── 1.4 Total Order Value + 1.6 Quote acceptance rate ── */}
         <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
           <motion.div variants={listItem}>
-            <Card className="rounded-xl border-[#ef4d62]/20 bg-gradient-to-br from-[#ef4d62]/10 to-transparent">
+            <Card className="rounded-xl border-brand-buyer/20 bg-gradient-to-br from-brand-buyer/10 to-transparent">
               <CardContent className="p-3">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
@@ -527,7 +527,7 @@ const Analytics = () => {
                       <p className="text-xs text-muted-foreground">Total Order Value</p>
                       <ScopePill window={activeTime} />
                     </div>
-                    <p className="mt-0.5 text-xl font-bold text-[#ef4d62]">{formatInrCompact(tovWindow)}</p>
+                    <p className="mt-0.5 text-xl font-bold text-brand-buyer">{formatInrCompact(tovWindow)}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {tovDelta != null ? (
                         <span className={tovDelta >= 0 ? "text-green-600" : "text-red-500"}>
@@ -543,8 +543,8 @@ const Analytics = () => {
                       </p>
                     )}
                   </div>
-                  <div className="rounded-lg bg-[#ef4d62]/10 p-2 shrink-0">
-                    <Wallet className="w-4 h-4 text-[#ef4d62]" />
+                  <div className="rounded-lg bg-brand-buyer/10 p-2 shrink-0">
+                    <Wallet className="w-4 h-4 text-brand-buyer" />
                   </div>
                 </div>
               </CardContent>
@@ -745,9 +745,9 @@ const Analytics = () => {
                       </div>
                     );
                   })}
-                  <div className="mt-3 flex items-center justify-between rounded-xl border border-[#ef4d62]/20 bg-[#ef4d62]/5 p-3">
+                  <div className="mt-3 flex items-center justify-between rounded-xl border border-brand-buyer/20 bg-brand-buyer/5 p-3">
                     <span className="text-xs font-medium text-muted-foreground">Total Order Value won</span>
-                    <span className="text-lg font-bold text-[#ef4d62]">{formatInrCompact(tovWindow)}</span>
+                    <span className="text-lg font-bold text-brand-buyer">{formatInrCompact(tovWindow)}</span>
                   </div>
                 </div>
               )}

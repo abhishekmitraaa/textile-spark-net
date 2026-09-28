@@ -450,5 +450,11 @@
   "You can't review your own business",
   "A reply can't be empty",
   "not authorized to reply to this review"
+ ],
+ "site_banners_source": "Banners on the vendor dashboard (public.site_banners, admin completion Phase 9), written by super admins on Cosora-Admin's Content page. The seeded banner is listed; an admin's new or edited banner shows in English until its text is added here and translated.",
+ "site_banners": [
+  "Get Prime Placement Above Competitors",
+  "Boost your visibility with featured listings",
+  "Claim This Banner"
  ]
 }

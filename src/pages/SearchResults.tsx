@@ -180,7 +180,7 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
         <button onClick={(e) => { e.preventDefault(); openSaveModal({ id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location, price: `₹${p.priceValue}`, priceValue: p.priceValue, moq: p.moq, image: p.image }); }}
           aria-label={isSaved ? "Edit saved folders" : "Save product"}
           className={cn("absolute top-2 right-2 bg-white/90 rounded-full flex items-center justify-center shadow-sm", compact ? "w-6 h-6" : "w-7 h-7")}>
-          {isSaved ? <BookmarkCheck className={cn("text-[#ef4d62] fill-[#ef4d62]/15", compact ? "w-3 h-3" : "w-3.5 h-3.5")} /> : <Bookmark className={cn("text-gray-500", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
+          {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", compact ? "w-3 h-3" : "w-3.5 h-3.5")} /> : <Bookmark className={cn("text-gray-500", compact ? "w-3 h-3" : "w-3.5 h-3.5")} />}
         </button>
         <div className="absolute bottom-2 left-2 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 py-0.5">
           <Star className="w-2.5 h-2.5 text-yellow-400 fill-yellow-400" />
@@ -189,7 +189,7 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
         </div>
       </Link>
       <div className={cn("flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
-        <p className={cn("font-bold text-[#ef4d62] leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq} | {p.sold}</p>
+        <p className={cn("font-bold text-brand-buyer leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq} | {p.sold}</p>
         <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px] lg:text-xs")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className="font-bold hover:underline">{p.manufacturer}</Link></p>
         <div className="flex items-center gap-0.5 mt-0.5">
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5 lg:w-3 lg:h-3")} />
@@ -202,7 +202,7 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
           </>
         )}
         <button onClick={() => callVendor(p.vendorId, p.name)}
-          className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white font-bold rounded-lg transition-colors", compact ? "text-[9px] py-1.5" : "text-xs lg:text-sm py-2 lg:py-2.5")}>
+          className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", compact ? "text-[9px] py-1.5" : "text-xs lg:text-sm py-2 lg:py-2.5")}>
           <Phone className={compact ? "w-2.5 h-2.5" : "w-3 h-3 lg:w-3.5 lg:h-3.5"} /> {t("Call Now")}
         </button>
       </div>
@@ -240,7 +240,7 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
           <span className="min-w-0">
             <span className="flex items-center gap-1">
               <span className="text-sm lg:text-[15px] font-semibold text-gray-900 truncate">{brand.name}</span>
-              {brand.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#ef4d62] shrink-0" />}
+              {brand.verified && <BadgeCheck className="w-3.5 h-3.5 text-brand-buyer shrink-0" />}
             </span>
             <span className="block text-xs text-gray-400 truncate mt-0.5">
               {brand.location} · {brand.products.length} {brand.products.length === 1 ? t("matching listing") : t("matching listings")}
@@ -248,7 +248,7 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
           </span>
         </button>
         <button onClick={() => toggleBrandFollow(brand.id)} aria-label={following ? "Unfollow" : "Follow"} className="shrink-0 -mr-1 p-1.5">
-          <Heart className={cn("w-[22px] h-[22px] transition-colors", following ? "text-[#ef4d62] fill-[#ef4d62]" : "text-gray-300 hover:text-gray-400")} />
+          <Heart className={cn("w-[22px] h-[22px] transition-colors", following ? "text-brand-buyer fill-brand-buyer" : "text-gray-300 hover:text-gray-400")} />
         </button>
       </div>
 
@@ -366,10 +366,10 @@ function PriceRangeControl({ facet, value, onChange }: {
         className="relative flex w-full touch-none select-none items-center py-2"
       >
         <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-gray-200">
-          <SliderPrimitive.Range className="absolute h-full bg-[#ef4d62]" />
+          <SliderPrimitive.Range className="absolute h-full bg-brand-buyer" />
         </SliderPrimitive.Track>
-        <SliderPrimitive.Thumb aria-label="Minimum price" className="block h-5 w-5 rounded-full border-2 border-[#ef4d62] bg-white shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4d62]/40" />
-        <SliderPrimitive.Thumb aria-label="Maximum price" className="block h-5 w-5 rounded-full border-2 border-[#ef4d62] bg-white shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef4d62]/40" />
+        <SliderPrimitive.Thumb aria-label="Minimum price" className="block h-5 w-5 rounded-full border-2 border-brand-buyer bg-white shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-buyer/40" />
+        <SliderPrimitive.Thumb aria-label="Maximum price" className="block h-5 w-5 rounded-full border-2 border-brand-buyer bg-white shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-buyer/40" />
       </SliderPrimitive.Root>
     </div>
   );
@@ -410,7 +410,7 @@ function FacetControls({
                       <span
                         className={cn(
                           "w-8 h-8 rounded-full flex items-center justify-center transition-shadow",
-                          on ? "ring-2 ring-[#ef4d62] ring-offset-1" : "ring-1 ring-gray-200"
+                          on ? "ring-2 ring-brand-buyer ring-offset-1" : "ring-1 ring-gray-200"
                         )}
                         style={{ backgroundColor: COLOUR_HEX[opt] ?? "#d1d5db" }}
                       >
@@ -431,7 +431,7 @@ function FacetControls({
                     <button key={opt} onClick={() => onToggle(f, opt)}
                       className={cn(
                         "px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors",
-                        on ? "bg-[#ef4d62] text-white border-[#ef4d62]" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                        on ? "bg-brand-buyer text-white border-brand-buyer" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
                       )}>
                       {opt}
                       {count != null && (
@@ -480,7 +480,7 @@ function FilterSheet({
               <div className="flex items-center justify-between">
                 <div className="min-w-0">
                   <h2 className="text-base font-bold text-gray-900">{t("Filters")}</h2>
-                  <p className="text-xs text-gray-400 truncate">{t("Refining")} <span className="font-semibold text-[#ef4d62]">{domainLabel}</span></p>
+                  <p className="text-xs text-gray-400 truncate">{t("Refining")} <span className="font-semibold text-brand-buyer">{domainLabel}</span></p>
                 </div>
                 <button onClick={onClose} className="p-1 -mr-1 text-gray-400 hover:text-gray-700"><X className="w-5 h-5" /></button>
               </div>
@@ -498,7 +498,7 @@ function FilterSheet({
                 {t("Clear")}{active > 0 ? ` (${active})` : ""}
               </button>
               <button onClick={onClose}
-                className="flex-[1.4] py-3 rounded-xl text-sm font-bold text-white bg-[#ef4d62] hover:bg-[#ef4d62]/90 transition-colors">
+                className="flex-[1.4] py-3 rounded-xl text-sm font-bold text-white bg-brand-buyer hover:bg-brand-buyer/90 transition-colors">
                 {t("Show")} {resultCount} {resultCount === 1 ? t("result") : t("results")}
               </button>
             </div>
@@ -827,7 +827,7 @@ const SearchResults = () => {
               {query && <span onClick={(e) => { e.stopPropagation(); navigate("/search"); }} aria-label="Clear"><X className="w-4 h-4 text-gray-400" /></span>}
             </button>
             <button onClick={() => setPageSaved((s) => !s)} aria-label="Save search" className="p-1 shrink-0">
-              {pageSaved ? <BookmarkCheck className="w-5 h-5 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-5 h-5 text-gray-700" />}
+              {pageSaved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-700" />}
             </button>
           </div>
 
@@ -857,24 +857,24 @@ const SearchResults = () => {
               genderFacet ? "grid-cols-[1fr_1fr_1fr_auto]" : "grid-cols-[1fr_1fr_auto]"
             )}>
               {genderFacet && (
-                <button onClick={() => setMenu((m) => (m === "gender" ? null : "gender"))} className={cn("flex items-center justify-center gap-1 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold border-r border-gray-100", genderSel ? "text-[#ef4d62]" : "text-gray-700")}>
+                <button onClick={() => setMenu((m) => (m === "gender" ? null : "gender"))} className={cn("flex items-center justify-center gap-1 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold border-r border-gray-100", genderSel ? "text-brand-buyer" : "text-gray-700")}>
                   <Users className="w-3.5 h-3.5" /> {t(genderSel ?? "GENDER")}
                   <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", menu === "gender" && "rotate-180")} />
                 </button>
               )}
-              <button onClick={() => setMenu((m) => (m === "sort" ? null : "sort"))} className={cn("flex items-center justify-center gap-1 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold border-r border-gray-100", sort !== "new" ? "text-[#ef4d62]" : "text-gray-700")}>
+              <button onClick={() => setMenu((m) => (m === "sort" ? null : "sort"))} className={cn("flex items-center justify-center gap-1 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold border-r border-gray-100", sort !== "new" ? "text-brand-buyer" : "text-gray-700")}>
                 <ArrowUpDown className="w-3.5 h-3.5" /> {t(sortLabel)}
                 <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", menu === "sort" && "rotate-180")} />
               </button>
-              <button onClick={() => setFilterOpen(true)} className={cn("flex items-center justify-center gap-1.5 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold", activeCount > 0 ? "text-[#ef4d62]" : "text-gray-700")}>
+              <button onClick={() => setFilterOpen(true)} className={cn("flex items-center justify-center gap-1.5 py-2.5 lg:px-5 text-xs lg:text-sm font-semibold", activeCount > 0 ? "text-brand-buyer" : "text-gray-700")}>
                 <Filter className="w-3.5 h-3.5" /> {t("FILTER")}
                 {activeCount > 0 && (
-                  <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-[#ef4d62] text-white text-[10px] font-bold">{activeCount}</span>
+                  <span className="inline-flex items-center justify-center min-w-[16px] h-4 px-1 rounded-full bg-brand-buyer text-white text-[10px] font-bold">{activeCount}</span>
                 )}
               </button>
               <div className="flex items-center gap-1 pl-3 lg:pl-5 lg:ml-auto border-l border-gray-100 lg:border-l-0">
-                <button onClick={() => setCols(2)} aria-label="2 columns" className={cn("p-1.5 rounded-md", cols === 2 ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}><Grid2X2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></button>
-                <button onClick={() => setCols(3)} aria-label="3 columns" className={cn("p-1.5 rounded-md", cols === 3 ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}><Grid3X3 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></button>
+                <button onClick={() => setCols(2)} aria-label="2 columns" className={cn("p-1.5 rounded-md", cols === 2 ? "bg-brand-buyer text-white" : "text-gray-400 hover:text-gray-600")}><Grid2X2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></button>
+                <button onClick={() => setCols(3)} aria-label="3 columns" className={cn("p-1.5 rounded-md", cols === 3 ? "bg-brand-buyer text-white" : "text-gray-400 hover:text-gray-600")}><Grid3X3 className="w-3.5 h-3.5 lg:w-4 lg:h-4" /></button>
               </div>
             </div>
 
@@ -883,13 +883,13 @@ const SearchResults = () => {
                 <FilterPanel key="gender-panel">
                   <p className="text-[10px] font-bold tracking-wider text-gray-400 mb-1">{(genderFacet?.label ?? "Gender").toUpperCase()}</p>
                   <button onClick={() => { setSelections((prev) => { const out = { ...prev }; delete out.gender; return out; }); setMenu(null); }} className="w-full flex items-center justify-between py-2.5 text-left border-b border-gray-50">
-                    <span className={cn("text-sm", !genderSel ? "font-bold text-[#ef4d62]" : "text-gray-800")}>{t("Everyone")}</span>
-                    {!genderSel && <Check className="w-4 h-4 text-[#ef4d62]" />}
+                    <span className={cn("text-sm", !genderSel ? "font-bold text-brand-buyer" : "text-gray-800")}>{t("Everyone")}</span>
+                    {!genderSel && <Check className="w-4 h-4 text-brand-buyer" />}
                   </button>
                   {genderOptions.map((opt) => (
                     <button key={opt} onClick={() => { setSelections((prev) => ({ ...prev, gender: [opt] })); setMenu(null); }} className="w-full flex items-center justify-between py-2.5 text-left border-b border-gray-50 last:border-0">
-                      <span className={cn("text-sm", genderSel === opt ? "font-bold text-[#ef4d62]" : "text-gray-800")}>{t(opt)}</span>
-                      {genderSel === opt && <Check className="w-4 h-4 text-[#ef4d62]" />}
+                      <span className={cn("text-sm", genderSel === opt ? "font-bold text-brand-buyer" : "text-gray-800")}>{t(opt)}</span>
+                      {genderSel === opt && <Check className="w-4 h-4 text-brand-buyer" />}
                     </button>
                   ))}
                 </FilterPanel>
@@ -899,8 +899,8 @@ const SearchResults = () => {
                   <p className="text-[10px] font-bold tracking-wider text-gray-400 mb-1">SORT BY</p>
                   {SORTS.map((s) => (
                     <button key={s.key} onClick={() => { setSort(s.key); setMenu(null); }} className="w-full flex items-center justify-between py-2.5 text-left border-b border-gray-50 last:border-0">
-                      <span className={cn("text-sm", sort === s.key ? "font-bold text-[#ef4d62]" : "text-gray-800")}>{s.label}</span>
-                      {sort === s.key && <Check className="w-4 h-4 text-[#ef4d62]" />}
+                      <span className={cn("text-sm", sort === s.key ? "font-bold text-brand-buyer" : "text-gray-800")}>{s.label}</span>
+                      {sort === s.key && <Check className="w-4 h-4 text-brand-buyer" />}
                     </button>
                   ))}
                 </FilterPanel>
@@ -1033,7 +1033,7 @@ const SearchResults = () => {
                   </p>
                   <button
                     onClick={() => setQuickRfqOpen(true)}
-                    className="mt-4 px-4 py-2 rounded-lg bg-[#ef4d62] text-white text-xs font-bold"
+                    className="mt-4 px-4 py-2 rounded-lg bg-brand-buyer text-white text-xs font-bold"
                   >
                     Post a requirement
                   </button>

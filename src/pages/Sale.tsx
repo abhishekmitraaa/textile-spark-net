@@ -145,7 +145,7 @@ function Countdown({ target, showDays = false, tone = "light" }: { target: numbe
           <div className="flex flex-col items-center">
             <span className={cn(
               "min-w-[2.1rem] rounded-md px-1.5 py-1 text-center text-sm font-bold tabular-nums",
-              tone === "light" ? "bg-white/20 text-white" : "bg-[#ef4d62] text-white"
+              tone === "light" ? "bg-white/20 text-white" : "bg-brand-buyer text-white"
             )}>
               {c.v}
             </span>
@@ -180,7 +180,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
         <img src={product.secondaryImage} alt="" className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")} />
 
         {/* Discount badge */}
-        <span className="absolute top-0 left-0 rounded-br-xl bg-[#ef4d62] px-2 py-1 text-[10px] lg:text-xs font-extrabold text-white shadow-sm">
+        <span className="absolute top-0 left-0 rounded-br-xl bg-brand-buyer px-2 py-1 text-[10px] lg:text-xs font-extrabold text-white shadow-sm">
           {discount}% OFF
         </span>
 
@@ -196,7 +196,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
           aria-label={isSaved ? "Edit saved folders" : "Save product"}
         >
-          {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
         </button>
 
         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
@@ -209,7 +209,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
       <div className={cn(compact ? "p-2" : "p-2 lg:p-3.5")}>
         {/* Price line: sale + struck-through original + MOQ */}
         <div className="flex items-baseline gap-1.5 flex-wrap">
-          <span className="text-sm lg:text-base font-extrabold text-[#ef4d62] leading-none">{show(product.saleValue, `₹${product.saleValue}`)}</span>
+          <span className="text-sm lg:text-base font-extrabold text-brand-buyer leading-none">{show(product.saleValue, `₹${product.saleValue}`)}</span>
           <span className="text-[10px] lg:text-xs text-gray-400 line-through">{show(product.originalValue, `₹${product.originalValue}`)}</span>
         </div>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1">{product.moq} | {product.soldCount}</p>
@@ -228,7 +228,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
         )}
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>
@@ -347,7 +347,7 @@ const Sale = () => {
               to={tab.href}
               className={cn(
                 "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/sale" ? "text-[#ef4d62] border-[#ef4d62]" : "text-gray-400 border-transparent hover:text-gray-600"
+                tab.href === "/home/sale" ? "text-brand-buyer border-brand-buyer" : "text-gray-400 border-transparent hover:text-gray-600"
               )}
             >
               {t(tab.label)}
@@ -361,7 +361,7 @@ const Sale = () => {
         variants={reduced ? {} : page} initial="hidden" animate="show"
       >
         {/* ── HERO ── */}
-        <motion.section variants={section} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#ef4d62] via-[#f0576b] to-[#ff8093] p-5 lg:p-8 text-white">
+        <motion.section variants={section} className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-buyer via-[#f0576b] to-[#ff8093] p-5 lg:p-8 text-white">
           {/* decorative glow */}
           <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
           <div className="pointer-events-none absolute -bottom-12 -left-6 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
@@ -382,9 +382,9 @@ const Sale = () => {
               </div>
               <button
                 onClick={() => setQuickRfqOpen(true)}
-                className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-[#ef4d62] shadow-sm hover:bg-white/90 transition-colors"
+                className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-brand-buyer shadow-sm hover:bg-white/90 transition-colors"
               >
-                <Zap className="w-4 h-4 fill-[#ef4d62]" /> Quick RFQ
+                <Zap className="w-4 h-4 fill-brand-buyer" /> Quick RFQ
               </button>
             </div>
           </div>
@@ -408,12 +408,12 @@ const Sale = () => {
                 transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
                 className="inline-flex"
               >
-                <Zap className="w-5 h-5 text-[#ef4d62] fill-[#ef4d62]" />
+                <Zap className="w-5 h-5 text-brand-buyer fill-brand-buyer" />
               </motion.span>
               Flash Deals
             </h2>
-            <div className="inline-flex items-center gap-2 rounded-full bg-[#ef4d62]/5 border border-[#ef4d62]/20 px-2.5 py-1">
-              <Clock className="w-3.5 h-3.5 text-[#ef4d62]" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-2.5 py-1">
+              <Clock className="w-3.5 h-3.5 text-brand-buyer" />
               <Countdown target={FLASH_END} tone="coral" />
             </div>
           </div>
@@ -429,7 +429,7 @@ const Sale = () => {
         {/* ── SHOP BY DISCOUNT ── */}
         <motion.section variants={section}>
           <h2 className="inline-flex items-center gap-2 text-base lg:text-xl font-bold text-gray-900 mb-3 px-1">
-            <Tag className="w-4 h-4 text-[#ef4d62]" /> Shop by Discount
+            <Tag className="w-4 h-4 text-brand-buyer" /> Shop by Discount
           </h2>
           <div className="flex gap-2 overflow-x-auto pb-1 px-1 scrollbar-hide">
             {TIERS.map((t) => {
@@ -440,7 +440,7 @@ const Sale = () => {
                   onClick={() => { setTier(t.key); setBatchCount(1); }}
                   className={cn(
                     "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all active:scale-95",
-                    active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40"
+                    active ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-600 hover:border-brand-buyer/40"
                   )}
                 >
                   {t.label}
@@ -462,16 +462,16 @@ const Sale = () => {
                 <DropdownMenuContent align="end" className="w-52">
                   {SORTS.map((o) => (
                     <DropdownMenuItem key={o.key} onClick={() => setSort(o.key)} className="gap-2 text-sm">
-                      <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                      <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                     </DropdownMenuItem>
                   ))}
                 </DropdownMenuContent>
               </DropdownMenu>
               <div className="flex items-center gap-1 border border-gray-200 rounded-lg p-0.5">
-                <button onClick={() => setViewMode("2-col")} aria-label="2 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "2-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}>
+                <button onClick={() => setViewMode("2-col")} aria-label="2 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "2-col" ? "bg-brand-buyer text-white" : "text-gray-400")}>
                   <Grid2X2 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
                 </button>
-                <button onClick={() => setViewMode("3-col")} aria-label="3 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "3-col" ? "bg-[#ef4d62] text-white" : "text-gray-400")}>
+                <button onClick={() => setViewMode("3-col")} aria-label="3 columns" className={cn("p-1.5 rounded-md transition-colors", viewMode === "3-col" ? "bg-brand-buyer text-white" : "text-gray-400")}>
                   <Grid3X3 className="w-3.5 lg:w-4 h-3.5 lg:h-4" />
                 </button>
               </div>
@@ -482,7 +482,7 @@ const Sale = () => {
             <div className="py-16 text-center">
               <Tag className="w-9 h-9 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No deals in this range right now.</p>
-              <button onClick={() => setTier("all")} className="mt-3 text-sm font-semibold text-[#ef4d62]">View all deals</button>
+              <button onClick={() => setTier("all")} className="mt-3 text-sm font-semibold text-brand-buyer">View all deals</button>
             </div>
           ) : (
             <motion.div

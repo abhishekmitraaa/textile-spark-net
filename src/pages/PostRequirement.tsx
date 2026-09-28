@@ -447,7 +447,7 @@ function SectionCard({ n, title, children }: { n: number; title: string; childre
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4">
       <div className="flex items-center gap-2 mb-3">
-        <span className="w-5 h-5 rounded-full bg-[#ef4d62]/10 text-[#ef4d62] text-[11px] font-bold flex items-center justify-center">{n}</span>
+        <span className="w-5 h-5 rounded-full bg-brand-buyer/10 text-brand-buyer text-[11px] font-bold flex items-center justify-center">{n}</span>
         <h3 className="text-sm font-bold text-gray-900">{title}</h3>
       </div>
       {children}
@@ -455,7 +455,7 @@ function SectionCard({ n, title, children }: { n: number; title: string; childre
   );
 }
 
-const inputCls = "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors";
+const inputCls = "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer transition-colors";
 
 function Chip({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -463,7 +463,7 @@ function Chip({ label, active, onClick }: { label: string; active: boolean; onCl
       onClick={onClick}
       className={cn(
         "rounded-lg border px-3 py-1.5 text-xs font-medium transition-all active:scale-95",
-        active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-700 hover:border-[#ef4d62]/40"
+        active ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-700 hover:border-brand-buyer/40"
       )}
     >
       {label}
@@ -647,7 +647,7 @@ const PostRequirement = () => {
       case "text":
         return (
           <div key={f.key}>
-            {f.label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{f.label}{f.required && <span className="text-[#ef4d62]"> *</span>}</label>}
+            {f.label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{f.label}{f.required && <span className="text-brand-buyer"> *</span>}</label>}
             <input className={inputCls} placeholder={f.placeholder} value={sVal(f.key)} onChange={(e) => setVal(f.key, e.target.value)} />
           </div>
         );
@@ -674,7 +674,7 @@ const PostRequirement = () => {
               <button
                 onClick={toggleVoice}
                 aria-label="Voice to text"
-                className={cn("absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-white transition-colors", recording ? "bg-[#ef4d62] animate-pulse" : "bg-[#ef4d62] hover:bg-[#ef4d62]/90")}
+                className={cn("absolute bottom-3 right-3 w-10 h-10 rounded-full flex items-center justify-center text-white transition-colors", recording ? "bg-brand-buyer animate-pulse" : "bg-brand-buyer hover:bg-brand-buyer/90")}
               >
                 {recording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
               </button>
@@ -687,7 +687,7 @@ const PostRequirement = () => {
         const open = openSelect === f.key;
         return (
           <div key={f.key}>
-            {f.label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{f.label}{f.required && <span className="text-[#ef4d62]"> *</span>}</label>}
+            {f.label && <label className="block text-xs font-semibold text-gray-700 mb-1.5">{f.label}{f.required && <span className="text-brand-buyer"> *</span>}</label>}
             <div className="relative">
               <button type="button" onClick={() => setOpenSelect(open ? null : f.key)} className={cn(inputCls, "flex items-center justify-between text-left")}>
                 <span className={sVal(f.key) ? "text-gray-900" : "text-gray-400"}>{sVal(f.key) || f.placeholder || "Select"}</span>
@@ -725,10 +725,10 @@ const PostRequirement = () => {
                   key={opt}
                   type="button"
                   onClick={() => setVal(f.key, active ? "" : opt)}
-                  className={cn("flex items-center gap-2 rounded-xl border p-3 text-left transition-all active:scale-[0.98]", active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40")}
+                  className={cn("flex items-center gap-2 rounded-xl border p-3 text-left transition-all active:scale-[0.98]", active ? "border-brand-buyer bg-brand-buyer/5" : "border-gray-200 hover:border-brand-buyer/40")}
                 >
-                  <span className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0", active ? "border-[#ef4d62]" : "border-gray-300")}>
-                    {active && <span className="w-2 h-2 rounded-full bg-[#ef4d62]" />}
+                  <span className={cn("w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0", active ? "border-brand-buyer" : "border-gray-300")}>
+                    {active && <span className="w-2 h-2 rounded-full bg-brand-buyer" />}
                   </span>
                   <span className="text-xs font-medium text-gray-800">{opt}</span>
                 </button>
@@ -759,7 +759,7 @@ const PostRequirement = () => {
         return (
           <div key={f.key}>
             <input type="file" ref={fileInputRef} onChange={onFiles} accept="image/*,video/*,.pdf" multiple className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-300 p-5 text-center hover:border-[#ef4d62]/50 transition-colors">
+            <button onClick={() => fileInputRef.current?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-300 p-5 text-center hover:border-brand-buyer/50 transition-colors">
               <div className="flex justify-center gap-3 mb-2">
                 {[ImageIcon, Video, FileUp].map((Ic, i) => (
                   <span key={i} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500"><Ic className="w-4 h-4" /></span>
@@ -773,7 +773,7 @@ const PostRequirement = () => {
                 {files.map((file, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5 bg-gray-100 rounded-lg px-2.5 py-1.5 text-xs text-gray-700">
                     <FileUp className="w-3 h-3" /> <span className="truncate max-w-[120px]">{file.name}</span>
-                    <button onClick={() => removeFile(i)} aria-label="Remove"><X className="w-3 h-3 text-gray-400 hover:text-[#ef4d62]" /></button>
+                    <button onClick={() => removeFile(i)} aria-label="Remove"><X className="w-3 h-3 text-gray-400 hover:text-brand-buyer" /></button>
                   </span>
                 ))}
               </div>
@@ -789,7 +789,7 @@ const PostRequirement = () => {
   // ── SUCCESS (full-screen coral, per reference) ──
   if (step === "success") {
     return (
-      <div className="fixed inset-0 z-[80] bg-[#ef4d62] flex flex-col items-center justify-center text-center px-8">
+      <div className="fixed inset-0 z-[80] bg-brand-buyer flex flex-col items-center justify-center text-center px-8">
         <CosoraLogo height={38} variant="white" className="mb-8" />
         <motion.div
           initial={reduced ? false : { scale: 0 }}
@@ -798,7 +798,7 @@ const PostRequirement = () => {
           className="w-24 h-24 rounded-full bg-white/20 flex items-center justify-center mb-6"
         >
           <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-            <Check className="w-9 h-9 text-[#ef4d62]" strokeWidth={3} />
+            <Check className="w-9 h-9 text-brand-buyer" strokeWidth={3} />
           </div>
         </motion.div>
         <p className="text-white text-lg font-semibold max-w-xs">Your requirement has been submitted successfully</p>
@@ -824,16 +824,16 @@ const PostRequirement = () => {
               {/* Quick Quote */}
               <button
                 onClick={() => setQuickOpen(true)}
-                className="w-full text-left rounded-2xl border-2 border-[#ef4d62]/30 bg-[#ef4d62]/5 p-4 mb-4 hover:border-[#ef4d62]/50 transition-colors"
+                className="w-full text-left rounded-2xl border-2 border-brand-buyer/30 bg-brand-buyer/5 p-4 mb-4 hover:border-brand-buyer/50 transition-colors"
               >
                 <div className="flex items-start gap-3">
-                  <span className="w-11 h-11 rounded-2xl bg-[#ef4d62]/15 flex items-center justify-center text-[#ef4d62] shrink-0">
-                    <Zap className="w-5 h-5 fill-[#ef4d62]" />
+                  <span className="w-11 h-11 rounded-2xl bg-brand-buyer/15 flex items-center justify-center text-brand-buyer shrink-0">
+                    <Zap className="w-5 h-5 fill-brand-buyer" />
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
                       <h3 className="text-base font-bold text-gray-900">Quick Quote</h3>
-                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase bg-[#ef4d62]/10 text-[#ef4d62] px-1.5 py-0.5 rounded"><Sparkles className="w-2.5 h-2.5" /> Fast</span>
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase bg-brand-buyer/10 text-brand-buyer px-1.5 py-0.5 rounded"><Sparkles className="w-2.5 h-2.5" /> Fast</span>
                     </div>
                     <p className="text-xs text-gray-500 mt-0.5">Just upload an image + quantity. Get quotes in minutes!</p>
                     <p className="inline-flex items-center gap-1 text-[11px] text-gray-400 mt-2"><Clock className="w-3 h-3" /> Takes 30 seconds</p>
@@ -912,7 +912,7 @@ const PostRequirement = () => {
               <button
                 onClick={() => categoryId && setStep("form")}
                 disabled={!categoryId}
-                className={cn("mt-4 w-full py-3 rounded-xl text-sm font-bold transition-colors", categoryId ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}
+                className={cn("mt-4 w-full py-3 rounded-xl text-sm font-bold transition-colors", categoryId ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}
               >
                 Save
               </button>
@@ -934,7 +934,7 @@ const PostRequirement = () => {
                   because that — not the parent — is what the RFQ gets filed
                   under, and the buyer should see the value being used. */}
               <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-center gap-3">
-                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#ef4d62]/10 text-sm font-bold text-[#ef4d62]">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-brand-buyer/10 text-sm font-bold text-brand-buyer">
                   {category.name.slice(0, 2).toUpperCase()}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -944,7 +944,7 @@ const PostRequirement = () => {
                     {subCategory && <span className="font-medium text-gray-500"> · {subCategory.name}</span>}
                   </p>
                 </div>
-                <button onClick={() => setStep("category")} className="shrink-0 text-xs font-semibold text-[#ef4d62] hover:underline">Change</button>
+                <button onClick={() => setStep("category")} className="shrink-0 text-xs font-semibold text-brand-buyer hover:underline">Change</button>
               </div>
 
               {/* Numbered sections for this category */}
@@ -965,15 +965,15 @@ const PostRequirement = () => {
               ))}
 
               {/* Deadline note */}
-              <div className="rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/20 px-3.5 py-2.5 flex items-start gap-2">
-                <Clock className="w-4 h-4 text-[#ef4d62] mt-0.5 shrink-0" />
+              <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/20 px-3.5 py-2.5 flex items-start gap-2">
+                <Clock className="w-4 h-4 text-brand-buyer mt-0.5 shrink-0" />
                 <p className="text-[11px] text-gray-600 leading-relaxed">
                   Every quote has an automatic <span className="font-semibold text-gray-800">7-day deadline</span>. Once it's reached, you'll get an option to extend it.
                 </p>
               </div>
 
               {/* Submit */}
-              <button onClick={submit} className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white py-3.5 text-sm font-bold transition-colors active:scale-[0.99]">
+              <button onClick={submit} className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3.5 text-sm font-bold transition-colors active:scale-[0.99]">
                 <Send className="w-4 h-4" /> Submit Quote Request
               </button>
               <p className="text-[11px] text-center text-gray-400">

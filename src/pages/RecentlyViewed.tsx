@@ -86,7 +86,7 @@ function RecentRow({ p }: { p: RecentProduct }) {
             aria-label={isSaved ? "Edit saved folders" : "Save product"}
             className="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-white/90 backdrop-blur flex items-center justify-center shadow-sm hover:bg-white transition-colors"
           >
-            <Heart className={cn("w-3.5 h-3.5", isSaved ? "fill-[#ef4d62] text-[#ef4d62]" : "text-gray-500")} />
+            <Heart className={cn("w-3.5 h-3.5", isSaved ? "fill-brand-buyer text-brand-buyer" : "text-gray-500")} />
           </button>
         </Link>
 
@@ -94,7 +94,7 @@ function RecentRow({ p }: { p: RecentProduct }) {
           <Link to={`/product/${p.id}`}>
             <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{p.name}</h3>
           </Link>
-          <p className="inline-flex items-center gap-1 text-xs text-[#ef4d62] font-medium mt-0.5">
+          <p className="inline-flex items-center gap-1 text-xs text-brand-buyer font-medium mt-0.5">
             {p.manufacturer} {p.verified && <BadgeCheck className="w-3 h-3" />}
           </p>
           <div className="flex items-center gap-1 mt-0.5 text-[11px] text-gray-500">
@@ -121,14 +121,14 @@ function RecentRow({ p }: { p: RecentProduct }) {
         <button onClick={() => navigate(`/chats/${p.vendorId}`)} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg py-2 text-xs font-semibold text-gray-700 hover:border-gray-300 transition-colors">
           <MessageCircle className="w-3.5 h-3.5" /> Chat
         </button>
-        <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-[#ef4d62] text-white rounded-lg py-2 text-xs font-bold hover:bg-[#ef4d62]/90 transition-colors">
+        <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-brand-buyer text-white rounded-lg py-2 text-xs font-bold hover:bg-brand-buyer/90 transition-colors">
           <Phone className="w-3.5 h-3.5" /> CALL NOW
         </button>
         {/* Deletes instantly — no confirm (per reference note) */}
         <button
           onClick={() => removeRecent(p.id)}
           aria-label="Remove from history"
-          className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#ef4d62] hover:border-[#ef4d62]/40 transition-colors"
+          className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-brand-buyer hover:border-brand-buyer/40 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -202,7 +202,7 @@ const RecentlyViewed = () => {
           {hasItems && (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <button aria-label="Clear viewing history" className="p-1.5 text-[#ef4d62] hover:bg-[#ef4d62]/10 rounded-lg transition-colors">
+                <button aria-label="Clear viewing history" className="p-1.5 text-brand-buyer hover:bg-brand-buyer/10 rounded-lg transition-colors">
                   <Trash2 className="w-5 h-5" />
                 </button>
               </AlertDialogTrigger>
@@ -216,7 +216,7 @@ const RecentlyViewed = () => {
                 <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
                   <AlertDialogAction
                     onClick={clearRecent}
-                    className="w-full bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+                    className="w-full bg-brand-buyer hover:bg-brand-buyer/90 text-white"
                   >
                     Clear All
                   </AlertDialogAction>
@@ -237,7 +237,7 @@ const RecentlyViewed = () => {
               <DropdownMenuContent align="start" className="w-40">
                 {GENDERS.map((o) => (
                   <DropdownMenuItem key={o.key} onClick={() => setGender(o.key)} className="gap-2 text-sm">
-                    <Check className={cn("w-4 h-4", gender === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                    <Check className={cn("w-4 h-4", gender === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -250,7 +250,7 @@ const RecentlyViewed = () => {
               <DropdownMenuContent align="center" className="w-48">
                 {SORTS.map((o) => (
                   <DropdownMenuItem key={o.key} onClick={() => setSort(o.key)} className="gap-2 text-sm">
-                    <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                    <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
@@ -258,11 +258,11 @@ const RecentlyViewed = () => {
 
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
-                <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-[#ef4d62]")} /> FILTER
+                <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-brand-buyer")} /> FILTER
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 <DropdownMenuItem onClick={() => setVerifiedOnly((v) => !v)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> Verified vendors only
+                  <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-brand-buyer" : "opacity-0")} /> Verified vendors only
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -300,7 +300,7 @@ const RecentlyViewed = () => {
             </p>
             <button
               onClick={() => navigate("/home/new-arrivals")}
-              className="rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white px-6 py-2.5 text-sm font-bold transition-colors"
+              className="rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white px-6 py-2.5 text-sm font-bold transition-colors"
             >
               Browse Products
             </button>
@@ -311,7 +311,7 @@ const RecentlyViewed = () => {
             <p className="text-sm text-gray-500">No products match these filters.</p>
             <button
               onClick={() => { setGender("all"); setVerifiedOnly(false); }}
-              className="mt-3 text-sm font-semibold text-[#ef4d62]"
+              className="mt-3 text-sm font-semibold text-brand-buyer"
             >
               Clear filters
             </button>

@@ -118,7 +118,7 @@ function VideoCloseupPhoneMockup({
 
         {/* Top bar */}
         <div className="absolute top-4 left-0 right-0 flex items-center justify-between px-3 z-10">
-          <span className="text-[7px] font-bold text-white bg-[#256fef] px-1.5 py-0.5 rounded-full tracking-wide">
+          <span className="text-[7px] font-bold text-white bg-brand-vendor px-1.5 py-0.5 rounded-full tracking-wide">
             CLOSEUP
           </span>
           <Volume2 className="w-3 h-3 text-white" />
@@ -145,7 +145,7 @@ function VideoCloseupPhoneMockup({
         <div className="absolute bottom-0 left-0 right-0 px-3 pb-3 z-10">
           {/* Vendor row */}
           <div className="flex items-center gap-1.5 mb-1.5">
-            <div className="w-5 h-5 rounded-full bg-[#256fef] border border-white flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full bg-brand-vendor border border-white flex items-center justify-center">
               <span className="text-[6px] font-bold text-white">TM</span>
             </div>
             <span className="text-[9px] font-bold text-white">Textile Mfr.</span>
@@ -229,7 +229,7 @@ function VideoCloseupCard({
           <p className="text-xs font-semibold text-gray-900 mt-1.5 line-clamp-2 leading-snug">
             {closeup.caption}
           </p>
-          <p className="text-[10px] text-[#256fef] mt-0.5 flex items-center gap-1 truncate">
+          <p className="text-[10px] text-brand-vendor mt-0.5 flex items-center gap-1 truncate">
             <Tag className="w-2.5 h-2.5" /> {closeup.productName}
           </p>
           <p className="text-[10px] text-gray-400 mt-1">{closeup.uploadedAt}</p>
@@ -530,7 +530,7 @@ const UploadVideo = () => {
         </motion.div>
 
         {/* ── Reach stat banner ── */}
-        <motion.div variants={section} className="bg-gradient-to-r from-[#256fef] to-[#1a55cc] rounded-2xl p-4 text-white flex items-center gap-4">
+        <motion.div variants={section} className="bg-gradient-to-r from-brand-vendor to-[#1a55cc] rounded-2xl p-4 text-white flex items-center gap-4">
           <div className="w-12 h-12 bg-white/15 rounded-2xl flex items-center justify-center shrink-0">
             <Sparkles className="w-6 h-6 text-white" />
           </div>
@@ -555,7 +555,7 @@ const UploadVideo = () => {
           ].map((tip) => (
             <div key={tip.label} className="bg-white rounded-xl border border-gray-100 shadow-sm p-3 text-center">
               <p className="text-xs font-bold text-gray-900">{tip.value}</p>
-              <p className="text-[10px] text-[#256fef] font-semibold mt-0.5">{tip.label}</p>
+              <p className="text-[10px] text-brand-vendor font-semibold mt-0.5">{tip.label}</p>
               <p className="text-[9px] text-gray-400 mt-0.5 leading-tight">{tip.hint}</p>
             </div>
           ))}
@@ -579,22 +579,22 @@ const UploadVideo = () => {
                 className={cn(
                   "border-2 border-dashed rounded-2xl flex flex-col items-center justify-center gap-3 cursor-pointer transition-all min-h-[200px]",
                   dragActive
-                    ? "border-[#256fef] bg-[#256fef]/5"
-                    : "border-gray-200 hover:border-[#256fef]/50 hover:bg-gray-50"
+                    ? "border-brand-vendor bg-brand-vendor/5"
+                    : "border-gray-200 hover:border-brand-vendor/50 hover:bg-gray-50"
                 )}
               >
                 <div className={cn(
                   "w-16 h-16 rounded-2xl flex items-center justify-center transition-colors",
-                  dragActive ? "bg-[#256fef]/10" : "bg-gray-100"
+                  dragActive ? "bg-brand-vendor/10" : "bg-gray-100"
                 )}>
-                  <Video className={cn("w-8 h-8 transition-colors", dragActive ? "text-[#256fef]" : "text-gray-400")} />
+                  <Video className={cn("w-8 h-8 transition-colors", dragActive ? "text-brand-vendor" : "text-gray-400")} />
                 </div>
                 <div className="text-center px-4">
                   <p className="text-sm font-semibold text-gray-900">
                     {dragActive ? "Drop your video here" : "Drag & drop your video"}
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    or <span className="text-[#256fef] font-semibold">browse files</span>
+                    or <span className="text-brand-vendor font-semibold">browse files</span>
                   </p>
                 </div>
                 <p className="text-[10px] text-gray-400">MP4 · WebM · Max 50 MB · up to 60s</p>
@@ -656,7 +656,7 @@ const UploadVideo = () => {
                 placeholder="Describe your product video closeup — what it's made of, MOQ, why buyers love it…"
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#256fef]/30 focus:border-[#256fef]/50 resize-none transition-all"
+                className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-vendor/30 focus:border-brand-vendor/50 resize-none transition-all"
               />
             </div>
 
@@ -671,12 +671,12 @@ const UploadVideo = () => {
                   className={cn(
                     "w-full flex items-center justify-between px-3 py-2.5 border rounded-xl text-sm transition-all",
                     selectedProduct
-                      ? "border-[#256fef]/50 bg-[#256fef]/5 text-gray-900"
+                      ? "border-brand-vendor/50 bg-brand-vendor/5 text-gray-900"
                       : "border-gray-200 text-gray-400 hover:border-gray-300"
                   )}
                 >
                   <div className="flex items-center gap-2 min-w-0">
-                    <Tag className={cn("w-3.5 h-3.5 shrink-0", selectedProduct ? "text-[#256fef]" : "text-gray-400")} />
+                    <Tag className={cn("w-3.5 h-3.5 shrink-0", selectedProduct ? "text-brand-vendor" : "text-gray-400")} />
                     <span className="truncate">{selectedProductObj?.name ?? "Select a product"}</span>
                   </div>
                   <ChevronDown className="w-4 h-4 text-gray-400 shrink-0" />
@@ -701,18 +701,18 @@ const UploadVideo = () => {
                             onClick={() => { setSelectedProduct(p.id); setProductOpen(false); }}
                             className={cn(
                               "w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0",
-                              selectedProduct === p.id && "bg-[#256fef]/5"
+                              selectedProduct === p.id && "bg-brand-vendor/5"
                             )}
                           >
-                            <div className="w-6 h-6 rounded-lg bg-[#256fef]/10 flex items-center justify-center mt-0.5 shrink-0">
-                              <ShoppingBag className="w-3 h-3 text-[#256fef]" />
+                            <div className="w-6 h-6 rounded-lg bg-brand-vendor/10 flex items-center justify-center mt-0.5 shrink-0">
+                              <ShoppingBag className="w-3 h-3 text-brand-vendor" />
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-900 leading-snug">{p.name}</p>
                               <p className="text-[10px] text-gray-400 mt-0.5">{p.productCode}</p>
                             </div>
                             {selectedProduct === p.id && (
-                              <CheckCircle2 className="w-4 h-4 text-[#256fef] ml-auto shrink-0 mt-0.5" />
+                              <CheckCircle2 className="w-4 h-4 text-brand-vendor ml-auto shrink-0 mt-0.5" />
                             )}
                           </button>
                         ))}
@@ -736,7 +736,7 @@ const UploadVideo = () => {
               </label>
               <div
                 onClick={() => thumbInputRef.current?.click()}
-                className="flex items-center gap-3 border border-dashed border-gray-200 rounded-xl p-3 cursor-pointer hover:border-[#256fef]/50 hover:bg-gray-50 transition-all"
+                className="flex items-center gap-3 border border-dashed border-gray-200 rounded-xl p-3 cursor-pointer hover:border-brand-vendor/50 hover:bg-gray-50 transition-all"
               >
                 {thumbnailUrl ? (
                   <>
@@ -789,8 +789,8 @@ const UploadVideo = () => {
               className={cn(
                 "w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 shadow-sm",
                 isSubmitting
-                  ? "bg-[#256fef]/60 cursor-not-allowed"
-                  : "bg-[#256fef] hover:bg-[#256fef]/90 active:scale-[0.99]"
+                  ? "bg-brand-vendor/60 cursor-not-allowed"
+                  : "bg-brand-vendor hover:bg-brand-vendor/90 active:scale-[0.99]"
               )}
             >
               {isSubmitting ? (
@@ -815,7 +815,7 @@ const UploadVideo = () => {
             {isSubmitting && (
               <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100">
                 <div
-                  className="h-full rounded-full bg-[#256fef] transition-[width] duration-200"
+                  className="h-full rounded-full bg-brand-vendor transition-[width] duration-200"
                   style={{ width: `${Math.max(3, Math.round(progress * 100))}%` }}
                 />
               </div>

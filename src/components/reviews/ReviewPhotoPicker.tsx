@@ -90,7 +90,7 @@ export function ReviewPhotoPicker({
             type="button"
             onClick={() => inputRef.current?.click()}
             disabled={disabled}
-            className="w-16 h-16 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:border-[#ef4d62] hover:text-[#ef4d62] transition-colors disabled:opacity-50"
+            className="w-16 h-16 rounded-lg border border-dashed border-gray-300 flex flex-col items-center justify-center gap-0.5 text-gray-400 hover:border-brand-buyer hover:text-brand-buyer transition-colors disabled:opacity-50"
           >
             <ImagePlus className="w-5 h-5" />
             <span className="text-[9px] font-semibold">Add</span>

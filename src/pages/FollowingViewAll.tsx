@@ -27,7 +27,7 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
       <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
         <span className="relative block">
           <img src={brand.logo} alt={brand.name} className="w-12 h-12 rounded-full object-cover" />
-          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ef4d62] flex items-center justify-center">
+          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-buyer flex items-center justify-center">
             <Check className="w-2.5 h-2.5 text-white" />
           </span>
         </span>
@@ -37,7 +37,7 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
         <div className="flex items-center gap-1.5">
           <span className="text-sm font-bold text-gray-900 truncate">{brand.name}</span>
           {brand.verified && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-[#ef4d62] bg-[#ef4d62]/10 px-1.5 py-0.5 rounded-full shrink-0">
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-brand-buyer bg-brand-buyer/10 px-1.5 py-0.5 rounded-full shrink-0">
               <BadgeCheck className="w-3 h-3" /> TradeSEAL
             </span>
           )}

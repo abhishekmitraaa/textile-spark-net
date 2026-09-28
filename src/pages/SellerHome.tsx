@@ -480,7 +480,7 @@ const SellerHome = () => {
             whileHover={{ scale: 1.012 }}
             whileTap={{ scale: 0.98 }}
             transition={{ ease: E, duration: 0.2 }}
-            className="bg-gradient-to-br from-[#ef4d62] to-[#f97316] rounded-2xl p-4 text-white lg:p-5"
+            className="bg-gradient-to-br from-brand-buyer to-[#f97316] rounded-2xl p-4 text-white lg:p-5"
           >
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">

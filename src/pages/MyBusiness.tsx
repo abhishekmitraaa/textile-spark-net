@@ -60,7 +60,7 @@ const badgeStyle = (tone: BadgeTone) =>
   tone === "good"
     ? "text-green-600 bg-green-50"
     : tone === "info"
-      ? "text-[#256fef] bg-[#256fef]/10"
+      ? "text-brand-vendor bg-brand-vendor/10"
       : "text-orange-600 bg-orange-50";
 
 const MyBusiness = () => {

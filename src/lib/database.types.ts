@@ -1728,6 +1728,96 @@ export type Database = {
         }
         Relationships: []
       }
+      site_banners: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          cta_label: string | null
+          ends_at: string | null
+          id: string
+          image_path: string | null
+          link_path: string | null
+          placement: string
+          position: number
+          starts_at: string | null
+          subtitle: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_path?: string | null
+          link_path?: string | null
+          placement?: string
+          position?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          cta_label?: string | null
+          ends_at?: string | null
+          id?: string
+          image_path?: string | null
+          link_path?: string | null
+          placement?: string
+          position?: number
+          starts_at?: string | null
+          subtitle?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      site_theme: {
+        Row: {
+          body_font: string
+          border: string
+          buyer_accent: string
+          heading_font: string
+          id: boolean
+          ink: string
+          success: string
+          updated_at: string
+          updated_by: string | null
+          vendor_accent: string
+        }
+        Insert: {
+          body_font: string
+          border: string
+          buyer_accent: string
+          heading_font: string
+          id?: boolean
+          ink: string
+          success: string
+          updated_at?: string
+          updated_by?: string | null
+          vendor_accent: string
+        }
+        Update: {
+          body_font?: string
+          border?: string
+          buyer_accent?: string
+          heading_font?: string
+          id?: boolean
+          ink?: string
+          success?: string
+          updated_at?: string
+          updated_by?: string | null
+          vendor_accent?: string
+        }
+        Relationships: []
+      }
       subscription_invoices: {
         Row: {
           amount: number
@@ -3012,6 +3102,39 @@ export type Database = {
           id: string
           is_active: boolean
         }[]
+      }
+      admin_site_banner_delete: { Args: { p_id: string }; Returns: string }
+      admin_site_banner_reorder: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
+      admin_site_banner_save: {
+        Args: {
+          p_active?: boolean
+          p_cta_label?: string
+          p_ends_at?: string
+          p_id?: string
+          p_image_path?: string
+          p_link_path?: string
+          p_starts_at?: string
+          p_subtitle?: string
+          p_title?: string
+        }
+        Returns: string
+      }
+      admin_site_banners: { Args: never; Returns: Json }
+      admin_site_theme_get: { Args: never; Returns: Json }
+      admin_site_theme_save: {
+        Args: {
+          p_body_font: string
+          p_border: string
+          p_buyer_accent: string
+          p_heading_font: string
+          p_ink: string
+          p_success: string
+          p_vendor_accent: string
+        }
+        Returns: Json
       }
       admin_status_of: {
         Args: { p_user_id: string }

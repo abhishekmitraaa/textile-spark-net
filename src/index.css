@@ -41,6 +41,18 @@
     --grey: 220 12% 87%;
     --grey-dark: 0 0% 45%;
 
+    /* Site theme (admin completion Phase 9): the five brand colours as "R G B" channels,
+       and the two font stacks. These are Cosora's defaults. SiteThemeApplier, and the boot
+       script in index.html, replace them with the theme saved in Cosora-Admin. Tailwind's
+       brand-* colours read them (tailwind.config.ts); inline styles use brand(). */
+    --brand-vendor: 37 111 239;
+    --brand-buyer: 239 77 98;
+    --brand-success: 20 174 92;
+    --brand-border: 208 212 220;
+    --brand-ink: 54 54 54;
+    --font-body: "Open Sans", Roboto, system-ui, sans-serif;
+    --font-heading: "Roboto", "Open Sans", system-ui, sans-serif;
+
     /* Gradients */
     --gradient-pink: linear-gradient(135deg, hsl(352 85% 62%) 0%, hsl(352 85% 52%) 100%);
     --gradient-dark: linear-gradient(180deg, hsl(0 0% 21%) 0%, hsl(0 0% 15%) 100%);
@@ -110,11 +122,11 @@
 
   body {
     @apply bg-background text-foreground antialiased;
-    font-family: "Open Sans", Roboto, system-ui, sans-serif;
+    font-family: var(--font-body);
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Roboto", "Open Sans", system-ui, sans-serif;
+    font-family: var(--font-heading);
   }
 
   /* Preserve original fonts for Landing page */
@@ -138,7 +150,7 @@
      must not diverge. Playfair Display (`font-display`) was removed from
      all vendor screens for this reason; do not reintroduce it. */
   .vendor-shell {
-    font-family: "Open Sans", Roboto, system-ui, sans-serif;
+    font-family: var(--font-body);
   }
 }
 

@@ -720,7 +720,7 @@ function AdCreationSteps({
                     <Building2 className="w-4 h-4 text-gray-600" />
                     <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">City / Area</span>
                   </div>
-                  <span className="rounded-full bg-[#256fef]/10 text-[#256fef] text-[10px] font-bold px-2 py-0.5">
+                  <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5">
                     Plan: {scopeLabel}
                   </span>
                 </div>

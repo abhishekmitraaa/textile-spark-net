@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
@@ -131,7 +132,7 @@ const AdvertisementSlideshow = () => {
                 style={{
                   height: "100%",
                   borderRadius: "999px",
-                  backgroundColor: "#EF4D62",
+                  backgroundColor: brand("buyer"),
                   width: i < current ? "100%" : "0%",
                   animation: i === current ? `fillBar ${SLIDE_DURATION}ms linear forwards` : "none",
                 }}
@@ -158,7 +159,7 @@ const AdvertisementSlideshow = () => {
               style={{
                 height: "4px",
                 borderRadius: "999px",
-                backgroundColor: i === current ? "#EF4D62" : "rgba(0,0,0,0.2)",
+                backgroundColor: i === current ? brand("buyer") : "rgba(0,0,0,0.2)",
                 width: i === current ? "24px" : "8px",
                 transition: "all 0.3s ease",
               }}

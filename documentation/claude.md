@@ -436,6 +436,21 @@ undocumented. Deep technical rationale for each lives in
     describes recording that isn't happening. The wording awaits legal review. Set the Clarity
     project's masking mode to Strict.
   - Detail: `technicalimplementation.md` → "Microsoft Clarity on the buyer site".
+- **The five brand colours and the two fonts are the site theme, set in Cosora-Admin** (admin
+  completion Phase 9, 2026-09-29). The table at the top gives the defaults.
+  - Write a brand colour as `text-brand-buyer`, `bg-brand-vendor/10`, `border-brand-border`
+    (Tailwind) or `brand("buyer")` (`src/lib/brand.ts`, inline styles), never as the hex.
+    `node scripts/theme-codemod.mjs --check` lists any hex class that slips back in.
+  - A `<canvas>` can't read CSS variables; the signature pad's stroke stays a hex.
+  - Derived shades (a darker hover coral, a lighter blue) and shadcn's `primary` don't follow the
+    theme yet (`ToDo.md`).
+  - The theme and the vendor-dashboard banners come from `site-config/site.json`
+    (`src/lib/siteConfig.ts`, the snapshot first and the tables second). `SiteThemeApplier` applies it
+    and caches it for the boot script in `index.html`. A new column the site shows goes in the edge
+    function's select, in `parseTheme()` / `parseBanner()`, and in the table's grant.
+  - A banner's copy is Cosora's text: an admin's new banner shows in English until its strings are
+    added to `external-strings.json` ("site_banners") and translated, as with FAQs.
+  - Detail: `technicalimplementation.md` → "Site content — banners and theme".
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the
@@ -791,6 +806,11 @@ undocumented. Deep technical rationale for each lives in
     computed from `engagement_events` on each call. A search shows only once at least 3
     different visitors made it in the window, the same floor as `vendor_buyer_geography`: it
     is a privacy rule, so changing it is a policy decision.
+  - **Site content is `public.site_banners` and `public.site_theme`** (admin completion Phase 9,
+    `20260928195051`), written only through the super-admin `admin_site_*` RPCs. Banners are for the
+    vendor dashboard only (Mitra: none on the buyer side). A banner's destination is a path on Cosora
+    and its image is in `site-content/banners/`; the theme keeps its contrast floors. The rules live
+    in the tables and the RPCs, and the buyer app checks them again.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.

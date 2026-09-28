@@ -329,15 +329,15 @@ const UploadCatalogue = () => {
         </motion.div>
 
         {/* ── Info banner ── */}
-        <motion.div variants={section} className="bg-[#256fef]/5 border border-[#256fef]/20 rounded-2xl p-4 flex items-start gap-3">
-          <BookOpen className="w-5 h-5 text-[#256fef] mt-0.5 shrink-0" />
+        <motion.div variants={section} className="bg-brand-vendor/5 border border-brand-vendor/20 rounded-2xl p-4 flex items-start gap-3">
+          <BookOpen className="w-5 h-5 text-brand-vendor mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-gray-900">
               Why upload a catalogue?
             </p>
             <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">
               Buyers browsing your profile can download your catalogue directly.
-              Vendors with catalogues get <span className="font-semibold text-[#256fef]">3× more inquiries</span> on average.
+              Vendors with catalogues get <span className="font-semibold text-brand-vendor">3× more inquiries</span> on average.
             </p>
           </div>
         </motion.div>
@@ -371,20 +371,20 @@ const UploadCatalogue = () => {
               className={cn(
                 "border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all",
                 dragActive
-                  ? "border-[#256fef] bg-[#256fef]/5"
-                  : "border-gray-200 hover:border-[#256fef]/50 hover:bg-gray-50"
+                  ? "border-brand-vendor bg-brand-vendor/5"
+                  : "border-gray-200 hover:border-brand-vendor/50 hover:bg-gray-50"
               )}
             >
               <div
                 className={cn(
                   "w-14 h-14 rounded-2xl flex items-center justify-center transition-colors",
-                  dragActive ? "bg-[#256fef]/10" : "bg-gray-100"
+                  dragActive ? "bg-brand-vendor/10" : "bg-gray-100"
                 )}
               >
                 <Upload
                   className={cn(
                     "w-7 h-7 transition-colors",
-                    dragActive ? "text-[#256fef]" : "text-gray-400"
+                    dragActive ? "text-brand-vendor" : "text-gray-400"
                   )}
                 />
               </div>
@@ -393,7 +393,7 @@ const UploadCatalogue = () => {
                   {dragActive ? "Drop your PDF here" : "Drag & drop your catalogue"}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  or <span className="text-[#256fef] font-semibold">browse files</span>
+                  or <span className="text-brand-vendor font-semibold">browse files</span>
                 </p>
               </div>
               <p className="text-[10px] text-gray-400">PDF only · Max 20 MB</p>
@@ -437,7 +437,7 @@ const UploadCatalogue = () => {
               placeholder="e.g. Summer Collection 2025"
               value={catalogueName}
               onChange={(e) => setCatalogueName(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#256fef]/30 focus:border-[#256fef]/50 transition-all"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-vendor/30 focus:border-brand-vendor/50 transition-all"
             />
           </div>
 
@@ -452,7 +452,7 @@ const UploadCatalogue = () => {
               placeholder="Briefly describe what's in this catalogue — categories, season, MOQ range, etc."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#256fef]/30 focus:border-[#256fef]/50 resize-none transition-all"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-vendor/30 focus:border-brand-vendor/50 resize-none transition-all"
             />
           </div>
 
@@ -478,7 +478,7 @@ const UploadCatalogue = () => {
                     className={cn(
                       "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all",
                       isSelected
-                        ? "border-[#256fef] bg-[#256fef]/5 text-[#256fef]"
+                        ? "border-brand-vendor bg-brand-vendor/5 text-brand-vendor"
                         : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
                     )}
                   >
@@ -511,8 +511,8 @@ const UploadCatalogue = () => {
             className={cn(
               "w-full py-3.5 rounded-2xl text-sm font-bold text-white transition-all flex items-center justify-center gap-2 shadow-sm",
               isSubmitting
-                ? "bg-[#256fef]/60 cursor-not-allowed"
-                : "bg-[#256fef] hover:bg-[#256fef]/90 active:scale-[0.99]"
+                ? "bg-brand-vendor/60 cursor-not-allowed"
+                : "bg-brand-vendor hover:bg-brand-vendor/90 active:scale-[0.99]"
             )}
           >
             {isSubmitting ? (

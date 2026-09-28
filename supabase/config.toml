@@ -90,6 +90,13 @@ verify_jwt = true
 [functions.faqs-snapshot]
 verify_jwt = true
 
+# The site-config snapshot (admin completion Phase 9, 2026-09-29): the theme and the
+# vendor-dashboard banners as one CDN file. Posted to by the site-table triggers and the
+# hourly faq-snapshots-refresh job, with the service-role key from Vault. The handler
+# also requires role = service_role.
+[functions.site-config-snapshot]
+verify_jwt = true
+
 # Dummy OTP for mobile sign-in (2026-09-27): accepts any 6 digits and returns a
 # session, until SMS delivery exists. A sign-in bypass by design, logged in
 # documentation/securityflags.md. Called from the signed-out browser with the

@@ -91,7 +91,7 @@ function FollowingRow({ brand, onUnfollow, onHide }: { brand: Brand; onUnfollow:
       <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
         <span className="relative block">
           <img src={brand.logo} alt={brand.name} className="w-11 h-11 rounded-full object-cover" />
-          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-[#ef4d62] flex items-center justify-center">
+          <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-buyer flex items-center justify-center">
             <Check className="w-2.5 h-2.5 text-white" />
           </span>
         </span>
@@ -149,7 +149,7 @@ function FeedControls({
         <DropdownMenuContent align="start" className="w-40">
           {GENDER_OPTIONS.map((opt) => (
             <DropdownMenuItem key={opt.key} onClick={() => setGender(opt.key)} className="gap-2 text-sm">
-              <Check className={cn("w-4 h-4", gender === opt.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} />
+              <Check className={cn("w-4 h-4", gender === opt.key ? "opacity-100 text-brand-buyer" : "opacity-0")} />
               {opt.label}
             </DropdownMenuItem>
           ))}
@@ -165,7 +165,7 @@ function FeedControls({
         <DropdownMenuContent align="center" className="w-48">
           {SORT_OPTIONS.map((opt) => (
             <DropdownMenuItem key={opt.key} onClick={() => setSort(opt.key)} className="gap-2 text-sm">
-              <Check className={cn("w-4 h-4", sort === opt.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} />
+              <Check className={cn("w-4 h-4", sort === opt.key ? "opacity-100 text-brand-buyer" : "opacity-0")} />
               {opt.label}
             </DropdownMenuItem>
           ))}
@@ -175,12 +175,12 @@ function FeedControls({
       {/* FILTER */}
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
-          <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-[#ef4d62]")} />
+          <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-brand-buyer")} />
           <span>FILTER</span>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-48">
           <DropdownMenuItem onClick={() => setVerifiedOnly(!verifiedOnly)} className="gap-2 text-sm">
-            <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-[#ef4d62]" : "opacity-0")} />
+            <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-brand-buyer" : "opacity-0")} />
             <SlidersHorizontal className="w-4 h-4" /> TradeSEAL brands only
           </DropdownMenuItem>
         </DropdownMenuContent>
@@ -338,7 +338,7 @@ const Following = () => {
               className={cn(
                 "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
                 tab.href === "/home/followings"
-                  ? "text-[#ef4d62] border-[#ef4d62]"
+                  ? "text-brand-buyer border-brand-buyer"
                   : "text-gray-400 border-transparent hover:text-gray-600"
               )}
             >

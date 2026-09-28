@@ -30,7 +30,7 @@ interface QuickActionItem {
 }
 
 const primaryActions: QuickActionItem[] = [
-  { name: "Business Profile", icon: Building2, href: "/business-profile", color: "text-[#256fef]", bgColor: "bg-[#f0f4ff]" },
+  { name: "Business Profile", icon: Building2, href: "/business-profile", color: "text-brand-vendor", bgColor: "bg-[#f0f4ff]" },
   { name: "Advertise", icon: Megaphone, href: "/advertisement-slideshow", color: "text-purple-600", bgColor: "bg-purple-100" },
   { name: "Add Products", icon: Package, href: "/upload", color: "text-emerald-600", bgColor: "bg-emerald-100" },
   { name: "Reviews", icon: Star, href: "/reviews", color: "text-amber-600", bgColor: "bg-amber-100" },
@@ -143,18 +143,18 @@ export const SellerQuickActionsGrid = () => {
       >
         <Link
           to="/upload-catalogue"
-          className="flex items-center justify-between rounded-xl border-2 border-dashed border-[#256fef]/40 bg-[#256fef]/5 p-4 transition-all hover:border-[#256fef] hover:bg-[#256fef]/10"
+          className="flex items-center justify-between rounded-xl border-2 border-dashed border-brand-vendor/40 bg-brand-vendor/5 p-4 transition-all hover:border-brand-vendor hover:bg-brand-vendor/10"
         >
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#256fef]/20">
-              <Upload className="h-5 w-5 text-[#256fef]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-vendor/20">
+              <Upload className="h-5 w-5 text-brand-vendor" />
             </div>
             <div>
               <h4 className="text-sm font-semibold text-foreground">Upload Catalogue</h4>
               <p className="text-xs text-muted-foreground">Share your full product range as a PDF</p>
             </div>
           </div>
-          <BookOpen className="h-5 w-5 text-[#256fef]" />
+          <BookOpen className="h-5 w-5 text-brand-vendor" />
         </Link>
       </motion.div>
     </motion.div>

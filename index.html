@@ -9,6 +9,35 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,700;0,800;1,700;1,800&family=Dancing+Script:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=Open+Sans:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <script>
+      // Site theme (admin completion Phase 9): apply the theme saved on the last visit before
+      // the first paint, so a changed theme doesn't flash the defaults. SiteThemeApplier writes
+      // it (src/components/SiteThemeApplier.tsx); every value is checked before it becomes CSS.
+      (function () {
+        try {
+          var saved = JSON.parse(localStorage.getItem("cosora_site_theme_v1") || "null");
+          if (!saved || typeof saved !== "object") return;
+          var vars = saved.vars || {};
+          var rgb = /^\d{1,3} \d{1,3} \d{1,3}$/;
+          var stack = /^[A-Za-z0-9 ",-]{1,160}$/;
+          var ok = { "--brand-vendor": rgb, "--brand-buyer": rgb, "--brand-success": rgb, "--brand-border": rgb,
+                     "--brand-ink": rgb, "--font-body": stack, "--font-heading": stack };
+          for (var k in ok) {
+            if (typeof vars[k] === "string" && ok[k].test(vars[k])) document.documentElement.style.setProperty(k, vars[k]);
+          }
+          var fonts = Array.isArray(saved.fonts) ? saved.fonts.slice(0, 2) : [];
+          for (var i = 0; i < fonts.length; i++) {
+            var href = fonts[i];
+            if (typeof href !== "string" || !/^https:\/\/fonts\.googleapis\.com\/css2\?family=[A-Za-z0-9+]+:wght@[0-9;]+&display=swap$/.test(href)) continue;
+            var link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = href;
+            link.setAttribute("data-cosora-font", href);
+            document.head.appendChild(link);
+          }
+        } catch (e) {}
+      })();
+    </script>
 
     <meta property="og:title" content="Cosora | B2B Fashion Marketplace" />
     <meta property="og:description" content="Connect with global fashion buyers. Upload products, create advertisements, and generate quality leads." />

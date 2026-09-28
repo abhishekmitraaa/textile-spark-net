@@ -222,7 +222,7 @@ function PlatformCard({ platform, fields, onChange, onAdd, onRemove }: PlatformC
         whileTap={TAP}
         transition={TAP_T}
         onClick={onAdd}
-        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-[#256fef] hover:bg-blue-50/40 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-3 text-sm font-medium text-brand-vendor hover:bg-blue-50/40 transition-colors"
       >
         <Plus className="w-3.5 h-3.5" />
         Add another link
@@ -354,8 +354,8 @@ export default function AddSocialLinks() {
           variants={cardIn}
           className="bg-blue-50 border border-blue-100 rounded-2xl p-4 flex items-start gap-3"
         >
-          <div className="w-8 h-8 rounded-lg bg-[#256fef]/10 flex items-center justify-center shrink-0 mt-0.5">
-            <Info className="w-4 h-4 text-[#256fef]" />
+          <div className="w-8 h-8 rounded-lg bg-brand-vendor/10 flex items-center justify-center shrink-0 mt-0.5">
+            <Info className="w-4 h-4 text-brand-vendor" />
           </div>
           <p className="text-sm text-blue-700 font-medium leading-relaxed">
             Social links on your vendor profile help buyers research and trust your business before reaching out.
@@ -381,7 +381,7 @@ export default function AddSocialLinks() {
             transition={TAP_T}
             onClick={handleSave}
             disabled={saving}
-            className="w-full py-4 rounded-2xl font-semibold text-sm text-white bg-[#256fef] hover:bg-[#1a5ed4] transition-colors flex items-center justify-center gap-2 overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-4 rounded-2xl font-semibold text-sm text-white bg-brand-vendor hover:bg-[#1a5ed4] transition-colors flex items-center justify-center gap-2 overflow-hidden disabled:opacity-60 disabled:cursor-not-allowed"
           >
             <AnimatePresence mode="wait">
               {saving ? (

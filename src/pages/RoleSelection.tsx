@@ -123,7 +123,7 @@ const RoleSelection = () => {
             // Active state is the buyer brand coral, per the Canva reference.
             // The disabled state is deliberately untouched.
             selected && !saving
-              ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+              ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >

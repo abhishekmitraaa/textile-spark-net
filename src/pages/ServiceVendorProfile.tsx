@@ -38,7 +38,7 @@ const ServiceVendorProfile = () => {
       <div className="min-h-screen bg-white grid place-items-center px-6 text-center">
         <div>
           <p className="text-sm text-gray-500">This service vendor no longer exists.</p>
-          <button onClick={() => navigate("/services")} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Services</button>
+          <button onClick={() => navigate("/services")} className="mt-3 text-sm font-semibold text-brand-buyer">Back to Services</button>
         </div>
       </div>
     );
@@ -68,7 +68,7 @@ const ServiceVendorProfile = () => {
           </button>
           <div className="ml-auto flex items-center gap-1">
             <button onClick={() => setSaved((s) => !s)} aria-label="Save" className="p-1.5 rounded-full hover:bg-gray-100">
-              {saved ? <BookmarkCheck className="w-5 h-5 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-5 h-5 text-gray-600" />}
+              {saved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-600" />}
             </button>
             <button onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} aria-label="Share" className="p-1.5 rounded-full hover:bg-gray-100">
               <Share2 className="w-5 h-5 text-gray-600" />
@@ -100,7 +100,7 @@ const ServiceVendorProfile = () => {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h1 className="text-lg font-bold text-gray-900 leading-tight">{v.name}</h1>
-              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#ef4d62] px-2.5 py-1 text-[11px] font-bold text-white">
+              <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-brand-buyer px-2.5 py-1 text-[11px] font-bold text-white">
                 <Briefcase className="w-3 h-3" /> {v.serviceType}
               </span>
             </div>
@@ -118,7 +118,7 @@ const ServiceVendorProfile = () => {
         <div className="flex rounded-xl border border-gray-200 p-1">
           {(["services", "portfolio", "reviews"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className="relative flex-1 rounded-lg py-2 text-sm font-semibold capitalize">
-              {tab === t && <motion.span layoutId="sv-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+              {tab === t && <motion.span layoutId="sv-tab" className="absolute inset-0 rounded-lg bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
               <span className={cn("relative z-10", tab === t ? "text-white" : "text-gray-500")}>{t}</span>
             </button>
           ))}
@@ -137,8 +137,8 @@ const ServiceVendorProfile = () => {
               <div className="space-y-2">
                 {v.services.map((s) => (
                   <div key={s.name} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
-                    <span className="inline-flex items-center gap-2 text-sm text-gray-800"><Briefcase className="w-4 h-4 text-[#ef4d62]" /> {s.name}</span>
-                    <span className="text-sm font-bold text-[#ef4d62]">{s.price}</span>
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-800"><Briefcase className="w-4 h-4 text-brand-buyer" /> {s.name}</span>
+                    <span className="text-sm font-bold text-brand-buyer">{s.price}</span>
                   </div>
                 ))}
               </div>
@@ -188,7 +188,7 @@ const ServiceVendorProfile = () => {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">Write a Review</button>
+              <button onClick={() => setReviewOpen(true)} className="rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-buyer/90">Write a Review</button>
             </div>
             <div className="space-y-3">
               {reviewCards.map((r) => (
@@ -197,7 +197,7 @@ const ServiceVendorProfile = () => {
                     <p className="text-sm font-bold text-gray-900">{r.name}</p>
                     <span className="text-[11px] text-gray-400">{r.timeAgo}</span>
                   </div>
-                  {r.project && <p className="text-[11px] text-[#ef4d62] font-medium">{r.project}</p>}
+                  {r.project && <p className="text-[11px] text-brand-buyer font-medium">{r.project}</p>}
                   <div className="flex items-center gap-0.5 mt-1">
                     {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3 h-3", s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />)}
                   </div>
@@ -213,8 +213,8 @@ const ServiceVendorProfile = () => {
         {/* Contact */}
         <div className={card}>
           <div className="flex items-center gap-2">
-            <button onClick={chat} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors"><MessageCircle className="w-4 h-4" /> Chat</button>
-            <button onClick={() => placeCall(v.name, demoPhone(v.id))} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#ef4d62] text-white py-3 text-sm font-bold hover:bg-[#ef4d62]/90 transition-colors"><Phone className="w-4 h-4" /> Call Now</button>
+            <button onClick={chat} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors"><MessageCircle className="w-4 h-4" /> Chat</button>
+            <button onClick={() => placeCall(v.name, demoPhone(v.id))} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer text-white py-3 text-sm font-bold hover:bg-brand-buyer/90 transition-colors"><Phone className="w-4 h-4" /> Call Now</button>
           </div>
           <p className="mt-2 text-center text-[11px] text-gray-400 inline-flex items-center justify-center gap-1 w-full"><Clock className="w-3 h-3" /> Usually responds within 24 hours</p>
         </div>
@@ -235,7 +235,7 @@ const ServiceVendorProfile = () => {
 function DetailRow({ icon: Icon, label, value }: { icon: typeof Briefcase; label: string; value: string }) {
   return (
     <div className="flex items-center gap-3 rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
-      <span className="w-9 h-9 rounded-lg bg-[#ef4d62]/10 flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-[#ef4d62]" /></span>
+      <span className="w-9 h-9 rounded-lg bg-brand-buyer/10 flex items-center justify-center shrink-0"><Icon className="w-4 h-4 text-brand-buyer" /></span>
       <div>
         <p className="text-[11px] text-gray-400">{label}</p>
         <p className="text-sm font-semibold text-gray-900">{value}</p>

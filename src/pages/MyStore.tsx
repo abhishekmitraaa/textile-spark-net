@@ -73,9 +73,9 @@ function ShareAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
 
         <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
           {/* App banner */}
-          <div className="bg-gradient-to-br from-[#256fef] to-[#1d5ed6] rounded-2xl p-6 text-white text-center">
+          <div className="bg-gradient-to-br from-brand-vendor to-[#1d5ed6] rounded-2xl p-6 text-white text-center">
             <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mx-auto mb-3 shadow">
-              <Share2 className="w-8 h-8 text-[#256fef]" />
+              <Share2 className="w-8 h-8 text-brand-vendor" />
             </div>
             <p className="font-bold text-lg">{t("Share Cosora")}</p>
             <p className="text-white/85 text-sm mt-1">
@@ -141,7 +141,7 @@ function ShareAppModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
             <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200">
               <span className="flex-1 text-sm text-gray-600 truncate">{appUrl}</span>
               <button onClick={copyLink}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-[#256fef] text-white rounded-lg text-xs font-medium hover:bg-[#1d5ed6] transition-colors shrink-0">
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-vendor text-white rounded-lg text-xs font-medium hover:bg-[#1d5ed6] transition-colors shrink-0">
                 {copied ? <><Check className="w-3.5 h-3.5" />{t("Copied!")}</> : <><Copy className="w-3.5 h-3.5" />{t("Copy Link")}</>}
               </button>
             </div>
@@ -286,13 +286,13 @@ const MyStore = () => {
               /* No vendor_profiles row yet — a buyer-only or half-registered
                  account. Nothing to show, so say that and point at the form
                  that creates it. */
-              <div className="mb-3 rounded-xl border border-[#256fef]/30 bg-[#256fef]/5 p-4">
+              <div className="mb-3 rounded-xl border border-brand-vendor/30 bg-brand-vendor/5 p-4">
                 <p className="text-sm font-semibold text-gray-900">{t("Your store isn't set up yet")}</p>
                 <p className="mt-1 text-sm text-gray-600">
                   {t("Complete seller registration to get your storefront, listings and buyer leads.")}
                 </p>
                 <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/onboarding")}
-                  className="mt-3 rounded-full bg-[#256fef] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d5ed6] transition-colors">
+                  className="mt-3 rounded-full bg-brand-vendor px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d5ed6] transition-colors">
                   {t("Start registration")}
                 </motion.button>
               </div>
@@ -312,7 +312,7 @@ const MyStore = () => {
                     ) : (
                       /* Initials on the vendor blue tint. Never a stock photo:
                          a picsum portrait reads as "this is your logo". */
-                      <span className="flex h-full w-full items-center justify-center bg-[#256fef]/10 text-base font-bold text-[#256fef]">
+                      <span className="flex h-full w-full items-center justify-center bg-brand-vendor/10 text-base font-bold text-brand-vendor">
                         {initialsOf(brandName)}
                       </span>
                     )}
@@ -377,7 +377,7 @@ const MyStore = () => {
                   </div>
                   <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
                     <motion.div
-                      className="h-full rounded-full bg-[#256fef]"
+                      className="h-full rounded-full bg-brand-vendor"
                       initial={{ width: 0 }}
                       animate={{ width: `${score}%` }}
                       transition={reduced ? { duration: 0 } : { duration: 0.8, delay: 0.1 }}
@@ -444,7 +444,7 @@ const MyStore = () => {
                         className={cn(
                           "px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all",
                           lang === l.code
-                            ? "border-2 border-[#256fef] text-[#256fef] bg-[#256fef]/5"
+                            ? "border-2 border-brand-vendor text-brand-vendor bg-brand-vendor/5"
                             : "border border-gray-300 text-gray-700 hover:bg-gray-50"
                         )}>
                         {l.native}

@@ -145,7 +145,7 @@ function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: Vendo
       <button
         onClick={() => input.current?.click()}
         disabled={busy}
-        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#256fef] px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f5fe0] disabled:opacity-60"
+        className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-brand-vendor px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-[#1f5fe0] disabled:opacity-60"
       >
         {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Upload className="h-3 w-3" />}
         {busy ? "Uploading…" : `Upload a replacement ${label}`}
@@ -207,10 +207,10 @@ const Kyc = () => {
         <motion.div variants={section} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
           <div className="flex items-start gap-3">
             <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-              store?.isVerified ? "bg-green-50" : rejectedCount > 0 ? "bg-red-50" : "bg-[#256fef]/10"
+              store?.isVerified ? "bg-green-50" : rejectedCount > 0 ? "bg-red-50" : "bg-brand-vendor/10"
             }`}>
               <ShieldCheck className={`h-5 w-5 ${
-                store?.isVerified ? "text-green-600" : rejectedCount > 0 ? "text-red-500" : "text-[#256fef]"
+                store?.isVerified ? "text-green-600" : rejectedCount > 0 ? "text-red-500" : "text-brand-vendor"
               }`} />
             </span>
             <div className="min-w-0">
@@ -285,7 +285,7 @@ const Kyc = () => {
                           <XCircle className="h-3 w-3" /> Rejected
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-semibold text-[#256fef]">
+                        <span className="flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-semibold text-brand-vendor">
                           <Clock className="h-3 w-3" /> In review
                         </span>
                       )}
@@ -325,7 +325,7 @@ const Kyc = () => {
           <p className="text-xs leading-5 text-gray-600">
             Documents are collected during seller registration and verified by the Cosora team. If one is rejected,
             upload a replacement on its row and it goes back into review. To add a document you didn't submit, contact support from{" "}
-            <button onClick={() => navigate("/help")} className="font-semibold text-[#256fef] underline">
+            <button onClick={() => navigate("/help")} className="font-semibold text-brand-vendor underline">
               Help &amp; Support
             </button>
             .

@@ -75,7 +75,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
           >
             {/* Header */}
             <div className="flex items-center gap-3 border-b border-gray-100 px-4 py-3">
-              <div className="w-9 h-9 rounded-full bg-[#256fef] text-white flex items-center justify-center text-xs font-bold">
+              <div className="w-9 h-9 rounded-full bg-brand-vendor text-white flex items-center justify-center text-xs font-bold">
                 {quote.vendorInitials}
               </div>
               <div className="flex-1 min-w-0">
@@ -115,7 +115,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
                       {/* What people type stays as typed (AutoTranslate). */}
                       <div data-no-translate className={
                         m.sender === "user"
-                          ? "rounded-2xl rounded-br-sm bg-[#ef4d62] text-white px-3 py-2 text-xs leading-relaxed"
+                          ? "rounded-2xl rounded-br-sm bg-brand-buyer text-white px-3 py-2 text-xs leading-relaxed"
                           : "rounded-2xl rounded-bl-sm bg-white border border-gray-200 text-gray-700 px-3 py-2 text-xs leading-relaxed"
                       }>
                         {m.text}
@@ -145,7 +145,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void send(); } }}
                   placeholder={canChat ? "Type your message..." : "Sign in to send a message"}
                   disabled={!canChat}
-                  className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] disabled:bg-gray-50 disabled:text-gray-400"
+                  className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer disabled:bg-gray-50 disabled:text-gray-400"
                 />
               )}
               <div className="flex items-center gap-2 mt-2">
@@ -155,7 +155,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
                 <button
                   onClick={() => void send()}
                   disabled={!canSend}
-                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:bg-gray-200 disabled:text-gray-400 text-white py-2.5 text-sm font-bold transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 disabled:bg-gray-200 disabled:text-gray-400 text-white py-2.5 text-sm font-bold transition-colors"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   {sending ? "Sending…" : "Send Message"}

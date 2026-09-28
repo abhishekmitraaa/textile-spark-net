@@ -49,7 +49,7 @@ export default function CompareTable({ quotes, onClose, onChat, onCall }: Props)
                 </thead>
                 <tbody className="text-xs">
                   <Row label="Price/Unit">
-                    {quotes.map((q) => <td key={q.id} className="px-4 py-3 font-bold text-[#ef4d62] whitespace-nowrap">{showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)}</td>)}
+                    {quotes.map((q) => <td key={q.id} className="px-4 py-3 font-bold text-brand-buyer whitespace-nowrap">{showBoth(q.pricePerUnit, fmtMoney(q.currency, q.pricePerUnit), q.currency)}</td>)}
                   </Row>
                   <Row label="MOQ">
                     {quotes.map((q) => <td key={q.id} className="px-4 py-3 text-gray-700 whitespace-nowrap">{q.moq.toLocaleString()} units</td>)}
