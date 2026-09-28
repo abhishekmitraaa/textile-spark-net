@@ -351,7 +351,7 @@ const Help = () => {
           </motion.div>
 
           {/* ── Delete Account ── emailed code, 14-day cooling-off, then anonymized */}
-          <motion.div variants={section}>
+          <motion.div variants={section} data-clarity-mask="True">
             <DeleteAccountCard />
           </motion.div>
             </motion.div>{/* /Left rail */}

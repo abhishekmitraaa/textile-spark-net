@@ -9,6 +9,7 @@ import { UserRoleProvider } from "./contexts/UserRoleContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { DisplayCurrencyProvider } from "./contexts/DisplayCurrencyContext";
 import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
+import ClarityMask from "./components/analytics/ClarityMask";
 import StoreSync from "./components/StoreSync";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
@@ -221,14 +222,16 @@ const App = () => (
               worse than nothing. */}
           <Suspense fallback={<div className="min-h-screen bg-white" />}>
           <Routes>
+            {/* <ClarityMask> hides a page from Microsoft Clarity's recordings (lib/analytics/clarity.ts):
+                sign-in, chats, onboarding, KYC, profile, requirements, quotes, leads and billing. */}
             <Route path="/" element={<Landing />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/auth/login" element={<Login />} />
-            <Route path="/auth/otp-verify" element={<OtpVerify />} />
+            <Route path="/login" element={<ClarityMask><Login /></ClarityMask>} />
+            <Route path="/auth/login" element={<ClarityMask><Login /></ClarityMask>} />
+            <Route path="/auth/otp-verify" element={<ClarityMask><OtpVerify /></ClarityMask>} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route path="/auth/role-selection" element={<RoleSelection />} />
             <Route path="/auth/sub-role" element={<SubRole />} />
-            <Route path="/auth/account-info" element={<AccountInfo />} />
+            <Route path="/auth/account-info" element={<ClarityMask><AccountInfo /></ClarityMask>} />
             <Route path="/auth/interest-preference" element={<InterestPreference />} />
             <Route path="/auth/terms" element={<Terms />} />
             <Route path="/auth/welcome" element={<Welcome />} />
@@ -249,67 +252,67 @@ const App = () => (
             <Route path="/services/:vendorId" element={<ServiceVendorProfile />} />
             <Route path="/freelancers" element={<Freelancers />} />
             <Route path="/freelancers/:id" element={<FreelancerProfile />} />
-            <Route path="/requirement/post-requirement" element={<PostRequirement />} />
-            <Route path="/requirement/my-quotes" element={<MyQuotes />} />
+            <Route path="/requirement/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
+            <Route path="/requirement/my-quotes" element={<ClarityMask><MyQuotes /></ClarityMask>} />
             <Route path="/vendor/:id" element={<VendorProfile />} />
-            <Route path="/chats" element={<Chat />} />
-            <Route path="/chats/:vendorId" element={<ChatThread />} />
+            <Route path="/chats" element={<ClarityMask><Chat /></ClarityMask>} />
+            <Route path="/chats/:vendorId" element={<ClarityMask><ChatThread /></ClarityMask>} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/profile/interest-preference" element={<InterestPreference />} />
             <Route path="/profile/reviews" element={<MyReviews />} />
             <Route path="/profile/help" element={<Help />} />
-            <Route path="/profile/help/chat" element={<SupportChat />} />
+            <Route path="/profile/help/chat" element={<ClarityMask><SupportChat /></ClarityMask>} />
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/for-you" element={<ForYou />} />
             <Route path="/upload" element={<Upload />} />
-            <Route path="/leads" element={<Leads />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/leads" element={<ClarityMask><Leads /></ClarityMask>} />
+            <Route path="/notifications" element={<ClarityMask><Notifications /></ClarityMask>} />
             <Route path="/advertisements" element={<Advertisements />} />
-            <Route path="/settings" element={<VendorSettings />} />
+            <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />
             <Route path="/terms" element={<TermsConditions />} />
-            <Route path="/subscription" element={<Subscription />} />
-            <Route path="/subscription/invoice/:id" element={<InvoiceDetail />} />
+            <Route path="/subscription" element={<ClarityMask><Subscription /></ClarityMask>} />
+            <Route path="/subscription/invoice/:id" element={<ClarityMask><InvoiceDetail /></ClarityMask>} />
             {/* Vendor billing: every payment, its bill, and certificate tracking. */}
-            <Route path="/my-payments" element={<MyPayments />} />
-            <Route path="/my-payments/receipt/:orderId" element={<AdReceiptDetail />} />
-            <Route path="/quotes" element={<Quotes />} />
-            <Route path="/profile" element={<Profile />} />
+            <Route path="/my-payments" element={<ClarityMask><MyPayments /></ClarityMask>} />
+            <Route path="/my-payments/receipt/:orderId" element={<ClarityMask><AdReceiptDetail /></ClarityMask>} />
+            <Route path="/quotes" element={<ClarityMask><Quotes /></ClarityMask>} />
+            <Route path="/profile" element={<ClarityMask><Profile /></ClarityMask>} />
             {/* Replaced the Edit Profile modal (2026-09-23): real, refresh-safe routes. */}
-            <Route path="/profile/edit" element={<ProfileEdit />} />
-            <Route path="/profile/business-details" element={<ProfileBusinessDetails />} />
+            <Route path="/profile/edit" element={<ClarityMask><ProfileEdit /></ClarityMask>} />
+            <Route path="/profile/business-details" element={<ClarityMask><ProfileBusinessDetails /></ClarityMask>} />
             {/* Buyer account & security settings (2026-09-23). /settings is the vendor's. */}
-            <Route path="/profile/settings" element={<BuyerSettings />} />
+            <Route path="/profile/settings" element={<ClarityMask><BuyerSettings /></ClarityMask>} />
             <Route path="/profile/notifications" element={<ProfileNotifications />} />
-            <Route path="/profile/social-links" element={<ProfileSocialLinks />} />
-            <Route path="/profile/regional-settings" element={<ProfileAccountPrefs />} />
-            <Route path="/profile/data-export" element={<ProfileAccountPrefs />} />
+            <Route path="/profile/social-links" element={<ClarityMask><ProfileSocialLinks /></ClarityMask>} />
+            <Route path="/profile/regional-settings" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
+            <Route path="/profile/data-export" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
             <Route path="/profile/terms" element={<TermsConditions />} />
             <Route path="/saved" element={<SavedCollections />} />
             <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
-            <Route path="/business-profile" element={<BusinessProfile />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/post-requirement" element={<PostRequirement />} />
+            <Route path="/business-profile" element={<ClarityMask><BusinessProfile /></ClarityMask>} />
+            <Route path="/chat" element={<ClarityMask><Chat /></ClarityMask>} />
+            <Route path="/post-requirement" element={<ClarityMask><PostRequirement /></ClarityMask>} />
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
             <Route path="/analytics" element={<Analytics />} />
             <Route path="/help" element={<Help />} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
-            <Route path="/register" element={<Register />} />
+            <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />
             <Route path="/seller" element={<VendorLanding />} />
-            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/onboarding" element={<ClarityMask><Onboarding /></ClarityMask>} />
             
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />
-            <Route path="/my-store/business" element={<MyBusiness />} />
+            <Route path="/my-store/business" element={<ClarityMask><MyBusiness /></ClarityMask>} />
             <Route path="/my-store/business/tools" element={<BusinessTools />} />
-            <Route path="/kyc" element={<Kyc />} />
+            <Route path="/kyc" element={<ClarityMask><Kyc /></ClarityMask>} />
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
-            <Route path="/report-fraud" element={<ReportFraud />} />
+            <Route path="/report-fraud" element={<ClarityMask><ReportFraud /></ClarityMask>} />
             <Route path="/about" element={<About />} />
             <Route path="/seller/blogs" element={<VendorBlogs />} />
             <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />

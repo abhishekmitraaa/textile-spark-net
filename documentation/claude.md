@@ -411,6 +411,21 @@ undocumented. Deep technical rationale for each lives in
     migration grants it (the 4b self-check fails otherwise). anon can't write the table at
     all. Never re-grant the eight.
   - Detail: `technicalimplementation.md` → "Vendor private fields".
+- **Microsoft Clarity may record the buyer site, and screens with personal data are masked
+  from it** (Mitra, 2026-09-27: "install Clarity"; admin completion Phase 8).
+  - `src/lib/analytics/clarity.ts` loads it only in a production build with
+    `VITE_CLARITY_PROJECT_ID` set. Never identify anyone to it: no `clarity("identify")`, and
+    no name, phone, email or account id in a custom tag.
+  - Masking happens in the browser, so masked content never reaches Clarity. **A new route
+    that shows or collects personal data** (contact details, chat, KYC, billing, requirements)
+    **wraps its element in `<ClarityMask>` in `App.tsx`.** One element on an open page carries
+    `data-clarity-mask="True"` itself.
+  - Overlays are masked in the primitives (`components/ui/dialog`, `alert-dialog`, `drawer`,
+    `sheet`), because they render in a portal outside the page's mask. Keep the attribute there.
+  - The Terms page's Clarity paragraphs render only while `CLARITY_ENABLED`, so the page never
+    describes recording that isn't happening. The wording awaits legal review. Set the Clarity
+    project's masking mode to Strict.
+  - Detail: `technicalimplementation.md` → "Microsoft Clarity on the buyer site".
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the
@@ -762,6 +777,10 @@ undocumented. Deep technical rationale for each lives in
   - **Leads is `admin.lead_rows`** (admin completion Phase 7, `20260928071643`): the one
     definition of an RFQ's stage (new, unanswered, overdue at 48 hours, quoted, won,
     closed). A page or report that needs a stage reads it, never its own copy of the rules.
+  - **Live Activity is `admin_live_activity()`** (admin completion Phase 8, `20260928145827`),
+    computed from `engagement_events` on each call. A search shows only once at least 3
+    different visitors made it in the window, the same floor as `vendor_buyer_geography`: it
+    is a privacy rule, so changing it is a policy decision.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.

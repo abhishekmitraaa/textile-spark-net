@@ -30,6 +30,9 @@ const DrawerContent = React.forwardRef<
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      // Hidden from Microsoft Clarity recordings: an overlay renders in a portal,
+      // outside its page's <ClarityMask> (lib/analytics/clarity.ts).
+      data-clarity-mask="True"
       className={cn(
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className,

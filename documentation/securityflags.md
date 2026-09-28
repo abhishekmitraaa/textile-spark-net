@@ -12,6 +12,8 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-28 | Microsoft Clarity's script, once switched on, can read every buyer-site page | Low (third-party script; dormant until `VITE_CLARITY_PROJECT_ID` is set) | `src/lib/analytics/clarity.ts` (loads `https://www.clarity.ms/tag/<id>`) | Open, accepted with Mitra's decision to install Clarity. Masking controls what Clarity uploads, not what its script can read: like any third-party script it runs with the page's privileges. In place: it loads only when configured, identifies no one, and the sign-in, chat, onboarding, KYC, profile, requirement, quote, lead and billing screens and every overlay are masked. The buyer site sends no Content-Security-Policy, so nothing limits which scripts load; a CSP that allows `www.clarity.ms` and `*.clarity.ms` is the next step. Log entry below |
+| 2026-09-28 | Session replay would start without asking the visitor | Low (a legal question; dormant until Clarity is switched on) | `src/lib/analytics/clarity.ts`; the notice on `/terms` (`TermsConditions.tsx`, `#analytics`) | Open, a decision for Mitra and legal before `VITE_CLARITY_PROJECT_ID` is set. The Terms page describes recording and cookies, but nothing asks for consent, and Clarity sets its cookies on the first page. Clarity offers a consent API and a project setting that holds cookies until consent. Log entry below |
 | 2026-09-27 | **Dummy OTP is live: any 6 digits sign in as any phone number's account** | High (accepted for now, on Mitra's instruction; Critical once real users hold phone accounts) | `supabase/functions/otp-dev-verify/index.ts` (deployed 2026-09-27, version 1), called by `src/lib/auth/otp.ts` when Supabase refuses to send an SMS | Open, on purpose. Mitra asked for it on 2026-09-27 while SMS delivery isn't live. Anyone who types a number is signed in as that number's account, and accounts can be created without limit. It signs in only to accounts it created itself (never a Google or email account, never an admin, and it fails closed). Kill switch: the secret `OTP_DEV_BYPASS=off`. Switch it off or delete it before real users sign up by phone, then review the accounts with `app_metadata.created_by = otp-dev-verify`. Log entry below |
 | 2026-09-24 | WhatsApp account-deletion codes will arrive as Meta's fixed text, "<code> is your verification code.", which doesn't say the code deletes the account | Low (social engineering; dormant until WhatsApp is configured) | `supabase/functions/account-deletion/index.ts` (`sendWhatsApp`) and the Meta template it names (`WHATSAPP_TEMPLATE`) | Open, setup guidance. Someone holding a stolen session could request a deletion, then ask the owner for "the verification code"; the email version says what the code is for, and Meta's authentication templates can't. Create the template with Meta's security recommendation ("For your security, do not share this code.") and a 10-minute expiry. Already in place: the code only confirms a deletion and signs no one in, deletion waits 14 days with Cancel on `/profile`, and scheduling posts an in-app notification. My Profile Phase 18; `myprofileflags.md` MPF-24 |
 | 2026-09-24 | The parked `otp-dev-verify` edge function signs anyone in as any phone number with any code, and is on by default | Critical if deployed; nil today (not deployed) | `supabase/functions/otp-dev-verify/index.ts`. Committed to branch `my-profile/phase-14` by `85f4f6a` (2026-09-25) and removed again before the merge to `main` (2026-09-26), so it is in the public history but not in `main`'s files. Not deployed: not among the 16 functions on 2026-09-24 or the 18 on 2026-09-26 (`list_edge_functions`) | **Superseded on 2026-09-27** by the dummy-OTP row above: now deployed on purpose. Of the fixes listed here, the admin check was rewritten to use `admin_status_of()` and fails closed. Off by default, refusing the production ref, a number allowlist, a secret header and restricted CORS were not applied, because each would stop the dummy OTP working on the live site. As first recorded: open, parked. Flagged by the automated security review on 2026-09-24. `ENABLED = true`, turned off only by `OTP_DEV_BYPASS=off`; it creates accounts with the service-role key, allows CORS `*`, and has no allowlist or secret. Never deploy it as it is, and never commit it. Before any use: off by default, refuse the production project ref, a dev-number allowlist, a shared-secret header, restricted CORS, and an admin check that doesn't read the dropped `profiles.is_admin`. Better: delete it once real SMS delivery works. `ToDo.md`: the MPF-21 entry (moved there from `myprofileflags.md` on 2026-09-25, left as it is on Mitra's instruction) and "Wire up mobile OTP delivery" |
@@ -78,6 +80,24 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-28 — Microsoft Clarity on the buyer site (admin completion Phase 8) — Severity: Low (dormant until configured)
+- What was done: Mitra chose "native dashboard + install Clarity". `src/lib/analytics/clarity.ts`
+  adds Clarity's tag only in a production build with `VITE_CLARITY_PROJECT_ID` set, after the
+  page's load event, and never identifies anyone.
+  - Masked in the browser, so never uploaded: 32 routes wrapped in `<ClarityMask>` (sign-in and
+    sign-up, chats, onboarding and KYC, profile and settings, requirements, quotes, leads,
+    billing, notifications, fraud reports), every dialog, alert dialog, drawer and sheet, the
+    vendor page's revealed phone number and Help's delete-account card. Clarity also masks every
+    input box in all modes.
+- Risks logged (two new Open rows):
+  - The script itself can read any page it runs on. Masking limits uploads, not access. No CSP
+    limits scripts on the buyer site.
+  - Nothing asks for consent before recording; the Terms notice only describes it. Legal review
+    is pending (`ToDo.md`).
+- Not a risk: the id is not a secret (it's in the tag URL), and the admin panel only links to
+  Clarity's dashboard, which needs a Microsoft sign-in.
+- Related changelog entry: 2026-09-28 (Phase 8: live activity and Clarity).
 
 ### 2026-09-28 — Vendor private fields, Phase 4a: readers first — Severity: High (open until Phase 4b)
 - What was done: the fix for the 2026-09-27 Open row, first half. Nothing was revoked yet (the

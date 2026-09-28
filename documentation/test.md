@@ -163,6 +163,46 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-28 — Admin completion Phase 8: live activity and Clarity (migration rehearsed and applied, md5 matches; harness 12 13/13 rehearsed and live; buyer and admin checked in a local browser)
+
+- **Harness `12_live_activity.sql`** (13 fixture events exist only inside their rolled-back cases):
+  - **Who reads:** all seven admin roles get a 60-minute answer with 60 minute buckets and every
+    key. An inactive admin and a buyer get 42501 ("admins only"); anon gets 42501 (no EXECUTE).
+  - **Fixtures move the counts by exactly their share:** now +4 visitors (+1 signed in, +3 guests);
+    the hour +5 visitors and +12 events, and the per-minute sum +12; the day +6 visitors;
+    product_view +5, search_impression +5, cta_click +1, ad_impression +1; the product +5 views
+    from +5 visitors ("Mesh Training Tee by Demo Textiles Co."); the vendor +6 actions
+    (impressions left out).
+  - **Search floor:** "  H12   Denim ", "h12 denim" and "H12 DENIM" from 3 visitors show as
+    "h12 denim (3)"; "h12 private" from 2 visitors doesn't show.
+  - **Window:** 1 → 5, 100000 → 1440, null → 60, no argument → 60; 60 buckets, ascending, the
+    last one this minute.
+  - **Speed:** 9.7 ms cold, 2.1 ms warm for 60 minutes; 2.4 ms for 24 hours. The window's scan is
+    an index scan on `engagement_events_created_idx`.
+- **Buyer site** (`vite preview` on :4179; Clarity's requests aborted and the tracking RPCs
+  answered in the browser, so nothing reached Microsoft or production):
+  - Built with a test id: the Terms notice has 4 paragraphs; one `clarity.ms/tag/<id>` script
+    after the load event, with the queue stub defined.
+  - `/login` and `/register` render inside the `display: contents` mask, a direct child of
+    `#root` (on `/login` the phone input is inside it); `/`, `/search` and `/terms` have no mask.
+  - **Pixel comparison with production** (390×844, full page): `/login` 0 differing pixels,
+    `/register` 0.
+  - Built without an id: no script, no stub, no Clarity request, and 1 Terms paragraph.
+  - `npx tsc --noEmit --skipLibCheck -p tsconfig.app.json` 0; `npm run i18n:check` 6,978/6,978 in
+    both catalogues; `npm run build` passes; the main chunk carries the attribute 7 times.
+- **Cosora-Admin** (`vite preview` on :4180, a made-up session in local storage, and every
+  Supabase request answered in the browser, so nothing reached the project):
+  - As super_admin and as product_moderator: every panel renders, 60 bars, the removed-product
+    fallback shows, and the search row shows.
+  - The seller links to its detail page for super_admin and is plain text for
+    product_moderator.
+  - Changing the window asks again with 1440 and relabels the figures.
+  - One more call within 31 s while visible, none within 31 s while hidden.
+  - No console errors, and no Supabase request other than the two answered.
+  - `npm run typecheck` 0, `npm run build` 0; the bundle calls `admin_live_activity`.
+- **Not run:** a real signed-in walk-through (it needs an admin sign-in), and Clarity itself (no
+  project yet).
+
 ### 2026-09-28 — Admin completion Phase 7: leads (migration rehearsed and applied, md5 matches; harness 11 16/16 rehearsed and live)
 
 - **Harness `11_leads.sql`** (six fixture RFQs and two quotes exist only inside their rolled-back cases):

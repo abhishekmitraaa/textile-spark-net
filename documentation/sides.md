@@ -195,6 +195,15 @@ the demand side of India's fashion and textile supply chain.
   catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-09-28 (admin completion, Phase 8: analytics)
+- **The Terms page says what is recorded.** A new "Analytics and session replay" section says
+  which products, storefronts and searches are viewed is recorded, linked to the account when
+  signed in.
+- **Microsoft Clarity can record visits**, once its project id is set (not yet). Sign-in,
+  chats, onboarding and KYC, the profile, requirements and quotes, billing and every pop-up are
+  hidden from recordings, and so is anything typed. The Terms page then also describes
+  recordings and cookies.
+
 ### Fixed 2026-09-28 (admin completion, Phase 4a: vendor contact details)
 - **A vendor's page no longer invents anything.** An empty owner, phone, email, website,
   address, GSTIN, PAN, About text, banner, employee count, founding year, member-since or
@@ -604,6 +613,17 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-09-28 (admin completion, Phase 8)
+- **Live Activity** shows the buyer site now, from Cosora's own event log. It used to be only a
+  link to Microsoft Clarity.
+  - Visitors in the last 5 minutes and over a chosen window (15 minutes to 24 hours), signed in
+    and guest.
+  - Events per minute for the last hour, and events by type.
+  - The most-viewed products, the busiest sellers, and searches made by at least 3 different
+    visitors.
+  - It refreshes every 30 seconds while open. Every admin role sees it.
+- The Clarity links (recordings, heatmaps) appear once the Clarity project id is set.
 
 ### Added 2026-09-28 (admin completion, Phase 7)
 - **Leads**, a new read-only page under Insight: every buyer request (RFQ) and its stage.

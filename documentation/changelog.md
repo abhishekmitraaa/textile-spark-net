@@ -1,3 +1,33 @@
+- 2026-09-28 (admin completion, Phase 8: live activity and Clarity): **Cosora-Admin's Live Activity page shows the buyer site's traffic from Cosora's own event log, and the buyer site can load Microsoft Clarity with its sensitive screens masked.** It is Mitra's "native dashboard + install Clarity" choice. Clarity stays off until its project id is set.
+  - **Migration `20260928145827_admin_live_activity.sql`:**
+    - `admin_live_activity(minutes)` reads `engagement_events`, which `log_engagement_event()` already writes. It returns:
+      - visitors active in the last 5 minutes and in a chosen window (5 minutes to 24 hours), split signed in and guest;
+      - events per minute for the last hour, and events by type;
+      - the top 5 products and sellers;
+      - searches, only once at least 3 different visitors made them.
+    - A visitor is a signed-in account or a signed-out tab session. Impressions count as events, but not as buyer actions for sellers.
+    - Any active admin reads it. Index `engagement_events (created_at desc)`.
+  - **Buyer site:**
+    - `src/lib/analytics/clarity.ts` adds Clarity's tag after the page's load event, only in a production build with `VITE_CLARITY_PROJECT_ID` set. It identifies no one.
+    - `<ClarityMask>` (`data-clarity-mask="True"` on a `display: contents` wrapper) hides 32 routes from recordings: sign-in and sign-up, chats, onboarding and KYC, profile and settings, requirements, quotes and leads, billing, notifications and fraud reports. The wrapper is in `App.tsx`; the sign-in files are untouched.
+    - Every dialog, alert dialog, drawer and sheet carries the attribute (`src/components/ui`), because an overlay renders outside its page. So do the vendor page's revealed phone number and Help's delete-account card.
+    - The Terms page has an "Analytics and session replay" section. The event-log paragraph always shows; the Clarity paragraphs show only while Clarity runs. Hindi and Gujarati entries added. The wording needs legal review.
+  - **Cosora-Admin:** Live Activity is a live dashboard, refreshed every 30 seconds while its tab is visible. See that repo's CHANGELOG.
+  - **Verified:**
+    - Harness `scripts/admin-completion/12_live_activity.sql`, rehearsed and live: 13/13.
+      - All seven admin roles read it; an inactive admin, a buyer and anon are refused.
+      - 13 planted events move each figure by exactly their share.
+      - The search floor hides a query only 2 visitors made, and case and spacing variants count as one search.
+      - The window clamps to 5–1440 minutes.
+    - 2–10 ms a call, on the new index. The md5 matches.
+    - Buyer: typecheck 0, i18n 6,978/6,978, build.
+    - A local preview built with a test id, with Clarity's requests blocked and tracking calls answered in the test browser, so nothing reached Microsoft or production:
+      - the tag loads once, after the load event;
+      - `/login` and `/register` are wrapped and pixel-identical to production;
+      - `/`, `/search` and `/terms` aren't wrapped.
+    - Built without the id: no tag, and the Terms page shows only the event-log paragraph.
+  - **Files:** the migration, `scripts/admin-completion/12_live_activity.sql`, `src/lib/analytics/clarity.ts`, `src/components/analytics/ClarityMask.tsx`, `src/App.tsx`, `src/main.tsx`, `src/components/ui/{dialog,alert-dialog,drawer,sheet}.tsx`, `src/pages/{TermsConditions,VendorProfile,Help}.tsx`, `src/i18n/{hi,gu}.json`, `src/lib/database.types.ts` (regenerated, additive), `.env.example`, `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `securityflags.md`, `ToDo.md`, `test.md`, this file.
+
 - 2026-09-28 (admin completion, Phase 7: leads): **Cosora-Admin has a Leads page: every RFQ's stage in the pipeline, and how fast vendors answer.** It is Mitra's "RFQ pipeline" choice for Leads, and it is read-only.
   - **Migration `20260928071643_leads_pipeline.sql`:**
     - `admin.lead_rows` gives every RFQ one stage: new (active, no quote, under 24 hours), unanswered (24 hours or older; overdue from 48 hours), quoted (a quote, none accepted), won (a quote accepted), closed (no longer active, none accepted). An RFQ addressed to one vendor is "direct".

@@ -2,6 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 import { getLang, loadCatalog } from "./lib/i18n";
+import { startClarity } from "./lib/analytics/clarity";
 
 // A Hindi or Gujarati session loads its catalogue before the first paint, so
 // the page never flashes English. Capped, so a failed download can't hold the
@@ -11,3 +12,6 @@ const catalogReady = Promise.race([loadCatalog(getLang()), new Promise((r) => se
 catalogReady.finally(() => {
   createRoot(document.getElementById("root")!).render(<App />);
 });
+
+// Microsoft Clarity: production builds with VITE_CLARITY_PROJECT_ID only, after the load event.
+startClarity();
