@@ -96,7 +96,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -162,6 +162,28 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-28 — Admin completion Phase 7: leads (migration rehearsed and applied, md5 matches; harness 11 16/16 rehearsed and live)
+
+- **Harness `11_leads.sql`** (six fixture RFQs and two quotes exist only inside their rolled-back cases):
+  - **Who reads:** super_admin, vendor_ops, product_moderator and support get 4 rows. finance_admin, ads_moderator, manager and a buyer get 42501; anon gets 42501 (no EXECUTE).
+  - **Production:** 4 RFQs, 1 direct; stages newest first: unanswered, quoted, quoted, quoted.
+  - **Stages:**
+    - H11 new = new;
+    - H11 unanswered = unanswered;
+    - H11 overdue = unanswered + overdue;
+    - H11 quoted = quoted, first quote after 12 h;
+    - H11 won = won after 30 h, by Demo Textiles Co.;
+    - H11 closed = closed.
+  - **Filters:** overdue = H11 overdue; won = H11 won; 48 hours or older = 4; "H11 won" = 1; a literal `%` = 0.
+  - **Summary:**
+    - planting the fixtures moves the 30-day window by +6 RFQs, +1 won, +1 closed, +2 answered, +5 at least a day old, +1 answered within 24 h;
+    - open now: 1 new, 3 unanswered, 2 overdue, 4 quoted (fixtures included); median first quote 21.0 h.
+  - **Paging:** limit 2 walks 10 rows, 10 distinct.
+  - **Detail:** the quoted fixture has stage quoted, 1 quote by Demo Textiles Co., and a named buyer; an unknown id gives P0002.
+  - **Bad inputs:** an unknown stage, half a cursor and days 0 each give 22023.
+- **Cosora-Admin:** `npm run typecheck` 0, `npm run build` 0; the bundle calls `admin_leads_list`.
+- **Not run:** a browser walk-through, which needs an admin sign-in.
 
 ### 2026-09-28 — Admin completion Phase 6: customers (migration rehearsed and applied, md5 matches; harness 10 21/21 rehearsed and live)
 

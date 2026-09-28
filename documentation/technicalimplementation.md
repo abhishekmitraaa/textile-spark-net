@@ -1827,6 +1827,46 @@ Migration `20260928070410_customers.sql`. Cosora-Admin's Customers page reads it
 
 ---
 
+## Leads — the RFQ pipeline (admin completion Phase 7, 2026-09-28)
+
+Migration `20260928071643_leads_pipeline.sql`. Cosora-Admin's `/leads` page reads it
+(`src/lib/leads.ts`). Read-only.
+
+- **`admin.lead_rows`** (a view; no client grants). One row per RFQ, with its quotes counted
+  by a lateral subquery over `quotes_rfq_idx`:
+
+  | Stage | Rule |
+  |---|---|
+  | won | a quote with status `accepted` (whatever the RFQ's status) |
+  | closed | RFQ not `active`, none accepted |
+  | quoted | active, at least one quote |
+  | new | active, no quote, under 24 hours old |
+  | unanswered | active, no quote, 24 hours or older |
+
+  - `overdue`: active, no quote, 48 hours or older.
+  - `direct`: `rfqs.vendor_id` is set.
+  - `first_quote_at`: the earliest `quotes.created_at`. A resubmitted quote keeps its
+    original time.
+- **`admin_leads_list(stage, min_age_hours, category, direct, search, cursor_at, cursor_id, limit)`:**
+  - Keyset paging on `(created_at, id)` descending, served by
+    `rfqs_created_idx (created_at desc, id desc)`. `limit` is at most 200.
+  - `stage` also accepts `overdue`.
+  - Search is literal over the title, the product, and the buyer's `full_name` and
+    `buyer_profiles.company`.
+  - An unknown stage or half a cursor is 22023.
+- **`admin_leads_summary(days)`** (1–3650, or null for all time):
+  - `open`: new, unanswered, overdue and quoted, over every active RFQ whatever its age;
+  - `window`: rfqs, direct, won, closed, answered, `median_first_quote_hours` (the median of
+    first quote minus created, in hours), `eligible_24h` (RFQs at least a day old) and
+    `answered_24h` (of those, answered within 24 hours).
+- **`admin_lead_detail(rfq_id)`:** the request (with description and images), its buyer
+  (name only), its target vendor, and its quotes (vendor, price, MOQ, lead time, status,
+  time). An unknown id is P0002.
+- **Gate:** `admin.leads_can_read()`: super_admin, vendor_ops, product_moderator, support.
+- **Tests:** `scripts/admin-completion/11_leads.sql`.
+
+---
+
 ## Calls — one write path, `log_call()` (2026-09-23)
 
 Phase 12 of the My Profile brief (MPF-2). Migration

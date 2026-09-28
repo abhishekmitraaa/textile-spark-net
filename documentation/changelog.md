@@ -1,3 +1,24 @@
+- 2026-09-28 (admin completion, Phase 7: leads): **Cosora-Admin has a Leads page: every RFQ's stage in the pipeline, and how fast vendors answer.** It is Mitra's "RFQ pipeline" choice for Leads, and it is read-only.
+  - **Migration `20260928071643_leads_pipeline.sql`:**
+    - `admin.lead_rows` gives every RFQ one stage: new (active, no quote, under 24 hours), unanswered (24 hours or older; overdue from 48 hours), quoted (a quote, none accepted), won (a quote accepted), closed (no longer active, none accepted). An RFQ addressed to one vendor is "direct".
+    - `admin_leads_list()`: stage, minimum age, category, audience (marketplace or direct), a literal search over title, product, buyer name and company, and keyset paging. The buyer is named, never their email or phone.
+    - `admin_leads_summary(days)`:
+      - the open pipeline now (new, unanswered, overdue, quoted);
+      - for RFQs created in the window: total, direct, won, closed, answered, the median time to a first quote, and the share answered within 24 hours of those at least a day old.
+    - `admin_lead_detail()`: the request, its buyer and target vendor, and its quotes.
+    - Readers are super_admin, vendor_ops, product_moderator and support.
+  - **Cosora-Admin:** a new `/leads` page under Insight, the `leads` section in `roles.ts` (read-only for everyone), and links to the buyer in Accounts (which now opens pre-searched from `?q=`) and to the vendor's detail. See that repo's CHANGELOG.
+  - **Found live:** one production RFQ has been waiting 48 hours or more with no quote. The page shows it as overdue.
+  - **Verified:**
+    - Harness `scripts/admin-completion/11_leads.sql`, rehearsed and live: 16/16.
+      - Access: the four reading roles see 4 RFQs; finance_admin, ads_moderator, manager, a buyer and anon are refused.
+      - Six planted RFQs land as new, unanswered, unanswered + overdue, quoted (first quote after 12 hours), won (after 30 hours, by Demo Textiles Co.) and closed.
+      - The filters find the right ones.
+      - The window counts move by exactly the fixtures' share: +6 RFQs, +1 won, +1 closed, +2 answered, +5 at least a day old, +1 within 24 hours.
+      - Paging walks 10 rows once each; detail carries the quote; an unknown id gives P0002; bad inputs give 22023.
+    - The md5 matches. Both apps typecheck and build.
+  - **Files:** the migration, `scripts/admin-completion/11_leads.sql`, `src/lib/database.types.ts` (regenerated, additive), `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `test.md`, this file.
+
 - 2026-09-28 (admin completion, Phase 6: customers): **Cosora-Admin's Customers page reads real customers, segments and tags from the database, replacing a dev-seed fixture.**
   - **Migration `20260928070410_customers.sql`:**
     - `admin.customer_summary`, a materialized view, one row per account that isn't deleted or active Cosora staff:
