@@ -7089,5 +7089,14 @@
  "Cosora records which products, storefronts and searches are viewed and which buttons are pressed, to show sellers how their listings perform and to run the marketplace. When you're signed in, these records are linked to your account.": "કોસોરા નોંધે છે કે કયા પ્રોડક્ટ, સ્ટોરફ્રન્ટ અને સર્ચ જોવામાં આવે છે અને કયા બટન દબાવવામાં આવે છે, જેથી વિક્રેતાઓને બતાવી શકાય કે તેમની લિસ્ટિંગ કેવું પ્રદર્શન કરે છે અને માર્કેટપ્લેસ ચલાવી શકાય. જ્યારે તમે સાઇન ઇન હો, ત્યારે આ રેકોર્ડ તમારા એકાઉન્ટ સાથે જોડાયેલા હોય છે.",
  "We also use Microsoft Clarity to see how our pages are used. It records clicks, taps and scrolling, and replays visits so we can find and fix problems. Recordings aren't linked to your Cosora account. Microsoft processes this data under its own privacy statement.": "અમારાં પેજ કેવી રીતે વપરાય છે તે જોવા માટે અમે Microsoft Clarity નો પણ ઉપયોગ કરીએ છીએ. તે ક્લિક, ટેપ અને સ્ક્રોલિંગ રેકોર્ડ કરે છે, અને મુલાકાતોને ફરીથી ચલાવે છે જેથી અમે સમસ્યાઓ શોધીને સુધારી શકીએ. રેકોર્ડિંગ તમારા કોસોરા એકાઉન્ટ સાથે જોડાયેલાં નથી. Microsoft આ ડેટાને તેના પોતાના પ્રાઇવસી સ્ટેટમેન્ટ હેઠળ પ્રોસેસ કરે છે.",
  "Sign-in, chats, onboarding and KYC, your profile, requirements and quotes, billing, and anything in a pop-up are hidden from these recordings, as is everything you type into a field. Hidden content is masked in your browser and never sent.": "સાઇન-ઇન, ચેટ, ઓનબોર્ડિંગ અને KYC, તમારી પ્રોફાઇલ, જરૂરિયાતો અને ક્વોટ્સ, બિલિંગ, અને પોપ-અપમાં દેખાતી દરેક વસ્તુ આ રેકોર્ડિંગથી છુપાયેલી રહે છે, અને તમે કોઈપણ ફીલ્ડમાં જે કંઈ ટાઇપ કરો છો તે પણ. છુપાયેલી સામગ્રી તમારા બ્રાઉઝરમાં જ ઢાંકી દેવામાં આવે છે અને ક્યારેય મોકલવામાં આવતી નથી.",
- "Clarity sets cookies to recognise a returning browser. The site works the same if you block them.": "Clarity પાછા આવતા બ્રાઉઝરને ઓળખવા માટે કૂકીઝ સેટ કરે છે. જો તમે તેને બ્લોક કરો, તો પણ સાઇટ એ જ રીતે કામ કરે છે."
+ "Clarity sets cookies to recognise a returning browser. The site works the same if you block them.": "Clarity પાછા આવતા બ્રાઉઝરને ઓળખવા માટે કૂકીઝ સેટ કરે છે. જો તમે તેને બ્લોક કરો, તો પણ સાઇટ એ જ રીતે કામ કરે છે.",
+ "Reply from the seller": "વિક્રેતાનો જવાબ",
+ "This review couldn't be updated.": "આ સમીક્ષા અપડેટ થઈ શકી નહીં.",
+ "This review couldn't be deleted.": "આ સમીક્ષા કાઢી શકાઈ નહીં.",
+ "No reviews on your products yet. Buyers can review any of your live products from its page.": "તમારા ઉત્પાદનો પર હજુ કોઈ સમીક્ષા નથી. ખરીદદારો તમારા કોઈપણ લાઇવ ઉત્પાદનની સમીક્ષા તેના પેજ પરથી કરી શકે છે.",
+ "Store reviews": "સ્ટોર સમીક્ષાઓ",
+ "Product reviews": "ઉત્પાદન સમીક્ષાઓ",
+ "You can't review your own business": "તમે તમારા પોતાના વ્યવસાયની સમીક્ષા કરી શકતા નથી",
+ "A reply can't be empty": "જવાબ ખાલી ન હોઈ શકે",
+ "not authorized to reply to this review": "આ સમીક્ષાનો જવાબ આપવાની પરવાનગી નથી"
 }

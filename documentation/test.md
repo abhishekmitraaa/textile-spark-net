@@ -13,6 +13,7 @@ Last updated: 2026-09-09
 
 | Spec | Covers | Accounts |
 |---|---|---|
+| `reviews-pipeline.spec.ts` | Store and product reviews written in the UI reach `/profile/reviews` and the vendor's `/reviews` (both tabs); the vendor's replies reach the buyer; self-reviews and forged replies are refused; delete from My Reviews. Cleans up in `afterEach` and answers tracking calls in the browser | demo-admin (reviewer), demo-vendor |
 | `new-arrivals.spec.ts` | Buyer New Arrivals tabs render (>=5) and the active route's tab is marked selected | anon |
 | `faqs-admin-editable.spec.ts` | Admin-editable FAQs across both apps. **The real content first:** the 12 Help FAQs signed out, then Andy's 5 Subscription questions and his 10 Seller Registration questions in his order. It also checks the Subscription "Contact us" link (`mailto:hello@cosora.in?subject=Subscription%20question` since Phase 24; it went to `/help` before) and that a bulleted answer renders as lines. **Then the edit flow:** in Cosora-Admin (:5174), demo-admin adds, edits, moves up then back down, deactivates and deletes an FAQ on each surface, and the live page follows each step with no deploy. That's Buyer Help on `/profile/help` signed out, Subscription on `/subscription` as demo-vendor, and Seller Registration on `/seller` signed out. Each page must end exactly as it started. **Permissions:** demo-buyer and anon get 42501 from every `admin_faq_*` RPC, from a direct insert, and from reading `created_by`. **Mutating, self-cleaning:** the rows it creates start with `[P9TEST` and are deleted in `finally`. **Since Phase 26, `finally` also compares every FAQ with a snapshot taken at the start, positions included, and moves back any row out of place.** Each move waits for its own `admin_faq_reorder` response. **Since Phase 23 its pages block the CDN snapshot URL and read the table**, so each step shows at once (the snapshot trails an edit by up to about a minute). Needs both dev servers (`ADMIN_APP_URL` overrides :5174) | `demo-admin`, `demo-vendor`, `demo-buyer`, anon |
 | `faqs-support-write.spec.ts` | Phase 22 (Phase 9 Q3): **support writes FAQs.** In Cosora-Admin as a support admin: no read-only banner, and on Buyer Help, Subscription and Seller Registration it adds, edits, moves up, moves down, deactivates and deletes an FAQ. Each `admin_faq_*` call the page makes must return 200 and is checked in the database: the creator is the support admin, anon reads the row while active and not after, and the swap lands. **product_moderator is still refused:** no FAQs in its nav, "Section not available for your role" on `/faqs`, and 42501 from all five RPCs aimed at a real row, which is unchanged afterwards. **Mutating, self-cleaning:** rows start with `[P22TEST`; `afterEach` deletes them, moves any reordered row back, and checks every FAQ against the start. Needs Cosora-Admin on :5174 only | run-only `rlstest-support` and `rlstest-productmod` (`FIXTURE_PASSWORD`; seed, then drop), `demo-admin` (snapshot and cleanup) |
@@ -162,6 +163,25 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-29 — Reviews pipeline (migration applied, md5 matches; 14/14 SQL cases; new spec passes; 8/8 related specs)
+
+- **SQL, as `authenticated` in one rolled-back transaction** (14/14):
+  - a buyer's store review is accepted;
+  - demo-vendor reviewing its own store or its own product is refused with 42501;
+  - a buyer's forged `reply_body` on their own store and product review is ignored;
+  - moving a review to another vendor is refused with 42501;
+  - a non-owner's reply to a store or product review is refused with 42501;
+  - the owner's replies are stored trimmed, and the flag is empty afterwards;
+  - an empty reply is refused with 22023;
+  - a buyer's later edit keeps the seller's reply;
+  - anon can't execute the reply RPCs.
+  - Afterwards: 9 store and 11 product reviews, as before.
+- **`tests/reviews-pipeline.spec.ts`** (demo-admin reviews demo-vendor's store and first live product; 58 s): passed.
+  - The first run exposed two spec bugs, not app bugs: the product page's reviews sit behind a lowercase "reviews" tab. `afterEach` removed that run's store review.
+  - After the passing run: demo-admin has 0 reviews, demo-vendor is back to 4.4 from 5 reviews, and demo-admin has 0 `recently_viewed` rows.
+- **Regression:** `mp7-product-detail-real-data.spec.ts` and `profile-data-export.spec.ts`, 8/8.
+- **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 6,987/6,987 in both languages; `npm run build` passes.
 
 ### 2026-09-28 — Admin completion Phase 8: live activity and Clarity (migration rehearsed and applied, md5 matches; harness 12 13/13 rehearsed and live; buyer and admin checked in a local browser)
 

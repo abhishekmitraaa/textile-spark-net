@@ -377,6 +377,16 @@ undocumented. Deep technical rationale for each lives in
 - **A review's subject id must be the resolved entity id, never the route param** — buyer
   side vendor links carry slugs. And where no real row exists, the Write-a-Review CTA is
   hidden rather than shown and left to fail.
+- **Nobody reviews their own business, and only the seller answers a review** (2026-09-29,
+  migration `20260928190320`).
+  - `guard_review_write()` refuses a review of your own store or your own product (42501),
+    fixes a review's author and subject, and keeps `reply_body` / `replied_at` unless
+    `reply_to_review` / `reply_to_product_review` set `cosora.review_reply`.
+  - A surface that offers "Write a Review" hides it on the viewer's own store and listings.
+  - Vendors see and reply to store and product reviews on `/reviews`. Buyers see the replies
+    on `/profile/reviews` and on the product and vendor pages.
+  - A new review table that takes replies gets the same guard and its own reply RPC.
+  - Detail: `technicalimplementation.md` → "Reviews: who writes what".
 - **Signed-out / loading / error / empty must stay four distinct states** on any surface
   that reads from Supabase. Collapsing them is how a broken page passes for an empty one.
 - **Vendor contact details are gated by the same rule as calling** — one resolution, many

@@ -12,6 +12,7 @@ import { StarRating, StarPicker } from "@/components/reviews/StarRating";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { ReviewPhotoPicker, type ReviewPhoto } from "@/components/reviews/ReviewPhotoPicker";
 import { useAuth } from "@/contexts/AuthContext";
+import { errorMessage } from "@/lib/errorMessage";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -36,6 +37,7 @@ interface MyReview {
   date: string;
   text: string;
   photos: string[];
+  replyBody: string | null;
   href: string | null;
   unavailable: boolean;
 }
@@ -55,6 +57,7 @@ function mapMyReview(r: MyReviewItem): MyReview {
     date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     text: r.body ?? "",
     photos: r.photos,
+    replyBody: r.replyBody,
     href: r.href,
     unavailable: r.unavailable,
   };
@@ -151,7 +154,7 @@ const MyReviews = () => {
       setEditing(null);
       toast.success("Review updated");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update review");
+      toast.error(errorMessage(e) || "Could not update review");
     } finally {
       setSaving(false);
     }
@@ -164,7 +167,7 @@ const MyReviews = () => {
       await del(r.id);
       toast.success("Review deleted");
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not delete review");
+      toast.error(errorMessage(e) || "Could not delete review");
     }
   };
 
@@ -209,7 +212,7 @@ const MyReviews = () => {
           </div>
           <p className="text-base font-bold text-gray-900">Couldn't load your reviews</p>
           <p className="text-sm text-gray-500 mt-1 max-w-xs">
-            {error instanceof Error ? error.message : "Something went wrong. Please try again."}
+            {errorMessage(error) || "Something went wrong. Please try again."}
           </p>
           <button onClick={() => refetch()}
             className="mt-5 px-5 py-2.5 rounded-xl text-white text-sm font-bold" style={{ backgroundColor: CORAL }}>
@@ -303,6 +306,13 @@ const MyReviews = () => {
                 {r.text && <p data-no-translate className="text-sm text-gray-600 leading-relaxed mt-3">{r.text}</p>}
 
                 <ReviewPhotoStrip photos={r.photos} className="mt-3" />
+
+                {r.replyBody && (
+                  <div className="mt-3 rounded-lg border-l-2 border-[#ef4d62] bg-[#ef4d62]/5 p-2.5">
+                    <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from the seller</p>
+                    <p data-no-translate className="text-xs leading-relaxed text-gray-600">{r.replyBody}</p>
+                  </div>
+                )}
 
                 {r.href && (
                   <button

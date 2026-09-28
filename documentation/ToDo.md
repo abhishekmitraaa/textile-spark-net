@@ -15,6 +15,12 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Decide whether reviews can be reported, and build it if so — added 2026-09-29
+- Task: decide whether a vendor (or anyone) can report an abusive or fake review. If so, build it: a report stored somewhere an admin reads it, a Cosora-Admin queue, and an admin action to remove a review (`reviews_delete_own` / `product_reviews_delete_own` already let admins delete).
+- Context: the vendor `/reviews` page had a "Report" button that did nothing. It was removed on 2026-09-29 rather than faked. `submit_report` exists for chat moderation, and could be a model or be extended.
+- Reference: 2026-09-29, the reviews-pipeline audit and fix (My Reviews and vendor replies).
+- Status: Open
+
 ### Switch on Microsoft Clarity, after a legal read of the notice — added 2026-09-28
 - Task:
   1. Have the Terms page's "Analytics and session replay" section read for legal wording, and

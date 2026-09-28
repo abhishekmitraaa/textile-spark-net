@@ -56,7 +56,7 @@ const COLOR_HEX: Record<string, string> = {
 // === Types ===
 interface MediaItem { type: "image" | "video"; url: string; videoUrl?: string }
 interface Spec { label: string; value: string }
-interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[] }
+interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; replyBody: string | null }
 /**
  * The product page's view model — built ONLY from the database row.
  *
@@ -259,6 +259,12 @@ function ReviewCard({ review }: { review: Review }) {
       {review.comment && <p data-no-translate className="mt-1.5 text-sm text-gray-700 leading-relaxed">{review.comment}</p>}
       {review.sizeBought && <p className="mt-1.5 inline-block rounded bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600">Size bought: {review.sizeBought}</p>}
       <ReviewPhotoStrip photos={review.photos} className="mt-2.5" />
+      {review.replyBody && (
+        <div className="mt-2.5 rounded-lg border-l-2 border-[#ef4d62] bg-gray-50 p-2.5">
+          <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from the seller</p>
+          <p data-no-translate className="text-xs leading-relaxed text-gray-600">{review.replyBody}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -385,7 +391,9 @@ const ProductDetail = () => {
   const vendorReviewCount = vendorReviews?.count ?? 0;
   // product_reviews.product_id is a real FK, so only a live DB product can be
   // reviewed — which, after the guards below, is the only kind rendered.
-  const canReview = Boolean(row?.id);
+  // Nor by the seller who listed it: guard_review_write refuses that, so the
+  // CTA is hidden rather than offered and refused.
+  const canReview = Boolean(row?.id) && row?.vendorId !== user?.id;
   const myReview = (productReviews?.reviews ?? []).find((r) => r.buyerId && r.buyerId === user?.id);
   const breakdownPct = (star: number) => productReviews?.breakdown.find((b) => b.stars === star)?.percent ?? 0;
   const reviewCards: Review[] = (productReviews?.reviews ?? []).map((r, i) => ({
@@ -395,6 +403,7 @@ const ProductDetail = () => {
     date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
     comment: r.body ?? "",
     sizeBought: r.sizeBought ?? "",
+    replyBody: r.replyBody,
     photos: r.photos,
   }));
 
