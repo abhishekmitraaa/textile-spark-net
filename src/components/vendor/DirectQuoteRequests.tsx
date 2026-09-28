@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,7 +17,7 @@ import { useDirectQuoteRequests, submitQuote, echoQuoteReplyToChat } from "@/lib
 // echoes a `quote_reply` message into the buyer's chat thread.
 // ─────────────────────────────────────────────────────────────
 
-const BLUE = "#256fef";
+const BLUE = brand("vendor");
 
 export default function DirectQuoteRequests() {
   const { user } = useAuth();
@@ -54,20 +55,20 @@ export default function DirectQuoteRequests() {
   };
 
   const input =
-    "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm transition-colors focus:outline-none focus:border-[#256fef] focus:ring-1 focus:ring-[#256fef]/20";
+    "w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm transition-colors focus:outline-none focus:border-brand-vendor focus:ring-1 focus:ring-brand-vendor/20";
 
   return (
     <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4 lg:p-5">
       <div className="mb-3 flex items-center gap-2 lg:mb-4">
         <h2 className="text-sm font-bold text-gray-900 lg:text-base">Direct Quote Requests</h2>
-        <span className="rounded-full bg-[#256fef]/10 px-2 py-0.5 text-[10px] font-bold text-[#256fef] lg:text-[11px]">
+        <span className="rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor lg:text-[11px]">
           {requests.length} for you
         </span>
       </div>
 
       <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {requests.map((r) => (
-          <div key={r.id} className="rounded-xl border border-[#256fef]/40 bg-[#256fef]/[0.03] p-3 lg:p-3.5">
+          <div key={r.id} className="rounded-xl border border-brand-vendor/40 bg-brand-vendor/[0.03] p-3 lg:p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-gray-900 lg:text-[15px]">{r.productName}</p>
@@ -148,7 +149,7 @@ export default function DirectQuoteRequests() {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOpenId(r.id)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-[#256fef]/5" style={{ borderColor: BLUE, color: BLUE }}>
+              <button onClick={() => setOpenId(r.id)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="h-3.5 w-3.5" /> Send Quote
               </button>
             )}

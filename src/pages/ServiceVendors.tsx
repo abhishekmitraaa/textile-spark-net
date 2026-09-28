@@ -76,21 +76,21 @@ const ServiceVendors = () => {
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search services..."
-            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
           />
         </div>
 
         {/* Controls: Filters (sort) · Location · Rating */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide mb-3">
           <DropdownMenu>
-            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold focus:outline-none", sort !== "recommended" ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold focus:outline-none", sort !== "recommended" ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-700")}>
               <SlidersHorizontal className="w-3.5 h-3.5" /> Filters
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Sort by</p>
               {SORTS.map((s) => (
                 <DropdownMenuItem key={s.key} onClick={() => setSort(s.key)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", sort === s.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {s.label}
+                  <Check className={cn("w-4 h-4", sort === s.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {s.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -110,7 +110,7 @@ const ServiceVendors = () => {
             return (
               <button key={c.id} onClick={() => setCategory(c.id)}
                 className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95",
-                  active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                  active ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-600 hover:border-brand-buyer/40")}>
                 <Icon className="w-3.5 h-3.5" /> {c.label}
               </button>
             );
@@ -121,10 +121,10 @@ const ServiceVendors = () => {
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm text-gray-500"><span className="font-bold text-gray-900">{results.length}</span> vendor{results.length === 1 ? "" : "s"} found</p>
           <div className="flex items-center rounded-lg border border-gray-200 p-0.5">
-            <button onClick={() => setView("grid")} aria-label="Grid view" className={cn("p-1.5 rounded-md transition-colors", view === "grid" ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}>
+            <button onClick={() => setView("grid")} aria-label="Grid view" className={cn("p-1.5 rounded-md transition-colors", view === "grid" ? "bg-brand-buyer text-white" : "text-gray-400 hover:text-gray-600")}>
               <LayoutGrid className="w-4 h-4" />
             </button>
-            <button onClick={() => setView("list")} aria-label="List view" className={cn("p-1.5 rounded-md transition-colors", view === "list" ? "bg-[#ef4d62] text-white" : "text-gray-400 hover:text-gray-600")}>
+            <button onClick={() => setView("list")} aria-label="List view" className={cn("p-1.5 rounded-md transition-colors", view === "list" ? "bg-brand-buyer text-white" : "text-gray-400 hover:text-gray-600")}>
               <ListIcon className="w-4 h-4" />
             </button>
           </div>
@@ -134,7 +134,7 @@ const ServiceVendors = () => {
           <div className="py-16 text-center">
             <Building2 className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-500">No service vendors match your filters.</p>
-            <button onClick={() => { setCategory("all"); setLocation("all"); setMinRating(0); setQuery(""); }} className="mt-3 text-sm font-semibold text-[#ef4d62]">Clear filters</button>
+            <button onClick={() => { setCategory("all"); setLocation("all"); setMinRating(0); setQuery(""); }} className="mt-3 text-sm font-semibold text-brand-buyer">Clear filters</button>
           </div>
         ) : view === "grid" ? (
           <motion.div variants={listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-3 gap-3">
@@ -162,7 +162,7 @@ type Vendor = (typeof SERVICE_VENDORS)[number];
 
 function TypeBadge({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[#ef4d62] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
+    <span className="inline-flex items-center gap-1 rounded-full bg-brand-buyer px-2.5 py-1 text-[10px] font-bold text-white shadow-sm">
       <Briefcase className="w-2.5 h-2.5" /> {label}
     </span>
   );
@@ -174,7 +174,7 @@ function ActionRow({ onChat, onCall }: { onChat: () => void; onCall: () => void 
       <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); onChat(); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-gray-200 py-1.5 text-[11px] font-semibold text-gray-700 hover:border-gray-300">
         <MessageCircle className="w-3 h-3" /> Chat
       </button>
-      <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCall(); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#ef4d62] text-white py-1.5 text-[11px] font-bold hover:bg-[#ef4d62]/90">
+      <button onClick={(e) => { e.stopPropagation(); e.preventDefault(); onCall(); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-brand-buyer text-white py-1.5 text-[11px] font-bold hover:bg-brand-buyer/90">
         <Phone className="w-3 h-3" /> Call
       </button>
     </div>
@@ -244,13 +244,13 @@ function FilterChip({ icon: Icon, label, active, items, value, onSelect }: {
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", active ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+      <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", active ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-700")}>
         <Icon className="w-3.5 h-3.5" /> {label} <ChevronDown className="w-3 h-3 text-gray-400" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44 max-h-64 overflow-y-auto">
         {items.map((it) => (
           <DropdownMenuItem key={it.key} onClick={() => onSelect(it.key)} className="gap-2 text-sm">
-            <Check className={cn("w-4 h-4", value === it.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {it.label}
+            <Check className={cn("w-4 h-4", value === it.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {it.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

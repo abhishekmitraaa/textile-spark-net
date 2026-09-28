@@ -45,7 +45,7 @@ const CHANNELS: {
   { key: "other",     label: "Other",        hint: "Any other link",    icon: Link2,     color: "text-gray-500",  tint: "bg-gray-100",       placeholder: "https://..." },
 ];
 
-const inputCls = "w-full rounded-xl border border-gray-300 bg-white pl-3.5 pr-9 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] focus:ring-2 focus:ring-[#ef4d62]/15 transition-all";
+const inputCls = "w-full rounded-xl border border-gray-300 bg-white pl-3.5 pr-9 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer focus:ring-2 focus:ring-brand-buyer/15 transition-all";
 
 function normalizeUrl(v: string) {
   const t = v.trim();
@@ -93,8 +93,8 @@ const ProfileSocialLinks = () => {
       <div className="max-w-2xl lg:max-w-5xl mx-auto px-4 pt-4 pb-28">
         {/* Intro */}
         <div className="rounded-2xl border border-gray-200 bg-white p-4 flex items-start gap-3">
-          <span className="w-10 h-10 rounded-xl bg-[#ef4d62]/10 grid place-items-center shrink-0">
-            <Share2 className="w-5 h-5 text-[#ef4d62]" />
+          <span className="w-10 h-10 rounded-xl bg-brand-buyer/10 grid place-items-center shrink-0">
+            <Share2 className="w-5 h-5 text-brand-buyer" />
           </span>
           <div className="min-w-0">
             <h2 className="text-sm font-bold text-gray-900">Connect your social profiles</h2>
@@ -115,7 +115,7 @@ const ProfileSocialLinks = () => {
             return (
               <div
                 key={key}
-                className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 focus-within:border-[#ef4d62]/60"
+                className="rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 focus-within:border-brand-buyer/60"
               >
                 <div className="flex items-center gap-2.5 mb-2.5">
                   <span className={`w-9 h-9 rounded-xl grid place-items-center shrink-0 ${tint}`}>
@@ -145,7 +145,7 @@ const ProfileSocialLinks = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={`Open ${label} in a new tab`}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-[#ef4d62] transition-colors"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-brand-buyer transition-colors"
                     >
                       <ExternalLink className="w-4 h-4" />
                     </a>
@@ -166,7 +166,7 @@ const ProfileSocialLinks = () => {
           <button
             onClick={onSave}
             disabled={saving}
-            className="w-full sm:w-auto sm:min-w-[220px] py-3 px-6 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
+            className="w-full sm:w-auto sm:min-w-[220px] py-3 px-6 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99] disabled:opacity-60"
           >
             {saving ? "Saving…" : "Update Social Links"}
           </button>

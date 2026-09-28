@@ -23,7 +23,7 @@ export const RoleSwitcher = ({ variant = "desktop" }: RoleSwitcherProps) => {
   ];
 
   const getActiveBackground = (roleValue: UserRole) =>
-    roleValue === "seller" ? "bg-[#256fef]" : "bg-accent";
+    roleValue === "seller" ? "bg-brand-vendor" : "bg-accent";
 
   if (variant === "mobile") {
     return (

@@ -1,3 +1,4 @@
+import { brand as brandColour } from "@/lib/brand";
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -366,7 +367,7 @@ const BusinessProfile = () => {
   const reviewAvg = hasRealReviews ? reviewData!.avg : 0;
   const reviewCount = hasRealReviews ? reviewData!.count : 0;
   const reviewBars = hasRealReviews
-    ? reviewData!.breakdown.map((b) => ({ stars: b.stars, percent: b.percent, color: "#14ae5c" }))
+    ? reviewData!.breakdown.map((b) => ({ stars: b.stars, percent: b.percent, color: brandColour("success") }))
     : [];
 
   const storeLocation = [store?.city, store?.state].filter(Boolean).join(", ");
@@ -694,7 +695,7 @@ const BusinessProfile = () => {
                 className="absolute inset-0 h-full w-full object-cover"
               />
             ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-[#256fef] via-[#2f7bf5] to-[#1d5ed6]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-vendor via-[#2f7bf5] to-[#1d5ed6]" />
             )}
             {/* Dark gradient overlay — stronger at bottom left where text sits */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
@@ -952,7 +953,7 @@ const BusinessProfile = () => {
                 Share your review link to collect the first one.
               </p>
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/reviews")}
-                className="mt-3 rounded-full bg-[#256fef] px-4 py-2 text-xs font-bold text-white hover:bg-[#1d5ed6] transition-colors">
+                className="mt-3 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-[#1d5ed6] transition-colors">
                 Get reviews
               </motion.button>
             </div>
@@ -1454,7 +1455,7 @@ const BusinessProfile = () => {
               <p className="text-sm font-semibold text-gray-900">No listings yet</p>
               <p className="mt-1 text-sm text-gray-500">Add your first product so buyers can find you.</p>
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/upload")}
-                className="mt-3 rounded-full bg-[#256fef] px-4 py-2 text-xs font-bold text-white hover:bg-[#1d5ed6] transition-colors">
+                className="mt-3 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-[#1d5ed6] transition-colors">
                 Add a product
               </motion.button>
             </div>
@@ -1512,7 +1513,7 @@ const BusinessProfile = () => {
                     )}
                     <button
                       onClick={() => navigate(`/upload?edit=${product.id}`)}
-                      className={`mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-[#256fef] font-bold text-white transition-colors hover:bg-[#1d5ed6] ${
+                      className={`mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-brand-vendor font-bold text-white transition-colors hover:bg-[#1d5ed6] ${
                         gridCols === 2 ? "mt-2 py-2 text-xs" : "mt-1.5 py-1.5 text-[9px]"
                       }`}
                     >
@@ -1616,7 +1617,7 @@ const BusinessProfile = () => {
                         key={product.id}
                         onClick={() => toggleRecommend(product.id)}
                         className={`flex w-full items-center gap-3 rounded-xl border p-2 text-left transition-colors ${
-                          picked ? "border-[#256fef] bg-[#256fef]/5" : "border-gray-200 hover:border-gray-300"
+                          picked ? "border-brand-vendor bg-brand-vendor/5" : "border-gray-200 hover:border-gray-300"
                         }`}
                       >
                         <img src={product.image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
@@ -1625,7 +1626,7 @@ const BusinessProfile = () => {
                           <p className="text-xs text-gray-500">{product.currency}{product.price} · MOQ {product.moq}</p>
                         </div>
                         <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${
-                          picked ? "bg-[#256fef] text-white" : "border-2 border-gray-300 text-transparent"
+                          picked ? "bg-brand-vendor text-white" : "border-2 border-gray-300 text-transparent"
                         }`}>
                           {picked ? position : ""}
                         </span>
@@ -1638,7 +1639,7 @@ const BusinessProfile = () => {
             <div className="border-t border-gray-100 px-5 py-4">
               <button
                 onClick={() => setShowRecommendPicker(false)}
-                className="w-full rounded-xl bg-[#256fef] py-3 font-bold text-white transition-colors hover:bg-[#1d5ed6]"
+                className="w-full rounded-xl bg-brand-vendor py-3 font-bold text-white transition-colors hover:bg-[#1d5ed6]"
               >
                 Done {recommendIds.length > 0 && `(${recommendIds.length})`}
               </button>

@@ -52,6 +52,11 @@ const SKIP_FILES = [/lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\
 const IGNORE = new Set([
   "es",
   "Tshirt", // Trends.tsx image key
+  // lib/siteConfig.ts: font families and Google Fonts weight axes, CSS values only.
+  "Open Sans", "Roboto", "DM Sans",
+  "wght@300;400;500;600;700;800", "wght@300;400;500;700;900", "wght@300;400;500;600;700", "wght@300;400;700",
+  // components/ui/carousel.tsx: thrown only when a developer misuses the hook.
+  "useCarousel must be used within a <Carousel />",
 ]);
 
 const DISPLAY_ATTRS = new Set([

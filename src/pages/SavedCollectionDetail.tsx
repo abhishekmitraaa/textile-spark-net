@@ -65,7 +65,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
           aria-label={selected ? "Deselect" : "Select"}
           className={cn(
             "absolute top-2 right-2 w-6 h-6 rounded-md flex items-center justify-center border-2 transition-colors",
-            selected ? "bg-[#ef4d62] border-[#ef4d62]" : "bg-white/85 border-white/85"
+            selected ? "bg-brand-buyer border-brand-buyer" : "bg-white/85 border-white/85"
           )}
         >
           {selected && <Check className="w-3.5 h-3.5 text-white" strokeWidth={3} />}
@@ -77,7 +77,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
         </div>
       </Link>
       <div className="p-2">
-        <p className="text-xs font-bold text-[#ef4d62]">{showText(p.price)} | {p.moq}</p>
+        <p className="text-xs font-bold text-brand-buyer">{showText(p.price)} | {p.moq}</p>
         <p className="text-[10px] text-gray-600 mt-1 truncate">{p.name} | <span className="font-bold">{p.manufacturer}</span></p>
         <div className="flex items-center gap-0.5 mt-1 text-[10px] text-gray-500">
           <MapPin className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{p.location}</span>
@@ -86,7 +86,7 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
           <button onClick={() => navigate(`/chats/${p.vendorId}`)} className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-[11px] font-semibold text-gray-700">
             <MessageCircle className="w-3 h-3" /> Chat
           </button>
-          <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1 bg-[#ef4d62] text-white rounded-lg py-1.5 text-[11px] font-bold">
+          <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1 bg-brand-buyer text-white rounded-lg py-1.5 text-[11px] font-bold">
             <Phone className="w-3 h-3" /> Call
           </button>
         </div>
@@ -106,14 +106,14 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
         <Link to={`/product/${p.id}`} className="relative w-20 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100">
           <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
           <span className="absolute top-1 left-1 w-6 h-6 rounded-full bg-white/90 flex items-center justify-center">
-            <Heart className="w-3.5 h-3.5 fill-[#ef4d62] text-[#ef4d62]" />
+            <Heart className="w-3.5 h-3.5 fill-brand-buyer text-brand-buyer" />
           </span>
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-gray-900 leading-snug">{p.name}</h3>
-              <p className="inline-flex items-center gap-1 text-xs text-[#ef4d62] font-medium">
+              <p className="inline-flex items-center gap-1 text-xs text-brand-buyer font-medium">
                 {p.manufacturer} {p.verified && <BadgeCheck className="w-3 h-3" />}
               </p>
             </div>
@@ -137,13 +137,13 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
         <button onClick={() => navigate(`/chats/${p.vendorId}`)} className="flex-1 flex items-center justify-center gap-1.5 border border-gray-200 rounded-lg py-2 text-xs font-semibold text-gray-700">
           <MessageCircle className="w-3.5 h-3.5" /> Chat
         </button>
-        <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-[#ef4d62] text-white rounded-lg py-2 text-xs font-bold">
+        <button onClick={() => callVendor(p.vendorId, p.name)} className="flex-1 flex items-center justify-center gap-1.5 bg-brand-buyer text-white rounded-lg py-2 text-xs font-bold">
           <Phone className="w-3.5 h-3.5" /> CALL NOW
         </button>
         <button
           onClick={() => { removeFromFolder(folderId, p.id); toast("Removed from collection"); }}
           aria-label="Remove"
-          className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-[#ef4d62] hover:border-[#ef4d62]/40 transition-colors"
+          className="shrink-0 w-9 h-9 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-brand-buyer hover:border-brand-buyer/40 transition-colors"
         >
           <Trash2 className="w-4 h-4" />
         </button>
@@ -196,7 +196,7 @@ const SavedCollectionDetail = () => {
       <BuyerShell>
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
           <p className="text-sm text-gray-500">This collection no longer exists.</p>
-          <button onClick={() => navigate("/saved")} className="mt-4 text-sm font-semibold text-[#ef4d62]">Back to My Saves</button>
+          <button onClick={() => navigate("/saved")} className="mt-4 text-sm font-semibold text-brand-buyer">Back to My Saves</button>
         </div>
       </BuyerShell>
     );
@@ -214,14 +214,14 @@ const SavedCollectionDetail = () => {
             <ArrowLeft className="w-5 h-5 text-gray-700" />
           </button>
           <h1 className="flex-1 text-lg font-bold text-gray-900 truncate">{folder.name}</h1>
-          <button onClick={deleteSelected} aria-label="Delete selected" className="p-1.5 text-gray-500 hover:text-[#ef4d62]">
+          <button onClick={deleteSelected} aria-label="Delete selected" className="p-1.5 text-gray-500 hover:text-brand-buyer">
             <Trash2 className="w-4 h-4" />
           </button>
           <div className="flex items-center rounded-lg border border-gray-200 p-0.5">
-            <button onClick={() => setView("grid")} className={cn("p-1.5 rounded-md", view === "grid" ? "bg-[#ef4d62] text-white" : "text-gray-400")} aria-label="Grid view">
+            <button onClick={() => setView("grid")} className={cn("p-1.5 rounded-md", view === "grid" ? "bg-brand-buyer text-white" : "text-gray-400")} aria-label="Grid view">
               <LayoutGrid className="w-3.5 h-3.5" />
             </button>
-            <button onClick={() => setView("list")} className={cn("p-1.5 rounded-md", view === "list" ? "bg-[#ef4d62] text-white" : "text-gray-400")} aria-label="List view">
+            <button onClick={() => setView("list")} className={cn("p-1.5 rounded-md", view === "list" ? "bg-brand-buyer text-white" : "text-gray-400")} aria-label="List view">
               <ListIcon className="w-3.5 h-3.5" />
             </button>
           </div>
@@ -236,7 +236,7 @@ const SavedCollectionDetail = () => {
             <DropdownMenuContent align="start" className="w-40">
               {GENDERS.map((o) => (
                 <DropdownMenuItem key={o.key} onClick={() => setGender(o.key)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", gender === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                  <Check className={cn("w-4 h-4", gender === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -249,7 +249,7 @@ const SavedCollectionDetail = () => {
             <DropdownMenuContent align="center" className="w-48">
               {SORTS.map((o) => (
                 <DropdownMenuItem key={o.key} onClick={() => setSort(o.key)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                  <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -257,11 +257,11 @@ const SavedCollectionDetail = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger className="flex items-center justify-center gap-1 py-2.5 text-xs font-semibold text-gray-700 focus:outline-none">
-              <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-[#ef4d62]")} /> FILTER
+              <Filter className={cn("w-3.5 h-3.5", verifiedOnly && "text-brand-buyer")} /> FILTER
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => setVerifiedOnly((v) => !v)} className="gap-2 text-sm">
-                <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> Verified vendors only
+                <Check className={cn("w-4 h-4", verifiedOnly ? "opacity-100 text-brand-buyer" : "opacity-0")} /> Verified vendors only
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -272,7 +272,7 @@ const SavedCollectionDetail = () => {
           <div className="py-16 text-center">
             <Heart className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-500">No items in this collection yet.</p>
-            <button onClick={() => navigate("/home/new-arrivals")} className="mt-4 text-sm font-semibold text-[#ef4d62]">Browse products</button>
+            <button onClick={() => navigate("/home/new-arrivals")} className="mt-4 text-sm font-semibold text-brand-buyer">Browse products</button>
           </div>
         ) : view === "grid" ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">

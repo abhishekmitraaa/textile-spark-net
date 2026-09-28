@@ -125,7 +125,7 @@ function ScoreBar({ value, barClass }: { value: number; barClass?: string }) {
   return (
     <div className="flex items-center gap-1.5">
       <div className={cn("h-1.5 bg-gray-100 rounded-full overflow-hidden w-16", barClass)}>
-        <div className="h-full bg-[#256fef] rounded-full" style={{ width: `${value}%` }} />
+        <div className="h-full bg-brand-vendor rounded-full" style={{ width: `${value}%` }} />
       </div>
       <span className="text-[10px] text-gray-400 whitespace-nowrap">{value}% Score</span>
     </div>
@@ -161,7 +161,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
         type="button"
         onClick={() => navigate(editHref)}
         aria-label={`Edit ${product.name}`}
-        className="absolute inset-0 z-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#256fef] focus-visible:ring-inset"
+        className="absolute inset-0 z-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-vendor focus-visible:ring-inset"
       />
 
       {/* ── Mobile card ── */}
@@ -209,7 +209,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
           <span className="text-[9px] text-gray-300 font-mono">{product.productCode}</span>
           <button
             onClick={() => navigate(editHref)}
-            className="flex items-center gap-1 px-2.5 py-1 border border-[#256fef] text-[#256fef] rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
+            className="flex items-center gap-1 px-2.5 py-1 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
           >
             <Edit2 className="w-3 h-3" /> Edit
           </button>
@@ -265,7 +265,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
         <div className="pointer-events-auto flex items-center justify-end gap-1">
           <button
             onClick={() => navigate(editHref)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-[#256fef] text-[#256fef] rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
           >
             <Edit2 className="w-3.5 h-3.5" /> Edit
           </button>
@@ -389,7 +389,7 @@ const Products = () => {
               <motion.button
                 whileTap={TAP}
                 transition={TAP_T}
-                className="flex items-center gap-2 px-5 py-2.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Upload New Product
               </motion.button>
@@ -402,7 +402,7 @@ const Products = () => {
               <motion.button
                 whileTap={TAP}
                 transition={TAP_T}
-                className="w-full flex items-center justify-center gap-2 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-2 py-3 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
               >
                 <Plus className="w-4 h-4" /> Upload New Product
               </motion.button>
@@ -437,7 +437,7 @@ const Products = () => {
                   value={categoryFilter}
                   onChange={e => setCategoryFilter(e.target.value)}
                   aria-label="Filter by category"
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-[#256fef] pr-7 lg:text-sm lg:py-2.5"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-brand-vendor pr-7 lg:text-sm lg:py-2.5"
                 >
                   <option value="all">All Categories</option>
                   <option value="apparel">Apparel</option>
@@ -452,7 +452,7 @@ const Products = () => {
                   value={statusFilter}
                   onChange={e => setStatusFilter(e.target.value)}
                   aria-label="Filter by status"
-                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-[#256fef] pr-7 lg:text-sm lg:py-2.5"
+                  className="w-full appearance-none bg-white border border-gray-200 rounded-lg px-3 py-2 text-xs font-medium text-gray-700 focus:outline-none focus:border-brand-vendor pr-7 lg:text-sm lg:py-2.5"
                 >
                   <option value="all">All Status</option>
                   <option value="active">Published</option>
@@ -478,7 +478,7 @@ const Products = () => {
             {filtersActive && !isLoading && (
               <button
                 onClick={clearFilters}
-                className="text-xs lg:text-sm font-semibold text-[#256fef] hover:underline shrink-0"
+                className="text-xs lg:text-sm font-semibold text-brand-vendor hover:underline shrink-0"
               >
                 Clear filters
               </button>
@@ -498,7 +498,7 @@ const Products = () => {
                 body="Sign in with your vendor account to add products and manage the ones you've already listed."
               >
                 <Link to="/login">
-                  <motion.button whileTap={TAP} transition={TAP_T} className="mt-3 text-[#256fef] text-sm font-semibold hover:underline">
+                  <motion.button whileTap={TAP} transition={TAP_T} className="mt-3 text-brand-vendor text-sm font-semibold hover:underline">
                     Sign in
                   </motion.button>
                 </Link>
@@ -520,7 +520,7 @@ const Products = () => {
                     whileTap={TAP}
                     transition={TAP_T}
                     onClick={clearFilters}
-                    className="mt-3 text-[#256fef] text-sm font-semibold hover:underline"
+                    className="mt-3 text-brand-vendor text-sm font-semibold hover:underline"
                   >
                     Clear filters
                   </motion.button>
@@ -532,7 +532,7 @@ const Products = () => {
                   body="Your catalog is empty. Upload a product and it goes live once our team reviews it, usually within 24 to 48 hours."
                 >
                   <Link to="/upload">
-                    <motion.button whileTap={TAP} transition={TAP_T} className="mt-3 text-[#256fef] text-sm font-semibold hover:underline">
+                    <motion.button whileTap={TAP} transition={TAP_T} className="mt-3 text-brand-vendor text-sm font-semibold hover:underline">
                       + Upload your first product
                     </motion.button>
                   </Link>
@@ -560,7 +560,7 @@ const Products = () => {
             <motion.button
               whileTap={TAP}
               transition={TAP_T}
-              className="flex items-center gap-2 px-6 py-3 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold rounded-full shadow-lg shadow-[#ef4d62]/30 transition-all hover:scale-105"
+              className="flex items-center gap-2 px-6 py-3 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold rounded-full shadow-lg shadow-brand-buyer/30 transition-all hover:scale-105"
             >
               <Plus className="w-4 h-4" /> Upload New Product
             </motion.button>

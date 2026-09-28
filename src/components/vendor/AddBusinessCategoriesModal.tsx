@@ -42,7 +42,7 @@ function SelectCategoryModal({
           <h3 className="text-base font-bold text-gray-900">Add Business Categories</h3>
         </div>
         <div className="px-5 py-3 border-b border-gray-100">
-          <p className="text-xs text-[#256fef] font-semibold mb-2">Add Categories</p>
+          <p className="text-xs text-brand-vendor font-semibold mb-2">Add Categories</p>
           <div className="flex items-center gap-2 bg-gray-100 rounded-lg px-3 py-2">
             <Search className="w-4 h-4 text-gray-400" />
             <input
@@ -69,8 +69,8 @@ function SelectCategoryModal({
                       onClick={() => onToggle(item)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
                         isSel
-                          ? "bg-[#256fef] text-white border-[#256fef]"
-                          : "bg-white text-gray-700 border-gray-300 hover:border-[#256fef]/60"
+                          ? "bg-brand-vendor text-white border-brand-vendor"
+                          : "bg-white text-gray-700 border-gray-300 hover:border-brand-vendor/60"
                       }`}
                     >
                       {item}
@@ -82,7 +82,7 @@ function SelectCategoryModal({
           ))}
         </div>
         <div className="px-5 py-4 border-t border-gray-100">
-          <button onClick={onClose} className="w-full py-3 bg-[#256fef] text-white font-bold rounded-xl hover:bg-[#1d5ed6] transition-colors">
+          <button onClick={onClose} className="w-full py-3 bg-brand-vendor text-white font-bold rounded-xl hover:bg-[#1d5ed6] transition-colors">
             Done {selected.length > 0 && `(${selected.length})`}
           </button>
         </div>
@@ -129,26 +129,26 @@ export function AddBusinessCategoriesModal({
             {local.length === 0 && <p className="text-sm text-gray-400 mb-4">No categories added yet.</p>}
             <div className="flex flex-wrap gap-2 mb-4">
               {local.map((cat) => (
-                <span key={cat} className="flex items-center gap-1.5 bg-[#256fef] text-white text-xs font-medium px-3 py-1.5 rounded-full">
+                <span key={cat} className="flex items-center gap-1.5 bg-brand-vendor text-white text-xs font-medium px-3 py-1.5 rounded-full">
                   {cat}
                   <button onClick={() => toggle(cat)}><X className="w-3 h-3" /></button>
                 </span>
               ))}
             </div>
-            <button onClick={() => setShowSelect(true)} className="flex items-center gap-1.5 text-[#256fef] font-semibold text-sm">
+            <button onClick={() => setShowSelect(true)} className="flex items-center gap-1.5 text-brand-vendor font-semibold text-sm">
               <span className="text-lg font-bold">+</span> Add New Category
             </button>
           </div>
           <div className="px-5 py-4 border-t border-gray-100 space-y-3">
             <button
               onClick={() => setShowSelect(true)}
-              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-[#256fef] text-[#256fef] font-bold rounded-xl hover:bg-[#256fef]/5 transition-colors"
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-brand-vendor text-brand-vendor font-bold rounded-xl hover:bg-brand-vendor/5 transition-colors"
             >
               <Plus className="w-4 h-4" /> Add
             </button>
             <button
               onClick={() => { onCategoriesChange(local); onClose(); }}
-              className="w-full py-3 bg-[#256fef] text-white font-bold rounded-xl hover:bg-[#1d5ed6] transition-colors"
+              className="w-full py-3 bg-brand-vendor text-white font-bold rounded-xl hover:bg-[#1d5ed6] transition-colors"
             >
               Proceed
             </button>

@@ -80,7 +80,7 @@ const Freelancers = () => {
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search freelancers by name or skill..."
-            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+            className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
           />
         </div>
 
@@ -92,27 +92,27 @@ const Freelancers = () => {
             items={RATINGS.map((r) => ({ key: r.key, label: r.label }))} value={minRating} onSelect={(v) => setMinRating(Number(v))} />
           {/* Filters (experience) */}
           <DropdownMenu>
-            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", activeFilters ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", activeFilters ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-700")}>
               <SlidersHorizontal className="w-3.5 h-3.5" /> Filters{activeFilters ? ` (${activeFilters})` : ""}
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-48">
               <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">Experience</p>
               {EXPERIENCE.map((x) => (
                 <DropdownMenuItem key={x.key} onClick={() => setMinExp(x.key)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", minExp === x.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {x.label}
+                  <Check className={cn("w-4 h-4", minExp === x.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {x.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
           {/* Sort */}
           <DropdownMenu>
-            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", sort !== "recommended" ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+            <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", sort !== "recommended" ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-700")}>
               <ArrowUpDown className="w-3.5 h-3.5" /> Sort
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
               {SORTS.map((s) => (
                 <DropdownMenuItem key={s.key} onClick={() => setSort(s.key)} className="gap-2 text-sm">
-                  <Check className={cn("w-4 h-4", sort === s.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {s.label}
+                  <Check className={cn("w-4 h-4", sort === s.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {s.label}
                 </DropdownMenuItem>
               ))}
             </DropdownMenuContent>
@@ -132,7 +132,7 @@ const Freelancers = () => {
           {FREELANCER_CATEGORIES.map((c) => (
             <button key={c.id} onClick={() => setCategory(c.id)}
               className={cn("shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-colors active:scale-95",
-                category === c.id ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40")}>
+                category === c.id ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-600 hover:border-brand-buyer/40")}>
               {c.label}
             </button>
           ))}
@@ -144,7 +144,7 @@ const Freelancers = () => {
           <div className="py-16 text-center">
             <Users className="w-10 h-10 text-gray-300 mx-auto mb-3" />
             <p className="text-sm text-gray-500">No freelancers match your filters.</p>
-            <button onClick={() => { setCategory("all"); setLocation("all"); setMinRating(0); setMinExp(0); setQuery(""); }} className="mt-3 text-sm font-semibold text-[#ef4d62]">Clear filters</button>
+            <button onClick={() => { setCategory("all"); setLocation("all"); setMinRating(0); setMinExp(0); setQuery(""); }} className="mt-3 text-sm font-semibold text-brand-buyer">Clear filters</button>
           </div>
         ) : (
           <motion.div variants={listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-3 gap-3">
@@ -157,7 +157,7 @@ const Freelancers = () => {
                       {f.online && <span className="absolute bottom-0.5 right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />}
                     </div>
                     <h3 className="mt-2 text-sm font-bold text-gray-900 leading-tight">{f.name}</h3>
-                    <p className="text-[11px] text-[#ef4d62] font-medium">{f.title}</p>
+                    <p className="text-[11px] text-brand-buyer font-medium">{f.title}</p>
                     <div className="mt-1 flex items-center gap-1 text-[11px] text-gray-600">
                       <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                       <span className="font-bold">{f.rating}</span>
@@ -177,7 +177,7 @@ const Freelancers = () => {
                     <button onClick={(e) => { e.preventDefault(); navigate(`/chats/${f.id}`); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg border border-gray-200 py-1.5 text-[11px] font-semibold text-gray-700 hover:border-gray-300">
                       <MessageCircle className="w-3 h-3" /> Chat
                     </button>
-                    <button onClick={(e) => { e.preventDefault(); placeCall(f.name, demoPhone(f.id)); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#ef4d62] text-white py-1.5 text-[11px] font-bold hover:bg-[#ef4d62]/90">
+                    <button onClick={(e) => { e.preventDefault(); placeCall(f.name, demoPhone(f.id)); }} className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-brand-buyer text-white py-1.5 text-[11px] font-bold hover:bg-brand-buyer/90">
                       <Phone className="w-3 h-3" /> Call
                     </button>
                   </div>
@@ -198,13 +198,13 @@ function FilterChip({ icon: Icon, label, active, items, value, onSelect }: {
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", active ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-700")}>
+      <DropdownMenuTrigger className={cn("shrink-0 inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-semibold focus:outline-none", active ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-700")}>
         <Icon className="w-3.5 h-3.5" /> {label} <ChevronDown className="w-3 h-3 text-gray-400" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44 max-h-64 overflow-y-auto">
         {items.map((it) => (
           <DropdownMenuItem key={it.key} onClick={() => onSelect(it.key)} className="gap-2 text-sm">
-            <Check className={cn("w-4 h-4", value === it.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {it.label}
+            <Check className={cn("w-4 h-4", value === it.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {it.label}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

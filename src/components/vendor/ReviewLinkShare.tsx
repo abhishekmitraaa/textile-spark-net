@@ -86,7 +86,7 @@ export function ReviewLinkShare({ vendorId }: { vendorId: string | undefined }) 
     <div className="space-y-4">
       {/* Real ratings for THIS vendor. The tile this replaced printed
           "4.2 / 24 Ratings" for every vendor on the platform. */}
-      <div className="rounded-xl bg-[#256fef]/5 p-4 text-center">
+      <div className="rounded-xl bg-brand-vendor/5 p-4 text-center">
         {count > 0 ? (
           <>
             <div className="flex items-center justify-center gap-2">
@@ -146,7 +146,7 @@ export function ReviewLinkShare({ vendorId }: { vendorId: string | undefined }) 
           </button>
           <button
             onClick={share}
-            className="flex h-11 items-center justify-center gap-2 rounded-lg bg-[#256fef] text-sm font-medium text-white hover:bg-[#1d5ed6] transition-colors"
+            className="flex h-11 items-center justify-center gap-2 rounded-lg bg-brand-vendor text-sm font-medium text-white hover:bg-[#1d5ed6] transition-colors"
           >
             <Share2 className="h-4 w-4" /> Share
           </button>

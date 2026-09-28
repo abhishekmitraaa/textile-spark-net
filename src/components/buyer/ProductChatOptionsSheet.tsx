@@ -76,10 +76,10 @@ export default function ProductChatOptionsSheet({
                 <button
                   key={o.key}
                   onClick={o.key === "chat" ? onChatDirectly : onRequestQuotation}
-                  className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 text-left transition-colors hover:border-[#ef4d62]/40 hover:bg-[#ef4d62]/5 active:scale-[0.99]"
+                  className="flex w-full items-center gap-3 rounded-xl border border-gray-200 px-4 py-3.5 text-left transition-colors hover:border-brand-buyer/40 hover:bg-brand-buyer/5 active:scale-[0.99]"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#ef4d62]/10">
-                    <o.icon className="h-4 w-4 text-[#ef4d62]" />
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-buyer/10">
+                    <o.icon className="h-4 w-4 text-brand-buyer" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block text-sm font-bold text-gray-900">{o.title}</span>

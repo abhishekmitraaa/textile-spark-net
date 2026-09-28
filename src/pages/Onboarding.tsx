@@ -71,29 +71,29 @@ function KycDocumentUpload({
       <button
         type="button"
         onClick={onPick}
-        className="block w-full rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-5 text-center disabled:opacity-60"
+        className="block w-full rounded-xl border-2 border-dashed border-brand-border bg-[#f5f5f5] px-4 py-5 text-center disabled:opacity-60"
       >
-        <UploadIcon className="mx-auto h-6 w-6 text-[#256fef]" />
-        <p className="mt-2 text-sm font-semibold text-[#256fef]">
+        <UploadIcon className="mx-auto h-6 w-6 text-brand-vendor" />
+        <p className="mt-2 text-sm font-semibold text-brand-vendor">
           {attached ? `Replace ${label}` : `Upload ${label}`}
         </p>
-        <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf — optional</p>
+        <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or pdf — optional</p>
       </button>
       {attached && (
-        <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-border bg-white px-3 py-2">
           <div className="flex min-w-0 items-center gap-2">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
-              <FileText className="h-4 w-4 text-[#256fef]" />
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-vendor/10">
+              <FileText className="h-4 w-4 text-brand-vendor" />
             </span>
             <div className="min-w-0">
-              <p className="truncate text-xs font-semibold text-[#363636]">{name || label}</p>
-              <p className="text-[10px] text-[#363636]/60">Attached · uploaded when you submit</p>
+              <p className="truncate text-xs font-semibold text-brand-ink">{name || label}</p>
+              <p className="text-[10px] text-brand-ink/60">Attached · uploaded when you submit</p>
             </div>
           </div>
           <button
             type="button"
             aria-label={`Remove ${label}`}
-            className="shrink-0 rounded-full p-1 text-[#363636]/60 hover:bg-[#f5f5f5]"
+            className="shrink-0 rounded-full p-1 text-brand-ink/60 hover:bg-[#f5f5f5]"
             onClick={onRemove}
           >
             <X className="h-4 w-4" />
@@ -670,12 +670,12 @@ export default function Onboarding() {
           transition={{ duration: 0.25 }}
           className="flex flex-col items-center gap-4"
         >
-          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#14ae5c] shadow-lg shadow-[#14ae5c]/25">
+          <div className="flex h-24 w-24 items-center justify-center rounded-full bg-brand-success shadow-lg shadow-brand-success/25">
             <Check className="h-12 w-12 text-white" />
           </div>
           <div className="space-y-1">
-            <p className="text-xl font-semibold text-[#363636]">The Good Times Start Now.</p>
-            <p className="text-xl font-semibold text-[#363636]">Welcome to Cosora</p>
+            <p className="text-xl font-semibold text-brand-ink">The Good Times Start Now.</p>
+            <p className="text-xl font-semibold text-brand-ink">Welcome to Cosora</p>
           </div>
         </motion.div>
       </div>
@@ -686,7 +686,7 @@ export default function Onboarding() {
     if (contractStage === "overview") {
       return (
         <div className="vendor-shell min-h-screen bg-[#ffffff] pb-24">
-          <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+          <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
             <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
               <Link to="/" className="block">
                 <img
@@ -701,7 +701,7 @@ export default function Onboarding() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                    className="h-8 rounded-md border-brand-border px-3 text-xs text-brand-ink hover:bg-[#f5f5f5]"
                   >
                     Login
                   </Button>
@@ -710,15 +710,15 @@ export default function Onboarding() {
                   <SheetTrigger asChild>
                     <button
                       type="button"
-                      className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                      className="flex h-8 w-8 items-center justify-center rounded-md border border-brand-border text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                       aria-label="Open menu"
                     >
                       <Menu className="h-5 w-5" />
                     </button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                  <SheetContent side="right" className="w-72 border-l border-brand-border bg-[#ffffff] p-4">
                     <SheetHeader>
-                      <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                      <SheetTitle className="text-left text-base font-semibold text-brand-ink">
                         Cosora Menu
                       </SheetTitle>
                     </SheetHeader>
@@ -727,10 +727,10 @@ export default function Onboarding() {
                         <Link
                           key={item.label}
                           to={item.href}
-                          className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                          className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                         >
                           {item.label}
-                          <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                          <ChevronRight className="h-4 w-4 text-brand-ink/60" />
                         </Link>
                       ))}
                     </nav>
@@ -742,9 +742,9 @@ export default function Onboarding() {
 
           <div className="mx-auto max-w-2xl px-4 pt-5">
             <div className="rounded-[1.75rem] bg-[#f5f5f5] p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#256fef]">Registration Set 4</p>
-              <h1 className="mt-2 text-2xl font-bold text-[#363636]">Partner contract checkpoint</h1>
-              <p className="mt-2 text-sm text-[#363636]">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-vendor">Registration Set 4</p>
+              <h1 className="mt-2 text-2xl font-bold text-brand-ink">Partner contract checkpoint</h1>
+              <p className="mt-2 text-sm text-brand-ink">
                 All prior steps are complete. Review the final contract details before signing the supplier agreement.
               </p>
 
@@ -757,30 +757,30 @@ export default function Onboarding() {
                       key={item.label}
                       className={cn(
                         "flex items-center gap-3 rounded-2xl border bg-white p-4 shadow-sm transition-all",
-                        isActive ? "border-[#256fef] ring-1 ring-[#256fef]/20" : "border-[#d0d4dc]",
+                        isActive ? "border-brand-vendor ring-1 ring-brand-vendor/20" : "border-brand-border",
                       )}
                     >
                       <div className={cn(
                         "flex h-11 w-11 items-center justify-center rounded-full border",
-                        isActive ? "border-[#256fef] bg-[#256fef]/10 text-[#256fef]" : "border-[#256fef] bg-[#256fef]/10 text-[#256fef]",
+                        isActive ? "border-brand-vendor bg-brand-vendor/10 text-brand-vendor" : "border-brand-vendor bg-brand-vendor/10 text-brand-vendor",
                       )}>
                         <Icon className="h-5 w-5" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-semibold text-[#363636]">{item.label}</p>
-                        <p className={cn("text-xs", isActive ? "text-[#256fef]" : "text-[#14ae5c]")}>
+                        <p className="text-sm font-semibold text-brand-ink">{item.label}</p>
+                        <p className={cn("text-xs", isActive ? "text-brand-vendor" : "text-brand-success")}>
                           {isActive ? "Unlocked and ready" : "Completed"}
                         </p>
                       </div>
-                      <Check className="h-5 w-5 text-[#14ae5c]" />
+                      <Check className="h-5 w-5 text-brand-success" />
                     </div>
                   );
                 })}
               </div>
 
-              <div className="mt-5 rounded-2xl border border-[#d0d4dc] bg-white p-4">
-                <div className="flex items-center gap-2 text-sm font-medium text-[#363636]">
-                  <FileSignature className="h-4 w-4 text-[#256fef]" />
+              <div className="mt-5 rounded-2xl border border-brand-border bg-white p-4">
+                <div className="flex items-center gap-2 text-sm font-medium text-brand-ink">
+                  <FileSignature className="h-4 w-4 text-brand-vendor" />
                   Edit the final contract details
                 </div>
                 <p className="mt-2 text-sm text-[#6b7280]">
@@ -788,7 +788,7 @@ export default function Onboarding() {
                 </p>
                 <Button
                   type="button"
-                  className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                  className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold"
                   onClick={() => setContractStage("contract")}
                 >
                   Edit details
@@ -800,7 +800,7 @@ export default function Onboarding() {
           <button
             type="button"
             onClick={() => window.open("https://wa.me/918821826465", "_blank")}
-            className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+            className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
             aria-label="WhatsApp help"
           >
             <MessageCircle className="h-5 w-5" />
@@ -811,7 +811,7 @@ export default function Onboarding() {
 
     return (
       <div className="vendor-shell min-h-screen bg-[#ffffff] pb-28">
-        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+        <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
             <Link to="/" className="block">
               <img
@@ -826,7 +826,7 @@ export default function Onboarding() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                  className="h-8 rounded-md border-brand-border px-3 text-xs text-brand-ink hover:bg-[#f5f5f5]"
                 >
                   Login
                 </Button>
@@ -835,15 +835,15 @@ export default function Onboarding() {
                 <SheetTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-brand-border text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                     aria-label="Open menu"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                <SheetContent side="right" className="w-72 border-l border-brand-border bg-[#ffffff] p-4">
                   <SheetHeader>
-                    <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                    <SheetTitle className="text-left text-base font-semibold text-brand-ink">
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
@@ -852,10 +852,10 @@ export default function Onboarding() {
                       <Link
                         key={item.label}
                         to={item.href}
-                        className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                        className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                       >
                         {item.label}
-                        <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                        <ChevronRight className="h-4 w-4 text-brand-ink/60" />
                       </Link>
                     ))}
                   </nav>
@@ -866,26 +866,26 @@ export default function Onboarding() {
         </header>
 
         <div className="mx-auto max-w-2xl px-4 pt-5">
-          <div className="rounded-[1.75rem] border border-[#d0d4dc] bg-white p-4 shadow-sm">
+          <div className="rounded-[1.75rem] border border-brand-border bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#256fef]">Partner Contract</p>
-                <h1 className="mt-1 text-2xl font-bold text-[#363636]">E-Signature</h1>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-vendor">Partner Contract</p>
+                <h1 className="mt-1 text-2xl font-bold text-brand-ink">E-Signature</h1>
                 <p className="mt-2 text-sm text-[#6b7280]">Your signature is auto-generated from your name and can be changed manually.</p>
               </div>
-              <div className="rounded-full bg-[#f0fdf4] px-3 py-1 text-xs font-medium text-[#14ae5c]">Final step</div>
+              <div className="rounded-full bg-[#f0fdf4] px-3 py-1 text-xs font-medium text-brand-success">Final step</div>
             </div>
 
             <div className="mt-5 space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="contract-name" className="text-sm font-medium text-[#363636]">
+                <Label htmlFor="contract-name" className="text-sm font-medium text-brand-ink">
                   Your Full Name
                 </Label>
                 <Input
                   id="contract-name"
                   value={contractName}
                   onChange={(e) => setContractName(e.target.value)}
-                  className="h-12 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                  className="h-12 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   placeholder="Enter your full name"
                 />
               </div>
@@ -893,12 +893,12 @@ export default function Onboarding() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <Label className="text-sm font-medium text-[#363636]">Generated E-Signature</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Generated E-Signature</Label>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <button
                           type="button"
-                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[#6b7280] transition-colors hover:bg-[#f5f5f5] hover:text-[#256fef]"
+                          className="inline-flex h-5 w-5 items-center justify-center rounded-full text-[#6b7280] transition-colors hover:bg-[#f5f5f5] hover:text-brand-vendor"
                           aria-label="What is an e-signature?"
                         >
                           <Info className="h-4 w-4" />
@@ -910,7 +910,7 @@ export default function Onboarding() {
                     </Tooltip>
                   </div>
                 </div>
-                <div className="rounded-xl border border-[#d0d4dc] bg-[#f8fafc] p-4">
+                <div className="rounded-xl border border-brand-border bg-[#f8fafc] p-4">
                   {manualSignatureDataUrl ? (
                     <img
                       src={manualSignatureDataUrl}
@@ -920,7 +920,7 @@ export default function Onboarding() {
                   ) : (
                     <div className="flex min-h-16 items-center">
                       <span
-                        className="text-4xl font-semibold text-[#363636]"
+                        className="text-4xl font-semibold text-brand-ink"
                         style={{ fontFamily: "'Dancing Script', cursive" }}
                       >
                         {contractDisplayName}
@@ -929,14 +929,14 @@ export default function Onboarding() {
                   )}
                 </div>
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm text-[#363636]">Want to change the signature?</p>
+                  <p className="text-sm text-brand-ink">Want to change the signature?</p>
                   <button
                     type="button"
                     onClick={() => {
                       signatureStrokeRef.current = [];
                       setSignatureDrawerOpen(true);
                     }}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-[#256fef] underline underline-offset-2"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-brand-vendor underline underline-offset-2"
                   >
                     Change
                     <PenLine className="h-4 w-4" />
@@ -947,19 +947,19 @@ export default function Onboarding() {
                 </p>
               </div>
 
-              <div className="flex items-start gap-3 rounded-2xl border border-[#d0d4dc] bg-white p-4">
+              <div className="flex items-start gap-3 rounded-2xl border border-brand-border bg-white p-4">
                 <Checkbox
                   id="supplier-agreement"
                   checked={agreed}
                   onCheckedChange={(value) => setAgreed(!!value)}
-                  className="mt-1 border-[#d0d4dc] data-[state=checked]:border-[#256fef] data-[state=checked]:bg-[#256fef]"
+                  className="mt-1 border-brand-border data-[state=checked]:border-brand-vendor data-[state=checked]:bg-brand-vendor"
                 />
-                <Label htmlFor="supplier-agreement" className="cursor-pointer text-sm leading-6 text-[#363636]">
+                <Label htmlFor="supplier-agreement" className="cursor-pointer text-sm leading-6 text-brand-ink">
                   I agree to comply with Cosora's{" "}
                   <button
                     type="button"
                     onClick={() => setAgreementModalOpen(true)}
-                    className="text-[#256fef] underline underline-offset-2"
+                    className="text-brand-vendor underline underline-offset-2"
                   >
                     Supplier Agreement
                   </button>
@@ -967,13 +967,13 @@ export default function Onboarding() {
               </div>
 
               {submitError && (
-                <div className="flex items-start gap-2 rounded-2xl border border-[#ef4d62]/40 bg-[#ef4d62]/5 p-4">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#ef4d62]" />
+                <div className="flex items-start gap-2 rounded-2xl border border-brand-buyer/40 bg-brand-buyer/5 p-4">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-buyer" />
                   <div className="space-y-2">
-                    <p className="text-sm font-semibold text-[#363636]">Registration not saved</p>
-                    <p className="text-sm text-[#363636]">{submitError}</p>
+                    <p className="text-sm font-semibold text-brand-ink">Registration not saved</p>
+                    <p className="text-sm text-brand-ink">{submitError}</p>
                     {!user && (
-                      <Link to="/login" className="inline-block text-sm font-semibold text-[#256fef] underline underline-offset-2">
+                      <Link to="/login" className="inline-block text-sm font-semibold text-brand-vendor underline underline-offset-2">
                         Go to sign in
                       </Link>
                     )}
@@ -985,7 +985,7 @@ export default function Onboarding() {
                 type="button"
                 onClick={submitContract}
                 disabled={!canSubmitContract}
-                className="h-12 w-full rounded-full bg-[#256fef] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-12 w-full rounded-full bg-brand-vendor font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Saving your registration…" : "Submit"}
               </Button>
@@ -996,7 +996,7 @@ export default function Onboarding() {
         <button
           type="button"
           onClick={() => window.open("https://wa.me/918821826465", "_blank")}
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
           aria-label="WhatsApp help"
         >
           <MessageCircle className="h-5 w-5" />
@@ -1017,13 +1017,13 @@ export default function Onboarding() {
             keepManualSignatureRef.current = false;
           }}
         >
-          <DrawerContent className="border-[#d0d4dc] bg-white">
+          <DrawerContent className="border-brand-border bg-white">
             <DrawerHeader className="space-y-2 px-4 pt-4 text-left">
-              <DrawerTitle className="text-base font-semibold text-[#363636]">Draw your signature</DrawerTitle>
+              <DrawerTitle className="text-base font-semibold text-brand-ink">Draw your signature</DrawerTitle>
               <p className="text-sm text-[#6b7280]">Use your finger or mouse to draw a signature that matches your legal name.</p>
             </DrawerHeader>
             <div className="px-4 pb-4">
-              <div className="rounded-2xl border border-[#d0d4dc] bg-white p-3">
+              <div className="rounded-2xl border border-brand-border bg-white p-3">
                 {/* data-vaul-no-drag is load-bearing, not a hint. This canvas
                     lives inside a vaul Drawer, which reads a pointer drag
                     across its content as swipe-to-dismiss. `touch-none` stops
@@ -1050,7 +1050,7 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={clearSignatureCanvas}
-                  className="text-sm font-medium text-[#256fef] underline underline-offset-2"
+                  className="text-sm font-medium text-brand-vendor underline underline-offset-2"
                 >
                   Clear
                 </button>
@@ -1069,7 +1069,7 @@ export default function Onboarding() {
               <Button
                 type="button"
                 onClick={saveManualSignature}
-                className="h-12 w-full rounded-full bg-[#256fef] font-semibold text-white"
+                className="h-12 w-full rounded-full bg-brand-vendor font-semibold text-white"
               >
                 Save Signature
               </Button>
@@ -1078,9 +1078,9 @@ export default function Onboarding() {
         </Drawer>
 
         <Dialog open={agreementModalOpen} onOpenChange={setAgreementModalOpen}>
-          <DialogContent className="max-h-[80vh] rounded-2xl border border-[#d0d4dc] bg-white p-5">
+          <DialogContent className="max-h-[80vh] rounded-2xl border border-brand-border bg-white p-5">
             <DialogHeader>
-              <DialogTitle className="text-base font-semibold text-[#363636]">Cosora Supplier Agreement</DialogTitle>
+              <DialogTitle className="text-base font-semibold text-brand-ink">Cosora Supplier Agreement</DialogTitle>
             </DialogHeader>
             {/* Rendered from the SAME constant whose version is written to
                 vendor_contracts.agreement_version, so the record always names
@@ -1088,9 +1088,9 @@ export default function Onboarding() {
                 clauses stay in English whatever the app language: a Hindi or
                 Gujarati rendering would be wording the record doesn't name, and
                 no translation of it has been reviewed (2026-09-26). */}
-            <div data-no-translate className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-[#363636]">
+            <div data-no-translate className="mt-4 max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6 text-brand-ink">
               {SUPPLIER_AGREEMENT_CLAUSES.map((clause) => <p key={clause}>{clause}</p>)}
-              <p className="pt-1 text-xs text-[#363636]/60">Version {SUPPLIER_AGREEMENT_VERSION}</p>
+              <p className="pt-1 text-xs text-brand-ink/60">Version {SUPPLIER_AGREEMENT_VERSION}</p>
             </div>
           </DialogContent>
         </Dialog>
@@ -1115,24 +1115,24 @@ export default function Onboarding() {
   return (
     <div className="vendor-shell min-h-screen bg-background pb-32">
       {isBusinessInfoStep ? (
-        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]">
+        <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
             <button
               type="button"
               onClick={goPrev}
-              className="flex h-8 w-8 items-center justify-center rounded-full text-[#363636]"
+              className="flex h-8 w-8 items-center justify-center rounded-full text-brand-ink"
               aria-label="Back"
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Link to="/help" className="text-sm font-medium text-[#256fef]">
+            <Link to="/help" className="text-sm font-medium text-brand-vendor">
               Help?
             </Link>
           </div>
           <BusinessInfoStepper currentStep={currentStep} />
         </header>
       ) : (
-        <header className="sticky top-0 z-50 border-b border-[#d0d4dc] bg-[#ffffff]/95 backdrop-blur">
+        <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
             <Link to="/" className="block">
               <img
@@ -1147,7 +1147,7 @@ export default function Onboarding() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 rounded-md border-[#d0d4dc] px-3 text-xs text-[#363636] hover:bg-[#f5f5f5]"
+                  className="h-8 rounded-md border-brand-border px-3 text-xs text-brand-ink hover:bg-[#f5f5f5]"
                 >
                   Login
                 </Button>
@@ -1156,15 +1156,15 @@ export default function Onboarding() {
                 <SheetTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-8 w-8 items-center justify-center rounded-md border border-[#d0d4dc] text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                    className="flex h-8 w-8 items-center justify-center rounded-md border border-brand-border text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                     aria-label="Open menu"
                   >
                     <Menu className="h-5 w-5" />
                   </button>
                 </SheetTrigger>
-                <SheetContent side="right" className="w-72 border-l border-[#d0d4dc] bg-[#ffffff] p-4">
+                <SheetContent side="right" className="w-72 border-l border-brand-border bg-[#ffffff] p-4">
                   <SheetHeader>
-                    <SheetTitle className="text-left text-base font-semibold text-[#363636]">
+                    <SheetTitle className="text-left text-base font-semibold text-brand-ink">
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
@@ -1173,10 +1173,10 @@ export default function Onboarding() {
                       <Link
                         key={item.label}
                         to={item.href}
-                        className="flex items-center justify-between rounded-xl border border-[#d0d4dc] px-3 py-2 text-sm font-medium text-[#363636] transition-colors hover:bg-[#f5f5f5]"
+                        className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
                       >
                         {item.label}
-                        <ChevronRight className="h-4 w-4 text-[#363636]/60" />
+                        <ChevronRight className="h-4 w-4 text-brand-ink/60" />
                       </Link>
                     ))}
                   </nav>
@@ -1192,12 +1192,12 @@ export default function Onboarding() {
         <div className="sticky top-16 z-40 border-b bg-background/95 p-4 backdrop-blur">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-2">
-              <button onClick={goPrev} disabled={currentStep === 1} className="text-sm text-[#363636] disabled:opacity-30 flex items-center gap-1">
+              <button onClick={goPrev} disabled={currentStep === 1} className="text-sm text-brand-ink disabled:opacity-30 flex items-center gap-1">
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-              <span className="text-sm font-medium text-[#363636]">Step {currentStep} of {TOTAL_STEPS}</span>
+              <span className="text-sm font-medium text-brand-ink">Step {currentStep} of {TOTAL_STEPS}</span>
             </div>
-            <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2 [&>div]:bg-[#256fef]" />
+            <Progress value={(currentStep / TOTAL_STEPS) * 100} className="h-2 [&>div]:bg-brand-vendor" />
           </div>
         </div>
       )}
@@ -1227,13 +1227,13 @@ export default function Onboarding() {
                     const Icon = item.icon;
                     const isLocked = item.state === "locked";
                     const iconStyle = isLocked
-                      ? "bg-[#f5f5f5] text-[#d0d4dc] border-[#d0d4dc]"
-                      : "bg-[#256fef]/10 text-[#256fef] border-[#256fef]/30";
-                    const labelStyle = isLocked ? "text-[#d0d4dc]" : "text-[#363636]";
-                    const helperStyle = isLocked ? "text-[#d0d4dc]" : "text-[#256fef]";
+                      ? "bg-[#f5f5f5] text-brand-border border-brand-border"
+                      : "bg-brand-vendor/10 text-brand-vendor border-brand-vendor/30";
+                    const labelStyle = isLocked ? "text-brand-border" : "text-brand-ink";
+                    const helperStyle = isLocked ? "text-brand-border" : "text-brand-vendor";
 
                     return (
-                      <div key={item.label} className="flex items-center gap-3 rounded-xl border border-[#d0d4dc] bg-white p-4 shadow-sm">
+                      <div key={item.label} className="flex items-center gap-3 rounded-xl border border-brand-border bg-white p-4 shadow-sm">
                         <div className={cn("h-10 w-10 rounded-full border flex items-center justify-center", iconStyle)}>
                           <Icon className="h-5 w-5" />
                         </div>
@@ -1249,19 +1249,19 @@ export default function Onboarding() {
                     <DialogTrigger asChild>
                       <button
                         type="button"
-                        className="flex w-full items-center justify-between rounded-xl border border-[#d0d4dc] bg-white p-4 text-left text-sm font-medium text-[#363636] shadow-sm"
+                        className="flex w-full items-center justify-between rounded-xl border border-brand-border bg-white p-4 text-left text-sm font-medium text-brand-ink shadow-sm"
                       >
                         Documents required for registration
-                        <ChevronRight className="h-4 w-4 text-[#363636]/70" />
+                        <ChevronRight className="h-4 w-4 text-brand-ink/70" />
                       </button>
                     </DialogTrigger>
-                    <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                    <DialogContent className="rounded-2xl border border-brand-border bg-white p-5">
                       <DialogHeader>
-                        <DialogTitle className="text-sm font-semibold text-[#363636]">
+                        <DialogTitle className="text-sm font-semibold text-brand-ink">
                           Please be ready with the following for a smooth registration
                         </DialogTitle>
                       </DialogHeader>
-                      <div className="mt-4 space-y-3 text-sm text-[#363636]">
+                      <div className="mt-4 space-y-3 text-sm text-brand-ink">
                         {/* This list must name only what the form can actually
                             take. It used to ask for an Aadhaar card that no
                             field anywhere collects — see the Aadhaar note in
@@ -1273,19 +1273,19 @@ export default function Onboarding() {
                           "Primary information",
                         ].map((item) => (
                           <div key={item} className="flex items-center gap-2">
-                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#14ae5c]">
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-success">
                               <Check className="h-3 w-3 text-white" />
                             </span>
                             <span>{item}</span>
                           </div>
                         ))}
                       </div>
-                      <Button className="mt-5 w-full rounded-full bg-[#256fef] text-white">Okay</Button>
+                      <Button className="mt-5 w-full rounded-full bg-brand-vendor text-white">Okay</Button>
                     </DialogContent>
                   </Dialog>
                 </div>
 
-                <Button onClick={goNext} className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0]">
+                <Button onClick={goNext} className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0]">
                   Edit details
                 </Button>
               </div>
@@ -1294,24 +1294,24 @@ export default function Onboarding() {
             {/* STEP 2 */}
             {currentStep === 2 && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-[#363636]">Business Details</h2>
+                <h2 className="text-2xl font-bold text-brand-ink">Business Details</h2>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Business name*</Label>
-                  <p className="text-xs text-[#363636]/70">Customers will see this name on Cosora</p>
+                  <Label className="text-sm font-medium text-brand-ink">Business name*</Label>
+                  <p className="text-xs text-brand-ink/70">Customers will see this name on Cosora</p>
                   <Input
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     placeholder="Business name"
-                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Mobile Number*</Label>
+                  <Label className="text-sm font-medium text-brand-ink">Mobile Number*</Label>
                   <div className="flex items-center gap-2">
                     <Select value={countryCode} onValueChange={setCountryCode}>
-                      <SelectTrigger className="h-11 w-24 rounded-xl border-[#d0d4dc] text-xs">
+                      <SelectTrigger className="h-11 w-24 rounded-xl border-brand-border text-xs">
                         <SelectValue placeholder="+91" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1330,47 +1330,47 @@ export default function Onboarding() {
                       value={mobile}
                       onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
                       placeholder="Phone number"
-                      className="h-11 flex-1 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="h-11 flex-1 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                       inputMode="numeric"
                       maxLength={10}
                     />
                   </div>
-                  <p className="text-xs text-[#363636]/70">
+                  <p className="text-xs text-brand-ink/70">
                     Buyers and our support team use this number to reach you.
                   </p>
                   <div className="flex items-center gap-2">
                     <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
-                    <Label htmlFor="wa" className="cursor-pointer text-sm text-[#363636]">Get business updates via WhatsApp</Label>
+                    <Label htmlFor="wa" className="cursor-pointer text-sm text-brand-ink">Get business updates via WhatsApp</Label>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Business's primary contact number*</Label>
-                  <p className="text-xs text-[#363636]/70">Customers, support team may call you on this number</p>
+                  <Label className="text-sm font-medium text-brand-ink">Business's primary contact number*</Label>
+                  <p className="text-xs text-brand-ink/70">Customers, support team may call you on this number</p>
                   <Input
                     value={primaryContact}
                     onChange={(e) => setPrimaryContact(e.target.value)}
                     placeholder="Primary contact number"
-                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     inputMode="numeric"
                     maxLength={10}
                     disabled={sameContact}
                   />
                   <div className="flex items-center gap-2">
                     <Checkbox id="same" checked={sameContact} onCheckedChange={(v) => setSameContact(!!v)} />
-                    <Label htmlFor="same" className="cursor-pointer text-sm text-[#363636]">Same as owner mobile number</Label>
+                    <Label htmlFor="same" className="cursor-pointer text-sm text-brand-ink">Same as owner mobile number</Label>
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Website</Label>
+                  <Label className="text-sm font-medium text-brand-ink">Website</Label>
                   <div className="flex items-center gap-3">
                     <button
                       type="button"
                       onClick={() => setHasWebsite(true)}
                       className={cn(
                         "rounded-full border px-4 py-1.5 text-sm",
-                        hasWebsite ? "border-[#256fef] text-[#256fef]" : "border-[#d0d4dc] text-[#363636]",
+                        hasWebsite ? "border-brand-vendor text-brand-vendor" : "border-brand-border text-brand-ink",
                       )}
                     >
                       Yes
@@ -1380,7 +1380,7 @@ export default function Onboarding() {
                       onClick={() => setHasWebsite(false)}
                       className={cn(
                         "rounded-full border px-4 py-1.5 text-sm",
-                        !hasWebsite ? "border-[#256fef] text-[#256fef]" : "border-[#d0d4dc] text-[#363636]",
+                        !hasWebsite ? "border-brand-vendor text-brand-vendor" : "border-brand-border text-brand-ink",
                       )}
                     >
                       None
@@ -1391,7 +1391,7 @@ export default function Onboarding() {
                       value={websiteUrl}
                       onChange={(e) => setWebsiteUrl(e.target.value)}
                       placeholder="https://yourwebsite.com"
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   )}
                 </div>
@@ -1399,7 +1399,7 @@ export default function Onboarding() {
                 <Button
                   onClick={goNext}
                   disabled={!canContinueStep2}
-                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </Button>
@@ -1409,18 +1409,18 @@ export default function Onboarding() {
             {/* STEP 3 */}
             {currentStep === 3 && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold text-[#363636]">Business Address</h2>
+                <h2 className="text-2xl font-bold text-brand-ink">Business Address</h2>
 
                 <div className="space-y-3">
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#363636]/60" />
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-ink/60" />
                     <Input
                       placeholder="Search for area, street name"
-                      className="h-11 rounded-xl border-[#d0d4dc] pl-9 focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="h-11 rounded-xl border-brand-border pl-9 focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   </div>
 
-                  <div className="relative overflow-hidden rounded-2xl border border-[#d0d4dc]">
+                  <div className="relative overflow-hidden rounded-2xl border border-brand-border">
                     {/* Follows what the vendor has actually typed. It was
                         hardcoded to `q=Delhi%20NCR`, so a Surat mill filling in
                         this form was shown a map of Delhi — the same invented
@@ -1435,21 +1435,21 @@ export default function Onboarding() {
                       />
                     ) : (
                       <div className="flex h-56 w-full flex-col items-center justify-center gap-2 bg-[#f5f5f5] px-6 text-center">
-                        <MapPin className="h-6 w-6 text-[#d0d4dc]" />
-                        <p className="text-xs text-[#363636]/60">
+                        <MapPin className="h-6 w-6 text-brand-border" />
+                        <p className="text-xs text-brand-ink/60">
                           Enter your city or pincode below and the map will find you.
                         </p>
                       </div>
                     )}
                     <div className="pointer-events-none absolute inset-0">
                       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                        <div className="mb-2 rounded-full bg-white px-3 py-1 text-[10px] font-medium text-[#363636] shadow">
+                        <div className="mb-2 rounded-full bg-white px-3 py-1 text-[10px] font-medium text-brand-ink shadow">
                           This is your business location
-                          <span className="ml-1 text-[#363636]/70">Move pin to add to exact location</span>
+                          <span className="ml-1 text-brand-ink/70">Move pin to add to exact location</span>
                         </div>
                         <div className="flex items-center justify-center">
-                          <div className="h-10 w-10 rounded-full bg-[#256fef]/15 flex items-center justify-center">
-                            <MapPin className="h-6 w-6 text-[#256fef]" />
+                          <div className="h-10 w-10 rounded-full bg-brand-vendor/15 flex items-center justify-center">
+                            <MapPin className="h-6 w-6 text-brand-vendor" />
                           </div>
                         </div>
                       </div>
@@ -1458,92 +1458,92 @@ export default function Onboarding() {
                       type="button"
                       onClick={handleUseCurrentLocation}
                       disabled={locLoading}
-                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-[#363636] shadow disabled:opacity-70"
+                      className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-medium text-brand-ink shadow disabled:opacity-70"
                     >
-                      <MapPin className="h-4 w-4 text-[#256fef]" />
+                      <MapPin className="h-4 w-4 text-brand-vendor" />
                       {locLoading ? "Locating…" : "Use current location"}
                     </button>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-[#d0d4dc] bg-white p-4 shadow-sm space-y-3">
+                <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-[#363636]">Complete business address</h3>
-                    <button type="button" className="text-[#363636]/70">
+                    <h3 className="text-sm font-semibold text-brand-ink">Complete business address</h3>
+                    <button type="button" className="text-brand-ink/70">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">Shop no. / building no. (optional)</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Shop no. / building no. (optional)</Label>
                     <Input
                       value={building}
                       onChange={(e) => setBuilding(e.target.value)}
                       placeholder="Shop no. / building no. (optional)"
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">Floor / tower (optional)</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Floor / tower (optional)</Label>
                     <Input
                       value={floor}
                       onChange={(e) => setFloor(e.target.value)}
                       placeholder="Floor / tower (optional)"
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">Area / Sector / Locality*</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Area / Sector / Locality*</Label>
                     <Input
                       value={area}
                       onChange={(e) => setArea(e.target.value)}
                       placeholder="Area / Sector / Locality*"
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-[#363636]">City*</Label>
+                      <Label className="text-sm font-medium text-brand-ink">City*</Label>
                       <Input
                         value={city}
                         onChange={(e) => setCity(e.target.value)}
                         placeholder="City"
-                        className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                        className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-[#363636]">State*</Label>
+                      <Label className="text-sm font-medium text-brand-ink">State*</Label>
                       <Input
                         value={state}
                         onChange={(e) => setState(e.target.value)}
                         placeholder="State"
-                        className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                        className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                       />
                     </div>
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">Pincode*</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Pincode*</Label>
                     <Input
                       value={pincode}
                       onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
                       placeholder="6-digit pincode"
                       inputMode="numeric"
                       maxLength={6}
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                     {pincode.length > 0 && !pincodeValid && (
-                      <p className="text-xs text-[#ef4d62]">Enter all 6 digits of your pincode.</p>
+                      <p className="text-xs text-brand-buyer">Enter all 6 digits of your pincode.</p>
                     )}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-[#363636]">Add any nearby landmark (optional)</Label>
+                    <Label className="text-sm font-medium text-brand-ink">Add any nearby landmark (optional)</Label>
                     <Input
                       value={landmark}
                       onChange={(e) => setLandmark(e.target.value)}
                       placeholder="Add any nearby landmark (optional)"
-                      className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                   </div>
-                  <p className="text-xs text-[#ef4d62]">
+                  <p className="text-xs text-brand-buyer">
                     Please ensure that this address is the same as mentioned on your licence
                   </p>
                   <Button
@@ -1554,7 +1554,7 @@ export default function Onboarding() {
                       toast.success("Business address added");
                     }}
                     disabled={!canAddAddress}
-                    className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Add business address
                   </Button>
@@ -1563,7 +1563,7 @@ export default function Onboarding() {
                     variant="outline"
                     onClick={goNext}
                     disabled={!addressConfirmed}
-                    className="w-full rounded-full border border-[#256fef] text-[#256fef] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-full border border-brand-vendor text-brand-vendor disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Save business address
                   </Button>
@@ -1575,34 +1575,34 @@ export default function Onboarding() {
             {currentStep === 4 && !ownerSuccess && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-[#363636]">Owner details</h2>
-                  <p className="mt-1 text-xs text-[#363636]/70">
+                  <h2 className="text-2xl font-bold text-brand-ink">Owner details</h2>
+                  <p className="mt-1 text-xs text-brand-ink/70">
                     Cosora will use these details for all business communications and updates
                   </p>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Full name*</Label>
+                  <Label className="text-sm font-medium text-brand-ink">Full name*</Label>
                   <Input
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
                     placeholder="Full name"
-                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Email address*</Label>
+                  <Label className="text-sm font-medium text-brand-ink">Email address*</Label>
                   <Input
                     type="email"
                     value={ownerEmail}
                     onChange={(e) => setOwnerEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-[#363636]">Registered country*</Label>
+                  <Label className="text-sm font-medium text-brand-ink">Registered country*</Label>
                   <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="rounded-xl border-[#d0d4dc]">
+                    <SelectTrigger className="rounded-xl border-brand-border">
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1616,7 +1616,7 @@ export default function Onboarding() {
                 <Button
                   onClick={goNext}
                   disabled={!canSaveOwner}
-                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Save
                 </Button>
@@ -1633,19 +1633,19 @@ export default function Onboarding() {
             {currentStep === 5 && (
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <button type="button" onClick={goPrev} className="mt-1 text-[#363636]" aria-label="Back">
+                  <button type="button" onClick={goPrev} className="mt-1 text-brand-ink" aria-label="Back">
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div className="text-center flex-1">
                     <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
-                    <p className="text-xs text-[#363636]/70">For Sellers</p>
+                    <p className="text-xs text-brand-ink/70">For Sellers</p>
                   </div>
                   <div className="w-4" />
                 </div>
 
                 <div className="space-y-2">
-                  <h2 className="text-lg font-semibold text-[#363636]">What kind of business are you?</h2>
-                  <p className="text-sm font-normal text-[#363636]">
+                  <h2 className="text-lg font-semibold text-brand-ink">What kind of business are you?</h2>
+                  <p className="text-sm font-normal text-brand-ink">
                     Buyers browse and filter by these categories. Pick every one that describes what you make, trade or provide.
                   </p>
                 </div>
@@ -1653,23 +1653,23 @@ export default function Onboarding() {
                 <button
                   type="button"
                   onClick={() => setCategoriesModalOpen(true)}
-                  className="w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                  className="w-full rounded-2xl border-2 border-dashed border-brand-border bg-[#f5f5f5] px-4 py-10 text-center"
                 >
-                  <Tag className="mx-auto h-10 w-10 text-[#256fef]" />
-                  <p className="mt-3 font-semibold text-[#256fef]">
+                  <Tag className="mx-auto h-10 w-10 text-brand-vendor" />
+                  <p className="mt-3 font-semibold text-brand-vendor">
                     {businessCategories.length > 0 ? "Edit business categories" : "Add business categories"}
                   </p>
-                  <p className="mt-1 text-xs text-[#363636]/70">Manufacturer, wholesaler, retailer, services and more</p>
+                  <p className="mt-1 text-xs text-brand-ink/70">Manufacturer, wholesaler, retailer, services and more</p>
                 </button>
 
                 {businessCategories.length > 0 && (
                   <div className="space-y-2">
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#363636]/70">
+                    <p className="text-xs font-bold uppercase tracking-wide text-brand-ink/70">
                       Selected ({businessCategories.length})
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {businessCategories.map((cat) => (
-                        <span key={cat} className="flex items-center gap-1.5 rounded-full bg-[#256fef] px-3 py-1.5 text-xs font-medium text-white">
+                        <span key={cat} className="flex items-center gap-1.5 rounded-full bg-brand-vendor px-3 py-1.5 text-xs font-medium text-white">
                           {cat}
                           <button
                             type="button"
@@ -1687,7 +1687,7 @@ export default function Onboarding() {
                 <Button
                   onClick={() => setCurrentStep(6)}
                   disabled={!canContinueCategories}
-                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </Button>
@@ -1705,53 +1705,53 @@ export default function Onboarding() {
             {currentStep === 6 && (
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <button type="button" onClick={goPrev} className="mt-1 text-[#363636]" aria-label="Back">
+                  <button type="button" onClick={goPrev} className="mt-1 text-brand-ink" aria-label="Back">
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <div className="text-center flex-1">
                     <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
-                    <p className="text-xs text-[#363636]/70">For Sellers</p>
+                    <p className="text-xs text-brand-ink/70">For Sellers</p>
                   </div>
                   <div className="w-4" />
                 </div>
 
                 <div className="space-y-2">
-                  <h2 className="text-lg font-semibold text-[#363636]">Add business images</h2>
-                  <p className="text-sm font-normal text-[#363636]">
+                  <h2 className="text-lg font-semibold text-brand-ink">Add business images</h2>
+                  <p className="text-sm font-normal text-brand-ink">
                     Upload at least one entrance image of your business along with interior images, for your Cosora page.
                   </p>
                 </div>
 
                 <button
                   type="button"
-                  className="w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center"
+                  className="w-full rounded-2xl border-2 border-dashed border-brand-border bg-[#f5f5f5] px-4 py-10 text-center"
                   onClick={() => setBusinessImagePickerOpen(true)}
                 >
-                  <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
-                  <p className="mt-3 font-semibold text-[#256fef]">Add business images</p>
-                  <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or jpg formats up to 5MB</p>
+                  <UploadIcon className="mx-auto h-10 w-10 text-brand-vendor" />
+                  <p className="mt-3 font-semibold text-brand-vendor">Add business images</p>
+                  <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or jpg formats up to 5MB</p>
                 </button>
 
                 <Dialog open={businessImagePickerOpen} onOpenChange={setBusinessImagePickerOpen}>
-                  <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                  <DialogContent className="rounded-2xl border border-brand-border bg-white p-5">
                     <DialogHeader>
-                      <DialogTitle className="text-base font-semibold text-[#363636]">Select images</DialogTitle>
+                      <DialogTitle className="text-base font-semibold text-brand-ink">Select images</DialogTitle>
                     </DialogHeader>
                     <div className="mt-4 grid grid-cols-2 gap-3">
                       <button
                         type="button"
-                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-[#363636]"
+                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-brand-ink"
                         onClick={() => businessImageInputRef.current?.click()}
                       >
-                        <UploadIcon className="h-6 w-6 text-[#256fef]" />
+                        <UploadIcon className="h-6 w-6 text-brand-vendor" />
                         <span className="mt-2 text-sm font-medium">Camera</span>
                       </button>
                       <button
                         type="button"
-                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-[#363636]"
+                        className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-brand-ink"
                         onClick={() => businessImageInputRef.current?.click()}
                       >
-                        <UploadIcon className="h-6 w-6 text-[#256fef]" />
+                        <UploadIcon className="h-6 w-6 text-brand-vendor" />
                         <span className="mt-2 text-sm font-medium">Browse</span>
                       </button>
                     </div>
@@ -1759,16 +1759,16 @@ export default function Onboarding() {
                         drawing of a device photo gallery — not a picker, not
                         clickable, not the vendor's photos. Removed: the two
                         buttons above open the real file picker. */}
-                    <Button className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold" onClick={() => setBusinessImagePickerOpen(false)}>
+                    <Button className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold" onClick={() => setBusinessImagePickerOpen(false)}>
                       Done
                     </Button>
                   </DialogContent>
                 </Dialog>
 
                 <Dialog open={businessImageGuidelinesOpen} onOpenChange={setBusinessImageGuidelinesOpen}>
-                  <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                  <DialogContent className="rounded-2xl border border-brand-border bg-white p-5">
                     <DialogHeader>
-                      <DialogTitle className="text-base font-semibold text-[#363636]">Image upload guidelines</DialogTitle>
+                      <DialogTitle className="text-base font-semibold text-brand-ink">Image upload guidelines</DialogTitle>
                     </DialogHeader>
                     <div className="mt-4 space-y-3">
                       {[
@@ -1789,18 +1789,18 @@ export default function Onboarding() {
                           type: "cross",
                         },
                       ].map((item) => (
-                        <div key={item.text} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-[#d0d4dc] p-2">
+                        <div key={item.text} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-brand-border p-2">
                           <div className="relative h-20 overflow-hidden rounded-lg bg-gradient-to-br from-[#dbeafe] to-[#f5f5f5]">
-                            <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", item.type === "check" ? "bg-[#14ae5c]" : "bg-[#ef4d62]") }>
+                            <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", item.type === "check" ? "bg-brand-success" : "bg-brand-buyer") }>
                               {item.type === "check" ? <Check className="h-3.5 w-3.5 text-white" /> : <X className="h-3.5 w-3.5 text-white" />}
                             </div>
                           </div>
-                          <p className="text-sm text-[#363636]">{item.text}</p>
+                          <p className="text-sm text-brand-ink">{item.text}</p>
                         </div>
                       ))}
                     </div>
                     <Button
-                      className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                      className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold"
                       onClick={() => {
                         setBusinessImageGuidelinesOpen(false);
                         setBusinessImagePickerOpen(true);
@@ -1813,7 +1813,7 @@ export default function Onboarding() {
 
                 <button
                   type="button"
-                  className="text-sm text-[#256fef] underline"
+                  className="text-sm text-brand-vendor underline"
                   onClick={() => setBusinessImageGuidelinesOpen(true)}
                 >
                   Guidelines to upload business images
@@ -1822,7 +1822,7 @@ export default function Onboarding() {
                 {(businessImageUploads.length > 0 || uploadingBusinessImages > 0) && (
                   <div className="grid grid-cols-3 gap-2">
                     {businessImageUploads.map((src, i) => (
-                      <div key={src} className="relative aspect-square overflow-hidden rounded-xl border border-[#d0d4dc]">
+                      <div key={src} className="relative aspect-square overflow-hidden rounded-xl border border-brand-border">
                         <img src={src} alt={`Business photo ${i + 1}`} className="h-full w-full object-cover" />
                         <button
                           type="button"
@@ -1836,7 +1836,7 @@ export default function Onboarding() {
                     ))}
                     {Array.from({ length: uploadingBusinessImages }).map((_, i) => (
                       <div key={`uploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-xl bg-[#eef0f3]">
-                        <span className="text-[10px] text-[#363636]/60">Uploading…</span>
+                        <span className="text-[10px] text-brand-ink/60">Uploading…</span>
                       </div>
                     ))}
                   </div>
@@ -1845,7 +1845,7 @@ export default function Onboarding() {
                 <Button
                   onClick={() => setCurrentStep(7)}
                   disabled={!canUploadBusinessImages}
-                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {uploadingBusinessImages > 0 ? "Uploading…" : "Next"}
                 </Button>
@@ -1865,19 +1865,19 @@ export default function Onboarding() {
             {currentStep === 7 && !documentsSuccess && (
               <div className="space-y-6 pb-14">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-full text-[#363636]" aria-label="Back">
+                  <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-full text-brand-ink" aria-label="Back">
                     <ArrowLeft className="h-4 w-4" />
                   </button>
-                  <h2 className="text-base font-semibold text-[#363636]">Business documents</h2>
-                  <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-[#363636]">1 of 4</span>
+                  <h2 className="text-base font-semibold text-brand-ink">Business documents</h2>
+                  <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-brand-ink">1 of 4</span>
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold text-[#363636]">PAN details</h3>
+                  <h3 className="text-lg font-semibold text-brand-ink">PAN details</h3>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pan-number" className="text-sm font-medium text-[#363636]">PAN number*</Label>
+                  <Label htmlFor="pan-number" className="text-sm font-medium text-brand-ink">PAN number*</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="pan-number"
@@ -1886,32 +1886,32 @@ export default function Onboarding() {
                       placeholder="ABCDE1234F"
                       maxLength={10}
                       className={cn(
-                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
-                        panStatus === "submitted" && "border-[#256fef]",
-                        panStatus === "invalid" && "border-[#ef4d62]",
+                        "h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor",
+                        panStatus === "submitted" && "border-brand-vendor",
+                        panStatus === "invalid" && "border-brand-buyer",
                       )}
                     />
                     {panStatus === "submitted" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#256fef]">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-vendor">
                         <Clock className="h-4 w-4" /> Submitted for review
                       </span>
                     ) : panStatus === "invalid" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-buyer">
                         <AlertCircle className="h-4 w-4" /> Check the format
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={checkPanFormat}>
+                      <Button type="button" variant="outline" className="rounded-full border-brand-vendor text-brand-vendor" onClick={checkPanFormat}>
                         Check
                       </Button>
                     )}
                   </div>
                   {panStatus === "invalid" && (
-                    <p className="text-xs text-[#ef4d62]">A PAN is 5 letters, 4 digits, then 1 letter — for example ABCDE1234F.</p>
+                    <p className="text-xs text-brand-buyer">A PAN is 5 letters, 4 digits, then 1 letter — for example ABCDE1234F.</p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pan-full-name" className="text-sm font-medium text-[#363636]">Full name as per PAN*</Label>
+                  <Label htmlFor="pan-full-name" className="text-sm font-medium text-brand-ink">Full name as per PAN*</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="pan-full-name"
@@ -1919,27 +1919,27 @@ export default function Onboarding() {
                       onChange={(e) => setPanFullName(e.target.value)}
                       placeholder="Name exactly as printed on the PAN card"
                       className={cn(
-                        "h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]",
-                        panNameStatus === "invalid" && "border-[#ef4d62]",
-                        panNameStatus === "submitted" && "border-[#256fef]",
+                        "h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor",
+                        panNameStatus === "invalid" && "border-brand-buyer",
+                        panNameStatus === "submitted" && "border-brand-vendor",
                       )}
                     />
                     {panNameStatus === "invalid" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#ef4d62]">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-buyer">
                         <AlertCircle className="h-4 w-4" /> Check the name
                       </span>
                     ) : panNameStatus === "submitted" ? (
-                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-[#256fef]">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-vendor">
                         <Clock className="h-4 w-4" /> Submitted for review
                       </span>
                     ) : (
-                      <Button type="button" variant="outline" className="rounded-full border-[#256fef] text-[#256fef]" onClick={checkPanName}>
+                      <Button type="button" variant="outline" className="rounded-full border-brand-vendor text-brand-vendor" onClick={checkPanName}>
                         Check
                       </Button>
                     )}
                   </div>
                   {panNameStatus === "invalid" && (
-                    <p className="text-xs text-[#ef4d62]">Enter the name exactly as shown on your PAN card.</p>
+                    <p className="text-xs text-brand-buyer">Enter the name exactly as shown on your PAN card.</p>
                   )}
                 </div>
 
@@ -1947,37 +1947,37 @@ export default function Onboarding() {
                     The form previously rendered a green "Verified" tick from a
                     regex and a 1.2s timer, which is the app vouching for a
                     document nobody had looked at. */}
-                <div className="flex items-start gap-2 rounded-2xl border border-[#d0d4dc] bg-[#f5f5f5] p-3">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#256fef]" />
-                  <p className="text-xs leading-5 text-[#363636]">
+                <div className="flex items-start gap-2 rounded-2xl border border-brand-border bg-[#f5f5f5] p-3">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-vendor" />
+                  <p className="text-xs leading-5 text-brand-ink">
                     Cosora checks the format here and queues your documents for review. A member of our team verifies them
                     against your uploads, usually within 3–5 days, and your profile is marked verified once that is done.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="pan-address" className="text-sm font-medium text-[#363636]">Full address of your registered business*</Label>
+                  <Label htmlFor="pan-address" className="text-sm font-medium text-brand-ink">Full address of your registered business*</Label>
                   <Input
                     id="pan-address"
                     value={panAddress}
                     onChange={(e) => setPanAddress(e.target.value)}
-                    className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
 
-                <div className="space-y-3 rounded-2xl border border-[#d0d4dc] p-4">
+                <div className="space-y-3 rounded-2xl border border-brand-border p-4">
                   <button
                     type="button"
-                    className="block w-full rounded-2xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] px-4 py-10 text-center disabled:opacity-60"
+                    className="block w-full rounded-2xl border-2 border-dashed border-brand-border bg-[#f5f5f5] px-4 py-10 text-center disabled:opacity-60"
                     onClick={() => panDocumentInputRef.current?.click()}
                   >
-                    <UploadIcon className="mx-auto h-10 w-10 text-[#256fef]" />
-                    <p className="mt-3 font-semibold text-[#256fef]">
+                    <UploadIcon className="mx-auto h-10 w-10 text-brand-vendor" />
+                    <p className="mt-3 font-semibold text-brand-vendor">
                       {panDocumentFile ? "Replace your PAN" : "Upload your PAN"}
                     </p>
-                    <p className="mt-1 text-xs text-[#363636]/70">jpeg, png or pdf formats up to 5MB</p>
+                    <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or pdf formats up to 5MB</p>
                   </button>
-                  <button type="button" className="text-sm text-[#256fef] underline" onClick={() => setPanGuidelinesOpen(true)}>
+                  <button type="button" className="text-sm text-brand-vendor underline" onClick={() => setPanGuidelinesOpen(true)}>
                     Guidelines to upload PAN
                   </button>
                   {/* One document, one row. The old grid rendered every pick as
@@ -1985,20 +1985,20 @@ export default function Onboarding() {
                       the copy above invites — and none of them were uploaded
                       anywhere, so vendor_documents.file_url was always null. */}
                   {panDocumentFile && (
-                    <div className="flex items-center justify-between gap-3 rounded-xl border border-[#d0d4dc] bg-white px-3 py-2">
+                    <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-border bg-white px-3 py-2">
                       <div className="flex min-w-0 items-center gap-2">
-                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#256fef]/10">
-                          <FileText className="h-4 w-4 text-[#256fef]" />
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-vendor/10">
+                          <FileText className="h-4 w-4 text-brand-vendor" />
                         </span>
                         <div className="min-w-0">
-                          <p className="truncate text-xs font-semibold text-[#363636]">{panDocumentName || "PAN document"}</p>
-                          <p className="text-[10px] text-[#363636]/60">Attached · uploaded when you submit</p>
+                          <p className="truncate text-xs font-semibold text-brand-ink">{panDocumentName || "PAN document"}</p>
+                          <p className="text-[10px] text-brand-ink/60">Attached · uploaded when you submit</p>
                         </div>
                       </div>
                       <button
                         type="button"
                         aria-label="Remove PAN document"
-                        className="shrink-0 rounded-full p-1 text-[#363636]/60 hover:bg-[#f5f5f5]"
+                        className="shrink-0 rounded-full p-1 text-brand-ink/60 hover:bg-[#f5f5f5]"
                         onClick={() => { setPanDocumentFile(null); setPanDocumentName(""); }}
                       >
                         <X className="h-4 w-4" />
@@ -2006,9 +2006,9 @@ export default function Onboarding() {
                     </div>
                   )}
                   <Dialog open={panGuidelinesOpen} onOpenChange={setPanGuidelinesOpen}>
-                    <DialogContent className="rounded-2xl border border-[#d0d4dc] bg-white p-5">
+                    <DialogContent className="rounded-2xl border border-brand-border bg-white p-5">
                       <DialogHeader>
-                        <DialogTitle className="text-base font-semibold text-[#363636]">Image upload guidelines</DialogTitle>
+                        <DialogTitle className="text-base font-semibold text-brand-ink">Image upload guidelines</DialogTitle>
                       </DialogHeader>
                       <div className="mt-4 space-y-3">
                         {[
@@ -2016,18 +2016,18 @@ export default function Onboarding() {
                           "Image should not be blurry",
                           "Image should not be zoomed in or cropped",
                         ].map((item, index) => (
-                          <div key={item} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-[#d0d4dc] p-2">
+                          <div key={item} className="grid grid-cols-[88px_1fr] gap-3 rounded-xl border border-brand-border p-2">
                             <div className="relative h-20 overflow-hidden rounded-lg bg-gradient-to-br from-[#dbeafe] to-[#f5f5f5]">
-                              <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", index === 0 ? "bg-[#14ae5c]" : "bg-[#ef4d62]") }>
+                              <div className={cn("absolute left-2 top-2 flex h-6 w-6 items-center justify-center rounded-full", index === 0 ? "bg-brand-success" : "bg-brand-buyer") }>
                                 {index === 0 ? <Check className="h-3.5 w-3.5 text-white" /> : <X className="h-3.5 w-3.5 text-white" />}
                               </div>
                             </div>
-                            <p className="text-sm text-[#363636]">{item}</p>
+                            <p className="text-sm text-brand-ink">{item}</p>
                           </div>
                         ))}
                       </div>
                       <Button
-                        className="mt-4 w-full rounded-full bg-[#256fef] text-white font-semibold"
+                        className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold"
                         onClick={() => {
                           setPanGuidelinesOpen(false);
                           panDocumentInputRef.current?.click();
@@ -2040,13 +2040,13 @@ export default function Onboarding() {
                 </div>
 
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-[#363636]">GST details (if applicable)</h4>
-                  <p className="text-xs text-[#363636]/70">This should be linked to the PAN provided earlier for tax calculations</p>
+                  <h4 className="text-sm font-semibold text-brand-ink">GST details (if applicable)</h4>
+                  <p className="text-xs text-brand-ink/70">This should be linked to the PAN provided earlier for tax calculations</p>
                   <div className="flex items-center gap-4">
-                    <Label className="flex items-center gap-2 text-sm font-medium text-[#363636]">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-brand-ink">
                       <input type="radio" name="gst" checked={hasGstin} onChange={() => setHasGstin(true)} /> Yes
                     </Label>
-                    <Label className="flex items-center gap-2 text-sm font-medium text-[#363636]">
+                    <Label className="flex items-center gap-2 text-sm font-medium text-brand-ink">
                       <input type="radio" name="gst" checked={!hasGstin} onChange={() => setHasGstin(false)} /> No
                     </Label>
                   </div>
@@ -2056,7 +2056,7 @@ export default function Onboarding() {
                         value={gstin}
                         onChange={(e) => setGstin(e.target.value)}
                         placeholder="GSTIN"
-                        className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                        className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                       />
                       <KycDocumentUpload
                         label="GST certificate"
@@ -2074,8 +2074,8 @@ export default function Onboarding() {
                     form has no entity-type field to infer it from, so it is
                     never required and never blocks submit. */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-[#363636]">Certificate of incorporation (if applicable)</h4>
-                  <p className="text-xs text-[#363636]/70">
+                  <h4 className="text-sm font-semibold text-brand-ink">Certificate of incorporation (if applicable)</h4>
+                  <p className="text-xs text-brand-ink/70">
                     Only companies and LLPs registered with the MCA have a CIN. Leave this blank if
                     you trade as a proprietorship or partnership.
                   </p>
@@ -2084,7 +2084,7 @@ export default function Onboarding() {
                     value={cin}
                     onChange={(e) => setCin(e.target.value.toUpperCase())}
                     placeholder="CIN (optional)"
-                    className="h-11 rounded-xl border-[#d0d4dc] focus-visible:border-[#256fef] focus-visible:ring-[#256fef]"
+                    className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                   {cin.trim().length > 0 && (
                     <KycDocumentUpload
@@ -2100,7 +2100,7 @@ export default function Onboarding() {
                 <Button
                   onClick={() => setDocumentsSuccess(true)}
                   disabled={!canSubmitPanDocuments}
-                  className="w-full rounded-full bg-[#256fef] text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Next
                 </Button>
@@ -2143,13 +2143,13 @@ export default function Onboarding() {
                   <Label>Product Images (up to {MAX_PRODUCT_IMAGES})</Label>
                   <label
                     className={cn(
-                      "block rounded-xl border-2 border-dashed border-[#d0d4dc] bg-[#f5f5f5] p-6 text-center hover:bg-[#eef0f3]",
+                      "block rounded-xl border-2 border-dashed border-brand-border bg-[#f5f5f5] p-6 text-center hover:bg-[#eef0f3]",
                       productImages.length >= MAX_PRODUCT_IMAGES || uploadingProductImages > 0
                         ? "cursor-not-allowed opacity-60"
                         : "cursor-pointer",
                     )}
                   >
-                    <UploadIcon className="w-6 h-6 mx-auto text-[#363636] mb-2" />
+                    <UploadIcon className="w-6 h-6 mx-auto text-brand-ink mb-2" />
                     <p className="text-sm">
                       {uploadingProductImages > 0
                         ? "Uploading…"
@@ -2187,7 +2187,7 @@ export default function Onboarding() {
                       ))}
                       {Array.from({ length: uploadingProductImages }).map((_, i) => (
                         <div key={`puploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-lg bg-[#eef0f3]">
-                          <span className="text-[10px] text-[#363636]/60">Uploading…</span>
+                          <span className="text-[10px] text-brand-ink/60">Uploading…</span>
                         </div>
                       ))}
                     </div>
@@ -2223,7 +2223,7 @@ export default function Onboarding() {
                   <Label>Sizes</Label>
                   <div className="flex flex-wrap gap-2">
                     {SIZES.map((s) => (
-                      <button key={s} onClick={() => toggleChip(s, selectedSizes, setSelectedSizes)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedSizes.includes(s) ? "bg-[#256fef] text-white border-[#256fef]" : "bg-white hover:bg-[#256fef]/10 border border-[#d0d4dc]")}>{s}</button>
+                      <button key={s} onClick={() => toggleChip(s, selectedSizes, setSelectedSizes)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedSizes.includes(s) ? "bg-brand-vendor text-white border-brand-vendor" : "bg-white hover:bg-brand-vendor/10 border border-brand-border")}>{s}</button>
                     ))}
                   </div>
                 </div>
@@ -2231,7 +2231,7 @@ export default function Onboarding() {
                   <Label>Colors</Label>
                   <div className="flex flex-wrap gap-2">
                     {COLORS.map((c) => (
-                      <button key={c} onClick={() => toggleChip(c, selectedColors, setSelectedColors)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedColors.includes(c) ? "bg-[#256fef] text-white border-[#256fef]" : "bg-white hover:bg-[#256fef]/10 border border-[#d0d4dc]")}>{c}</button>
+                      <button key={c} onClick={() => toggleChip(c, selectedColors, setSelectedColors)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedColors.includes(c) ? "bg-brand-vendor text-white border-brand-vendor" : "bg-white hover:bg-brand-vendor/10 border border-brand-border")}>{c}</button>
                     ))}
                   </div>
                   {/* `products.colour` is a single text column across this
@@ -2239,7 +2239,7 @@ export default function Onboarding() {
                       same way). Say so rather than accepting four picks and
                       quietly storing one. */}
                   {selectedColors.length > 1 && (
-                    <p className="text-xs text-[#363636]/70">
+                    <p className="text-xs text-brand-ink/70">
                       A listing carries one colour, so <span className="font-semibold">{selectedColors[0]}</span> will be saved.
                       Add the others as separate listings from your catalogue later.
                     </p>
@@ -2248,7 +2248,7 @@ export default function Onboarding() {
                 <Button
                   onClick={goNext}
                   disabled={uploadingProductImages > 0}
-                  className="w-full bg-[#256fef] text-white rounded-full font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="w-full bg-brand-vendor text-white rounded-full font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Submit
                 </Button>
@@ -2285,7 +2285,7 @@ export default function Onboarding() {
         <button
           type="button"
           onClick={() => window.open("https://wa.me/918821826465", "_blank")}
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-[#14ae5c] text-white shadow-lg"
+          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
           aria-label="WhatsApp help"
         >
           <MessageCircle className="h-5 w-5" />
@@ -2312,18 +2312,18 @@ function BusinessInfoStepper({ currentStep }: { currentStep: number }) {
           return (
             <div key={label} className="flex flex-1 flex-col items-center text-center gap-2">
               {isDone ? (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#14ae5c]">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-success">
                   <Check className="h-4 w-4 text-white" />
                 </div>
               ) : isActive ? (
-                <div className="h-8 w-8 rounded-full bg-[#256fef]" />
+                <div className="h-8 w-8 rounded-full bg-brand-vendor" />
               ) : (
-                <div className="h-8 w-8 rounded-full border border-[#d0d4dc]" />
+                <div className="h-8 w-8 rounded-full border border-brand-border" />
               )}
               <span
                 className={cn(
                   "text-[11px] font-medium",
-                  isActive ? "text-[#256fef]" : isDone ? "text-[#14ae5c]" : "text-[#d0d4dc]",
+                  isActive ? "text-brand-vendor" : isDone ? "text-brand-success" : "text-brand-border",
                 )}
               >
                 {label}
@@ -2353,10 +2353,10 @@ function BusinessInfoSuccessScreen({ text, onContinue }: { text: string; onConti
       }}
     >
       <div className="flex flex-col items-center px-6 text-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[#14ae5c]">
+        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-brand-success">
           <Check className="h-12 w-12 text-white" />
         </div>
-        <p className="mt-4 text-xl font-semibold text-[#363636]">{text}</p>
+        <p className="mt-4 text-xl font-semibold text-brand-ink">{text}</p>
       </div>
     </div>
   );
@@ -2373,12 +2373,12 @@ function SuccessScreen({ text, onContinue }: { text: string; onContinue: () => v
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        className="w-20 h-20 rounded-full bg-[#14ae5c]/15 flex items-center justify-center mb-4"
+        className="w-20 h-20 rounded-full bg-brand-success/15 flex items-center justify-center mb-4"
       >
-        <CheckCircle2 className="w-12 h-12 text-[#14ae5c]" />
+        <CheckCircle2 className="w-12 h-12 text-brand-success" />
       </motion.div>
       <h3 className="text-2xl font-bold mb-1">{text} ✓</h3>
-      <p className="text-sm text-[#363636]">Continuing...</p>
+      <p className="text-sm text-brand-ink">Continuing...</p>
     </div>
   );
 }

@@ -171,7 +171,7 @@ const Chat = () => {
                 <button key={t} onClick={() => setTab(t)}
                   className={cn("relative flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm font-bold transition-colors",
                     tab === t ? "text-white" : "text-gray-500")}>
-                  {tab === t && <motion.span layoutId="chat-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+                  {tab === t && <motion.span layoutId="chat-tab" className="absolute inset-0 rounded-lg bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
                   <span className="relative z-10 inline-flex items-center gap-1.5">
                     {t === "chats" ? <MessageCircle className="w-4 h-4" /> : <Phone className="w-4 h-4" />}
                     {t === "chats" ? "Chats" : "Calls"}
@@ -186,7 +186,7 @@ const Chat = () => {
               <input
                 value={query} onChange={(e) => setQuery(e.target.value)}
                 placeholder={tab === "chats" ? "Search conversations..." : "Search call history..."}
-                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] focus:bg-white"
+                className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer focus:bg-white"
               />
             </div>
           </div>
@@ -252,7 +252,7 @@ const Chat = () => {
         <motion.button
           whileTap={reduced ? undefined : { scale: 0.95 }}
           onClick={() => navigate("/requirement/post-requirement")}
-          className="fixed bottom-[84px] left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 rounded-full bg-[#256fef] px-5 py-3 text-sm font-bold text-white shadow-lg shadow-[#256fef]/30 hover:bg-[#256fef]/90"
+          className="fixed bottom-[84px] left-1/2 -translate-x-1/2 z-30 inline-flex items-center gap-2 rounded-full bg-brand-vendor px-5 py-3 text-sm font-bold text-white shadow-lg shadow-brand-vendor/30 hover:bg-brand-vendor/90"
         >
           <FileText className="w-4 h-4" /> Post Requirement
         </motion.button>
@@ -289,7 +289,7 @@ function Avatar({ src, name, size = 48, online }: { src: string | null; name: st
       {src ? (
         <img src={src} alt={name} className="w-full h-full rounded-full object-cover" />
       ) : (
-        <div className="w-full h-full rounded-full bg-gradient-to-br from-[#ef4d62]/20 to-[#ef4d62]/40 flex items-center justify-center text-sm font-bold text-gray-700">{initials}</div>
+        <div className="w-full h-full rounded-full bg-gradient-to-br from-brand-buyer/20 to-brand-buyer/40 flex items-center justify-center text-sm font-bold text-gray-700">{initials}</div>
       )}
       {online && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" />}
     </div>
@@ -298,7 +298,7 @@ function Avatar({ src, name, size = 48, online }: { src: string | null; name: st
 
 function QuoteChip({ product, onClick }: { product: string; onClick: () => void }) {
   return (
-    <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="inline-flex items-center gap-1 rounded-full bg-[#ef4d62]/10 px-2 py-0.5 text-[10px] font-semibold text-[#ef4d62] hover:bg-[#ef4d62]/15">
+    <button onClick={(e) => { e.stopPropagation(); onClick(); }} className="inline-flex items-center gap-1 rounded-full bg-brand-buyer/10 px-2 py-0.5 text-[10px] font-semibold text-brand-buyer hover:bg-brand-buyer/15">
       <FileText className="w-2.5 h-2.5" /> Quote · {product}
     </button>
   );
@@ -306,7 +306,7 @@ function QuoteChip({ product, onClick }: { product: string; onClick: () => void 
 
 // `active` only paints at `lg`, where the row genuinely drives a visible pane.
 const ROW_DESKTOP = "transition-colors lg:-mx-2 lg:rounded-xl lg:px-2 lg:hover:bg-gray-100/70";
-const ROW_ACTIVE = "lg:bg-[#ef4d62]/[0.07] lg:hover:bg-[#ef4d62]/[0.07]";
+const ROW_ACTIVE = "lg:bg-brand-buyer/[0.07] lg:hover:bg-brand-buyer/[0.07]";
 
 function ChatRow({ conv, active, onOpen, onQuote }: { conv: ChatSummary; active?: boolean; onOpen: () => void; onQuote: () => void }) {
   return (
@@ -322,7 +322,7 @@ function ChatRow({ conv, active, onOpen, onQuote }: { conv: ChatSummary; active?
         <div className="mt-1 flex items-center justify-between gap-2">
           <QuoteChip product={conv.rfqProduct} onClick={onQuote} />
           {conv.unread > 0 && (
-            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[#ef4d62] text-[10px] font-bold text-white shrink-0">{conv.unread}</span>
+            <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-brand-buyer text-[10px] font-bold text-white shrink-0">{conv.unread}</span>
           )}
         </div>
       </div>
@@ -354,8 +354,8 @@ function CallRow({ call, onOpen, onCall, onQuote }: { call: CallRecord; onOpen: 
           <div className="mt-1"><QuoteChip product={call.rfqProduct} onClick={onQuote} /></div>
         </div>
       </div>
-      <button onClick={onCall} aria-label={`Call ${call.name}`} className="shrink-0 w-9 h-9 rounded-full bg-[#ef4d62]/10 flex items-center justify-center hover:bg-[#ef4d62]/15">
-        <Phone className="w-4 h-4 text-[#ef4d62]" />
+      <button onClick={onCall} aria-label={`Call ${call.name}`} className="shrink-0 w-9 h-9 rounded-full bg-brand-buyer/10 flex items-center justify-center hover:bg-brand-buyer/15">
+        <Phone className="w-4 h-4 text-brand-buyer" />
       </button>
     </div>
   );

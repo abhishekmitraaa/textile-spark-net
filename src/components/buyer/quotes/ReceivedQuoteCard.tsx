@@ -45,7 +45,7 @@ export default function ReceivedQuoteCard({
   return (
     <div className={cn(
       "rounded-2xl border bg-white p-4 transition-colors",
-      compareMode && selected ? "border-[#ef4d62] ring-1 ring-[#ef4d62]" : "border-gray-200"
+      compareMode && selected ? "border-brand-buyer ring-1 ring-brand-buyer" : "border-gray-200"
     )}>
       {/* Header */}
       <div className="flex items-start gap-3">
@@ -55,13 +55,13 @@ export default function ReceivedQuoteCard({
             aria-label={selected ? "Deselect" : "Select for comparison"}
             className={cn(
               "mt-0.5 w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors",
-              selected ? "bg-[#ef4d62] border-[#ef4d62]" : "border-gray-300"
+              selected ? "bg-brand-buyer border-brand-buyer" : "border-gray-300"
             )}
           >
             {selected && <Check className="w-3 h-3 text-white" strokeWidth={3} />}
           </button>
         )}
-        <div className="w-11 h-11 rounded-full bg-[#256fef] text-white flex items-center justify-center text-sm font-bold shrink-0">
+        <div className="w-11 h-11 rounded-full bg-brand-vendor text-white flex items-center justify-center text-sm font-bold shrink-0">
           {q.vendorInitials}
         </div>
         <div className="min-w-0 flex-1">

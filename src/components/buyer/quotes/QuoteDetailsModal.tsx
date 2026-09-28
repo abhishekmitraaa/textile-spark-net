@@ -22,7 +22,7 @@ function QuoteStat({ icon: Icon, label, value }: { icon: typeof Package; label: 
   return (
     <div className="rounded-xl border border-gray-200 p-3">
       <span className="inline-flex items-center gap-1 text-[11px] text-gray-400">
-        <Icon className="w-3.5 h-3.5 text-[#ef4d62]" /> {label}
+        <Icon className="w-3.5 h-3.5 text-brand-buyer" /> {label}
       </span>
       <p className="text-sm font-bold text-gray-900 mt-0.5">{value}</p>
     </div>
@@ -76,7 +76,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
               {/* Vendor profile */}
               <div className="rounded-2xl bg-gray-50 p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-[#256fef] text-white flex items-center justify-center text-sm font-bold">
+                  <div className="w-12 h-12 rounded-full bg-brand-vendor text-white flex items-center justify-center text-sm font-bold">
                     {quote.vendorInitials}
                   </div>
                   <div className="min-w-0">
@@ -146,7 +146,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                 <p className="inline-flex items-center gap-1 text-[11px] text-gray-500 mb-1.5"><FileText className="w-3.5 h-3.5" /> Documents</p>
                 {quote.attachments.documents.map((doc) => (
                   <a key={doc.name} href={doc.url} className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs text-gray-700 hover:border-gray-300 transition-colors">
-                    <FileText className="w-4 h-4 text-[#ef4d62]" />
+                    <FileText className="w-4 h-4 text-brand-buyer" />
                     <span className="flex-1 truncate">{doc.name}</span>
                     <Download className="w-3.5 h-3.5 text-gray-400" />
                   </a>
@@ -173,7 +173,7 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
                   value={paymentTerms}
                   onChange={(e) => setPaymentTerms(e.target.value)}
                   placeholder="e.g. 50% advance, 50% before dispatch"
-                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
                 />
               </div>
 
@@ -184,8 +184,8 @@ export default function QuoteDetailsModal({ quote, forProduct, onClose, onChat, 
               </div>
 
               {/* Chat with vendor */}
-              <button onClick={onChat} className="w-full flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-left hover:border-[#ef4d62]/40 transition-colors">
-                <span className="w-9 h-9 rounded-full bg-[#ef4d62]/10 flex items-center justify-center text-[#ef4d62]">
+              <button onClick={onChat} className="w-full flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-2.5 text-left hover:border-brand-buyer/40 transition-colors">
+                <span className="w-9 h-9 rounded-full bg-brand-buyer/10 flex items-center justify-center text-brand-buyer">
                   <MessageCircle className="w-4 h-4" />
                 </span>
                 <span className="flex-1 min-w-0">

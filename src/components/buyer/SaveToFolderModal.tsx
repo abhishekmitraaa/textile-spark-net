@@ -73,20 +73,20 @@ const SaveToFolderModal = () => {
                 onClick={() => { if (!isAll) toggle(folder.id); }}
                 className={cn(
                   "w-full flex items-center gap-3 rounded-xl border px-3.5 py-3 text-left transition-colors",
-                  active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-gray-300",
+                  active ? "border-brand-buyer bg-brand-buyer/5" : "border-gray-200 hover:border-gray-300",
                   isAll && "opacity-90"
                 )}
               >
-                <FolderIcon className={cn("w-4 h-4 shrink-0", active ? "text-[#ef4d62]" : "text-gray-400")} />
+                <FolderIcon className={cn("w-4 h-4 shrink-0", active ? "text-brand-buyer" : "text-gray-400")} />
                 <span className="flex-1 text-sm font-medium text-gray-800">{folder.name}</span>
-                {active && <Check className="w-4 h-4 text-[#ef4d62]" />}
+                {active && <Check className="w-4 h-4 text-brand-buyer" />}
               </button>
             );
           })}
 
           {/* Create new folder */}
           {creating ? (
-            <div className="flex items-center gap-2 rounded-xl border border-[#ef4d62]/40 px-2 py-2">
+            <div className="flex items-center gap-2 rounded-xl border border-brand-buyer/40 px-2 py-2">
               <input
                 autoFocus
                 value={newName}
@@ -95,16 +95,16 @@ const SaveToFolderModal = () => {
                 placeholder="Folder name"
                 className="flex-1 min-w-0 bg-transparent px-1.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none"
               />
-              <button onClick={addFolder} className="px-3 py-1.5 rounded-lg bg-[#ef4d62] text-white text-xs font-bold">Add</button>
+              <button onClick={addFolder} className="px-3 py-1.5 rounded-lg bg-brand-buyer text-white text-xs font-bold">Add</button>
               <button onClick={() => { setCreating(false); setNewName(""); }} className="px-2 py-1.5 rounded-lg text-xs font-semibold text-gray-500">Cancel</button>
             </div>
           ) : (
             <button
               onClick={() => setCreating(true)}
-              className="w-full flex items-center gap-3 rounded-xl border border-dashed border-gray-300 px-3.5 py-3 text-left hover:border-[#ef4d62]/50 transition-colors"
+              className="w-full flex items-center gap-3 rounded-xl border border-dashed border-gray-300 px-3.5 py-3 text-left hover:border-brand-buyer/50 transition-colors"
             >
-              <Plus className="w-4 h-4 text-[#ef4d62]" />
-              <span className="text-sm font-medium text-[#ef4d62]">Create new folder</span>
+              <Plus className="w-4 h-4 text-brand-buyer" />
+              <span className="text-sm font-medium text-brand-buyer">Create new folder</span>
             </button>
           )}
         </div>
@@ -114,7 +114,7 @@ const SaveToFolderModal = () => {
           <button onClick={closeSaveModal} className="px-4 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors">
             Cancel
           </button>
-          <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors">
+          <button onClick={handleSave} className="px-5 py-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors">
             Save
           </button>
         </div>

@@ -10,6 +10,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { DisplayCurrencyProvider } from "./contexts/DisplayCurrencyContext";
 import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import ClarityMask from "./components/analytics/ClarityMask";
+import SiteThemeApplier from "./components/SiteThemeApplier";
 import StoreSync from "./components/StoreSync";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
@@ -216,6 +217,8 @@ const App = () => (
         <BrowserRouter>
           <AutoTranslate />
           <LanguageSync />
+          {/* The site theme saved in Cosora-Admin (admin completion Phase 9). */}
+          <SiteThemeApplier />
           {/* Covers the lazily-loaded routes below. Deliberately a blank div
               rather than a spinner: these chunks are small and load in a frame
               or two on any reasonable connection, and a flashed spinner reads

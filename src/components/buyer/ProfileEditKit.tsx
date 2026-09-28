@@ -9,7 +9,7 @@ import { ArrowLeft, Loader2 } from "lucide-react";
 // ─────────────────────────────────────────────────────────────
 
 export const inputCls =
-  "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors";
+  "w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer transition-colors";
 
 export function Field({ label, htmlFor, children }: { label: string; htmlFor?: string; children: React.ReactNode }) {
   return (
@@ -42,7 +42,7 @@ export function ProfileSignedOut() {
       <p className="mt-1 text-sm text-gray-500">Sign in to edit your profile.</p>
       <button
         onClick={() => navigate("/login")}
-        className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#ef4d62] px-6 py-3 text-sm font-bold text-white hover:bg-[#ef4d62]/90 transition-colors"
+        className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-buyer px-6 py-3 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors"
       >
         Sign In
       </button>
@@ -64,7 +64,7 @@ export function ProfileFormActions({ saving, onCancel, onSave }: { saving: boole
       <button onClick={onCancel} disabled={saving} className="flex-1 py-2.5 rounded-xl border border-gray-200 bg-white text-sm font-semibold text-gray-700 hover:border-gray-300 transition-colors disabled:opacity-60">
         Cancel
       </button>
-      <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors disabled:opacity-60">
+      <button onClick={onSave} disabled={saving} className="flex-1 py-2.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors disabled:opacity-60">
         {saving ? "Saving…" : "Save Changes"}
       </button>
     </div>

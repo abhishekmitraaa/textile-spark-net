@@ -200,6 +200,10 @@ the demand side of India's fashion and textile supply chain.
 - **A seller can't review their own store or products.** The Write-a-Review button is hidden there, and the database refuses it.
 - A refused edit or delete now says why, instead of reporting success or a generic error.
 
+### Changed 2026-09-29 (admin completion, Phase 9: theme)
+- **The site's brand colours and fonts can be changed by Cosora's team** without a release. Today they
+  look exactly as before.
+
 ### Changed 2026-09-28 (admin completion, Phase 8: analytics)
 - **The Terms page says what is recorded.** A new "Analytics and session replay" section says
   which products, storefronts and searches are viewed is recorded, linked to the account when
@@ -478,6 +482,11 @@ rather than a supplier directory.
 - With no reviews, the rating reads "–" and "No reviews yet", not "0/5 POOR". Loading, a failed read and an empty list look different.
 - The Report button is gone: it did nothing (ToDo).
 
+### Changed 2026-09-29 (admin completion, Phase 9: dashboard banners)
+- **The banner on the vendor dashboard is managed by Cosora's team**: several can rotate, each with
+  its own dates, and it's in the vendor blue. The old hardcoded one claimed "3x more inquiries",
+  which nothing measured; the seeded banner leaves it out.
+
 ### Fixed 2026-09-28 (admin completion, Phase 4a: private business details)
 - **Your PAN, business email, phone, WhatsApp and street address are private.** Buyers no
   longer see your email, PAN or street address. A signed-in buyer sees your phone or WhatsApp
@@ -623,6 +632,14 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-09-29 (admin completion, Phase 9)
+- **Site content is real.** It used to edit sample data.
+  - **Vendor dashboard banners:** add, edit, reorder, turn on and off, schedule and delete; an optional
+    image (JPEG, PNG or WebP, up to 2 MB); a button that goes to a page on Cosora.
+  - **Theme:** the buyer site's five colours and two fonts, with live contrast checks; a theme below
+    the floors can't be saved. "Revert to saved" and "Cosora defaults".
+  - Changes reach the site in about a minute. Super admins only; every change is in the Admin Log.
 
 ### Added 2026-09-28 (admin completion, Phase 8)
 - **Live Activity** shows the buyer site now, from Cosora's own event log. It used to be only a

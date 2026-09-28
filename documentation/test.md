@@ -183,6 +183,52 @@ file was created; they record real runs, but only those the changelog captured.
 - **Regression:** `mp7-product-detail-real-data.spec.ts` and `profile-data-export.spec.ts`, 8/8.
 - **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 6,987/6,987 in both languages; `npm run build` passes.
 
+### 2026-09-29 — Admin completion Phase 9: site content (migration rehearsed and applied, md5 matches; harness 13 15/15 rehearsed and live; edge function deployed and re-read; theme pixel and style comparison; admin and dashboard render checks)
+
+- **Harness `13_site_content.sql`** (every fixture exists only inside its rolled-back case):
+  - **Who calls:** super_admin lists 1 banner (the seed). The six other admin roles and a buyer get
+    42501 ("super admins only"); anon gets 42501 (no EXECUTE).
+  - **Banner rules, each 22023:** a blank headline, 81 characters, a button with no destination,
+    `//evil.example`, `/\evil.example`, `https://evil.example`, `javascript:alert(1)`, `/a b`,
+    `/x"><script>`, an image outside `banners/`, an image never uploaded, a schedule that ends first.
+    An unknown id: P0002.
+  - **Lifecycle** (an image object planted as postgres): listed 1 → 3; new at positions 2 and 3; the
+    headline trimmed; turned off; the order reversed (the last is now first); a partial order 22023;
+    delete returns the image path; deleting again P0002. Admin Log by the admin: 2 inserts, 3 updates,
+    1 delete.
+  - **Public read (anon):** sees "H13 live" and "H13 tomorrow", not "H13 off" or "H13 ended";
+    `created_by` 42501; insert 42501. A buyer's theme update and banner delete: 42501.
+  - **Theme:** defaults, 10 fonts, floors 4.5/3. A bad hex, an unoffered font, `#aaaaaa` text ("gives
+    2.32:1") and a `#ffcc00` accent: 22023. `#1F5FE0` / `#222222` / Inter / Mukta saves lowercased;
+    anon reads the new text colour; 1 Admin Log update; vendor_ops 42501.
+  - **Storage (as authenticated):** super_admin may insert `site-content/banners/<uuid>.webp`, not
+    `banners/logo.webp`, `other/…` or `site-config/site.json`; vendor_ops may not insert at all.
+  - **Snapshot:** two banner saves and a theme save in one transaction queue 1 call.
+- **Edge function:** deployed as v1 and re-read: the source matches the repo. First build via
+  `pg_net` (request 410): `site.json` is public, `Cache-Control: public, max-age=300`,
+  `x-smart-cdn: true`, and holds the default theme and the seeded banner.
+- **Theme at the defaults, pre-change build (4181) against the themed build (4182)** (signed out,
+  reduced motion, a fixed clock, tracking RPCs answered in the browser):
+  - Pixels, full page: `/` and `/seller` 0 differing at 390 and 1280 wide; at 1280 also
+    `/home/new-arrivals`, the vendor page and the product page, on the first run. The feed pages differ
+    from run to run with lazy images and live data, which moved the differences each time.
+  - So on those three pages, every element's computed colour, background, borders, fill, stroke,
+    fonts, shadow, background image and placeholder colour, in document order and as a multiset:
+    0 differences at both widths (1,453, 663 and 751 elements).
+  - `node scripts/theme-codemod.mjs --check`: 0 classes left, 12 literal lines left (all listed as
+    expected). Typecheck 0; i18n 6,988/6,988; build.
+- **Cosora-Admin Content page** (local preview, a made-up super_admin session, every Supabase request
+  answered in the browser): showing / scheduled / off badges; the first up and last down arrows
+  disabled; "Turn off" sends the banner with `p_active: false`; moving the second up sends
+  b2, b1, b3; the form refuses `//evil.example` and a button with no destination; the Theme tab shows
+  12.08, 4.57 and 3.55:1, a grey text colour shows 2.32:1 and disables Save, `#222222` saves. No console
+  errors. Typecheck 0, build; no fixture string in `dist/`.
+- **Vendor dashboard as a seller** (buyer build, made-up session, every request and `site.json`
+  answered in the browser): two live banners in a carousel, a banner starting in two days hidden,
+  one with `//evil.example` dropped, the button to `/advertisements`, the title of the button-less one
+  linked, the vendor-blue gradient, no PromoBanner, no errors.
+- **Not run:** a real signed-in walk-through of either page (it needs an admin and a vendor sign-in).
+
 ### 2026-09-28 — Admin completion Phase 8: live activity and Clarity (migration rehearsed and applied, md5 matches; harness 12 13/13 rehearsed and live; buyer and admin checked in a local browser)
 
 - **Harness `12_live_activity.sql`** (13 fixture events exist only inside their rolled-back cases):

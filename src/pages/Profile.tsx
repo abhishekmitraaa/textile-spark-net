@@ -81,7 +81,7 @@ function Row({
       </span>
       <span className="flex-1 text-sm lg:text-[15px] font-medium text-gray-800">{label}</span>
       {badge !== undefined && (
-        <span className="min-w-5 h-5 px-1.5 rounded-full bg-[#ef4d62] text-white text-[10px] lg:text-[11px] font-bold flex items-center justify-center">{badge}</span>
+        <span className="min-w-5 h-5 px-1.5 rounded-full bg-brand-buyer text-white text-[10px] lg:text-[11px] font-bold flex items-center justify-center">{badge}</span>
       )}
       {value && <span className="text-xs lg:text-sm text-gray-400">{value}</span>}
       <ChevronRight className="w-4 h-4 lg:w-5 lg:h-5 text-gray-300 shrink-0" />
@@ -170,7 +170,7 @@ const Profile = () => {
           <p className="mt-1 text-sm text-gray-500">Sign in to view and manage your profile.</p>
           <button
             onClick={() => navigate("/login")}
-            className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#ef4d62] px-6 py-3 text-sm font-bold text-white hover:bg-[#ef4d62]/90 transition-colors"
+            className="mt-5 inline-flex items-center justify-center rounded-xl bg-brand-buyer px-6 py-3 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors"
           >
             Sign In
           </button>
@@ -224,15 +224,15 @@ const Profile = () => {
           </div>
         )}
         {!cityNudgeDismissed && !view.city?.trim() && (
-          <div className="mb-3 lg:mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-[#ef4d62]/20 bg-[#ef4d62]/5 px-4 py-3">
-            <MapPin className="h-4 w-4 shrink-0 text-[#ef4d62]" />
+          <div className="mb-3 lg:mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-brand-buyer/20 bg-brand-buyer/5 px-4 py-3">
+            <MapPin className="h-4 w-4 shrink-0 text-brand-buyer" />
             <p className="min-w-0 flex-1 text-sm text-gray-700">
               <span className="font-semibold text-gray-900">Add your city</span>{" "}
               to see offers from suppliers near you.
             </p>
             <button
               onClick={() => navigate("/profile/edit?focus=city")}
-              className="shrink-0 rounded-xl bg-[#ef4d62] px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-[#ef4d62]/90"
+              className="shrink-0 rounded-xl bg-brand-buyer px-3.5 py-2 text-xs font-bold text-white transition-colors hover:bg-brand-buyer/90"
             >
               Add city
             </button>
@@ -261,7 +261,7 @@ const Profile = () => {
               <button
                 onClick={() => navigate("/profile/edit")}
                 aria-label="Change photo"
-                className="absolute bottom-0 right-0 w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-[#ef4d62] flex items-center justify-center border-2 border-white"
+                className="absolute bottom-0 right-0 w-7 h-7 lg:w-8 lg:h-8 rounded-full bg-brand-buyer flex items-center justify-center border-2 border-white"
               >
                 <Camera className="w-3.5 h-3.5 lg:w-4 lg:h-4 text-white" />
               </button>
@@ -272,7 +272,7 @@ const Profile = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <h2 className="text-lg lg:text-xl font-bold text-gray-900 truncate">{displayName}</h2>
-                    <BadgeCheck className="w-4 h-4 lg:w-5 lg:h-5 text-[#ef4d62] shrink-0" />
+                    <BadgeCheck className="w-4 h-4 lg:w-5 lg:h-5 text-brand-buyer shrink-0" />
                   </div>
                   <p className="text-sm lg:text-base text-gray-500 truncate">{displayBusiness}</p>
                 </div>
@@ -310,10 +310,10 @@ const Profile = () => {
         <div className="rounded-2xl border border-gray-200 bg-white mt-3 p-4 lg:p-5">
           <div className="flex items-center justify-between mb-2 lg:mb-3">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-[#ef4d62]" />
+              <Sparkles className="w-4 h-4 lg:w-5 lg:h-5 text-brand-buyer" />
               <h3 className="text-sm lg:text-base font-bold text-gray-900">Interest &amp; Preferences</h3>
             </div>
-            <button onClick={() => navigate("/profile/interest-preference")} className="text-xs lg:text-sm font-semibold text-[#ef4d62] hover:underline">Edit</button>
+            <button onClick={() => navigate("/profile/interest-preference")} className="text-xs lg:text-sm font-semibold text-brand-buyer hover:underline">Edit</button>
           </div>
           {interestChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">
@@ -333,8 +333,8 @@ const Profile = () => {
         {/* Activity */}
         <SectionLabel className="lg:mt-0">Activity</SectionLabel>
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
-          <Row icon={ClipboardList} iconColor="text-[#ef4d62]" label="Post Your Requirement" onClick={() => navigate("/requirement/post-requirement")} />
-          <Row icon={FileText} iconColor="text-[#ef4d62]" label="Quotes Received" badge={stats?.quotes || undefined} onClick={() => navigate("/requirement/my-quotes")} />
+          <Row icon={ClipboardList} iconColor="text-brand-buyer" label="Post Your Requirement" onClick={() => navigate("/requirement/post-requirement")} />
+          <Row icon={FileText} iconColor="text-brand-buyer" label="Quotes Received" badge={stats?.quotes || undefined} onClick={() => navigate("/requirement/my-quotes")} />
           <Row icon={Bookmark} label="Saved Products" value={String(savedCount)} onClick={() => navigate("/saved")} />
           <Row icon={Star} label="My Reviews" onClick={() => navigate("/profile/reviews")} />
         </div>
@@ -373,7 +373,7 @@ const Profile = () => {
 
         <button
           onClick={async () => { await signOut(); toast.success("Logged out"); navigate("/"); }}
-          className="mt-4 w-full lg:max-w-xs lg:mx-auto flex items-center justify-center gap-2 rounded-xl border border-[#ef4d62]/40 py-3 text-sm font-bold text-[#ef4d62] hover:bg-[#ef4d62]/5 transition-colors"
+          className="mt-4 w-full lg:max-w-xs lg:mx-auto flex items-center justify-center gap-2 rounded-xl border border-brand-buyer/40 py-3 text-sm font-bold text-brand-buyer hover:bg-brand-buyer/5 transition-colors"
         >
           <LogOut className="w-4 h-4" /> Log Out
         </button>

@@ -531,7 +531,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
               transition={{ type: "spring", stiffness: 500, damping: 15 }}
               className="flex"
             >
-              <Heart className={`w-5 h-5 ${liked ? "fill-[#ef4d62] text-[#ef4d62]" : "text-white"}`} />
+              <Heart className={`w-5 h-5 ${liked ? "fill-brand-buyer text-brand-buyer" : "text-white"}`} />
             </motion.span>
           </div>
           <span className="text-[10px] text-white tabular-nums">{formatCount(likeCount)}</span>
@@ -570,7 +570,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
             <p className="text-xs font-bold text-gray-900 truncate">{video.brandName}</p>
             <p className="text-[11px] text-gray-500 truncate">{video.brandLine}</p>
             <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm font-bold text-[#ef4d62]">{showText(video.price)}</span>
+              <span className="text-sm font-bold text-brand-buyer">{showText(video.price)}</span>
               <span className="text-[10px] text-gray-400">MOQ: {video.moq}</span>
               <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
                 <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" /> {video.rating} · {video.reviews}
@@ -579,7 +579,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           </div>
           <button
             onClick={onCallNow}
-            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 bg-[#ef4d62] text-white text-xs font-bold rounded-xl hover:bg-[#ef4d62]/90 transition-colors"
+            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors"
           >
             <Phone className="w-3.5 h-3.5" /> Call Now
           </button>

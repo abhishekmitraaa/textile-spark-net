@@ -353,7 +353,7 @@ const Search = () => {
                 aria-pressed={listening}
                 className={cn(
                   "shrink-0 flex items-center justify-center rounded-full transition-colors",
-                  listening ? "w-6 h-6 bg-[#ef4d62] text-white animate-pulse" : "text-[#ef4d62]"
+                  listening ? "w-6 h-6 bg-brand-buyer text-white animate-pulse" : "text-brand-buyer"
                 )}
               >
                 <Mic className={cn(listening ? "w-3.5 h-3.5" : "w-4 h-4")} />
@@ -366,11 +366,11 @@ const Search = () => {
             {listening && (
               <motion.p
                 initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }}
-                className="mt-2 flex items-center gap-2 text-xs font-medium text-[#ef4d62]"
+                className="mt-2 flex items-center gap-2 text-xs font-medium text-brand-buyer"
               >
                 <span className="relative flex h-2 w-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#ef4d62]/60" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-[#ef4d62]" />
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-buyer/60" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-brand-buyer" />
                 </span>
                 Listening… speak now
               </motion.p>
@@ -446,7 +446,7 @@ const Search = () => {
           {categoryRail.length > 0 && (
             <motion.div variants={section} className="pt-5">
               <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-2">
-                <LayoutGrid className="w-4 h-4 text-[#ef4d62]" /> Browse by category
+                <LayoutGrid className="w-4 h-4 text-brand-buyer" /> Browse by category
               </p>
               <div className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-hide">
                 {categoryRail.map((c) => {
@@ -494,13 +494,13 @@ const Search = () => {
               campaign and no data, and sat beside a "Popular search categories /
               For Him" grid built on picsum placeholder photography. */}
           <motion.div variants={section} className="pt-2">
-            <div className="rounded-xl bg-[#ef4d62]/5 p-4">
+            <div className="rounded-xl bg-brand-buyer/5 p-4">
               <p className="text-sm font-bold text-gray-900">Jump to a category</p>
               <div className="flex gap-3 mt-3 overflow-x-auto scrollbar-hide">
                 {QUICK_PICKS.map((g) => (
                   <motion.button whileTap={{ scale: 0.95 }} key={g.label} onClick={() => runSearch(g.label)} className="flex flex-col items-center gap-1.5 shrink-0">
                     <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center shadow-sm">
-                      <g.icon className="w-5 h-5 text-[#ef4d62]" />
+                      <g.icon className="w-5 h-5 text-brand-buyer" />
                     </div>
                     <span className="text-[10px] text-gray-600 font-medium whitespace-nowrap">{g.label}</span>
                   </motion.button>
@@ -567,7 +567,7 @@ const Search = () => {
                           <div className="min-w-0">
                             <p className="flex items-center gap-1 text-sm font-medium text-gray-800 truncate">
                               {b.label}
-                              {b.verified && <BadgeCheck className="w-3.5 h-3.5 text-[#ef4d62] shrink-0" />}
+                              {b.verified && <BadgeCheck className="w-3.5 h-3.5 text-brand-buyer shrink-0" />}
                             </p>
                             <p className="text-xs text-gray-400">
                               {b.countHint.toLocaleString("en-IN")} follower{b.countHint === 1 ? "" : "s"}

@@ -354,7 +354,7 @@ const VendorProfile = () => {
               </p>
               <motion.button whileTap={TAP} transition={TAP_T}
                 onClick={() => (vendorFailed ? void refetchVendor() : navigate("/home/new-arrivals"))}
-                className="mt-5 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90">
+                className="mt-5 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90">
                 {vendorFailed ? "Try again" : "Browse new arrivals"}
               </motion.button>
             </div>
@@ -379,7 +379,7 @@ const VendorProfile = () => {
               <button onClick={() => navigate(-1)} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
               <h2 className="flex-1 text-base font-extrabold tracking-wide text-gray-900 truncate">{brandName}</h2>
               <button onClick={() => setPageSaved((s) => !s)} aria-label="Save vendor" className="p-1">
-                {pageSaved ? <BookmarkCheck className="w-5 h-5 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-5 h-5 text-gray-500" />}
+                {pageSaved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-500" />}
               </button>
             </div>
           </motion.div>
@@ -397,7 +397,7 @@ const VendorProfile = () => {
               <img src={vendor.bannerUrl} alt={`${brandName} banner`} className="absolute inset-0 h-full w-full object-cover" />
             ) : (
               // A plain brand wash until the vendor uploads a banner, not a stock photo.
-              <div className="absolute inset-0 bg-gradient-to-br from-[#ef4d62] via-[#c93a55] to-[#3b1d2a]" />
+              <div className="absolute inset-0 bg-gradient-to-br from-brand-buyer via-[#c93a55] to-[#3b1d2a]" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
@@ -459,7 +459,7 @@ const VendorProfile = () => {
           <div className={cn("bg-white px-3 py-3 grid gap-2", canWhatsApp ? "grid-cols-4" : "grid-cols-3")}>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={toggleFollow}
               className={cn("flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-bold transition-colors",
-                following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-[#ef4d62]/10 text-[#ef4d62] hover:bg-[#ef4d62]/15")}>
+                following ? "bg-gray-100 text-gray-700 hover:bg-gray-200" : "bg-brand-buyer/10 text-brand-buyer hover:bg-brand-buyer/15")}>
               {following ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
               {following ? "Unfollow" : "Follow"}
             </motion.button>
@@ -468,7 +468,7 @@ const VendorProfile = () => {
               <MessageCircle className="h-4 w-4" /> Chat
             </motion.button>
             <motion.button whileTap={TAP} transition={TAP_T} onClick={() => callVendor(vendorId, brandName)}
-              className="flex items-center justify-center gap-1.5 rounded-xl bg-[#ef4d62] py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90 transition-colors">
               <Phone className="h-4 w-4" /> Call Now
             </motion.button>
             {canWhatsApp && (
@@ -500,15 +500,15 @@ const VendorProfile = () => {
           <h2 className="text-sm font-bold text-gray-900 mb-3">Contact Details</h2>
           {!user ? (
             <div className="py-2 text-center">
-              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#ef4d62]/10">
-                <LogIn className="h-5 w-5 text-[#ef4d62]" />
+              <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-brand-buyer/10">
+                <LogIn className="h-5 w-5 text-brand-buyer" />
               </div>
               <p className="text-sm font-bold text-gray-900">Sign in to see contact details</p>
               <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500">
                 Phone and WhatsApp numbers are shared with signed-in Cosora accounts.
               </p>
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/login")}
-                className="mt-4 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90">
+                className="mt-4 rounded-xl bg-brand-buyer px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-buyer/90">
                 Sign in
               </motion.button>
             </div>
@@ -557,7 +557,7 @@ const VendorProfile = () => {
                 ) : (
                   <div>
                     <button onClick={reveal} disabled={revealing}
-                      className="text-sm font-semibold text-[#ef4d62] hover:underline disabled:opacity-60">
+                      className="text-sm font-semibold text-brand-buyer hover:underline disabled:opacity-60">
                       {revealing ? "Loading…" : "Show phone number"}
                     </button>
                     {numbersFailed && !revealing && (
@@ -580,7 +580,7 @@ const VendorProfile = () => {
             <h2 className="text-base font-bold text-gray-900">Reviews and Ratings</h2>
             {canReview && (
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setReviewOpen(true)}
-                className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90 transition-colors">
+                className="rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-buyer/90 transition-colors">
                 {myReview ? "Edit your Review" : "Write a Review"}
               </motion.button>
             )}
@@ -610,7 +610,7 @@ const VendorProfile = () => {
               <motion.div variants={listItem} key={row.stars} className="flex items-center gap-3">
                 <span className="w-12 text-xs text-gray-500 shrink-0 text-right">{row.stars} Star</span>
                 <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <motion.div className="h-full rounded-full bg-[#ef4d62]"
+                  <motion.div className="h-full rounded-full bg-brand-buyer"
                     initial={reduced ? false : { width: 0 }} whileInView={{ width: `${row.percent}%` }} viewport={{ once: true }} transition={{ duration: 0.6, ease: E }} />
                 </div>
                 <span className="w-8 text-right text-xs text-gray-500 shrink-0">{row.percent}%</span>
@@ -625,7 +625,7 @@ const VendorProfile = () => {
                 <div key={r.id} className="rounded-xl bg-gray-50/70 p-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#ef4d62]/10 text-[11px] font-bold text-[#ef4d62]">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-buyer/10 text-[11px] font-bold text-brand-buyer">
                         {r.reviewerName.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                       </div>
                       <div className="min-w-0">
@@ -644,8 +644,8 @@ const VendorProfile = () => {
                   </div>
                   {r.body && <p data-no-translate className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>}
                   {r.replyBody && (
-                    <div className="mt-2.5 rounded-lg border-l-2 border-[#ef4d62] bg-white p-2.5">
-                      <p className="mb-0.5 text-[11px] font-bold text-[#ef4d62]">Reply from {brandName}</p>
+                    <div className="mt-2.5 rounded-lg border-l-2 border-brand-buyer bg-white p-2.5">
+                      <p className="mb-0.5 text-[11px] font-bold text-brand-buyer">Reply from {brandName}</p>
                       <p data-no-translate className="text-xs leading-relaxed text-gray-600">{r.replyBody}</p>
                     </div>
                   )}
@@ -655,7 +655,7 @@ const VendorProfile = () => {
           )}
 
           {reviewList.length > 3 && (
-            <button onClick={() => setShowAllReviews((s) => !s)} className="mt-4 w-full text-center text-xs font-semibold text-[#ef4d62]">
+            <button onClick={() => setShowAllReviews((s) => !s)} className="mt-4 w-full text-center text-xs font-semibold text-brand-buyer">
               {showAllReviews ? "Show fewer reviews" : `View all ${reviewList.length} reviews`}
             </button>
           )}
@@ -698,7 +698,7 @@ const VendorProfile = () => {
                   {vendor && vendor.capacity.length > 0 && (
                     <div>
                       <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-0.5">
-                        <Factory className="w-4 h-4 text-[#ef4d62]" /> Capacity
+                        <Factory className="w-4 h-4 text-brand-buyer" /> Capacity
                       </p>
                       <p className="text-xs text-gray-400 mb-3">Manufacturing scale this vendor operates at</p>
                       <div className="space-y-2">
@@ -706,8 +706,8 @@ const VendorProfile = () => {
                           .filter((opt) => vendor.capacity.includes(opt.key))
                           .map((opt) => (
                             <div key={opt.key}
-                              className="flex items-start gap-3 rounded-xl border border-[#ef4d62]/40 bg-[#ef4d62]/5 px-3 py-2.5">
-                              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#ef4d62]">
+                              className="flex items-start gap-3 rounded-xl border border-brand-buyer/40 bg-brand-buyer/5 px-3 py-2.5">
+                              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-brand-buyer">
                                 <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
                               </span>
                               <span className="text-xs leading-relaxed font-medium text-gray-800">{opt.desc}</span>
@@ -722,7 +722,7 @@ const VendorProfile = () => {
                     <p className="text-sm font-bold text-gray-900 mb-2">Sells</p>
                     <div className="flex flex-wrap gap-2">
                       {sells.map((s) => (
-                        <span key={s} className="rounded-full bg-[#ef4d62]/5 border border-[#ef4d62]/20 px-3 py-1 text-xs font-medium text-[#ef4d62]">{s}</span>
+                        <span key={s} className="rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-3 py-1 text-xs font-medium text-brand-buyer">{s}</span>
                       ))}
                     </div>
                   </div>
@@ -741,7 +741,7 @@ const VendorProfile = () => {
                         href={websiteValue.startsWith("http") ? websiteValue : `https://${websiteValue}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="font-semibold text-[#ef4d62] text-right truncate"
+                        className="font-semibold text-brand-buyer text-right truncate"
                       >
                         {websiteValue}
                       </a>
@@ -756,7 +756,7 @@ const VendorProfile = () => {
         {/* ══ OFFICE PICTURES (grid) ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center gap-2 mb-1">
-            <Factory className="h-4 w-4 text-[#ef4d62]" />
+            <Factory className="h-4 w-4 text-brand-buyer" />
             <h2 className="text-sm font-bold text-gray-900">Office Pictures</h2>
           </div>
           <p className="text-xs text-gray-400 mb-3">A look inside this brand's manufacturing & office premises</p>
@@ -801,7 +801,7 @@ const VendorProfile = () => {
                     <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                     <button onClick={() => openSaveModal(toSavePayload(product))}
                       aria-label="Save" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-white/90 shadow-sm">
-                      {isSaved ? <BookmarkCheck className="h-3 w-3 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="h-3 w-3 text-gray-500" />}
+                      {isSaved ? <BookmarkCheck className="h-3 w-3 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-3 w-3 text-gray-500" />}
                     </button>
                     <div className="absolute bottom-1.5 left-1.5 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 py-0.5">
                       <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
@@ -810,7 +810,7 @@ const VendorProfile = () => {
                     </div>
                   </div>
                   <div className="p-1.5">
-                    <p className="text-[10px] font-bold text-[#ef4d62]">{showText(product.price)} | MOQ: {product.moq} | {product.sold} sold</p>
+                    <p className="text-[10px] font-bold text-brand-buyer">{showText(product.price)} | MOQ: {product.moq} | {product.sold} sold</p>
                     <p className="text-[9px] text-gray-500 truncate">{product.name} | <span className="font-bold">{brandName}</span></p>
                   </div>
                 </motion.div>
@@ -849,7 +849,7 @@ const VendorProfile = () => {
                   <div className="absolute inset-0 bg-black/25" />
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80">
-                      <Play className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]" />
+                      <Play className="h-4 w-4 text-brand-buyer fill-brand-buyer" />
                     </div>
                   </div>
                   <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-2 py-2">
@@ -866,7 +866,7 @@ const VendorProfile = () => {
         {catalogueList.length > 0 && (
           <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
             <div className="flex items-center gap-2 mb-1">
-              <FileText className="h-4 w-4 text-[#ef4d62]" />
+              <FileText className="h-4 w-4 text-brand-buyer" />
               <h2 className="text-sm font-bold text-gray-900">Catalogues & Lookbooks</h2>
             </div>
             <p className="text-xs text-gray-400 mb-3">Browse this brand's full product range as PDF catalogues</p>
@@ -880,14 +880,14 @@ const VendorProfile = () => {
                   href={cat.fileUrl ?? "#"}
                   target="_blank"
                   rel="noreferrer"
-                  className="group flex flex-col rounded-xl border border-gray-200 overflow-hidden bg-white hover:border-[#ef4d62]/40 transition-colors"
+                  className="group flex flex-col rounded-xl border border-gray-200 overflow-hidden bg-white hover:border-brand-buyer/40 transition-colors"
                 >
                   <div className="relative aspect-[3/4] bg-gray-50">
                     {cat.coverUrl ? (
                       <img src={cat.coverUrl} alt={cat.title} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#ef4d62]/5 to-gray-50">
-                        <FileText className="h-9 w-9 text-[#ef4d62]/40" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-brand-buyer/5 to-gray-50">
+                        <FileText className="h-9 w-9 text-brand-buyer/40" />
                         <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">PDF</span>
                       </div>
                     )}
@@ -900,7 +900,7 @@ const VendorProfile = () => {
                   <div className="flex flex-1 flex-col p-2.5">
                     <p className="text-xs font-bold text-gray-900 line-clamp-1">{cat.title}</p>
                     {cat.description && <p className="mt-0.5 text-[10px] text-gray-500 line-clamp-2">{cat.description}</p>}
-                    <span className="mt-auto pt-2 inline-flex items-center gap-1 text-[11px] font-bold text-[#ef4d62]">
+                    <span className="mt-auto pt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-buyer">
                       View catalogue <ExternalLink className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
                     </span>
                   </div>
@@ -915,7 +915,7 @@ const VendorProfile = () => {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">{brandName}</h2>
             <button onClick={() => setPageSaved((p) => !p)} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200">
-              {pageSaved ? <BookmarkCheck className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
+              {pageSaved ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
             </button>
           </div>
 
@@ -949,17 +949,17 @@ const VendorProfile = () => {
             </button>
             <div className="ml-auto flex items-center gap-1">
               <button onClick={() => setGridCols(2)} aria-label="2 columns"
-                className={cn("flex h-7 w-7 items-center justify-center rounded-full border transition-colors", gridCols === 2 ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-400")}>
+                className={cn("flex h-7 w-7 items-center justify-center rounded-full border transition-colors", gridCols === 2 ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-400")}>
                 <Grid2X2 className="h-3.5 w-3.5" />
               </button>
               <button onClick={() => setGridCols(3)} aria-label="3 columns"
-                className={cn("flex h-7 w-7 items-center justify-center rounded-full border transition-colors", gridCols === 3 ? "border-[#ef4d62] text-[#ef4d62]" : "border-gray-200 text-gray-400")}>
+                className={cn("flex h-7 w-7 items-center justify-center rounded-full border transition-colors", gridCols === 3 ? "border-brand-buyer text-brand-buyer" : "border-gray-200 text-gray-400")}>
                 <Grid3X3 className="h-3.5 w-3.5" />
               </button>
             </div>
           </div>
 
-          <p className="text-sm font-semibold text-gray-700 mb-3">Product <span className="text-[#ef4d62]">{vpProducts.length}</span></p>
+          <p className="text-sm font-semibold text-gray-700 mb-3">Product <span className="text-brand-buyer">{vpProducts.length}</span></p>
 
           {/* Product grid */}
           <div className={cn("grid", gridCols === 2 ? "grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-4" : "grid-cols-3 gap-2 lg:grid-cols-5 xl:grid-cols-6")}>
@@ -971,7 +971,7 @@ const VendorProfile = () => {
                     <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
                     <button onClick={() => openSaveModal({ ...toSavePayload(product), location: product.location })}
                       aria-label="Save" className={cn("absolute top-2 right-2 flex items-center justify-center rounded-full bg-white/90 shadow", gridCols === 2 ? "h-7 w-7" : "h-6 w-6")}>
-                      {isSaved ? <BookmarkCheck className={cn("text-[#ef4d62] fill-[#ef4d62]/15", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} /> : <Bookmark className={cn("text-gray-500", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} />}
+                      {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} /> : <Bookmark className={cn("text-gray-500", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} />}
                     </button>
                     <div className="absolute bottom-2 left-2 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 py-0.5">
                       <Star className="h-2.5 w-2.5 text-yellow-400 fill-yellow-400" />
@@ -982,10 +982,10 @@ const VendorProfile = () => {
                   <div className={cn("flex flex-col flex-1", gridCols === 2 ? "p-2" : "p-1.5")}>
                     {gridCols === 2 && (
                       <div className="h-5 mb-0.5">
-                        {product.latest && <span className="inline-block rounded-full bg-[#ef4d62]/10 px-2 py-0.5 text-[9px] font-semibold text-[#ef4d62]">Latest Products</span>}
+                        {product.latest && <span className="inline-block rounded-full bg-brand-buyer/10 px-2 py-0.5 text-[9px] font-semibold text-brand-buyer">Latest Products</span>}
                       </div>
                     )}
-                    <p className={cn("font-bold text-[#ef4d62] leading-tight", gridCols === 2 ? "text-xs" : "text-[9px] truncate")}>
+                    <p className={cn("font-bold text-brand-buyer leading-tight", gridCols === 2 ? "text-xs" : "text-[9px] truncate")}>
                       {showText(product.price)} | MOQ: {product.moq} | {product.sold} sold
                     </p>
                     <p className={cn("text-gray-600 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>
@@ -998,7 +998,7 @@ const VendorProfile = () => {
                     <p className={cn("text-gray-500 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fabric: {product.fabric} | GSM: {product.gsm}</p>
                     <p className={cn("text-gray-500", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fit Type: {product.fit}</p>
                     <button onClick={() => callVendor(vendorId, product.name)}
-                      className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
+                      className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
                       <Phone className={gridCols === 2 ? "h-3 w-3" : "h-2.5 w-2.5"} /> Call Now
                     </button>
                   </div>

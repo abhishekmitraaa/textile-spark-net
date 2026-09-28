@@ -83,7 +83,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       <div className={cn("bg-white grid place-items-center px-6 text-center", fills ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">This conversation no longer exists.</p>
-          <button onClick={() => navigate(inboxHref)} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Messages</button>
+          <button onClick={() => navigate(inboxHref)} className="mt-3 text-sm font-semibold text-brand-buyer">Back to Messages</button>
         </div>
       </div>
     );
@@ -157,7 +157,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
           )}
           <button onClick={goProfile} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
             <div className="relative shrink-0">
-              {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover lg:w-10 lg:h-10" /> : <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-[#ef4d62]/20 to-[#ef4d62]/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
+              {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover lg:w-10 lg:h-10" /> : <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-brand-buyer/20 to-brand-buyer/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
               {conv.online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />}
             </div>
             <div className="min-w-0">
@@ -199,14 +199,14 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
         </div>
 
         {/* RFQ banner → quotes page */}
-        <button onClick={goQuote} className="w-full bg-[#ef4d62]/5 border-t border-[#ef4d62]/10 transition-colors hover:bg-[#ef4d62]/10">
+        <button onClick={goQuote} className="w-full bg-brand-buyer/5 border-t border-brand-buyer/10 transition-colors hover:bg-brand-buyer/10">
           <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-4 py-2", THREAD_WIDE)}>
-            <FileText className="w-4 h-4 text-[#ef4d62] shrink-0" />
+            <FileText className="w-4 h-4 text-brand-buyer shrink-0" />
             <div className="flex-1 text-left min-w-0">
               <p className="text-xs font-bold text-gray-900">{conv.rfqId}</p>
               <p className="text-[11px] text-gray-500 truncate">{conv.rfqProduct}</p>
             </div>
-            <ChevronRight className="w-4 h-4 text-[#ef4d62] shrink-0" />
+            <ChevronRight className="w-4 h-4 text-brand-buyer shrink-0" />
           </div>
         </button>
 
@@ -242,13 +242,13 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               <motion.div key={m.id} initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2, delay: Math.min(i * 0.02, 0.2) }}
                 className={cn("flex", m.sender === "user" ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[78%] lg:max-w-[68%] rounded-2xl px-3.5 py-2 shadow-sm",
-                  m.sender === "user" ? "bg-[#ef4d62] text-white rounded-br-md" : "bg-white text-gray-900 rounded-bl-md border border-gray-100")}>
+                  m.sender === "user" ? "bg-brand-buyer text-white rounded-br-md" : "bg-white text-gray-900 rounded-bl-md border border-gray-100")}>
                   {m.kind === "image" && m.imageUrl && <img src={m.imageUrl} alt="" className="mb-1 rounded-lg max-h-48 object-cover" />}
                   {m.kind === "file" && (
-                    <span className="mb-0.5 inline-flex items-center gap-1.5 text-sm"><FileIcon className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-[#ef4d62]")} /> {m.fileName}</span>
+                    <span className="mb-0.5 inline-flex items-center gap-1.5 text-sm"><FileIcon className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} /> {m.fileName}</span>
                   )}
                   {m.kind === "audio" && (
-                    <span className="inline-flex items-center gap-1.5 text-sm"><Headphones className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-[#ef4d62]")} /> {m.text}</span>
+                    <span className="inline-flex items-center gap-1.5 text-sm"><Headphones className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} /> {m.text}</span>
                   )}
                   {(m.kind === "quote_request" || m.kind === "quote_reply") && (
                     <QuoteCard message={m} />
@@ -276,7 +276,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             className="shrink-0 bg-white border-t border-gray-100">
             <div className={cn("mx-auto w-full max-w-2xl grid grid-cols-4 gap-3 px-5 py-4 lg:grid-cols-5", THREAD_WIDE)}>
               <AttachItem icon={ImageIcon} label="Gallery" color="text-violet-600 bg-violet-100" onClick={() => galleryRef.current?.click()} />
-              <AttachItem icon={Camera} label="Camera" color="text-[#ef4d62] bg-[#ef4d62]/10" onClick={() => cameraRef.current?.click()} />
+              <AttachItem icon={Camera} label="Camera" color="text-brand-buyer bg-brand-buyer/10" onClick={() => cameraRef.current?.click()} />
               <AttachItem icon={FileIcon} label="Document" color="text-indigo-600 bg-indigo-100" onClick={() => docRef.current?.click()} />
               <AttachItem icon={User} label="Contact" color="text-cyan-600 bg-cyan-100" onClick={() => { setAttachOpen(false); toast.success("Contact shared"); }} />
               <AttachItem icon={Headphones} label="Audio" color="text-orange-600 bg-orange-100" onClick={() => { setAttachOpen(false); toggleRecord(); }} />
@@ -308,14 +308,14 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             {hasText ? (
               <motion.button key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
                 onClick={() => void send()} disabled={underReview} aria-label="Send"
-                className="shrink-0 w-10 h-10 rounded-full bg-[#ef4d62] flex items-center justify-center hover:bg-[#ef4d62]/90 disabled:hover:bg-[#ef4d62] disabled:cursor-not-allowed">
+                className="shrink-0 w-10 h-10 rounded-full bg-brand-buyer flex items-center justify-center hover:bg-brand-buyer/90 disabled:hover:bg-brand-buyer disabled:cursor-not-allowed">
                 <Send className="w-4 h-4 text-white" />
               </motion.button>
             ) : (
               <motion.button key="mic" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
                 onClick={toggleRecord} disabled={underReview} aria-label="Record audio"
                 className={cn("shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:cursor-not-allowed",
-                  recording ? "bg-red-500 animate-pulse" : "bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:hover:bg-[#ef4d62]")}>
+                  recording ? "bg-red-500 animate-pulse" : "bg-brand-buyer hover:bg-brand-buyer/90 disabled:hover:bg-brand-buyer")}>
                 <Mic className="w-4 h-4 text-white" />
               </motion.button>
             )}
@@ -372,8 +372,8 @@ function QuoteCard({ message }: { message: ThreadMessage }) {
       )}
     >
       <span className="flex items-center gap-1.5">
-        <FileText className={cn("h-3.5 w-3.5 shrink-0", mine ? "text-white/90" : "text-[#ef4d62]")} />
-        <span className={cn("text-[11px] font-bold uppercase tracking-wide", mine ? "text-white/90" : "text-[#ef4d62]")}>
+        <FileText className={cn("h-3.5 w-3.5 shrink-0", mine ? "text-white/90" : "text-brand-buyer")} />
+        <span className={cn("text-[11px] font-bold uppercase tracking-wide", mine ? "text-white/90" : "text-brand-buyer")}>
           {isReply ? "Quotation" : "Quote request"}
         </span>
         <ChevronRight className={cn("ml-auto h-3.5 w-3.5 shrink-0", mine ? "text-white/70" : "text-gray-400")} />
@@ -509,7 +509,7 @@ function ReportModal({ open, onClose, name, onBlock, conversationId, messageId, 
                 <button onClick={() => { onClose(); onBlock(); }} className="mt-5 w-full text-left flex items-center justify-between rounded-xl border border-gray-100 px-3 py-3 text-sm font-semibold text-red-500 hover:bg-red-50">
                   Block {name} <ChevronRight className="w-4 h-4" />
                 </button>
-                <button onClick={onClose} className="mt-2 w-full rounded-xl bg-[#256fef] py-3 text-sm font-bold text-white hover:bg-[#256fef]/90">Close</button>
+                <button onClick={onClose} className="mt-2 w-full rounded-xl bg-brand-vendor py-3 text-sm font-bold text-white hover:bg-brand-vendor/90">Close</button>
               </div>
             )}
           </motion.div>

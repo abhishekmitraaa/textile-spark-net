@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { motion, useReducedMotion } from "framer-motion";
@@ -21,7 +22,7 @@ import { cn } from "@/lib/utils";
 // ─────────────────────────────────────────────────────────────
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
-const BLUE = "#256fef";
+const BLUE = brand("vendor");
 
 const STATUS_STYLES: Record<QuoteStatus, { label: string; cls: string }> = {
   pending: { label: "Pending your review", cls: "bg-blue-50 text-blue-600" },
@@ -118,7 +119,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
       {/* ── Direct-request marker ── */}
       <div
         className="rounded-xl px-3.5 py-2.5 mb-3"
-        style={{ backgroundColor: `${BLUE}0d`, border: `1px solid ${BLUE}26` }}
+        style={{ backgroundColor: brand("vendor", 0x0d), border: `1px solid ${brand("vendor", 0x26)}` }}
       >
         <p className="text-[11px] font-semibold" style={{ color: BLUE }}>Direct request</p>
         {/* Vendor name is kept mid-sentence: brand names often end in a period
@@ -190,7 +191,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
           </p>
           <button
             onClick={onChat}
-            className="mt-4 inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-colors hover:bg-[#256fef]/5"
+            className="mt-4 inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-2 text-xs font-bold transition-colors hover:bg-brand-vendor/5"
             style={{ borderColor: BLUE, color: BLUE }}
           >
             <MessageCircle className="w-3.5 h-3.5" /> Continue in chat

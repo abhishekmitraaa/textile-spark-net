@@ -265,7 +265,7 @@ function LocationPicker({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search a country or city"
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
         />
       </div>
       <div className="space-y-2">
@@ -277,13 +277,13 @@ function LocationPicker({
               onClick={() => toggleLocation(loc.id)}
               className={cn(
                 "flex w-full items-center justify-between rounded-xl border p-3.5 transition-all active:scale-[0.99]",
-                active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40"
+                active ? "border-brand-buyer bg-brand-buyer/5" : "border-gray-200 hover:border-brand-buyer/40"
               )}
             >
               <span className="text-sm font-medium text-gray-800">{loc.label}</span>
               <span className={cn(
                 "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-                active ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-300"
+                active ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-300"
               )}>
                 {active && <Check className="w-3 h-3" strokeWidth={3} />}
               </span>
@@ -300,7 +300,7 @@ function StepDots({ step }: { step: number }) {
   return (
     <div className="flex justify-center gap-2">
       {[0, 1, 2].map((i) => (
-        <span key={i} className={cn("h-2 w-2 rounded-full", i <= step ? "bg-[#ef4d62]" : "bg-gray-200")} />
+        <span key={i} className={cn("h-2 w-2 rounded-full", i <= step ? "bg-brand-buyer" : "bg-gray-200")} />
       ))}
     </div>
   );
@@ -481,7 +481,7 @@ const ForYou = () => {
                 exit={reduced ? undefined : { opacity: 0, y: -16 }}
                 className="w-full text-center"
               >
-                <div className="mx-auto mb-5 w-44 h-44 rounded-full bg-[#ef4d62]/5 flex items-center justify-center overflow-hidden">
+                <div className="mx-auto mb-5 w-44 h-44 rounded-full bg-brand-buyer/5 flex items-center justify-center overflow-hidden">
                   <img src={img("foryou-welcome", 360, 360)} alt="Welcome to Cosora" className="w-full h-full object-cover" />
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Welcome to Cosora 👋</h1>
@@ -491,7 +491,7 @@ const ForYou = () => {
                 <div className="my-7"><StepDots step={0} /></div>
                 <button
                   onClick={() => setStep(1)}
-                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
+                  className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Start
                 </button>
@@ -517,7 +517,7 @@ const ForYou = () => {
                 <div className="my-6"><StepDots step={1} /></div>
                 <button
                   onClick={() => setStep(2)}
-                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
+                  className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next
                 </button>
@@ -540,7 +540,7 @@ const ForYou = () => {
                 <div className="my-6"><StepDots step={2} /></div>
                 <button
                   onClick={() => completeOnboarding(false)}
-                  className="w-full py-3.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
+                  className="w-full py-3.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors active:scale-[0.99]"
                 >
                   Next
                 </button>
@@ -564,7 +564,7 @@ const ForYou = () => {
               to={tab.href}
               className={cn(
                 "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
-                tab.href === "/home/for-you" ? "text-[#ef4d62] border-[#ef4d62]" : "text-gray-400 border-transparent hover:text-gray-600"
+                tab.href === "/home/for-you" ? "text-brand-buyer border-brand-buyer" : "text-gray-400 border-transparent hover:text-gray-600"
               )}
             >
               {tab.href === "/home/new-arrivals" && "✦ "}{t(tab.label)}
@@ -580,7 +580,7 @@ const ForYou = () => {
         <div className="lg:flex lg:items-start lg:justify-between lg:gap-8">
           <div className="lg:shrink-0">
             <div className="flex items-center gap-1.5 lg:gap-2">
-              <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-[#ef4d62]" />
+              <Sparkles className="w-5 h-5 lg:w-6 lg:h-6 text-brand-buyer" />
               <h1 className="text-lg lg:text-3xl font-bold text-gray-900">For You</h1>
             </div>
             <p className="text-xs lg:text-sm text-gray-500 mt-0.5 lg:mt-1.5">Personalized recommendations based on your preferences</p>
@@ -592,7 +592,7 @@ const ForYou = () => {
           <div className="mt-3 lg:mt-1 lg:shrink-0 flex items-center gap-3 lg:justify-end">
             <button
               onClick={() => setFilterOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3.5 py-2 text-xs font-semibold text-[#ef4d62] hover:border-[#ef4d62] transition-colors"
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-3.5 py-2 text-xs font-semibold text-brand-buyer hover:border-brand-buyer transition-colors"
             >
               <SlidersHorizontal className="w-4 h-4" /> Edit Preferences
             </button>
@@ -608,7 +608,7 @@ const ForYou = () => {
           {(prefs.categories.length > 0 || activeLocations.length > 0) && (
             <div className="flex flex-wrap gap-2">
               {prefs.categories.map((id) => (
-                <span key={id} className="inline-flex items-center gap-1 bg-[#ef4d62]/10 text-[#ef4d62] rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
+                <span key={id} className="inline-flex items-center gap-1 bg-brand-buyer/10 text-brand-buyer rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
                   {CATEGORY_LABEL[id] ?? id}
                   <button onClick={() => removeCategory(id)} aria-label={`Remove ${CATEGORY_LABEL[id] ?? id}`}>
                     <X className="w-3 h-3" />
@@ -664,7 +664,7 @@ const ForYou = () => {
                   </p>
                   <button
                     onClick={() => setQuickRfqOpen(true)}
-                    className="px-4 py-2.5 rounded-xl bg-[#ef4d62] text-white text-sm font-bold"
+                    className="px-4 py-2.5 rounded-xl bg-brand-buyer text-white text-sm font-bold"
                   >
                     Post a requirement
                   </button>
@@ -733,7 +733,7 @@ const ForYou = () => {
               </button>
               <button
                 onClick={() => setFilterOpen(false)}
-                className="flex-1 py-2.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-sm font-bold transition-colors"
+                className="flex-1 py-2.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors"
               >
                 Show {filtered.length} products
               </button>

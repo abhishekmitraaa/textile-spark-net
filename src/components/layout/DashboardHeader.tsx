@@ -112,7 +112,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           {/* Seller CTA */}
           {role === "seller" && (
             <Link to="/upload">
-              <Button variant="gold" size="sm" className="hidden sm:inline-flex bg-[#256fef] text-white hover:bg-[#256fef]/90 shadow-none">
+              <Button variant="gold" size="sm" className="hidden sm:inline-flex bg-brand-vendor text-white hover:bg-brand-vendor/90 shadow-none">
                 New Product
               </Button>
             </Link>

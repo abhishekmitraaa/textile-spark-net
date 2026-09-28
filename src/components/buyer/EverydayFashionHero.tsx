@@ -148,7 +148,7 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
           tabIndex={isActive ? 0 : -1}
         >
           {saved
-            ? <BookmarkCheck className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]/15" />
+            ? <BookmarkCheck className="w-4 h-4 text-brand-buyer fill-brand-buyer/15" />
             : <Bookmark className="w-4 h-4 text-gray-600" />}
         </button>
 
@@ -255,7 +255,7 @@ export default function EverydayFashionHero() {
               aria-current={i === activeIndex ? "true" : undefined}
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300",
-                i === activeIndex ? "w-5 bg-[#ef4d62]" : "w-1.5 bg-gray-300 hover:bg-gray-400"
+                i === activeIndex ? "w-5 bg-brand-buyer" : "w-1.5 bg-gray-300 hover:bg-gray-400"
               )}
             />
           ))}

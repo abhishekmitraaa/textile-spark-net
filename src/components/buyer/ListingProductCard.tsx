@@ -52,7 +52,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
           aria-label={isSaved ? "Edit saved folders" : "Save product"}
         >
-          {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          {isSaved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
         </button>
 
         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
@@ -63,7 +63,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
       </Link>
 
       <div className="p-2 lg:p-3.5 flex flex-col flex-1">
-        <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
+        <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
@@ -81,7 +81,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>

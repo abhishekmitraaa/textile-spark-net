@@ -190,12 +190,12 @@ const CosoraStudio = () => {
           className="grid overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:grid-cols-[1.05fr_1fr]"
         >
           <div className="order-2 flex flex-col justify-center p-6 md:order-1 md:p-9">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#256fef]/10 px-3 py-1 text-xs font-medium text-[#256fef]">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-vendor/10 px-3 py-1 text-xs font-medium text-brand-vendor">
               <Camera className="h-3.5 w-3.5" strokeWidth={2} />
               Premium studio service
             </span>
 
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-[#363636] md:text-4xl">
+            <h1 className="mt-4 text-3xl font-bold tracking-tight text-brand-ink md:text-4xl">
               Cosora Studio
             </h1>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-gray-500">
@@ -207,7 +207,7 @@ const CosoraStudio = () => {
               <motion.div whileTap={reduced ? undefined : TAP} transition={TAP_T}>
                 <Button
                   onClick={() => openChat()}
-                  className="h-11 rounded-full bg-[#256fef] px-6 font-semibold text-white hover:bg-[#1d5ed6]"
+                  className="h-11 rounded-full bg-brand-vendor px-6 font-semibold text-white hover:bg-[#1d5ed6]"
                 >
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Chat &amp; Book Now
@@ -217,7 +217,7 @@ const CosoraStudio = () => {
                 href="#studios"
                 whileTap={reduced ? undefined : TAP}
                 transition={TAP_T}
-                className="inline-flex h-11 items-center rounded-full border border-[#d0d4dc] px-6 text-sm font-semibold text-[#363636] transition-colors hover:border-[#256fef] hover:text-[#256fef]"
+                className="inline-flex h-11 items-center rounded-full border border-brand-border px-6 text-sm font-semibold text-brand-ink transition-colors hover:border-brand-vendor hover:text-brand-vendor"
               >
                 Browse studios
               </motion.a>
@@ -237,7 +237,7 @@ const CosoraStudio = () => {
         <motion.section variants={section} className="grid grid-cols-3 divide-x divide-gray-100">
           {STATS.map((s) => (
             <div key={s.label} className="px-3 text-center first:pl-0 last:pr-0">
-              <p className="text-xl font-bold text-[#363636] md:text-2xl">{s.value}</p>
+              <p className="text-xl font-bold text-brand-ink md:text-2xl">{s.value}</p>
               <p className="mt-0.5 text-xs text-gray-500">{s.label}</p>
             </div>
           ))}
@@ -253,13 +253,13 @@ const CosoraStudio = () => {
                 placeholder="Search a studio"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="h-11 rounded-full border-[#d0d4dc] pl-11 text-sm text-[#363636] placeholder:text-gray-400 focus-visible:border-[#256fef] focus-visible:ring-1 focus-visible:ring-[#256fef] focus-visible:ring-offset-0"
+                className="h-11 rounded-full border-brand-border pl-11 text-sm text-brand-ink placeholder:text-gray-400 focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor focus-visible:ring-offset-0"
               />
             </div>
             <Select value={city} onValueChange={setCity}>
               <SelectTrigger
                 aria-label="Filter by city"
-                className="h-11 rounded-full border-[#d0d4dc] px-5 text-sm font-medium text-[#363636] focus:ring-1 focus:ring-[#256fef] focus:ring-offset-0 sm:w-44"
+                className="h-11 rounded-full border-brand-border px-5 text-sm font-medium text-brand-ink focus:ring-1 focus:ring-brand-vendor focus:ring-offset-0 sm:w-44"
               >
                 <SelectValue />
               </SelectTrigger>
@@ -285,8 +285,8 @@ const CosoraStudio = () => {
                   onClick={() => setShootType(t.value)}
                   className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                     active
-                      ? "bg-[#256fef] text-white"
-                      : "border border-[#d0d4dc] text-gray-500 hover:border-[#256fef] hover:text-[#256fef]"
+                      ? "bg-brand-vendor text-white"
+                      : "border border-brand-border text-gray-500 hover:border-brand-vendor hover:text-brand-vendor"
                   }`}
                 >
                   {t.label}
@@ -309,15 +309,15 @@ const CosoraStudio = () => {
               whileTap={reduced ? undefined : TAP}
               transition={TAP_T}
               onClick={() => navigate(`/cosora-studio/${s.id}`)}
-              className="group w-full overflow-hidden rounded-2xl border border-gray-100 bg-white text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#256fef]/40"
+              className="group w-full overflow-hidden rounded-2xl border border-gray-100 bg-white text-left shadow-sm transition-shadow hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-vendor/40"
             >
               <StudioCover images={s.portfolio} name={s.name} />
 
               <div className="p-4">
                 <div className="flex items-center gap-1.5">
-                  <h3 className="truncate text-sm font-semibold text-[#363636]">{s.name}</h3>
+                  <h3 className="truncate text-sm font-semibold text-brand-ink">{s.name}</h3>
                   {s.verified && (
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-[#14ae5c]" strokeWidth={2} />
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-brand-success" strokeWidth={2} />
                   )}
                 </div>
                 <p className="mt-1 text-xs text-gray-500">
@@ -328,14 +328,14 @@ const CosoraStudio = () => {
                 </p>
 
                 <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                  <p className="text-sm font-bold text-[#363636]">
+                  <p className="text-sm font-bold text-brand-ink">
                     {s.startingAt}
                     <span className="font-normal text-gray-400"> /look</span>
                   </p>
                   <span className="flex items-center gap-1 text-xs text-gray-500">
                     <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span className="font-semibold text-[#363636]">{s.rating}</span>({s.reviews})
-                    <ArrowRight className="ml-1 h-3.5 w-3.5 text-[#256fef] transition-transform duration-200 group-hover:translate-x-0.5" />
+                    <span className="font-semibold text-brand-ink">{s.rating}</span>({s.reviews})
+                    <ArrowRight className="ml-1 h-3.5 w-3.5 text-brand-vendor transition-transform duration-200 group-hover:translate-x-0.5" />
                   </span>
                 </div>
               </div>
@@ -346,12 +346,12 @@ const CosoraStudio = () => {
         {studios.length === 0 && (
           <motion.div variants={section} className="py-16 text-center">
             <Camera className="mx-auto h-8 w-8 text-gray-300" strokeWidth={1.5} />
-            <p className="mt-3 text-sm font-medium text-[#363636]">No studios match that filter</p>
+            <p className="mt-3 text-sm font-medium text-brand-ink">No studios match that filter</p>
             <p className="mt-1 text-xs text-gray-500">Try another shoot type or city.</p>
             {filtered && (
               <button
                 onClick={clearFilters}
-                className="mt-4 text-xs font-semibold text-[#256fef] hover:underline"
+                className="mt-4 text-xs font-semibold text-brand-vendor hover:underline"
               >
                 Clear filters
               </button>
@@ -361,7 +361,7 @@ const CosoraStudio = () => {
 
         {/* ── Packages ────────────────────────────────────────────────────── */}
         <motion.section variants={section}>
-          <h2 className="text-base font-bold text-[#363636]">Shoot packages</h2>
+          <h2 className="text-base font-bold text-brand-ink">Shoot packages</h2>
           <p className="mt-1 text-sm text-gray-500">
             Flat rates across every partner studio. Custom volumes are quoted on chat.
           </p>
@@ -371,16 +371,16 @@ const CosoraStudio = () => {
               <div
                 key={p.name}
                 className={`border-b border-gray-100 p-5 last:border-b-0 md:border-b-0 md:border-r md:last:border-r-0 ${
-                  p.popular ? "bg-[#256fef]/[0.04]" : ""
+                  p.popular ? "bg-brand-vendor/[0.04]" : ""
                 }`}
               >
                 <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-semibold text-[#363636]">{p.name}</p>
+                  <p className="text-sm font-semibold text-brand-ink">{p.name}</p>
                   {p.popular && (
-                    <span className="text-[11px] font-medium text-[#256fef]">Most popular</span>
+                    <span className="text-[11px] font-medium text-brand-vendor">Most popular</span>
                   )}
                 </div>
-                <p className="mt-2 text-2xl font-bold text-[#363636]">{p.price}</p>
+                <p className="mt-2 text-2xl font-bold text-brand-ink">{p.price}</p>
                 <p className="mt-2 text-xs leading-relaxed text-gray-500">{p.detail}</p>
               </div>
             ))}
@@ -393,7 +393,7 @@ const CosoraStudio = () => {
           className="grid overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm md:grid-cols-2"
         >
           <div className="border-b border-gray-100 p-6 md:border-b-0 md:border-r">
-            <h3 className="text-base font-bold text-[#363636]">Shoot for brands on Cosora</h3>
+            <h3 className="text-base font-bold text-brand-ink">Shoot for brands on Cosora</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
               Product, fashion and textile photographers get listed here, set their own rates, and pay
               zero commission on the first 10 shoots.
@@ -407,7 +407,7 @@ const CosoraStudio = () => {
                 onClick={() =>
                   openChat("I am a photographer and I would like to join Cosora Studio.")
                 }
-                className="h-11 rounded-full bg-[#256fef] px-6 font-semibold text-white hover:bg-[#1d5ed6]"
+                className="h-11 rounded-full bg-brand-vendor px-6 font-semibold text-white hover:bg-[#1d5ed6]"
               >
                 Apply to join
               </Button>
@@ -415,21 +415,21 @@ const CosoraStudio = () => {
           </div>
 
           <div className="p-6">
-            <h3 className="text-base font-bold text-[#363636]">Talk to the studio team</h3>
+            <h3 className="text-base font-bold text-brand-ink">Talk to the studio team</h3>
             <p className="mt-1.5 text-sm leading-relaxed text-gray-500">
               For custom packages, bulk catalogue shoots or anything the packages above do not cover.
             </p>
             <div className="mt-5 space-y-2.5 text-sm text-gray-500">
               <a
                 href="mailto:studio@cosora.in"
-                className="flex items-center gap-2.5 transition-colors hover:text-[#256fef]"
+                className="flex items-center gap-2.5 transition-colors hover:text-brand-vendor"
               >
                 <Mail className="h-4 w-4 shrink-0 text-gray-400" />
                 studio@cosora.in
               </a>
               <a
                 href="tel:+919876543210"
-                className="flex items-center gap-2.5 transition-colors hover:text-[#256fef]"
+                className="flex items-center gap-2.5 transition-colors hover:text-brand-vendor"
               >
                 <Phone className="h-4 w-4 shrink-0 text-gray-400" />
                 +91 98765 43210
@@ -454,13 +454,13 @@ const CosoraStudio = () => {
           >
             <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
               <div>
-                <p className="text-sm font-semibold text-[#363636]">Cosora Studio</p>
+                <p className="text-sm font-semibold text-brand-ink">Cosora Studio</p>
                 <p className="text-[11px] text-gray-400">Replies in about 5 minutes</p>
               </div>
               <button
                 onClick={() => setShowChat(false)}
                 aria-label="Close chat"
-                className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-50 hover:text-[#363636]"
+                className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-50 hover:text-brand-ink"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -475,8 +475,8 @@ const CosoraStudio = () => {
                   <p
                     className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
                       m.from === "vendor"
-                        ? "rounded-br-md bg-[#256fef] text-white"
-                        : "rounded-bl-md bg-gray-50 text-[#363636]"
+                        ? "rounded-br-md bg-brand-vendor text-white"
+                        : "rounded-bl-md bg-gray-50 text-brand-ink"
                     }`}
                   >
                     {m.text}
@@ -493,14 +493,14 @@ const CosoraStudio = () => {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && send()}
-                  className="h-10 rounded-full border-[#d0d4dc] text-xs text-[#363636] placeholder:text-gray-400 focus-visible:border-[#256fef] focus-visible:ring-1 focus-visible:ring-[#256fef] focus-visible:ring-offset-0"
+                  className="h-10 rounded-full border-brand-border text-xs text-brand-ink placeholder:text-gray-400 focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor focus-visible:ring-offset-0"
                 />
                 <motion.button
                   whileTap={reduced ? undefined : TAP}
                   transition={TAP_T}
                   onClick={send}
                   aria-label="Send message"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#256fef] text-white transition-colors hover:bg-[#1d5ed6]"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-vendor text-white transition-colors hover:bg-[#1d5ed6]"
                 >
                   <Send className="h-4 w-4" />
                 </motion.button>
@@ -522,7 +522,7 @@ const CosoraStudio = () => {
           whileTap={reduced ? undefined : TAP}
           onClick={() => setShowChat(true)}
           aria-label="Chat with the Cosora Studio team"
-          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-[#256fef] text-white shadow-lg transition-colors hover:bg-[#1d5ed6] lg:bottom-6 lg:right-6"
+          className="fixed bottom-20 right-4 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-brand-vendor text-white shadow-lg transition-colors hover:bg-[#1d5ed6] lg:bottom-6 lg:right-6"
         >
           <MessageCircle className="h-5 w-5" />
         </motion.button>

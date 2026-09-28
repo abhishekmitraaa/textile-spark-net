@@ -76,7 +76,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
           aria-label={saved ? "Edit saved folders" : "Save product"}
         >
           {saved
-            ? <BookmarkCheck className="h-4 w-4 text-[#ef4d62] fill-[#ef4d62]/15" />
+            ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" />
             : <Bookmark className="h-4 w-4 text-muted-foreground" />}
         </button>
 

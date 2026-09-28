@@ -74,7 +74,7 @@ const ProfileEdit = () => {
                   <input ref={photoRef} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
                   <button type="button" onClick={() => photoRef.current?.click()} disabled={uploadingPhoto} className="relative" aria-label="Change photo">
                     <img src={form.avatar || noUserPicture} alt="Profile" className="w-28 h-28 rounded-full object-cover bg-gray-100" />
-                    <span className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-[#ef4d62] flex items-center justify-center">
+                    <span className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-brand-buyer flex items-center justify-center">
                       {uploadingPhoto ? <Loader2 className="w-4 h-4 text-white animate-spin" /> : <Camera className="w-4 h-4 text-white" />}
                     </span>
                   </button>

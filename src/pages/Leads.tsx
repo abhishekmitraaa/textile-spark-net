@@ -43,8 +43,8 @@ const Leads = () => {
 
           {!isLoading && !hasLeads && (
             <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[#256fef]/10">
-                <Inbox className="h-6 w-6 text-[#256fef]" />
+              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-vendor/10">
+                <Inbox className="h-6 w-6 text-brand-vendor" />
               </div>
               <p className="text-base font-bold text-gray-900">No open buyer requirements right now</p>
               <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
@@ -60,7 +60,7 @@ const Leads = () => {
                 </Link>
                 <Link to="/advertisements">
                   <motion.span whileTap={TAP} transition={TAP_T}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-[#256fef] px-4 py-2 text-xs font-bold text-white hover:bg-[#256fef]/90 transition-colors">
+                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-brand-vendor/90 transition-colors">
                     <Megaphone className="h-4 w-4" /> Boost visibility <ArrowRight className="h-3.5 w-3.5" />
                   </motion.span>
                 </Link>

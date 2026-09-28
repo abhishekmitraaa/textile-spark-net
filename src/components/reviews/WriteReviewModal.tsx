@@ -106,7 +106,7 @@ export function WriteReviewModal({
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={placeholder}
-              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+              className="w-full resize-none rounded-xl border border-gray-200 px-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
             />
 
             {allowPhotos && (
@@ -119,7 +119,7 @@ export function WriteReviewModal({
             <button
               onClick={submit}
               disabled={saving}
-              className="mt-4 w-full rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors"
+              className="mt-4 w-full rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 disabled:opacity-60 text-white py-3 text-sm font-bold transition-colors"
             >
               {saving ? "Submitting…" : isEdit ? "Update Review" : "Submit Review"}
             </button>

@@ -56,7 +56,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-[#ef4d62] fill-[#ef4d62]" />
+                <Zap className="w-4 h-4 text-brand-buyer fill-brand-buyer" />
                 <h2 className="text-base font-bold text-gray-900">Quick Quote</h2>
               </div>
               <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
@@ -69,28 +69,28 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
               {/* Product/Service Name */}
               <div>
                 <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                  Product / Service Name <span className="text-[#ef4d62]">*</span>
+                  Product / Service Name <span className="text-brand-buyer">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g., Cotton T-Shirt, Leather Wallet"
                   value={productName}
                   onChange={e => setProductName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
                 />
               </div>
 
               {/* Quantity */}
               <div>
                 <label className="text-sm font-semibold text-gray-800 mb-1.5 block">
-                  Quantity <span className="text-[#ef4d62]">*</span>
+                  Quantity <span className="text-brand-buyer">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="e.g., 500 pieces, 1000 units"
                   value={quantity}
                   onChange={e => setQuantity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors"
                 />
               </div>
 
@@ -103,10 +103,10 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                   <button
                     type="button"
                     onClick={() => fileRef.current?.click()}
-                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-2 hover:border-[#ef4d62]/40 hover:bg-[#fff5f6] transition-colors"
+                    className="w-full border-2 border-dashed border-gray-200 rounded-xl py-6 flex flex-col items-center gap-2 hover:border-brand-buyer/40 hover:bg-[#fff5f6] transition-colors"
                   >
                     <Upload className="w-5 h-5 text-gray-400" />
-                    <span className="text-sm text-[#ef4d62] font-medium">Click to upload or drag &amp; drop</span>
+                    <span className="text-sm text-brand-buyer font-medium">Click to upload or drag &amp; drop</span>
                     <span className="text-xs text-gray-400">PNG, JPG up to 10MB</span>
                   </button>
                 ) : (
@@ -117,7 +117,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                           <img src={img} alt="" className="w-full h-full object-cover" />
                           <button
                             onClick={() => removeImage(i)}
-                            className="absolute top-0.5 right-0.5 w-4 h-4 bg-[#ef4d62] rounded-full flex items-center justify-center"
+                            className="absolute top-0.5 right-0.5 w-4 h-4 bg-brand-buyer rounded-full flex items-center justify-center"
                           >
                             <X className="w-2.5 h-2.5 text-white" />
                           </button>
@@ -126,7 +126,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                       {images.length < 5 && (
                         <button
                           onClick={() => fileRef.current?.click()}
-                          className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-[#ef4d62]/40 transition-colors"
+                          className="aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:border-brand-buyer/40 transition-colors"
                         >
                           <Upload className="w-4 h-4 text-gray-300" />
                         </button>
@@ -151,7 +151,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                   placeholder="Any specific requirements? Colors, sizes, fabric..."
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#ef4d62] transition-colors resize-none"
+                  className="w-full px-3.5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer transition-colors resize-none"
                 />
               </div>
 
@@ -162,7 +162,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                 className={cn(
                   "w-full flex items-center justify-center gap-2 py-3.5 text-sm font-bold rounded-xl transition-colors",
                   isValid
-                    ? "bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white"
+                    ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white"
                     : "bg-gray-200 text-gray-400 cursor-not-allowed"
                 )}
               >
@@ -173,7 +173,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
                 Need more options?{" "}
                 <button
                   onClick={() => { onClose(); navigate("/requirement/post-requirement"); }}
-                  className="text-[#ef4d62] font-semibold hover:underline"
+                  className="text-brand-buyer font-semibold hover:underline"
                 >
                   Create detailed Quote
                 </button>

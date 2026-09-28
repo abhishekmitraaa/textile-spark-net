@@ -37,7 +37,7 @@ export default function CategoryPickerGrid({ selected, onToggle, query, setQuery
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search product types"
-          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+          className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
         />
       </div>
       <div className="grid grid-cols-2 gap-3">
@@ -49,7 +49,7 @@ export default function CategoryPickerGrid({ selected, onToggle, query, setQuery
               onClick={() => onToggle(cat.id)}
               className={cn(
                 "flex items-center gap-2.5 rounded-xl border-2 p-3 transition-all active:scale-[0.98]",
-                active ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-gray-200 hover:border-[#ef4d62]/40",
+                active ? "border-brand-buyer bg-brand-buyer/5" : "border-gray-200 hover:border-brand-buyer/40",
               )}
             >
               <span className="text-xl">{cat.icon}</span>

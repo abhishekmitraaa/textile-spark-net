@@ -1951,6 +1951,61 @@ Migration `20260928145827_admin_live_activity.sql`. Cosora-Admin's Live Activity
   headers). Nothing needed changing for Clarity, and nothing would stop another script either
   (`securityflags.md`).
 
+## Site content — banners and theme (admin completion Phase 9, 2026-09-29)
+
+Migration `20260928195051_site_content.sql`; edge function `site-config-snapshot`; Cosora-Admin's
+Content page (`src/lib/siteContent.ts`).
+
+- **`public.site_banners`:** `placement` is `vendor_dashboard` only. CHECKs: title 1–80 trimmed,
+  subtitle up to 160, `cta_label` up to 30 and only with a `link_path`, `link_path` up to 200 and
+  `~ '^/[^/\\]'` with no whitespace, control characters, quotes or angle brackets, `image_path`
+  `~ '^banners/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$'`, `starts_at < ends_at`. `position` orders them.
+- **`public.site_theme`:** one row (`id boolean primary key check (id)`). Five colours
+  `~ '^#[0-9a-f]{6}$'`, two fonts `= any (admin.site_theme_fonts())` (ten Google Fonts families), and
+  `site_theme_contrast`: `admin.contrast_ratio(ink, '#ffffff') >= 4.5` and white on each accent
+  `>= 3`. `admin.srgb_luminance()` / `admin.contrast_ratio()` are WCAG 2's formulas; today's values
+  give 12.08, 4.57 and 3.55.
+- **Reads:** RLS `site_banners_public_read` (`active and (ends_at is null or ends_at > now())`) and
+  `site_theme_public_read`; column grants without `created_by` / `updated_by` / `active` /
+  timestamps.
+- **Writes:** only the RPCs, each behind `admin.require_content_admin()` (super_admin, 42501
+  otherwise): `admin_site_banners()`, `admin_site_banner_save(...)` (22023 with a readable message for
+  each rule, and a check that the image object exists; P0002 for an unknown id),
+  `admin_site_banner_delete()` (returns the image path; the panel removes the object after the row),
+  `admin_site_banner_reorder(ids)` (every banner exactly once, else 22023), `admin_site_theme_get()`
+  (theme, defaults, fonts, floors) and `admin_site_theme_save(...)`. Both tables: `trg_admin_audit`.
+- **Storage:** `site-content` is public, 2 MB, JPEG/PNG/WebP; four policies let super admins select,
+  insert, update and delete `banners/<uuid>.<ext>` only. `site-config` is public, 64 KB, JSON, with no
+  client policy.
+- **Delivery:** `trg_site_banners_snapshot` / `trg_site_theme_snapshot` (after each statement)
+  queue one `pg_net` call per transaction to `site-config-snapshot` with the Vault service-role key.
+  The function reads both tables with the anon key and uploads `site-config/site.json`
+  (`{ version: 1, generated_at, theme, banners }`, max-age 300), re-reading until stable (at most 3
+  passes). `faq-snapshots-refresh` (hourly at :17) now posts to both snapshot functions.
+- **Buyer app:**
+  - `index.css` holds `--brand-vendor|buyer|success|border|ink` as `R G B` channels and
+    `--font-body` / `--font-heading` (today's stacks). `tailwind.config.ts` maps `brand.*` to
+    `rgb(var(--brand-*) / <alpha-value>)`, so `bg-brand-buyer/10` works; body, headings and
+    `.vendor-shell` read the font variables.
+  - `scripts/theme-codemod.mjs` rewrote `<utility>-[#hex]` classes for the five hexes (1,334 in 85
+    files); `--check` reports leftovers without writing. `brand(token, alpha255?)` gives
+    `rgb(var(--brand-x) / a)` for inline styles.
+  - `src/lib/siteConfig.ts`: `useSiteConfig()` (snapshot with a 3 s timeout, then the tables),
+    `parseTheme()` / `parseBanner()` (colours, the font list, internal paths and banner images
+    checked again; a bad banner is dropped), `isBannerLive()`, `themeVariables()`, `fontStack()`
+    (today's stack stays behind a chosen font, so the defaults give today's stacks exactly) and
+    `googleFontUrl()` (with each family's weights).
+  - `SiteThemeApplier` (in `App.tsx`) sets the variables on `<html>`, adds a Google Fonts link for a
+    family `index.html` doesn't preload, and stores `{ vars, fonts }` under `cosora_site_theme_v1`.
+    The inline script in `index.html` applies that before the first paint, after checking each value
+    with a strict pattern.
+  - `VendorDashboardBanners` (on `/dashboard` for sellers) shows live banners in order, in the vendor
+    blue, as a carousel when there are two or more; nothing while loading, on an error or with none.
+- **Proven 2026-09-29** at the default theme against the pre-change build: pixel-identical on `/` and
+  `/seller` at 390 and 1280 wide, and the vendor page at 1280; on the feed pages (whose pixels vary
+  between loads with live data) every element's computed colours, fonts and shadows are identical.
+- **Tests:** `scripts/admin-completion/13_site_content.sql`.
+
 ---
 
 ## Calls — one write path, `log_call()` (2026-09-23)

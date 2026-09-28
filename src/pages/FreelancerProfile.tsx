@@ -37,7 +37,7 @@ const FreelancerProfile = () => {
       <div className="min-h-screen bg-white grid place-items-center px-6 text-center">
         <div>
           <p className="text-sm text-gray-500">This freelancer no longer exists.</p>
-          <button onClick={() => navigate("/freelancers")} className="mt-3 text-sm font-semibold text-[#ef4d62]">Back to Freelancers</button>
+          <button onClick={() => navigate("/freelancers")} className="mt-3 text-sm font-semibold text-brand-buyer">Back to Freelancers</button>
         </div>
       </div>
     );
@@ -67,7 +67,7 @@ const FreelancerProfile = () => {
           </button>
           <div className="ml-auto flex items-center gap-1">
             <button onClick={() => setSaved((s) => !s)} aria-label="Save" className="p-1.5 rounded-full hover:bg-gray-100">
-              {saved ? <BookmarkCheck className="w-5 h-5 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-5 h-5 text-gray-600" />}
+              {saved ? <BookmarkCheck className="w-5 h-5 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-5 h-5 text-gray-600" />}
             </button>
             <button onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} aria-label="Share" className="p-1.5 rounded-full hover:bg-gray-100">
               <Share2 className="w-5 h-5 text-gray-600" />
@@ -100,7 +100,7 @@ const FreelancerProfile = () => {
             <img src={f.avatar} alt={f.name} className="w-14 h-14 rounded-full object-cover" />
             <div className="flex-1 min-w-0">
               <h1 className="text-lg font-bold text-gray-900 leading-tight">{f.name}</h1>
-              <p className="text-sm text-[#ef4d62] font-medium">{f.title}</p>
+              <p className="text-sm text-brand-buyer font-medium">{f.title}</p>
               <p className="text-xs text-gray-500">{f.specialty}</p>
             </div>
           </div>
@@ -110,12 +110,12 @@ const FreelancerProfile = () => {
           </div>
           {/* Rate cards */}
           <div className="mt-3 grid grid-cols-2 gap-2.5">
-            <div className="rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/15 px-3 py-2.5">
-              <p className="text-base font-extrabold text-[#ef4d62]">₹{f.hourlyRate.toLocaleString("en-IN")}<span className="text-[11px] font-medium text-gray-400">/hr</span></p>
+            <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/15 px-3 py-2.5">
+              <p className="text-base font-extrabold text-brand-buyer">₹{f.hourlyRate.toLocaleString("en-IN")}<span className="text-[11px] font-medium text-gray-400">/hr</span></p>
               <p className="text-[11px] text-gray-500">Hourly Rate</p>
             </div>
-            <div className="rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/15 px-3 py-2.5">
-              <p className="text-base font-extrabold text-[#ef4d62]">{f.projectRate}</p>
+            <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/15 px-3 py-2.5">
+              <p className="text-base font-extrabold text-brand-buyer">{f.projectRate}</p>
               <p className="text-[11px] text-gray-500">Per Project</p>
             </div>
           </div>
@@ -125,7 +125,7 @@ const FreelancerProfile = () => {
         <div className="flex rounded-xl border border-gray-200 p-1">
           {(["services", "portfolio", "reviews"] as Tab[]).map((t) => (
             <button key={t} onClick={() => setTab(t)} className="relative flex-1 rounded-lg py-2 text-sm font-semibold capitalize">
-              {tab === t && <motion.span layoutId="fp-tab" className="absolute inset-0 rounded-lg bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+              {tab === t && <motion.span layoutId="fp-tab" className="absolute inset-0 rounded-lg bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
               <span className={cn("relative z-10", tab === t ? "text-white" : "text-gray-500")}>{t}</span>
             </button>
           ))}
@@ -144,8 +144,8 @@ const FreelancerProfile = () => {
               <div className="space-y-2">
                 {f.services.map((s) => (
                   <div key={s.name} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/60 px-3 py-2.5">
-                    <span className="inline-flex items-center gap-2 text-sm text-gray-800"><Briefcase className="w-4 h-4 text-[#ef4d62]" /> {s.name}</span>
-                    <span className="text-sm font-bold text-[#ef4d62]">{s.price}</span>
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-800"><Briefcase className="w-4 h-4 text-brand-buyer" /> {s.name}</span>
+                    <span className="text-sm font-bold text-brand-buyer">{s.price}</span>
                   </div>
                 ))}
               </div>
@@ -159,7 +159,7 @@ const FreelancerProfile = () => {
                 <Stat icon={Wallet} label="Price Range" value={f.priceRange} />
               </div>
               <div className="flex flex-wrap gap-2">
-                {f.skills.map((s) => <span key={s} className="rounded-full bg-[#ef4d62]/5 border border-[#ef4d62]/20 px-3 py-1 text-xs font-medium text-[#ef4d62]">{s}</span>)}
+                {f.skills.map((s) => <span key={s} className="rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-3 py-1 text-xs font-medium text-brand-buyer">{s}</span>)}
               </div>
             </div>
 
@@ -213,7 +213,7 @@ const FreelancerProfile = () => {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setReviewOpen(true)} className="rounded-full bg-[#ef4d62] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#ef4d62]/90">Write a Review</button>
+              <button onClick={() => setReviewOpen(true)} className="rounded-full bg-brand-buyer px-3 py-1.5 text-xs font-bold text-white hover:bg-brand-buyer/90">Write a Review</button>
             </div>
             <div className="space-y-3">
               {reviewCards.map((r) => (
@@ -222,7 +222,7 @@ const FreelancerProfile = () => {
                     <p className="text-sm font-bold text-gray-900">{r.name}</p>
                     <span className="text-[11px] text-gray-400">{r.timeAgo}</span>
                   </div>
-                  {r.project && <p className="text-[11px] text-[#ef4d62] font-medium">{r.project}</p>}
+                  {r.project && <p className="text-[11px] text-brand-buyer font-medium">{r.project}</p>}
                   <div className="flex items-center gap-0.5 mt-1">
                     {[1, 2, 3, 4, 5].map((s) => <Star key={s} className={cn("w-3 h-3", s <= r.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300")} />)}
                   </div>
@@ -238,8 +238,8 @@ const FreelancerProfile = () => {
         {/* Contact */}
         <div className={card}>
           <div className="flex items-center gap-2">
-            <button onClick={chat} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-[#ef4d62] text-[#ef4d62] py-3 text-sm font-bold hover:bg-[#ef4d62]/5 transition-colors"><MessageCircle className="w-4 h-4" /> Chat</button>
-            <button onClick={() => placeCall(f.name, demoPhone(f.id))} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-[#ef4d62] text-white py-3 text-sm font-bold hover:bg-[#ef4d62]/90 transition-colors"><Phone className="w-4 h-4" /> Call Now</button>
+            <button onClick={chat} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl border border-brand-buyer text-brand-buyer py-3 text-sm font-bold hover:bg-brand-buyer/5 transition-colors"><MessageCircle className="w-4 h-4" /> Chat</button>
+            <button onClick={() => placeCall(f.name, demoPhone(f.id))} className="flex-1 flex items-center justify-center gap-1.5 rounded-xl bg-brand-buyer text-white py-3 text-sm font-bold hover:bg-brand-buyer/90 transition-colors"><Phone className="w-4 h-4" /> Call Now</button>
           </div>
           <p className="mt-2 text-center text-[11px] text-gray-400 inline-flex items-center justify-center gap-1 w-full"><Clock className="w-3 h-3" /> Usually responds within 24 hours</p>
         </div>
@@ -260,7 +260,7 @@ const FreelancerProfile = () => {
 function Stat({ icon: Icon, label, value }: { icon: typeof Briefcase; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-gray-100 bg-gray-50/60 p-2.5 text-center">
-      <Icon className="w-4 h-4 text-[#ef4d62] mx-auto mb-1" />
+      <Icon className="w-4 h-4 text-brand-buyer mx-auto mb-1" />
       <p className="text-[11px] font-bold text-gray-900 leading-tight">{value}</p>
       <p className="text-[9px] text-gray-400">{label}</p>
     </div>

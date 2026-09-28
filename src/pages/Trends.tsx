@@ -228,7 +228,7 @@ function ProductCard({ product }: { product: CompactProduct }) {
           className="absolute top-2 lg:top-3 right-2 lg:right-3 w-7 lg:w-9 h-7 lg:h-9 bg-white/90 rounded-full flex items-center justify-center shadow-sm"
           aria-label={saved ? "Edit saved folders" : "Save product"}
         >
-          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-[#ef4d62] fill-[#ef4d62]/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
+          {saved ? <BookmarkCheck className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="w-3.5 lg:w-4 h-3.5 lg:h-4 text-gray-500" />}
         </button>
 
         <div className="absolute bottom-2 lg:bottom-3 left-2 lg:left-3 flex items-center gap-0.5 bg-white/90 rounded-full px-1.5 lg:px-2 py-0.5 lg:py-1">
@@ -239,7 +239,7 @@ function ProductCard({ product }: { product: CompactProduct }) {
       </Link>
 
       <div className="p-2 lg:p-3.5">
-        <p className="text-xs lg:text-sm font-bold text-[#ef4d62] leading-snug">
+        <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5 truncate">
@@ -254,7 +254,7 @@ function ProductCard({ product }: { product: CompactProduct }) {
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>
@@ -407,7 +407,7 @@ const Trends = () => {
               className={cn(
                 "text-xs lg:text-sm font-bold whitespace-nowrap pb-2 border-b-2 transition-colors shrink-0",
                 tab.href === "/home/trends"
-                  ? "text-[#ef4d62] border-[#ef4d62]"
+                  ? "text-brand-buyer border-brand-buyer"
                   : "text-gray-400 border-transparent hover:text-gray-600"
               )}
             >
@@ -579,7 +579,7 @@ const Trends = () => {
                     onClick={() => selectGroup(group)}
                     className={cn(
                       "w-full text-left px-4 py-2 text-sm hover:bg-gray-50 transition-colors",
-                      group === apparelGroup ? "text-[#ef4d62] font-semibold" : "text-gray-700"
+                      group === apparelGroup ? "text-brand-buyer font-semibold" : "text-gray-700"
                     )}
                   >
                     {group}
@@ -592,7 +592,7 @@ const Trends = () => {
           {/* Hot Keywords */}
           <div className="mt-3">
             <div className="flex items-center gap-1.5 mb-2">
-              <TrendingUp className="w-4 h-4 text-[#ef4d62]" />
+              <TrendingUp className="w-4 h-4 text-brand-buyer" />
               {/* "Hot Keywords" with "↑ 800%" / "↑ 540%" growth figures sat here.
                   Nothing measures search growth — the figures were invented. These
                   are editorial suggestions and are labelled as such. */}
@@ -629,7 +629,7 @@ const Trends = () => {
             <div className="mt-6 flex flex-col items-center text-center py-8">
               <p className="text-sm font-bold text-gray-900">Couldn't load listings</p>
               <p className="text-xs text-gray-500 mt-1">Check your connection and try again.</p>
-              <button onClick={() => void refetchLive()} className="mt-3 px-4 py-2 rounded-xl bg-[#ef4d62] text-white text-xs font-bold">
+              <button onClick={() => void refetchLive()} className="mt-3 px-4 py-2 rounded-xl bg-brand-buyer text-white text-xs font-bold">
                 Retry
               </button>
             </div>

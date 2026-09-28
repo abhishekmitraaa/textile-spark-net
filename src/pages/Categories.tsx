@@ -64,7 +64,7 @@ const Categories = () => {
           <input
             value={query} onChange={(e) => setQuery(e.target.value)}
             placeholder="Search categories…"
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-9 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62] focus:bg-white"
+            className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-9 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer focus:bg-white"
           />
           {query && (
             <button onClick={() => setQuery("")} aria-label="Clear" className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -91,8 +91,8 @@ const Categories = () => {
                   onClick={() => go(category, sub)}
                   className="w-full flex items-center gap-3 py-3 text-left"
                 >
-                  <span className="w-9 h-9 rounded-lg bg-[#ef4d62]/10 flex items-center justify-center shrink-0">
-                    {(() => { const I = ICONS[category.icon] ?? Grid2X2; return <I className="w-4 h-4 text-[#ef4d62]" />; })()}
+                  <span className="w-9 h-9 rounded-lg bg-brand-buyer/10 flex items-center justify-center shrink-0">
+                    {(() => { const I = ICONS[category.icon] ?? Grid2X2; return <I className="w-4 h-4 text-brand-buyer" />; })()}
                   </span>
                   <span className="flex-1 min-w-0">
                     <span className="block text-sm font-semibold text-gray-900 truncate">{sub.label}</span>
@@ -116,12 +116,12 @@ const Categories = () => {
                 return (
                   <button key={c.id} onClick={() => setActiveId(c.id)}
                     className={cn("w-full rounded-xl border p-2 flex flex-col lg:flex-row items-center lg:gap-2.5 text-center lg:text-left transition-colors relative",
-                      on ? "border-[#ef4d62] bg-[#ef4d62]/5" : "border-transparent hover:bg-gray-50")}>
-                    {on && <motion.span layoutId="cat-rail" className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-[#ef4d62]" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
-                    <span className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", on ? "bg-[#ef4d62] text-white" : "bg-gray-100 text-gray-500")}>
+                      on ? "border-brand-buyer bg-brand-buyer/5" : "border-transparent hover:bg-gray-50")}>
+                    {on && <motion.span layoutId="cat-rail" className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-1 rounded-r bg-brand-buyer" transition={{ type: "spring", stiffness: 400, damping: 32 }} />}
+                    <span className={cn("w-9 h-9 rounded-lg flex items-center justify-center shrink-0", on ? "bg-brand-buyer text-white" : "bg-gray-100 text-gray-500")}>
                       <I className="w-4 h-4" />
                     </span>
-                    <span className={cn("mt-1 lg:mt-0 text-[10px] lg:text-sm font-semibold leading-tight", on ? "text-[#ef4d62]" : "text-gray-600")}>{c.label}</span>
+                    <span className={cn("mt-1 lg:mt-0 text-[10px] lg:text-sm font-semibold leading-tight", on ? "text-brand-buyer" : "text-gray-600")}>{c.label}</span>
                   </button>
                 );
               })}
@@ -154,7 +154,7 @@ const Categories = () => {
                         <motion.button key={s.label} variants={tile} whileTap={reduced ? undefined : { scale: 0.96 }}
                           onClick={() => go(active, s)}
                           className="group flex flex-col items-center gap-1.5">
-                          <span className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-100 group-hover:ring-[#ef4d62]/40 transition">
+                          <span className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-100 group-hover:ring-brand-buyer/40 transition">
                             <img src={active.images[i % active.images.length]} alt=""
                               className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                             <span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />

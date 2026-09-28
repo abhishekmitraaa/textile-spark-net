@@ -31,7 +31,7 @@ interface Row {
 
 const label = "mb-1.5 block text-sm font-semibold text-gray-800";
 const input =
-  "w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-[#ef4d62] focus:ring-1 focus:ring-[#ef4d62]";
+  "w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors focus:border-brand-buyer focus:ring-1 focus:ring-brand-buyer";
 
 export default function ProductQuoteRequestModal({
   isOpen,
@@ -176,7 +176,7 @@ export default function ProductQuoteRequestModal({
               {/* Quantity, by size when the vendor listed sizes */}
               <div>
                 <span className={label}>
-                  Quantity <span className="text-[#ef4d62]">*</span>
+                  Quantity <span className="text-brand-buyer">*</span>
                 </span>
 
                 {hasSizes ? (
@@ -220,7 +220,7 @@ export default function ProductQuoteRequestModal({
                     {canAddRow && (
                       <button
                         onClick={addRow}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#ef4d62] transition-opacity hover:opacity-80"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-buyer transition-opacity hover:opacity-80"
                       >
                         <Plus className="h-3.5 w-3.5" /> Add size
                       </button>
@@ -251,7 +251,7 @@ export default function ProductQuoteRequestModal({
               <div>
                 <span className={label}>Colour</span>
                 {product.colour ? (
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ef4d62] bg-[#ef4d62]/5 px-3 py-1.5 text-xs font-medium text-[#ef4d62]">
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-brand-buyer bg-brand-buyer/5 px-3 py-1.5 text-xs font-medium text-brand-buyer">
                     {product.colour}
                   </span>
                 ) : (
@@ -294,8 +294,8 @@ export default function ProductQuoteRequestModal({
                           className={cn(
                             "rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
                             wantsCustom === v
-                              ? "border-[#ef4d62] bg-[#ef4d62] text-white"
-                              : "border-gray-200 text-gray-600 hover:border-[#ef4d62]/40",
+                              ? "border-brand-buyer bg-brand-buyer text-white"
+                              : "border-gray-200 text-gray-600 hover:border-brand-buyer/40",
                           )}
                         >
                           {v ? "Yes" : "No"}
@@ -308,7 +308,7 @@ export default function ProductQuoteRequestModal({
                     <div className="mt-3 space-y-3">
                       <div>
                         <span className={label}>
-                          What needs to change? <span className="text-[#ef4d62]">*</span>
+                          What needs to change? <span className="text-brand-buyer">*</span>
                         </span>
                         <textarea
                           aria-label="Customization details"
@@ -338,7 +338,7 @@ export default function ProductQuoteRequestModal({
                           {files.length < 5 && (
                             <button
                               onClick={() => fileRef.current?.click()}
-                              className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-[#ef4d62] hover:text-[#ef4d62]"
+                              className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-gray-300 text-gray-400 transition-colors hover:border-brand-buyer hover:text-brand-buyer"
                             >
                               <Upload className="h-4 w-4" />
                               <span className="text-[10px]">Add</span>
@@ -368,7 +368,7 @@ export default function ProductQuoteRequestModal({
               <button
                 onClick={submit}
                 disabled={!isValid || submitting}
-                className="w-full rounded-xl bg-[#ef4d62] py-3 text-sm font-bold text-white transition-colors hover:bg-[#ef4d62]/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-xl bg-brand-buyer py-3 text-sm font-bold text-white transition-colors hover:bg-brand-buyer/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submitting ? "Sending…" : "Send request"}
               </button>

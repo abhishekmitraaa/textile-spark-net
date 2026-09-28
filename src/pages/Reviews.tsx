@@ -147,8 +147,8 @@ function ReplyableReviewCard({
         <ReviewPhotoStrip photos={photos} className="mt-2.5" />
 
         {replyBody ? (
-          <div className="mt-3 bg-blue-50 rounded-lg p-3 border-l-2 border-[#256fef]">
-            <p className="text-xs font-semibold text-[#256fef] mb-1">Your Reply</p>
+          <div className="mt-3 bg-blue-50 rounded-lg p-3 border-l-2 border-brand-vendor">
+            <p className="text-xs font-semibold text-brand-vendor mb-1">Your Reply</p>
             <p data-no-translate className="text-sm text-gray-600">{replyBody}</p>
           </div>
         ) : (
@@ -156,7 +156,7 @@ function ReplyableReviewCard({
             <Button
               variant="outline"
               size="sm"
-              className="h-7 text-xs ml-auto border-[#256fef] text-[#256fef] hover:bg-blue-50"
+              className="h-7 text-xs ml-auto border-brand-vendor text-brand-vendor hover:bg-blue-50"
               onClick={() => { setOpen(!open); setText(""); }}
             >
               {open ? "Cancel" : "Reply"}
@@ -188,7 +188,7 @@ function ReplyableReviewCard({
                   </Button>
                   <Button
                     size="sm"
-                    className="h-8 text-xs bg-[#256fef] hover:bg-[#1a5fd4] text-white"
+                    className="h-8 text-xs bg-brand-vendor hover:bg-[#1a5fd4] text-white"
                     disabled={!text.trim() || posting}
                     onClick={post}
                   >
@@ -248,7 +248,7 @@ const Reviews = () => {
           <AlertCircle className="h-8 w-8 text-red-500 mb-3" />
           <p className="text-sm font-semibold text-gray-900">Couldn't load your reviews</p>
           <p className="text-xs text-gray-500 mt-1 max-w-[260px]">{errorMessage(active.error) || "Something went wrong. Please try again."}</p>
-          <Button size="sm" className="mt-4 h-8 text-xs bg-[#256fef] hover:bg-[#1a5fd4] text-white" onClick={() => active.refetch()}>
+          <Button size="sm" className="mt-4 h-8 text-xs bg-brand-vendor hover:bg-[#1a5fd4] text-white" onClick={() => active.refetch()}>
             Retry
           </Button>
         </div>
@@ -284,7 +284,7 @@ const Reviews = () => {
               <motion.div key={review.id} variants={listItem}>
                 <ReplyableReviewCard
                   avatar={
-                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#256fef] text-sm font-bold flex-shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-brand-vendor text-sm font-bold flex-shrink-0">
                       {initials(review.reviewerName)}
                     </div>
                   }
@@ -337,7 +337,7 @@ const Reviews = () => {
 
         {/* ── Get Ratings Section ── */}
         <motion.div variants={section}>
-          <h2 className="text-base font-bold text-[#256fef] mb-3">Get Ratings</h2>
+          <h2 className="text-base font-bold text-brand-vendor mb-3">Get Ratings</h2>
 
           {/* The same four states as the list: a signed-out visitor's query never
               runs (so never stops pending), and a failed read is not "no reviews". */}
@@ -350,7 +350,7 @@ const Reviews = () => {
             <div className="flex items-center gap-2 text-sm">
               <AlertCircle className="h-4 w-4 text-red-500 shrink-0" />
               <span className="text-gray-600">Couldn't load your reviews</span>
-              <button className="font-semibold text-[#256fef] hover:underline" onClick={() => store.refetch()}>
+              <button className="font-semibold text-brand-vendor hover:underline" onClick={() => store.refetch()}>
                 Retry
               </button>
             </div>
@@ -403,7 +403,7 @@ const Reviews = () => {
             <motion.button
               whileTap={TAP}
               transition={TAP_T}
-              className="flex-1 h-11 bg-[#256fef] hover:bg-[#1a5fd4] text-white font-semibold rounded-lg gap-2 flex items-center justify-center"
+              className="flex-1 h-11 bg-brand-vendor hover:bg-[#1a5fd4] text-white font-semibold rounded-lg gap-2 flex items-center justify-center"
               onClick={() => setQrOpen(true)}
             >
               <Share2 className="h-4 w-4" />
@@ -424,7 +424,7 @@ const Reviews = () => {
 
         {/* ── Respond To Reviews ── */}
         <motion.div variants={section}>
-          <h2 className="text-base font-bold text-[#256fef] mb-3">Respond To Reviews</h2>
+          <h2 className="text-base font-bold text-brand-vendor mb-3">Respond To Reviews</h2>
 
           {/* Store reviews are about the business; product reviews are left on
               one of its listings. Both reach the vendor here, and both take a reply. */}
@@ -439,7 +439,7 @@ const Reviews = () => {
                   aria-selected={selected}
                   onClick={() => setTab(t)}
                   className={`px-3.5 py-1.5 rounded-full text-sm font-semibold border transition-colors ${
-                    selected ? "bg-[#256fef] text-white border-transparent" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                    selected ? "bg-brand-vendor text-white border-transparent" : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
                   }`}
                 >
                   {t === "store" ? "Store reviews" : "Product reviews"}

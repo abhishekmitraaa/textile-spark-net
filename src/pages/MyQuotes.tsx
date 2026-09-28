@@ -1,3 +1,4 @@
+import { brand } from "@/lib/brand";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { errorMessage } from "@/lib/errorMessage";
 import { useMemo, useState } from "react";
@@ -30,7 +31,7 @@ import { cn } from "@/lib/utils";
 // comparison is meaningless — see DirectRequestThread.
 type View = "list" | "received" | "direct";
 
-const BLUE = "#256fef";
+const BLUE = brand("vendor");
 type StatusFilter = "all" | QuoteStatus;
 type SortKey = "recent" | "price" | "rating";
 
@@ -49,7 +50,7 @@ function StatCard({ icon: Icon, value, label, tint, badge }: {
   return (
     <div className="relative rounded-2xl border border-gray-200 bg-white p-3 flex flex-col items-center text-center">
       {badge ? (
-        <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-[#ef4d62] text-white text-[9px] font-bold flex items-center justify-center">{badge}</span>
+        <span className="absolute top-2 right-2 min-w-4 h-4 px-1 rounded-full bg-brand-buyer text-white text-[9px] font-bold flex items-center justify-center">{badge}</span>
       ) : null}
       <span className={cn("w-8 h-8 rounded-lg flex items-center justify-center mb-1.5", tint)}>
         <Icon className="w-4 h-4" />
@@ -169,7 +170,7 @@ const MyQuotes = () => {
                 </div>
                 <button
                   onClick={() => navigate("/requirement/post-requirement")}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#ef4d62] hover:bg-[#ef4d62]/90 text-white px-3.5 py-2.5 text-sm font-bold transition-colors shrink-0"
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white px-3.5 py-2.5 text-sm font-bold transition-colors shrink-0"
                 >
                   <Plus className="w-4 h-4" /> Create New
                 </button>
@@ -177,7 +178,7 @@ const MyQuotes = () => {
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3 mb-5">
-                <StatCard icon={FileText} value={listTotals.activeRfqs} label="Active RFQs" tint="bg-[#ef4d62]/10 text-[#ef4d62]" />
+                <StatCard icon={FileText} value={listTotals.activeRfqs} label="Active RFQs" tint="bg-brand-buyer/10 text-brand-buyer" />
                 <StatCard icon={MessageCircle} value={listTotals.totalQuotes} label="Total Quotes" tint="bg-blue-50 text-blue-500" />
                 <StatCard icon={TrendingUp} value={listTotals.newQuotes} label="New Quotes" tint="bg-emerald-50 text-emerald-500" badge={listTotals.newQuotes} />
               </div>
@@ -209,12 +210,12 @@ const MyQuotes = () => {
                               {r.status === "active" ? "Active" : "Closed"}
                             </span>
                             {r.newCount > 0 && (
-                              <span className="rounded-full bg-[#ef4d62] text-white px-2 py-0.5 text-[10px] font-bold">{r.newCount} new</span>
+                              <span className="rounded-full bg-brand-buyer text-white px-2 py-0.5 text-[10px] font-bold">{r.newCount} new</span>
                             )}
                             {r.targetVendorId && (
                               <span
                                 className="inline-flex max-w-full items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
-                                style={{ backgroundColor: `${BLUE}1a`, color: BLUE }}
+                                style={{ backgroundColor: brand("vendor", 0x1a), color: BLUE }}
                               >
                                 <Send className="w-2.5 h-2.5 shrink-0" />
                                 <span className="truncate">Direct to {r.targetVendorName}</span>
@@ -298,13 +299,13 @@ const MyQuotes = () => {
               </div>
 
               {/* Selected RFQ banner */}
-              <div className="rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/15 px-3.5 py-2.5 mb-4">
+              <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/15 px-3.5 py-2.5 mb-4">
                 <p data-no-translate className="text-sm font-bold text-gray-900">{rfq.title}</p>
               </div>
 
               {/* Stats 2x2 */}
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <StatCard icon={Send} value={stats.total} label="Total Quotes" tint="bg-[#ef4d62]/10 text-[#ef4d62]" />
+                <StatCard icon={Send} value={stats.total} label="Total Quotes" tint="bg-brand-buyer/10 text-brand-buyer" />
                 <StatCard icon={Clock} value={stats.pending} label="Pending Review" tint="bg-amber-50 text-amber-500" />
                 <StatCard icon={CheckCircle2} value={stats.shortlisted} label="Shortlisted" tint="bg-emerald-50 text-emerald-500" />
                 <StatCard icon={XCircle} value={stats.rejected} label="Rejected" tint="bg-red-50 text-red-500" />
@@ -331,7 +332,7 @@ const MyQuotes = () => {
                   onClick={() => { setCompareMode((v) => !v); setSelected([]); }}
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
-                    compareMode ? "border-[#ef4d62] bg-[#ef4d62] text-white" : "border-gray-200 text-gray-700 hover:border-gray-300"
+                    compareMode ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-700 hover:border-gray-300"
                   )}
                 >
                   <Scale className="w-3.5 h-3.5" /> {compareMode ? "Exit Compare" : "Compare"}
@@ -340,14 +341,14 @@ const MyQuotes = () => {
 
               {/* Compare bar */}
               {compareMode && (
-                <div className="flex items-center justify-between gap-2 rounded-xl bg-[#ef4d62]/5 border border-[#ef4d62]/20 px-3.5 py-2.5 mb-3">
+                <div className="flex items-center justify-between gap-2 rounded-xl bg-brand-buyer/5 border border-brand-buyer/20 px-3.5 py-2.5 mb-3">
                   <span className="text-xs font-semibold text-gray-700">{selected.length} selected (max 3)</span>
                   <button
                     onClick={() => setShowCompare(true)}
                     disabled={selected.length < 2}
                     className={cn(
                       "rounded-lg px-3 py-1.5 text-xs font-bold transition-colors",
-                      selected.length >= 2 ? "bg-[#ef4d62] text-white hover:bg-[#ef4d62]/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      selected.length >= 2 ? "bg-brand-buyer text-white hover:bg-brand-buyer/90" : "bg-gray-200 text-gray-400 cursor-not-allowed"
                     )}
                   >
                     Compare Now
@@ -364,7 +365,7 @@ const MyQuotes = () => {
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
                       placeholder="Search by vendor or product..."
-                      className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-[#ef4d62]"
+                      className="w-full rounded-xl border border-gray-200 bg-white pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-2.5">
@@ -375,7 +376,7 @@ const MyQuotes = () => {
                       <DropdownMenuContent align="start" className="w-44">
                         {STATUS_FILTERS.map((o) => (
                           <DropdownMenuItem key={o.key} onClick={() => setStatus(o.key)} className="gap-2 text-sm">
-                            <Check className={cn("w-4 h-4", status === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                            <Check className={cn("w-4 h-4", status === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
@@ -387,7 +388,7 @@ const MyQuotes = () => {
                       <DropdownMenuContent align="end" className="w-44">
                         {SORTS.map((o) => (
                           <DropdownMenuItem key={o.key} onClick={() => setSort(o.key)} className="gap-2 text-sm">
-                            <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-[#ef4d62]" : "opacity-0")} /> {o.label}
+                            <Check className={cn("w-4 h-4", sort === o.key ? "opacity-100 text-brand-buyer" : "opacity-0")} /> {o.label}
                           </DropdownMenuItem>
                         ))}
                       </DropdownMenuContent>
