@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Browser, type BrowserContext } from "@playwright/test";
 import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
+import { readOwnVendorRow } from "../scripts/lib/vendor-row.mjs";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -312,7 +313,7 @@ test("8.1 completing /onboarding writes every collected field to the database", 
 
   // ── The assertion that matters: it reached the database ──
   const db = await signedInDb();
-  const { data: vp } = await db.from("vendor_profiles").select("*").eq("id", VENDOR_ID).maybeSingle();
+  const vp = await readOwnVendorRow(db, VENDOR_ID);
   expect(vp, "vendor_profiles row created").toBeTruthy();
   expect(vp!.brand_name).toBe(FORM.businessName);
   expect(vp!.city).toBe(FORM.city);
@@ -396,7 +397,7 @@ test("8.1 completing /onboarding writes every collected field to the database", 
 // ── 8.3 / 8.4 (unverified branch) ──────────────────────────────────────────
 test("8.3–8.4 the new vendor's pages show their own data, unverified", async ({ browser }) => {
   const db = await signedInDb();
-  const { data: vp } = await db.from("vendor_profiles").select("*").eq("id", VENDOR_ID).maybeSingle();
+  const vp = await readOwnVendorRow(db, VENDOR_ID);
 
   const ctx = await contextAs(browser);
   const page = await ctx.newPage();

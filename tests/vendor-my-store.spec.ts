@@ -1,5 +1,6 @@
 import { test, expect, type Page, type Browser, type BrowserContext } from "@playwright/test";
 import { optionalCredential } from "../scripts/lib/test-credentials.mjs";
+import { readOwnVendorRow } from "../scripts/lib/vendor-row.mjs";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, mkdirSync } from "node:fs";
 import path from "node:path";
@@ -101,7 +102,7 @@ async function readVendorRow() {
   const db = createClient(SUPABASE_URL, ANON, { auth: { persistSession: false } });
   const { error } = await db.auth.signInWithPassword({ email: VENDOR, password: PASSWORD });
   if (error) throw error;
-  const { data } = await db.from("vendor_profiles").select("*").eq("id", (await db.auth.getUser()).data.user!.id).maybeSingle();
+  const data = await readOwnVendorRow(db, (await db.auth.getUser()).data.user!.id);
   const { count: products } = await db
     .from("products").select("*", { count: "exact", head: true }).eq("vendor_id", data!.id);
   return { row: data!, products: products ?? 0 };

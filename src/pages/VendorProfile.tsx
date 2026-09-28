@@ -12,7 +12,12 @@ import { useVendorCatalogues } from "@/lib/queries/catalogues";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
-import { useCallVendor, useContactGate } from "@/lib/queries/calls";
+import {
+  useCallVendor, useContactGate, useVendorContact, useRevealVendorContact,
+  CONTACT_REFUSAL_COPY, type VendorContactResult,
+} from "@/lib/queries/calls";
+import { errorMessage } from "@/lib/errorMessage";
+import { memberSinceLabel } from "@/lib/memberSince";
 import { messaging } from "@/lib/messaging";
 import { logEngagement } from "@/lib/queries/engagement";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,7 +26,7 @@ import { cn } from "@/lib/utils";
 import type { Gender as SavedGender } from "@/lib/listingProducts";
 import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
-  Bookmark, BookmarkCheck, Star, ChevronDown, Users, Mail, Globe,
+  Bookmark, BookmarkCheck, Star, ChevronDown, Users, Globe,
   Search, ArrowUpDown, Filter, Grid2X2, Grid3X3, Play, Factory, Send,
   FileText, ExternalLink, LogIn,
 } from "lucide-react";
@@ -53,11 +58,11 @@ const listContainer = { show: { transition: { staggerChildren: 0.05 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
 // ─────────────────────────────────────────────────────────────
-// DATA (demo vendor — mirrors the vendor-side profile, view only)
+// DATA. Placeholder content still shown for every vendor: the category tiles,
+// the office pictures, the catalogues and the "Sells" chips (ToDo.md). The
+// vendor's identity, contact and business details come from their own row, or
+// read "Not provided".
 // ─────────────────────────────────────────────────────────────
-const BANNER = "/vendorregistration1banner.png";
-const BRAND = "CARAMEL";
-
 const brandCategories = [
   { label: "T-Shirt", src: catTshirt },
   { label: "Denim", src: catDenim },
@@ -94,17 +99,6 @@ const capacityOptions = [
   { key: "Export-grade", desc: "Export-grade manufacturers (international compliance)" },
 ];
 // Which tiers this vendor operates at (read-only for buyers)
-
-const detailRows = [
-  { label: "Business Type", value: "Apparel Manufacturer" },
-  { label: "Company MD", value: "Mr. K.S. Tomar" },
-  { label: "Total Number of Employees", value: "11 to 25 People" },
-  { label: "Year of Establishment", value: "2019" },
-  { label: "Cosora Member Since", value: "1 Year" },
-  { label: "Annual Turnover", value: "Rs. 50 Lakh - 1 Crore" },
-  { label: "GST", value: "07AABCS1077Q1ZV" },
-  { label: "PAN", value: "ABNCS1077Q" },
-];
 
 const sells = [
   "Men's T-Shirts", "Women's Kurtis", "Denim Jackets", "Custom Printing",
@@ -144,7 +138,7 @@ const VendorProfile = () => {
   const chatHref = `/chats/${vendorId}`;
 
   // Real vendor identity + catalogue + reels.
-  const { data: vendor } = useVendorProfile(id);
+  const { data: vendor, isPending: vendorPending, isError: vendorFailed, refetch: refetchVendor } = useVendorProfile(id);
   const { data: catalogues = [] } = useVendorCatalogues(id);
   const { data: reviewData } = useVendorReviews(id);
   const { submit: submitReview } = useReviewMutations();
@@ -161,64 +155,79 @@ const VendorProfile = () => {
   // Website Address row further down. Unresolved counts as NOT visible — the
   // whole point is never to paint a contact channel and take it back.
   const contactVisible = Boolean(user) && !contactLoading && !contactBlocked;
+  // The vendor's phone and WhatsApp are private (admin completion Phase 4).
+  // call_vendor_contact() reveals them on request ("Show phone number", Call Now,
+  // WhatsApp), applying the same rule in the database and limiting how many
+  // sellers' numbers one account opens. Nothing is revealed on page load, so
+  // browsing sellers never uses up that limit.
+  const { numbers, refusal: numbersRefusal, failed: numbersFailed, revealing, reveal } = useVendorContact(vendorId);
+  const revealContact = useRevealVendorContact();
   const following = brands.find((b) => b.id === vendorId)?.isFollowing ?? false;
   const toggleFollow = () => (following ? unfollow(vendorId) : follow(vendorId));
 
-  const brandName = vendor?.brandName ?? BRAND;
+  const brandName = vendor?.brandName ?? "";
 
   // Interim buyer→vendor messaging (Phase 7). Gated on the SAME contact rule
   // the Call button uses — a vendor whose contact details are withheld by
   // moderation must not be reachable through a different button on the same
-  // card. `canReach` is false when the stored number cannot be normalised into
-  // a plausible one, so a malformed entry hides the button rather than opening
-  // a stranger's chat.
-  const contact = useMemo(
-    () => ({ vendorId, brandName, whatsapp: vendor?.whatsapp ?? null }),
-    [vendorId, brandName, vendor?.whatsapp],
-  );
-  const canWhatsApp = !contactLoading && !contactBlocked && messaging().canReach(contact);
-  const openWhatsApp = () => {
-    const ok = messaging().open(contact);
+  // card. Shown when the vendor has a WhatsApp number on file; the tap reveals
+  // it. Once revealed, a number that cannot be normalised into a plausible one
+  // hides the button rather than opening a stranger's chat.
+  const canWhatsApp =
+    Boolean(vendor?.hasWhatsapp) && !contactLoading && !contactBlocked &&
+    (numbers ? messaging().canReach({ vendorId, brandName, whatsapp: numbers.whatsapp }) : true);
+  const openWhatsApp = async () => {
+    if (!user) {
+      toast.info("Sign in to message sellers on WhatsApp", {
+        description: "Contact numbers are shared with signed-in Cosora accounts.",
+        action: { label: "Sign in", onClick: () => navigate("/login") },
+      });
+      return;
+    }
+    let result: VendorContactResult;
+    try {
+      result = await revealContact(vendorId);
+    } catch (e) {
+      toast.error("Couldn't open WhatsApp", { description: errorMessage(e) });
+      return;
+    }
+    if (result.refusal) {
+      const copy = CONTACT_REFUSAL_COPY[result.refusal];
+      toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+      return;
+    }
+    const ok = messaging().open({ vendorId, brandName, whatsapp: result.numbers?.whatsapp ?? null });
     if (!ok) {
       toast.error("Couldn't open WhatsApp", { description: "This seller hasn't added a valid WhatsApp number." });
       return;
     }
     void logEngagement({ eventType: "cta_click", vendorId, ctaName: "message", source: "direct" });
   };
-  const vendorLocation = vendor ? [vendor.city, vendor.country].filter(Boolean).join(", ") : "Gwalior, Madhya Pradesh · India";
-  const aboutText =
-    vendor?.about ??
-    `${brandName} — retail trader & manufacturer of Men's T-Shirts, Sweaters and Hospital Uniforms. Trusted for consistent quality, on-time delivery and flexible order volumes.`;
+  const vendorLocation = [vendor?.city, vendor?.country].filter(Boolean).join(", ");
+  // The vendor's own words, or nothing. This used to be an invented paragraph
+  // about T-shirts, sweaters and hospital uniforms, the same for every vendor.
+  const aboutText = vendor?.about?.trim() || null;
   const fmtCount = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1).replace(/\.0$/, "")}k` : String(n));
 
-  // Real store banner (managed by the vendor) with the demo fallback.
-  const bannerSrc = vendor?.bannerUrl || BANNER;
-
-  // Real contact details, falling back to the demo values when a field is empty
-  // so vendors mid-onboarding still render a complete-looking card.
-  const contactAddress =
-    vendor && [vendor.addressLine, vendor.area, vendor.city, vendor.state, vendor.postalCode].some(Boolean)
-      ? [vendor.addressLine, vendor.area, vendor.city, vendor.state, vendor.postalCode].filter(Boolean).join(", ")
-      : "2nd Floor, Malviya Nagar, Gwalior, Madhya Pradesh, India";
-  const contactRows = [
-    { Icon: Users, value: vendor?.ownerName || "Mr. K.S. Tomar" },
-    { Icon: MapPin, value: contactAddress },
-    { Icon: Phone, value: vendor?.phone || "+91 90110 60851" },
-    { Icon: Mail, value: vendor?.ownerEmail || "contact@caramel.in" },
-    { Icon: Globe, value: vendor?.website || "www.caramel.in" },
+  // The vendor's own details, or "Not provided". Every one of these used to fall
+  // back to a demo value (an owner, a phone, an email, a Gwalior street address, a
+  // GSTIN and a PAN that belonged to no one), so a buyer could call a number or
+  // trust a tax id that wasn't this seller's (securityflags.md, 2026-09-11). The
+  // PAN, email and street address are private now and are not shown at all.
+  const NOT_PROVIDED = "Not provided";
+  const place = [vendor?.city, vendor?.state, vendor?.country].filter(Boolean).join(", ");
+  const websiteValue = vendor?.website?.trim() || null;
+  const detailRowsResolved = [
+    { label: "Business Type", value: vendor?.businessType?.trim() || NOT_PROVIDED },
+    { label: "Company MD", value: vendor?.ownerName?.trim() || NOT_PROVIDED },
+    { label: "Total Number of Employees", value: vendor?.employeeCount?.trim() || NOT_PROVIDED },
+    { label: "Year of Establishment", value: vendor?.yearEstablished ? String(vendor.yearEstablished) : NOT_PROVIDED },
+    { label: "Cosora Member Since", value: memberSinceLabel(vendor?.createdAt) ?? NOT_PROVIDED },
+    { label: "Annual Turnover", value: vendor?.annualTurnover?.trim() || NOT_PROVIDED },
+    { label: "GST", value: vendor?.gstin?.trim() || NOT_PROVIDED },
+    // Only companies and LLPs have a CIN, so an empty one isn't a gap to point at.
+    ...(vendor?.cin?.trim() ? [{ label: "CIN", value: vendor.cin.trim() }] : []),
   ];
-
-  // Real detailed information, with the demo values as fallbacks.
-  const detailRowsResolved = vendor
-    ? [
-        { label: "Business Type", value: vendor.businessType || "Apparel Manufacturer" },
-        { label: "Company MD", value: vendor.ownerName || "Mr. K.S. Tomar" },
-        ...detailRows.slice(2, 6),
-        { label: "GST", value: vendor.gstin || "07AABCS1077Q1ZV" },
-        { label: "PAN", value: vendor.pan || "ABNCS1077Q" },
-      ]
-    : detailRows;
-  const websiteValue = vendor?.website || "www.caramel.in";
 
   // Real reviews only (Master Prompt 8, Phase 2). A vendor with none shows
   // none. This used to fall back to the vendor_profiles aggregate — seed data
@@ -311,6 +320,47 @@ const VendorProfile = () => {
     return list;
   }, [vpProducts, productSearch, genderFilter, sortKey]);
 
+  // Loading, failed and not found are states of their own. All three used to
+  // render a complete invented seller ("CARAMEL", 7,333 followers, a trust seal,
+  // a phone number, a GSTIN and a PAN) that belonged to no one.
+  if (!vendor) {
+    const loading = vendorPending && Boolean(id);
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-2xl lg:max-w-5xl mx-auto px-3 lg:px-4 pt-3 pb-24 space-y-3">
+          <button onClick={() => navigate(-1)} aria-label="Back"
+            className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm hover:bg-gray-100 transition-colors">
+            <ArrowLeft className="h-4 w-4" />
+          </button>
+          {loading ? (
+            <div aria-hidden="true" className="space-y-3">
+              <div className="h-52 sm:h-60 animate-pulse rounded-2xl bg-gray-200" />
+              <div className="h-24 animate-pulse rounded-2xl bg-gray-200" />
+              <div className="h-40 animate-pulse rounded-2xl bg-gray-200" />
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-gray-200 bg-white px-6 py-10 text-center">
+              <p className="text-base font-bold text-gray-900">
+                {vendorFailed ? "Couldn't load this seller's page" : "Seller not found"}
+              </p>
+              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                {vendorFailed
+                  ? "Check your connection and try again."
+                  : "This seller's page doesn't exist or is no longer available."}
+              </p>
+              <motion.button whileTap={TAP} transition={TAP_T}
+                onClick={() => (vendorFailed ? void refetchVendor() : navigate("/home/new-arrivals"))}
+                className="mt-5 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90">
+                {vendorFailed ? "Try again" : "Browse new arrivals"}
+              </motion.button>
+            </div>
+          )}
+        </div>
+        <MobileBottomNav />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ── Scroll-aware sticky header ── */}
@@ -339,7 +389,12 @@ const VendorProfile = () => {
         {/* ══ HERO ══ */}
         <motion.section variants={section} className="rounded-2xl overflow-hidden relative">
           <div className="relative h-52 sm:h-60">
-            <img src={bannerSrc} alt={`${brandName} banner`} className="absolute inset-0 h-full w-full object-cover" />
+            {vendor.bannerUrl ? (
+              <img src={vendor.bannerUrl} alt={`${brandName} banner`} className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              // A plain brand wash until the vendor uploads a banner, not a stock photo.
+              <div className="absolute inset-0 bg-gradient-to-br from-[#ef4d62] via-[#c93a55] to-[#3b1d2a]" />
+            )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
               <span className="text-5xl sm:text-6xl font-extrabold tracking-[0.3em] text-white/20 uppercase">{brandName}</span>
@@ -352,7 +407,7 @@ const VendorProfile = () => {
             </button>
 
             {/* TrustedSEAL image — top right (verified vendors only) */}
-            {(vendor?.isVerified ?? true) && (
+            {vendor.isVerified && (
               <img src={trustedSeal} alt="TrustedSEAL" className="absolute top-3 right-3 z-10 h-9 w-auto drop-shadow" />
             )}
             {/* 3-dot menu */}
@@ -363,22 +418,26 @@ const VendorProfile = () => {
             {/* Info — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
               <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight">{brandName}</h1>
-              <div className="flex items-center gap-1 mt-0.5 mb-2">
-                <MapPin className="h-3 w-3 text-white/80 shrink-0" />
-                <span className="text-xs text-white/80">{vendorLocation}</span>
+              <div className="flex min-h-[1rem] items-center gap-1 mt-0.5 mb-2">
+                {vendorLocation && (
+                  <>
+                    <MapPin className="h-3 w-3 text-white/80 shrink-0" />
+                    <span className="text-xs text-white/80">{vendorLocation}</span>
+                  </>
+                )}
               </div>
               <div className="flex items-center gap-6 mb-1">
                 <div>
                   <p className="text-[10px] text-white/70 uppercase tracking-wider leading-none">Followers</p>
-                  <p className="text-lg font-bold text-white leading-tight">{vendor ? fmtCount(vendor.followers) : "7,333"}</p>
+                  <p className="text-lg font-bold text-white leading-tight">{fmtCount(vendor.followers)}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-white/70 uppercase tracking-wider leading-none">All Items</p>
-                  <p className="text-lg font-bold text-white leading-tight">{vendor ? vpProducts.length : "3,538"}</p>
+                  <p className="text-lg font-bold text-white leading-tight">{vpProducts.length}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                <p className="text-xs text-white/80 font-medium">{vendor?.businessType ?? "Manufacturer"}</p>
+                {vendor.businessType && <p className="text-xs text-white/80 font-medium">{vendor.businessType}</p>}
                 {vendor?.international && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
                     <Globe className="h-3 w-3" /> International-ready
@@ -420,14 +479,19 @@ const VendorProfile = () => {
         {/* ══ ABOUT US ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-2">About Us</h2>
-          <p className="text-sm text-gray-600 leading-relaxed">{aboutText}</p>
+          {aboutText ? (
+            <p className="text-sm text-gray-600 leading-relaxed">{aboutText}</p>
+          ) : (
+            <p className="text-sm text-gray-400">This seller hasn't added a description yet.</p>
+          )}
         </motion.section>
 
         {/* ══ CONTACT DETAILS ══ */}
         {/* Gated on exactly the same rule as calling (useCallVendor → callGate).
             A phone number printed on the page is as much of a leak as a dial
             button, so locking the chat has to close both or it closes neither.
-            Signed-out visitors previously got the full card with no check at all. */}
+            The number itself is private and is revealed on request by
+            call_vendor_contact(), which applies the rule in the database. */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Contact Details</h2>
           {!user ? (
@@ -437,7 +501,7 @@ const VendorProfile = () => {
               </div>
               <p className="text-sm font-bold text-gray-900">Sign in to see contact details</p>
               <p className="mx-auto mt-1 max-w-xs text-xs text-gray-500">
-                Phone, address and email are shared with signed-in Cosora accounts.
+                Phone and WhatsApp numbers are shared with signed-in Cosora accounts.
               </p>
               <motion.button whileTap={TAP} transition={TAP_T} onClick={() => navigate("/login")}
                 className="mt-4 rounded-xl bg-[#ef4d62] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#ef4d62]/90">
@@ -445,10 +509,9 @@ const VendorProfile = () => {
               </motion.button>
             </div>
           ) : contactLoading ? (
-            /* Skeleton, never the real rows. Rendering them "just until the
-               check resolves" would flash the number and leak it anyway. */
+            /* Skeleton, never the real rows, while the gate resolves. */
             <div className="divide-y divide-gray-100" aria-hidden="true">
-              {contactRows.map((_, i) => (
+              {[0, 1, 2, 3].map((i) => (
                 <div key={i} className={cn("flex items-center gap-3", i === 0 ? "pb-3" : "py-3 last:pb-0")}>
                   <div className="h-4 w-4 shrink-0 animate-pulse rounded bg-gray-200" />
                   <div className="h-3 flex-1 animate-pulse rounded bg-gray-200" style={{ maxWidth: `${72 - i * 8}%` }} />
@@ -466,12 +529,43 @@ const VendorProfile = () => {
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {contactRows.map(({ Icon, value }, i) => (
-                <div key={i} className={cn("flex items-start gap-3", i === 0 ? "pb-3" : "py-3 last:pb-0")}>
-                  <Icon className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
-                  <span className="text-sm text-gray-700">{value}</span>
-                </div>
-              ))}
+              <div className="flex items-start gap-3 pb-3">
+                <Users className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                <span className="text-sm text-gray-700">{vendor.ownerName?.trim() || NOT_PROVIDED}</span>
+              </div>
+              <div className="flex items-start gap-3 py-3">
+                <MapPin className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                <span className="text-sm text-gray-700">{place || NOT_PROVIDED}</span>
+              </div>
+              <div className="flex items-start gap-3 py-3">
+                <Phone className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                {!vendor.hasPhone ? (
+                  <span className="text-sm text-gray-700">{NOT_PROVIDED}</span>
+                ) : numbers ? (
+                  <span className="text-sm text-gray-700">{numbers.phone || NOT_PROVIDED}</span>
+                ) : numbersRefusal ? (
+                  <div className="rounded-lg bg-amber-50 px-2.5 py-2">
+                    <p className="text-sm font-semibold text-amber-900">{CONTACT_REFUSAL_COPY[numbersRefusal].title}</p>
+                    {CONTACT_REFUSAL_COPY[numbersRefusal].description && (
+                      <p className="mt-0.5 text-xs text-amber-800">{CONTACT_REFUSAL_COPY[numbersRefusal].description}</p>
+                    )}
+                  </div>
+                ) : (
+                  <div>
+                    <button onClick={reveal} disabled={revealing}
+                      className="text-sm font-semibold text-[#ef4d62] hover:underline disabled:opacity-60">
+                      {revealing ? "Loading…" : "Show phone number"}
+                    </button>
+                    {numbersFailed && !revealing && (
+                      <p className="mt-0.5 text-xs text-red-600">Couldn't load the number. Try again.</p>
+                    )}
+                  </div>
+                )}
+              </div>
+              <div className="flex items-start gap-3 py-3 last:pb-0">
+                <Globe className="h-4 w-4 text-gray-400 shrink-0 mt-0.5" />
+                <span className="text-sm text-gray-700 break-all">{websiteValue || NOT_PROVIDED}</span>
+              </div>
             </div>
           )}
         </motion.section>
@@ -630,13 +724,13 @@ const VendorProfile = () => {
                   </div>
 
                   {/* Website — a contact channel, so it lives behind the same
-                      gate as phone/email even though it sits in this section.
+                      gate as the phone even though it sits in this section.
                       The rest of these rows (Company MD, Business Type, GST,
-                      PAN, Capacity) are registry data, not a way to reach
+                      CIN, Capacity) are registry data, not a way to reach
                       anyone, and stay visible regardless. Reuses the gate
                       already resolved for the Contact Details card above rather
                       than running it a second time on the same page. */}
-                  {contactVisible && (
+                  {contactVisible && websiteValue && (
                     <div className="flex items-center justify-between gap-4 text-sm">
                       <span className="text-gray-500">Website Address</span>
                       <a

@@ -5,6 +5,7 @@ export type Json =
   | null
   | { [key: string]: Json | undefined }
   | Json[]
+
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -2108,6 +2109,8 @@ export type Database = {
           employee_count: string | null
           followers_count: number
           gstin: string | null
+          has_phone: boolean | null
+          has_whatsapp: boolean | null
           id: string
           is_verified: boolean
           landmark: string | null
@@ -2153,6 +2156,8 @@ export type Database = {
           employee_count?: string | null
           followers_count?: number
           gstin?: string | null
+          has_phone?: boolean | null
+          has_whatsapp?: boolean | null
           id: string
           is_verified?: boolean
           landmark?: string | null
@@ -2198,6 +2203,8 @@ export type Database = {
           employee_count?: string | null
           followers_count?: number
           gstin?: string | null
+          has_phone?: boolean | null
+          has_whatsapp?: boolean | null
           id?: string
           is_verified?: boolean
           landmark?: string | null
@@ -2357,7 +2364,20 @@ export type Database = {
       }
     }
     Functions: {
+      account_deletion_blocker: { Args: { p_user: string }; Returns: string }
+      account_deletion_channels: { Args: { p_user: string }; Returns: string[] }
+      account_deletion_sweep_list: {
+        Args: never
+        Returns: {
+          avatar_paths: string[]
+          avatar_url: string
+          phase: string
+          request_id: string
+          user_id: string
+        }[]
+      }
       account_is_active: { Args: { p_id: string }; Returns: boolean }
+      account_not_deleted: { Args: { p_id: string }; Returns: boolean }
       active_ads: {
         Args: {
           filter_categories?: string[]
@@ -2393,7 +2413,6 @@ export type Database = {
         }
         Returns: undefined
       }
-      account_deletion_blocker: { Args: { p_user: string }; Returns: string }
       ad_bump_window: { Args: never; Returns: string }
       ad_category_benchmarks: { Args: { v?: string }; Returns: Json }
       ad_click: { Args: { ad: string; p_session?: string }; Returns: undefined }
@@ -2462,6 +2481,13 @@ export type Database = {
           suspended_by_full_name: string
         }[]
       }
+      admin_ad_reason_codes: {
+        Args: never
+        Returns: {
+          code: string
+          label: string
+        }[]
+      }
       admin_ad_review_log_list: {
         Args: { p_ad_id: string }
         Returns: {
@@ -2476,6 +2502,53 @@ export type Database = {
           reviewer_id: string
         }[]
       }
+      admin_audit_log_actors: {
+        Args: never
+        Returns: {
+          actor_id: string
+          actor_name: string
+          actor_role: Database["public"]["Enums"]["admin_role_type"]
+          entries: number
+          last_at: string
+        }[]
+      }
+      admin_audit_log_list: {
+        Args: {
+          p_action?: string
+          p_actor?: string
+          p_before_id?: number
+          p_from?: string
+          p_limit?: number
+          p_table?: string
+          p_to?: string
+        }
+        Returns: {
+          action: string
+          actor_id: string
+          actor_name: string
+          actor_role: Database["public"]["Enums"]["admin_role_type"]
+          at: string
+          changes: Json
+          id: number
+          own_row: boolean
+          reason: string
+          source: string
+          target_id: string
+          target_table: string
+        }[]
+      }
+      admin_audit_record: {
+        Args: {
+          p_action: string
+          p_actor: string
+          p_changes: Json
+          p_source: string
+          p_target_id: string
+          p_target_table: string
+        }
+        Returns: undefined
+      }
+      admin_audit_session: { Args: { p_action: string }; Returns: undefined }
       admin_block_reason_add: {
         Args: { p_reason: string }
         Returns: {
@@ -2532,6 +2605,20 @@ export type Database = {
           status: string
         }[]
       }
+      admin_cron_status: {
+        Args: never
+        Returns: {
+          active: boolean
+          failures_24h: number
+          jobname: string
+          last_finished_at: string
+          last_message: string
+          last_started_at: string
+          last_status: string
+          runs_24h: number
+          schedule: string
+        }[]
+      }
       admin_embedding_pipeline_health: {
         Args: { p_limit?: number }
         Returns: {
@@ -2543,6 +2630,20 @@ export type Database = {
           status: string
           vault_secret_ok: boolean
           videos_missing: number
+        }[]
+      }
+      admin_engagement_event_failures: {
+        Args: { p_days?: number }
+        Returns: {
+          constraint_name: string
+          count: number
+          error_code: string
+          first_at: string
+          hour: string
+          last_at: string
+          last_event_type: string
+          last_source: string
+          message: string
         }[]
       }
       admin_faq_add: {
@@ -2563,7 +2664,12 @@ export type Database = {
           surface: string
         }[]
       }
-      admin_faq_delete: { Args: { p_id: string }; Returns: { id: string }[] }
+      admin_faq_delete: {
+        Args: { p_id: string }
+        Returns: {
+          id: string
+        }[]
+      }
       admin_faq_list: {
         Args: { p_surface?: string }
         Returns: {
@@ -2583,7 +2689,10 @@ export type Database = {
       }
       admin_faq_reorder: {
         Args: { p_id: string; p_position: number }
-        Returns: { id: string; position: number }[]
+        Returns: {
+          id: string
+          position: number
+        }[]
       }
       admin_faq_update: {
         Args: {
@@ -2729,6 +2838,10 @@ export type Database = {
           id: string
         }[]
       }
+      admin_report_summary: {
+        Args: { p_from?: string; p_to?: string }
+        Returns: Json
+      }
       admin_revoke: {
         Args: { p_user_id: string }
         Returns: {
@@ -2768,6 +2881,28 @@ export type Database = {
           is_admin: boolean
         }[]
       }
+      admin_subscription_cancel: {
+        Args: { p_reason: string; p_subscription_id: string }
+        Returns: undefined
+      }
+      admin_subscription_change_plan: {
+        Args: { p_plan_id: string; p_reason: string; p_subscription_id: string }
+        Returns: undefined
+      }
+      admin_vendor_private: {
+        Args: { p_ids: string[] }
+        Returns: {
+          address_line: string
+          area: string
+          id: string
+          landmark: string
+          owner_email: string
+          pan: string
+          phone: string
+          postal_code: string
+          whatsapp: string
+        }[]
+      }
       admin_whoami: {
         Args: never
         Returns: {
@@ -2787,11 +2922,21 @@ export type Database = {
         Args: { target_id: string; target_table: string }
         Returns: undefined
       }
-      approve_vendor_content_bulk: {
-        Args: { target: string }
-        Returns: undefined
+      approve_vendor_videos_bulk: {
+        Args: { p_vendor: string }
+        Returns: number
       }
       archive_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
+      block_account_from_review: {
+        Args: {
+          p_profile_id: string
+          p_reason_id: string
+          p_resume?: boolean
+          p_review_id: string
+          p_side: string
+        }
+        Returns: undefined
+      }
       build_video_search_text: {
         Args: { v: Database["public"]["Tables"]["product_videos"]["Row"] }
         Returns: string
@@ -2810,6 +2955,14 @@ export type Database = {
         Returns: {
           full_name: string
           phone: string
+        }[]
+      }
+      call_vendor_contact: {
+        Args: { p_vendor_id: string }
+        Returns: {
+          brand_name: string
+          phone: string
+          whatsapp: string
         }[]
       }
       cancel_account_deletion: { Args: never; Returns: Json }
@@ -2849,6 +3002,10 @@ export type Database = {
       }
       certificate_mark_returned: {
         Args: { p_ad_certificate_id: string; p_reason: string }
+        Returns: string
+      }
+      complete_account_deletion: {
+        Args: { p_request: string }
         Returns: string
       }
       confirm_account_deletion: { Args: { p_code: string }; Returns: Json }
@@ -3015,6 +3172,19 @@ export type Database = {
           phone: string
         }[]
       }
+      my_vendor_private: {
+        Args: never
+        Returns: {
+          address_line: string
+          area: string
+          landmark: string
+          owner_email: string
+          pan: string
+          phone: string
+          postal_code: string
+          whatsapp: string
+        }[]
+      }
       next_invoice_number: { Args: never; Returns: string }
       normalise_search_query: { Args: { q: string }; Returns: string }
       notify: {
@@ -3034,14 +3204,17 @@ export type Database = {
       owns_product: { Args: { pid: string }; Returns: boolean }
       owns_rfq: { Args: { rid: string }; Returns: boolean }
       pause_ad_campaign_by_admin: {
-        Args: { p_ad_id: string; p_reason_code: string }
+        Args: { p_ad_id: string; p_note?: string; p_reason_code: string }
         Returns: undefined
       }
       pause_ad_campaign_by_vendor: {
         Args: { p_ad_id: string; p_reason_code?: string }
         Returns: undefined
       }
-      process_due_account_deletions: { Args: never; Returns: number }
+      process_due_account_deletions: {
+        Args: { p_min_overdue?: string }
+        Returns: number
+      }
       prune_search_query_embeddings: {
         Args: {
           p_max_age_days?: number
@@ -3053,6 +3226,10 @@ export type Database = {
       recompute_vendor_catalog_embedding: {
         Args: { v_id: string }
         Returns: undefined
+      }
+      record_account_storage_cleanup: {
+        Args: { p_error?: string; p_request: string }
+        Returns: string
       }
       record_embedding_pipeline_health: { Args: never; Returns: string }
       regex_probe: {
@@ -3183,6 +3360,7 @@ export type Database = {
         | "ads_moderator"
         | "finance_admin"
         | "support"
+        | "manager"
       product_status: "draft" | "under_review" | "live" | "rejected"
       quote_status: "pending" | "shortlisted" | "accepted" | "rejected"
       rfq_status: "active" | "closed"
@@ -3321,6 +3499,7 @@ export const Constants = {
         "ads_moderator",
         "finance_admin",
         "support",
+        "manager",
       ],
       product_status: ["draft", "under_review", "live", "rejected"],
       quote_status: ["pending", "shortlisted", "accepted", "rejected"],

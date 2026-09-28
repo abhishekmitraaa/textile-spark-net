@@ -96,7 +96,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -162,6 +162,30 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-09-28 — Admin completion Phase 4a: vendor private-field readers (2 migrations rehearsed and applied, md5s match; harness 07 25/25 as expected, rehearsed and live; both apps typecheck and build; i18n 6972/6972)
+
+- **Harness `07_vendor_contact.sql`** (rehearsed together with `20260927185902`, then run again against the applied schema: the same 25 results):
+  - `my_vendor_private()`: demo-vendor 1 row with a phone; a buyer 0 rows; anon 42501.
+  - `call_vendor_contact()`:
+    - anon 42501 (no EXECUTE);
+    - a buyer gets demo-vendor's phone, and the ledger holds 1 row;
+    - the same vendor again is served, and the ledger is unchanged (1 row, `revealed_at` not moved);
+    - the vendor asking for itself is served, with no ledger row;
+    - a non-vendor id `not_a_vendor`;
+    - caller suspended `caller_suspended`, vendor suspended `target_suspended`, chat under review `under_review`;
+    - 30 other vendors in the last hour `rate_limited`, and 100 in the last day `rate_limited`;
+    - an already-revealed vendor at the limit is served;
+    - 5 rows older than a day are pruned by the next call.
+  - `admin_vendor_private()`: super_admin, vendor_ops, support and finance_admin get the row; product_moderator, ads_moderator, manager and a buyer 42501; 201 ids 22023.
+  - `has_phone` / `has_whatsapp` readable signed out: 9 vendors with a phone, 3 with WhatsApp.
+- **Static checks:**
+  - No function, view or RLS policy reads the private columns as the caller (catalog queries).
+  - A scripted scan of both apps' `src/` finds no `vendor_profiles` select of the eight columns, and no `select("*")` on it.
+  - Buyer: `npx tsc --noEmit --skipLibCheck -p tsconfig.app.json` 0; `npm run build` 0; `npm run i18n:check` 6972/6972 in both catalogues. The built bundle contains none of the invented vendor values (`caramel.in`, the fake GSTIN and PAN, "Tomar", "Malviya Nagar"): 0 files.
+  - Cosora-Admin: `npm run typecheck` 0; `npm run build` 0; the bundle calls `admin_vendor_private`.
+  - `node --check scripts/contact-gate-check.mjs` passes.
+- **Not run:** `scripts/contact-gate-check.mjs` and the Playwright specs touched here (`chat-pipeline` T9, `vendor-my-store`, `vendor-onboarding-write-path`, `mp4-phase2-callback-onboarding`, `profile-save-diff`). They sign in with the demo accounts against production. R-18 in the gate check is expected to fail until Phase 4b.
 
 ### 2026-09-27 — Admin completion Phase 3: admin correctness (3 migrations rehearsed and applied, md5s match; harness 05 11/11 live; harness 06 8/8 rehearsed; report reconciles)
 

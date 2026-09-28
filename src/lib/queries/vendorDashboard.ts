@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { errorMessage } from "@/lib/errorMessage";
+import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
 // Real vendor dashboard metrics, derived from the vendor's own rows (RLS lets
@@ -162,14 +164,18 @@ export function calculateProfileScore(input: ProfileScoreInput): ProfileScoreRes
 }
 
 /**
- * The `vendor_profiles` columns the score reads. One list, so a new signal
+ * The public `vendor_profiles` columns the score reads. One list, so a new signal
  * cannot be added to the weights above and then silently score as `false`
  * everywhere because one call site forgot to select its column.
+ *
+ * Two signals are private columns (admin completion Phase 4): the business phone
+ * and email. fetchProfileScoreRow() adds them from my_vendor_private(). Never put
+ * them back in this list.
  */
 export const PROFILE_SCORE_COLUMNS =
-  "about, phone, owner_email, website, category, office_photos, year_established, employee_count, annual_turnover, capacity, social, reviews_count";
+  "about, website, category, office_photos, year_established, employee_count, annual_turnover, capacity, social, reviews_count";
 
-/** The shape `PROFILE_SCORE_COLUMNS` returns. */
+/** The shape fetchProfileScoreRow() returns: PROFILE_SCORE_COLUMNS plus the two private signals. */
 export interface ProfileScoreRow {
   about: string | null;
   phone: string | null;
@@ -253,21 +259,43 @@ async function count<T extends CountableTable>(
  * Call it AFTER every other write in a flow: it scores rows, not intentions,
  * so products inserted later in the same submit have to already be there.
  */
+/**
+ * The vendor's OWN row, shaped for the scorer: the public columns in `extra` and
+ * PROFILE_SCORE_COLUMNS, plus phone and owner_email from my_vendor_private(),
+ * which only ever returns the caller's own. Throws if either read fails, so a
+ * failed read is never scored (and written back) as an empty profile.
+ */
+async function fetchProfileScoreRow<Extra extends object = object>(
+  vendorId: string,
+  extra?: string,
+): Promise<(ProfileScoreRow & Extra) | null> {
+  const [row, priv] = await Promise.all([
+    supabase
+      .from("vendor_profiles")
+      .select(extra ? `${extra}, ${PROFILE_SCORE_COLUMNS}` : PROFILE_SCORE_COLUMNS)
+      .eq("id", vendorId)
+      .maybeSingle(),
+    fetchMyVendorPrivate(vendorId),
+  ]);
+  if (row.error) throw row.error;
+  if (!row.data) return null;
+  return {
+    ...(row.data as unknown as object),
+    phone: priv?.phone ?? null,
+    owner_email: priv?.owner_email ?? null,
+  } as ProfileScoreRow & Extra;
+}
+
 export async function syncProfileScore(vendorId: string): Promise<number> {
   const [productsTotal, productsLive, quotesSent] = await Promise.all([
     count("products", (q) => q.eq("vendor_id", vendorId)),
     count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "live")),
     count("quotes", (q) => q.eq("vendor_id", vendorId)),
   ]);
-  const { data: vp, error: se } = await supabase
-    .from("vendor_profiles")
-    .select(PROFILE_SCORE_COLUMNS)
-    .eq("id", vendorId)
-    .maybeSingle();
-  if (se) throw se;
+  const vp = await fetchProfileScoreRow(vendorId);
 
   const { score } = calculateProfileScore(
-    profileScoreInputFrom(vp as ProfileScoreRow | null, { productsTotal, productsLive, quotesSent }),
+    profileScoreInputFrom(vp, { productsTotal, productsLive, quotesSent }),
   );
   const { error } = await supabase.from("vendor_profiles").update({ profile_score: score }).eq("id", vendorId);
   if (error) throw error;
@@ -297,13 +325,17 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
   const { data: prodRows } = await supabase.from("products").select("enquiries_count").eq("vendor_id", vendorId);
   const enquiries = (prodRows ?? []).reduce((s, r) => s + (r.enquiries_count ?? 0), 0);
 
-  const { data: vp } = await supabase
-    .from("vendor_profiles")
-    .select(`followers_count, profile_score, ${PROFILE_SCORE_COLUMNS}`)
-    .eq("id", vendorId)
-    .maybeSingle();
+  // A failed read scores as empty for display, and the write-back below is
+  // skipped, as before: it only runs when the row was read.
+  const vp = await fetchProfileScoreRow<{ followers_count: number; profile_score: number }>(
+    vendorId,
+    "followers_count, profile_score",
+  ).catch((e) => {
+    console.warn("[vendorDashboard] profile read failed:", errorMessage(e));
+    return null;
+  });
 
-  const scoreInput = profileScoreInputFrom(vp as ProfileScoreRow | null, {
+  const scoreInput = profileScoreInputFrom(vp, {
     productsTotal,
     productsLive,
     quotesSent,

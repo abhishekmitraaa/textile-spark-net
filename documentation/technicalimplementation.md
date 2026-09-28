@@ -1631,8 +1631,8 @@ client-selectable. The migrations are `20260923171821_profiles_contact_columns_p
     more.
   - It ignores quote status on purpose, because a vendor can set their own (MPF-18).
   - `useCallBuyer()` maps the reason to callGate's copy and no longer calls `callGate()` itself.
-  - `useCallVendor()` keeps the client gate, because a vendor's business phone
-    (`vendor_profiles.phone`) is public by design.
+  - `useCallVendor()` works the same way since admin completion Phase 4, through
+    `call_vendor_contact()`: a vendor's phone is private too (next section).
 - **`fetchProfileFull()` throws on a read error.** It used to return blanks, and
   `useEditableProfile` seeds its form from the first result, and while `saveProfileFull()`
   wrote every field (MPF-9, fixed 2026-09-24) a refused read could have been saved over real
@@ -1641,6 +1641,72 @@ client-selectable. The migrations are `20260923171821_profiles_contact_columns_p
   - `scripts/profile-contact-privacy-check.mjs`: every role, over HTTP;
   - `scripts/contact-gate-check.mjs`: the client and server gates in every state;
   - `tests/profile-contact-privacy.spec.ts`: the page sweep, Call Buyer and the admin.
+
+---
+
+## Vendor private fields — readers first, then the revoke (admin completion Phase 4, 2026-09-28)
+
+Mitra's decision (2026-09-27): a vendor's `pan`, `owner_email`, `phone`, `whatsapp` and street
+address (`address_line`, `area`, `landmark`, `postal_code`) are private. GSTIN, CIN, owner name,
+city, state, country and website stay public. It is the `profiles` contact pattern above, applied
+to `vendor_profiles`, in the same order (MPF-19): readers and code first, the revoke last.
+
+- **Migrations.**
+  - `20260927184250_vendor_private_readers.sql`: the three readers and the reveal ledger.
+  - `20260927185902_vendor_contact_channels.sql`: `has_phone` / `has_whatsapp`, and the
+    ledger's last-day rule.
+  - **Phase 4b (pending):** replace table SELECT for anon and authenticated with column
+    SELECT on every column except the eight, after both apps are live without the old reads.
+- **Readers.** Each is SECURITY DEFINER, with `search_path = ''` and EXECUTE for authenticated
+  only:
+
+  | Function | Returns | Gate | Used by |
+  |---|---|---|---|
+  | `my_vendor_private()` | own eight fields | `auth.uid()`'s row only | `fetchMyVendorPrivate()` in `src/lib/queries/vendorStore.ts` → `useMyVendorProfile`, `fetchBillTo()` (invoice and receipt "Bill to"), the profile score (`fetchProfileScoreRow()`), `/subscription`'s tax fields |
+  | `call_vendor_contact(p_vendor_id)` | `phone`, `whatsapp`, `brand_name` | signed in; neither account suspended; their chat not under review; the reveal limit | `useCallVendor()`, `useVendorContact()`, `useRevealVendorContact()` in `src/lib/queries/calls.ts` |
+  | `admin_vendor_private(p_ids)` | id and the eight fields | super_admin, vendor_ops, support, finance_admin; at most 200 ids | Cosora-Admin Vendor detail |
+
+- **`call_vendor_contact()` is callGate in the database, plus a limit.**
+  - A refusal is a 42501 whose message is the reason, in this order: `not_signed_in`,
+    `caller_suspended`, `not_a_vendor`, `target_suspended`, `under_review`, `rate_limited`.
+  - **The limit:** at most 30 different vendors in the last hour and 100 in the last day, per
+    account. The ledger `admin.vendor_contact_reveals` (caller, vendor, revealed_at; PK on the
+    pair) has RLS and no client grants.
+    - Concurrent calls from one account are serialised with
+      `pg_advisory_xact_lock(hashtext('vendor_contact:' || caller))`, so parallel requests
+      can't all read the same count (the plan-cap race lesson).
+    - A vendor already revealed in the last day is served again without counting and without
+      moving its timestamp.
+    - Each call deletes that caller's rows older than a day, so the ledger holds at most about
+      a day's reveals per account, without a scheduled job.
+    - A vendor asking for their own number isn't counted.
+  - The client maps each reason to copy (`CALL_REFUSAL_COPY` for Call Now,
+    `CONTACT_REFUSAL_COPY` for the contact card and WhatsApp). A failure that isn't a refusal
+    is thrown and shown with `errorMessage()`.
+- **Nothing is revealed on render.** `useVendorContact()` is a React Query entry with
+  `enabled: false`; it fills only when the buyer presses "Show phone number", Call Now or
+  WhatsApp. All three share one cache key per (viewer, vendor), so one reveal serves the page.
+  Call Now always asks afresh (`staleTime: 0`), because moderation can change between two taps.
+- **`has_phone` / `has_whatsapp`** are stored generated columns
+  (`nullif(btrim(phone), '') is not null`). The page uses them to offer the button and the
+  WhatsApp action without reading a number. They're public and say only that a number exists.
+- **The public page (`/vendor/:id`)** selects public columns only, and answers "not found" for
+  an id that isn't a uuid without a request. Loading, failed and not found are separate
+  states. An empty field reads "Not provided", or the row is left out (CIN).
+- **The vendor's own screens** no longer `select("*")`: `MY_STORE_COLUMNS` names the columns
+  (the old `*` also pulled the 1,536-number `catalog_embedding`), and the eight private fields
+  are merged from `my_vendor_private()`. `fetchMyVendorPrivate(id)` returns null unless `id` is
+  the signed-in user, so it never shows the caller's own details under another vendor's id.
+- **What 4b can and can't break.** No function, view or RLS policy reads the eight columns as
+  the caller (checked 2026-09-28: every function that reads `vendor_profiles` is SECURITY
+  DEFINER, and no view or policy refers to it). Edge functions use the service role. So the
+  revoke affects direct PostgREST reads only, and both apps' `src/` were scanned for them.
+- **Tests:**
+  - `scripts/admin-completion/07_vendor_contact.sql`: every reader and refusal, the limits,
+    the prune;
+  - `scripts/contact-gate-check.mjs`: the client gate and both server gates in every state, and
+    R-18 (signed out, nothing readable), which fails until 4b;
+  - `tests/chat-pipeline.spec.ts` T9: the page gate, and the reveal on request.
 
 ---
 

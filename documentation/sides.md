@@ -190,11 +190,24 @@ the demand side of India's fashion and textile supply chain.
   to a thread — including a test message — can only be removed with service_role. Found while
   verifying the quote chat on 2026-09-16; two clearly-labelled test rows are still in the demo
   buyer's thread for that reason.
-- **A vendor's public page invents what the vendor left blank.** On `/vendor/:id`, an empty
-  owner name, phone, email, website, address, GSTIN or PAN is replaced by a hardcoded demo
-  value ("Mr. K.S. Tomar", a Gwalior address, a GSTIN that is no one's), and so are the
-  About text and banner. Logged in `securityflags.md`; left for a later round on Mitra's
-  decision (Master Prompt 8).
+- **A vendor's public page still shows placeholder content in four places:** the category
+  tiles, the office pictures (stock photos, though vendors can now upload their own), the
+  catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
+  contact and business details were fixed on 2026-09-28 (below).
+
+### Fixed 2026-09-28 (admin completion, Phase 4a: vendor contact details)
+- **A vendor's page no longer invents anything.** An empty owner, phone, email, website,
+  address, GSTIN, PAN, About text, banner, employee count, founding year, member-since or
+  turnover used to be filled with a demo value that belonged to no one. Empty now reads "Not
+  provided", and the real values come from the vendor's row. An unknown seller shows "Seller not
+  found" instead of a made-up one, and loading shows a skeleton.
+- **A vendor's phone number is shown when the buyer asks for it.** Signed in, the contact card
+  has **Show phone number**; Call Now and WhatsApp reveal it the same way. Signed out, all three
+  ask the buyer to sign in. One account can open up to 30 sellers' numbers an hour and 100 a day;
+  reopening a seller already opened that day is free. Past the limit, the buyer is told to try
+  later or use chat.
+- **The vendor's email, PAN and street address are no longer shown to buyers.** The card shows
+  the owner, the city, state and country, and the website. CIN shows when the vendor has one.
 
 ### Fixed 2026-09-27 (sign-in)
 - **Mobile sign-in works again, in test mode.** No SMS is sent yet, so the code screen says so,
@@ -445,6 +458,16 @@ rather than a supplier directory.
 
 ---
 
+### Fixed 2026-09-28 (admin completion, Phase 4a: private business details)
+- **Your PAN, business email, phone, WhatsApp and street address are private.** Buyers no
+  longer see your email, PAN or street address. A signed-in buyer sees your phone or WhatsApp
+  when they ask for it, within a per-buyer limit. Your GSTIN, CIN, owner name, city and website
+  stay public.
+- **Your own screens are unchanged:** My Store, Business Profile, KYC, the profile score,
+  invoices and receipts still show all of it to you.
+- **Your public page shows what you entered, or "Not provided".** It used to fill your empty
+  fields with someone else's demo details.
+
 ### Fixed 2026-09-27 (sign-in)
 - **Seller signup and sign-in by mobile number work again, in test mode.** No SMS is sent yet,
   so the code screen says so, and any 6 digits sign in. This is a sign-in bypass on purpose
@@ -580,6 +603,11 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-09-28 (admin completion, Phase 4a)
+- **Vendor detail** reads a vendor's PAN, email, phone, WhatsApp and street address through
+  `admin_vendor_private()` (super admin, vendor ops, support, finance), and now shows WhatsApp
+  too. Any other role sees a note that the fields are private.
 
 ### Rules the admin layer must respect
 - **Notifications are written only by `SECURITY DEFINER` functions** — no insert policy for

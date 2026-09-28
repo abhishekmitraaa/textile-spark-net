@@ -32,6 +32,14 @@
  * phone. Seen from the vendor, the roles swap: the vendor suspended is
  * caller_suspended, the buyer suspended is target_suspended.
  *
+ * SECOND SERVER TWIN (admin completion Phase 4, 2026-09-28): a vendor's phone and
+ * WhatsApp are private too. useCallVendor gets them from call_vendor_contact(),
+ * which applies the same three rules and raises the same reason codes, so every
+ * state is also checked from the BUYER's side against it. With nothing blocking,
+ * demo-buyer gets demo-vendor's phone. The function also limits reveals (30
+ * vendors an hour, 100 a day); repeating one vendor within the day doesn't count,
+ * so this script never approaches the limit.
+ *
  * Run: node scripts/contact-gate-check.mjs
  */
 import { createClient } from "@supabase/supabase-js";
@@ -91,6 +99,16 @@ async function callGate(db, meId, otherId) {
  */
 async function serverGate(db, buyerId) {
   const { data, error } = await db.rpc("call_buyer_contact", { p_buyer_id: buyerId });
+  if (error) return error.message;
+  return Array.isArray(data) && data.length === 1 && data[0].phone ? null : `unexpected: ${JSON.stringify(data?.length)} rows`;
+}
+
+/**
+ * call_vendor_contact(), the server-side gate for the buyer -> vendor direction.
+ * Returns the refusal's reason code, or null when the phone is released.
+ */
+async function vendorServerGate(db, vendorId) {
+  const { data, error } = await db.rpc("call_vendor_contact", { p_vendor_id: vendorId });
   if (error) return error.message;
   return Array.isArray(data) && data.length === 1 && data[0].phone ? null : `unexpected: ${JSON.stringify(data?.length)} rows`;
 }
@@ -171,6 +189,7 @@ try {
   convId = await setConversation("active");
   check("none (both active)", null, await callGate(buyer.db, buyer.id, vendor.id));
   check("server: none -> vendor gets the buyer's phone", null, await serverGate(vendor.db, buyer.id));
+  check("server: none -> buyer gets the vendor's phone", null, await vendorServerGate(buyer.db, vendor.id));
 
   // ── under_review: nothing suspended, thread locked ──
   await setConversation("under_review");
@@ -178,12 +197,14 @@ try {
   // Both directions: the vendor is just as blocked as the buyer.
   check("under_review, other direction", "under_review", await callGate(vendor.db, vendor.id, buyer.id));
   check("server: under_review", "under_review", await serverGate(vendor.db, buyer.id));
+  check("server (vendor's number): under_review", "under_review", await vendorServerGate(buyer.db, vendor.id));
   await setConversation("active");
 
   // ── target_suspended ──
   await setStatus(vendor.id, "suspended");
   check("target suspended", "target_suspended", await callGate(buyer.db, buyer.id, vendor.id));
   check("server: vendor suspended -> caller_suspended", "caller_suspended", await serverGate(vendor.db, buyer.id));
+  check("server (vendor's number): vendor suspended", "target_suspended", await vendorServerGate(buyer.db, vendor.id));
 
   // ── caller_suspended, and it WINS over target_suspended ──
   await setStatus(buyer.id, "suspended");
@@ -193,10 +214,12 @@ try {
     await callGate(buyer.db, buyer.id, vendor.id),
   );
   check("server: both suspended -> caller wins", "caller_suspended", await serverGate(vendor.db, buyer.id));
+  check("server (vendor's number): both suspended -> caller wins", "caller_suspended", await vendorServerGate(buyer.db, vendor.id));
 
   await setStatus(vendor.id, "active");
   check("caller suspended only", "caller_suspended", await callGate(buyer.db, buyer.id, vendor.id));
   check("server: buyer suspended only -> target_suspended", "target_suspended", await serverGate(vendor.db, buyer.id));
+  check("server (vendor's number): buyer suspended only", "caller_suspended", await vendorServerGate(buyer.db, vendor.id));
 
   // ── suspension outranks the thread lock ──
   await setStatus(buyer.id, "active");
@@ -212,6 +235,11 @@ try {
     "caller_suspended",
     await serverGate(vendor.db, buyer.id),
   );
+  check(
+    "server (vendor's number): suspended vendor outranks a locked thread",
+    "target_suspended",
+    await vendorServerGate(buyer.db, vendor.id),
+  );
 } finally {
   await setStatus(buyer.id, "active");
   await setStatus(vendor.id, "active");
@@ -223,43 +251,32 @@ try {
 
 // ── R-18: what a SIGNED-OUT visitor can reach ────────────────────────────────
 //
-// Checked against actual current behaviour, not assumed.
+// In the UI: VendorProfile.tsx branches on `!user` FIRST and renders a sign-in
+// prompt, and the Website Address row is gated on `contactVisible`, which is
+// `Boolean(user) && ...`. No phone, address or website is painted signed out.
 //
-// In the UI it holds. VendorProfile.tsx branches on `!user` FIRST and renders a
-// sign-in prompt, and the Website Address row in the "Detailed information"
-// card is gated on `contactVisible`, which is `Boolean(user) && ...`. Neither
-// consults callGate for a signed-out visitor, so no phone, email, address or
-// website is painted. That is a UI fact and it is intact.
-//
-// It is NOT a data fact, and the difference is worth stating plainly:
-// `vprofiles_select` is `USING (true)`, so the anon key can read
-// vendor_profiles.phone straight from PostgREST. The check below records that
-// rather than asserting it away — closing it means column-level restriction or
-// a view, which is a marketplace-visibility decision, not a bug fix.
+// In the data, since admin completion Phase 4 (Mitra, 2026-09-27): a vendor's
+// phone, WhatsApp, email, PAN and street address are private. Phase 4a moved
+// every reader to call_vendor_contact() / my_vendor_private(); Phase 4b replaced
+// the table-wide SELECT with column grants that leave those eight out. Signed
+// out, neither the table nor the function hands out a number. Before 4b is
+// applied, the first check fails: that is the gap 4b closes.
 {
   const anon = client();
-  const { data } = await anon
-    .from("vendor_profiles")
-    .select("brand_name, phone")
-    .not("phone", "is", null)
-    .limit(1);
-  const reachable = (data?.length ?? 0) > 0;
-  results.push({
-    state: "R-18 — anon can read vendor_profiles.phone via PostgREST",
-    expected: "documented gap",
-    actual: reachable ? "YES — readable" : "no rows with a phone",
-    verdict: "INFO",
-  });
+  const { data, error } = await anon.from("vendor_profiles").select("brand_name, phone").limit(1);
+  check(
+    "R-18 anon cannot read vendor_profiles.phone",
+    "refused",
+    error ? "refused" : `readable (${data?.length ?? 0} row)`,
+  );
+  const { error: rpcError } = await anon.rpc("call_vendor_contact", { p_vendor_id: vendor.id });
+  check("R-18 anon cannot call call_vendor_contact()", "refused", rpcError ? "refused" : "served");
 }
 
 console.table(results);
 console.log(
   failures === 0
-    ? "\nPASS - callGate and call_buyer_contact() return the right reason for every state, in the right order."
+    ? "\nPASS - callGate, call_buyer_contact() and call_vendor_contact() return the right reason for every state, in the right order, and nothing is readable signed out."
     : `\n${failures} STATE(S) WRONG`,
-);
-console.log(
-  "NOTE: the R-18 row is INFO, not a failure. The UI gate holds; the underlying\n" +
-    "column is world-readable because vprofiles_select is USING (true).",
 );
 process.exit(failures === 0 ? 0 : 1);

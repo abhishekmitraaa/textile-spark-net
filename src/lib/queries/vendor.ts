@@ -37,21 +37,23 @@ export interface VendorProfileData {
   followers: number;
   ratingAvg: number;
   reviewsCount: number;
-  // Real store identity + contact (managed by the vendor at /my-store) so it
-  // reflects to buyers instead of showing hardcoded placeholders.
+  // The vendor's public store identity (managed at /my-store). Their PAN, email,
+  // phone, WhatsApp and street address are private (admin completion Phase 4,
+  // Mitra 2026-09-27): a signed-in buyer gets phone and WhatsApp from
+  // call_vendor_contact() (useVendorContact / useCallVendor in queries/calls.ts).
   logoUrl: string | null;
   bannerUrl: string | null;
-  phone: string | null;
-  whatsapp: string | null;
   website: string | null;
   ownerName: string | null;
-  ownerEmail: string | null;
-  addressLine: string | null;
-  area: string | null;
-  postalCode: string | null;
-  landmark: string | null;
   gstin: string | null;
-  pan: string | null;
+  cin: string | null;
+  /** A number is on file. Says nothing more: the numbers themselves are private. */
+  hasPhone: boolean;
+  hasWhatsapp: boolean;
+  employeeCount: string | null;
+  yearEstablished: number | null;
+  /** The vendor row's creation time, for "Cosora Member Since". */
+  createdAt: string;
   /** Manufacturing capacity bands the vendor declared. Empty = not stated;
    *  the buyer page renders nothing rather than guessing. */
   capacity: string[];
@@ -66,11 +68,18 @@ interface RawVid {
   views_count: number; thumbnail_url: string | null; video_url: string | null;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 async function fetchVendorProfile(id: string): Promise<VendorProfileData | null> {
+  // A slug or an old demo id ("v5") is no vendor: answer "not found" without a
+  // request that could only fail on the uuid cast.
+  if (!UUID_RE.test(id)) return null;
+  // Public columns only. Never add phone, whatsapp, owner_email, pan or the street
+  // address here: they are private (admin completion Phase 4).
   const { data: v, error } = await supabase
     .from("vendor_profiles")
     .select(
-      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, phone, whatsapp, website, owner_name, owner_email, address_line, area, postal_code, landmark, gstin, pan, capacity, annual_turnover",
+      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, website, owner_name, gstin, cin, has_phone, has_whatsapp, employee_count, year_established, created_at, capacity, annual_turnover",
     )
     .eq("id", id)
     .maybeSingle();
@@ -131,17 +140,15 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     reviewsCount: v.reviews_count,
     logoUrl: v.logo_url,
     bannerUrl: v.banner_url,
-    phone: v.phone,
-    whatsapp: v.whatsapp,
     website: v.website,
     ownerName: v.owner_name,
-    ownerEmail: v.owner_email,
-    addressLine: v.address_line,
-    area: v.area,
-    postalCode: v.postal_code,
-    landmark: v.landmark,
     gstin: v.gstin,
-    pan: v.pan,
+    cin: v.cin,
+    hasPhone: Boolean(v.has_phone),
+    hasWhatsapp: Boolean(v.has_whatsapp),
+    employeeCount: v.employee_count,
+    yearEstablished: v.year_established,
+    createdAt: v.created_at,
     capacity: v.capacity ?? [],
     annualTurnover: v.annual_turnover,
     products,

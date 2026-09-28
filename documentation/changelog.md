@@ -1,3 +1,35 @@
+- 2026-09-28 (admin completion, Phase 4a: vendor contact and tax details become private, readers first): **A vendor's phone and WhatsApp reach a buyer only through a gated, rate-limited server function, their PAN, email and street address are shown to nobody but the vendor and admins, and the public vendor page no longer invents any of it.** Mitra decided on 2026-09-27: PAN, owner email, phone, WhatsApp and street address become private; GSTIN and CIN stay public. This half adds the readers and moves both apps onto them. The revoke is Phase 4b, applied only once both apps are live without the old reads (the MPF-19 order).
+  - **Database** (both migrations rehearsed, then applied; md5s match):
+    - `20260927184250_vendor_private_readers.sql`:
+      - `my_vendor_private()`: the caller's own eight fields.
+      - `call_vendor_contact(vendor)`: phone, WhatsApp and brand name for a signed-in account, under callGate's three rules (caller suspended, vendor suspended, chat under review). Refusals are 42501 with the reason code. At most 30 different vendors an hour and 100 a day per account (`rate_limited`), serialised per caller with an advisory lock.
+      - `admin_vendor_private(ids)`: super_admin, vendor_ops, support and finance_admin, at most 200 ids a call.
+    - `20260927185902_vendor_contact_channels.sql`:
+      - public generated columns `has_phone` / `has_whatsapp`: a number is on file, nothing more;
+      - the reveal ledger keeps each caller's last day only. A vendor already revealed today is served again without counting, and each call deletes that caller's older rows, so the table stays bounded without a scheduled job.
+  - **Buyer app:**
+    - **`/vendor/:id`:**
+      - The contact card shows the owner, the city/state/country, the website and a **Show phone number** button. The number is revealed on request, so browsing never uses up the limit.
+      - Email and the street address are gone from the page. The PAN row is gone; CIN shows when the vendor has one.
+      - WhatsApp shows when the vendor has a number on file and opens after the reveal.
+      - **Every invented fallback is removed** (securityflags 2026-09-11): the owner "Mr. K.S. Tomar", a phone number, `contact@caramel.in`, `www.caramel.in`, a Gwalior street address, a GSTIN, a PAN, an About paragraph, a stock banner, "Apparel Manufacturer", "11 to 25 People", "2019", "1 Year", a turnover band, and, for an unknown id or while loading, a whole seller called "CARAMEL" with 7,333 followers and a trust seal. Empty fields read "Not provided". Employees, year, member since and turnover now come from the vendor's row. Loading, failed and not found each have their own state.
+    - **Call Now** (every surface) asks `call_vendor_contact()` on each tap. Signed out, it asks the buyer to sign in. A refusal says why (the three moderation reasons keep their wording; `rate_limited` has its own). Logging through `log_call()` is unchanged.
+    - **The vendor's own screens** read the eight fields through `my_vendor_private()`:
+      - `/my-store`, `/business-profile`, `/kyc` and settings, via `useMyVendorProfile`, which also stopped selecting `*`. That had been pulling the 1,536-number catalog embedding into every store screen.
+      - the profile score, via `fetchProfileScoreRow()`;
+      - invoice and ad-receipt "Bill to", via `fetchBillTo()`;
+      - the tax fields on `/subscription`.
+    - `lib/memberSince.ts` is now shared by the vendor's Business Profile and the public page, so both say the same thing.
+    - i18n: 19 new strings in both catalogues. Also added, missed in Phase 3: the two subscription notices and the 8 ad reason labels, which are a notice's body when the admin adds no note (`external-strings.json`). The 10 entries whose only use was the invented vendor values were removed from the catalogues.
+  - **Cosora-Admin:** Vendor detail reads the private fields through `admin_vendor_private()` and shows WhatsApp too (see that repo's CHANGELOG).
+  - **Tests and scripts** that read the vendor's own row with `select("*")` use `scripts/lib/vendor-row.mjs` (`readOwnVendorRow`): 4 specs. `chat-pipeline` T9.2 presses "Show phone number" first. `contact-gate-check.mjs` checks `call_vendor_contact()` in every state and turns R-18 into a real assertion; it fails until Phase 4b by design.
+  - **Verified:**
+    - `scripts/admin-completion/07_vendor_contact.sql`: 25/25 as expected. Own row only, the three admin roles plus finance served, the other roles refused, every refusal code, the hour and day limits, a repeat not counted, the prune.
+    - No function, view or policy reads the private columns as the caller, so 4b affects direct table reads only.
+    - Both apps typecheck and build. `i18n:check` 6972/6972. Neither `src/` selects a private column (scripted scan). The buyer bundle no longer contains any of the invented values.
+  - **Also on this branch: Phase 3d** (`20260927183901`, applied after the Phase 3 panel was live). `approve_vendor_content_bulk()` is dropped. `ad_apply_decision()` refuses an unlisted reason code on an admin decision; a vendor's own pause keeps free text.
+  - **Files:** the two migrations, `scripts/admin-completion/07_vendor_contact.sql`, `scripts/lib/vendor-row.mjs`, `scripts/contact-gate-check.mjs`, `src/lib/queries/{vendor,calls,vendorStore,vendorDashboard}.ts`, `src/lib/memberSince.ts`, `src/pages/{VendorProfile,BusinessProfile,AdReceiptDetail,InvoiceDetail,Subscription}.tsx`, `src/lib/database.types.ts` (regenerated), `src/i18n/*`, 5 specs, `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `securityflags.md`, `ToDo.md`, `test.md`, this file.
+
 - 2026-09-27 (admin completion, Phase 3: admin correctness): **Admin review actions are whole, bulk approval stays on its own screen, ad reasons have one vocabulary, plan changes keep the seal consistent, and Reports is computed in the database.**
   - **Chat review block is atomic** (`block_account_from_review()`, migration `20260927182120`). Blocking a participant used to be two requests. A failure between them left an account suspended with its review still pending, and the panel had to ask the admin to fix the queue by hand. One transaction now; `set_account_status()` is still the ledger's only writer.
   - **"Approve all for vendor" on Video Closeups approves videos only** (`approve_vendor_videos_bulk()`, which returns the count). The old function also put that vendor's pending products and catalogues live, which nobody had reviewed on that screen. The old function is dropped once the new panel is in production.
