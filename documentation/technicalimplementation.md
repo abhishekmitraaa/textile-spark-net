@@ -1865,6 +1865,79 @@ Migration `20260928071643_leads_pipeline.sql`. Cosora-Admin's `/leads` page read
 - **Gate:** `admin.leads_can_read()`: super_admin, vendor_ops, product_moderator, support.
 - **Tests:** `scripts/admin-completion/11_leads.sql`.
 
+## Live Activity — computed from the event log (admin completion Phase 8, 2026-09-28)
+
+Migration `20260928145827_admin_live_activity.sql`. Cosora-Admin's Live Activity page
+(`/traction`) reads it every 30 seconds while its tab is visible (`src/lib/liveActivity.ts`).
+
+- **`admin_live_activity(p_minutes default 60)`** returns one jsonb document. It's SECURITY
+  DEFINER, with `search_path = ''` and EXECUTE for authenticated only. The gate is
+  `is_admin()`, so every active admin role reads it (`roles.ts` section `traction`).
+  - The window is clamped to 5–1440 minutes (null → 60).
+  - One CTE reads `engagement_events` once, where `created_at > least(window start, now − 60
+    min)`, through `engagement_events_created_idx (created_at desc)`. It's referenced by every
+    figure, so Postgres materializes it.
+  - A visitor is `coalesce(viewer_id::text, 's:' || session_id)`: the account when signed in,
+    the tab's `sessionStorage` id when not (`log_engagement_event()` keeps `session_id` only
+    signed out). Someone who signs in mid-visit counts once as each.
+  - `active_now` (5 minutes) and `active_window`: distinct visitors, signed in and guest, plus
+    `events` for the window.
+  - `per_minute`: 60 buckets from `generate_series`, so an empty minute is 0. Always the last
+    hour, whatever the window.
+  - `by_type`: events per type in the window.
+  - `top_products` (5): `product_view` rows, views and visitors, with the product's name and
+    seller.
+  - `top_vendors` (5): every event except `ad_impression` and `search_impression`.
+  - `top_searches` (10): `search_impression.query_text` lowercased, trimmed and
+    whitespace-collapsed, kept `having count(distinct visitor) >= 3`, cut to 100 characters. A
+    search logs one impression per vendor shown, so it reports visitors, not rows.
+- **Cost:** 2–10 ms on ~2,100 events (measured 2026-09-28). It scans the window's raw events on
+  every call, so it grows with traffic (`ToDo.md`: "Pre-aggregate Live Activity").
+- **Tests:** `scripts/admin-completion/12_live_activity.sql`.
+
+## Microsoft Clarity on the buyer site (admin completion Phase 8, 2026-09-28)
+
+- **Loader:** `src/lib/analytics/clarity.ts`, started from `main.tsx`.
+  - `CLARITY_ENABLED` = a production build (`import.meta.env.PROD`) and a
+    `VITE_CLARITY_PROJECT_ID` matching `^[a-z0-9]{6,32}$` (any case). Vite inlines the
+    variable at build time, so switching it on or off needs a redeploy.
+  - After the window's `load` event it defines Microsoft's queue stub (`window.clarity`) and
+    appends `https://www.clarity.ms/tag/<id>` (async, marked `data-cosora-clarity`), once.
+  - No `identify` call and no custom tags.
+- **Masking.** Microsoft documents that `data-clarity-mask="True"` masks the element and its
+  children in the browser, so the content is never uploaded, and that input boxes are masked in
+  every mode.
+  - `<ClarityMask>` (`src/components/analytics/ClarityMask.tsx`) is a `display: contents` div
+    with the attribute, so it adds no box. `App.tsx` wraps 32 routes' elements in it:
+    - sign-in and sign-up: `/login`, `/auth/login`, `/auth/otp-verify`, `/auth/account-info`,
+      `/register` (their own files are unchanged);
+    - chats: `/chats`, `/chats/:vendorId`, `/chat`, `/profile/help/chat`;
+    - `/onboarding`, `/kyc`;
+    - account: `/profile` and its edit, business-details, settings, social-links,
+      regional-settings and data-export pages, `/business-profile`, `/my-store/business`,
+      `/settings`, `/notifications`;
+    - requirements and deals: `/requirement/post-requirement`, `/post-requirement`,
+      `/requirement/my-quotes`, `/quotes`, `/leads`;
+    - billing: `/subscription`, `/subscription/invoice/:id`, `/my-payments`,
+      `/my-payments/receipt/:orderId`;
+    - `/report-fraud`.
+  - The wrapper exists from the moment the page's content does. Clarity doesn't document
+    honouring an attribute toggled on `<body>` after it has seen the page.
+  - Overlays render in a portal outside the route's wrapper, so `DialogContent`,
+    `AlertDialogContent`, `DrawerContent` and `SheetContent` (`src/components/ui`) carry the
+    attribute themselves.
+  - Single elements on open pages: the vendor page's revealed phone number, and Help's
+    delete-account card.
+- **Notice:** `/terms` (`TermsConditions.tsx`, section `#analytics`) always describes the event
+  log. Its three Clarity paragraphs render only when `CLARITY_ENABLED`.
+- **Proven 2026-09-28** on a local preview, with Clarity's requests blocked in the browser: the
+  tag loads once, after `load`; `/login` and `/register` render pixel-identical to production
+  with the wrapper; `/`, `/search` and `/terms` aren't wrapped; with no id there's no tag and one
+  notice paragraph.
+- **No Content-Security-Policy** limits scripts on the buyer site (`vercel.json` sends no
+  headers). Nothing needed changing for Clarity, and nothing would stop another script either
+  (`securityflags.md`).
+
 ---
 
 ## Calls — one write path, `log_call()` (2026-09-23)

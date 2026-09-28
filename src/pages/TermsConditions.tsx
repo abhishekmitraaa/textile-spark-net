@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { CLARITY_ENABLED } from "@/lib/analytics/clarity";
 
 // Cosora Terms & Conditions (buyer-facing, linked from My Profile).
 // Content supplied by the business; rendered as a readable legal document.
@@ -142,6 +143,21 @@ const CLAUSES: Clause[] = [
   },
 ];
 
+// Not one of the business's numbered clauses: a notice about analytics (admin completion
+// Phase 8, 2026-09-28), pending legal review of its wording. The event log paragraph is
+// always true. The Clarity paragraphs show only while Clarity actually runs, so the page
+// never describes recording that isn't happening (lib/analytics/clarity.ts).
+const ANALYTICS_NOTICE = {
+  heading: "Analytics and session replay",
+  events:
+    "Cosora records which products, storefronts and searches are viewed and which buttons are pressed, to show sellers how their listings perform and to run the marketplace. When you're signed in, these records are linked to your account.",
+  clarity: [
+    "We also use Microsoft Clarity to see how our pages are used. It records clicks, taps and scrolling, and replays visits so we can find and fix problems. Recordings aren't linked to your Cosora account. Microsoft processes this data under its own privacy statement.",
+    "Sign-in, chats, onboarding and KYC, your profile, requirements and quotes, billing, and anything in a pop-up are hidden from these recordings, as is everything you type into a field. Hidden content is masked in your browser and never sent.",
+    "Clarity sets cookies to recognise a returning browser. The site works the same if you block them.",
+  ],
+};
+
 const TermsConditions = () => {
   const navigate = useNavigate();
 
@@ -181,6 +197,15 @@ const TermsConditions = () => {
             </section>
           ))}
         </div>
+
+        <section id="analytics" className="mt-8 border-t border-gray-100 pt-5">
+          <h2 className="text-sm font-bold text-gray-900">{ANALYTICS_NOTICE.heading}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-gray-700">{ANALYTICS_NOTICE.events}</p>
+          {CLARITY_ENABLED &&
+            ANALYTICS_NOTICE.clarity.map((p, i) => (
+              <p key={i} className="mt-2 text-sm leading-relaxed text-gray-700">{p}</p>
+            ))}
+        </section>
 
         <p className="mt-8 text-sm leading-relaxed text-gray-600 border-t border-gray-100 pt-5">
           By using Cosora, you acknowledge that you have read, understood, and agree to be bound by these Terms &amp; Conditions.

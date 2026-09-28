@@ -542,7 +542,7 @@ const VendorProfile = () => {
                 {!vendor.hasPhone ? (
                   <span className="text-sm text-gray-700">{NOT_PROVIDED}</span>
                 ) : numbers ? (
-                  <span className="text-sm text-gray-700">{numbers.phone || NOT_PROVIDED}</span>
+                  <span data-clarity-mask="True" className="text-sm text-gray-700">{numbers.phone || NOT_PROVIDED}</span>
                 ) : numbersRefusal ? (
                   <div className="rounded-lg bg-amber-50 px-2.5 py-2">
                     <p className="text-sm font-semibold text-amber-900">{CONTACT_REFUSAL_COPY[numbersRefusal].title}</p>

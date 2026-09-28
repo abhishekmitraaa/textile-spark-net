@@ -15,6 +15,37 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Switch on Microsoft Clarity, after a legal read of the notice — added 2026-09-28
+- Task:
+  1. Have the Terms page's "Analytics and session replay" section read for legal wording, and
+     decide whether recording needs a consent prompt first (`securityflags.md`, the two
+     2026-09-28 Clarity rows).
+  2. Create the Clarity project, and set its masking mode to Strict.
+  3. Set `VITE_CLARITY_PROJECT_ID` to its id in both Vercel projects (the buyer site and
+     Cosora-Admin), and redeploy both.
+  4. Check: the production bundle adds `clarity.ms/tag/<id>`; a recording of `/login` or a chat
+     shows masked blocks; Cosora-Admin's Live Activity shows the Clarity links.
+- Context: admin completion Phase 8 built the loader (`src/lib/analytics/clarity.ts`), the masks
+  (`<ClarityMask>` in `App.tsx`, the overlay primitives) and the notice, all dormant until the id
+  is set. Vite inlines the id at build time, so the redeploy is what turns it on. Optionally add a
+  Content-Security-Policy that allows `www.clarity.ms` and `*.clarity.ms` at the same time.
+- Reference: 2026-09-28, admin completion Phase 8; Mitra's "native dashboard + install Clarity"
+  choice and the plan's manual steps.
+- Priority: Medium
+- Status: Open
+
+### Pre-aggregate Live Activity before traffic grows by orders of magnitude — added 2026-09-28
+- Task: stop `admin_live_activity()` scanning raw `engagement_events` for the whole window on
+  every call. Options: a per-minute rollup table the function reads (needs a scheduled job, which
+  is Mitra's call), or a shorter maximum window.
+- Context: it's 2–10 ms today on ~2,100 events, and each open Live Activity tab calls it every
+  30 seconds. At 10,000 concurrent buyers the log could take millions of rows an hour, and the
+  24-hour window would scan all of them per call. While there: the performance advisor lists
+  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys (Phase 12 material).
+- Reference: 2026-09-28, admin completion Phase 8 (Live Activity, native).
+- Priority: Low today; High before a traffic launch
+- Status: Open
+
 ### Decide on the five scheduled jobs left off in the 2026-09-27 restore — added 2026-09-27
 - Task: decide whether each of these comes back, and when:
   - `embedding-worker` and `vendor-catalog-recompute` (every minute);
