@@ -36,22 +36,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
 - Status: Open
 
-### Revoke the vendor private columns (admin completion Phase 4b) — added 2026-09-28
-- Task: once both apps run the Phase 4a code in production, replace table SELECT on
-  `vendor_profiles` for anon and authenticated with column SELECT on every column except `pan`,
-  `owner_email`, `phone`, `whatsapp`, `address_line`, `area`, `landmark`, `postal_code` (and
-  `catalog_embedding` / `catalog_embedding_updated_at`, which no client reads). Self-check with
-  `has_column_privilege`, then run `scripts/contact-gate-check.mjs` (R-18 must pass) and close
-  the securityflags Open row.
-- Context: Phase 4a (migrations `20260927184250`, `20260927185902`) moved every reader to
-  `my_vendor_private()`, `call_vendor_contact()` and `admin_vendor_private()`. Revoking before
-  the apps deploy would break the live vendor page and store screens, as MPF-19 did for
-  `profiles`. The rehearsal (2026-09-28) found that the old upserts from `vendorStore.ts` and
-  `vendorOnboarding.ts` would be refused; `writeOwnVendorRow()` replaced them and must be live
-  first. The migration and `scripts/admin-completion/08` are ready.
-- Reference: 2026-09-28, admin completion Phase 4a and the Phase 4b rehearsal.
-- Status: Open (Phase 4a is live; waits for the `writeOwnVendorRow()` deploy)
-
 ### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
 - Task: make the vendor's Advertise page show the reason an admin gave in words. Today
   `advertisements.moderation_reason` stores `<code> <note>` (for example
@@ -642,6 +626,26 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Revoke the vendor private columns (admin completion Phase 4b) — added 2026-09-28
+- Task: once both apps run the Phase 4a code in production, replace table SELECT on
+  `vendor_profiles` for anon and authenticated with column SELECT on every column except `pan`,
+  `owner_email`, `phone`, `whatsapp`, `address_line`, `area`, `landmark`, `postal_code` (and
+  `catalog_embedding` / `catalog_embedding_updated_at`, which no client reads). Self-check with
+  `has_column_privilege`, then run `scripts/contact-gate-check.mjs` (R-18 must pass) and close
+  the securityflags Open row.
+- Context: Phase 4a (migrations `20260927184250`, `20260927185902`) moved every reader to
+  `my_vendor_private()`, `call_vendor_contact()` and `admin_vendor_private()`. Revoking before
+  the apps deploy would break the live vendor page and store screens, as MPF-19 did for
+  `profiles`. The rehearsal (2026-09-28) found that the old upserts from `vendorStore.ts` and
+  `vendorOnboarding.ts` would be refused; `writeOwnVendorRow()` replaced them and must be live
+  first. The migration and `scripts/admin-completion/08` are ready.
+- Reference: 2026-09-28, admin completion Phase 4a and the Phase 4b rehearsal.
+- Status: Completed
+- Completed: 2026-09-28 — `20260928042152_vendor_private_columns_revoke.sql`, applied after
+  `writeOwnVendorRow()` was live; harness 08 18/18 live, signed-out HTTP proof 401/42501 on every
+  private read. Note: `scripts/contact-gate-check.mjs` (R-18 now expected to pass) wasn't run, as it
+  signs in with the demo accounts against production.
 
 ### Restore the scheduled jobs (all 12 were deleted on 2026-09-26) — added 2026-09-26
 - Task: decide which scheduled jobs come back, and re-create them. Until then, none of the
