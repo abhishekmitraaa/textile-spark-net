@@ -605,6 +605,16 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
 
+### Added 2026-09-28 (admin completion, Phase 7)
+- **Leads**, a new read-only page under Insight: every buyer request (RFQ) and its stage.
+  - Stages: new, unanswered, overdue after 48 hours without a quote, quoted, won, closed. A
+    direct request is marked.
+  - The numbers: what's waiting for a first quote, the median time to a first quote, and the
+    share answered within 24 hours.
+  - Filter by stage, age and audience, and search. Each row links to the buyer in Accounts
+    and to the vendor.
+  - For super admins, vendor ops, product moderators and support.
+
 ### Added 2026-09-28 (admin completion, Phase 6)
 - **Customers is real.** It used to show sample data. Every account (staff aside) appears with:
   - its segments: new, active, high value, at risk, dormant, never transacted;

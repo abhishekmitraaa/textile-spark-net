@@ -759,6 +759,9 @@ undocumented. Deep technical rationale for each lives in
     - Segments live in `admin.customer_rows` and are computed at read time. Change a rule
       there and in Cosora-Admin's `lib/customers.ts` together.
     - Active Cosora staff (`admin.admin_users`) aren't customers.
+  - **Leads is `admin.lead_rows`** (admin completion Phase 7, `20260928071643`): the one
+    definition of an RFQ's stage (new, unanswered, overdue at 48 hours, quoted, won,
+    closed). A page or report that needs a stage reads it, never its own copy of the rules.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
