@@ -1728,6 +1728,53 @@ to `vendor_profiles`, in the same order (MPF-19): readers and code first, the re
 
 ---
 
+## Payments ledger — one view, in paise (admin completion Phase 5, 2026-09-28)
+
+Migration `20260928043917_payments_ledger.sql`. Cosora-Admin's Payments page reads it
+(`src/lib/payments.ts`).
+
+- **`admin.payment_entries`** (a view in the admin schema, which PostgREST doesn't expose; no
+  client grants). One row per money movement:
+
+  | Row | Source | `total_paise` | `net_paise` / `gst_paise` | `gateway_ref` | `verified` |
+  |---|---|---|---|---|---|
+  | subscription payment | `subscription_invoices` (any status) | (amount + GST) × 100 | amount × 100 / GST × 100 | `razorpay_payment_id` | payment id present |
+  | refund | same row, `refund_status` set | −`refunded_amount` (paise), else −total | null | `razorpay_refund_id` | refund id present |
+  | unfinished checkout | `subscription_payment_orders` `created`/`failed` | `amount` (paise, GST included) | null | order id | false |
+  | ad / certificate order | `ad_orders` | `amount` (paise, no GST line) | null | order id | status paid or refund_review |
+
+  - `entry_key` is `invoice:` / `refund:` / `intent:` / `ad:` plus the source id: unique, and
+    the tie-breaker for paging.
+  - Statuses: paid, pending (under 24 hours, or a refund in flight), abandoned (24 hours
+    unpaid), failed, review (`ad_orders.refund_review`: paid, not fulfilled), refunded.
+  - Kind `certificate` is an order whose `placementIds` is exactly `["verifiedCertificate"]`.
+    A mixed order is `ad_purchase` with `includes_certificate`: orders don't store per-line
+    prices, so its amount isn't split.
+- **`admin_payments_ledger(kinds, statuses, from, to, vendor, search, cursor_at, cursor_key, limit)`:**
+  - Keyset paging on `(occurred_at, entry_key)` descending; `limit` is clamped to 1–200, and
+    half a cursor is 22023.
+  - Search is literal: `%`, `_` and `\` are escaped. It matches the vendor's brand name
+    (up to 500 vendors), the reference or the gateway id.
+- **`admin_payments_summary(same filters)`:**
+  - Counts per status and refunds; `paid_paise`, `subscriptions_net_paise`, `gst_paise`,
+    `ads_paise`, `refunded_paise`, `review_paise`, `unverified_paise`.
+  - Paid totals follow `admin_report_summary()`: paid invoices by `created_at`, paid ad orders
+    by `paid_at`. Refunds are reported beside them, not netted in.
+- **Gate:** super_admin, finance_admin, support (roles.ts `payments` read). Everyone else gets
+  42501. EXECUTE is for authenticated only.
+- **`subscription_invoices.refund_requested_at`:** `trg_subscription_invoices_refund_requested`
+  (BEFORE UPDATE OF refund_status) stamps it when `refund_status` becomes `pending`, which is
+  how `admin-refund-payment` claims a refund. A pending or failed refund sorts by it. A
+  processed one sorts by `refunded_at`.
+- **Indexes:**
+  - `subscription_invoices (created_at desc)`, plus the refund time expression for rows with
+    a refund;
+  - `subscription_payment_orders (created_at desc)` for created and failed rows;
+  - `ad_orders (coalesce(paid_at, created_at) desc)` and `ad_orders (vendor_id, created_at desc)`.
+- **Tests:** `scripts/admin-completion/09_payments_ledger.sql`.
+
+---
+
 ## Calls — one write path, `log_call()` (2026-09-23)
 
 Phase 12 of the My Profile brief (MPF-2). Migration

@@ -605,6 +605,14 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
 
+### Added 2026-09-28 (admin completion, Phase 5)
+- **Payments is a real ledger.** It used to show sample data. Every subscription payment,
+  refund, unfinished checkout and ad or certificate order is one row.
+  - Filters, search and "Load more" run in the database.
+  - The totals describe exactly the rows the filters select and agree with Reports.
+  - Demo-mode payments with no gateway id are flagged.
+  - The Latest strip refreshes every 30 seconds while the tab is open.
+
 ### Added 2026-09-28 (admin completion, Phase 4a)
 - **Vendor detail** reads a vendor's PAN, email, phone, WhatsApp and street address through
   `admin_vendor_private()` (super admin, vendor ops, support, finance), and now shows WhatsApp

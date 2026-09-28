@@ -1738,6 +1738,7 @@ export type Database = {
           razorpay_order_id: string | null
           razorpay_payment_id: string | null
           razorpay_refund_id: string | null
+          refund_requested_at: string | null
           refund_status: string | null
           refunded_amount: number | null
           refunded_at: string | null
@@ -1761,6 +1762,7 @@ export type Database = {
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           razorpay_refund_id?: string | null
+          refund_requested_at?: string | null
           refund_status?: string | null
           refunded_amount?: number | null
           refunded_at?: string | null
@@ -1784,6 +1786,7 @@ export type Database = {
           razorpay_order_id?: string | null
           razorpay_payment_id?: string | null
           razorpay_refund_id?: string | null
+          refund_requested_at?: string | null
           refund_status?: string | null
           refunded_amount?: number | null
           refunded_at?: string | null
@@ -2818,6 +2821,49 @@ export type Database = {
           full_name: string
           id: string
         }[]
+      }
+      admin_payments_ledger: {
+        Args: {
+          p_cursor_at?: string
+          p_cursor_key?: string
+          p_from?: string
+          p_kinds?: string[]
+          p_limit?: number
+          p_search?: string
+          p_statuses?: string[]
+          p_to?: string
+          p_vendor?: string
+        }
+        Returns: {
+          detail: string
+          entry_key: string
+          gateway_ref: string
+          gst_paise: number
+          includes_certificate: boolean
+          kind: string
+          net_paise: number
+          occurred_at: string
+          reference: string
+          source_id: string
+          source_table: string
+          status: string
+          total_paise: number
+          vendor_city: string
+          vendor_id: string
+          vendor_name: string
+          verified: boolean
+        }[]
+      }
+      admin_payments_summary: {
+        Args: {
+          p_from?: string
+          p_kinds?: string[]
+          p_search?: string
+          p_statuses?: string[]
+          p_to?: string
+          p_vendor?: string
+        }
+        Returns: Json
       }
       admin_profile_emails: {
         Args: { p_ids: string[] }

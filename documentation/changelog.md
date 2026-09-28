@@ -1,3 +1,27 @@
+- 2026-09-28 (admin completion, Phase 5: payments ledger): **Cosora-Admin's Payments page is a real ledger computed in the database, replacing a dev-seed fixture, and its totals agree with Reports.**
+  - **Migration `20260928043917_payments_ledger.sql`:**
+    - `admin.payment_entries`, a view with one row per money movement:
+      - a subscription invoice (the payment);
+      - its refund, as a negative row;
+      - a subscription checkout that never completed;
+      - an ad or certificate order.
+    - Every amount is in paise. Invoice rupees are converted there, once.
+    - One status vocabulary: paid, pending, abandoned (a checkout unpaid for 24 hours), failed, review (an ad order paid but not fulfilled) and refunded.
+    - An order of the ₹199 certificate alone is "certificate". A mixed order is an ad purchase flagged as including it: orders don't store per-line prices, so its amount isn't split.
+    - `admin_payments_ledger()`: filters, a literal search (vendor name, reference, Razorpay id), keyset paging. `admin_payments_summary()`: totals for the same filters, on `admin_report_summary()`'s definitions. Both for super_admin, finance_admin and support.
+    - `subscription_invoices.refund_requested_at`, stamped by a trigger when `admin-refund-payment` claims a refund, so a pending or failed refund has a time of its own. No function change.
+    - Indexes for newest-first reads on all three money tables.
+  - **Cosora-Admin:** Payments reads the RPCs (see that repo's CHANGELOG), and `devSeed/payments.ts` is deleted. The Latest strip polls every 30 seconds and pauses in hidden tabs.
+  - **Verified:**
+    - Harness `scripts/admin-completion/09_payments_ledger.sql`, rehearsed and live: 19/19.
+      - The three reading roles are served; every other role and anon is refused.
+      - The 9 production invoices appear once each, newest first, none gateway-verified.
+      - Net ₹47,483, GST ₹8,548 and unverified ₹56,031 equal Reports, all time and for a date window.
+      - Paging walks 4+4+1 rows with no repeats; a literal `%` finds nothing.
+      - Fixtures of every kind show with the right kind, status, sign and total, and the refund trigger stamps.
+    - The md5 matches. Both apps typecheck and build.
+  - **Files:** the migration, `scripts/admin-completion/09_payments_ledger.sql`, `src/lib/database.types.ts` (regenerated, additive), `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `sides.md`, `test.md`, this file.
+
 - 2026-09-28 (admin completion, Phase 4b: the revoke): **A vendor's PAN, owner email, phone, WhatsApp and street address can no longer be read from the database by anyone but the vendor, through their own function, and the admins who need them. That closes the 2026-09-27 High flag (readable signed out).**
   - **Migration `20260928042152_vendor_private_columns_revoke.sql`:**
     - For anon and authenticated, table-wide SELECT on `vendor_profiles` became column SELECT on every column except the eight private ones and `catalog_embedding` / `catalog_embedding_updated_at`, which no client reads.
