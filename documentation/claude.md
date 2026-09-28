@@ -405,9 +405,11 @@ undocumented. Deep technical rationale for each lives in
     SELECT on `col`, which clients don't have for the private columns.
   - Specs and scripts read a vendor's own row with `readOwnVendorRow()`
     (`scripts/lib/vendor-row.mjs`).
-  - Order (the MPF-19 rule): Phase 4a shipped the readers; Phase 4b revokes the table-wide
-    SELECT only after both apps are live without the old reads. Until 4b, the columns are
-    still readable through PostgREST.
+  - **Column grants since 2026-09-28** (`20260928042152`, Phase 4b): anon and authenticated
+    read every `vendor_profiles` column except the eight and the two `catalog_embedding`
+    columns. So `select("*")` fails, and a new column is not client-readable until its
+    migration grants it (the 4b self-check fails otherwise). anon can't write the table at
+    all. Never re-grant the eight.
   - Detail: `technicalimplementation.md` → "Vendor private fields".
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.

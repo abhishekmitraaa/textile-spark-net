@@ -1655,8 +1655,11 @@ to `vendor_profiles`, in the same order (MPF-19): readers and code first, the re
   - `20260927184250_vendor_private_readers.sql`: the three readers and the reveal ledger.
   - `20260927185902_vendor_contact_channels.sql`: `has_phone` / `has_whatsapp`, and the
     ledger's last-day rule.
-  - **Phase 4b (pending):** replace table SELECT for anon and authenticated with column
-    SELECT on every column except the eight, after both apps are live without the old reads.
+  - `20260928042152_vendor_private_columns_revoke.sql` (Phase 4b, applied 2026-09-28 after
+    both apps and `writeOwnVendorRow()` were live): for anon and authenticated, column
+    SELECT on every column except the eight and `catalog_embedding` /
+    `catalog_embedding_updated_at`. anon has no INSERT, UPDATE or DELETE. The self-check
+    lists every column, so a new one needs a deliberate grant.
 - **Readers.** Each is SECURITY DEFINER, with `search_path = ''` and EXECUTE for authenticated
   only:
 
@@ -1709,10 +1712,13 @@ to `vendor_profiles`, in the same order (MPF-19): readers and code first, the re
   (the old `*` also pulled the 1,536-number `catalog_embedding`), and the eight private fields
   are merged from `my_vendor_private()`. `fetchMyVendorPrivate(id)` returns null unless `id` is
   the signed-in user, so it never shows the caller's own details under another vendor's id.
-- **What 4b can and can't break.** No function, view or RLS policy reads the eight columns as
-  the caller (checked 2026-09-28: every function that reads `vendor_profiles` is SECURITY
-  DEFINER, and no view or policy refers to it). Edge functions use the service role. So the
-  revoke affects direct PostgREST reads only, and both apps' `src/` were scanned for them.
+- **What 4b could and couldn't break.** No function, view or RLS policy reads the eight
+  columns as the caller (checked 2026-09-28: every function that reads `vendor_profiles` is
+  SECURITY DEFINER, and no view or policy refers to it). Edge functions use the service role.
+  So the revoke affected direct PostgREST reads and writes only.
+  - Reads: every live JS chunk was scanned before applying it. After it, every select
+    string in both live bundles was replayed signed out: all return 200.
+  - Writes: the upserts were the one break, found in the rehearsal (above).
 - **Tests:**
   - `scripts/admin-completion/07_vendor_contact.sql`: every reader and refusal, the limits,
     the prune;

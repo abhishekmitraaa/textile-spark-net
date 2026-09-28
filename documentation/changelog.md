@@ -1,3 +1,18 @@
+- 2026-09-28 (admin completion, Phase 4b: the revoke): **A vendor's PAN, owner email, phone, WhatsApp and street address can no longer be read from the database by anyone but the vendor, through their own function, and the admins who need them. That closes the 2026-09-27 High flag (readable signed out).**
+  - **Migration `20260928042152_vendor_private_columns_revoke.sql`:**
+    - For anon and authenticated, table-wide SELECT on `vendor_profiles` became column SELECT on every column except the eight private ones and `catalog_embedding` / `catalog_embedding_updated_at`, which no client reads.
+    - anon lost INSERT, UPDATE and DELETE. RLS already refused them.
+    - Its self-check fails if the table gains a column nobody decided the grant for.
+  - **Order (MPF-19):** Phase 4a was live in both apps (`1df03e1`, Cosora-Admin `f80e656`); then `writeOwnVendorRow()` was live (`93ed707`, bundle `index-DEQgUnXw.js`). Every live JS chunk was scanned first: no private-column or `*` select of `vendor_profiles`, and no updating upsert of it.
+  - **Verified live:**
+    - Signed-out HTTP, before → after:
+      - `select=phone` 200 → 401/42501; `select=*` 200 → 401/42501; `pan=not.is.null` 200 (2 rows) → 401/42501; an embed of `phone` → 401/42501;
+      - public columns 200 → 200; an embed of public columns 200.
+    - Harness `08` 18/18, the same as the rehearsal.
+    - All 17 distinct `vendor_profiles` select strings in the two live bundles, plus the 4 held in constants, work signed out.
+    - The md5 matches. Advisors: no new finding.
+  - **Files:** the migration, `MIGRATIONS.md`, `claude.md`, `technicalimplementation.md`, `securityflags.md` (the Open row moved to Fixed), `sides.md`, `ToDo.md`, `test.md`, this file.
+
 - 2026-09-28 (admin completion, before Phase 4b: vendor writes without updating upserts): **Every client write to `vendor_profiles` is now an UPDATE, or an INSERT on a first save, because the Phase 4b rehearsal showed the old upsert would be refused once the private columns are revoked.**
   - **Found in the rehearsal (nothing was applied):** `INSERT ... ON CONFLICT (id) DO UPDATE SET pan = EXCLUDED.pan` needs SELECT on `pan`. That is the SQL supabase-js `.upsert()` sends, and three client writes used it: the store save (`saveVendorProfile`), Vendor Settings (`saveVendorSetting`) and onboarding (`saveVendorOnboarding`). After the revoke, a vendor saving a phone number or finishing registration would have got 42501. A plain UPDATE, a plain INSERT, and `ON CONFLICT DO NOTHING` need no SELECT on the columns they write.
   - **Fix:** `writeOwnVendorRow()` in `src/lib/queries/vendorStore.ts`. It updates the row. When there is none, it inserts with `ON CONFLICT DO NOTHING`, and if another save created the row in between, it applies the update to that row. It throws rather than report success if RLS refused the row. All three writes use it.

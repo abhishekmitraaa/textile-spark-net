@@ -208,6 +208,7 @@ the demand side of India's fashion and textile supply chain.
   later or use chat.
 - **The vendor's email, PAN and street address are no longer shown to buyers.** The card shows
   the owner, the city, state and country, and the website. CIN shows when the vendor has one.
+  Since Phase 4b the database itself refuses them to anyone else, signed in or not.
 
 ### Fixed 2026-09-27 (sign-in)
 - **Mobile sign-in works again, in test mode.** No SMS is sent yet, so the code screen says so,

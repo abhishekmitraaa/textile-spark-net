@@ -163,6 +163,32 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-28 — Phase 4b applied: vendor private columns revoked (md5 matches; harness 08 18/18 live; signed-out HTTP proof; 21/21 app selects replayed)
+
+- **Before applying:**
+  - `www.cosora.in` served `index-DEQgUnXw.js`, the same hash as the local build with `writeOwnVendorRow()`.
+  - Every live JS chunk of both sites was scanned (6 buyer, 2 admin): no private-column or `*` select of `vendor_profiles`. The only `vendor_profiles` upsert left is insert-only (`ignoreDuplicates`).
+- **Applied** `20260928042152`. Its self-check passed, and the md5 `1902264b…` matches the file.
+- **Signed-out HTTP proof** (the public anon key; status and error code only):
+
+  | Request | Before | After |
+  |---|---|---|
+  | `select=phone` | 200 | 401 / 42501 |
+  | `select=*` | 200 | 401 / 42501 |
+  | `pan=not.is.null` | 200 | 401 / 42501 |
+  | `reviews` embedding `vendor_profiles(phone)` | — | 401 / 42501 |
+  | public columns | 200 | 200 (10 rows) |
+  | `reviews` embedding public columns | — | 200 |
+  | `rpc/call_vendor_contact` | 401 / 42501 | 401 / 42501 |
+  | `rpc/my_vendor_private` | 401 / 42501 | 401 / 42501 |
+
+- **Harness `08` against the live grants:** 18/18, identical to the rehearsal.
+- **Every app read still works signed out:**
+  - the 17 distinct `vendor_profiles` select strings in the two live bundles: all 200;
+  - the 4 held in constants (`MY_STORE_COLUMNS`, the profile-score lists, "Bill to"): all 200.
+- **Advisors:** no ERROR-level finding, and the same counts as before.
+- **Not run:** `scripts/contact-gate-check.mjs` and the specs, which sign in with the demo accounts against production. R-18 is now expected to pass.
+
 ### 2026-09-28 — Phase 4b rehearsal: the revoke rehearsed and rolled back; one blocker found and fixed in code (harness 08 18/18 as designed)
 
 - **The migration** (`vendor_profiles` column grants) was rehearsed with its self-check and `scripts/admin-completion/08_vendor_columns_revoke.sql` in one transaction that raised at the end. Nothing was applied.
