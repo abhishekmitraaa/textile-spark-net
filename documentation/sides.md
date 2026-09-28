@@ -605,6 +605,16 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
 
+### Added 2026-09-28 (admin completion, Phase 6)
+- **Customers is real.** It used to show sample data. Every account (staff aside) appears with:
+  - its segments: new, active, high value, at risk, dormant, never transacted;
+  - lifetime spend, activity and when it was last seen;
+  - the team's tags.
+
+  Filters, search, sort and "Load more" run in the database. The data refreshes when the
+  page opens, at most every 10 minutes. Super admins and support manage tags, and each change
+  is in the Admin Log.
+
 ### Added 2026-09-28 (admin completion, Phase 5)
 - **Payments is a real ledger.** It used to show sample data. Every subscription payment,
   refund, unfinished checkout and ad or certificate order is one row.

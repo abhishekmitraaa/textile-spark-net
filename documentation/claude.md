@@ -752,6 +752,13 @@ undocumented. Deep technical rationale for each lives in
       columns and status vocabulary. Don't add a second ledger in a page.
     - The summary's paid totals must keep matching `admin_report_summary()`; harness `09`
       checks it.
+  - **Customers is `admin.customer_summary`** (admin completion Phase 6, `20260928070410`), a
+    materialized view that `admin_customer_refresh()` rebuilds at most once every 10 minutes,
+    when an admin opens the page.
+    - Don't schedule it: that would be a new job, and new jobs are Mitra's call.
+    - Segments live in `admin.customer_rows` and are computed at read time. Change a rule
+      there and in Cosora-Admin's `lib/customers.ts` together.
+    - Active Cosora staff (`admin.admin_users`) aren't customers.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
