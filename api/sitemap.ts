@@ -85,14 +85,23 @@ type BlogRow = {
   updated_at: string | null;
   published_at: string | null;
   category: { slug: string } | { slug: string }[] | null;
+  author: { slug: string } | { slug: string }[] | null;
 };
 
-type BlogData = { posts: BlogRow[]; categories: { slug: string; lastmod?: string }[] };
+type Listing = { slug: string; lastmod?: string };
+
+type BlogData = { posts: BlogRow[]; categories: Listing[]; authors: Listing[] };
+
+/**
+ * The Journal reads a post with no author as Cosora's (cosora-blogs
+ * DEFAULT_AUTHOR_SLUG), so the sitemap must too.
+ */
+const DEFAULT_AUTHOR_SLUG = "cosora";
 
 async function fetchBlog(): Promise<BlogData> {
   const url = process.env.VITE_SUPABASE_URL;
   const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return { posts: [], categories: [] };
+  if (!url || !anonKey) return { posts: [], categories: [], authors: [] };
 
   const supabase = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
@@ -103,7 +112,7 @@ async function fetchBlog(): Promise<BlogData> {
   const [postsRes, catsRes] = await Promise.all([
     supabase
       .from("blog_posts")
-      .select("slug,updated_at,published_at,category:blog_categories(slug)")
+      .select("slug,updated_at,published_at,category:blog_categories(slug),author:authors(slug)")
       .in("status", ["published", "scheduled"])
       .not("published_at", "is", null)
       .lte("published_at", new Date().toISOString())
@@ -116,16 +125,20 @@ async function fetchBlog(): Promise<BlogData> {
 
   const posts = (postsRes.data ?? []) as BlogRow[];
 
-  // A category page's lastmod is the newest post in it, so a crawler is told to
-  // recheck the listing when its contents actually change.
+  // A category or author page's lastmod is the newest post on it, so a crawler
+  // is told to recheck the listing when its contents actually change.
   const newest = new Map<string, string>();
+  const newestByAuthor = new Map<string, string>();
+  const bump = (map: Map<string, string>, key: string, when: string) => {
+    if (!map.has(key) || when > (map.get(key) as string)) map.set(key, when);
+  };
   for (const p of posts) {
-    const cat = Array.isArray(p.category) ? p.category[0] : p.category;
     const when = p.updated_at ?? p.published_at;
-    if (!cat?.slug || !when) continue;
-    if (!newest.has(cat.slug) || when > (newest.get(cat.slug) as string)) {
-      newest.set(cat.slug, when);
-    }
+    if (!when) continue;
+    const cat = Array.isArray(p.category) ? p.category[0] : p.category;
+    if (cat?.slug) bump(newest, cat.slug, when);
+    const author = Array.isArray(p.author) ? p.author[0] : p.author;
+    bump(newestByAuthor, author?.slug ?? DEFAULT_AUTHOR_SLUG, when);
   }
 
   const categories = ((catsRes.data ?? []) as { slug: string }[]).map((c) => ({
@@ -133,7 +146,11 @@ async function fetchBlog(): Promise<BlogData> {
     lastmod: newest.get(c.slug),
   }));
 
-  return { posts, categories };
+  // Only authors with a live post: the Journal marks an author page with no
+  // posts noindex, and a sitemap must not list a page it asks crawlers to skip.
+  const authors = [...newestByAuthor].map(([slug, lastmod]) => ({ slug, lastmod }));
+
+  return { posts, categories, authors };
 }
 
 export default async function handler(req: Req, res: Res) {
@@ -143,10 +160,11 @@ export default async function handler(req: Req, res: Res) {
   }
 
   let posts: BlogRow[] = [];
-  let categories: { slug: string; lastmod?: string }[] = [];
+  let categories: Listing[] = [];
+  let authors: Listing[] = [];
   let degraded = false;
   try {
-    ({ posts, categories } = await fetchBlog());
+    ({ posts, categories, authors } = await fetchBlog());
   } catch {
     // A sitemap missing its blog section still beats a 500: crawlers keep the
     // static routes, and the short s-maxage means the next crawl retries.
@@ -174,6 +192,9 @@ export default async function handler(req: Req, res: Res) {
       : []),
     ...categories.map((c) =>
       urlEntry(`${ORIGIN}/blogs/category/${c.slug}`, c.lastmod, "weekly", "0.6"),
+    ),
+    ...authors.map((a) =>
+      urlEntry(`${ORIGIN}/blogs/authors/${a.slug}`, a.lastmod, "monthly", "0.5"),
     ),
     // Full ISO-8601 rather than a date: a same-day correction is otherwise
     // invisible to a crawler that already fetched the page today.
