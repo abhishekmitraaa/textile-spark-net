@@ -12,3 +12,43 @@ Allow: /
 
 User-agent: *
 Allow: /
+Allow: /blogs/
+
+# Account- and session-scoped routes. These render only for a signed-in user, so
+# crawling them wastes budget on empty or redirecting shells. Taken from the
+# route table in src/App.tsx.
+Disallow: /auth/
+Disallow: /login
+Disallow: /register
+Disallow: /onboarding
+Disallow: /kyc
+Disallow: /profile
+Disallow: /settings
+Disallow: /dashboard
+Disallow: /seller-home
+Disallow: /chat
+Disallow: /chats
+Disallow: /leads
+Disallow: /quotes
+Disallow: /notifications
+Disallow: /requirement
+Disallow: /post-requirement
+Disallow: /subscription
+Disallow: /my-payments
+Disallow: /my-store
+Disallow: /business-profile
+Disallow: /saved
+Disallow: /recently-viewed
+Disallow: /upload
+Disallow: /upload-catalogue
+Disallow: /upload-video
+Disallow: /products
+Disallow: /analytics
+Disallow: /advertisements
+Disallow: /old-advertisements
+Disallow: /competitor-ads
+Disallow: /report-fraud
+Disallow: /add-social-links
+Disallow: /business-profile-score
+
+Sitemap: https://www.cosora.in/sitemap.xml

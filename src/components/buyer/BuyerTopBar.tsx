@@ -22,7 +22,7 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
   // uncontrolled <select> that saved nothing.
   const currency = useCurrencySetting();
 
-  const menuItems = [
+  const menuItems: { label: string; href: string; external?: boolean }[] = [
     { label: "Home",              href: "/home/new-arrivals" },
     { label: "Post Requirement",  href: "/requirement/post-requirement" },
     { label: "Browse Products",   href: "/search/results" },
@@ -33,6 +33,9 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
     { label: "Service Vendors",   href: "/services" },
     { label: "Freelancers",       href: "/freelancers" },
     { label: "Saved Products",    href: "/saved" },
+    // Served by the cosora-blogs app through a rewrite (vercel.json), not by
+    // this router, so it opens as a real navigation rather than via navigate().
+    { label: "Blogs",             href: "/blogs", external: true },
   ];
 
   return (
@@ -75,6 +78,19 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
             {/* Menu items */}
             <div className="flex-1 overflow-y-auto py-2">
               {menuItems.map(item => (
+                item.external ? (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onClose}
+                    className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors text-left"
+                  >
+                    <span className="text-sm text-gray-800">{t(item.label)}</span>
+                    <ChevronRight className="w-4 h-4 text-gray-300" />
+                  </a>
+                ) : (
                 <button
                   key={item.label}
                   onClick={() => { onClose(); navigate(item.href); }}
@@ -83,6 +99,7 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
                   <span className="text-sm text-gray-800">{t(item.label)}</span>
                   <ChevronRight className="w-4 h-4 text-gray-300" />
                 </button>
+                )
               ))}
             </div>
 
