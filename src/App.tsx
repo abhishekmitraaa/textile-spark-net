@@ -95,6 +95,7 @@ import About from "./pages/About";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
+import GoPostRfq from "./pages/GoPostRfq";
 import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
 import CallNumberModal from "./components/buyer/CallNumberModal";
 import AutoTranslate from "./components/i18n/AutoTranslate";
@@ -189,20 +190,6 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     description: "Expanded business profile management page.",
     relatedHref: "/profile",
     relatedLabel: "Open Profile",
-  },
-  {
-    path: "/blogs",
-    title: "Blogs",
-    description: "Buyer-facing articles, industry insights, and updates.",
-    relatedHref: "/about",
-    relatedLabel: "Open About",
-  },
-  {
-    path: "/blogs/:blogId",
-    title: "Blog Article",
-    description: "Individual blog post reading experience.",
-    relatedHref: "/blogs",
-    relatedLabel: "Back to Blogs",
   },
 ];
 
@@ -317,6 +304,8 @@ const App = () => (
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ClarityMask><ReportFraud /></ClarityMask>} />
             <Route path="/about" element={<About />} />
+            {/* Entry point for Post RFQ links arriving from the proxied blog at /blogs. */}
+            <Route path="/go/post-rfq" element={<GoPostRfq />} />
             <Route path="/seller/blogs" element={<VendorBlogs />} />
             <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />
             {buyerShellRoutes.map((route) => (

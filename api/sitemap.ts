@@ -75,27 +75,60 @@ function urlEntry(loc: string, lastmod?: string, changefreq?: string, priority?:
     .join("\n");
 }
 
-type BlogRow = { slug: string; updated_at: string | null; published_at: string | null };
+type BlogRow = {
+  slug: string;
+  updated_at: string | null;
+  published_at: string | null;
+  category: { slug: string } | { slug: string }[] | null;
+};
 
-async function fetchBlogPosts(): Promise<BlogRow[]> {
+type BlogData = { posts: BlogRow[]; categories: { slug: string; lastmod?: string }[] };
+
+async function fetchBlog(): Promise<BlogData> {
   const url = process.env.VITE_SUPABASE_URL;
   const anonKey = process.env.VITE_SUPABASE_ANON_KEY;
-  if (!url || !anonKey) return [];
+  if (!url || !anonKey) return { posts: [], categories: [] };
 
   const supabase = createClient(url, anonKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select("slug,updated_at,published_at")
-    .eq("status", "published")
-    .not("published_at", "is", null)
-    .lte("published_at", new Date().toISOString())
-    .order("published_at", { ascending: false });
+  // 'scheduled' is included because a scheduled post goes live the moment its
+  // published_at passes; the RLS policy exposes it without any status flip.
+  const [postsRes, catsRes] = await Promise.all([
+    supabase
+      .from("blog_posts")
+      .select("slug,updated_at,published_at,category:blog_categories(slug)")
+      .in("status", ["published", "scheduled"])
+      .not("published_at", "is", null)
+      .lte("published_at", new Date().toISOString())
+      .order("published_at", { ascending: false }),
+    supabase.from("blog_categories").select("slug").order("sort_order"),
+  ]);
 
-  if (error) throw new Error(error.message);
-  return (data ?? []) as BlogRow[];
+  if (postsRes.error) throw new Error(postsRes.error.message);
+  if (catsRes.error) throw new Error(catsRes.error.message);
+
+  const posts = (postsRes.data ?? []) as BlogRow[];
+
+  // A category page's lastmod is the newest post in it, so a crawler is told to
+  // recheck the listing when its contents actually change.
+  const newest = new Map<string, string>();
+  for (const p of posts) {
+    const cat = Array.isArray(p.category) ? p.category[0] : p.category;
+    const when = p.updated_at ?? p.published_at;
+    if (!cat?.slug || !when) continue;
+    if (!newest.has(cat.slug) || when > (newest.get(cat.slug) as string)) {
+      newest.set(cat.slug, when);
+    }
+  }
+
+  const categories = ((catsRes.data ?? []) as { slug: string }[]).map((c) => ({
+    slug: c.slug,
+    lastmod: newest.get(c.slug),
+  }));
+
+  return { posts, categories };
 }
 
 export default async function handler(req: Req, res: Res) {
@@ -105,9 +138,10 @@ export default async function handler(req: Req, res: Res) {
   }
 
   let posts: BlogRow[] = [];
+  let categories: { slug: string; lastmod?: string }[] = [];
   let degraded = false;
   try {
-    posts = await fetchBlogPosts();
+    ({ posts, categories } = await fetchBlog());
   } catch {
     // A sitemap missing its blog section still beats a 500: crawlers keep the
     // static routes, and the short s-maxage means the next crawl retries.
@@ -118,10 +152,30 @@ export default async function handler(req: Req, res: Res) {
     ...STATIC_ROUTES.map((r) =>
       urlEntry(`${ORIGIN}${r.path === "/" ? "/" : r.path}`, undefined, r.changefreq, r.priority),
     ),
+    // The blog index itself, then each category listing. Paginated pages
+    // (/blogs/page/N) stay out on purpose: they are near-duplicate listings.
+    ...(posts.length
+      ? [
+          urlEntry(
+            `${ORIGIN}/blogs`,
+            posts
+              .map((p) => p.updated_at ?? p.published_at ?? "")
+              .sort()
+              .pop() || undefined,
+            "daily",
+            "0.9",
+          ),
+        ]
+      : []),
+    ...categories.map((c) =>
+      urlEntry(`${ORIGIN}/blogs/category/${c.slug}`, c.lastmod, "weekly", "0.6"),
+    ),
+    // Full ISO-8601 rather than a date: a same-day correction is otherwise
+    // invisible to a crawler that already fetched the page today.
     ...posts.map((p) =>
       urlEntry(
         `${ORIGIN}/blogs/${p.slug}`,
-        (p.updated_at ?? p.published_at ?? undefined)?.slice(0, 10),
+        p.updated_at ?? p.published_at ?? undefined,
         "weekly",
         "0.8",
       ),
