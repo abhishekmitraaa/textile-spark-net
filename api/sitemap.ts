@@ -37,11 +37,16 @@ const ORIGIN = "https://www.cosora.in";
  * /search is omitted as a thin, query-dependent surface.
  *
  * Note: the brief mentioned /who-we-are and /contact — neither route exists in
- * this router. /about is the closest equivalent and is included.
+ * this router. /blogs/about is the closest equivalent and is included.
+ *
+ * /blogs/about is served by the Journal app, not this one, but it is the same
+ * origin and this is the origin's only sitemap, so it belongs here. The bare
+ * /about that used to live in this router now 308s to it (see vercel.json) and
+ * is deliberately absent: a sitemap should list destinations, not redirects.
  */
 const STATIC_ROUTES: { path: string; priority: string; changefreq: string }[] = [
   { path: "/", priority: "1.0", changefreq: "daily" },
-  { path: "/about", priority: "0.7", changefreq: "monthly" },
+  { path: "/blogs/about", priority: "0.7", changefreq: "monthly" },
   { path: "/seller", priority: "0.9", changefreq: "weekly" },
   { path: "/categories", priority: "0.8", changefreq: "weekly" },
   { path: "/services", priority: "0.8", changefreq: "weekly" },
