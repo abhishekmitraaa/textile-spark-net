@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/spa-routes.mjs && vite build && node scripts/emit-404.mjs",
+    "build": "node scripts/spa-routes.mjs && vite build && node scripts/emit-404.mjs && node scripts/csp-inline-hashes.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
@@ -14,7 +14,8 @@
     "test:e2e": "npx playwright test",
     "check:fields": "node scripts/check-seller-fields.mjs",
     "i18n:check": "node scripts/i18n-coverage-check.mjs",
-    "routes:sync": "node scripts/spa-routes.mjs --write"
+    "routes:sync": "node scripts/spa-routes.mjs --write",
+    "csp:sync": "node scripts/csp-inline-hashes.mjs --write"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
