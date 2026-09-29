@@ -4,7 +4,7 @@
 -- marks each parameter optional, so the client omits rather than passing null,
 -- and PostgREST leaves an omitted key out of the call entirely.
 --
--- The bodies are identical to 20260929120100; only the signatures gain
+-- The bodies are identical to 20260929114918; only the signatures gain
 -- defaults. See that file for what each function does.
 
 create or replace function public.admin_blog_post_save(

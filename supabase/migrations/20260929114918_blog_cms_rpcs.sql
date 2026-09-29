@@ -24,18 +24,18 @@ create policy blog_posts_select_published on public.blog_posts
 -- ── Helpers ──────────────────────────────────────────────────────────────────
 
 create or replace function public.blog_slugify(p_text text)
-returns text language sql immutable set search_path = '' as $$
+returns text language sql immutable set search_path = '' as $fn$
   select trim(both '-' from
     regexp_replace(
       regexp_replace(lower(coalesce(p_text, '')), '[^a-z0-9]+', '-', 'g'),
       '-{2,}', '-', 'g'))
-$$;
+$fn$;
 
 -- 'category', 'page' and 'api' collide with real route segments in the Next.js
 -- app (/blogs/category/..., /blogs/page/2, /blogs/api/revalidate). A post using
 -- one would be shadowed by the static route and unreachable.
 create or replace function public.blog_assert_slug(p_slug text, p_id uuid)
-returns text language plpgsql set search_path = '' as $$
+returns text language plpgsql set search_path = '' as $fn$
 declare v_slug text := public.blog_slugify(p_slug);
 begin
   if v_slug = '' then
@@ -53,12 +53,12 @@ begin
       using errcode = '23505';
   end if;
   return v_slug;
-end $$;
+end $fn$;
 
 -- Reading time, derived rather than typed by hand so it cannot drift from the
 -- body. Roughly 200 words a minute over the text every block carries.
 create or replace function public.blog_read_time(p_blocks jsonb)
-returns text language sql immutable set search_path = '' as $$
+returns text language sql immutable set search_path = '' as $fn$
   select case
     when p_blocks is null then null
     else greatest(1, round(
@@ -76,7 +76,7 @@ returns text language sql immutable set search_path = '' as $$
             '<[^>]*>', ' ', 'g')),
           '\s+'), 1), 0)::numeric / 200))::text || ' min read'
   end
-$$;
+$fn$;
 
 -- ── Posts ────────────────────────────────────────────────────────────────────
 
@@ -87,7 +87,7 @@ returns table (
   category_id uuid, category_name text, thumbnail text, hero_image text,
   noindex boolean, has_blocks boolean, tags text[], updated_at timestamptz
 )
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql stable security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
@@ -98,7 +98,7 @@ begin
       from public.blog_posts b
       left join public.blog_categories c on c.id = b.category_id
      order by b.sort_order, b.published_at desc nulls first, b.created_at desc;
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_post_get(p_id uuid)
 returns table (
@@ -109,7 +109,7 @@ returns table (
   og_image text, read_time text, tags text[], canonical_url text,
   noindex boolean, created_at timestamptz, updated_at timestamptz
 )
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql stable security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
@@ -121,7 +121,7 @@ begin
            b.noindex, b.created_at, b.updated_at
       from public.blog_posts b
      where b.id = p_id;
-end $$;
+end $fn$;
 
 -- Full save. Omit p_id to insert. Every field is written as given, so the client
 -- sends the whole post: the same contract as admin_site_banner_save.
@@ -147,7 +147,7 @@ create or replace function public.admin_blog_post_save(
   p_canonical_url   text,
   p_noindex         boolean
 ) returns uuid
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare
   v_slug text;
   v_published timestamptz := p_published_at;
@@ -210,25 +210,25 @@ begin
   end if;
 
   return v_id;
-end $$;
+end $fn$;
 
 -- Returns the image paths so the caller can clean up Storage, the same shape as
 -- admin_site_banner_delete.
 create or replace function public.admin_blog_post_delete(p_id uuid)
 returns table (id uuid, images text[])
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
     delete from public.blog_posts b
      where b.id = p_id
     returning b.id, array_remove(array[b.hero_image, b.thumbnail, b.og_image], null);
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_post_set_status(
   p_id uuid, p_status text, p_published_at timestamptz default null
 ) returns table (id uuid, status text, published_at timestamptz)
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare v_published timestamptz := p_published_at;
 begin
   perform admin.require_content_admin();
@@ -244,17 +244,17 @@ begin
        set status = p_status, published_at = v_published
      where b.id = p_id
     returning b.id, b.status, b.published_at;
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_post_reorder(p_ids uuid[])
-returns void language plpgsql security definer set search_path = '' as $$
+returns void language plpgsql security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   update public.blog_posts b
      set sort_order = x.ord
     from unnest(p_ids) with ordinality as x(id, ord)
    where b.id = x.id;
-end $$;
+end $fn$;
 
 -- ── Categories ───────────────────────────────────────────────────────────────
 
@@ -263,7 +263,7 @@ returns table (
   id uuid, name text, slug text, description text,
   seo_title text, seo_description text, sort_order int, posts bigint
 )
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql stable security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
@@ -273,13 +273,13 @@ begin
       left join public.blog_posts b on b.category_id = c.id
      group by c.id
      order by c.sort_order, c.name;
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_category_save(
   p_id uuid, p_name text, p_slug text, p_description text,
   p_seo_title text, p_seo_description text
 ) returns uuid
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare v_slug text; v_id uuid;
 begin
   perform admin.require_content_admin();
@@ -309,12 +309,12 @@ begin
     end if;
   end if;
   return v_id;
-end $$;
+end $fn$;
 
 -- Refuses while posts still point at it, rather than silently orphaning them.
 create or replace function public.admin_blog_category_delete(p_id uuid)
 returns table (id uuid)
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 declare v_posts bigint;
 begin
   perform admin.require_content_admin();
@@ -324,17 +324,17 @@ begin
       using errcode = '23503';
   end if;
   return query delete from public.blog_categories c where c.id = p_id returning c.id;
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_category_reorder(p_ids uuid[])
-returns void language plpgsql security definer set search_path = '' as $$
+returns void language plpgsql security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   update public.blog_categories c
      set sort_order = x.ord
     from unnest(p_ids) with ordinality as x(id, ord)
    where c.id = x.id;
-end $$;
+end $fn$;
 
 -- ── Landing-page settings ────────────────────────────────────────────────────
 
@@ -344,7 +344,7 @@ returns table (
   hero_eyebrow text, hero_title text, hero_subtitle text,
   hero_cta_label text, hero_cta_href text, updated_at timestamptz
 )
-language plpgsql stable security definer set search_path = '' as $$
+language plpgsql stable security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
@@ -352,14 +352,14 @@ begin
            s.hero_eyebrow, s.hero_title, s.hero_subtitle,
            s.hero_cta_label, s.hero_cta_href, s.updated_at
       from public.blog_settings s where s.id;
-end $$;
+end $fn$;
 
 create or replace function public.admin_blog_settings_save(
   p_hero_enabled boolean, p_hero_image text, p_hero_image_alt text,
   p_hero_eyebrow text, p_hero_title text, p_hero_subtitle text,
   p_hero_cta_label text, p_hero_cta_href text
 ) returns table (hero_image text)
-language plpgsql security definer set search_path = '' as $$
+language plpgsql security definer set search_path = '' as $fn$
 begin
   perform admin.require_content_admin();
   return query
@@ -371,14 +371,14 @@ begin
       hero_cta_label = p_hero_cta_label, hero_cta_href = p_hero_cta_href
      where s.id
     returning s.hero_image;
-end $$;
+end $fn$;
 
 -- ── Grants ───────────────────────────────────────────────────────────────────
 -- CREATE FUNCTION grants EXECUTE to PUBLIC by default, which would let a
 -- logged-out caller reach every one of these. Revoke that and hand execute to
 -- authenticated only; the gate inside each function decides from there.
 
-do $$
+do $grants$
 declare fn text;
 begin
   for fn in
@@ -389,4 +389,4 @@ begin
     execute format('revoke execute on function %s from public, anon', fn);
     execute format('grant execute on function %s to authenticated', fn);
   end loop;
-end $$;
+end $grants$;

@@ -29,7 +29,8 @@ begin
   return v_slug;
 end $$;
 
--- CREATE OR REPLACE resets privileges to the PUBLIC default, so re-apply them.
 -- This is a helper, not an admin RPC: it is called from inside the SECURITY
--- DEFINER save functions and nothing should reach it directly.
+-- DEFINER save functions and nothing should reach it directly. Live, anon could
+-- execute it; this closes that. (CREATE OR REPLACE keeps existing privileges,
+-- so the revoke is needed here, not a re-grant.)
 revoke execute on function public.blog_assert_slug(text, uuid) from public, anon;

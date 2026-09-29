@@ -5,6 +5,7 @@
 -- denied. These are additive siblings for the blog/ prefix; the banner policies
 -- are left untouched.
 
+drop policy if exists blog_media_admin_select on storage.objects;
 create policy blog_media_admin_select on storage.objects
   for select to authenticated
   using (
@@ -13,6 +14,7 @@ create policy blog_media_admin_select on storage.objects
     and (select public.admin_role())::text = 'super_admin'
   );
 
+drop policy if exists blog_media_admin_insert on storage.objects;
 create policy blog_media_admin_insert on storage.objects
   for insert to authenticated
   with check (
@@ -21,6 +23,7 @@ create policy blog_media_admin_insert on storage.objects
     and (select public.admin_role())::text = 'super_admin'
   );
 
+drop policy if exists blog_media_admin_update on storage.objects;
 create policy blog_media_admin_update on storage.objects
   for update to authenticated
   using (
@@ -34,6 +37,7 @@ create policy blog_media_admin_update on storage.objects
     and (select public.admin_role())::text = 'super_admin'
   );
 
+drop policy if exists blog_media_admin_delete on storage.objects;
 create policy blog_media_admin_delete on storage.objects
   for delete to authenticated
   using (
@@ -110,13 +114,13 @@ begin
   return v_faqs <= 1;
 end $fn$;
 
-do $$
+do $c$
 begin
   if not exists (select 1 from pg_constraint where conname = 'blog_posts_blocks_valid') then
     alter table public.blog_posts
       add constraint blog_posts_blocks_valid check (public.blog_blocks_valid(blocks));
   end if;
-end $$;
+end $c$;
 
 create index if not exists blog_posts_blocks_gin
   on public.blog_posts using gin (blocks jsonb_path_ops);
