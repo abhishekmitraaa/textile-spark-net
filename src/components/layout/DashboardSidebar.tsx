@@ -27,7 +27,9 @@ import {
   Briefcase,
   Camera,
   Receipt,
+  BookOpen,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -38,8 +40,20 @@ import { tierStyle, isUnlimited } from "@/lib/plan";
 import { useT } from "@/lib/i18n";
 import { RoleSwitcher } from "./RoleSwitcher";
 
+type NavItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  /**
+   * Served by a different app behind a Vercel rewrite (see vercel.json), not by
+   * this SPA's router. Must render as a real anchor: a react-router <Link> would
+   * be handled client-side and fall through to the "*" NotFound route.
+   */
+  external?: boolean;
+};
+
 // Buyer navigation (Clothing Brands)
-const buyerNavigation = [
+const buyerNavigation: NavItem[] = [
   { name: "New Arrivals", href: "/home/new-arrivals", icon: ShoppingBag },
   { name: "For You", href: "/home/for-you", icon: Sparkles },
   { name: "Service Vendors", href: "/services", icon: Wrench },
@@ -49,10 +63,11 @@ const buyerNavigation = [
   { name: "Cosora Studio", href: "/cosora-studio", icon: Camera },
   { name: "My Quotes", href: "/requirement/my-quotes", icon: ClipboardList },
   { name: "Messages", href: "/chats", icon: MessageCircle },
+  { name: "Blogs", href: "/blogs", icon: BookOpen, external: true },
 ];
 
 // Seller navigation (Manufacturers)
-const sellerNavigation = [
+const sellerNavigation: NavItem[] = [
   { name: "Dashboard", href: "/seller-home", icon: LayoutDashboard },
   { name: "My Products", href: "/products", icon: Package },
   { name: "Upload Product", href: "/upload", icon: Upload },
@@ -67,6 +82,7 @@ const sellerNavigation = [
   // delivery state of any physical certificate ordered. Sits below Subscription
   // because that is the page most payments originate from.
   { name: "My Payments", href: "/my-payments", icon: Receipt },
+  { name: "Blogs", href: "/blogs", icon: BookOpen, external: true },
 ];
 
 interface DashboardSidebarProps {
@@ -193,20 +209,44 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
             const isActive =
               location.pathname === item.href ||
               (item.icon === MessageCircle && location.pathname.startsWith("/chats/"));
+            const itemClass = cn(
+              "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 lg:py-2.5",
+              isActive
+                ? "bg-accent text-accent-foreground shadow-gold"
+                : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+            );
+            const itemBody = (
+              <>
+                <item.icon size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                <span>{t(item.name)}</span>
+              </>
+            );
+
+            // A different app serves this path through a rewrite, so it needs a
+            // real document request rather than client-side routing.
+            if (item.external) {
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={isMobile ? onClose : undefined}
+                  className={itemClass}
+                >
+                  {itemBody}
+                </a>
+              );
+            }
+
             return (
               <Link
                 key={item.name}
                 to={item.href}
                 onClick={isMobile ? onClose : undefined}
-                className={cn(
-                  "group flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200 lg:py-2.5",
-                  isActive
-                    ? "bg-accent text-accent-foreground shadow-gold"
-                    : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                )}
+                className={itemClass}
               >
-                <item.icon size={20} className="shrink-0 transition-transform duration-200 group-hover:scale-110" />
-                <span>{t(item.name)}</span>
+                {itemBody}
               </Link>
             );
           })}

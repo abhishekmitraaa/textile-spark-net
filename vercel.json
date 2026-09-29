@@ -1,6 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
+    {
+      "source": "/blogs",
+      "destination": "https://cosora-blogs.vercel.app/blogs"
+    },
+    {
+      "source": "/blogs/:path*",
+      "destination": "https://cosora-blogs.vercel.app/blogs/:path*"
+    },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
