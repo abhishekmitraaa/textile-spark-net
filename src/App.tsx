@@ -91,7 +91,6 @@ import BusinessTools from "./pages/BusinessTools";
 import Kyc from "./pages/Kyc";
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
-import About from "./pages/About";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
@@ -303,7 +302,6 @@ const App = () => (
             <Route path="/kyc" element={<ClarityMask><Kyc /></ClarityMask>} />
             <Route path="/old-advertisements" element={<OldAdvertisements />} />
             <Route path="/report-fraud" element={<ClarityMask><ReportFraud /></ClarityMask>} />
-            <Route path="/about" element={<About />} />
             {/* Entry point for Post RFQ links arriving from the proxied blog at /blogs. */}
             <Route path="/go/post-rfq" element={<GoPostRfq />} />
             <Route path="/seller/blogs" element={<VendorBlogs />} />

@@ -508,7 +508,10 @@ const Landing = () => {
             <div>
               <h4 className="text-sm font-semibold text-zinc-900">Company</h4>
               <ul className="mt-4 space-y-3 text-sm">
-                <li><Link to="/about" className="text-zinc-500 transition-colors hover:text-zinc-900">About</Link></li>
+                {/* The Journal app is reverse-proxied onto this origin, so /blogs
+                    is same-origin but outside this router. A plain anchor, not a
+                    <Link>: react-router would match nothing and render the 404. */}
+                <li><a href="/blogs/about" className="text-zinc-500 transition-colors hover:text-zinc-900">About</a></li>
                 <li><a href="#why" className="text-zinc-500 transition-colors hover:text-zinc-900">Why Cosora</a></li>
                 <li><a href="#how" className="text-zinc-500 transition-colors hover:text-zinc-900">How it works</a></li>
               </ul>

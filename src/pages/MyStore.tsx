@@ -517,7 +517,10 @@ const MyStore = () => {
                   <MenuRow icon={Shield}    label={t("Privacy Policy")} onClick={() => navigate("/terms")} />
                   <MenuRow icon={FileText}  label={t("Terms of Use")}   onClick={() => navigate("/terms")} />
                   <MenuRow icon={Lightbulb} label={t("What's New")}     onClick={() => navigate("/seller/blogs")} />
-                  <MenuRow icon={Info}      label={t("About Us")}       onClick={() => navigate("/about")} />
+                  {/* /blogs/about lives in the Journal app, proxied onto this
+                      origin. navigate() is router-only, so this needs a real
+                      document load. */}
+                  <MenuRow icon={Info}      label={t("About Us")}       onClick={() => { window.location.href = "/blogs/about"; }} />
                   <motion.button whileTap={TAP} transition={TAP_T} onClick={() => setLogoutOpen(true)}
                     className="w-full flex items-center justify-between px-3 py-3 hover:bg-gray-50 rounded-lg transition-colors text-left">
                     <div className="flex items-center gap-3">
