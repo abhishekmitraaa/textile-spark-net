@@ -585,7 +585,10 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 
 **Analytics & support**
 - Platform-level analytics; ad impressions and clicks; call records.
-- Support chat, fraud reports, app feedback.
+- **Support requests** (Help & Support, live in the admin 2026-10-01; rollout Off): support chats,
+  callback requests, fraud reports and app feedback, answered in Cosora-Admin's Support
+  section. Until the buyer screens (P3) ship and rollout opens, fraud reports and feedback still
+  aren't collected from users (`securityflags.md`).
 
 **Content**
 - **FAQs** (`/faqs`, 2026-09-23): the first real admin-editable content. It covers the
@@ -601,7 +604,8 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   edge functions' actions. Filters by admin, area, action and date. Written by the database,
   append-only.
 - **Manager role:** reads the Admin Log (with super_admin), and sees no moderation or
-  commerce section.
+  commerce section. Since Help & Support (2026-09-30) it also reads every support request,
+  read-only, and each phone number it reveals is in the Admin Log.
 - **System Health → Analytics events refused** (MPF-23): events `log_engagement_event()`
   couldn't record, per hour, with the error and the last event type and source.
 
@@ -632,6 +636,31 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-09-30, live 2026-10-01 (Help & Support P4; rollout Off, so no requests arrive yet)
+- **Support section** in Cosora-Admin, for super_admin and the Support role, with the
+  Manager role read-only (D-08):
+  - **Inbox** (`/support`): every request, oldest waiting first, with views (waiting on us,
+    open, mine, unassigned, resolved, closed) and filters by channel, topic, side and
+    language. Test accounts' requests carry a “test” tag, and
+    unticking “Include test requests” hides them. Live updates.
+  - **One request** (`/support/:ticketNo`): the thread with photos, voice notes and PDFs
+    (PDFs download, never open in the panel); a reply or an internal note, with files;
+    take, assign, resolve, reopen and close with a reason; the requester's account and
+    status; what the database gathered when the request was opened (plan, KYC, the chat or
+    requirement it's about); the history of every change.
+  - **Phone numbers are masked.** Reveal shows the full number and writes an Admin Log row.
+  - **Callbacks, Fraud reports, App feedback:** the same list, per channel. A call attempt
+    is recorded as completed, no answer (three tries), wrong number or cancelled. A fraud
+    report takes an outcome (no action, warned, suspended, escalated to legal) that the
+    reporter never sees, and the reporter never sees their own evidence either.
+  - **Support settings** (`/support/settings`, super_admin changes, the others read): who
+    can reach support (Off, Staff testing with up to 20 test accounts, Everyone), hours,
+    holidays, the phone and email Help shows, and which topics are on. Subscription and billing
+    (`vendor_billing`) stays off until the manual refund process is written (D-11).
+- **Quick Guides** tab on `/faqs`: the Help page's step-by-step guides in English, Hindi
+  and Gujarati, for support and super_admin.
+- **The requester always sees "Cosora Support"**, never the staff member's name (D-06).
 
 ### Added 2026-09-29 (admin completion, Phase 9)
 - **Site content is real.** It used to edit sample data.

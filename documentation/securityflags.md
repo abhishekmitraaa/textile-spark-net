@@ -12,6 +12,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-30 | 33 SECURITY DEFINER functions in `public` can still be called by `anon` (suspected; not reviewed one by one) | Unknown until reviewed (suspected gap) | Live catalog, 2026-09-30: `has_function_privilege('anon', oid, 'execute')` is true for 33 definer functions in `public` | Open, suspected. Some are meant to be public (feeds, ad serving). `submit_report` was checked: it refuses anyone who isn't a member of the conversation. The rest weren't reviewed. May overlap admin-completion Phase 11 (least-privilege reads). Log entry below |
+| 2026-09-30 | `/report-fraud` takes a fraud report, keeps nothing, and says it will be reviewed within 48 hours | Medium (trust and safety: a victim believes a report was filed) | `src/pages/ReportFraud.tsx:82` (success toast only; the upload box at `:67` toggles a boolean); linked signed-out from `Landing.tsx:524`, and from `VendorLanding.tsx:136` and `Onboarding.tsx:48` | Open. Fixed by the Help plan's P1 (an honest `mailto:`), then P3 (a stored, reviewed report). `documentation/help-feature-plan.md`. Log entry below |
+| 2026-09-30 | The Help page's support chat has no chat-monitoring notice, and both support chats present an invented agent with fake presence | Medium (the notice is legally required in every chat flow, `claude.md`) | `src/pages/Help.tsx:77-227` (`ChatModal`: no notice, agent "Abdul", fake typing); `src/pages/SupportChat.tsx:26-117,157` (canned replies, "Online", read ticks) | Open. Already in `ToDo.md` MPF-15; this is its flag row. Fixed by the Help plan's P1 (both removed), then P3 (a real chat with the notice). Log entry below |
 | 2026-09-29 | A review's display name is client-supplied: `reviewer_name` / `reviewer_company` are written by the browser, so a buyer can post under any name | Low (impersonation in review text; the author's uid is still recorded) | `src/lib/queries/reviews.ts` (`resolveReviewer`); `reviews` / `product_reviews` / `service_reviews` insert policies | Open: fill them in a BEFORE INSERT trigger from `buyer_profiles` / `profiles` |
 | 2026-09-28 | Microsoft Clarity's script, once switched on, can read every buyer-site page | Low (third-party script; dormant until `VITE_CLARITY_PROJECT_ID` is set) | `src/lib/analytics/clarity.ts` (loads `https://www.clarity.ms/tag/<id>`) | Open, accepted with Mitra's decision to install Clarity. Masking controls what Clarity uploads, not what its script can read: like any third-party script it runs with the page's privileges. In place: it loads only when configured, identifies no one, and the sign-in, chat, onboarding, KYC, profile, requirement, quote, lead and billing screens and every overlay are masked. The buyer site sends no Content-Security-Policy, so nothing limits which scripts load; a CSP that allows `www.clarity.ms` and `*.clarity.ms` is the next step. Log entry below |
 | 2026-09-28 | Session replay would start without asking the visitor | Low (a legal question; dormant until Clarity is switched on) | `src/lib/analytics/clarity.ts`; the notice on `/terms` (`TermsConditions.tsx`, `#analytics`) | Open, a decision for Mitra and legal before `VITE_CLARITY_PROJECT_ID` is set. The Terms page describes recording and cookies, but nothing asks for consent, and Clarity sets its cookies on the first page. Clarity offers a consent API and a project setting that holds cookies until consent. Log entry below |
@@ -83,6 +86,32 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-30 — Help & Support planning session: three findings — Severity: Medium / Medium / unknown (suspected)
+- **Found:** during Stage 1 of the Help planning session (verifying the Help audit report). Read-only: no code or data
+  was changed. The plan that fixes the first two is `documentation/help-feature-plan.md`.
+- **1. The fraud form discards reports** (`src/pages/ReportFraud.tsx`).
+  - It asks for the reporter's name, email and phone, the suspect number, a city and a description.
+  - Submit only shows "Report submitted. Our team will review it within 48 hours." (`:82`). Nothing is stored or sent.
+  - The "attach" box toggles a boolean and never reads a file (`:67`).
+  - It is linked from the signed-out home page footer (`Landing.tsx:524`), `/seller` and vendor onboarding.
+  - Risk: a fraud victim believes they reported and waits for a review that never comes.
+  - Fix: P1 replaces it with a prefilled `mailto:` and drops the 48-hour line; P3 builds a stored report reviewed in
+    a restricted Cosora-Admin queue.
+- **2. Support chat without the monitoring notice, and invented staff.**
+  - `ChatModal` in `Help.tsx` (opened by "Contact Us" and "Start Live Chat") has no `CHAT_MONITORING_NOTICE`.
+  - It shows an agent "Abdul" and a two-second "typing" indicator, and never replies.
+  - `SupportChat.tsx` (`/profile/help/chat`) shows the notice, but replies on a timer from a canned list and shows
+    "Online" and read ticks.
+  - Neither sends anything anywhere.
+  - Risk: a legal requirement is missing, and users are misled about being helped.
+  - Fix: P1 removes both chats; P3 builds a real chat with the notice.
+- **3. Suspected: `anon` can execute 33 SECURITY DEFINER functions in `public`.**
+  - Supabase's default PUBLIC EXECUTE grant was left on them (the same pattern as the 2026-09-13 ad-helper flag).
+  - Checked: `submit_report` refuses callers who aren't in the conversation, so it is safe.
+  - Not checked: the other 32. Some are meant to be public.
+  - Next step: list them, and revoke from `public` and `anon` where a function isn't meant for signed-out callers.
+    This probably belongs with admin-completion Phase 11.
 
 ### 2026-09-29 — Self-reviews and forged seller replies — Severity: Medium (fixed the same day)
 - **Found:** while auditing the reviews pipeline for Mitra.

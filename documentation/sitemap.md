@@ -178,14 +178,23 @@ reason anything ever appears in this repo's `/video-closeups` buyer feed.
 
 **`/faqs`** (added 2026-09-23) edits the FAQ rows in this repo's `public.faqs`: the ones on
 `/profile/help` and `/help` (`buyer_help`), on `/subscription` (`subscription`), and on
-the seller landing page `/seller` (`seller_registration`). super_admin writes and
-support reads, all through `admin_faq_*` RPCs. Edits show on those pages with no deploy.
+the seller landing page `/seller` (`seller_registration`). super_admin and support write
+(support since 2026-09-24), all through `admin_faq_*` RPCs. Edits show on those pages with
+no deploy. Since 2026-09-30 it also has a Quick Guides tab (`public.help_guides`).
 
 **`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
 `admin.audit_log` in this project's database, for super_admin and the Manager role only.
 
 **`/admins`** is for super_admin and, since 2026-09-26, the Manager role, which adds, changes
 and removes teammates in the five team roles only (migration `20260925210601`).
+
+**`/support`** (Help & Support, live 2026-10-01; rollout Off) answers what buyers and vendors
+send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
+`/support/feedback`, `/support/:ticketNo` (one request, e.g. `CS-000001`) and
+`/support/settings`. It reads this project's `public.support_*` tables through the
+`admin_support_*` functions. The buyer and vendor routes that feed it (`/help/chat`,
+`/help/requests`, `/help/callback`, `/feedback`, the `/report-fraud` wizard) are planned in
+`help-feature-plan.md` P3 and not built.
 
 ---
 
