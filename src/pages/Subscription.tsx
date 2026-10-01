@@ -19,7 +19,9 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import { useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription } from "@/lib/queries/subscriptions";
+import { discountRefusal } from "@/lib/queries/discounts";
 import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
+import { PlanCheckoutDialog } from "@/components/vendor/PlanCheckoutDialog";
 import {
   formatINR, tierStyle, isUnlimited, usagePct, yearlySavingsPct, yearlySavingsAmount,
   type Plan, type PlanId, type PlanDisplay,
@@ -74,6 +76,8 @@ export default function Subscription() {
   const [isYearly, setIsYearly] = useState(false);
   const [showAllFeatures, setShowAllFeatures] = useState(false);
   const [busyPlan, setBusyPlan] = useState<PlanId | null>(null);
+  // The plan in the checkout dialog (price, discount code, GST, total), if open.
+  const [checkoutPlan, setCheckoutPlan] = useState<Plan | null>(null);
 
   // Tax details — persisted to vendor_profiles (and sent with each checkout, so
   // they land on the invoice for input credit). Loaded once on mount.
@@ -104,22 +108,33 @@ export default function Subscription() {
     ? Math.max(0, Math.ceil((new Date(vplan.subscription_end).getTime() - Date.now()) / 86_400_000))
     : null;
 
-  const buy = async (plan: Plan) => {
+  // "Choose <plan>": the checks that need no server, then the checkout dialog.
+  const buy = (plan: Plan) => {
     if (!user) { toast.error("Sign in as a vendor to subscribe"); return; }
     if (plan.id === "free") { toast.info("Free is the default plan — no purchase needed."); return; }
     if (plan.is_invite_only) {
       toast("Cosora VIP is invite-only", { description: "Our team hand-picks VIP vendors. Ask your account manager to request access." });
       return;
     }
+    setCheckoutPlan(plan);
+  };
+
+  // The dialog's Pay. Resolves to why a discount code was refused (the dialog
+  // shows it and drops the code), or null.
+  const completePurchase = async (plan: Plan, discountCode?: string): Promise<string | null> => {
     setBusyPlan(plan.id);
     try {
       const res = await purchaseSubscription({
-        planId: plan.id, billingCycle, gstNumber: gstin || undefined, planName: plan.name,
+        planId: plan.id, billingCycle, gstNumber: gstin || undefined, planName: plan.name, discountCode,
         prefill: { name: profile?.full_name ?? undefined, email: profile?.email ?? undefined },
+        // Razorpay's window can't be clicked while the dialog is open.
+        onGatewayOpen: () => setCheckoutPlan(null),
       });
+      if (res.discountReason) return discountRefusal(res.discountReason);
       if (res.ok) {
         qc.invalidateQueries({ queryKey: ["vendor_plan"] });
         qc.invalidateQueries({ queryKey: ["subscription_invoices"] });
+        setCheckoutPlan(null);
         toast.success(res.demo ? `${plan.name} activated (demo mode)` : `You're now on ${plan.name}!`, {
           description: res.demo ? "Simulated checkout — add Razorpay keys for live payments." : "Your new plan is active.",
         });
@@ -134,6 +149,7 @@ export default function Subscription() {
     } finally {
       setBusyPlan(null);
     }
+    return null;
   };
 
   const savingsPct = currentPlan ? yearlySavingsPct(2299, 22990) : 17; // Gold reference (~17%)
@@ -453,6 +469,13 @@ export default function Subscription() {
           </Card>
         </motion.div>
       </motion.div>
+
+      <PlanCheckoutDialog
+        plan={checkoutPlan}
+        billingCycle={billingCycle}
+        onClose={() => setCheckoutPlan(null)}
+        onConfirm={completePurchase}
+      />
     </DashboardLayout>
   );
 }

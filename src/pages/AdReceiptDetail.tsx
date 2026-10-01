@@ -163,6 +163,25 @@ export default function AdReceiptDetail() {
                 </td>
               </tr>
             )}
+            {/* Both figures are read off the order (admin completion Phase 10):
+                the discount it stored, and the amount it charged. */}
+            {receipt.discountRupees > 0 && (
+              <>
+                <tr className="border-b border-border">
+                  <td className="py-3 text-sm text-foreground" colSpan={2}>Subtotal</td>
+                  <td className="py-3 text-right text-sm text-foreground">{formatINR(receipt.amountRupees + receipt.discountRupees)}</td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="py-3 text-sm text-muted-foreground" colSpan={2}>
+                    <span>Discount</span>
+                    {receipt.discountCode && (
+                      <span className="ml-1.5 font-mono text-xs" data-no-translate>{receipt.discountCode}</span>
+                    )}
+                  </td>
+                  <td className="py-3 text-right text-sm text-muted-foreground">−{formatINR(receipt.discountRupees)}</td>
+                </tr>
+              </>
+            )}
             <tr>
               <td className="py-4 text-base font-bold text-foreground" colSpan={2}>Total paid</td>
               <td className="py-4 text-right text-base font-bold text-foreground">{formatINR(receipt.amountRupees)}</td>

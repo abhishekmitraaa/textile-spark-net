@@ -35,12 +35,17 @@ export interface OrderResult {
   keyId?: string;
   amount?: number; // paise
   currency?: string;
+  /** A code took the order to ₹0: there is no Razorpay order to pay. */
+  free?: boolean;
+  /** Set when the discount code was refused (DiscountReason). Nothing was created. */
+  discountReason?: string;
 }
 
 // Ask the server to create a Razorpay order. The full spec is recorded in a
-// server-side intent (ad_orders); the amount is computed server-side.
-export async function createRazorpayOrder(spec: AdSpec): Promise<OrderResult> {
-  const { data, error } = await supabase.functions.invoke("razorpay-create-order", { body: { spec } });
+// server-side intent (ad_orders); the amount is computed server-side, and so is
+// any discount: the browser only names the code.
+export async function createRazorpayOrder(spec: AdSpec, discountCode?: string): Promise<OrderResult> {
+  const { data, error } = await supabase.functions.invoke("razorpay-create-order", { body: { spec, discountCode } });
   if (error) throw error;
   if (!data) return { configured: false };
   // Order matters. `not_configured` is the ONLY response that may fall back to
@@ -49,9 +54,14 @@ export async function createRazorpayOrder(spec: AdSpec): Promise<OrderResult> {
   // failed, so it must surface. Testing `!data.configured` first would swallow
   // those into the demo branch and publish the campaigns for free.
   if (data.error === "not_configured") return { configured: false };
+  // A refused code stops the purchase here, with nothing created and nothing held.
+  if (data.error === "discount") return { configured: true, discountReason: data.reason ?? "unavailable" };
   if (data.error) throw new Error(String(data.detail || data.error));
   if (!data.configured) return { configured: false };
-  return { configured: true, orderId: data.orderId, keyId: data.keyId, amount: data.amount, currency: data.currency };
+  return {
+    configured: true, orderId: data.orderId, keyId: data.keyId, amount: data.amount, currency: data.currency,
+    free: Boolean(data.free),
+  };
 }
 
 interface RazorpayHandlerResponse {
@@ -68,6 +78,8 @@ interface RazorpayOptions {
   description?: string;
   theme?: { color?: string };
   prefill?: { name?: string; email?: string; contact?: string };
+  /** Seconds before Checkout closes itself. */
+  timeout?: number;
   handler: (r: RazorpayHandlerResponse) => void;
   modal?: { ondismiss?: () => void };
 }
@@ -97,6 +109,8 @@ export interface CheckoutOpts {
   name?: string;
   description?: string;
   prefill?: { name?: string; email?: string; contact?: string };
+  /** Seconds before Checkout closes itself; set when a discount code's use is held for the order. */
+  timeout?: number;
 }
 
 // Opens Razorpay Checkout; resolves with the payment fields, rejects with
@@ -120,6 +134,7 @@ export function openRazorpayCheckout(opts: CheckoutOpts): Promise<RazorpayHandle
       description: opts.description,
       theme: { color: "#ff2160" },
       prefill: opts.prefill,
+      ...(opts.timeout ? { timeout: opts.timeout } : {}),
       handler: (r) => { done = true; resolve(r); },
       modal: { ondismiss: () => { if (!done) reject(new Error("dismissed")); } },
     });
@@ -139,11 +154,25 @@ export async function verifyRazorpayPayment(input: {
   return data ?? { ok: false, error: "no_response" };
 }
 
-// Demo (no gateway configured): publish the campaigns server-side from the spec.
-// The server still owns the insert (clients can't create active ads directly).
-export async function publishDemoAds(spec: AdSpec): Promise<{ ok: boolean; count?: number; error?: string }> {
+// A code took this order to ₹0, so there was no Razorpay checkout: the server
+// fulfils it only if the order is the caller's, costs ₹0 and its code's use
+// confirms.
+export async function publishFreeAdOrder(orderId: string): Promise<{ ok: boolean; count?: number; error?: string }> {
   const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", {
-    body: { demo: true, spec },
+    body: { orderId, free: true },
+  });
+  if (error) throw error;
+  return data ?? { ok: false, error: "no_response" };
+}
+
+// Demo (no gateway configured): publish the campaigns server-side from the spec.
+// The server still owns the insert (clients can't create active ads directly),
+// and applies a code through the same reservation a live order would.
+export async function publishDemoAds(
+  spec: AdSpec, discountCode?: string,
+): Promise<{ ok: boolean; count?: number; error?: string; reason?: string }> {
+  const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", {
+    body: { demo: true, spec, discountCode },
   });
   if (error) throw error;
   return data ?? { ok: false, error: "no_response" };

@@ -147,7 +147,11 @@ export function useVendorPayments(vendorId: string | undefined) {
 /** One ad order, for the printable receipt. */
 export interface AdReceipt {
   orderId: string;
+  /** What was charged, after any discount code. */
   amountRupees: number;
+  /** What a discount code took off (admin completion Phase 10); 0 when none. */
+  discountRupees: number;
+  discountCode: string | null;
   status: string;
   createdAt: string;
   paidAt: string | null;
@@ -160,15 +164,17 @@ export interface AdReceipt {
 export async function fetchAdReceipt(orderId: string): Promise<AdReceipt | null> {
   const { data, error } = await supabase
     .from("ad_orders")
-    .select("order_id, amount, status, created_at, paid_at, spec")
+    .select("order_id, amount, status, created_at, paid_at, spec, discount_paise, discount_code")
     .eq("order_id", orderId)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const o = data as unknown as RawAdOrder;
+  const o = data as unknown as RawAdOrder & { discount_paise: number | null; discount_code: string | null };
   return {
     orderId: o.order_id,
     amountRupees: Math.round(Number(o.amount) / 100),
+    discountRupees: Math.round(Number(o.discount_paise ?? 0) / 100),
+    discountCode: o.discount_code,
     status: o.status,
     createdAt: o.created_at,
     paidAt: o.paid_at,

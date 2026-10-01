@@ -43,6 +43,7 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-29 | Live subscription invoices dropped the signature-verified Razorpay payment id (`paymentId: null` into the invoice), so a real payment would have read as "not gateway-verified" and had no id to refund against | Low (audit trail; latent while the keys are unset) | `subscription-verify-payment` `activateFromOrder`; `subscription-webhook` | Fixed 2026-09-29 (admin completion Phase 10): verify passes the verified id, the webhook the event's payment id (verify v6, webhook v5). `scripts/discount-flow-check.mjs` B1 and C1 assert it |
 | 2026-09-29 | **A seller could review their own store and products**, and so set their own rating (insert policies checked only `buyer_id = auth.uid()`) | Medium (reputation fraud) | `reviews`, `product_reviews` | Fixed 2026-09-29: `guard_review_write()` (migration `20260928190320`) |
 | 2026-09-29 | **A buyer could write a "seller reply" onto their own review** (`reviews_update_own` let the author set `reply_body` / `replied_at`) | Medium (a forged response in the seller's name) | `reviews` | Fixed 2026-09-29: the guard keeps the reply columns unless a reply RPC writes them |
 | 2026-09-27 | **Every vendor's PAN, owner email, phone, WhatsApp and street address is readable signed out** (anon holds column SELECT on all 43 `vendor_profiles` columns; `vprofiles_select` is `USING (true)`) | High (PII and tax id of every vendor, unauthenticated) | `public.vendor_profiles`; readers in `src/lib/queries/vendor.ts`, `vendorStore.ts`, `calls.ts`, `AdReceiptDetail.tsx`, `InvoiceDetail.tsx`, `Subscription.tsx` | **Fixed 2026-09-28** (admin completion Phase 4). Readers first: `my_vendor_private()`, the gated and rate-limited `call_vendor_contact()` and `admin_vendor_private()` (`20260927184250`, `20260927185902`), both apps moved onto them, then `writeOwnVendorRow()` for writes. Then `20260928042152` replaced table SELECT with column grants without the eight columns. **Verified live:** signed-out `select=phone`, `select=*`, a `pan` filter and a private embed went from 200 to 401/42501; public columns still 200; harness `08` 18/18; every select string in both live bundles still works. The MPF-19 order held: the code was live first |
@@ -83,6 +84,24 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-09-29 — Discount codes: what stops a vendor pricing their own order — Severity: n/a (design, admin completion Phase 10)
+- **The browser never sends a discount or an amount**, only a code. The payment functions price the order,
+  and the database decides the discount (`admin.discount_evaluate`).
+- **The four RPCs that hold and spend uses are service-role only** (`discount_check`, `_reserve`, `_confirm`,
+  `_release`): revoked from public, anon and authenticated, confirmed with `has_function_privilege`, and
+  absent from the advisors' anon/authenticated lists. The three tables are in the admin schema with no
+  client privileges.
+- **Guessing:** ten unknown codes in an hour lock that vendor out of every code for the rest of the hour,
+  in the quote and at checkout. A lockout is per vendor account; account creation is OTP-gated.
+- **Races:** the last use is taken under the code's row lock; checked with real concurrent requests
+  (`scripts/discount-race-check.sql`).
+- **₹0 orders** have no signature to check, so fulfilment requires the caller's own order, a stored amount
+  of 0 and a redemption that confirms (`free: true` only for `free_` ids).
+- **Admin edits:** super_admin and finance_admin only, in the database; a used code's meaning can't change;
+  both tables in the Admin Log.
+- **Still open (not changed here):** the 2026-09-12 flag. Checkouts run in demo mode because the Razorpay
+  keys aren't set, so a vendor activates a plan or submits ads without paying, code or not.
 
 ### 2026-09-29 — Self-reviews and forged seller replies — Severity: Medium (fixed the same day)
 - **Found:** while auditing the reviews pipeline for Mitra.

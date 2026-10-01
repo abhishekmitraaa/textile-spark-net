@@ -164,6 +164,54 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-09-29 — Admin completion Phase 10: discount codes (harness 19/19 twice; race 1 of 10; flow 53/53)
+- **Migrations** `20260929080502_discount_codes` and `20260929084703_discount_code_save_defaults`: each
+  rehearsed with its harness in one transaction that raised, applied, md5 matched (`a694b60d…`,
+  `464931b4…`).
+- **`scripts/admin-completion/14_discounts.sql`** (rolled back), 19/19 in the rehearsal, live, and live
+  again after the follow-up:
+  - super_admin and finance_admin list codes; vendor_ops, product_moderator, support, ads_moderator,
+    manager and a buyer get 42501; anon has no EXECUTE.
+  - A signed-in vendor can't call the four service-role RPCs or read the tables (42501).
+  - 17 bad saves → 22023, a duplicate in another case → 23505, an unknown id → P0002.
+  - Every refusal reason, and the arithmetic: 25% of ₹2,299 = ₹575; 10% of Gold = ₹230; ₹500 off a
+    ₹199 certificate = ₹199; 10% of ₹1,000 of ad lines beside a ₹199 certificate = ₹100.
+  - Ten unknown codes lock one vendor out (a real code then answers `too_many_attempts`), not another,
+    and not an hour later.
+  - The last use held by one vendor and refused to another; replaced by the same vendor's next checkout;
+    free again when it lapses (held 30 minutes); `changed`; a reused order → 23505; no order → 22023.
+  - Confirm is idempotent (same `confirmed_at`), a wrong order is `unknown`, release never undoes a
+    confirmation, a replaced order paid anyway confirms, the per-vendor limit holds.
+  - After a confirmed use the text, kind, value and plans are refused, the cap can't go below the uses;
+    dates, caps, note and on/off save.
+  - The discount columns' CHECKs refuse five inconsistent rows and take a ₹0 order.
+  - The ledger shows each discounted row, the summary totals ₹2,974 off over 3 rows, and a ₹0 invoice
+    counts as verified.
+- **`scripts/discount-race-check.sql`** (real concurrency: pg_net → PostgREST `/rpc/discount_reserve`,
+  the service-role key read from Vault inside the database): ten vendors racing for a code with one use
+  → 1 reserved, 9 `exhausted`; one vendor's ten simultaneous checkouts → all accepted, exactly 1 left
+  open and 9 released, transaction starts spread over 64 ms, 3 reservations released by a transaction
+  that began before they existed (it could only have been waiting on the lock). A two-session lock test
+  through two `execute_sql` calls didn't overlap (the tool runs them one after the other), so it isn't
+  counted. Test codes and 12 redemptions deleted; no audit rows.
+- **`scripts/discount-flow-check.mjs`** (no network): 53/53 across the seven functions, including every
+  no-code path sending exactly what it sent before. Mutation check: breaking the discount arithmetic
+  failed 10 checks; removing verify's confirm failed 1.
+- **`scripts/gst-check.mjs`**: the functions reach `gstOn` through `subscriptionAmounts()`; no code =
+  the same charge for every rupee to ₹1,00,000; 25% off Gold = ₹1,724 + ₹310; `src/lib/gst.ts` equals the
+  charged formula for every rupee to ₹1,00,000. **`scripts/ad-pricing-check.mjs`**: certificate line +
+  ad lines = the order across 4,000 generated orders.
+- **Deployed functions**: `discount-quote` v1, `subscription-create-order` v5, `-verify-payment` v6,
+  `-webhook` v5, `razorpay-create-order` v6, `-verify-payment` v11, `-webhook` v8. Sources read back.
+  Smoke with the anon key: create-order `not_configured`, verify and quote `unauthenticated`, webhooks
+  `not_configured`, CORS preflight 200.
+- **Render checks** (local builds, made-up sessions, every Supabase request answered in the browser, no
+  real writes): buyer plan checkout, refused and applied code, demo purchase body, invoice and receipt
+  lines, the ad panel's quote and re-quote and demo pay; Cosora-Admin Discounts (list, create with
+  field validation, locked edit, switch off, uses) and the ledger's discount. 0 page errors.
+- **Typecheck, i18n (7,029/7,029 hi and gu) and build**: pass in both apps. Admin `dist` holds none of
+  the old fixture's codes.
+
 ### 2026-09-29 — Reviews pipeline (migration applied, md5 matches; 14/14 SQL cases; new spec passes; 8/8 related specs)
 
 - **SQL, as `authenticated` in one rolled-back transaction** (14/14):

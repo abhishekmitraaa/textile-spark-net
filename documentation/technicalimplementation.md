@@ -2008,6 +2008,59 @@ Content page (`src/lib/siteContent.ts`).
 
 ---
 
+## Discount codes — priced by the server (admin completion Phase 10, 2026-09-29)
+
+Migrations `20260929080502_discount_codes.sql` and `20260929084703_discount_code_save_defaults.sql`;
+`supabase/functions/_shared/discounts.ts`; edge function `discount-quote`; the six payment functions;
+Cosora-Admin's Discounts page (`src/lib/discounts.ts`).
+
+- **What a code applies to.** `vendor_plan`: the plan's price for the cycle, before GST.
+  `ad_purchase`: every line of an ad order except the Verified Certificate. `certificate`: the
+  `verifiedCertificate` line only. `orderLineRupees(spec)` in `_shared/adPricing.ts` splits an order
+  (certificate + ads = `computeOrderRupees`, asserted over 4,000 generated orders by
+  `ad-pricing-check`).
+- **The arithmetic is the database's** (`admin.discount_amount`): a percentage rounds to the nearest
+  rupee, a flat discount never exceeds its lines, and a discount of ₹0 is refused (`no_discount`).
+  Subscriptions: `base = list − discount`, then `gstOn(base)` (`subscriptionAmounts()`). Ads:
+  `total = gross − discount`, no GST line (unchanged).
+- **Tables (admin schema, no client privileges):**
+  - `discount_codes`: code (upper case, `^[A-Z0-9][A-Z0-9_-]{2,31}$`, unique forever), kind, value,
+    target, optional plans, cap, per-vendor limit, dates, on/off, note.
+  - `discount_redemptions`: one per order (`unique (order_kind, order_ref)`), with the eligible amount
+    and the discount in paise; `reserved` → `confirmed` or `released`; `expires_at` 30 minutes after
+    reserving.
+  - `discount_attempts`: codes a vendor tried that don't exist; ten in an hour locks that vendor out of
+    every code for the rest of the hour.
+- **Counting.** A use is a confirmed redemption, or another vendor's reservation that hasn't lapsed.
+  The vendor's own open reservation doesn't count: a new checkout releases it (one open checkout per
+  vendor per code). `discount_reserve` takes `select … for update` on the code row first, so concurrent
+  reservations queue and each counts the ones before it. Under READ COMMITTED each statement in the
+  volatile function takes a fresh snapshot, so the waiter sees the reservation that just committed.
+- **The order of a live checkout (create-order):**
+  1. `discount_check` (no lock) with the order's own amounts. A refusal returns
+     `{ error: "discount", reason }` and creates nothing.
+  2. The Razorpay order at the discounted amount, or `free_<uuid>` when it is ₹0.
+  3. `discount_reserve` against that order id, passing the discount the order was priced with; if the
+     code now gives a different one (an admin edited it) the answer is `changed`, and a lost race is
+     `exhausted`. Either way the unpaid Razorpay order simply expires.
+  4. The intent row with the discount columns; if that write fails, `discount_release`.
+- **Fulfilment.** Verify and the webhook claim the intent (`created` → `paid`), confirm the redemption
+  (idempotent, and it succeeds even after the reservation lapsed or was replaced, because the vendor
+  was charged the discounted price), then invoice from the stored amounts. An intent from before the
+  columns existed (`list_rupees` null) is invoiced from the plan, as before.
+- **₹0 orders:** `{ orderId, free: true }` to verify-payment, only for `free_…` ids. It reads the
+  intent, requires the caller's vendor id, `amount = 0` and a redemption, confirms the redemption, then
+  claims and fulfils. No signature exists to check, so the stored order is the proof.
+- **Demo mode** (no Razorpay keys, production today): verify reserves against `demo_<uuid>`, activates
+  or publishes, then confirms (or releases on failure).
+- **Checkout timeout.** Razorpay Checkout gets `timeout: 1500` seconds when a code is applied, inside
+  the 30-minute hold.
+- **Not decided here (ToDo):** a refund doesn't give the use back; a Free vendor's paid ad order still
+  goes to refund review with its use confirmed.
+- **Tests:** harness `scripts/admin-completion/14_discounts.sql`, `scripts/discount-race-check.sql`
+  (real concurrency through pg_net), `scripts/discount-flow-check.mjs` (the functions' code, mocked
+  network), and the extended `gst-check` / `ad-pricing-check`.
+
 ## Calls — one write path, `log_call()` (2026-09-23)
 
 Phase 12 of the My Profile brief (MPF-2). Migration
