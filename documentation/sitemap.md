@@ -219,7 +219,13 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | Route | Component | Notes |
 |---|---|---|
 | `/notifications` | `Notifications` | Backed by the `notifications` table; 4 moderation kinds are real, the rest are dev-only samples |
-| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`, so vendors land on the buyer FAQs (MPF-15) |
+| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`. Seller frame for sellers; buyer FAQs with a note until P5's `seller_help` (MPF-15). Shows chat and callback only when rollout includes the person (P3) |
+| `/help/chat` | `SupportChatStart` | Start a chat or continue an open one. `?category=&entity_type=&entity_id=` from links (`supportChatHref`) |
+| `/help/requests` | `MyRequests` | Every request, newest activity first |
+| `/help/requests/:ticketNo` | `SupportThread` | One request's conversation with Cosora Support, live; files and voice notes |
+| `/help/callback` | `SupportCallback` | Book a one-hour slot in support hours |
+| `/help/guides/:slug` | `HelpGuide` | A Quick Guide; public |
+| `/feedback` | `AppFeedback` | A bug or an idea; My Store's "App Feedback" |
 | `/terms` | `TermsConditions` | |
 | `/about` | `About` | |
 | `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |

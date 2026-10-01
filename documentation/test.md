@@ -164,6 +164,22 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-01 — Help & Support P3, requester screens (typecheck 0; i18n 7,124/7,124; build; browser check in two passes, nothing written)
+
+- **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 7,124/7,124 in both languages; `npm run build` passes (`spa-routes` 100 routes in sync, CSP hashes).
+- **Browser** (`.claude/tmp/p3-check.mjs`, not committed): the local build at :8080 against production. Tracking RPCs were answered in the browser, table writes aborted, and every `support_*` write RPC was caught in the browser with its payload recorded. Nothing reached the database.
+  - **A. The real state, rollout Off:**
+    - Signed out: `/help` shows Call us and no chat tile. `/help/chat`, `/help/requests`, `/help/callback` and `/feedback` each show their sign-in prompt, `/report-fraud` the email form, and an unknown guide "This guide isn't available."
+    - As demo-buyer: `/help` has no chat tile but has the My requests link. Chat and callback show "isn't available … yet". My requests shows "No requests yet." `/help/requests/CS-999999` shows "We couldn't find that request."
+  - **B. The live state, simulated in the browser** (`support_status` answered `available: true`; sample requests, thread and slots):
+    - `/help` shows Chat with us, Request a callback, App feedback and My requests.
+    - `/help/chat?category=buyer_chat&entity_type=conversation&entity_id=…` preselects "Chats and calls" and lists the open chat and the monitoring notice. Start chat sent `support_start_chat {p_category: buyer_chat, p_body, p_language: en, p_entity_type: conversation, p_entity_id}`, and the caught refusal showed the friendly message.
+    - The thread shows "Cosora Support", the two automatic lines from their codes, End chat, and no "Online" or "typing". Opening it sent `support_mark_read`, and sending sent `support_post_message {p_ticket_id, p_body}`.
+    - Callback shows the topics and 3 slots. Feedback renders. The fraud wizard refuses an empty description, and Send sent `support_report_fraud {p_description, p_language}`.
+    - As demo-vendor at 1280: the note for sellers. `/help/chat?category=account` preselects "Account status and suspension", and the topics are the seller and shared ones only (billing hidden while it's off).
+  - No page or console errors, and no horizontal overflow at 390.
+- **Not run:** the end-to-end with real writes (needs rollout Staff and test accounts, a production setting, so not done here); recording a voice note (no microphone in a headless browser); Playwright specs on a local stack (P7).
+
 ### 2026-10-01 — Help & Support P1, honesty patch (typecheck 0; i18n 6,943/6,943; build; browser check on the local build)
 
 - **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 6,943/6,943 in both languages; `npm run build` passes, including the CSP inline-hash check.

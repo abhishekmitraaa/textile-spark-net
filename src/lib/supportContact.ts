@@ -13,6 +13,23 @@ export const SUPPORT_EMAIL = "hello@cosora.in";
 export const SUPPORT_HOURS_LABEL = "Mon–Fri, 10:00–19:00 IST. Closed on weekends and holidays.";
 export const SUPPORT_INSTAGRAM = "https://instagram.com/cosora";
 
+/**
+ * A link that starts a support chat about something (plan P3e): the topic, and the
+ * item it's about. The chat page checks both and falls back to letting the person
+ * choose, so a link to a topic that's switched off still works. `account` means
+ * "my account", whichever side the person is on.
+ */
+export function supportChatHref(opts: { category?: string; entityType?: string; entityId?: string | null } = {}): string {
+  const q = new URLSearchParams();
+  if (opts.category) q.set("category", opts.category);
+  if (opts.entityType && opts.entityId) {
+    q.set("entity_type", opts.entityType);
+    q.set("entity_id", opts.entityId);
+  }
+  const s = q.toString();
+  return s ? `/help/chat?${s}` : "/help/chat";
+}
+
 /** A `mailto:` link with a subject and, optionally, a prefilled body. */
 export function supportMailto(subject: string, body?: string): string {
   const q = [`subject=${encodeURIComponent(subject)}`];

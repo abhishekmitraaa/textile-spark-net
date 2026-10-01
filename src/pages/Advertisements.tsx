@@ -22,6 +22,7 @@ const listItem = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } },
 };
 import { useNavigate, Link } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -1354,6 +1355,15 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
                 </button>
               </div>
               <p className="mt-1.5 pl-12 text-[11px] text-gray-500">{rs.reason}</p>
+              {/* Cosora stopped or flagged it: the vendor can ask why, about this campaign (P3e). */}
+              {rs.tone === "attention" && (
+                <Link
+                  to={supportChatHref({ category: "vendor_ads", entityType: "ad", entityId: a.id })}
+                  className="mt-1 ml-12 inline-block text-[11px] font-semibold text-brand-vendor underline"
+                >
+                  Contact support
+                </Link>
+              )}
             </div>
           );
         })}

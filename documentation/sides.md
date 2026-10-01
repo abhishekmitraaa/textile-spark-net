@@ -132,6 +132,13 @@ the demand side of India's fashion and textile supply chain.
     saved items, follows, recently viewed, video likes and notifications. A session
     still open elsewhere can't change anything afterwards.
   - Sellers, admins and suspended accounts are sent to support instead.
+- **Help & Support** (P3, 2026-10-01; works once rollout includes the person, call and email always):
+  - chat with "Cosora Support", with photos, PDFs and voice notes;
+  - book a callback in support hours;
+  - report fraud in the app, with evidence only Cosora can open;
+  - send app feedback;
+  - follow everything in **My requests** (`/help/requests`), with in-app notifications on replies;
+  - "Contact support" in KYC, payments, ads, calls, chats, account deletion and the suspension notice opens a chat about that item.
 - **Help FAQs are managed by the Cosora team** (2026-09-23). The questions on Help & Support
   come from the admin panel, so they can be corrected without an app release. Several
   current answers describe things Cosora doesn't do yet (escrow, order tracking, team

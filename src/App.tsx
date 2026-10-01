@@ -90,6 +90,13 @@ import BusinessTools from "./pages/BusinessTools";
 import Kyc from "./pages/Kyc";
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
+// Help & Support (plan P3): the requester's screens.
+import SupportChatStart from "./pages/SupportChatStart";
+import SupportThread from "./pages/SupportThread";
+import MyRequests from "./pages/MyRequests";
+import SupportCallback from "./pages/SupportCallback";
+import AppFeedback from "./pages/AppFeedback";
+import HelpGuide from "./pages/HelpGuide";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
@@ -248,7 +255,7 @@ const App = () => (
             <Route path="/categories" element={<Categories />} />
             <Route path="/profile/interest-preference" element={<InterestPreference />} />
             <Route path="/profile/reviews" element={<MyReviews />} />
-            <Route path="/profile/help" element={<Help />} />
+            <Route path="/profile/help" element={<ClarityMask><Help /></ClarityMask>} />
             {/* The canned "support chat" is gone (Help & Support P1); the real one is /help/chat (P3). */}
             <Route path="/profile/help/chat" element={<Navigate to="/help" replace />} />
             <Route path="/seller-home" element={<SellerHome />} />
@@ -288,7 +295,13 @@ const App = () => (
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/help" element={<Help />} />
+            <Route path="/help" element={<ClarityMask><Help /></ClarityMask>} />
+            <Route path="/help/chat" element={<ClarityMask><SupportChatStart /></ClarityMask>} />
+            <Route path="/help/requests" element={<ClarityMask><MyRequests /></ClarityMask>} />
+            <Route path="/help/requests/:ticketNo" element={<ClarityMask><SupportThread /></ClarityMask>} />
+            <Route path="/help/callback" element={<ClarityMask><SupportCallback /></ClarityMask>} />
+            <Route path="/help/guides/:slug" element={<HelpGuide />} />
+            <Route path="/feedback" element={<ClarityMask><AppFeedback /></ClarityMask>} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />

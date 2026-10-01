@@ -1,6 +1,6 @@
 {
  "_about": "Text the page shows that is not in this codebase. scripts/i18n-coverage-check.mjs requires every string here in src/i18n/hi.json and gu.json. Each group's _source says where it comes from.",
- "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3.",
+ "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01.",
  "notifications": [
   "Account deletion cancelled",
   "Your account will not be deleted.",
@@ -42,7 +42,25 @@
   "Promoted product is not live",
   "Trademark or brand misuse",
   "Suspected invalid traffic / fraud",
-  "Other policy breach"
+  "Other policy breach",
+  "Cosora Support replied",
+  "There's a new reply on your request {0}.",
+  "Request resolved",
+  "Your request {0} was marked resolved.",
+  "Request closed",
+  "Your request {0} was closed.",
+  "We missed you",
+  "We tried to call you about request {0}.",
+  "Check your number",
+  "We couldn't reach you about request {0}.",
+  "Report reviewed",
+  "We've reviewed your report {0}.",
+  "Callback booked",
+  "Request {0}: we'll call you on {1}.",
+  "Report recorded",
+  "We've recorded your report {0}.",
+  "Feedback recorded",
+  "We've recorded your feedback {0}."
  ],
  "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated.",
  "faqs": [

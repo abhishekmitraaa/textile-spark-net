@@ -2433,6 +2433,15 @@ The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to 
 ### Rate limits (`admin.support_rate_check()`)
 - 5 new tickets an hour, 20 a day, 5 open at once (3 of them chats); 30 messages in 5 minutes; 20 uploads an hour; 3 fraud reports and 5 feedback notes a day; one pending callback.
 
+### The requester side (plan P3, buyer app)
+- **`src/lib/queries/support.ts`** is the only file that calls `support_*`. `supportError()` maps each refusal HINT to the words shown. `useSupportStatus(uid)` asks `support_status()` (anon too); `available` is per caller, so the key includes the user id. When it is false, or the call fails, pages show `SupportUnavailable` (phone and email), the plan's fallback.
+- **`useSupportThread(ticketNo)`** uses `support_request_detail`, plus Realtime on `support_messages` INSERT and `support_tickets` UPDATE, filtered to the one ticket. Each mount gets its own topic. RLS and the column grants decide what arrives; the payload is only a "refetch" signal.
+- **Uploads:** `support_prepare_upload` → storage upload with `contentType` exactly the reserved type (`baseMime()` strips `;codecs=…`) → `support-attachment-verify`, asked up to 3 times while it says `pending`. A message can carry only `clean` files. A retried send reuses files already checked.
+- **Voice notes:** `src/hooks/useVoiceRecorder.ts`. MediaRecorder's first supported format from webm/opus, webm, mp4, aac, ogg; a 120 s cap; `denied` or `unsupported` falls back to the audio file picker. The mic button keeps pointer capture while recording; a keyboard press toggles instead.
+- **Automatic messages** are rendered from `support_messages.event` and `meta` (`SupportThread.tsx` `systemText`), so they translate. `body` is the English fallback for an unknown code.
+- **Links into support:** `supportChatHref({category, entityType, entityId})` (`lib/supportContact.ts`). `resolveTopic()` ignores a topic that's off or for the other side, and `category=account` means the person's own account topic. A link to a switched-off topic (billing, D-11) still works: the person picks one.
+- **Frames:** `components/support/SupportFrame.tsx`. The seller dashboard for sellers, the back header otherwise; brand-vendor accents on seller surfaces, brand-buyer on buyer ones.
+
 ### Tests
 - `scripts/support-role-simulation.sql`: 61 checks in one call; it writes nothing (the last statement aborts the transaction). 61/61 against the live functions on 2026-10-01 (`test.md`). Re-run it after any change to the support functions or policies.
 

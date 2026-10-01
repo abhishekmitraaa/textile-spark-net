@@ -5,9 +5,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import {
   Search, Phone, Mail, Flag,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
-  Instagram, ArrowLeft, Store,
+  Instagram, ArrowLeft, Store, MessageCircle, PhoneCall, Lightbulb, ListChecks, BookOpen,
 } from "lucide-react";
+import type { ReactNode } from "react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -16,9 +18,13 @@ import {
 } from "@/components/ui/accordion";
 import { DeleteAccountCard } from "@/components/buyer/DeleteAccountCard";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { useLang } from "@/lib/i18n";
 import {
-  SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_INSTAGRAM, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto,
+  SUPPORT_EMAIL, SUPPORT_INSTAGRAM, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto,
 } from "@/lib/supportContact";
+import { hoursLabel, labelIn, useHelpGuides, useSupportStatus } from "@/lib/queries/support";
+import { HoursBanner } from "@/components/support/SupportFrame";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -65,6 +71,16 @@ const Help = () => {
   const navigate = useNavigate();
   const { role } = useUserRole();
   const isSeller = role === "seller";
+  const { user } = useAuth();
+  const lang = useLang();
+  // support_status() answers signed out too. `available` says whether chat,
+  // callbacks, the in-app fraud report and feedback are open to this person
+  // (rollout). When it's false, or the call fails, Help is the P1 page: phone and email.
+  const status = useSupportStatus(user?.id);
+  const available = Boolean(user) && Boolean(status.data?.available);
+  const audience = isSeller ? "vendor" : "buyer";
+  const { data: allGuides } = useHelpGuides();
+  const guides = (allGuides ?? []).filter((g) => g.audience === "both" || g.audience === audience);
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -88,22 +104,33 @@ const Help = () => {
     ),
   })).filter(cat => cat.faqs.length > 0);
 
-  return (
-    <div
-      className="min-h-screen bg-gray-50"
-      style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
-    >
-      {/* ── Back header (no home tab strip in the profile section) ── */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
-        <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
-          <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
-            <ArrowLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <h1 className="text-base font-bold text-gray-900">Help &amp; Support</h1>
+  const frame = (children: ReactNode) =>
+    isSeller ? (
+      <DashboardLayout>{children}</DashboardLayout>
+    ) : (
+      <div
+        className="min-h-screen bg-gray-50"
+        style={{ fontFamily: "'Open Sans', Roboto, system-ui, sans-serif" }}
+      >
+        {/* ── Back header (no home tab strip in the profile section) ── */}
+        <div className="sticky top-0 z-30 bg-white border-b border-gray-100">
+          <div className="max-w-2xl mx-auto px-4 py-3 flex items-center gap-3">
+            <button onClick={() => navigate(-1)} aria-label="Back" className="-ml-1 p-1">
+              <ArrowLeft className="w-5 h-5 text-gray-700" />
+            </button>
+            <h1 className="text-base font-bold text-gray-900">Help &amp; Support</h1>
+          </div>
         </div>
+        {children}
+        <MobileBottomNav />
       </div>
+    );
 
-      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl lg:max-w-6xl mx-auto px-4 py-6 space-y-6 pb-28">
+  const tile = "bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors";
+  const accentBg = isSeller ? "bg-brand-vendor" : "bg-brand-buyer";
+
+  return frame(
+      <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className={`${isSeller ? "max-w-6xl" : "max-w-2xl lg:max-w-6xl px-4 py-6 pb-28"} mx-auto space-y-6`}>
 
           {/* ── Welcome ── */}
           <motion.div variants={section}>
@@ -111,6 +138,10 @@ const Help = () => {
               Welcome to Cosora's Customer Service
             </h2>
             <p className="text-sm text-gray-500">What can we help you with?</p>
+          </motion.div>
+
+          <motion.div variants={section}>
+            <HoursBanner status={status.data} />
           </motion.div>
 
           {/* Vendors land here from Settings and the seller sidebar, but the answers
@@ -122,8 +153,9 @@ const Help = () => {
                 <CardContent className="p-4 flex gap-3">
                   <Store className="w-5 h-5 text-brand-vendor shrink-0 mt-0.5" />
                   <p className="text-sm text-gray-700">
-                    The questions on this page are written for buyers. For help with your store, KYC,
-                    leads, ads or billing, call or email us using the details below.
+                    {available
+                      ? "The questions on this page are written for buyers. For help with your store, KYC, leads, ads or billing, chat with us, or call or email us."
+                      : "The questions on this page are written for buyers. For help with your store, KYC, leads, ads or billing, call or email us using the details below."}
                   </p>
                 </CardContent>
               </Card>
@@ -136,32 +168,42 @@ const Help = () => {
             {/* Left rail — contact & account */}
             <motion.div variants={reduced ? {} : page} className="space-y-6 lg:sticky lg:top-20">
 
-          {/* ── Contact Us ── a phone line staffed in support hours, and email. */}
+          {/* ── Contact Us ── chat and callbacks when they're open to this person
+              (rollout), and always the phone line in hours and email. */}
           <motion.div variants={section}>
             <h3 className="text-base font-semibold text-gray-900 mb-1">Contact Us</h3>
-            <p className="text-xs text-gray-500 mb-4">{SUPPORT_HOURS_LABEL}</p>
+            <p className="text-xs text-gray-500 mb-4">{hoursLabel(status.data)}</p>
             <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
-              <motion.a
-                variants={listItem}
-                whileTap={TAP}
-                transition={TAP_T}
-                href={`tel:${SUPPORT_PHONE}`}
-                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors"
-              >
-                <div className="w-12 h-12 bg-brand-vendor rounded-full flex items-center justify-center mb-2">
-                  <Phone className="w-6 h-6 text-white" />
+              {available && (
+                <motion.div variants={listItem} whileTap={TAP} transition={TAP_T}>
+                  <Link to="/help/chat" className={tile}>
+                    <div className={`w-12 h-12 ${accentBg} rounded-full flex items-center justify-center mb-2`}>
+                      <MessageCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">Chat with us</span>
+                    <span className="text-xs text-gray-500">Cosora Support</span>
+                  </Link>
+                </motion.div>
+              )}
+              {available && (
+                <motion.div variants={listItem} whileTap={TAP} transition={TAP_T}>
+                  <Link to="/help/callback" className={tile}>
+                    <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 border border-gray-300">
+                      <PhoneCall className="w-6 h-6 text-gray-900" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-900">Request a callback</span>
+                    <span className="text-xs text-gray-500">We call you</span>
+                  </Link>
+                </motion.div>
+              )}
+              <motion.a variants={listItem} whileTap={TAP} transition={TAP_T} href={`tel:${SUPPORT_PHONE}`} className={tile}>
+                <div className={`w-12 h-12 ${available ? "bg-white border border-gray-300" : accentBg} rounded-full flex items-center justify-center mb-2`}>
+                  <Phone className={`w-6 h-6 ${available ? "text-gray-900" : "text-white"}`} />
                 </div>
                 <span className="text-sm font-semibold text-gray-900">Call us</span>
                 <span className="text-xs text-gray-500">{SUPPORT_PHONE_LABEL}</span>
               </motion.a>
-
-              <motion.a
-                variants={listItem}
-                whileTap={TAP}
-                transition={TAP_T}
-                href={supportMailto("Help request")}
-                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors"
-              >
+              <motion.a variants={listItem} whileTap={TAP} transition={TAP_T} href={supportMailto("Help request")} className={tile}>
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 border border-gray-300">
                   <Mail className="w-6 h-6 text-gray-900" />
                 </div>
@@ -169,12 +211,21 @@ const Help = () => {
                 <span className="text-xs text-gray-500">{SUPPORT_EMAIL}</span>
               </motion.a>
             </motion.div>
-            <Link
-              to="/report-fraud"
-              className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline"
-            >
-              <Flag className="w-3.5 h-3.5" /> Report fraud
-            </Link>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+              <Link to="/report-fraud" className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline">
+                <Flag className="w-3.5 h-3.5" /> Report fraud
+              </Link>
+              {available && (
+                <Link to="/feedback" state={{ from: "/help" }} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
+                  <Lightbulb className="w-3.5 h-3.5" /> App feedback
+                </Link>
+              )}
+              {user && (
+                <Link to="/help/requests" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
+                  <ListChecks className="w-3.5 h-3.5" /> My requests
+                </Link>
+              )}
+            </div>
           </motion.div>
 
           {/* ── Follow Us ── */}
@@ -306,6 +357,29 @@ const Help = () => {
               )}
             </Card>
           </motion.div>
+
+          {guides.length > 0 && (
+            <motion.div variants={section}>
+              <h2 className="text-xl font-semibold text-foreground mb-4">Quick Guides</h2>
+              <motion.div variants={listContainer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {guides.map((g) => (
+                  <motion.div key={g.slug} variants={listItem}>
+                    <Link to={`/help/guides/${g.slug}`}>
+                      <Card className="border-border hover:shadow-sm transition-all group">
+                        <CardContent className="p-4 flex items-center gap-3">
+                          <div className="p-2 rounded-lg bg-gray-100">
+                            <BookOpen className="w-4 h-4 text-gray-500" />
+                          </div>
+                          <span className="text-sm font-medium text-foreground flex-1" data-no-translate>{labelIn(g.title, lang)}</span>
+                          <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </motion.div>
+          )}
             </motion.div>{/* /Right main */}
           </motion.div>{/* /two-column grid */}
 
@@ -315,10 +389,20 @@ const Help = () => {
               <CardContent className="py-8 text-center">
                 <h3 className="text-xl font-semibold text-foreground mb-2">Still need help?</h3>
                 <p className="text-muted-foreground mb-4 max-w-md mx-auto text-sm">
-                  Call us during support hours, or email us any time and the Cosora team will get back to you.
+                  {available
+                    ? "Chat with Cosora Support, or call us during support hours."
+                    : "Call us during support hours, or email us any time and the Cosora team will get back to you."}
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <Button asChild className="bg-brand-vendor hover:bg-brand-vendor/90">
+                  {available && (
+                    <Button asChild className={`${accentBg} hover:opacity-90`}>
+                      <Link to="/help/chat">
+                        <MessageCircle className="w-4 h-4 mr-2" />
+                        Chat with us
+                      </Link>
+                    </Button>
+                  )}
+                  <Button asChild variant={available ? "outline" : "default"} className={available ? "border-border" : `${accentBg} hover:opacity-90`}>
                     <a href={`tel:${SUPPORT_PHONE}`}>
                       <Phone className="w-4 h-4 mr-2" />
                       Call us
@@ -335,10 +419,7 @@ const Help = () => {
             </Card>
           </motion.div>
 
-      </motion.div>
-
-      <MobileBottomNav />
-    </div>
+      </motion.div>,
   );
 };
 

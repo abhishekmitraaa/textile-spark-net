@@ -1,3 +1,34 @@
+- 2026-10-01 (Help & Support P3, the requester screens; branch `help-support/p3-requester`, on top of P1): **Buyers and vendors can chat with Cosora Support, book a callback, report fraud in the app, send feedback and follow every request, once rollout includes them. With rollout Off (today) every screen shows the honest P1 fallback: call or email.**
+  - **Data layer, `src/lib/queries/support.ts`:**
+    - status, topics, My requests, one request kept live, and the actions, all through the `support_*` functions;
+    - friendly text for each database refusal code (`support_unavailable`, `rate_limited`, `file_unchecked`, …);
+    - uploads: reserve, upload, then `support-attachment-verify`, waiting for `clean`;
+    - signed file links that are refreshed when opened;
+    - the hours line built from `support_hours`.
+  - **`useSupportThread`** keeps a request live over Realtime: new messages and status changes on that one ticket, per-instance topic, refetch on focus.
+  - **Screens:**
+    - **`/help`** follows the role, with the seller dashboard for sellers. It shows open or closed with the next reply time. Chat with us, Request a callback, App feedback and My requests appear only when they're open to the person; Call us, Email us and Report fraud always. Quick Guides appear once any are active.
+    - **`/help/chat`** offers a topic (for the person's side) and the first message. It lists open chats to continue, shows the monitoring notice, and preselects the topic and item a link names.
+    - **`/help/requests`** is My requests, with unread dots.
+    - **`/help/requests/:ticketNo`** is the conversation with "Cosora Support" (no staff name, no fake presence). Automatic lines are shown from their codes, so they translate. Photos, PDFs, audio files and **hold-to-record voice notes** (`useVoiceRecorder`: webm/opus, mp4 for Safari, 2-minute cap, file picker when the mic is refused). A failed send can be retried without re-uploading. End chat, reply-to-reopen within 7 days, and a closed state with "Start a new chat".
+    - **`/help/callback`** takes a topic, the number (prefilled from the account) and a one-hour slot inside support hours.
+    - **`/feedback`** takes a bug or an idea, and returns a request ID.
+    - **`/report-fraud`** is a four-step wizard (who, what happened, evidence, check and send). Evidence only Cosora's team can open; the reporter later learns "reviewed", never the outcome. Signed out, or with rollout Off, it's the P1 email form.
+    - **`/help/guides/:slug`** shows a Quick Guide in the reader's language, with English as the fallback.
+  - **Links into support (P3e):** each opens a chat on the right topic, about the right item (`supportChatHref`).
+    - KYC: a file that won't open, a rejection with no reason, and adding a document.
+    - Certificate orders: cancelled or returned, or no address on file.
+    - A campaign Cosora stopped or flagged.
+    - Calling and contact refusals for a suspended account (a toast button and a card link).
+    - The chat thread menu's "Get help with this chat".
+    - The account-deletion problem notice.
+    - The suspension notification.
+  - **Notifications:** `support_reply`, `support_status`, `support_callback` and `support_receipt` link to My requests. Their titles and bodies are in `external-strings.json`.
+  - My Store's row is **App Feedback** again (→ `/feedback`). Every support route is under `<ClarityMask>`. `vercel.json` gains the six rewrites. The unrouted `SupportChat.tsx` is deleted.
+  - `database.types.ts` was regenerated from the live schema: additive (1,277 lines, none removed).
+  - **i18n:** 177 new strings in `hi.json` and `gu.json`; the two recorder MIME strings are on the ignore list.
+  - **Not done:** the end-to-end run with real writes. It needs rollout set to Staff with test accounts, which is a production setting.
+
 - 2026-10-01 (Help & Support P1, honesty patch; branch `help-support/p1-honesty`): **Help no longer pretends. The canned chats are gone, "Request a Callback" is a real phone line, and the fraud form says what it does.**
   - **`/help` and `/profile/help` (`Help.tsx`):**
     - `ChatModal` is deleted. It was the invented agent "Abdul", a typing indicator, and attachments that went nowhere.

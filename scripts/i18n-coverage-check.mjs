@@ -60,6 +60,8 @@ const IGNORE = new Set([
   // pages/ReportFraud.tsx: lines of the email body Cosora staff receive. English on
   // purpose, and never on the page, so the translator never sees them.
   "What happened:", "(Screenshots attached, if any.)",
+  // hooks/useVoiceRecorder.ts: MediaRecorder formats (a MIME type with a codec), not text.
+  "audio/webm;codecs=opus", "audio/ogg;codecs=opus",
 ]);
 
 const DISPLAY_ATTRS = new Set([

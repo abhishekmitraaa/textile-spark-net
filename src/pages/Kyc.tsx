@@ -1,6 +1,7 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -66,6 +67,7 @@ const COLLECTED_DOC_TYPES = ["pan", "gst", "cin"] as const;
  * short spinner on the first click, which is the right way round.
  */
 function ViewDocumentButton({ doc }: { doc: VendorDocumentRow }) {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
 
   const open = async () => {
@@ -78,6 +80,7 @@ function ViewDocumentButton({ doc }: { doc: VendorDocumentRow }) {
       // broken tab or a dead <img>.
       toast.error("File unavailable", {
         description: error ?? "This document could not be opened. Contact support if it persists.",
+        action: { label: "Contact support", onClick: () => navigate(supportChatHref({ category: "vendor_kyc", entityType: "kyc", entityId: doc.id })) },
       });
       return;
     }
@@ -306,6 +309,12 @@ const Kyc = () => {
                             : "No reason was recorded. Contact support and we'll tell you what to re-submit."}
                         </p>
                       </div>
+                      <Link
+                        to={supportChatHref({ category: "vendor_kyc", entityType: "kyc", entityId: doc.id })}
+                        className="ml-5 text-[11px] font-semibold text-brand-vendor underline"
+                      >
+                        Contact support
+                      </Link>
                       {user?.id && <ReplaceDocumentButton vendorId={user.id} doc={doc} />}
                     </div>
                   )}
@@ -325,7 +334,7 @@ const Kyc = () => {
           <p className="text-xs leading-5 text-gray-600">
             Documents are collected during seller registration and verified by the Cosora team. If one is rejected,
             upload a replacement on its row and it goes back into review. To add a document you didn't submit, contact support from{" "}
-            <button onClick={() => navigate("/help")} className="font-semibold text-brand-vendor underline">
+            <button onClick={() => navigate(supportChatHref({ category: "vendor_kyc" }))} className="font-semibold text-brand-vendor underline">
               Help &amp; Support
             </button>
             .
