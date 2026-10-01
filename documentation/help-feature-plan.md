@@ -59,25 +59,25 @@ tickets to other admin roles.
 | D-02 | Make the designed features work first; extras are debated afterwards | Andy | closed |
 | D-03 | Run it from Cosora-Admin, staffed by the `support` role | Andy | closed |
 | D-04 | Support phone **+91 88155 78226**, staffed 10:00-19:00 IST; `instagram.com/cosora` is Cosora's account | Andy | closed |
-| D-05 | Supabase is on the Free plan; an upgrade is planned | Andy | tier and date: **Mitra** |
+| D-05 | Supabase is on the Free plan; an upgrade is planned | Andy | tier and date: **Mitra**. 2026-10-01: "will happen soon" (`ToDo.md`) |
 | D-06 | Users see only "Cosora Support"; the assigned agent is visible in Admin only | Andy | closed |
 | D-07 | After hours the chat stays open as messages, with an offline notice and the next reply time | Andy | closed |
 | D-08 | Admin access: support and super_admin read and act; manager reads only; other roles see nothing. Every phone-number reveal is logged | Andy | closed |
 | D-09 | Attachments: photo, audio and PDF now; video after the Supabase upgrade | Andy | closed |
-| D-10 | Any active admin with the support role can answer, from one shared queue | Andy | who holds the role: **Andy / Mitra** |
+| D-10 | Any active admin with the support role can answer, from one shared queue | Andy | who holds the role: **Andy / Mitra**. 2026-10-01: staff are registered in Cosora-Admin by a manager or super admin (name, personal email, phone); the panel generates the employee ID, the work email and a temporary password sent to the personal email. Formats are interim (`ToDo.md`) |
 | D-11 | Refunds: a manual process (support passes the request to finance, who refund by hand in Razorpay); the Terms state the 7-day guarantee | Andy | process: **Mitra**; Terms wording: **Andy**, then counsel |
 | D-12 | The 7 inaccurate buyer FAQs (MPF-14) stay live until launch; true replacements are drafted in the build and swapped in at launch | Andy | risk accepted |
-| D-13 | Andy rewords her Seller Registration and Subscription answers (MPF-16) in `/faqs` | Andy | action: **Andy** |
-| D-14 | No launch to real users while the dummy OTP is on; until then support runs for staff and test accounts only | Andy | switch-off date: **Mitra** |
+| D-13 | Andy rewords her Seller Registration and Subscription answers (MPF-16) in `/faqs` | Andy | 2026-10-01: **kept as they are** |
+| D-14 | No launch to real users while the dummy OTP is on; until then support runs for staff and test accounts only | Andy | switch-off date: **Andy** to give (`ToDo.md`) |
 | D-15 | Grievance Officer named later (`ToDo.md`); the `/grievance` page is built but hidden until named | Andy | **Andy / Mitra / counsel** |
-| D-16 | When a buyer's deletion completes, their support messages and files are scrubbed. Fraud reports are kept until counsel sets a period | Andy | period: **counsel** |
+| D-16 | When a buyer's deletion completes, their support messages and files are scrubbed. **Fraud reports are kept for one year** (Andy, 2026-10-01). When a report is reviewed and the fraud is confirmed, the person reported is restricted, for good or for a period, and a lasting record stays: who it was (name), what they did, and whether they were suspended or restricted | Andy | closed 2026-10-01; counsel may still review it with the Privacy Policy (`ToDo.md`) |
 | D-17 | The personal address on the Terms' Contact Information goes to `ToDo.md`; this build doesn't change it | Andy | **Andy** |
 | D-18 | Hours: Mon-Fri 10:00-19:00 IST, closed weekends and holidays; editable in Admin with a holiday list | Andy | closed |
 | D-19 | Staff reply in Hindi and English for now; automatic messages are in English, Hindi and Gujarati | Andy | closed |
 | D-20 | Feedback gets a report ID, always shown on screen and in the bell, plus an email once Resend is configured | Andy | closed |
-| D-21 | One scheduled job, every 15 minutes: auto-close resolved chats after 7 silent days, and flag callbacks that are due | Andy | approval: **Mitra** |
+| D-21 | One scheduled job, every 15 minutes: auto-close resolved chats after 7 silent days, and flag callbacks that are due. With D-16 revised it also clears fraud reports past their year, once a day | Andy | approval: **Mitra** (asked what it does, 2026-10-01) |
 | D-22 | Email receipts for feedback and fraud reports only; the email carries no details of the report | Andy | closed |
-| D-23 | Mitra sets up Resend (MPF-4) before support launches | Andy | action: **Mitra** |
+| D-23 | Mitra sets up Resend (MPF-4) before support launches | Andy | action: **Mitra** (`ToDo.md`, extended 2026-10-01) |
 
 ### Architecture records
 
@@ -213,9 +213,19 @@ Exit: every item below has a date.
   - plan the Supabase upgrade (D-05).
 - **Counsel:**
   - whether the grievance rules apply;
-  - a retention period for fraud reports;
+  - a retention period for fraud reports (Andy decided one year on 2026-10-01, D-16);
   - the Terms wording for the refund guarantee;
   - the missing Privacy Policy page.
+
+**Owner answers, 2026-10-01** (Andy):
+- Support staff: registered in Cosora-Admin by a manager or super admin, with generated IDs, emails and temporary
+  passwords (D-10). The formats are interim, in `ToDo.md`.
+- MPF-16: the answers stay as they are (D-13).
+- The `claude.md` rules: approved and merged.
+- Resend, the dummy-OTP date, the Supabase upgrade, the Terms refund wording and the Privacy Policy: in `ToDo.md`.
+- Fraud reports: kept a year, with a lasting record of confirmed fraud (D-16).
+- Still open: the MPF-14 approval (after P5 drafts), the manual refund process, the scheduled job's approval, and
+  grievance applicability.
 
 ### P1. Honesty patch (buyer app; small; ships first)
 Exit: no fake agent, fake reply, fake presence, fake success message or dead button remains on a live page.

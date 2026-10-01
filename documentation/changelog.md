@@ -1,3 +1,12 @@
+- 2026-10-01 (Help & Support owner answers, the security review and the support indexes; branch `help-support/db-fixes`): **Andy's P0 answers recorded, the 2026-09-30 SECURITY DEFINER flag reviewed and closed, and two small migrations applied.**
+  - **Applied** (Andy: "fix if needed"), each rehearsed first:
+    - `20261001113143_support_fk_indexes`: indexes on the four support foreign keys, two of which the per-send rate check reads;
+    - `20261001113147_revoke_trigger_function_execute`: no client role can execute the 11 trigger functions that kept the grant. Nothing changes, because triggers don't check it.
+  - **The review** (`securityflags.md`, 2026-10-01): 34 definer functions anon can run. 11 revoked; 23 kept, each for a stated reason. One new Low flag: four counters (views, enquiries, video views, ad clicks) have no limit.
+  - **`ToDo.md`:** new entries for the staff email and employee-ID formats, the dummy sign-in switch-off date, the Supabase upgrade, the Terms refund wording and the Privacy Policy page. The Resend entry now lists support receipts and staff passwords. The support-index entry moved to Completed.
+  - **`help-feature-plan.md`:** D-05, D-10, D-13, D-14, D-16 (fraud reports kept a year, plus a lasting record of confirmed fraud), D-21 and D-23 carry the answers.
+  - **`MIGRATIONS.md`** lists the five support migrations, and **`test.md`**'s scripts table lists `support-role-simulation.sql`. The 2026-10-01 apply session couldn't edit either.
+
 - 2026-10-01 (Help & Support, business rules): **Andy confirmed the plan's ten business rules (Appendix D), and they're in `claude.md`** under "Business Rules — Discovered/Decided": the phone and hours; "Cosora Support" only; Hindi and English replies; who acts and who reads; photo, voice note and PDF; suspended users can appeal and deleted ones can't; receipts for feedback and fraud only, once Resend is set up; the retention default; and no real-user launch while the dummy sign-in code is on. Files: `documentation/claude.md`, this file.
 
 - 2026-10-01 (Help & Support, applied; Mitra approved): **The support database and the file-check function are live, and Cosora-Admin's Support section works against them. Rollout is Off, so no buyer or vendor can send a request yet.**
