@@ -2419,6 +2419,40 @@ by hand there.
 
 **How it was verified:** `scripts/admin-completion/01`–`04`, see `test.md` (2026-09-27).
 
+### Reads (admin completion Phase 11, 2026-10-02; migration `20261002120000_admin_least_privilege_reads.sql`, rehearsed, not applied)
+
+Seven tables let every admin role read every row through `... or is_admin()`. Each read policy now names the
+roles whose Cosora-Admin section reads the table (`roles.ts` `SECTION_READ`):
+
+| Table | Admin roles that read it | Read by |
+|---|---|---|
+| `vendor_documents`, `vendor_contracts` | super_admin, vendor_ops, support | Vendors: `VendorKycPanel`, `VendorContractPanel` |
+| `subscription_invoices`, `vendor_subscriptions` | super_admin, finance_admin, support | `Subscriptions.tsx` |
+| `ad_orders` | super_admin, ads_moderator, finance_admin, support | `AdsMonitoring` (in Ads) |
+| `certificate_orders` | super_admin, finance_admin | `lib/certificates.ts` |
+| `engagement_events` | super_admin | no page; Live Activity uses `admin_live_activity()` |
+
+`buyer_profiles` was already super_admin and support (Phase 1). Vendors keep their own rows.
+
+- **What doesn't change:** every admin function that reports across these tables (`admin_report_summary`,
+  `admin_payments_*`, customers, leads, `admin_live_activity`, the support RPCs) is SECURITY DEFINER, and the views
+  over them (`admin.payment_entries`, `admin.customer_summary`) are in the `admin` schema with no client grant. The
+  only INVOKER functions that read the seven tables are `admin.support_context` / `admin.support_check_entity`
+  (reached only through definer functions, so they run as the owner) and four trigger functions.
+- **The plan-cap triggers.** `enforce_product_cap` and `enforce_catalogue_plan` fire on UPDATE as well as INSERT,
+  and Cosora-Admin's Products page updates `status` directly, so a product moderator re-approving a rejected listing
+  runs them as the moderator. They used to read `vendor_subscriptions` with the caller's rights; under the narrowed
+  policy that read returns nothing and the cap would fall back to the free plan. Both now call
+  `public.vendor_cap_plan(p_vendor)`: SECURITY DEFINER, `search_path = public`, EXECUTE for authenticated only,
+  42501 unless the caller is that vendor or an admin, and the triggers' rule unchanged (an `active` subscription whose
+  `current_period_end` is in the future, else `free`; `vendor_id` is unique). The triggers stay INVOKER: a definer
+  trigger would see `current_user` as the owner and skip the cap. `enforce_ad_location_scope` and `enforce_lead_cap`
+  keep their direct read, because only vendors reach them (admins change campaigns through the review RPCs and
+  don't insert quotes).
+- **Checks:** the migration's self-check (no read policy on the seven tables with `is_admin()` and no
+  `admin_role()`; the helper's definer flag, path and grants; the triggers INVOKER and reading through the helper),
+  and `scripts/admin-completion/15_admin_reads.sql`.
+
 ## Scheduled jobs: what runs, and the bounded history (2026-09-27)
 
 Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 2026-09-27 restore

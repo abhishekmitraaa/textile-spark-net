@@ -833,6 +833,13 @@ undocumented. Deep technical rationale for each lives in
     managed through the `admin_discount_*` RPCs by super_admin and finance_admin. Uses are counted from
     `admin.discount_redemptions`, never kept as a counter. Once a code has a confirmed use, its text, discount
     and target are fixed; make a new code instead.
+  - **Admin reads name their roles too** (admin completion Phase 11, `20261002120000`, rehearsed and not yet
+    applied). The read policies on `vendor_documents`, `vendor_contracts`, `subscription_invoices`,
+    `vendor_subscriptions`, `ad_orders`, `certificate_orders` and `engagement_events` admit only the roles whose
+    Cosora-Admin section reads them (`technicalimplementation.md` → "Admin write model" → Reads). A new admin page
+    that selects one of them directly needs those roles, or a definer RPC with its own check. A trigger that a
+    moderator's write fires reads what it needs through a definer helper, as the plan-cap triggers read the plan
+    through `vendor_cap_plan()`.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.
