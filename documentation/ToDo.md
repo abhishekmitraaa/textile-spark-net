@@ -94,7 +94,9 @@ with no need to dictate format, context, or reference each time.
 
 ### Name Cosora's Grievance Officer and publish the grievance page — added 2026-09-30
 - Task: choose who is Cosora's Grievance Officer and record their name, designation and a contact email. Then switch
-  on the `/grievance` page, which the Help build creates hidden (Help plan P6c).
+  on the `/grievance` page, which the Help build creates hidden (Help plan P6c). **Built 2026-10-01 (branch
+  `help-support/p6-background`):** fill in `GRIEVANCE_OFFICER` in `src/lib/grievance.ts`, with the reply times counsel
+  confirms; then link the page from Help and the Terms, and add it to the sitemap.
 - Context:
   - Indian rules may require a named Grievance Officer with published contact details and reply times. The IT
     (Intermediary Guidelines) Rules 2021 ask for acknowledgement within 24 hours and resolution within 15 days; the

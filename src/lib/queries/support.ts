@@ -363,6 +363,34 @@ export async function submitFeedback(input: { kind: "bug" | "idea"; body: string
   return data as unknown as { ticket_no: string };
 }
 
+/**
+ * The email receipt for feedback and fraud reports (P6; D-20, D-22), through the
+ * support-receipt edge function. Never throws: a receipt is extra, the screen already shows
+ * the request number. Say "we've emailed you" only when status is "sent".
+ */
+export type ReceiptStatus = "sent" | "not_configured" | "no_email" | "already_sent" | "send_failed" | "not_found" | "error";
+export async function sendSupportReceipt(ticketNo: string): Promise<{ status: ReceiptStatus; to?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke("support-receipt", { body: { ticket_no: ticketNo } });
+    if (error || !data || typeof data.status !== "string") return { status: "error" };
+    return { status: data.status as ReceiptStatus, to: typeof data.to === "string" ? data.to : undefined };
+  } catch {
+    return { status: "error" };
+  }
+}
+
+/** Asks for the receipt once per request number (the function also refuses a second send). */
+export function useSupportReceipt(ticketNo: string | null) {
+  return useQuery({
+    queryKey: ["support-receipt", ticketNo],
+    enabled: Boolean(ticketNo),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: false,
+    queryFn: () => sendSupportReceipt(ticketNo!),
+  });
+}
+
 // ── Quick Guides ─────────────────────────────────────────────
 // Written in Cosora-Admin (FAQs → Quick Guides). Active ones are public
 // (help_guides_select_active), so signed-out visitors read them too.

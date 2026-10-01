@@ -1,3 +1,19 @@
+- 2026-10-01 (Help & Support P6, background; branch `help-support/p6-background`, on top of P5; migration rehearsed in parts, **not applied**; nothing scheduled): **Email receipts, the support sweep, the deletion scrub, a lasting record of confirmed fraud, and a hidden `/grievance` page.**
+  - **`20261001140000_support_sweep_receipts_fraud_records.sql`:**
+    - **Confirmed fraud** (D-16, revised by Andy on 2026-10-01: fraud reports are kept for a year). `admin.fraud_findings` is written by `trg_fraud_finding_on_outcome` when a reviewer decides warned, suspended or escalated_legal. It holds who it was (the account and its store or profile name, or the name as reported), what they did (the reviewer's note), the amount and date, the outcome and the account's status then. It stays after the report is deleted; a later "no action" marks it withdrawn. Read through `admin_fraud_findings()` (super_admin, support, manager).
+    - **The sweep's SQL** (D-21). `support_sweep_run()` closes requests resolved 7+ days ago with no reply (the requester is told), flags a callback window that ended with no call logged (staff only, once), and lists what's due for deletion with its file paths. Due: a fraud report a year after filing, once decided or closed; and every other request of a deleted account (D-16). `support_sweep_purge()` deletes those requests and logs only the ticket number in `admin.support_purge_log`. It uses the `cosora.support_scrub` switch P2 built for this, and re-checks that each request is still due.
+    - **Receipts:** `support_receipt_target()` (the requester's own feedback or fraud report, a confirmed real email, not already sent, fewer than 3 failures) and `support_receipt_record()`.
+    - All service_role only, except `admin_fraud_findings`.
+  - **Edge functions** (not deployed):
+    - `support-receipt` sends the receipt in the request's language through the new `_shared/resend.ts`. It repeats nothing the person wrote (D-22) and answers `sent`, `not_configured`, `no_email`, `already_sent`, `send_failed` or `not_found`.
+    - `support-sweep` deletes each due request's files from Storage first (only inside the request's own folder), then calls the purge.
+  - **Not scheduled.** `scripts/support-sweep-schedule.sql` holds the every-15-minutes job for when Mitra approves it. It is deliberately outside `supabase/migrations/`.
+  - **Buyer app:**
+    - after feedback or a fraud report, "We've emailed a receipt to a*****@…" appears only when the email went;
+    - `/grievance` exists and renders the not-found page until the officer is named in `src/lib/grievance.ts` (D-15). The page has the officer, how to raise a grievance and counsel's reply times.
+  - **Cosora-Admin:** the Fraud board gains "Confirmed fraud" under its queue.
+  - `anonymize_account()` is not changed: the sweep finds a deleted account's requests itself.
+
 - 2026-10-01 (Help & Support P5, content; branch `help-support/p5-content`, stacked on P3 and the staff branch; migrations rehearsed, **not applied**): **Sellers get their own Help questions, FAQs carry their own Hindi and Gujarati, and the Quick Guides and the MPF-14 replacements are written.** For review: `documentation/help-content-p5.md`.
   - **`20261001130000_faqs_seller_help_and_translations.sql`:**
     - The `seller_help` surface, in the CHECK and `admin_faq_add()`.

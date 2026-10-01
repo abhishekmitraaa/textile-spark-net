@@ -97,6 +97,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
+| `support-sweep-check.sql` | Help & Support P6 (2026-10-01), one self-rolling-back DO block. The confirmed-fraud record (written with subject, note and account status; withdrawn on no action; restored; readable by admins only); the sweep (auto-close after 7 days, not after 2; a missed callback window flagged once; due for deletion: a decided fraud report over a year old and a deleted account's chat, not one still in review); the purge (W8-W9); the receipt lookups; nobody else can run any of it. **Run it in the SQL editor:** the MCP tool refuses the purge section |
 | `faqs-p5-check.sql` | Help & Support P5 (2026-10-01), one self-rolling-back DO block. 13 checks: support adds to `seller_help`; an unknown surface is refused; translations are stored trimmed; an unknown language and an empty answer are refused; toggling active and re-saving the same English keep them; anon reads `translations` and still not `created_by`; `admin_faq_translations` returns them; changing the English clears them; a non-admin can't translate; the table's CHECKs refuse bad translations and unknown surfaces. Then it counts what the content (or a sample of it) added. Paste the migration above it to rehearse |
 | `staff-registry-check.sql` | Staff registration (2026-10-01), one self-rolling-back DO block run as postgres. 21 checks: the employee-ID format; the work email from a two-word, accented, one-word, three-word and Devanagari name; the `2` suffix when taken; a personal email registered twice refused with `already_registered`; the password events; `admin_staff_get`; the Admin Log's staff rows (and a refusal for any other table); every service-role function refused to a signed-in caller; the directory read by a manager and refused to support and anon. Paste the migration above it to rehearse |
 | `support-role-simulation.sql` | Help & Support (2026-09-30), one self-rolling-back SQL statement run as postgres with MCP `execute_sql`. 61 checks over the support tables, functions, bucket and grants: user A can't read B's requests, messages or files; internal notes never reach the requester; a fraud reporter can't read their own evidence; manager reads and every manager write is 42501; other admin roles and anon get nothing; a suspended user can open a request and a deleted one can't; rate limits trip; rollout Staff refuses a normal user; storage refuses a path outside the caller's ticket; one overload per function; phone masks. It reports in its final error message. Re-run after any change to a support function, policy or grant |
@@ -163,6 +164,23 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 ---
 
 ## Test Run History
+
+### 2026-10-01 — Help & Support P6, background (migration rehearsed in parts, 25 checks passed, NOT applied; purge not rehearsed; typecheck 0 in both apps; i18n 7,138/7,138; builds; browser check)
+
+- **Rehearsal in four parts**, each in a transaction it aborts, each leaving nothing (checked afterwards: no new table, function or trigger; 0 tickets; rollout Off):
+  1. the record table, trigger and receipt lookup compile;
+  2. **the confirmed-fraud record, 5/5.** demo-admin decides "suspended" with a note, and the record names Demo Textiles Co., the note, ₹5,000 and the account status. "No action" withdraws it; "warned" restores it. A non-admin and anon are refused;
+  3. **the sweep run, 6/6.** It closes a request resolved 8 days ago (event, public message, a notification), not one resolved 2 days ago. It flags yesterday's missed callback window once, and lists as due a decided fraud report filed 13 months ago and a deleted account's chat, not a fraud report still in review. A second run changes nothing; a signed-in caller is refused;
+  4. **receipt lookups, 7/7:** a confirmed email, another user's request, a chat, three failures, already sent, refusals for signed-in callers.
+- **Not rehearsed: the purge** (`support_sweep_purge`, W8-W9). The MCP tool refused every query that runs it, three times, because it deletes support rows, even inside a rolled-back transaction. Run `scripts/support-sweep-check.sql` whole in the SQL editor before applying.
+- **Earlier refusals:** a first full run was refused before anything ran (it also switched rollout to Staff inside the transaction). The fixtures now write requests directly and leave rollout alone.
+- **Edge functions:** `support-receipt`, `support-sweep` and `_shared/resend.ts` typecheck under `tsc --strict` with a declaration for `Deno`. Not deployed.
+- **Browser** (`.claude/tmp/p6-check.mjs`, not committed; writes answered in the browser):
+  - `/grievance` signed out is the not-found page;
+  - feedback with a sent receipt shows CS-000123 and "We've emailed a receipt to d*****@cosora.dev.";
+  - with Resend not set up, nothing claims an email;
+  - the admin Fraud board shows "Confirmed fraud" with a live record and a purged one.
+  - No page errors. The not-found page logs its own 404 line, as it does for any unknown route.
 
 ### 2026-10-01 — Help & Support P5, content (migrations rehearsed, NOT applied: 13/13; typecheck 0 in both apps; i18n 7,132/7,132; browser check, nothing written)
 

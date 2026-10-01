@@ -169,6 +169,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/grievance",
+      "destination": "/index.html"
+    },
+    {
       "source": "/help",
       "destination": "/index.html"
     },

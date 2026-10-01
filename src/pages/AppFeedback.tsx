@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { submitFeedback, supportError, useSupportStatus } from "@/lib/queries/support";
-import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
+import { ReceiptLine, SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
 
 /**
  * App feedback: a bug or an idea (plan P3d). Each one is stored with an ID the
@@ -73,6 +73,7 @@ function FeedbackForm() {
             <CheckCircle2 className={cn("w-10 h-10 mx-auto", accent.text)} />
             <p className="text-base font-semibold text-gray-900">Thanks. The team reads every note.</p>
             <p className="text-sm text-gray-600">{`We've recorded it as ${done}.`}</p>
+            <ReceiptLine ticketNo={done} />
             <p className="text-sm text-gray-600">You'll see it, and any reply, in My requests.</p>
             <div className="flex justify-center gap-2">
               <Link to="/help/requests" className={cn("rounded-full px-4 py-2 text-sm font-semibold text-white", accent.bg, accent.hoverBg)}>My requests</Link>

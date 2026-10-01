@@ -7309,5 +7309,11 @@
  "Leads and quotes": "लीड्स और कोटेशन",
  "Listings and videos": "लिस्टिंग और वीडियो",
  "Plans and billing": "प्लान और बिलिंग",
- "Account and suspension": "खाता और निलंबन"
+ "Account and suspension": "खाता और निलंबन",
+ "We've emailed a receipt to {0}.": "हमने {0} पर रसीद ईमेल कर दी है।",
+ "Grievance Officer": "शिकायत अधिकारी",
+ "How to raise a grievance": "शिकायत कैसे दर्ज करें",
+ "Write to the Grievance Officer with the mobile number you sign in with, what happened, and any request number you have (it starts with CS-).": "शिकायत अधिकारी को लिखें: वह मोबाइल नंबर जिससे आप साइन इन करते हैं, क्या हुआ, और आपके पास कोई अनुरोध नंबर हो तो वह भी (वह CS- से शुरू होता है)।",
+ "We acknowledge every grievance within {0} and resolve it within {1}.": "हम हर शिकायत की पावती {0} में देते हैं और उसका समाधान {1} में करते हैं।",
+ "For anything else, Help & Support is faster.": "बाकी किसी भी बात के लिए सहायता और समर्थन ज़्यादा तेज़ है।"
 }

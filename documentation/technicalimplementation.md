@@ -2458,6 +2458,23 @@ The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to 
 - **Links into support:** `supportChatHref({category, entityType, entityId})` (`lib/supportContact.ts`). `resolveTopic()` ignores a topic that's off or for the other side, and `category=account` means the person's own account topic. A link to a switched-off topic (billing, D-11) still works: the person picks one.
 - **Frames:** `components/support/SupportFrame.tsx`. The seller dashboard for sellers, the back header otherwise; brand-vendor accents on seller surfaces, brand-buyer on buyer ones.
 
+### Background (plan P6, 2026-10-01)
+- **Confirmed fraud.** `trg_fraud_finding_on_outcome` (AFTER UPDATE OF `fraud_outcome` on `support_ticket_staff`) upserts `admin.fraud_findings` by ticket for warned, suspended or escalated_legal, and sets `withdrawn_at` for anything else.
+  - The subject comes from `support_fraud_details`: a vendor or buyer id directly; a product's or ad's vendor; otherwise none.
+  - The name is the store's `brand_name` or the profile's `full_name` then, falling back to the reported name.
+  - "What they did" is the newest staff internal note, which `admin_fraud_set_outcome()` writes just before the update.
+  - No foreign key to the ticket, so the record survives the purge; `support_sweep_purge()` nulls `ticket_id` and stamps `report_purged_at`.
+- **The sweep.** `support-sweep` (edge, service_role) → `support_sweep_run(50)` → Storage `DELETE /object/support-attachments {prefixes}` per due request → `support_sweep_purge(ids)`.
+  - What's due is `admin.support_purge_due()`: a fraud report filed over a year ago and resolved or closed; any other request whose requester is gone or `account_status = 'deleted'`.
+  - Paths outside `{ticket_id}/` are never deleted; the request is left and logged.
+  - `support_messages` and `support_events` are append-only (`admin.support_append_only`). The purge sets `cosora.support_scrub = on` for its transaction, and the cascade from `support_tickets` does the rest.
+  - The schedule (`*/15`, raising without the Vault key) is `scripts/support-sweep-schedule.sql`, applied only after approval (D-21).
+- **Receipts.** `support-receipt` → `support_receipt_target(ticket_no, sub)` → `_shared/resend.ts` → `support_receipt_record()`.
+  - One `receipt_emailed` event per request; three `receipt_failed` events stop retries.
+  - `not_configured` records nothing, so a receipt can still go once Resend is set up.
+  - Phone sign-in placeholder addresses (`@phone.cosora.invalid`) and unconfirmed emails count as `no_email`.
+- **`/grievance`** reads `GRIEVANCE_OFFICER` (`src/lib/grievance.ts`); null renders `NotFound`.
+
 ### Tests
 - `scripts/support-role-simulation.sql`: 61 checks in one call; it writes nothing (the last statement aborts the transaction). 61/61 against the live functions on 2026-10-01 (`test.md`). Re-run it after any change to the support functions or policies.
 

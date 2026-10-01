@@ -109,3 +109,14 @@ verify_jwt = true
 # shown. The platform verifies the JWT; the function reads the uploader from the row.
 [functions.support-attachment-verify]
 verify_jwt = true
+
+# Help & Support P6 (2026-10-01): the email receipt for feedback and fraud reports, called
+# by the signed-in requester. The platform verifies the JWT; the function reads `sub`.
+[functions.support-receipt]
+verify_jwt = true
+
+# Help & Support P6 (2026-10-01): the support sweep (auto-close, missed callback windows,
+# the deletions). Posted to by the support-sweep cron job once it is approved, with the
+# service-role key from Vault. The handler also requires role = service_role.
+[functions.support-sweep]
+verify_jwt = true

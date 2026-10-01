@@ -13,7 +13,7 @@ import { SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_PHONE, SUPPORT_PHONE_LABEL,
 import {
   PHOTO_TYPES, fileProblem, postMessage, reportFraud, supportError, uploadSupportFile, useSupportStatus,
 } from "@/lib/queries/support";
-import { SignInForSupport, SupportFrame } from "@/components/support/SupportFrame";
+import { ReceiptLine, SignInForSupport, SupportFrame } from "@/components/support/SupportFrame";
 
 /**
  * Report a potential fraud.
@@ -284,6 +284,7 @@ function FraudWizard() {
           <CheckCircle2 className="w-10 h-10 mx-auto text-destructive" />
           <p className="text-base font-semibold text-gray-900">{`We've recorded your report ${done.ticketNo}.`}</p>
           <p className="text-sm text-gray-600">Our team reviews every report. You'll see in My requests when it has been reviewed.</p>
+          <ReceiptLine ticketNo={done.ticketNo} />
           {done.failedFiles > 0 && (
             <p className="text-sm text-amber-700">
               {done.failedFiles === 1

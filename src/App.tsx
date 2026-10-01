@@ -77,6 +77,8 @@ import ProfileEdit from "./pages/ProfileEdit";
 import ProfileBusinessDetails from "./pages/ProfileBusinessDetails";
 import BuyerSettings from "./pages/Settings";
 import TermsConditions from "./pages/TermsConditions";
+// Help & Support P6c (D-15): hidden until the Grievance Officer is named (src/lib/grievance.ts).
+import Grievance from "./pages/Grievance";
 import SavedCollections from "./pages/SavedCollections";
 import SavedCollectionDetail from "./pages/SavedCollectionDetail";
 import Search from "./pages/Search";
@@ -269,6 +271,7 @@ const App = () => (
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />
             <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/grievance" element={<Grievance />} />
             <Route path="/subscription" element={<ClarityMask><Subscription /></ClarityMask>} />
             <Route path="/subscription/invoice/:id" element={<ClarityMask><InvoiceDetail /></ClarityMask>} />
             {/* Vendor billing: every payment, its bill, and certificate tracking. */}

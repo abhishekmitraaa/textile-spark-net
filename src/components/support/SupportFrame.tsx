@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import { SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto } from "@/lib/supportContact";
-import { istLabel, type SupportStatus } from "@/lib/queries/support";
+import { istLabel, useSupportReceipt, type SupportStatus } from "@/lib/queries/support";
 
 /**
  * The frame and shared states of the Help & Support pages (plan P3).
@@ -124,6 +124,17 @@ export function SignInForSupport({ title }: { title: string }) {
 }
 
 /** "We're open now" / "Closed now. We'll reply from Mon, 5 Oct, 10:00 IST." */
+/**
+ * "We've emailed a receipt to a*****@gmail.com." after feedback or a fraud report, shown
+ * only when the email actually went (P6, D-20). Nothing otherwise: the request number on
+ * screen and in the bell is the receipt.
+ */
+export function ReceiptLine({ ticketNo }: { ticketNo: string }) {
+  const receipt = useSupportReceipt(ticketNo);
+  if (receipt.data?.status !== "sent" || !receipt.data.to) return null;
+  return <p className="text-sm text-gray-600" data-clarity-mask="True">{`We've emailed a receipt to ${receipt.data.to}.`}</p>;
+}
+
 export function HoursBanner({ status }: { status: SupportStatus | undefined }) {
   if (!status) return null;
   return (

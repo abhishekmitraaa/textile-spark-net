@@ -226,6 +226,7 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | `/help/callback` | `SupportCallback` | Book a one-hour slot in support hours |
 | `/help/guides/:slug` | `HelpGuide` | A Quick Guide; public |
 | `/feedback` | `AppFeedback` | A bug or an idea; My Store's "App Feedback" |
+| `/grievance` | `Grievance` | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
 | `/terms` | `TermsConditions` | |
 | `/about` | `About` | |
 | `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |

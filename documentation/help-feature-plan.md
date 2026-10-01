@@ -369,6 +369,13 @@ Exit: no fake agent, fake reply, fake presence, fake success message or dead but
 - FAQ translations stored with the FAQ (the open ToDo), because it touches the same five places.
 
 ### P6. Background work
+**Built 2026-10-01** (branch `help-support/p6-background`; `20261001140000` rehearsed in parts, not applied; the job not scheduled). The scheduled job Mitra is asked to approve is one job, `support-sweep`, every 15 minutes:
+- it closes requests resolved 7+ days ago with no reply, and tells the requester;
+- it flags a callback window that ended with no call logged, once, for staff;
+- it deletes fraud reports a year after filing (once decided) and a deleted account's other requests, files first. Confirmed fraud stays on record.
+
+About 96 runs a day (about 1,350 rows within `cron-history-prune`'s 14 days). The schedule is `scripts/support-sweep-schedule.sql`. Without the job, the same tasks need doing by hand (G1).
+
 - `support-receipt` and `_shared/resend.ts` (D-20, D-22).
 - The `support-sweep` job, once Mitra approves it (D-21). It adds about 96 rows a day to what `cron-history-prune`
   clears.
