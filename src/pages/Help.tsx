@@ -1,12 +1,11 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { useFaqs, groupFaqs } from "@/lib/queries/faqs";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
-  Search, MessageCircle, Phone, Mail, FileText,
+  Search, Phone, Mail, Flag,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
-  ExternalLink, Instagram, X, Paperclip, Send, Camera,
-  ArrowLeft, Image as ImageIcon, Music, FileText as FilePdf,
+  Instagram, ArrowLeft, Store,
 } from "lucide-react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +15,10 @@ import {
   Accordion, AccordionContent, AccordionItem, AccordionTrigger,
 } from "@/components/ui/accordion";
 import { DeleteAccountCard } from "@/components/buyer/DeleteAccountCard";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import {
+  SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_INSTAGRAM, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto,
+} from "@/lib/supportContact";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -52,179 +55,6 @@ const FAQ_CATEGORY_ICONS: Record<string, typeof HelpCircle> = {
   "Account Management": User,
 };
 
-const quickGuides = [
-  { title: "How to Complete Verification", icon: FileText },
-  { title: "Request a Callback",            icon: Phone },
-  { title: "Audio, PDF & Image Support",    icon: MessageCircle },
-  { title: "Payment & Subscription Guide",  icon: CreditCard },
-];
-
-// ─────────────────────────────────────────────────────────────
-// CHAT MODAL  (ported from ChatModal.jsx)
-// ─────────────────────────────────────────────────────────────
-
-interface ChatMessage {
-  id: number;
-  sender: "support" | "user";
-  text: string;
-  timestamp: Date;
-  senderName?: string;
-  senderRole?: string;
-  fileType?: string;
-  fileName?: string;
-}
-
-function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      sender: "support",
-      text: "Hi! We will assist you in connecting with a customer manager. Please let us know the details of your inquiry. Please wait a moment as it may take some time for the manager to respond.",
-      timestamp: new Date(),
-      senderName: "Abdul",
-      senderRole: "Cosora support executive",
-    },
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
-  const audioRef  = useRef<HTMLInputElement>(null);
-  const pdfRef    = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  const sendMessage = () => {
-    if (!message.trim()) return;
-    const next: ChatMessage = { id: messages.length + 1, sender: "user", text: message, timestamp: new Date() };
-    setMessages(p => [...p, next]);
-    setMessage("");
-    setIsTyping(true);
-    setTimeout(() => setIsTyping(false), 2000);
-  };
-
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setMessages(p => [...p, { id: p.length + 1, sender: "user", text: `Sent a ${type}: ${file.name}`, timestamp: new Date(), fileType: type, fileName: file.name }]);
-  };
-
-  const fmt = (d: Date) => new Date(d).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full max-w-lg bg-white rounded-t-2xl sm:rounded-2xl flex flex-col h-[90vh] sm:h-[600px]">
-
-        {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button onClick={onClose}><ChevronRight className="w-6 h-6 text-gray-700 rotate-180" /></button>
-              <div>
-                <p className="text-sm font-semibold text-gray-900">Abdul</p>
-                <p className="text-xs text-gray-500">Cosora support executive</p>
-              </div>
-            </div>
-            <button onClick={onClose} className="text-sm font-medium text-red-600 hover:text-red-700">
-              End chat
-            </button>
-          </div>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 bg-gray-50 space-y-4">
-          {messages.map(msg => (
-            <div key={msg.id} className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[75%] px-4 py-3 ${
-                msg.sender === "user"
-                  ? "bg-blue-600 text-white rounded-l-2xl rounded-tr-2xl"
-                  : "bg-white border border-gray-200 rounded-r-2xl rounded-tl-2xl"
-              }`}>
-                {msg.sender === "support" && (
-                  <div className="mb-1">
-                    <p className="text-xs font-semibold text-gray-900">{msg.senderName}</p>
-                    <p className="text-xs text-gray-500">{msg.senderRole}</p>
-                  </div>
-                )}
-                <p className={`text-sm ${msg.sender === "user" ? "text-white" : "text-gray-900"}`}>{msg.text}</p>
-                <p className={`text-xs mt-1 ${msg.sender === "user" ? "text-blue-100" : "text-gray-400"}`}>{fmt(msg.timestamp)}</p>
-              </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-gray-200 rounded-r-2xl rounded-tl-2xl px-4 py-3">
-                <div className="flex gap-1">
-                  {[0, 150, 300].map(delay => (
-                    <div key={delay} className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-
-        {/* Support banner */}
-        <div className="bg-amber-50 border-t border-amber-100 px-4 py-2 shrink-0">
-          <p className="text-xs text-amber-800 text-center">Support executive Abdul will be assisting you now</p>
-        </div>
-
-        {/* Input area */}
-        <div className="bg-white border-t border-gray-200 px-4 py-3 shrink-0">
-          {/* Attachment options */}
-          {showAttachMenu && (
-            <div className="mb-3 flex gap-4 pb-3 border-b border-gray-100">
-              {[
-                { label: "Camera",  ref: cameraRef, type: "photo",  accept: "image/*",        capture: "environment" as const },
-                { label: "Gallery", ref: galleryRef, type: "image",  accept: "image/*",        capture: undefined },
-                { label: "Audio",   ref: audioRef,  type: "audio",  accept: "audio/*",        capture: undefined },
-                { label: "PDF",     ref: pdfRef,    type: "PDF",    accept: "application/pdf",capture: undefined },
-              ].map(item => (
-                <button key={item.label} onClick={() => { item.ref.current?.click(); setShowAttachMenu(false); }}
-                  className="flex flex-col items-center gap-1">
-                  <div className="w-12 h-12 bg-pink-100 rounded-full flex items-center justify-center hover:bg-pink-200 transition-colors">
-                    {item.label === "Camera"  && <Camera className="w-5 h-5 text-pink-600" />}
-                    {item.label === "Gallery" && <ImageIcon className="w-5 h-5 text-pink-600" />}
-                    {item.label === "Audio"   && <Music className="w-5 h-5 text-pink-600" />}
-                    {item.label === "PDF"     && <FilePdf className="w-5 h-5 text-pink-600" />}
-                  </div>
-                  <span className="text-xs text-gray-600">{item.label}</span>
-                  <input ref={item.ref} type="file" className="hidden" accept={item.accept}
-                    {...(item.capture ? { capture: item.capture } : {})}
-                    onChange={e => handleFile(e, item.type)} />
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowAttachMenu(p => !p)}
-              className={`p-2 transition-colors ${showAttachMenu ? "text-pink-600 bg-pink-50 rounded-full" : "text-gray-500 hover:text-gray-700"}`}>
-              <Paperclip className="w-5 h-5" />
-            </button>
-            <input type="text" value={message}
-              onChange={e => setMessage(e.target.value)}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
-              placeholder="Type your message here..."
-              className="flex-1 px-4 py-2.5 border border-gray-300 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button onClick={sendMessage} disabled={!message.trim()}
-              className="bg-[#FF4081] text-white p-3 rounded-full hover:bg-pink-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
-              <Send className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 // MAIN COMPONENT
@@ -233,7 +63,8 @@ function ChatModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }
 const Help = () => {
   const reduced = useReducedMotion();
   const navigate = useNavigate();
-  const [chatOpen, setChatOpen]       = useState(false);
+  const { role } = useUserRole();
+  const isSeller = role === "seller";
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -282,47 +113,68 @@ const Help = () => {
             <p className="text-sm text-gray-500">What can we help you with?</p>
           </motion.div>
 
+          {/* Vendors land here from Settings and the seller sidebar, but the answers
+              below are written for buyers (MPF-15). Until seller help exists, say so
+              and point them at the people who can help. */}
+          {isSeller && (
+            <motion.div variants={section}>
+              <Card className="border-brand-vendor/20 bg-brand-vendor/5">
+                <CardContent className="p-4 flex gap-3">
+                  <Store className="w-5 h-5 text-brand-vendor shrink-0 mt-0.5" />
+                  <p className="text-sm text-gray-700">
+                    The questions on this page are written for buyers. For help with your store, KYC,
+                    leads, ads or billing, call or email us using the details below.
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
           {/* Desktop: contact/account rail (left) + FAQ & guides (right).
               Mobile: wrappers carry no layout, so the stack is unchanged. */}
           <motion.div variants={reduced ? {} : page} className="lg:grid lg:grid-cols-[340px_minmax(0,1fr)] lg:gap-8 lg:items-start">
             {/* Left rail — contact & account */}
             <motion.div variants={reduced ? {} : page} className="space-y-6 lg:sticky lg:top-20">
 
-          {/* ── Contact Us ── */}
+          {/* ── Contact Us ── a phone line staffed in support hours, and email. */}
           <motion.div variants={section}>
             <h3 className="text-base font-semibold text-gray-900 mb-1">Contact Us</h3>
-            <p className="text-xs text-gray-500 mb-4">
-              10:00 - 7:00 PM IST (Closed on weekends and holidays)
-            </p>
+            <p className="text-xs text-gray-500 mb-4">{SUPPORT_HOURS_LABEL}</p>
             <motion.div variants={listContainer} className="grid grid-cols-2 gap-3">
-              <motion.button
+              <motion.a
                 variants={listItem}
                 whileTap={TAP}
                 transition={TAP_T}
-                onClick={() => setChatOpen(true)}
-                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+                href={`tel:${SUPPORT_PHONE}`}
+                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors"
               >
-                <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-2">
-                  <MessageCircle className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 bg-brand-vendor rounded-full flex items-center justify-center mb-2">
+                  <Phone className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-sm font-semibold text-gray-900">Contact Us</span>
-                <span className="text-xs text-gray-500">Chat with us</span>
-              </motion.button>
+                <span className="text-sm font-semibold text-gray-900">Call us</span>
+                <span className="text-xs text-gray-500">{SUPPORT_PHONE_LABEL}</span>
+              </motion.a>
 
-              <motion.button
+              <motion.a
                 variants={listItem}
                 whileTap={TAP}
                 transition={TAP_T}
-                onClick={() => { window.location.href = "tel:+919147700465"; }}
-                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center hover:bg-gray-50 transition-colors"
+                href={supportMailto("Help request")}
+                className="bg-white rounded-lg border border-gray-200 p-4 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors"
               >
                 <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center mb-2 border border-gray-300">
-                  <Phone className="w-6 h-6 text-gray-900" />
+                  <Mail className="w-6 h-6 text-gray-900" />
                 </div>
-                <span className="text-sm font-semibold text-gray-900">Request a Callback</span>
-                <span className="text-xs text-gray-500">a Callback</span>
-              </motion.button>
+                <span className="text-sm font-semibold text-gray-900">Email us</span>
+                <span className="text-xs text-gray-500">{SUPPORT_EMAIL}</span>
+              </motion.a>
             </motion.div>
+            <Link
+              to="/report-fraud"
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline"
+            >
+              <Flag className="w-3.5 h-3.5" /> Report fraud
+            </Link>
           </motion.div>
 
           {/* ── Follow Us ── */}
@@ -332,7 +184,7 @@ const Help = () => {
               Get connected for our latest news & updates!
             </p>
             <a
-              href="https://instagram.com/cosora"
+              href={SUPPORT_INSTAGRAM}
               target="_blank"
               rel="noopener noreferrer"
               className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:bg-gray-800 transition-colors"
@@ -345,8 +197,8 @@ const Help = () => {
           <motion.div variants={section} className="flex items-center gap-2 text-sm text-gray-700">
             <Mail className="w-4 h-4 shrink-0" />
             <span className="font-medium">Email -</span>
-            <a href="mailto:hello@cosora.in" className="text-blue-600 hover:underline">
-              hello@cosora.in
+            <a href={supportMailto("Help request")} className="text-blue-600 hover:underline">
+              {SUPPORT_EMAIL}
             </a>
           </motion.div>
 
@@ -454,31 +306,6 @@ const Help = () => {
               )}
             </Card>
           </motion.div>
-
-          {/* ── Quick Guides ── */}
-          <motion.div variants={section}>
-            <h2 className="text-xl font-semibold text-foreground mb-4">Quick Guides</h2>
-            <motion.div variants={listContainer} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {quickGuides.map(guide => (
-                <motion.div
-                  key={guide.title}
-                  variants={listItem}
-                >
-                <Card
-                  className="border-border hover:border-brand-vendor/30 hover:shadow-sm transition-all cursor-pointer group"
-                >
-                  <CardContent className="p-4 flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-gray-100 group-hover:bg-brand-vendor/10 transition-colors">
-                      <guide.icon className="w-4 h-4 text-gray-500 group-hover:text-brand-vendor transition-colors" />
-                    </div>
-                    <span className="text-sm font-medium text-foreground flex-1">{guide.title}</span>
-                    <ExternalLink className="w-4 h-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                  </CardContent>
-                </Card>
-                </motion.div>
-              ))}
-            </motion.div>
-          </motion.div>
             </motion.div>{/* /Right main */}
           </motion.div>{/* /two-column grid */}
 
@@ -488,16 +315,20 @@ const Help = () => {
               <CardContent className="py-8 text-center">
                 <h3 className="text-xl font-semibold text-foreground mb-2">Still need help?</h3>
                 <p className="text-muted-foreground mb-4 max-w-md mx-auto text-sm">
-                  Our dedicated support team is here to assist you with any questions or concerns.
+                  Call us during support hours, or email us any time and the Cosora team will get back to you.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
-                  <Button className="bg-brand-vendor hover:bg-brand-vendor/90" onClick={() => setChatOpen(true)}>
-                    <MessageCircle className="w-4 h-4 mr-2" />
-                    Start Live Chat
+                  <Button asChild className="bg-brand-vendor hover:bg-brand-vendor/90">
+                    <a href={`tel:${SUPPORT_PHONE}`}>
+                      <Phone className="w-4 h-4 mr-2" />
+                      Call us
+                    </a>
                   </Button>
-                  <Button variant="outline" className="border-border" onClick={() => { window.location.href = "mailto:hello@cosora.in"; }}>
-                    <Mail className="w-4 h-4 mr-2" />
-                    Email Support
+                  <Button asChild variant="outline" className="border-border">
+                    <a href={supportMailto("Help request")}>
+                      <Mail className="w-4 h-4 mr-2" />
+                      Email us
+                    </a>
                   </Button>
                 </div>
               </CardContent>
@@ -507,9 +338,6 @@ const Help = () => {
       </motion.div>
 
       <MobileBottomNav />
-
-      {/* ── Chat Modal ── */}
-      <ChatModal isOpen={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 };

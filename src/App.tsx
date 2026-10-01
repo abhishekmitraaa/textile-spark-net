@@ -35,7 +35,6 @@ import Chat from "./pages/Chat";
 import ChatThread from "./pages/ChatThread";
 import Categories from "./pages/Categories";
 import MyReviews from "./pages/MyReviews";
-import SupportChat from "./pages/SupportChat";
 import PostRequirement from "./pages/PostRequirement";
 import MyQuotes from "./pages/MyQuotes";
 import Sale from "./pages/Sale";
@@ -250,7 +249,8 @@ const App = () => (
             <Route path="/profile/interest-preference" element={<InterestPreference />} />
             <Route path="/profile/reviews" element={<MyReviews />} />
             <Route path="/profile/help" element={<Help />} />
-            <Route path="/profile/help/chat" element={<ClarityMask><SupportChat /></ClarityMask>} />
+            {/* The canned "support chat" is gone (Help & Support P1); the real one is /help/chat (P3). */}
+            <Route path="/profile/help/chat" element={<Navigate to="/help" replace />} />
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/products" element={<Products />} />

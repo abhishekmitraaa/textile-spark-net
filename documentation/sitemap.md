@@ -88,7 +88,7 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 | `/profile/data-export` | `ProfileAccountPrefs` | |
 | `/profile/terms` | `TermsConditions` | |
 | `/profile/help` | `Help` | FAQ rows come from `public.faqs` (`buyer_help`), edited in Cosora-Admin `/faqs` with no deploy (2026-09-23). Also the Delete my account entry |
-| `/profile/help/chat` | `SupportChat` | |
+| `/profile/help/chat` | redirect | Redirects to `/help` since Help & Support P1 (2026-10-01); the canned chat it showed is gone |
 
 ### Content
 | Route | Component |
@@ -222,7 +222,7 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`, so vendors land on the buyer FAQs (MPF-15) |
 | `/terms` | `TermsConditions` | |
 | `/about` | `About` | |
-| `/report-fraud` | `ReportFraud` | |
+| `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
 | `*` | `NotFound` | Fallback |
 
 ---

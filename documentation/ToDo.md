@@ -540,7 +540,7 @@ with no need to dictate format, context, or reference each time.
   `/profile/help/chat` (canned replies).
   Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
 - Priority: Medium (MPF-15's severity)
-- Status: Open (waiting on the decision; the chat fix doesn't need it)
+- Status: Open. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships.
 
 ### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
 - Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it

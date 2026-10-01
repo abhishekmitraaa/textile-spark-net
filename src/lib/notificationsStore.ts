@@ -276,7 +276,7 @@ const KIND_META: Record<string, {
   /** Where this kind sends the vendor, when it is not a chat notification. */
   href?: string;
 }> = {
-  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support" },
+  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support", href: "/help" },
   account_reinstated:  { type: "system",  tone: "positive", group: "updates", actionLabel: "Go to dashboard" },
   chat_locked:         { type: "message", tone: "warning",  group: "updates", actionLabel: "Open chat" },
   chat_resumed:        { type: "message", tone: "positive", group: "updates", actionLabel: "Open chat" },

@@ -410,8 +410,9 @@ rather than a supplier directory.
   order the vendor pays explicitly.
   The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
   button that opens the Help page, as Andy asked. That's the buyer help page: its email
-  link (hello@cosora.in) is the only real support channel a vendor has, and its chat sends
-  canned replies (MPF-15). Some of Andy's plan answers promise what billing doesn't do yet:
+  link (hello@cosora.in) and phone line (+91 88155 78226) are the real support channels a vendor
+  has; since Help & Support P1 (2026-10-01) it has no canned chat, and it tells sellers its
+  answers are written for buyers (MPF-15). Some of Andy's plan answers promise what billing doesn't do yet:
   proration, limit notifications and a 7-day refund (MPF-16, MPF-17).
 - **Seller FAQ on the landing page** (`/seller`, 2026-09-23): Andy's 10 registration
   questions, editable from the admin panel. They're published verbatim, though some don't

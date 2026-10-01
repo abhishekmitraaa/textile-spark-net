@@ -164,6 +164,17 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-01 — Help & Support P1, honesty patch (typecheck 0; i18n 6,943/6,943; build; browser check on the local build)
+
+- **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 6,943/6,943 in both languages; `npm run build` passes, including the CSP inline-hash check.
+- **Browser** (`.claude/tmp/p1-check.mjs`, not committed): the local build at :8080 against production data. Tracking RPCs were answered in the browser and table writes aborted, so nothing was written.
+  - Signed out, at 390 and 1280 wide, `/help` shows +91 88155 78226 and hello@cosora.in. It has 2 `tel:+918815578226` links and 3 `mailto:hello@cosora.in` links. There's no "Abdul", "Live Chat", "Chat with us" or Quick Guides, and the old number (…0465) is gone from the page.
+  - `/report-fraud` has no "48 hours" and has the buyer back header. "Email this report" with nothing typed shows "Describe what happened first."; with text, it shows the "Nothing reaches Cosora until you send it" status. Playwright can't read where a `mailto:` navigation goes, so the email body was checked in the code, not in the browser.
+  - `/profile/help/chat` lands on `/help`.
+  - In Hindi, `/report-fraud` shows "यह रिपोर्ट ईमेल करें".
+  - As demo-vendor on the seller side, `/help` shows the note for sellers, and `/report-fraud` renders in the seller dashboard.
+  - No page or console errors.
+
 ### 2026-10-01 — Help & Support applied (3 migrations, md5s match; role simulation 61/61 live; edge function deployed and probed; admin render check)
 
 - **Before:** latest migration `20260929221659`; no support table, function or bucket; the live `admin.audit_log` action check was exactly the migration's list minus `reveal_contact`.

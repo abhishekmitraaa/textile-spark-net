@@ -1,3 +1,21 @@
+- 2026-10-01 (Help & Support P1, honesty patch; branch `help-support/p1-honesty`): **Help no longer pretends. The canned chats are gone, "Request a Callback" is a real phone line, and the fraud form says what it does.**
+  - **`/help` and `/profile/help` (`Help.tsx`):**
+    - `ChatModal` is deleted. It was the invented agent "Abdul", a typing indicator, and attachments that went nowhere.
+    - "Chat with us" and "Start Live Chat" became **Email us**, a `mailto:hello@cosora.in` with a subject.
+    - "Request a Callback", which dialled an old number, became **Call us: +91 88155 78226**, with the hours Mon–Fri 10:00–19:00 IST (D-04, D-18).
+    - The four Quick Guides, which linked to nothing, are hidden until P5 writes them.
+    - "Still need help?" offers the same two real channels, and Help links to Report fraud.
+    - A seller sees a note that the questions are written for buyers and how to reach us (MPF-15, option b).
+  - **`/report-fraud` (`ReportFraud.tsx`):**
+    - The form fills an email to Cosora, and the person's own mail app sends it. The page says nothing is sent until they send it.
+    - Gone: the "Report submitted… within 48 hours" toast, the 48-hour promise, and the attach box that only toggled a tick. The page now says to attach screenshots to the email.
+    - Sellers get the dashboard frame; everyone else, signed out included, gets the plain back header.
+  - **`/profile/help/chat`** redirects to `/help`, and Profile's "Chat with Us" row is removed. `SupportChat.tsx` stays in the repo, unrouted, for P3 to reuse its layout.
+  - **The suspension notice's "Contact support"** now opens `/help` (`notificationsStore.ts`).
+  - **`src/lib/supportContact.ts`:** the phone, email, hours and Instagram link in one place, matching `support_settings`. P3 falls back to it whenever rollout is Off.
+  - **i18n:** 21 new strings in `hi.json` and `gu.json`. The two email-body lines staff read in English are on the check's ignore list.
+  - Files: the above, `src/App.tsx`, `src/pages/Profile.tsx`, `scripts/i18n-coverage-check.mjs`, `src/i18n/{hi,gu}.json`, `securityflags.md`, `ToDo.md`, `sitemap.md`, `sides.md`, `test.md`, this file.
+
 - 2026-10-01 (Help & Support, applied; Mitra approved): **The support database and the file-check function are live, and Cosora-Admin's Support section works against them. Rollout is Off, so no buyer or vendor can send a request yet.**
   - **Migrations applied**, each md5 matching its file: `20260930212818_support_schema.sql`, `20260930213143_support_requester_rpcs.sql`, `20260930213451_support_admin_rpcs.sql` (renamed from the provisional `20260930120000/120100/120200`). Each ran its own self-check.
   - **Role simulation live: 61/61** (`scripts/support-role-simulation.sql`, in a transaction it aborts; nothing kept).
