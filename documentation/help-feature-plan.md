@@ -383,6 +383,7 @@ About 96 runs a day (about 1,350 rows within `cron-history-prune`'s 14 days). Th
 - The `/grievance` page, hidden until named (D-15).
 
 ### P7. Launch gate
+**Built and run 2026-10-01** (branch `help-support/p7-launch-gate`). Section 4's tests run against a local copy of production's schema (`scripts/local-stack/`), never production: role simulation 61/61 with the mutation checks, the staff, FAQ and sweep suites (the purge ran for the first time), the sweep end to end with the scheduled job firing locally, 11 browser specs (`tests/local/`, two Cosora-Admin bugs found and fixed), and a 60-user load run with no errors. Results: `test.md`, 2026-10-01. **G1 is not met**; every open item is an owner action, listed below.
 - Entry: P2-P6.
 - Exit: section 4 passes, then gate **G1**:
   - at least one active support-role admin who has practised on the inbox;

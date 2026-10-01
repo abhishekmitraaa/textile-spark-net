@@ -9,6 +9,8 @@
 -- 2026-10-01: the MCP tool refused to run the purge section (W8-W9) because it deletes
 -- support rows, even inside a rolled-back transaction. Every other section ran there (in
 -- four parts, 25/25). Run the whole block once in the SQL editor before the apply.
+-- Later 2026-10-01: the whole block, purge included, ran on the local stack (P7,
+-- scripts/local-stack/): 19/19.
 --
 -- Fixtures, all rolled back and written directly (rollout isn't touched): requests from
 -- demo-buyer (1111…), one with no requester (a deleted account), a fraud report about
