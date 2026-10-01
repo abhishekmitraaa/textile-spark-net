@@ -112,6 +112,9 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          discount_code: string | null
+          discount_paise: number
+          discount_redemption_id: string | null
           order_id: string
           paid_at: string | null
           spec: Json
@@ -121,6 +124,9 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          discount_code?: string | null
+          discount_paise?: number
+          discount_redemption_id?: string | null
           order_id: string
           paid_at?: string | null
           spec: Json
@@ -130,6 +136,9 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          discount_code?: string | null
+          discount_paise?: number
+          discount_redemption_id?: string | null
           order_id?: string
           paid_at?: string | null
           spec?: Json
@@ -1825,6 +1834,8 @@ export type Database = {
           billing_period_start: string | null
           created_at: string
           currency: string
+          discount_amount: number | null
+          discount_code: string | null
           gst_amount: number | null
           gst_number: string | null
           id: string
@@ -1849,6 +1860,8 @@ export type Database = {
           billing_period_start?: string | null
           created_at?: string
           currency?: string
+          discount_amount?: number | null
+          discount_code?: string | null
           gst_amount?: number | null
           gst_number?: string | null
           id?: string
@@ -1873,6 +1886,8 @@ export type Database = {
           billing_period_start?: string | null
           created_at?: string
           currency?: string
+          discount_amount?: number | null
+          discount_code?: string | null
           gst_amount?: number | null
           gst_number?: string | null
           id?: string
@@ -1920,7 +1935,11 @@ export type Database = {
           amount: number
           billing_cycle: string
           created_at: string
+          discount_code: string | null
+          discount_redemption_id: string | null
+          discount_rupees: number
           gst_number: string | null
+          list_rupees: number | null
           order_id: string
           paid_at: string | null
           plan_id: string
@@ -1931,7 +1950,11 @@ export type Database = {
           amount: number
           billing_cycle?: string
           created_at?: string
+          discount_code?: string | null
+          discount_redemption_id?: string | null
+          discount_rupees?: number
           gst_number?: string | null
+          list_rupees?: number | null
           order_id: string
           paid_at?: string | null
           plan_id: string
@@ -1942,7 +1965,11 @@ export type Database = {
           amount?: number
           billing_cycle?: string
           created_at?: string
+          discount_code?: string | null
+          discount_redemption_id?: string | null
+          discount_rupees?: number
           gst_number?: string | null
+          list_rupees?: number | null
           order_id?: string
           paid_at?: string | null
           plan_id?: string

@@ -1,5 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -31,7 +31,9 @@ import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
 import { useLeadFunnelData, funnelForWindow, formatInrCompact } from "@/lib/queries/vendorAnalytics";
-import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, type AdSpec } from "@/lib/queries/payments";
+import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, publishFreeAdOrder, type AdSpec } from "@/lib/queries/payments";
+import { quoteAdDiscount, discountRefusal, DISCOUNT_CHECKOUT_TIMEOUT_S, type AdQuote } from "@/lib/queries/discounts";
+import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { adStateAllowance, canRunAds, AD_SCOPE_LABEL, type AdLocationScope } from "@/lib/plan";
 import { computeOrderRupees, priceLines } from "@/lib/adPricing";
@@ -865,6 +867,25 @@ function PaymentModal({
   );
 }
 
+// The order the checkout sends: what the server prices, charges and publishes.
+function buildAdSpec(
+  products: VendorProductRow[], selectedAdTypes: string[], selectedProducts: string[], days: number,
+  selectedCategories: string[], selectedCities: string[],
+): AdSpec {
+  return {
+    placementIds: selectedAdTypes,
+    days,
+    campaignLabel: selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.name).filter(Boolean).join(", ") || "Ad",
+    items: selectedProducts.map((pid) => {
+      const prod = products.find(p => p.id === pid);
+      return { productId: pid, title: prod?.name ?? "Product", imageUrl: prod?.image ?? null };
+    }),
+    // Real targeting persisted on the campaign row (see edge functions).
+    targetCategories: selectedCategories.length ? selectedCategories : undefined,
+    targetCities: selectedCities.length ? selectedCities : undefined,
+  };
+}
+
 // ── CostSummary ──
 function CostSummary({
   products, selectedAdTypes, selectedProducts, selectedDuration, selectedCategories, selectedCities, vendorId, onCreated, canAds,
@@ -875,6 +896,37 @@ function CostSummary({
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // A discount code (admin completion Phase 10). The quote is the server's: it
+  // prices the order and says what the code takes off. When the order changes,
+  // the same code is quoted again, and Pay waits for the new numbers.
+  const [quote, setQuote] = useState<AdQuote | null>(null);
+  const [quoteNote, setQuoteNote] = useState<string | null>(null);
+  const [requoting, setRequoting] = useState(false);
+  const quotedFor = useRef("");
+  const specKey = [selectedAdTypes.join(","), selectedDuration, selectedProducts.join(",")].join("|");
+  useEffect(() => {
+    if (!quote || quotedFor.current === specKey || !selectedAdTypes.length || !selectedProducts.length) return;
+    let cancelled = false;
+    setRequoting(true);
+    const t = setTimeout(async () => {
+      const spec = buildAdSpec(products, selectedAdTypes, selectedProducts, parseInt(selectedDuration) || 1, selectedCategories, selectedCities);
+      const res = await quoteAdDiscount(spec, quote.code);
+      if (cancelled) return;
+      setRequoting(false);
+      if (res.quote) {
+        quotedFor.current = specKey;
+        setQuote(res.quote);
+        setQuoteNote(null);
+      } else {
+        setQuote(null);
+        setQuoteNote(res.message);
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); setRequoting(false); };
+    // specKey covers the order's contents; quote.code is the only part of the quote that matters here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [specKey, quote?.code]);
 
   if (!selectedAdTypes.length || !selectedProducts.length || !selectedDuration) {
     // Mobile keeps its original behaviour — nothing appears until the form is
@@ -933,28 +985,41 @@ function CostSummary({
   // certificate across 3 products on a 30-day campaign quoted ₹17,910 before.
   const total = computeOrderRupees(selectedAdTypes, days, selectedProducts.length);
   const lines = priceLines(selectedAdTypes, days, selectedProducts.length);
-  const campaignLabel = selectedAdTypes.map(id => AD_TYPES.find(a => a.id === id)?.name).filter(Boolean).join(", ") || "Ad";
+  // With a code applied, what the vendor pays is the server's quote.
+  const payable = quote ? quote.total : total;
 
-  const buildSpec = (): AdSpec => ({
-    placementIds: selectedAdTypes,
-    days,
-    campaignLabel,
-    items: selectedProducts.map((pid) => {
-      const prod = products.find(p => p.id === pid);
-      return { productId: pid, title: prod?.name ?? "Product", imageUrl: prod?.image ?? null };
-    }),
-    // Real targeting persisted on the campaign row (see edge functions).
-    targetCategories: selectedCategories.length ? selectedCategories : undefined,
-    targetCities: selectedCities.length ? selectedCities : undefined,
-  });
+  const buildSpec = (): AdSpec =>
+    buildAdSpec(products, selectedAdTypes, selectedProducts, days, selectedCategories, selectedCities);
+
+  const applyCode = async (code: string): Promise<string | null> => {
+    setQuoteNote(null);
+    const res = await quoteAdDiscount(buildSpec(), code);
+    if (!res.quote) return res.message;
+    quotedFor.current = specKey;
+    setQuote(res.quote);
+    return null;
+  };
+
+  // The code was refused at the last step (its last use went, or it changed).
+  const dropCode = (reason: string | undefined) => {
+    setQuote(null);
+    setQuoteNote(discountRefusal(reason));
+  };
 
   // Fallback (no Razorpay keys): publish server-side from the spec after the
   // simulated checkout. Used by the mock PaymentModal. Ads are still created by
   // the server (the edge function), never inserted directly by the client.
   const publishDemo = async () => {
-    const res = await publishDemoAds(buildSpec());
+    const res = await publishDemoAds(buildSpec(), quote?.code);
+    if (!res.ok && res.error === "discount") {
+      setPayOpen(false);
+      dropCode(res.reason);
+      toast.error("Your discount code couldn't be used", { description: discountRefusal(res.reason) });
+      return;
+    }
     if (!res.ok) throw new Error(res.error || "Could not publish ads");
     onCreated();
+    setQuote(null);
     toast.success("Payment successful — your ads are live!", {
       description: `${res.count ?? selectedProducts.length} campaign${(res.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
     });
@@ -967,10 +1032,28 @@ function CostSummary({
     const spec = buildSpec();
     setBusy(true);
     try {
-      const order = await createRazorpayOrder(spec);
+      const order = await createRazorpayOrder(spec, quote?.code);
+      if (order.discountReason) {
+        dropCode(order.discountReason);
+        return;
+      }
       if (!order.configured) {
         // Gateway not wired yet → simulated checkout.
         setPayOpen(true);
+        return;
+      }
+      if (order.free) {
+        // The code took the order to ₹0: nothing to pay, so no Razorpay checkout.
+        const published = await publishFreeAdOrder(order.orderId!);
+        if (published.ok) {
+          onCreated();
+          setQuote(null);
+          toast.success("Your ads are submitted!", {
+            description: `${published.count ?? selectedProducts.length} campaign${(published.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review.`,
+          });
+        } else {
+          toast.error("Couldn't publish your ads", { description: "Nothing was charged. Please try again." });
+        }
         return;
       }
       const res = await openRazorpayCheckout({
@@ -979,6 +1062,8 @@ function CostSummary({
         amount: order.amount,
         name: "Cosora Ads",
         description: `${selectedProducts.length} campaign${selectedProducts.length > 1 ? "s" : ""} · ${days} days`,
+        // A code's use is held for this order for 30 minutes; don't let checkout outlive it.
+        timeout: quote ? DISCOUNT_CHECKOUT_TIMEOUT_S : undefined,
       });
       const verified = await verifyRazorpayPayment({
         orderId: res.razorpay_order_id,
@@ -987,6 +1072,7 @@ function CostSummary({
       });
       if (verified.ok) {
         onCreated();
+        setQuote(null);
         toast.success("Payment successful — your ads are live!", {
           description: `${verified.count ?? selectedProducts.length} campaign${(verified.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
         });
@@ -1008,7 +1094,7 @@ function CostSummary({
             stack, so the amount gets its own line. */}
         <div className="flex items-center justify-center gap-2 mb-2 min-[1400px]:flex-col min-[1400px]:items-start min-[1400px]:gap-0 min-[1400px]:mb-3">
           <span className="text-gray-600 text-base min-[1400px]:text-xs min-[1400px]:font-semibold min-[1400px]:uppercase min-[1400px]:tracking-wider min-[1400px]:text-gray-400">Estimated Cost:</span>
-          <span className="text-4xl font-bold text-gray-900 lg:tabular-nums min-[1400px]:leading-tight">₹{total.toLocaleString("en-IN")}</span>
+          <span className="text-4xl font-bold text-gray-900 lg:tabular-nums min-[1400px]:leading-tight">₹{payable.toLocaleString("en-IN")}</span>
           <span className="text-gray-600 text-base min-[1400px]:text-sm">for {selectedDuration} days</span>
         </div>
         {/* A real per-line breakdown, not one blanket "× days × products"
@@ -1025,12 +1111,34 @@ function CostSummary({
               <span className="shrink-0 tabular-nums text-gray-700">₹{l.rupees.toLocaleString("en-IN")}</span>
             </li>
           ))}
+          {quote && quote.discount > 0 && (
+            <li className="flex items-baseline justify-between gap-3">
+              <span className="flex min-w-0 items-center gap-1.5 text-gray-700">
+                <span>Discount</span>
+                <span className="font-mono text-xs text-gray-500" data-no-translate>{quote.code}</span>
+              </span>
+              <span className="shrink-0 tabular-nums text-brand-success">−₹{quote.discount.toLocaleString("en-IN")}</span>
+            </li>
+          )}
         </ul>
       </div>
 
-      <button onClick={startCheckout} disabled={busy}
+      <div className="mb-4">
+        <DiscountCodeField
+          applied={quote ? { code: quote.code, discount: quote.discount } : null}
+          onApply={applyCode}
+          onRemove={() => { setQuote(null); setQuoteNote(null); }}
+          disabled={busy}
+        />
+        {requoting && <p className="mt-1.5 text-xs text-gray-500" role="status">Updating the discount for this order…</p>}
+        {quoteNote && <p className="mt-1.5 text-xs text-destructive" role="alert">{quoteNote}</p>}
+      </div>
+
+      <button onClick={startCheckout} disabled={busy || requoting}
         className="w-full bg-[#ff2160] text-white py-4 rounded-2xl font-bold text-lg hover:bg-[#ff2160]/80 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 disabled:opacity-60 min-[1400px]:text-base">
-        {busy ? "Processing…" : <>Pay &amp; Publish · ₹{total.toLocaleString("en-IN")}<ChevronRight className="w-5 h-5" /></>}
+        {busy ? "Processing…"
+          : payable > 0 ? <>Pay &amp; Publish · ₹{payable.toLocaleString("en-IN")}<ChevronRight className="w-5 h-5" /></>
+          : <>Publish for free<ChevronRight className="w-5 h-5" /></>}
       </button>
 
       <div className="grid grid-cols-2 gap-4 mt-6 min-[1400px]:grid-cols-1 min-[1400px]:gap-2.5 min-[1400px]:mt-5 min-[1400px]:border-t min-[1400px]:border-gray-100 min-[1400px]:pt-5">
@@ -1049,7 +1157,7 @@ function CostSummary({
       <PaymentModal
         open={payOpen}
         onClose={() => setPayOpen(false)}
-        amount={total}
+        amount={payable}
         days={days}
         productCount={selectedProducts.length}
         onPaid={publishDemo}

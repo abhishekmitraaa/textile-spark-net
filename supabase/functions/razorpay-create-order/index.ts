@@ -6,9 +6,20 @@
 // computed SERVER-SIDE from the spec (never trust a client amount). The vendor
 // id comes from the caller's JWT.
 //
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29). `discountCode` is
+// optional. The order is split into its certificate line and everything else
+// (orderLineRupees); a "certificate" code comes off the first, an
+// "ad_purchase" code off the second. The database checks the code before
+// anything is created, then one use is reserved against the Razorpay order id
+// under the code's lock, and ad_orders stores what was taken off
+// (discount_paise), the code and the redemption. `amount` stays what is
+// charged. A code that takes the order to ₹0 makes no Razorpay order: the id is
+// free_<uuid> and razorpay-verify-payment fulfils it.
+//
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET (+ platform SUPABASE_URL /
 // SUPABASE_SERVICE_ROLE_KEY). Returns { error:"not_configured" } until the
-// Razorpay keys are set, so the client falls back to the simulated checkout.
+// Razorpay keys are set, so the client falls back to the simulated checkout
+// (which applies a code itself: razorpay-verify-payment, demo mode).
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,7 +41,8 @@ function json(body: unknown, status = 200): Response {
 // scripts/ad-pricing-check.mjs now asserts the one remaining duplicate (the
 // browser's, in src/lib/adPricing.ts) matches this one across 4000 generated
 // orders, because a drift here quotes the vendor one price and charges another.
-import { computeOrderRupees, type AdSpec } from "../_shared/adPricing.ts";
+import type { AdSpec } from "../_shared/adPricing.ts";
+import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -62,7 +74,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const vendorId = vendorIdFromJwt(req);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
-  let payload: { spec?: AdSpec };
+  let payload: { spec?: AdSpec; discountCode?: string };
   try {
     payload = await req.json();
   } catch {
@@ -73,25 +85,55 @@ Deno.serve(async (req: Request): Promise<Response> => {
     return json({ error: "bad_spec" }, 400);
   }
 
-  const rupees = computeOrderRupees(spec);
-  if (rupees <= 0) return json({ error: "zero_amount" }, 400);
-  const amount = rupees * 100; // paise
+  const lines = adAmounts(spec);
+  if (lines.gross <= 0) return json({ error: "zero_amount" }, 400);
 
-  // 1) Create the Razorpay order.
+  // 0) The code, if any, before anything exists that it could leave behind.
+  const code = normaliseCode(payload.discountCode);
+  const amounts = { adRupees: lines.ads, certificateRupees: lines.certificate };
+  let discount = 0;
+  if (code) {
+    const check = await checkDiscount(url, serviceKey, code, vendorId, "ad", amounts);
+    if (!check.ok) return json({ error: "discount", reason: check.reason ?? "unavailable" }, 200);
+    discount = check.discount_rupees ?? 0;
+  }
+  const money = adAmounts(spec, discount);
+  const amount = money.paise;
+  const free = amount === 0;
+
+  // 1) Create the Razorpay order: none when the code took the total to ₹0.
   let orderId: string;
-  try {
-    const resp = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
-      body: JSON.stringify({ amount, currency: "INR", receipt: `ad_${Date.now()}`, notes: { kind: "ad_campaign", vendor: vendorId } }),
-    });
-    if (!resp.ok) return json({ error: "order_failed", detail: (await resp.text()).slice(0, 300) }, 200);
-    orderId = (await resp.json()).id;
-  } catch (e) {
-    return json({ error: "request_failed", detail: String(e) }, 200);
+  if (free) {
+    orderId = `free_${crypto.randomUUID()}`;
+  } else {
+    try {
+      const resp = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          amount, currency: "INR", receipt: `ad_${Date.now()}`,
+          notes: { kind: "ad_campaign", vendor: vendorId, ...(code ? { discount_code: code } : {}) },
+        }),
+      });
+      if (!resp.ok) return json({ error: "order_failed", detail: (await resp.text()).slice(0, 300) }, 200);
+      orderId = (await resp.json()).id;
+    } catch (e) {
+      return json({ error: "request_failed", detail: String(e) }, 200);
+    }
   }
 
-  // 2) Record the intent (service role) so publish is driven server-side.
+  // 2) Hold the code's use for this order. Refused here means another vendor
+  //    took the last use (or an admin changed the code) since step 0.
+  let redemptionId: string | null = null;
+  let heldCode: string | null = null;
+  if (code) {
+    const held = await reserveDiscount(url, serviceKey, code, vendorId, "ad", orderId, discount, amounts);
+    if (!held.ok || !held.redemption_id) return json({ error: "discount", reason: held.reason ?? "unavailable" }, 200);
+    redemptionId = held.redemption_id;
+    heldCode = held.code ?? code;
+  }
+
+  // 3) Record the intent (service role) so publish is driven server-side.
   //
   // This MUST succeed before the client is allowed to open Checkout. Both
   // fulfilment paths (verify-payment and the webhook) publish by claiming this
@@ -103,9 +145,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const ins = await fetch(`${url}/rest/v1/ad_orders`, {
     method: "POST",
     headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ order_id: orderId, vendor_id: vendorId, spec, amount, status: "created" }),
+    body: JSON.stringify({
+      order_id: orderId, vendor_id: vendorId, spec, amount, status: "created",
+      discount_paise: money.discount * 100, discount_code: heldCode, discount_redemption_id: redemptionId,
+    }),
   });
-  if (!ins.ok) return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
+  if (!ins.ok) {
+    // Nobody can pay an order with no intent, so its use goes back.
+    if (redemptionId) await releaseDiscount(url, serviceKey, redemptionId, orderId);
+    return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
+  }
 
-  return json({ configured: true, orderId, amount, currency: "INR", keyId });
+  return json({
+    configured: true, orderId, amount, currency: "INR", keyId,
+    gross: money.gross, discount: money.discount, discountCode: heldCode, free,
+  });
 });

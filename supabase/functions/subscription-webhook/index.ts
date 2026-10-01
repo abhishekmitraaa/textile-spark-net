@@ -9,13 +9,18 @@
 // No subscription-charged/cancelled events to handle — there is no recurring
 // Razorpay subscription object; each period is a plain payment.captured.
 //
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29): as in verify-payment,
+// a claimed intent is invoiced from its own list price and discount and its
+// code's use is confirmed, and the invoice records the event's payment id.
+//
 // Setup: in the Razorpay dashboard add a webhook →
 //   URL:    https://<project>.supabase.co/functions/v1/subscription-webhook
 //   events: payment.captured (and optionally order.paid)
 //   secret: set the same value as the RAZORPAY_WEBHOOK_SECRET function secret
 
-// GST is computed in one place for all three subscription functions (MPF-11).
-import { gstOn } from "../_shared/gst.ts";
+// GST is computed in one place for all three subscription functions (MPF-11);
+// subscriptionAmounts() applies it after the discount.
+import { confirmDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -40,13 +45,17 @@ async function fetchPlan(url: string, key: string, planId: string): Promise<Plan
   return Array.isArray(rows) && rows.length ? rows[0] as PlanRow : null;
 }
 
-async function activateSubscription(url: string, key: string, o: Record<string, unknown>): Promise<boolean> {
+async function activateSubscription(url: string, key: string, o: Record<string, unknown>, paymentId: string | null): Promise<boolean> {
   const planId = String(o.plan_id);
   const billingCycle = o.billing_cycle === "yearly" ? "yearly" : "monthly";
   const plan = await fetchPlan(url, key, planId);
   if (!plan) return false;
-  const base = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
-  const { gst } = gstOn(base);
+  // The order's own list price when it stored one (orders from 2026-09-29 on),
+  // else the plan's; the discount comes off before GST.
+  const list = o.list_rupees != null
+    ? Number(o.list_rupees)
+    : (billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price);
+  const money = subscriptionAmounts(list, Number(o.discount_rupees ?? 0));
 
   const start = new Date();
   const end = new Date(start);
@@ -86,20 +95,23 @@ async function activateSubscription(url: string, key: string, o: Record<string, 
     if (inv.ok) invoiceNumber = await inv.json();
   } catch { /* null */ }
 
+  const discounted = money.discount > 0;
   await fetch(`${url}/rest/v1/subscription_invoices`, {
     method: "POST",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify({
-      vendor_id: o.vendor_id, subscription_id: subscriptionId, plan_id: planId, amount: base,
-      currency: "INR", gst_amount: gst, gst_number: o.gst_number ?? null, status: "paid",
-      razorpay_order_id: o.order_id, invoice_number: invoiceNumber,
+      vendor_id: o.vendor_id, subscription_id: subscriptionId, plan_id: planId, amount: money.base,
+      currency: "INR", gst_amount: money.gst, gst_number: o.gst_number ?? null, status: "paid",
+      razorpay_payment_id: paymentId, razorpay_order_id: o.order_id, invoice_number: invoiceNumber,
       billing_period_start: startIso, billing_period_end: endIso,
+      discount_amount: discounted ? money.discount : null,
+      discount_code: discounted ? (o.discount_code ?? null) : null,
     }),
   });
   return true;
 }
 
-async function activateFromOrder(url: string, key: string, orderId: string): Promise<boolean> {
+async function activateFromOrder(url: string, key: string, orderId: string, paymentId: string | null): Promise<boolean> {
   const claim = await fetch(`${url}/rest/v1/subscription_payment_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
     method: "PATCH",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=representation" },
@@ -107,14 +119,21 @@ async function activateFromOrder(url: string, key: string, orderId: string): Pro
   });
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return false; // already paid / unknown
-  return await activateSubscription(url, key, claimed[0]);
+  const o = claimed[0];
+  // Charged the discounted price, so the code's use is the vendor's.
+  if (o.discount_redemption_id) await confirmDiscount(url, key, String(o.discount_redemption_id), orderId);
+  return await activateSubscription(url, key, o, paymentId);
 }
 
-function orderIdFromEvent(evt: Record<string, unknown>): string | null {
+function entity(evt: Record<string, unknown>, name: "payment" | "order"): Record<string, unknown> | undefined {
   const payload = (evt?.payload ?? {}) as Record<string, unknown>;
-  const payment = (payload?.payment as Record<string, unknown>)?.entity as Record<string, unknown> | undefined;
-  const order = (payload?.order as Record<string, unknown>)?.entity as Record<string, unknown> | undefined;
-  return (payment?.order_id as string) || (order?.id as string) || null;
+  return (payload?.[name] as Record<string, unknown>)?.entity as Record<string, unknown> | undefined;
+}
+function orderIdFromEvent(evt: Record<string, unknown>): string | null {
+  return (entity(evt, "payment")?.order_id as string) || (entity(evt, "order")?.id as string) || null;
+}
+function paymentIdFromEvent(evt: Record<string, unknown>): string | null {
+  return (entity(evt, "payment")?.id as string) || null;
 }
 
 Deno.serve(async (req: Request): Promise<Response> => {
@@ -145,6 +164,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const activated = await activateFromOrder(url, serviceKey, orderId);
+  const activated = await activateFromOrder(url, serviceKey, orderId, paymentIdFromEvent(evt));
   return new Response(JSON.stringify({ ok: true, activated }), { status: 200, headers: { "content-type": "application/json" } });
 });

@@ -52,6 +52,30 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-09-30, the Help & Support planning session, Stage 3 (Andy: "add this to todo.md").
 - Status: Open
 
+### Decide what a refund does to a discount code's use — added 2026-09-29
+- Task: decide whether refunding an order that used a discount code gives the code's use back (and
+  whether a Free vendor's ad order sent to refund review should keep its use). If yes, add an admin
+  RPC that releases a confirmed redemption and call it from the refund path.
+- Context: admin completion Phase 10 confirms a code's use as soon as a paid order is claimed, because
+  the vendor was charged the discounted price. Nothing releases it afterwards, so a refunded or
+  refund-review order still counts against the code's cap and the vendor's limit. Built that way on
+  purpose (simple, and never lets a paid order lose its discount); the business call is open.
+- Reference: 2026-09-29, admin completion Phase 10 (discounts); `admin.discount_redemptions`,
+  `discount_confirm()`, `supabase/functions/_shared/discounts.ts`.
+- Status: Open
+
+### Turn on real vendor payments (the Razorpay keys aren't set) — added 2026-09-29
+- Task: set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` in Supabase
+  (`scripts/setup-razorpay.ps1`), register the two webhooks, then buy a plan and an ad with a real card
+  and a discount code, and check the ledger, the invoice and the code's uses.
+- Context: both create-order functions answer `not_configured` (checked 2026-09-29), so every vendor
+  checkout runs the simulated demo path: a plan activates and ads are submitted without payment.
+  `claude.md` used to say checkouts move real money; corrected in Phase 10. The discount code path is
+  built and tested for live mode (reserve against the Razorpay order, confirm on claim, ₹0 orders
+  without Razorpay) but has only run against a stand-in for Razorpay.
+- Reference: 2026-09-29, admin completion Phase 10; `securityflags.md` (2026-09-12, demo mode).
+- Status: Open
+
 ### Decide whether reviews can be reported, and build it if so — added 2026-09-29
 - Task: decide whether a vendor (or anyone) can report an abusive or fake review. If so, build it: a report stored somewhere an admin reads it, a Cosora-Admin queue, and an admin action to remove a review (`reviews_delete_own` / `product_reviews_delete_own` already let admins delete).
 - Context: the vendor `/reviews` page had a "Report" button that did nothing. It was removed on 2026-09-29 rather than faked. `submit_report` exists for chat moderation, and could be a model or be extended.

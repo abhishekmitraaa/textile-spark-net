@@ -123,6 +123,26 @@ export function computeOrderPaise(spec: AdSpec): number {
   return computeOrderRupees(spec) * 100;
 }
 
+/**
+ * The Cosora Verified Certificate: the only line a "certificate" discount code
+ * takes money off (admin completion Phase 10). trustedSeal is vendor-level too,
+ * but it is a badge, not a certificate, so it counts as an ad line.
+ */
+export const CERTIFICATE_TYPES = new Set(["verifiedCertificate"]);
+
+/**
+ * The order's total split the way discount codes see it: the certificate line,
+ * and every other line (what an "ad_purchase" code applies to). The two always
+ * add up to computeOrderRupees(spec); scripts/ad-pricing-check.mjs asserts it.
+ */
+export function orderLineRupees(spec: AdSpec): { certificate: number; ads: number; total: number } {
+  const days = clampDays(spec?.days);
+  const total = computeOrderRupees(spec);
+  const { vendorLevel } = splitPlacements(spec?.placementIds);
+  const certificate = subtotalRupees(vendorLevel.filter((id) => CERTIFICATE_TYPES.has(id)), days);
+  return { certificate, ads: total - certificate, total };
+}
+
 export function campaignEndIso(spec: AdSpec): string {
   return new Date(Date.now() + clampDays(spec?.days) * 86_400_000).toISOString();
 }
