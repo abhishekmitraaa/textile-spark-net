@@ -89,6 +89,17 @@ is not what red is for; each skip message says how to re-arm it.
 - **Notes:** artifacts land in `test-results/`, which Playwright **wipes at the start of every
   run** — durable evidence for this file goes in `screenshots/` instead.
 
+### Local-stack E2E — `tests/local/` (Help & Support launch gate, P7)
+- **Location:** `tests/local/`, config `playwright.local.config.ts`. **Runs only against a local Supabase stack** built from production's catalog (`scripts/local-stack/README.md`); `tests/local/stack.ts` refuses any API not on this machine, and the global setup checks that both dev servers (buyer :8090, Cosora-Admin :5184) were started against it. These specs write freely, so they must never reach production.
+- **Accounts:** made by `scripts/local-stack/bootstrap.mjs` (local-buyer, -vendor, -admin with demo-buyer/-vendor/-admin's fixed ids, -buyer2, -support, -manager, -moderator, three extras, and `LOAD_USERS` load accounts). One local-only password.
+
+| Spec | Covers |
+|---|---|
+| `support-chat.spec.ts` | A buyer starts a chat in the open hours; Support finds it in the inbox, takes it, saves an internal note and replies; **the reply reaches the buyer's open page live** (no reload) and the note never does, before or after a reload; the buyer answers and staff see it live; the buyer ends the chat (resolved); the reply notified the buyer. A manager reads a request but gets no reply or take controls; a product moderator gets no Support section. Rollout: Staff lets the test list in and keeps an ordinary account out, All lets everyone in, Off shuts the test list out too |
+| `support-channels.spec.ts` | **Callback:** a vendor books one; Support's number is masked until Reveal, the reveal is an Admin Log row, "Completed" is recorded and the vendor sees "We called you". **Fraud report with a photo:** the wizard's four steps; the file passes the server-side check (`clean`) and the reporter can't download it; on the restricted board, "Suspended" can't be saved without the line that stays on the lasting record; the confirmed-fraud record names the party, the outcome and that line; the reporter sees "reviewed" and nothing about the outcome. **Feedback:** an ID, no email claimed (Resend isn't configured locally), "Mark reviewed", and the sender is told |
+| `staff-registration.spec.ts` | A super admin registers a support staff member: EMP-#### and first.last@cosora.in; with Resend not configured the temporary password is shown once; the directory says "Temporary, not yet changed"; the Admin Log has the insert. The new person signs in with it, is held on "Choose your password" (a short one is refused), saves one and lands in the panel with Support; `password_changed_at` is set. A manager is offered only the team roles |
+| `faqs-seller-help.spec.ts` | A seller's Help lists the 17 Seller Help questions and a buyer's doesn't; a Hindi reader sees the stored Hindi; Cosora-Admin's FAQs page has the Seller Help tab |
+
 ### Live-database verification scripts — `scripts/`
 These are not a unit-test framework. They are `node` scripts that assert invariants against
 the **live Supabase project**, set state in SQL and restore it afterwards. Run with
@@ -97,6 +108,12 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
+| `local-stack/` | **Local stack, not production** (P7, 2026-10-01). `catalog-export.sql` (four read-only queries) → `extract-json.mjs` → `load-schema.mjs` builds a copy of production's schema and reference data in a local Supabase stack; `bootstrap.mjs` adds the test accounts; `copy-functions.mjs` the edge functions; `sweep-e2e.mjs` runs the support sweep end to end (14 checks: the function, Storage deletes, the scheduled job firing by itself). `README.md` has the steps |
+| `load/support.k6.js` | **Local stack only** (refuses any other URL). Help & Support load: each VU a signed-in load account opening one chat, then posting, reading the thread and listing its requests inside the per-user message limit; two VUs work the inbox. Rate-limit answers are counted apart from failures. Runs through the `grafana/k6` image |
+| `support-sweep-check.sql` | Help & Support P6 (2026-10-01), one self-rolling-back DO block. The confirmed-fraud record (written with subject, note and account status; withdrawn on no action; restored; readable by admins only); the sweep (auto-close after 7 days, not after 2; a missed callback window flagged once; due for deletion: a decided fraud report over a year old and a deleted account's chat, not one still in review); the purge (W8-W9); the receipt lookups; nobody else can run any of it. **Run it in the SQL editor:** the MCP tool refuses the purge section |
+| `faqs-p5-check.sql` | Help & Support P5 (2026-10-01), one self-rolling-back DO block. 13 checks: support adds to `seller_help`; an unknown surface is refused; translations are stored trimmed; an unknown language and an empty answer are refused; toggling active and re-saving the same English keep them; anon reads `translations` and still not `created_by`; `admin_faq_translations` returns them; changing the English clears them; a non-admin can't translate; the table's CHECKs refuse bad translations and unknown surfaces. Then it counts what the content (or a sample of it) added. Paste the migration above it to rehearse |
+| `staff-registry-check.sql` | Staff registration (2026-10-01), one self-rolling-back DO block run as postgres. 21 checks: the employee-ID format; the work email from a two-word, accented, one-word, three-word and Devanagari name; the `2` suffix when taken; a personal email registered twice refused with `already_registered`; the password events; `admin_staff_get`; the Admin Log's staff rows (and a refusal for any other table); every service-role function refused to a signed-in caller; the directory read by a manager and refused to support and anon. Paste the migration above it to rehearse |
+| `support-role-simulation.sql` | Help & Support (2026-09-30), one self-rolling-back SQL statement run as postgres with MCP `execute_sql`. 61 checks over the support tables, functions, bucket and grants: user A can't read B's requests, messages or files; internal notes never reach the requester; a fraud reporter can't read their own evidence; manager reads and every manager write is 42501; other admin roles and anon get nothing; a suspended user can open a request and a deleted one can't; rate limits trip; rollout Staff refuses a normal user; storage refuses a path outside the caller's ticket; one overload per function; phone masks. It reports in its final error message. Re-run after any change to a support function, policy or grant |
 | `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
@@ -161,8 +178,103 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-10-01 — Help & Support P7, launch gate (local stack: role simulation 61/61, staff 21/21, FAQ P5 12/12, sweep 19/19 incl. the purge; sweep end to end 14/14 incl. the scheduled job; browser 11/11; load 60 VUs, 0 errors; typecheck 0 in both apps; i18n 7,138/7,138; builds)
+
+- **The local stack.** A copy of production's schema built from its catalog (`scripts/local-stack/`): 3,622 statements, all loaded (the pgmq extension needed its schema left to it). Then compared with production by count and digest: 82 tables, 6 views, 335 functions, 148 policies, 89 triggers, 203 indexes, 354 constraints; every function body the same except the three repointed at local URLs; every policy expression, table grant, column grant and function grant the same. Reference data only (categories, plans, support settings and hours, FAQs, theme, FX, moderation lists); no personal data. Then the four unapplied migrations, in order: `20261001120000`, `130000`, `130100`, `140000`, each in one transaction, no errors.
+- **SQL suites on that copy** (each rolls itself back):
+  - `support-role-simulation.sql`: **61/61**, mutations M1-M3 caught, with every pending migration applied. It assumes rollout starts Off, as in production; with the test list already on Staff it trips its own rate limit early (T12d), so the run resets rollout first.
+  - `staff-registry-check.sql` **21/21**; `faqs-p5-check.sql` **12/12** plus the content counts (17 Seller Help with translations, 7 MPF-14 drafts, 4 guides); `support-sweep-check.sql` **19/19, including W8-W9, the purge**: the first time the purge has run anywhere. The production MCP tool refuses it.
+- **The sweep end to end** (`scripts/local-stack/sweep-e2e.mjs`, 14/14): a chat resolved 8 days ago is closed and its requester told; a decided fraud report filed 13 months ago is deleted, **its file deleted from Storage through the Storage API**, the deletion logged, and the confirmed-fraud record kept with `report_purged_at`. Then `scripts/support-sweep-schedule.sql`, pointed at the local gateway and run every 20 seconds: the job fired by itself, every run succeeded, every HTTP call returned 200, and it closed the next fixture. Removed again after.
+- **Browser, `tests/local/`: 11/11** (and the chat spec 9/9 over three repeats). Two product bugs found and fixed on the way, both in Cosora-Admin:
+  1. **A new staff member couldn't get past "Choose your password".** Changing the password through the Auth admin API ends the account's sessions, so the app's `refreshSession()` failed with "Invalid Refresh Token: Refresh Token Not Found". `setOwnPassword()` now signs in again with the new password.
+  2. **A confirmed fraud could be saved with no note**, leaving the lasting record with "No note was written." On Warned, Suspended or Escalated the note is now "What they did (kept on the lasting record)" and Save waits for it.
+  - One run showed a blank page for 15 s on the rollout check (a dev-server stall); three repeats passed and the check now waits 30 s.
+- **Load, `scripts/load/support.k6.js`, 60 requester VUs + 2 staff VUs for 2 minutes** on the laptop stack: 2,248 requests, **0 failed**, 2,187/2,187 checks. p95: post a message 63 ms, read a thread 46 ms, list requests 31 ms, the inbox 14 ms, open a chat 410 ms (the heaviest: number, staff row, auto-reply, notification). These numbers show the database work holds under concurrency; they are not production capacity.
+- **Static:** buyer `tsc` 0 and the new specs typecheck; Cosora-Admin `tsc` 0; i18n 7,138/7,138; both builds pass.
+- **Not run here:** the admin-completion harnesses (`scripts/admin-completion/`, `admin-separation/`) name production rows and don't apply to the local copy; the Resend paths (no key locally; receipts and staff passwords take the not-configured path, which the specs check).
+- **G1, the gate before `rollout = all`:** not met, and not code: a support-role admin who has practised; Resend (D-23); the dummy OTP off (D-14); holidays entered; the MPF-14 replacements approved and switched on; the billing category's refund process (D-11); the job approved (D-21).
+
+### 2026-10-01 — Help & Support P6, background (migration rehearsed in parts, 25 checks passed, NOT applied; purge not rehearsed; typecheck 0 in both apps; i18n 7,138/7,138; builds; browser check)
+
+- **Rehearsal in four parts**, each in a transaction it aborts, each leaving nothing (checked afterwards: no new table, function or trigger; 0 tickets; rollout Off):
+  1. the record table, trigger and receipt lookup compile;
+  2. **the confirmed-fraud record, 5/5.** demo-admin decides "suspended" with a note, and the record names Demo Textiles Co., the note, ₹5,000 and the account status. "No action" withdraws it; "warned" restores it. A non-admin and anon are refused;
+  3. **the sweep run, 6/6.** It closes a request resolved 8 days ago (event, public message, a notification), not one resolved 2 days ago. It flags yesterday's missed callback window once, and lists as due a decided fraud report filed 13 months ago and a deleted account's chat, not a fraud report still in review. A second run changes nothing; a signed-in caller is refused;
+  4. **receipt lookups, 7/7:** a confirmed email, another user's request, a chat, three failures, already sent, refusals for signed-in callers.
+- **Not rehearsed: the purge** (`support_sweep_purge`, W8-W9). The MCP tool refused every query that runs it, three times, because it deletes support rows, even inside a rolled-back transaction. Run `scripts/support-sweep-check.sql` whole in the SQL editor before applying.
+- **Earlier refusals:** a first full run was refused before anything ran (it also switched rollout to Staff inside the transaction). The fixtures now write requests directly and leave rollout alone.
+- **Edge functions:** `support-receipt`, `support-sweep` and `_shared/resend.ts` typecheck under `tsc --strict` with a declaration for `Deno`. Not deployed.
+- **Browser** (`.claude/tmp/p6-check.mjs`, not committed; writes answered in the browser):
+  - `/grievance` signed out is the not-found page;
+  - feedback with a sent receipt shows CS-000123 and "We've emailed a receipt to d*****@cosora.dev.";
+  - with Resend not set up, nothing claims an email;
+  - the admin Fraud board shows "Confirmed fraud" with a live record and a purged one.
+  - No page errors. The not-found page logs its own 404 line, as it does for any unknown route.
+
+### 2026-10-01 — Help & Support P5, content (migrations rehearsed, NOT applied: 13/13; typecheck 0 in both apps; i18n 7,132/7,132; browser check, nothing written)
+
+- **Rehearsal:** `20261001130000` in full, plus a sample of `20261001130100` made by the same generator (two catalogue strings, one seller FAQ, one MPF-14 draft, one guide), plus `scripts/faqs-p5-check.sql`, in one transaction the check aborts: **0 failed of 13**, and the sample rows landed (1, 1, 1, 1). Afterwards the surface CHECK, the column, the rows and the fixture role are all as before.
+- **Not rehearsed in full:** the content file (88 KB, mostly Hindi and Gujarati). Every row was validated by the generator against the database's rules instead: non-empty, length limits, hi and gu only, guide slugs, and the same number of steps in each language.
+- **Two attempts were refused by the tool** before running: they contained `drop function admin_faq_list`. That design was replaced by a second reader, `admin_faq_translations`. Dropping and re-adding the surface CHECK was allowed.
+- **Catalogue coverage:** 27 of the 30 active FAQs have both their question and answer in the catalogues, measured by md5 against the live rows. The content migration's check expects at least 27.
+- **Browser** (`.claude/tmp/p5-check.mjs`, not committed): the local dev servers against production. The `seller_help` snapshot and the active guide were answered in the browser, and the admin writes were caught. Results:
+  - demo-vendor sees "17 questions across 6 topics", the KYC question, the category heading, no buyer note, and the Quick Guide. Search finds the lead-limit answer, and the guide's steps are numbered.
+  - In Hindi: the stored question, marked `data-no-translate`; the heading "KYC और वेरिफ़िकेशन"; the guide's Hindi title.
+  - With no seller rows, the note comes back.
+  - demo-buyer still sees "12 questions across 4 topics" and no seller questions, with no overflow at 390.
+  - Admin: the Seller Help tab, the `hi` badge, Hindi prefilled in Edit, a half-filled Gujarati refused. Save sent `admin_faq_update`, then `admin_faq_set_translations` with both languages.
+  - No page errors.
+- **Not run:** the FAQ specs and `faq-snapshot-check.mjs` (they need the migration applied and `faqs-snapshot` v2 deployed).
+
+### 2026-10-01 — Staff registration (migration rehearsed, NOT applied: 21/21; Cosora-Admin typecheck and build; edge function typechecked)
+
+- **Rehearsal:** the migration plus `scripts/staff-registry-check.sql`, in one transaction the check aborts on purpose: **0 failed of 21**, and the migration's own self-check passed. Afterwards `admin.staff_members` doesn't exist, the fixture roles are gone and `admin_audit_record` has its old md5.
+- **Two earlier attempts were refused by the tool** before anything ran. They contained `DROP` (`drop function if exists` on the new functions, and dropping the audit log's action CHECK). The design changed so that neither is needed: the new functions are plain `create function`, and the Admin Log records staff rows as `insert` and `update`, which the CHECK already allows.
+- **Cosora-Admin:** `tsc --noEmit` 0 and `npm run build` pass. `supabase/functions/admin-staff/index.ts` typechecks under `tsc --strict` with a declaration for `Deno`; Deno itself isn't installed here.
+- **Not run:** the edge function itself (not deployed) and the panel against a live directory (the migration isn't applied).
+
+### 2026-10-01 — Security-definer review and the support indexes (2 migrations rehearsed and applied, md5s match)
+
+- **Rehearsal** (both migrations plus a test block, one transaction aborted by its last statement): both self-checks
+  passed; a signed-in buyer (demo-buyer, `set local role authenticated` with JWT claims) liked a live video and
+  `sync_video_likes_count` still fired with EXECUTE revoked (likes 1 → 2); a signed-out direct call of the function
+  got `42501 permission denied`; the four new indexes existed. Afterwards: 0 new indexes, the grant unchanged and the
+  like count back at 1.
+- **Applied** `20261001113143_support_fk_indexes` and `20261001113147_revoke_trigger_function_execute`; each file's
+  md5 equals the recorded statement's.
+- **Review method** for the other 23 functions: their bodies, the RLS policies that call them (`pg_policy`), and the
+  app's callers in both repos. Results in `securityflags.md`, 2026-10-01.
+- **Not run:** the support role simulation (no support function, policy or grant changed).
+
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-10-01 — Help & Support P3, requester screens (typecheck 0; i18n 7,124/7,124; build; browser check in two passes, nothing written)
+
+- **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 7,124/7,124 in both languages; `npm run build` passes (`spa-routes` 100 routes in sync, CSP hashes).
+- **Browser** (`.claude/tmp/p3-check.mjs`, not committed): the local build at :8080 against production. Tracking RPCs were answered in the browser, table writes aborted, and every `support_*` write RPC was caught in the browser with its payload recorded. Nothing reached the database.
+  - **A. The real state, rollout Off:**
+    - Signed out: `/help` shows Call us and no chat tile. `/help/chat`, `/help/requests`, `/help/callback` and `/feedback` each show their sign-in prompt, `/report-fraud` the email form, and an unknown guide "This guide isn't available."
+    - As demo-buyer: `/help` has no chat tile but has the My requests link. Chat and callback show "isn't available … yet". My requests shows "No requests yet." `/help/requests/CS-999999` shows "We couldn't find that request."
+  - **B. The live state, simulated in the browser** (`support_status` answered `available: true`; sample requests, thread and slots):
+    - `/help` shows Chat with us, Request a callback, App feedback and My requests.
+    - `/help/chat?category=buyer_chat&entity_type=conversation&entity_id=…` preselects "Chats and calls" and lists the open chat and the monitoring notice. Start chat sent `support_start_chat {p_category: buyer_chat, p_body, p_language: en, p_entity_type: conversation, p_entity_id}`, and the caught refusal showed the friendly message.
+    - The thread shows "Cosora Support", the two automatic lines from their codes, End chat, and no "Online" or "typing". Opening it sent `support_mark_read`, and sending sent `support_post_message {p_ticket_id, p_body}`.
+    - Callback shows the topics and 3 slots. Feedback renders. The fraud wizard refuses an empty description, and Send sent `support_report_fraud {p_description, p_language}`.
+    - As demo-vendor at 1280: the note for sellers. `/help/chat?category=account` preselects "Account status and suspension", and the topics are the seller and shared ones only (billing hidden while it's off).
+  - No page or console errors, and no horizontal overflow at 390.
+- **Not run:** the end-to-end with real writes (needs rollout Staff and test accounts, a production setting, so not done here); recording a voice note (no microphone in a headless browser); Playwright specs on a local stack (P7).
+
+### 2026-10-01 — Help & Support P1, honesty patch (typecheck 0; i18n 6,943/6,943; build; browser check on the local build)
+
+- **Static:** `tsc -p tsconfig.app.json` 0; `npm run i18n:check` 6,943/6,943 in both languages; `npm run build` passes, including the CSP inline-hash check.
+- **Browser** (`.claude/tmp/p1-check.mjs`, not committed): the local build at :8080 against production data. Tracking RPCs were answered in the browser and table writes aborted, so nothing was written.
+  - Signed out, at 390 and 1280 wide, `/help` shows +91 88155 78226 and hello@cosora.in. It has 2 `tel:+918815578226` links and 3 `mailto:hello@cosora.in` links. There's no "Abdul", "Live Chat", "Chat with us" or Quick Guides, and the old number (…0465) is gone from the page.
+  - `/report-fraud` has no "48 hours" and has the buyer back header. "Email this report" with nothing typed shows "Describe what happened first."; with text, it shows the "Nothing reaches Cosora until you send it" status. Playwright can't read where a `mailto:` navigation goes, so the email body was checked in the code, not in the browser.
+  - `/profile/help/chat` lands on `/help`.
+  - In Hindi, `/report-fraud` shows "यह रिपोर्ट ईमेल करें".
+  - As demo-vendor on the seller side, `/help` shows the note for sellers, and `/report-fraud` renders in the seller dashboard.
+  - No page or console errors.
 
 ### 2026-10-01 — Help & Support applied (3 migrations, md5s match; role simulation 61/61 live; edge function deployed and probed; admin render check)
 

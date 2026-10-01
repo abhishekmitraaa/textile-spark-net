@@ -276,7 +276,12 @@ const KIND_META: Record<string, {
   /** Where this kind sends the vendor, when it is not a chat notification. */
   href?: string;
 }> = {
-  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support" },
+  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support", href: "/help/chat?category=account" },
+  // Help & Support (plan P3e): what Cosora Support's functions send through support_notify().
+  support_reply:       { type: "message", tone: "neutral",  group: "updates", actionLabel: "See the reply",   href: "/help/requests" },
+  support_status:      { type: "system",  tone: "neutral",  group: "updates", actionLabel: "See the request", href: "/help/requests" },
+  support_callback:    { type: "system",  tone: "neutral",  group: "updates", actionLabel: "See the request", href: "/help/requests" },
+  support_receipt:     { type: "system",  tone: "positive", group: "updates", actionLabel: "See the request", href: "/help/requests" },
   account_reinstated:  { type: "system",  tone: "positive", group: "updates", actionLabel: "Go to dashboard" },
   chat_locked:         { type: "message", tone: "warning",  group: "updates", actionLabel: "Open chat" },
   chat_resumed:        { type: "message", tone: "positive", group: "updates", actionLabel: "Open chat" },

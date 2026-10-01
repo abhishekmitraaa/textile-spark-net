@@ -1607,6 +1607,22 @@ Phase 9 Q2: the FAQ read path at 10k concurrent users. Migration
 
 ---
 
+### Seller Help and stored translations (Help & Support P5, 2026-10-01)
+- **A fourth surface, `seller_help`**, shown on `/help` to sellers (`useUserRole`), grouped by category like Buyer Help. A surface is listed in:
+  - the `faqs_surface_check` constraint and `admin_faq_add()`;
+  - `SURFACES` in `faqs-snapshot`;
+  - `FaqSurface` in `src/lib/queries/faqs.ts`;
+  - `Surface` and `SURFACES` in Cosora-Admin `Faqs.tsx`;
+  - the scripts and specs (`faq-snapshot-check`, `faq-cdn-propagation`, `load/faq-read.k6.js`, `faqs-support-write.spec.ts`).
+- **`faqs.translations`** jsonb, `{"hi": {question, answer}, "gu": {…}}`, `{}` by default.
+  - `faq_translations_valid()` is the CHECK: only hi and gu, both fields non-empty, nothing else.
+  - Clients read it through a column grant.
+  - Written by `admin_faq_set_translations(id, translations)` (support, super_admin); read in the admin by `admin_faq_translations(surface)`, merged with `admin_faq_list()` by id.
+  - `admin_faq_update()` sets it to `{}` in the same statement when the English question or answer changes, so a translation never outlives its text.
+- **Reading:** `faqText(row, lang)` returns the stored text for hi or gu when both fields exist, with `stored: true`. The renderer then marks it `data-no-translate`, so `AutoTranslate` leaves it alone. Otherwise the English goes through the catalogues as before.
+- **Snapshots** carry `translations` per row and stay `version: 1`. `parseFaqSnapshot` treats the field as optional, so a file written before P5 still parses.
+- **Deploy order:** the two migrations, then `faqs-snapshot` v2, then the apps. Both apps also cope if they ship first: the buyer app's table fallback retries without `translations` (42703), and the admin page shows the FAQs without translations if `admin_faq_translations` is missing (PGRST202).
+
 ## Profile contact details — private columns, narrow readers (2026-09-23)
 
 Phase 11 of the My Profile brief (MPF-3). `profiles.email` and `profiles.phone` aren't
@@ -2486,8 +2502,54 @@ The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to 
 ### Rate limits (`admin.support_rate_check()`)
 - 5 new tickets an hour, 20 a day, 5 open at once (3 of them chats); 30 messages in 5 minutes; 20 uploads an hour; 3 fraud reports and 5 feedback notes a day; one pending callback.
 
+### The requester side (plan P3, buyer app)
+- **`src/lib/queries/support.ts`** is the only file that calls `support_*`. `supportError()` maps each refusal HINT to the words shown. `useSupportStatus(uid)` asks `support_status()` (anon too); `available` is per caller, so the key includes the user id. When it is false, or the call fails, pages show `SupportUnavailable` (phone and email), the plan's fallback.
+- **`useSupportThread(ticketNo)`** uses `support_request_detail`, plus Realtime on `support_messages` INSERT and `support_tickets` UPDATE, filtered to the one ticket. Each mount gets its own topic. RLS and the column grants decide what arrives; the payload is only a "refetch" signal.
+- **Uploads:** `support_prepare_upload` → storage upload with `contentType` exactly the reserved type (`baseMime()` strips `;codecs=…`) → `support-attachment-verify`, asked up to 3 times while it says `pending`. A message can carry only `clean` files. A retried send reuses files already checked.
+- **Voice notes:** `src/hooks/useVoiceRecorder.ts`. MediaRecorder's first supported format from webm/opus, webm, mp4, aac, ogg; a 120 s cap; `denied` or `unsupported` falls back to the audio file picker. The mic button keeps pointer capture while recording; a keyboard press toggles instead.
+- **Automatic messages** are rendered from `support_messages.event` and `meta` (`SupportThread.tsx` `systemText`), so they translate. `body` is the English fallback for an unknown code.
+- **Links into support:** `supportChatHref({category, entityType, entityId})` (`lib/supportContact.ts`). `resolveTopic()` ignores a topic that's off or for the other side, and `category=account` means the person's own account topic. A link to a switched-off topic (billing, D-11) still works: the person picks one.
+- **Frames:** `components/support/SupportFrame.tsx`. The seller dashboard for sellers, the back header otherwise; brand-vendor accents on seller surfaces, brand-buyer on buyer ones.
+
+### Background (plan P6, 2026-10-01)
+- **Confirmed fraud.** `trg_fraud_finding_on_outcome` (AFTER UPDATE OF `fraud_outcome` on `support_ticket_staff`) upserts `admin.fraud_findings` by ticket for warned, suspended or escalated_legal, and sets `withdrawn_at` for anything else.
+  - The subject comes from `support_fraud_details`: a vendor or buyer id directly; a product's or ad's vendor; otherwise none.
+  - The name is the store's `brand_name` or the profile's `full_name` then, falling back to the reported name.
+  - "What they did" is the newest staff internal note, which `admin_fraud_set_outcome()` writes just before the update.
+  - No foreign key to the ticket, so the record survives the purge; `support_sweep_purge()` nulls `ticket_id` and stamps `report_purged_at`.
+- **The sweep.** `support-sweep` (edge, service_role) → `support_sweep_run(50)` → Storage `DELETE /object/support-attachments {prefixes}` per due request → `support_sweep_purge(ids)`.
+  - What's due is `admin.support_purge_due()`: a fraud report filed over a year ago and resolved or closed; any other request whose requester is gone or `account_status = 'deleted'`.
+  - Paths outside `{ticket_id}/` are never deleted; the request is left and logged.
+  - `support_messages` and `support_events` are append-only (`admin.support_append_only`). The purge sets `cosora.support_scrub = on` for its transaction, and the cascade from `support_tickets` does the rest.
+  - The schedule (`*/15`, raising without the Vault key) is `scripts/support-sweep-schedule.sql`, applied only after approval (D-21).
+- **Receipts.** `support-receipt` → `support_receipt_target(ticket_no, sub)` → `_shared/resend.ts` → `support_receipt_record()`.
+  - One `receipt_emailed` event per request; three `receipt_failed` events stop retries.
+  - `not_configured` records nothing, so a receipt can still go once Resend is set up.
+  - Phone sign-in placeholder addresses (`@phone.cosora.invalid`) and unconfirmed emails count as `no_email`.
+- **`/grievance`** reads `GRIEVANCE_OFFICER` (`src/lib/grievance.ts`); null renders `NotFound`.
+
 ### Tests
 - `scripts/support-role-simulation.sql`: 61 checks in one call; it writes nothing (the last statement aborts the transaction). 61/61 against the live functions on 2026-10-01 (`test.md`). Re-run it after any change to the support functions or policies.
+
+## Staff registration — generated IDs, emailed temporary passwords (2026-10-01)
+- **Who:** super admins and managers, on Cosora-Admin's Admins page. A manager registers people into the five team roles only. The edge function checks this, and so does `admin_grant()`, which runs with the manager's own token.
+- **What's generated:**
+  - `admin.staff_next_employee_id()`: `EMP-0001`, …
+  - `admin.staff_work_email(name, id)`: `first.last@cosora.in`, made unique against `auth.users` and the directory.
+  - A 16-character temporary password, from an alphabet with no look-alike characters. The edge function makes it and never stores it.
+  - The formats are interim (`ToDo.md`).
+- **Flow** (`admin-staff`, `register`):
+  1. `admin_staff_identifiers()` (which also refuses a personal email already registered: 23505, HINT `already_registered`);
+  2. GoTrue `POST /admin/users` with `email_confirm`, `app_metadata {created_by: "admin-staff", must_change_password: true}`;
+  3. `profiles` email and name;
+  4. `admin_staff_record()`;
+  5. `admin_grant()` with the caller's token (on failure the auth user is deleted, and the directory row goes with it);
+  6. Resend to the personal email, or `delivery: "shown"`;
+  7. `admin_staff_password_event('issued')`;
+  8. `admin_audit_record('insert', 'admin.staff_members')`.
+- **First sign-in:** `RequireAdmin` renders `ChangeTemporaryPassword` while `session.user.app_metadata.must_change_password` is true. `set_password` changes the password and the flag together through the admin API, and the panel refreshes the session to get the new claim. This is a panel gate. The database authorises by role, as for every admin.
+- **Resets:** the work email has no mailbox, so "Forgot password" can't reach these accounts. `reset_password` issues a new temporary password the same way, and nobody can reset their own. Existing sessions aren't signed out: GoTrue's admin API can't revoke another user's sessions by id.
+- **Not touched:** buyer and vendor sign-in. No `auth.users.phone` is set, and `otp-dev-verify` only opens accounts it created.
 
 ## Integrations
 
@@ -2875,3 +2937,9 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **`emil-design-eng`** (`emilkowalski/skill`) — Emil Kowalski's philosophy on UI polish,
   micro-interactions, animation decisions, invisible details. Invoke with
   `/emil-design-eng`.
+
+## Local stack for tests (2026-10-01, Help & Support P7)
+- **Why:** `supabase db reset` can't build Cosora's database from `supabase/migrations/`. Production records 230 migrations; the repo has the files for the ones from 2026-07-16 on, and the base schema (2026-07-04/05) was never saved. Specs that write must not run against production (myprofileflags decision 2), so P7 builds a local copy instead.
+- **How:** `scripts/local-stack/catalog-export.sql` reads production's catalog (read-only) into statements: extensions, types, sequences, tables, every `public`/`admin` function, defaults, views, constraints, indexes, triggers (including `on_auth_user_created` on `auth.users` and the `ensure_rls` event trigger), RLS, policies on `public`, `admin` and `storage`, the realtime publication, and schema, table, column and function grants. `load-schema.mjs` replays them into `supabase start`'s Postgres 17, retrying in passes until nothing more loads, then loads reference rows with triggers off. Functions that call a URL (`faqs_queue_snapshot`, `site_config_queue_snapshot`, the three blog revalidate hooks) are repointed at the local gateway, or nowhere.
+- **Fidelity check:** counts and md5 digests of function bodies, policy expressions and normalised grants, computed the same way in both databases, matched on 2026-10-01.
+- **Local differences that matter:** the local Storage refuses direct `delete from storage.objects` unless `storage.allow_delete_query = 'true'` (test cleanup sets it); production code deletes files through the Storage API only, so it isn't affected. Edge functions run in the local edge runtime with no `RESEND_API_KEY` or Razorpay keys, so receipts, staff passwords and checkouts take their not-configured paths.

@@ -88,7 +88,7 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 | `/profile/data-export` | `ProfileAccountPrefs` | |
 | `/profile/terms` | `TermsConditions` | |
 | `/profile/help` | `Help` | FAQ rows come from `public.faqs` (`buyer_help`), edited in Cosora-Admin `/faqs` with no deploy (2026-09-23). Also the Delete my account entry |
-| `/profile/help/chat` | `SupportChat` | |
+| `/profile/help/chat` | redirect | Redirects to `/help` since Help & Support P1 (2026-10-01); the canned chat it showed is gone |
 
 ### Content
 | Route | Component |
@@ -219,10 +219,17 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | Route | Component | Notes |
 |---|---|---|
 | `/notifications` | `Notifications` | Backed by the `notifications` table; 4 moderation kinds are real, the rest are dev-only samples |
-| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`, so vendors land on the buyer FAQs (MPF-15) |
+| `/help` | `Help` | Both sidebars' "Help & Support". The same page as `/profile/help`. Seller frame and `seller_help` FAQs for sellers (P5), `buyer_help` for buyers, each in the reader's language when stored. Shows chat and callback only when rollout includes the person (P3) |
+| `/help/chat` | `SupportChatStart` | Start a chat or continue an open one. `?category=&entity_type=&entity_id=` from links (`supportChatHref`) |
+| `/help/requests` | `MyRequests` | Every request, newest activity first |
+| `/help/requests/:ticketNo` | `SupportThread` | One request's conversation with Cosora Support, live; files and voice notes |
+| `/help/callback` | `SupportCallback` | Book a one-hour slot in support hours |
+| `/help/guides/:slug` | `HelpGuide` | A Quick Guide; public |
+| `/feedback` | `AppFeedback` | A bug or an idea; My Store's "App Feedback" |
+| `/grievance` | `Grievance` | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
 | `/terms` | `TermsConditions` | |
 | `/about` | `About` | |
-| `/report-fraud` | `ReportFraud` | |
+| `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
 | `*` | `NotFound` | Fallback |
 
 ---

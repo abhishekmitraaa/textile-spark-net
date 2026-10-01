@@ -149,6 +149,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/feedback",
+      "destination": "/index.html"
+    },
+    {
       "source": "/for-you",
       "destination": "/index.html"
     },
@@ -165,7 +169,31 @@
       "destination": "/index.html"
     },
     {
+      "source": "/grievance",
+      "destination": "/index.html"
+    },
+    {
       "source": "/help",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help/callback",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help/chat",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help/guides/:slug",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help/requests",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help/requests/:ticketNo",
       "destination": "/index.html"
     },
     {

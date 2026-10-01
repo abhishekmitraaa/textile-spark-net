@@ -8,8 +8,8 @@
  *               which is what the browser sends for fetch(..., { cache: "no-cache" })).
  *   MODE=table  GET /rest/v1/faqs?..., the query useFaqs() made on every page load
  *               before Phase 23 and still makes as its fallback.
- * Surfaces are weighted by where visitors land: buyer_help 50%, seller_registration
- * 30%, subscription 20%.
+ * Surfaces are weighted by where visitors land: buyer_help 5, seller_registration 3,
+ * subscription 2 and seller_help 1 (Help & Support P5) in 11.
  *
  * Load is an ARRIVAL RATE (requests per second), stepped: one constant-arrival-rate
  * scenario per level, STEP seconds each, GAP seconds apart, so the summary gives
@@ -47,6 +47,7 @@ const WEIGHTED = [
   ...Array(5).fill("buyer_help"),
   ...Array(3).fill("seller_registration"),
   ...Array(2).fill("subscription"),
+  "seller_help", // Help & Support P5: signed-in sellers on /help
 ];
 
 const cdnStatus = new Counter("cdn_cache_status");
@@ -94,7 +95,7 @@ export default function () {
     cdnStatus.add(1, { status: res.headers["Cf-Cache-Status"] || "none" });
   } else {
     res = http.get(
-      `${URL_BASE}/rest/v1/faqs?select=id,category_label,question,answer,position` +
+      `${URL_BASE}/rest/v1/faqs?select=id,category_label,question,answer,position,translations` +
         `&surface=eq.${surface}&active=eq.true&order=position.asc,created_at.asc,id.asc`,
       {
         headers: { apikey: __ENV.ANON, Authorization: `Bearer ${__ENV.ANON}`, "Accept-Encoding": "gzip" },

@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Loader2, AlertTriangle } from "lucide-react";
@@ -226,6 +227,9 @@ export function DeleteAccountCard() {
               <div className="text-xs text-red-700">
                 <p className="font-semibold">{problem.title}</p>
                 {problem.description && <p>{problem.description}</p>}
+                <Link to={supportChatHref({ category: "privacy_request" })} className="mt-1 inline-block font-semibold underline">
+                  Contact support
+                </Link>
               </div>
             </div>
           )}

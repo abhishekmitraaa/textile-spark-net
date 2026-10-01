@@ -34,7 +34,6 @@ import {
   Share2,
   Bell,
   HelpCircle,
-  MessagesSquare,
   ScrollText,
   ShieldCheck,
   LogOut,
@@ -354,7 +353,6 @@ const Profile = () => {
         <SectionLabel>Help &amp; Support</SectionLabel>
         <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
           <Row icon={HelpCircle} label="Help Center" onClick={() => navigate("/profile/help")} />
-          <Row icon={MessagesSquare} label="Chat with Us" onClick={() => navigate("/profile/help/chat")} />
         </div>
           </div>{/* /Right main */}
         </div>{/* /two-column grid */}

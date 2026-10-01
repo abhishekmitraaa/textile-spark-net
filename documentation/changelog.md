@@ -1,4 +1,120 @@
+- 2026-10-01 (Help & Support P7, the launch gate): **Every support flow now runs end to end on a local copy of the database, and passes.** Results in `test.md`.
+  - **A local stack** (`scripts/local-stack/`): production's schema rebuilt from its catalog, because `supabase/migrations/` can't rebuild it (the first 22 migrations were never kept as files). Checked against production by digest: same functions, policies and grants. Reference data only.
+  - **Specs** `tests/local/` (`playwright.local.config.ts`): chat with a live reply, callbacks, fraud reports with evidence, feedback, rollout, staff registration, Seller Help in English and Hindi. They refuse to run against anything but a local stack.
+  - **Load** `scripts/load/support.k6.js` (local only) and **the sweep end to end** `scripts/local-stack/sweep-e2e.mjs`, including the scheduled job firing by itself.
+  - **The purge ran for the first time** (`support-sweep-check.sql` W8-W9, and the end-to-end run deleting a file through Storage).
+  - **Two fixes in Cosora-Admin:** a new staff member was stuck on "Choose your password" (an Auth admin password change ends the session; the panel now signs in again with the new password); and confirming fraud now needs the line that stays on the lasting record.
+- 2026-10-01 (Help & Support P6, background; branch `help-support/p6-background`, on top of P5; migration rehearsed in parts, **not applied**; nothing scheduled): **Email receipts, the support sweep, the deletion scrub, a lasting record of confirmed fraud, and a hidden `/grievance` page.**
+  - **`20261001140000_support_sweep_receipts_fraud_records.sql`:**
+    - **Confirmed fraud** (D-16, revised by Andy on 2026-10-01: fraud reports are kept for a year). `admin.fraud_findings` is written by `trg_fraud_finding_on_outcome` when a reviewer decides warned, suspended or escalated_legal. It holds who it was (the account and its store or profile name, or the name as reported), what they did (the reviewer's note), the amount and date, the outcome and the account's status then. It stays after the report is deleted; a later "no action" marks it withdrawn. Read through `admin_fraud_findings()` (super_admin, support, manager).
+    - **The sweep's SQL** (D-21). `support_sweep_run()` closes requests resolved 7+ days ago with no reply (the requester is told), flags a callback window that ended with no call logged (staff only, once), and lists what's due for deletion with its file paths. Due: a fraud report a year after filing, once decided or closed; and every other request of a deleted account (D-16). `support_sweep_purge()` deletes those requests and logs only the ticket number in `admin.support_purge_log`. It uses the `cosora.support_scrub` switch P2 built for this, and re-checks that each request is still due.
+    - **Receipts:** `support_receipt_target()` (the requester's own feedback or fraud report, a confirmed real email, not already sent, fewer than 3 failures) and `support_receipt_record()`.
+    - All service_role only, except `admin_fraud_findings`.
+  - **Edge functions** (not deployed):
+    - `support-receipt` sends the receipt in the request's language through the new `_shared/resend.ts`. It repeats nothing the person wrote (D-22) and answers `sent`, `not_configured`, `no_email`, `already_sent`, `send_failed` or `not_found`.
+    - `support-sweep` deletes each due request's files from Storage first (only inside the request's own folder), then calls the purge.
+  - **Not scheduled.** `scripts/support-sweep-schedule.sql` holds the every-15-minutes job for when Mitra approves it. It is deliberately outside `supabase/migrations/`.
+  - **Buyer app:**
+    - after feedback or a fraud report, "We've emailed a receipt to a*****@…" appears only when the email went;
+    - `/grievance` exists and renders the not-found page until the officer is named in `src/lib/grievance.ts` (D-15). The page has the officer, how to raise a grievance and counsel's reply times.
+  - **Cosora-Admin:** the Fraud board gains "Confirmed fraud" under its queue.
+  - `anonymize_account()` is not changed: the sweep finds a deleted account's requests itself.
+
+- 2026-10-01 (Help & Support P5, content; branch `help-support/p5-content`, stacked on P3 and the staff branch; migrations rehearsed, **not applied**): **Sellers get their own Help questions, FAQs carry their own Hindi and Gujarati, and the Quick Guides and the MPF-14 replacements are written.** For review: `documentation/help-content-p5.md`.
+  - **`20261001130000_faqs_seller_help_and_translations.sql`:**
+    - The `seller_help` surface, in the CHECK and `admin_faq_add()`.
+    - `faqs.translations`, `{"hi": {question, answer}, "gu": …}`, checked by `faq_translations_valid()` and readable by anon and authenticated through a column grant.
+    - `admin_faq_set_translations()` writes them and `admin_faq_translations()` reads them. `admin_faq_update()` clears them when the English question or answer changes.
+    - `admin_faq_list` is untouched: dropping it to change its result type was refused by the tool, so translations come through a second reader.
+  - **`20261001130100_help_content_p5.sql`:**
+    - The Hindi and Gujarati the app already shows, copied from the catalogues into 27 of the 30 active FAQs. The other three are Seller Registration answers written as bullet lists, and keep the catalogue fallback.
+    - 17 Seller Help FAQs (active) in six topics: KYC, leads, listings and videos, advertising, plans and billing, account and suspension.
+    - The 7 MPF-14 replacements, **inactive**, each just after the answer it replaces: swapped in at launch once Andy approves (D-12).
+    - The four Quick Guides. Only "How to Complete Verification" is active. Callbacks and attachments wait for rollout; the payment guide waits for live online payment (checkout is in demo mode).
+  - **Buyer app:**
+    - `useFaqs` reads `translations` from the snapshot (optional, so old files still parse) and from the table.
+    - `faqText()` picks the reader's language; stored text is marked `data-no-translate`.
+    - `/help` shows sellers `seller_help`, with six category icons. The "written for buyers" note now shows only while no seller questions exist.
+    - `/seller` and the Subscription FAQ also use stored translations.
+    - The ten FAQ category headings are in the catalogues.
+  - **`faqs-snapshot`** writes `seller_help.json` and each row's `translations` (still version 1). Redeploy needed.
+  - **Cosora-Admin `/faqs`:** a Seller Help tab, category suggestions per surface, Hindi and Gujarati fields in Edit, a note when the English changes, and badges for the stored languages.
+  - Scripts and specs that list surfaces now include `seller_help`.
+  - **Deploy order:** the two migrations, then `faqs-snapshot` v2, then the apps. Both apps also cope if they ship first: the buyer app's table fallback retries without `translations` (42703), and the admin page shows the FAQs without translations if `admin_faq_translations` is missing (PGRST202).
+
+- 2026-10-01 (Staff registration; branches `admin-staff/registration` here and in Cosora-Admin; migration rehearsed, **not applied**): **A manager or super admin registers a staff member in Cosora-Admin, and the panel generates their employee ID, their work email and a temporary password** (Andy's P0 answer, D-10).
+  - **Migration `20261001120000_admin_staff_registry.sql`** (the name changes to the recorded version when applied):
+    - `admin.staff_members`, the directory: employee ID, name, work email, personal email, phone, who registered them, and the temporary-password state. No client grants.
+    - The interim formats: `EMP-0001` from a sequence; `first.last@cosora.in`, ASCII only, with `2`, `3`, … when taken, and the employee ID when the name has no Latin letters.
+    - Service-role functions for the edge function, and `admin_staff_list()` for super admins and managers.
+    - `admin_audit_record()` also records a registration (an `insert` on `admin.staff_members`) and a new temporary password (an `update`). It never records the password.
+  - **Edge function `admin-staff`** (Cosora-Admin, not deployed). Its actions:
+    - `register` creates the auth user with the work email, a 16-character temporary password and `must_change_password`. It writes the directory row, then grants the role with the caller's token, so the database's manager rule decides. If the grant fails, it deletes the user again.
+    - `reset_password` issues a new temporary password.
+    - `set_password` is the first-sign-in change.
+    - The password is emailed by Resend to the personal address. Until Resend is set up, it's shown once to the person registering.
+  - **Not changed:** buyer and vendor sign-in (mobile + OTP). These accounts get no phone number on `auth.users`, so neither phone sign-in nor the dummy OTP can reach them.
+  - **Tests:** `scripts/staff-registry-check.sql`, rehearsed with the migration in a transaction that aborts itself: 21/21. Nothing was kept.
+
+- 2026-10-01 (Help & Support owner answers, the security review and the support indexes; branch `help-support/db-fixes`): **Andy's P0 answers recorded, the 2026-09-30 SECURITY DEFINER flag reviewed and closed, and two small migrations applied.**
+  - **Applied** (Andy: "fix if needed"), each rehearsed first:
+    - `20261001113143_support_fk_indexes`: indexes on the four support foreign keys, two of which the per-send rate check reads;
+    - `20261001113147_revoke_trigger_function_execute`: no client role can execute the 11 trigger functions that kept the grant. Nothing changes, because triggers don't check it.
+  - **The review** (`securityflags.md`, 2026-10-01): 34 definer functions anon can run. 11 revoked; 23 kept, each for a stated reason. One new Low flag: four counters (views, enquiries, video views, ad clicks) have no limit.
+  - **`ToDo.md`:** new entries for the staff email and employee-ID formats, the dummy sign-in switch-off date, the Supabase upgrade, the Terms refund wording and the Privacy Policy page. The Resend entry now lists support receipts and staff passwords. The support-index entry moved to Completed.
+  - **`help-feature-plan.md`:** D-05, D-10, D-13, D-14, D-16 (fraud reports kept a year, plus a lasting record of confirmed fraud), D-21 and D-23 carry the answers.
+  - **`MIGRATIONS.md`** lists the five support migrations, and **`test.md`**'s scripts table lists `support-role-simulation.sql`. The 2026-10-01 apply session couldn't edit either.
+
 - 2026-10-01 (Help & Support, business rules): **Andy confirmed the plan's ten business rules (Appendix D), and they're in `claude.md`** under "Business Rules — Discovered/Decided": the phone and hours; "Cosora Support" only; Hindi and English replies; who acts and who reads; photo, voice note and PDF; suspended users can appeal and deleted ones can't; receipts for feedback and fraud only, once Resend is set up; the retention default; and no real-user launch while the dummy sign-in code is on. Files: `documentation/claude.md`, this file.
+
+- 2026-10-01 (Help & Support P3, the requester screens; branch `help-support/p3-requester`, on top of P1): **Buyers and vendors can chat with Cosora Support, book a callback, report fraud in the app, send feedback and follow every request, once rollout includes them. With rollout Off (today) every screen shows the honest P1 fallback: call or email.**
+  - **Data layer, `src/lib/queries/support.ts`:**
+    - status, topics, My requests, one request kept live, and the actions, all through the `support_*` functions;
+    - friendly text for each database refusal code (`support_unavailable`, `rate_limited`, `file_unchecked`, …);
+    - uploads: reserve, upload, then `support-attachment-verify`, waiting for `clean`;
+    - signed file links that are refreshed when opened;
+    - the hours line built from `support_hours`.
+  - **`useSupportThread`** keeps a request live over Realtime: new messages and status changes on that one ticket, per-instance topic, refetch on focus.
+  - **Screens:**
+    - **`/help`** follows the role, with the seller dashboard for sellers. It shows open or closed with the next reply time. Chat with us, Request a callback, App feedback and My requests appear only when they're open to the person; Call us, Email us and Report fraud always. Quick Guides appear once any are active.
+    - **`/help/chat`** offers a topic (for the person's side) and the first message. It lists open chats to continue, shows the monitoring notice, and preselects the topic and item a link names.
+    - **`/help/requests`** is My requests, with unread dots.
+    - **`/help/requests/:ticketNo`** is the conversation with "Cosora Support" (no staff name, no fake presence). Automatic lines are shown from their codes, so they translate. Photos, PDFs, audio files and **hold-to-record voice notes** (`useVoiceRecorder`: webm/opus, mp4 for Safari, 2-minute cap, file picker when the mic is refused). A failed send can be retried without re-uploading. End chat, reply-to-reopen within 7 days, and a closed state with "Start a new chat".
+    - **`/help/callback`** takes a topic, the number (prefilled from the account) and a one-hour slot inside support hours.
+    - **`/feedback`** takes a bug or an idea, and returns a request ID.
+    - **`/report-fraud`** is a four-step wizard (who, what happened, evidence, check and send). Evidence only Cosora's team can open; the reporter later learns "reviewed", never the outcome. Signed out, or with rollout Off, it's the P1 email form.
+    - **`/help/guides/:slug`** shows a Quick Guide in the reader's language, with English as the fallback.
+  - **Links into support (P3e):** each opens a chat on the right topic, about the right item (`supportChatHref`).
+    - KYC: a file that won't open, a rejection with no reason, and adding a document.
+    - Certificate orders: cancelled or returned, or no address on file.
+    - A campaign Cosora stopped or flagged.
+    - Calling and contact refusals for a suspended account (a toast button and a card link).
+    - The chat thread menu's "Get help with this chat".
+    - The account-deletion problem notice.
+    - The suspension notification.
+  - **Notifications:** `support_reply`, `support_status`, `support_callback` and `support_receipt` link to My requests. Their titles and bodies are in `external-strings.json`.
+  - My Store's row is **App Feedback** again (→ `/feedback`). Every support route is under `<ClarityMask>`. `vercel.json` gains the six rewrites. The unrouted `SupportChat.tsx` is deleted.
+  - `database.types.ts` was regenerated from the live schema: additive (1,277 lines, none removed).
+  - **i18n:** 177 new strings in `hi.json` and `gu.json`; the two recorder MIME strings are on the ignore list.
+  - **Not done:** the end-to-end run with real writes. It needs rollout set to Staff with test accounts, which is a production setting.
+
+- 2026-10-01 (Help & Support P1, honesty patch; branch `help-support/p1-honesty`): **Help no longer pretends. The canned chats are gone, "Request a Callback" is a real phone line, and the fraud form says what it does.**
+  - **`/help` and `/profile/help` (`Help.tsx`):**
+    - `ChatModal` is deleted. It was the invented agent "Abdul", a typing indicator, and attachments that went nowhere.
+    - "Chat with us" and "Start Live Chat" became **Email us**, a `mailto:hello@cosora.in` with a subject.
+    - "Request a Callback", which dialled an old number, became **Call us: +91 88155 78226**, with the hours Mon–Fri 10:00–19:00 IST (D-04, D-18).
+    - The four Quick Guides, which linked to nothing, are hidden until P5 writes them.
+    - "Still need help?" offers the same two real channels, and Help links to Report fraud.
+    - A seller sees a note that the questions are written for buyers and how to reach us (MPF-15, option b).
+  - **`/report-fraud` (`ReportFraud.tsx`):**
+    - The form fills an email to Cosora, and the person's own mail app sends it. The page says nothing is sent until they send it.
+    - Gone: the "Report submitted… within 48 hours" toast, the 48-hour promise, and the attach box that only toggled a tick. The page now says to attach screenshots to the email.
+    - Sellers get the dashboard frame; everyone else, signed out included, gets the plain back header.
+  - **`/profile/help/chat`** redirects to `/help`, and Profile's "Chat with Us" row is removed. `SupportChat.tsx` stays in the repo, unrouted, for P3 to reuse its layout.
+  - **The suspension notice's "Contact support"** now opens `/help` (`notificationsStore.ts`).
+  - **`src/lib/supportContact.ts`:** the phone, email, hours and Instagram link in one place, matching `support_settings`. P3 falls back to it whenever rollout is Off.
+  - **i18n:** 21 new strings in `hi.json` and `gu.json`. The two email-body lines staff read in English are on the check's ignore list.
+  - Files: the above, `src/App.tsx`, `src/pages/Profile.tsx`, `scripts/i18n-coverage-check.mjs`, `src/i18n/{hi,gu}.json`, `securityflags.md`, `ToDo.md`, `sitemap.md`, `sides.md`, `test.md`, this file.
 
 - 2026-10-01 (Help & Support, applied; Mitra approved): **The support database and the file-check function are live, and Cosora-Admin's Support section works against them. Rollout is Off, so no buyer or vendor can send a request yet.**
   - **Migrations applied**, each md5 matching its file: `20260930212818_support_schema.sql`, `20260930213143_support_requester_rpcs.sql`, `20260930213451_support_admin_rpcs.sql` (renamed from the provisional `20260930120000/120100/120200`). Each ran its own self-check.

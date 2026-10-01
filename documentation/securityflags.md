@@ -12,9 +12,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
-| 2026-09-30 | 33 SECURITY DEFINER functions in `public` can still be called by `anon` (suspected; not reviewed one by one) | Unknown until reviewed (suspected gap) | Live catalog, 2026-09-30: `has_function_privilege('anon', oid, 'execute')` is true for 33 definer functions in `public` | Open, suspected. Some are meant to be public (feeds, ad serving). `submit_report` was checked: it refuses anyone who isn't a member of the conversation. The rest weren't reviewed. May overlap admin-completion Phase 11 (least-privilege reads). Log entry below |
-| 2026-09-30 | `/report-fraud` takes a fraud report, keeps nothing, and says it will be reviewed within 48 hours | Medium (trust and safety: a victim believes a report was filed) | `src/pages/ReportFraud.tsx:82` (success toast only; the upload box at `:67` toggles a boolean); linked signed-out from `Landing.tsx:524`, and from `VendorLanding.tsx:136` and `Onboarding.tsx:48` | Open. Fixed by the Help plan's P1 (an honest `mailto:`), then P3 (a stored, reviewed report). `documentation/help-feature-plan.md`. Log entry below |
-| 2026-09-30 | The Help page's support chat has no chat-monitoring notice, and both support chats present an invented agent with fake presence | Medium (the notice is legally required in every chat flow, `claude.md`) | `src/pages/Help.tsx:77-227` (`ChatModal`: no notice, agent "Abdul", fake typing); `src/pages/SupportChat.tsx:26-117,157` (canned replies, "Online", read ticks) | Open. Already in `ToDo.md` MPF-15; this is its flag row. Fixed by the Help plan's P1 (both removed), then P3 (a real chat with the notice). Log entry below |
+| 2026-10-01 | Signed-out callers can raise any live product's views and enquiries, a video's views and an ad's clicks, with no limit | Low (metrics integrity: these counts order the related-products fallback, and vendors read them as demand) | `increment_product_view`, `increment_product_enquiry`, `increment_video_view`, `ad_click` (SECURITY DEFINER, EXECUTE for anon by design) | Open, follow-up from the 2026-10-01 review. `ad_impression` has a per-session daily cap and a throttle; these four have none, and `ad_click` doesn't take a session into account at all. Fix shape: a per-session limit in the database like `ad_impression`'s, or count from `engagement_events` instead. The session id comes from the browser, so a database limit stops only naive repeats; a per-IP limit needs an edge function in front. Log entry below |
+| 2026-09-30 | `/report-fraud` takes a fraud report, keeps nothing, and says it will be reviewed within 48 hours | Medium (trust and safety: a victim believes a report was filed) | `src/pages/ReportFraud.tsx:82` (success toast only; the upload box at `:67` toggles a boolean); linked signed-out from `Landing.tsx:524`, and from `VendorLanding.tsx:136` and `Onboarding.tsx:48` | Open until P1 is merged. **P1 (branch `help-support/p1-honesty`, 2026-10-01):** the form fills an email to Cosora, says nothing is sent until the person sends it, and the 48-hour promise and fake attach box are gone. P3 adds the stored, reviewed report: built on branch `help-support/p3-requester` (2026-10-01), live once merged and rollout opens. `documentation/help-feature-plan.md`. Log entry below |
+| 2026-09-30 | The Help page's support chat has no chat-monitoring notice, and both support chats present an invented agent with fake presence | Medium (the notice is legally required in every chat flow, `claude.md`) | `src/pages/Help.tsx:77-227` (`ChatModal`: no notice, agent "Abdul", fake typing); `src/pages/SupportChat.tsx:26-117,157` (canned replies, "Online", read ticks) | Open until P1 is merged. Already in `ToDo.md` MPF-15; this is its flag row. **P1 (branch `help-support/p1-honesty`, 2026-10-01):** `ChatModal` is deleted and `/profile/help/chat` redirects to `/help`, so neither canned chat is reachable. P3 adds the real chat with the notice: built on branch `help-support/p3-requester` (2026-10-01), with the monitoring notice on the chat start and the thread. Log entry below |
 | 2026-09-29 | A review's display name is client-supplied: `reviewer_name` / `reviewer_company` are written by the browser, so a buyer can post under any name | Low (impersonation in review text; the author's uid is still recorded) | `src/lib/queries/reviews.ts` (`resolveReviewer`); `reviews` / `product_reviews` / `service_reviews` insert policies | Open: fill them in a BEFORE INSERT trigger from `buyer_profiles` / `profiles` |
 | 2026-09-28 | Microsoft Clarity's script, once switched on, can read every buyer-site page | Low (third-party script; dormant until `VITE_CLARITY_PROJECT_ID` is set) | `src/lib/analytics/clarity.ts` (loads `https://www.clarity.ms/tag/<id>`) | Open, accepted with Mitra's decision to install Clarity. Masking controls what Clarity uploads, not what its script can read: like any third-party script it runs with the page's privileges. In place: it loads only when configured, identifies no one, and the sign-in, chat, onboarding, KYC, profile, requirement, quote, lead and billing screens and every overlay are masked. The buyer site sends no Content-Security-Policy, so nothing limits which scripts load; a CSP that allows `www.clarity.ms` and `*.clarity.ms` is the next step. Log entry below |
 | 2026-09-28 | Session replay would start without asking the visitor | Low (a legal question; dormant until Clarity is switched on) | `src/lib/analytics/clarity.ts`; the notice on `/terms` (`TermsConditions.tsx`, `#analytics`) | Open, a decision for Mitra and legal before `VITE_CLARITY_PROJECT_ID` is set. The Terms page describes recording and cookies, but nothing asks for consent, and Clarity sets its cookies on the first page. Clarity offers a consent API and a project setting that holds cookies until consent. Log entry below |
@@ -46,6 +46,7 @@ not the sensitive value itself. This file may end up in version control history.
 ## Fixed / Closed Flags
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-09-30 | 33 SECURITY DEFINER functions in `public` can be called by `anon` | Low after review: none of them lets a signed-out caller read or change what it shouldn't | Live catalog, 2026-10-01: 34 definer functions in `public` executable by anon (the 33, plus `support_status`, public on purpose) | **Reviewed and closed 2026-10-01.** 11 are trigger or event-trigger functions: EXECUTE revoked from public, anon and authenticated (`20261001113147`), rehearsed with a real trigger firing for a signed-in buyer afterwards. 23 keep it, each for a stated reason: public read paths, signed-out logging, the policy helpers that 48 RLS policies written `TO public` call, and signed-in functions that refuse or answer null otherwise. Not part of admin-completion Phase 11, which is about admin reads. One follow-up: the unthrottled counters (Open row, 2026-10-01). Log entry below |
 | 2026-09-29 | Live subscription invoices dropped the signature-verified Razorpay payment id (`paymentId: null` into the invoice), so a real payment would have read as "not gateway-verified" and had no id to refund against | Low (audit trail; latent while the keys are unset) | `subscription-verify-payment` `activateFromOrder`; `subscription-webhook` | Fixed 2026-09-29 (admin completion Phase 10): verify passes the verified id, the webhook the event's payment id (verify v6, webhook v5). `scripts/discount-flow-check.mjs` B1 and C1 assert it |
 | 2026-09-29 | **A seller could review their own store and products**, and so set their own rating (insert policies checked only `buyer_id = auth.uid()`) | Medium (reputation fraud) | `reviews`, `product_reviews` | Fixed 2026-09-29: `guard_review_write()` (migration `20260928190320`) |
 | 2026-09-29 | **A buyer could write a "seller reply" onto their own review** (`reviews_update_own` let the author set `reply_body` / `replied_at`) | Medium (a forged response in the seller's name) | `reviews` | Fixed 2026-09-29: the guard keeps the reply columns unless a reply RPC writes them |
@@ -87,6 +88,37 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-10-01 — Review of the SECURITY DEFINER functions signed-out callers can run — Severity: Low
+- **Asked for:** Andy, 2026-10-01 ("check … and fix if needed"), closing the 2026-09-30 suspected flag.
+- **Method:** the live catalog (`pg_proc`, `has_function_privilege('anon', …)`), each body read, the policies that
+  call each helper counted (`pg_policy`), and the app's callers found with a search of both repos.
+- **The 34 functions, by kind:**
+  - **11 trigger or event-trigger functions** (`check_message_blocklist`, `check_message_flag_patterns`,
+    `create_certificate_order`, `guard_ad_activation`, `log_ad_submission`, `sync_product_rating`,
+    `sync_vendor_rating`, `sync_video_likes_count`, `vendor_contracts_skip_duplicate_version`,
+    `vendor_documents_guard_review_columns`, `rls_auto_enable`). No client can call them, and a trigger fires
+    without an EXECUTE check, so the grant only put them on the list. **Revoked** by
+    `20261001113147_revoke_trigger_function_execute.sql`. Rehearsed first: a signed-in buyer's video like still fired
+    `sync_video_likes_count` (likes 1 → 2), a signed-out direct call got 42501, then rolled back.
+  - **7 policy helpers** (`account_is_active`, `account_not_deleted`, `admin_role`, `is_admin`,
+    `is_conversation_member`, `owns_product`, `owns_rfq`). **Kept.** Postgres runs a policy's functions as the
+    querying role: 8 policies written `TO public` call `account_is_active` and 40 call `account_not_deleted`, so a
+    revoke would break signed-out reads (for example `video_likes_owner`). For a signed-out caller five answer about
+    the caller (false or null). The two account helpers say whether a given account is active or deleted, which
+    anyone can already read from `profiles.account_status` (`profiles_select` is `USING (true)`).
+  - **6 public read paths** (`active_ads`, `match_videos`, `related_products`, `search_products`,
+    `search_suggestions`, `support_status`). **Kept**: signed-out browsing needs them. They return live rows only.
+    `match_count` is unbounded, so a caller can ask for every live row at once: cheap to cap later, and public data.
+  - **6 signed-out writes by design** (`ad_impression`, `ad_click`, `csp_report_ingest`, `log_engagement_event`,
+    `increment_product_view`, `increment_video_view`), plus `increment_product_enquiry`. **Kept.** `ad_impression`
+    is capped per session and throttled, `csp_report_ingest` caps its rows, and `log_engagement_event` records
+    failures (MPF-23). The four counters have no limit: **new Open flag, 2026-10-01**.
+  - **3 signed-in functions** (`get_vendor_plan`, `ad_category_benchmarks`, `submit_report`). **Kept.** For a
+    signed-out caller the first two return null (they answer only for the caller's own vendor id, or an admin) and
+    `submit_report` refuses non-members. Revoking would turn a null into an error for any caller that runs before
+    sign-in settles, for no gain.
+- **Not related to admin-completion Phase 11**, which narrows admin SELECT on six tables.
 
 ### 2026-09-30 — Help & Support planning session: three findings — Severity: Medium / Medium / unknown (suspected)
 - **Found:** during Stage 1 of the Help planning session (verifying the Help audit report). Read-only: no code or data

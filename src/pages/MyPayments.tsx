@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { motion, useReducedMotion } from "framer-motion";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -329,6 +330,12 @@ function CertificateCard({ cert: c }: { cert: VendorCertificate }) {
               <p className="mt-1 text-xs text-muted-foreground">
                 Contact support and we'll sort out the next step.
               </p>
+              <Link
+                to={supportChatHref({ category: "vendor_billing", entityType: "certificate_order", entityId: c.id })}
+                className="mt-1 inline-block text-xs font-semibold text-brand-vendor underline"
+              >
+                Contact support
+              </Link>
             </div>
           </div>
         ) : (
@@ -389,6 +396,14 @@ function CertificateCard({ cert: c }: { cert: VendorCertificate }) {
           <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
             {address || "No delivery address was on your profile when you ordered — please contact support."}
+            {!address && (
+              <Link
+                to={supportChatHref({ category: "vendor_billing", entityType: "certificate_order", entityId: c.id })}
+                className="ml-1 font-semibold text-brand-vendor underline"
+              >
+                Contact support
+              </Link>
+            )}
             <span className="mt-0.5 block text-[11px]">
               This is the address as it was when you ordered. Changing your profile now does not
               change a parcel already on its way.

@@ -35,7 +35,6 @@ import Chat from "./pages/Chat";
 import ChatThread from "./pages/ChatThread";
 import Categories from "./pages/Categories";
 import MyReviews from "./pages/MyReviews";
-import SupportChat from "./pages/SupportChat";
 import PostRequirement from "./pages/PostRequirement";
 import MyQuotes from "./pages/MyQuotes";
 import Sale from "./pages/Sale";
@@ -78,6 +77,8 @@ import ProfileEdit from "./pages/ProfileEdit";
 import ProfileBusinessDetails from "./pages/ProfileBusinessDetails";
 import BuyerSettings from "./pages/Settings";
 import TermsConditions from "./pages/TermsConditions";
+// Help & Support P6c (D-15): hidden until the Grievance Officer is named (src/lib/grievance.ts).
+import Grievance from "./pages/Grievance";
 import SavedCollections from "./pages/SavedCollections";
 import SavedCollectionDetail from "./pages/SavedCollectionDetail";
 import Search from "./pages/Search";
@@ -91,6 +92,13 @@ import BusinessTools from "./pages/BusinessTools";
 import Kyc from "./pages/Kyc";
 import OldAdvertisements from "./pages/OldAdvertisements";
 import ReportFraud from "./pages/ReportFraud";
+// Help & Support (plan P3): the requester's screens.
+import SupportChatStart from "./pages/SupportChatStart";
+import SupportThread from "./pages/SupportThread";
+import MyRequests from "./pages/MyRequests";
+import SupportCallback from "./pages/SupportCallback";
+import AppFeedback from "./pages/AppFeedback";
+import HelpGuide from "./pages/HelpGuide";
 import VendorBlogs from "./pages/VendorBlogs";
 import VendorBlogArticle from "./pages/VendorBlogArticle";
 import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
@@ -249,8 +257,9 @@ const App = () => (
             <Route path="/categories" element={<Categories />} />
             <Route path="/profile/interest-preference" element={<InterestPreference />} />
             <Route path="/profile/reviews" element={<MyReviews />} />
-            <Route path="/profile/help" element={<Help />} />
-            <Route path="/profile/help/chat" element={<ClarityMask><SupportChat /></ClarityMask>} />
+            <Route path="/profile/help" element={<ClarityMask><Help /></ClarityMask>} />
+            {/* The canned "support chat" is gone (Help & Support P1); the real one is /help/chat (P3). */}
+            <Route path="/profile/help/chat" element={<Navigate to="/help" replace />} />
             <Route path="/seller-home" element={<SellerHome />} />
             <Route path="/dashboard" element={<Index />} />
             <Route path="/products" element={<Products />} />
@@ -262,6 +271,7 @@ const App = () => (
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />
             <Route path="/terms" element={<TermsConditions />} />
+            <Route path="/grievance" element={<Grievance />} />
             <Route path="/subscription" element={<ClarityMask><Subscription /></ClarityMask>} />
             <Route path="/subscription/invoice/:id" element={<ClarityMask><InvoiceDetail /></ClarityMask>} />
             {/* Vendor billing: every payment, its bill, and certificate tracking. */}
@@ -288,7 +298,13 @@ const App = () => (
             <Route path="/recently-viewed" element={<RecentlyViewed />} />
             <Route path="/service-vendors" element={<ServiceVendors />} />
             <Route path="/analytics" element={<Analytics />} />
-            <Route path="/help" element={<Help />} />
+            <Route path="/help" element={<ClarityMask><Help /></ClarityMask>} />
+            <Route path="/help/chat" element={<ClarityMask><SupportChatStart /></ClarityMask>} />
+            <Route path="/help/requests" element={<ClarityMask><MyRequests /></ClarityMask>} />
+            <Route path="/help/requests/:ticketNo" element={<ClarityMask><SupportThread /></ClarityMask>} />
+            <Route path="/help/callback" element={<ClarityMask><SupportCallback /></ClarityMask>} />
+            <Route path="/help/guides/:slug" element={<HelpGuide />} />
+            <Route path="/feedback" element={<ClarityMask><AppFeedback /></ClarityMask>} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />

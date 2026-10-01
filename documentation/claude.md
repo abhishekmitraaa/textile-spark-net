@@ -149,8 +149,10 @@ undocumented. Deep technical rationale for each lives in
     can't. No support function checks `account_is_active()`.
   - **Email receipts go out for feedback and fraud reports only**, and only once Resend is set
     up (D-20, D-22). A screen says "We've emailed you" only when the send succeeded.
-  - **When an account is deleted, its support messages and files are erased.** Fraud reports
-    are kept until counsel sets a retention period (D-16).
+  - **When an account is deleted, its support requests are erased, files first** (the support
+    sweep). **Fraud reports are kept for one year** (Andy, 2026-10-01), then deleted the same
+    way. A report decided as fraud leaves a lasting record in `admin.fraud_findings` (who,
+    what they did, the outcome, the account's status), which outlives the report (D-16).
   - **No launch to real users** (rollout "Everyone") while the dummy sign-in code is on (D-14).
 
 - **A buyer account is anonymized, never deleted, and only after a confirmation code and 14

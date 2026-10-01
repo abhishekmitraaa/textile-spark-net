@@ -1,7 +1,8 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -14,7 +15,7 @@ import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
 import {
   useCallVendor, useContactGate, useVendorContact, useRevealVendorContact,
-  CONTACT_REFUSAL_COPY, type VendorContactResult,
+  CONTACT_REFUSAL_COPY, toastBlock, type VendorContactResult,
 } from "@/lib/queries/calls";
 import { errorMessage } from "@/lib/errorMessage";
 import { memberSinceLabel } from "@/lib/memberSince";
@@ -194,8 +195,7 @@ const VendorProfile = () => {
       return;
     }
     if (result.refusal) {
-      const copy = CONTACT_REFUSAL_COPY[result.refusal];
-      toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+      toastBlock(CONTACT_REFUSAL_COPY[result.refusal], navigate);
       return;
     }
     const ok = messaging().open({ vendorId, brandName, whatsapp: result.numbers?.whatsapp ?? null });
@@ -527,6 +527,9 @@ const VendorProfile = () => {
                is the same sentence the Call Now button gives them. */
             <div className="rounded-xl bg-amber-50 px-3 py-3">
               <p className="text-sm font-semibold text-amber-900">{contactBlocked.title}</p>
+              {contactBlocked.support && (
+                <Link to={supportChatHref({ category: "account" })} className="mt-1 inline-block text-xs font-semibold text-amber-900 underline">Contact support</Link>
+              )}
               {contactBlocked.description && (
                 <p className="mt-0.5 text-xs text-amber-800">{contactBlocked.description}</p>
               )}
@@ -552,6 +555,9 @@ const VendorProfile = () => {
                     <p className="text-sm font-semibold text-amber-900">{CONTACT_REFUSAL_COPY[numbersRefusal].title}</p>
                     {CONTACT_REFUSAL_COPY[numbersRefusal].description && (
                       <p className="mt-0.5 text-xs text-amber-800">{CONTACT_REFUSAL_COPY[numbersRefusal].description}</p>
+                    )}
+                    {CONTACT_REFUSAL_COPY[numbersRefusal].support && (
+                      <Link to={supportChatHref({ category: "account" })} className="mt-1 inline-block text-xs font-semibold text-amber-900 underline">Contact support</Link>
                     )}
                   </div>
                 ) : (
