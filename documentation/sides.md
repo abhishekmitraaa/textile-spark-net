@@ -645,6 +645,11 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
 
+### Added 2026-10-01 (staff registration; built, not live)
+- **Register a staff member** (Admins page, super admin and manager; a manager registers into the team roles only): name, personal email, mobile number and role. The panel generates the employee ID (`EMP-0001`) and the work email the person signs in with, and sends a temporary password to their personal email, or shows it once while email isn't set up. The person chooses their own password at first sign-in.
+- **Staff directory:** everyone registered, with "New temporary password" for someone locked out. The Admin Log records both.
+- The ID and email formats are interim (`ToDo.md`).
+
 ### Added 2026-09-30, live 2026-10-01 (Help & Support P4; rollout Off, so no requests arrive yet)
 - **Support section** in Cosora-Admin, for super_admin and the Support role, with the
   Manager role read-only (D-08):

@@ -1,3 +1,28 @@
+- 2026-10-01 (Staff registration; branches `admin-staff/registration` here and in Cosora-Admin; migration rehearsed, **not applied**): **A manager or super admin registers a staff member in Cosora-Admin, and the panel generates their employee ID, their work email and a temporary password** (Andy's P0 answer, D-10).
+  - **Migration `20261001120000_admin_staff_registry.sql`** (the name changes to the recorded version when applied):
+    - `admin.staff_members`, the directory: employee ID, name, work email, personal email, phone, who registered them, and the temporary-password state. No client grants.
+    - The interim formats: `EMP-0001` from a sequence; `first.last@cosora.in`, ASCII only, with `2`, `3`, … when taken, and the employee ID when the name has no Latin letters.
+    - Service-role functions for the edge function, and `admin_staff_list()` for super admins and managers.
+    - `admin_audit_record()` also records a registration (an `insert` on `admin.staff_members`) and a new temporary password (an `update`). It never records the password.
+  - **Edge function `admin-staff`** (Cosora-Admin, not deployed). Its actions:
+    - `register` creates the auth user with the work email, a 16-character temporary password and `must_change_password`. It writes the directory row, then grants the role with the caller's token, so the database's manager rule decides. If the grant fails, it deletes the user again.
+    - `reset_password` issues a new temporary password.
+    - `set_password` is the first-sign-in change.
+    - The password is emailed by Resend to the personal address. Until Resend is set up, it's shown once to the person registering.
+  - **Not changed:** buyer and vendor sign-in (mobile + OTP). These accounts get no phone number on `auth.users`, so neither phone sign-in nor the dummy OTP can reach them.
+  - **Tests:** `scripts/staff-registry-check.sql`, rehearsed with the migration in a transaction that aborts itself: 21/21. Nothing was kept.
+
+- 2026-10-01 (Help & Support owner answers, the security review and the support indexes; branch `help-support/db-fixes`): **Andy's P0 answers recorded, the 2026-09-30 SECURITY DEFINER flag reviewed and closed, and two small migrations applied.**
+  - **Applied** (Andy: "fix if needed"), each rehearsed first:
+    - `20261001113143_support_fk_indexes`: indexes on the four support foreign keys, two of which the per-send rate check reads;
+    - `20261001113147_revoke_trigger_function_execute`: no client role can execute the 11 trigger functions that kept the grant. Nothing changes, because triggers don't check it.
+  - **The review** (`securityflags.md`, 2026-10-01): 34 definer functions anon can run. 11 revoked; 23 kept, each for a stated reason. One new Low flag: four counters (views, enquiries, video views, ad clicks) have no limit.
+  - **`ToDo.md`:** new entries for the staff email and employee-ID formats, the dummy sign-in switch-off date, the Supabase upgrade, the Terms refund wording and the Privacy Policy page. The Resend entry now lists support receipts and staff passwords. The support-index entry moved to Completed.
+  - **`help-feature-plan.md`:** D-05, D-10, D-13, D-14, D-16 (fraud reports kept a year, plus a lasting record of confirmed fraud), D-21 and D-23 carry the answers.
+  - **`MIGRATIONS.md`** lists the five support migrations, and **`test.md`**'s scripts table lists `support-role-simulation.sql`. The 2026-10-01 apply session couldn't edit either.
+
+- 2026-10-01 (Help & Support, business rules): **Andy confirmed the plan's ten business rules (Appendix D), and they're in `claude.md`** under "Business Rules — Discovered/Decided": the phone and hours; "Cosora Support" only; Hindi and English replies; who acts and who reads; photo, voice note and PDF; suspended users can appeal and deleted ones can't; receipts for feedback and fraud only, once Resend is set up; the retention default; and no real-user launch while the dummy sign-in code is on. Files: `documentation/claude.md`, this file.
+
 - 2026-10-01 (Help & Support P3, the requester screens; branch `help-support/p3-requester`, on top of P1): **Buyers and vendors can chat with Cosora Support, book a callback, report fraud in the app, send feedback and follow every request, once rollout includes them. With rollout Off (today) every screen shows the honest P1 fallback: call or email.**
   - **Data layer, `src/lib/queries/support.ts`:**
     - status, topics, My requests, one request kept live, and the actions, all through the `support_*` functions;

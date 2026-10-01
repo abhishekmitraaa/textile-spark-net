@@ -2445,6 +2445,26 @@ The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to 
 ### Tests
 - `scripts/support-role-simulation.sql`: 61 checks in one call; it writes nothing (the last statement aborts the transaction). 61/61 against the live functions on 2026-10-01 (`test.md`). Re-run it after any change to the support functions or policies.
 
+## Staff registration — generated IDs, emailed temporary passwords (2026-10-01)
+- **Who:** super admins and managers, on Cosora-Admin's Admins page. A manager registers people into the five team roles only. The edge function checks this, and so does `admin_grant()`, which runs with the manager's own token.
+- **What's generated:**
+  - `admin.staff_next_employee_id()`: `EMP-0001`, …
+  - `admin.staff_work_email(name, id)`: `first.last@cosora.in`, made unique against `auth.users` and the directory.
+  - A 16-character temporary password, from an alphabet with no look-alike characters. The edge function makes it and never stores it.
+  - The formats are interim (`ToDo.md`).
+- **Flow** (`admin-staff`, `register`):
+  1. `admin_staff_identifiers()` (which also refuses a personal email already registered: 23505, HINT `already_registered`);
+  2. GoTrue `POST /admin/users` with `email_confirm`, `app_metadata {created_by: "admin-staff", must_change_password: true}`;
+  3. `profiles` email and name;
+  4. `admin_staff_record()`;
+  5. `admin_grant()` with the caller's token (on failure the auth user is deleted, and the directory row goes with it);
+  6. Resend to the personal email, or `delivery: "shown"`;
+  7. `admin_staff_password_event('issued')`;
+  8. `admin_audit_record('insert', 'admin.staff_members')`.
+- **First sign-in:** `RequireAdmin` renders `ChangeTemporaryPassword` while `session.user.app_metadata.must_change_password` is true. `set_password` changes the password and the flag together through the admin API, and the panel refreshes the session to get the new claim. This is a panel gate. The database authorises by role, as for every admin.
+- **Resets:** the work email has no mailbox, so "Forgot password" can't reach these accounts. `reset_password` issues a new temporary password the same way, and nobody can reset their own. Existing sessions aren't signed out: GoTrue's admin API can't revoke another user's sessions by id.
+- **Not touched:** buyer and vendor sign-in. No `auth.users.phone` is set, and `otp-dev-verify` only opens accounts it created.
+
 ## Integrations
 
 ### Supabase

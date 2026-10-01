@@ -97,6 +97,8 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
+| `staff-registry-check.sql` | Staff registration (2026-10-01), one self-rolling-back DO block run as postgres. 21 checks: the employee-ID format; the work email from a two-word, accented, one-word, three-word and Devanagari name; the `2` suffix when taken; a personal email registered twice refused with `already_registered`; the password events; `admin_staff_get`; the Admin Log's staff rows (and a refusal for any other table); every service-role function refused to a signed-in caller; the directory read by a manager and refused to support and anon. Paste the migration above it to rehearse |
+| `support-role-simulation.sql` | Help & Support (2026-09-30), one self-rolling-back SQL statement run as postgres with MCP `execute_sql`. 61 checks over the support tables, functions, bucket and grants: user A can't read B's requests, messages or files; internal notes never reach the requester; a fraud reporter can't read their own evidence; manager reads and every manager write is 42501; other admin roles and anon get nothing; a suspended user can open a request and a deleted one can't; rate limits trip; rollout Staff refuses a normal user; storage refuses a path outside the caller's ticket; one overload per function; phone masks. It reports in its final error message. Re-run after any change to a support function, policy or grant |
 | `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads. Expected cells are in each file's header |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
@@ -160,6 +162,26 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 ---
 
 ## Test Run History
+
+### 2026-10-01 — Staff registration (migration rehearsed, NOT applied: 21/21; Cosora-Admin typecheck and build; edge function typechecked)
+
+- **Rehearsal:** the migration plus `scripts/staff-registry-check.sql`, in one transaction the check aborts on purpose: **0 failed of 21**, and the migration's own self-check passed. Afterwards `admin.staff_members` doesn't exist, the fixture roles are gone and `admin_audit_record` has its old md5.
+- **Two earlier attempts were refused by the tool** before anything ran. They contained `DROP` (`drop function if exists` on the new functions, and dropping the audit log's action CHECK). The design changed so that neither is needed: the new functions are plain `create function`, and the Admin Log records staff rows as `insert` and `update`, which the CHECK already allows.
+- **Cosora-Admin:** `tsc --noEmit` 0 and `npm run build` pass. `supabase/functions/admin-staff/index.ts` typechecks under `tsc --strict` with a declaration for `Deno`; Deno itself isn't installed here.
+- **Not run:** the edge function itself (not deployed) and the panel against a live directory (the migration isn't applied).
+
+### 2026-10-01 — Security-definer review and the support indexes (2 migrations rehearsed and applied, md5s match)
+
+- **Rehearsal** (both migrations plus a test block, one transaction aborted by its last statement): both self-checks
+  passed; a signed-in buyer (demo-buyer, `set local role authenticated` with JWT claims) liked a live video and
+  `sync_video_likes_count` still fired with EXECUTE revoked (likes 1 → 2); a signed-out direct call of the function
+  got `42501 permission denied`; the four new indexes existed. Afterwards: 0 new indexes, the grant unchanged and the
+  like count back at 1.
+- **Applied** `20261001113143_support_fk_indexes` and `20261001113147_revoke_trigger_function_execute`; each file's
+  md5 equals the recorded statement's.
+- **Review method** for the other 23 functions: their bodies, the RLS policies that call them (`pg_policy`), and the
+  app's callers in both repos. Results in `securityflags.md`, 2026-10-01.
+- **Not run:** the support role simulation (no support function, policy or grant changed).
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
