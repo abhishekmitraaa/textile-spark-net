@@ -1,3 +1,5 @@
+- 2026-10-01 (Help & Support, business rules): **Andy confirmed the plan's ten business rules (Appendix D), and they're in `claude.md`** under "Business Rules — Discovered/Decided": the phone and hours; "Cosora Support" only; Hindi and English replies; who acts and who reads; photo, voice note and PDF; suspended users can appeal and deleted ones can't; receipts for feedback and fraud only, once Resend is set up; the retention default; and no real-user launch while the dummy sign-in code is on. Files: `documentation/claude.md`, this file.
+
 - 2026-10-01 (Help & Support, applied; Mitra approved): **The support database and the file-check function are live, and Cosora-Admin's Support section works against them. Rollout is Off, so no buyer or vendor can send a request yet.**
   - **Migrations applied**, each md5 matching its file: `20260930212818_support_schema.sql`, `20260930213143_support_requester_rpcs.sql`, `20260930213451_support_admin_rpcs.sql` (renamed from the provisional `20260930120000/120100/120200`). Each ran its own self-check.
   - **Role simulation live: 61/61** (`scripts/support-role-simulation.sql`, in a transaction it aborts; nothing kept).
