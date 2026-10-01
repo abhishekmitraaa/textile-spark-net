@@ -1,3 +1,17 @@
+- 2026-10-01 (Staff registration; branches `admin-staff/registration` here and in Cosora-Admin; migration rehearsed, **not applied**): **A manager or super admin registers a staff member in Cosora-Admin, and the panel generates their employee ID, their work email and a temporary password** (Andy's P0 answer, D-10).
+  - **Migration `20261001120000_admin_staff_registry.sql`** (the name changes to the recorded version when applied):
+    - `admin.staff_members`, the directory: employee ID, name, work email, personal email, phone, who registered them, and the temporary-password state. No client grants.
+    - The interim formats: `EMP-0001` from a sequence; `first.last@cosora.in`, ASCII only, with `2`, `3`, … when taken, and the employee ID when the name has no Latin letters.
+    - Service-role functions for the edge function, and `admin_staff_list()` for super admins and managers.
+    - `admin_audit_record()` also records a registration (an `insert` on `admin.staff_members`) and a new temporary password (an `update`). It never records the password.
+  - **Edge function `admin-staff`** (Cosora-Admin, not deployed). Its actions:
+    - `register` creates the auth user with the work email, a 16-character temporary password and `must_change_password`. It writes the directory row, then grants the role with the caller's token, so the database's manager rule decides. If the grant fails, it deletes the user again.
+    - `reset_password` issues a new temporary password.
+    - `set_password` is the first-sign-in change.
+    - The password is emailed by Resend to the personal address. Until Resend is set up, it's shown once to the person registering.
+  - **Not changed:** buyer and vendor sign-in (mobile + OTP). These accounts get no phone number on `auth.users`, so neither phone sign-in nor the dummy OTP can reach them.
+  - **Tests:** `scripts/staff-registry-check.sql`, rehearsed with the migration in a transaction that aborts itself: 21/21. Nothing was kept.
+
 - 2026-10-01 (Help & Support owner answers, the security review and the support indexes; branch `help-support/db-fixes`): **Andy's P0 answers recorded, the 2026-09-30 SECURITY DEFINER flag reviewed and closed, and two small migrations applied.**
   - **Applied** (Andy: "fix if needed"), each rehearsed first:
     - `20261001113143_support_fk_indexes`: indexes on the four support foreign keys, two of which the per-send rate check reads;
