@@ -34,7 +34,7 @@ const env = Object.fromEntries(
 );
 const URL_BASE = env.VITE_SUPABASE_URL;
 const TRIALS = Number(process.argv[2] ?? 3);
-const SURFACES = ["buyer_help", "seller_registration", "subscription"];
+const SURFACES = ["buyer_help", "seller_help", "seller_registration", "subscription"];
 const STYLES = {
   plain: { "Accept-Encoding": "gzip" },
   browser: { Origin: "http://localhost:8080", "Accept-Encoding": "gzip, deflate, br, zstd", "Cache-Control": "max-age=0" },

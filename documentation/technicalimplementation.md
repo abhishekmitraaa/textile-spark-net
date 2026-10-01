@@ -1607,6 +1607,22 @@ Phase 9 Q2: the FAQ read path at 10k concurrent users. Migration
 
 ---
 
+### Seller Help and stored translations (Help & Support P5, 2026-10-01)
+- **A fourth surface, `seller_help`**, shown on `/help` to sellers (`useUserRole`), grouped by category like Buyer Help. A surface is listed in:
+  - the `faqs_surface_check` constraint and `admin_faq_add()`;
+  - `SURFACES` in `faqs-snapshot`;
+  - `FaqSurface` in `src/lib/queries/faqs.ts`;
+  - `Surface` and `SURFACES` in Cosora-Admin `Faqs.tsx`;
+  - the scripts and specs (`faq-snapshot-check`, `faq-cdn-propagation`, `load/faq-read.k6.js`, `faqs-support-write.spec.ts`).
+- **`faqs.translations`** jsonb, `{"hi": {question, answer}, "gu": {…}}`, `{}` by default.
+  - `faq_translations_valid()` is the CHECK: only hi and gu, both fields non-empty, nothing else.
+  - Clients read it through a column grant.
+  - Written by `admin_faq_set_translations(id, translations)` (support, super_admin); read in the admin by `admin_faq_translations(surface)`, merged with `admin_faq_list()` by id.
+  - `admin_faq_update()` sets it to `{}` in the same statement when the English question or answer changes, so a translation never outlives its text.
+- **Reading:** `faqText(row, lang)` returns the stored text for hi or gu when both fields exist, with `stored: true`. The renderer then marks it `data-no-translate`, so `AutoTranslate` leaves it alone. Otherwise the English goes through the catalogues as before.
+- **Snapshots** carry `translations` per row and stay `version: 1`. `parseFaqSnapshot` treats the field as optional, so a file written before P5 still parses.
+- **Deploy order:** the two migrations, then `faqs-snapshot` v2, then the apps. Both apps also cope if they ship first: the buyer app's table fallback retries without `translations` (42703), and the admin page shows the FAQs without translations if `admin_faq_translations` is missing (PGRST202).
+
 ## Profile contact details — private columns, narrow readers (2026-09-23)
 
 Phase 11 of the My Profile brief (MPF-3). `profiles.email` and `profiles.phone` aren't

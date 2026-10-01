@@ -7299,5 +7299,15 @@
  "Request {0}: we'll call you on {1}.": "अनुरोध {0}: हम आपको {1} पर कॉल करेंगे।",
  "Report recorded": "रिपोर्ट दर्ज हो गई",
  "Feedback recorded": "फ़ीडबैक दर्ज हो गया",
- "We've recorded your feedback {0}.": "हमने आपका फ़ीडबैक {0} दर्ज कर लिया है।"
+ "We've recorded your feedback {0}.": "हमने आपका फ़ीडबैक {0} दर्ज कर लिया है।",
+ "For help with your store, KYC, leads, ads or billing, chat with us, or call or email us.": "अपने स्टोर, KYC, लीड्स, विज्ञापन या बिलिंग में मदद के लिए हमसे चैट करें, या हमें कॉल या ईमेल करें।",
+ "For help with your store, KYC, leads, ads or billing, call or email us using the details below.": "अपने स्टोर, KYC, लीड्स, विज्ञापन या बिलिंग में मदद के लिए नीचे दिए विवरण पर हमें कॉल या ईमेल करें।",
+ "Getting Started": "शुरुआत करें",
+ "Orders & Quotes": "ऑर्डर और कोटेशन",
+ "Payments & Billing": "भुगतान और बिलिंग",
+ "KYC and verification": "KYC और वेरिफ़िकेशन",
+ "Leads and quotes": "लीड्स और कोटेशन",
+ "Listings and videos": "लिस्टिंग और वीडियो",
+ "Plans and billing": "प्लान और बिलिंग",
+ "Account and suspension": "खाता और निलंबन"
 }

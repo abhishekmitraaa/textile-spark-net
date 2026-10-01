@@ -255,7 +255,7 @@ with no need to dictate format, context, or reference each time.
   "faqs"). An FAQ edited in the admin shows in English until its new text is added there and
   translated in code. The same applies to `subscription_plans.display` values and `notify()` texts.
 - Reference: 2026-09-26, the language-translation fix.
-- Status: Open
+- Status: Built 2026-10-01 in Help & Support P5 (branch `help-support/p5-content`): `faqs.translations`, Hindi and Gujarati fields in Cosora-Admin Edit, and the app shows a stored translation first. Done once `20261001130000` and `20261001130100` are applied and the branch is merged. `subscription_plans.display` and `notify()` texts still use the catalogues.
 
 ### Decide whether the Supplier Agreement gets a reviewed translation — added 2026-09-26
 - Task: if vendors should read the agreement in Hindi or Gujarati, have the text translated and
@@ -614,7 +614,7 @@ with no need to dictate format, context, or reference each time.
   `/profile/help/chat` (canned replies).
   Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
 - Priority: Medium (MPF-15's severity)
-- Status: Open. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships.
+- Status: Open. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships. **P5 built (2026-10-01, branch `help-support/p5-content`):** 17 Seller Help FAQs on `/help` for sellers; live once the migrations are applied and the branch is merged.
 
 ### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
 - Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it

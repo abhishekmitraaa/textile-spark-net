@@ -62,7 +62,7 @@
   "Feedback recorded",
   "We've recorded your feedback {0}."
  ],
- "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated.",
+ "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated. Since Help & Support P5 (2026-10-01) an FAQ can carry its own Hindi and Gujarati (faqs.translations), which the app shows first; this list is then the fallback. The category headings are listed at the end.",
  "faqs": [
   "How do I find the right vendors for my needs?",
   "Use our smart matching system by posting your requirements. We'll connect you with verified vendors who specialize in your product category. You can also browse vendor profiles and view their ratings and reviews.",
@@ -123,7 +123,17 @@
   "What information should I include in my requirement?",
   "Include product category, quantity, preferred fabric/material, size range, any specific designs or prints, target price range, and delivery timeline. The more details you provide, the better quotes you'll receive.",
   "Can I edit my listings after uploading?",
-  "Yes. You can log in to your dashboard to update prices, product details, or contact information anytime."
+  "Yes. You can log in to your dashboard to update prices, product details, or contact information anytime.",
+  "Getting Started",
+  "Orders & Quotes",
+  "Payments & Billing",
+  "Account Management",
+  "KYC and verification",
+  "Leads and quotes",
+  "Listings and videos",
+  "Advertising",
+  "Plans and billing",
+  "Account and suspension"
  ],
  "categories_source": "public.categories.name, as of 2026-09-26.",
  "categories": [

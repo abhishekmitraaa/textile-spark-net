@@ -3,7 +3,8 @@ import { LifeBuoy, MessageSquare, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useFaqs, type FaqSurface } from "@/lib/queries/faqs";
+import { faqText, useFaqs, type FaqSurface } from "@/lib/queries/faqs";
+import { useLang } from "@/lib/i18n";
 
 // One surface's admin-editable FAQs as a card with an accordion (Phase 9,
 // 2026-09-23). Used on the vendor Subscription page, and droppable into any
@@ -30,6 +31,7 @@ export function FaqSection({
   contact?: FaqContact;
 }) {
   const { data: faqs, isPending, error } = useFaqs(surface);
+  const lang = useLang();
 
   // No questions and nothing to contact: render nothing rather than an empty card.
   if (!isPending && !error && (faqs?.length ?? 0) === 0 && !contact) return null;
@@ -51,12 +53,16 @@ export function FaqSection({
         ) : (
           faqs.length > 0 && (
             <Accordion type="single" collapsible className="w-full">
-              {faqs.map((faq) => (
-                <AccordionItem key={faq.id} value={faq.id}>
-                  <AccordionTrigger className="text-left text-foreground hover:text-accent">{faq.question}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground whitespace-pre-line">{faq.answer}</AccordionContent>
-                </AccordionItem>
-              ))}
+              {faqs.map((faq) => {
+                // A stored translation (P5) is already in the reader's language.
+                const text = faqText(faq, lang);
+                return (
+                  <AccordionItem key={faq.id} value={faq.id} data-no-translate={text.stored || undefined}>
+                    <AccordionTrigger className="text-left text-foreground hover:text-accent">{text.question}</AccordionTrigger>
+                    <AccordionContent className="text-muted-foreground whitespace-pre-line">{text.answer}</AccordionContent>
+                  </AccordionItem>
+                );
+              })}
             </Accordion>
           )
         )}

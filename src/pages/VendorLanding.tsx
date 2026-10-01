@@ -27,7 +27,8 @@ import {
   Star,
   Users,
 } from "lucide-react";
-import { useFaqs } from "@/lib/queries/faqs";
+import { faqText, useFaqs } from "@/lib/queries/faqs";
+import { useLang } from "@/lib/i18n";
 import hotpingLogo from "@/assets/brands/hotping.png";
 import mocoBlingLogo from "@/assets/brands/moco-bling.png";
 import merongShopLogo from "@/assets/brands/merong-shop.png";
@@ -141,6 +142,7 @@ const VendorLanding = () => {
   // Seller Registration FAQs are admin-edited in Cosora-Admin (/faqs) and read
   // live, signed out included. They replaced a hardcoded list here (2026-09-23).
   const { data: faqs, isPending: faqsLoading } = useFaqs("seller_registration");
+  const lang = useLang();
 
   return (
     <div className="vendor-shell min-h-screen bg-[#ffffff] text-brand-ink">
@@ -421,17 +423,21 @@ const VendorLanding = () => {
             ) : (
               faqs && faqs.length > 0 && (
                 <Accordion type="single" collapsible className="mt-4">
-                  {faqs.map((faq) => (
-                    <AccordionItem key={faq.id} value={faq.id} className="border-brand-border">
-                      <AccordionTrigger className="text-left text-sm font-medium text-brand-ink">
-                        {faq.question}
-                      </AccordionTrigger>
-                      {/* whitespace-pre-line: answers can hold line-broken lists. */}
-                      <AccordionContent className="whitespace-pre-line text-base text-brand-ink/70">
-                        {faq.answer}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
+                  {faqs.map((faq) => {
+                    // A stored translation (P5) is already in the reader's language.
+                    const text = faqText(faq, lang);
+                    return (
+                      <AccordionItem key={faq.id} value={faq.id} className="border-brand-border" data-no-translate={text.stored || undefined}>
+                        <AccordionTrigger className="text-left text-sm font-medium text-brand-ink">
+                          {text.question}
+                        </AccordionTrigger>
+                        {/* whitespace-pre-line: answers can hold line-broken lists. */}
+                        <AccordionContent className="whitespace-pre-line text-base text-brand-ink/70">
+                          {text.answer}
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
                 </Accordion>
               )
             )}

@@ -1,8 +1,9 @@
 // Supabase Edge Function: faqs-snapshot
 //
-// Rebuilds the three public FAQ snapshots in the `faq-snapshots` Storage bucket
+// Rebuilds the public FAQ snapshots in the `faq-snapshots` Storage bucket
 // (Phase 23 of the My Profile brief, 2026-09-24; Phase 9 Q2):
-//   buyer_help.json, seller_registration.json, subscription.json
+//   buyer_help.json, seller_help.json (Help & Support P5, 2026-10-01),
+//   seller_registration.json, subscription.json
 // The buyer app reads these through the Storage CDN instead of querying
 // public.faqs on every page load, and falls back to the table if a file can't be
 // fetched or doesn't parse (src/lib/queries/faqs.ts).
@@ -19,7 +20,9 @@
 // are read with the ANON key, so RLS (active rows only) and the column grant (no
 // created_by) apply, and the query also names its filter and columns:
 //   { version: 1, surface, generated_at, count, rows: [{ id, category_label,
-//     question, answer, position }] }, rows in display order.
+//     question, answer, position, translations }] }, rows in display order.
+//   `translations` (P5) is {"hi": {question, answer}, "gu": {...}} or {}. It's additive:
+//   an app built before P5 ignores it, and still parses the file as version 1.
 // A surface with no active FAQs gets a file with rows: [], which is the truth,
 // not a failure.
 //
@@ -42,7 +45,7 @@
 // Platform-provided: SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY.
 
 const BUCKET = "faq-snapshots";
-const SURFACES = ["buyer_help", "seller_registration", "subscription"] as const;
+const SURFACES = ["buyer_help", "seller_help", "seller_registration", "subscription"] as const;
 const MAX_AGE = 300;
 const MAX_PASSES = 3;
 
@@ -82,6 +85,7 @@ interface Row {
   question: string;
   answer: string;
   position: number;
+  translations: Record<string, { question: string; answer: string }>;
 }
 
 Deno.serve(async (req) => {
@@ -100,7 +104,7 @@ Deno.serve(async (req) => {
 
   const readRows = async (): Promise<Row[]> => {
     const res = await fetch(
-      `${url}/rest/v1/faqs?select=id,surface,category_label,question,answer,position` +
+      `${url}/rest/v1/faqs?select=id,surface,category_label,question,answer,position,translations` +
         `&active=eq.true&order=surface.asc,position.asc,created_at.asc,id.asc`,
       { headers: { apikey: readKey, authorization: `Bearer ${readKey}` } },
     );
@@ -135,7 +139,7 @@ Deno.serve(async (req) => {
       for (const surface of SURFACES) {
         const mine = rows
           .filter((r) => r.surface === surface)
-          .map(({ id, category_label, question, answer, position }) => ({ id, category_label, question, answer, position }));
+          .map(({ id, category_label, question, answer, position, translations }) => ({ id, category_label, question, answer, position, translations }));
         counts[surface] = mine.length;
         await upload(surface, JSON.stringify({ version: 1, surface, generated_at: generatedAt, count: mine.length, rows: mine }));
       }

@@ -139,6 +139,7 @@ test("support adds, edits, reorders, deactivates and deletes FAQs on all three s
     { tab: "Buyer Help", surface: "buyer_help", category: "Account Management" },
     { tab: "Subscription", surface: "subscription" },
     { tab: "Seller Registration", surface: "seller_registration" },
+    { tab: "Seller Help", surface: "seller_help", category: "Account and suspension" },
   ] as const;
 
   for (const s of surfaces) {

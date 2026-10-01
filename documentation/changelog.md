@@ -1,3 +1,25 @@
+- 2026-10-01 (Help & Support P5, content; branch `help-support/p5-content`, stacked on P3 and the staff branch; migrations rehearsed, **not applied**): **Sellers get their own Help questions, FAQs carry their own Hindi and Gujarati, and the Quick Guides and the MPF-14 replacements are written.** For review: `documentation/help-content-p5.md`.
+  - **`20261001130000_faqs_seller_help_and_translations.sql`:**
+    - The `seller_help` surface, in the CHECK and `admin_faq_add()`.
+    - `faqs.translations`, `{"hi": {question, answer}, "gu": …}`, checked by `faq_translations_valid()` and readable by anon and authenticated through a column grant.
+    - `admin_faq_set_translations()` writes them and `admin_faq_translations()` reads them. `admin_faq_update()` clears them when the English question or answer changes.
+    - `admin_faq_list` is untouched: dropping it to change its result type was refused by the tool, so translations come through a second reader.
+  - **`20261001130100_help_content_p5.sql`:**
+    - The Hindi and Gujarati the app already shows, copied from the catalogues into 27 of the 30 active FAQs. The other three are Seller Registration answers written as bullet lists, and keep the catalogue fallback.
+    - 17 Seller Help FAQs (active) in six topics: KYC, leads, listings and videos, advertising, plans and billing, account and suspension.
+    - The 7 MPF-14 replacements, **inactive**, each just after the answer it replaces: swapped in at launch once Andy approves (D-12).
+    - The four Quick Guides. Only "How to Complete Verification" is active. Callbacks and attachments wait for rollout; the payment guide waits for live online payment (checkout is in demo mode).
+  - **Buyer app:**
+    - `useFaqs` reads `translations` from the snapshot (optional, so old files still parse) and from the table.
+    - `faqText()` picks the reader's language; stored text is marked `data-no-translate`.
+    - `/help` shows sellers `seller_help`, with six category icons. The "written for buyers" note now shows only while no seller questions exist.
+    - `/seller` and the Subscription FAQ also use stored translations.
+    - The ten FAQ category headings are in the catalogues.
+  - **`faqs-snapshot`** writes `seller_help.json` and each row's `translations` (still version 1). Redeploy needed.
+  - **Cosora-Admin `/faqs`:** a Seller Help tab, category suggestions per surface, Hindi and Gujarati fields in Edit, a note when the English changes, and badges for the stored languages.
+  - Scripts and specs that list surfaces now include `seller_help`.
+  - **Deploy order:** the two migrations, then `faqs-snapshot` v2, then the apps. Both apps also cope if they ship first: the buyer app's table fallback retries without `translations` (42703), and the admin page shows the FAQs without translations if `admin_faq_translations` is missing (PGRST202).
+
 - 2026-10-01 (Staff registration; branches `admin-staff/registration` here and in Cosora-Admin; migration rehearsed, **not applied**): **A manager or super admin registers a staff member in Cosora-Admin, and the panel generates their employee ID, their work email and a temporary password** (Andy's P0 answer, D-10).
   - **Migration `20261001120000_admin_staff_registry.sql`** (the name changes to the recorded version when applied):
     - `admin.staff_members`, the directory: employee ID, name, work email, personal email, phone, who registered them, and the temporary-password state. No client grants.

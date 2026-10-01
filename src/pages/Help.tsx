@@ -1,11 +1,12 @@
 import { useState, useMemo } from "react";
-import { useFaqs, groupFaqs } from "@/lib/queries/faqs";
+import { faqText, useFaqs, groupFaqs } from "@/lib/queries/faqs";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
   Search, Phone, Mail, Flag,
   ShoppingBag, CreditCard, User, HelpCircle, ChevronRight,
   Instagram, ArrowLeft, Store, MessageCircle, PhoneCall, Lightbulb, ListChecks, BookOpen,
+  ShieldCheck, Users, Package, Megaphone,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -50,15 +51,21 @@ const listItem = {
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-// FAQ content lives in public.faqs (surface "buyer_help") and is edited from
-// Cosora-Admin's FAQs page with no deploy (2026-09-23). Only the data source
-// changed here. Each category keeps the icon it had when it was hardcoded, and
-// a category an admin adds later gets HelpCircle.
+// FAQ content lives in public.faqs and is edited from Cosora-Admin's FAQs page with
+// no deploy (2026-09-23): "buyer_help" for buyers, "seller_help" for sellers (P5,
+// 2026-10-01). Each category keeps its icon, and a category an admin adds later gets
+// HelpCircle.
 const FAQ_CATEGORY_ICONS: Record<string, typeof HelpCircle> = {
   "Getting Started": HelpCircle,
   "Orders & Quotes": ShoppingBag,
   "Payments & Billing": CreditCard,
   "Account Management": User,
+  "KYC and verification": ShieldCheck,
+  "Leads and quotes": Users,
+  "Listings and videos": Package,
+  "Advertising": Megaphone,
+  "Plans and billing": CreditCard,
+  "Account and suspension": User,
 };
 
 
@@ -84,17 +91,21 @@ const Help = () => {
   const [faqOpen, setFaqOpen]         = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Same shape the hardcoded array had, so everything below renders as before.
-  const { data: faqRows, isPending: faqsLoading } = useFaqs("buyer_help");
+  // Sellers get the seller questions (P5). The rows come back in the reader's
+  // language when a translation is stored (faqText), so search matches what's shown.
+  const { data: faqRows, isPending: faqsLoading } = useFaqs(isSeller ? "seller_help" : "buyer_help");
   const faqCategories = useMemo(
     () => groupFaqs(faqRows ?? []).map((g) => ({
       id: g.label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
       title: g.label,
       icon: FAQ_CATEGORY_ICONS[g.label] ?? HelpCircle,
-      faqs: g.faqs,
+      faqs: g.faqs.map((f) => faqText(f, lang)),
     })),
-    [faqRows],
+    [faqRows, lang],
   );
+  // Until seller questions exist (the content migration not applied yet), sellers see
+  // the buyer note below rather than an empty list passed off as help.
+  const noSellerFaqs = isSeller && !faqsLoading && (faqRows?.length ?? 0) === 0;
 
   const filteredCategories = faqCategories.map(cat => ({
     ...cat,
@@ -144,18 +155,17 @@ const Help = () => {
             <HoursBanner status={status.data} />
           </motion.div>
 
-          {/* Vendors land here from Settings and the seller sidebar, but the answers
-              below are written for buyers (MPF-15). Until seller help exists, say so
-              and point them at the people who can help. */}
-          {isSeller && (
+          {/* Sellers get their own questions (P5). If there are none yet, say so and
+              point them at the people who can help (MPF-15). */}
+          {noSellerFaqs && (
             <motion.div variants={section}>
               <Card className="border-brand-vendor/20 bg-brand-vendor/5">
                 <CardContent className="p-4 flex gap-3">
                   <Store className="w-5 h-5 text-brand-vendor shrink-0 mt-0.5" />
                   <p className="text-sm text-gray-700">
                     {available
-                      ? "The questions on this page are written for buyers. For help with your store, KYC, leads, ads or billing, chat with us, or call or email us."
-                      : "The questions on this page are written for buyers. For help with your store, KYC, leads, ads or billing, call or email us using the details below."}
+                      ? "For help with your store, KYC, leads, ads or billing, chat with us, or call or email us."
+                      : "For help with your store, KYC, leads, ads or billing, call or email us using the details below."}
                   </p>
                 </CardContent>
               </Card>
@@ -340,6 +350,7 @@ const Help = () => {
                               key={i}
                               value={`${cat.id}-${i}`}
                               className="border-0 border-b border-border/40 last:border-b-0 px-6"
+                              data-no-translate={faq.stored || undefined}
                             >
                               <AccordionTrigger className="text-left text-sm font-medium hover:no-underline hover:text-brand-vendor py-4 gap-3">
                                 {faq.question}

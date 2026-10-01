@@ -476,6 +476,10 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-01 (Help & Support P5; built, not live)
+- **Seller Help:** `/help` shows sellers their own questions: KYC, leads, listings and videos, advertising, plans and billing, account and suspension. Each is in Hindi and Gujarati, edited in Cosora-Admin `/faqs`.
+- **Quick Guide:** "How to Complete Verification".
+
 ### Constraints that shape the vendor UI
 - Every vendor page must wrap in `DashboardLayout`.
 - Tailwind's named breakpoints overstate available width here — the sidebar takes 256 px

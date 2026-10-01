@@ -33,9 +33,10 @@ const env = Object.fromEntries(
 const URL_BASE = env.VITE_SUPABASE_URL;
 const ANON = env.VITE_SUPABASE_ANON_KEY;
 const BUCKET = "faq-snapshots";
-const SURFACES = ["buyer_help", "seller_registration", "subscription"];
+const SURFACES = ["buyer_help", "seller_help", "seller_registration", "subscription"];
 const MAX_AGE = 300;
-const COLUMNS = ["answer", "category_label", "id", "position", "question"];
+// translations since Help & Support P5 (2026-10-01).
+const COLUMNS = ["answer", "category_label", "id", "position", "question", "translations"];
 
 let failures = 0;
 const rows = [];
@@ -50,7 +51,7 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 for (const surface of SURFACES) {
   const { data: table, error } = await anon.from("faqs")
-    .select("id, category_label, question, answer, position")
+    .select("id, category_label, question, answer, position, translations")
     .eq("surface", surface).eq("active", true)
     .order("position").order("created_at").order("id");
   if (error) { check(`${surface}: read the table`, false, error.message); continue; }

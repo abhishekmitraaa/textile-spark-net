@@ -97,6 +97,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
+| `faqs-p5-check.sql` | Help & Support P5 (2026-10-01), one self-rolling-back DO block. 13 checks: support adds to `seller_help`; an unknown surface is refused; translations are stored trimmed; an unknown language and an empty answer are refused; toggling active and re-saving the same English keep them; anon reads `translations` and still not `created_by`; `admin_faq_translations` returns them; changing the English clears them; a non-admin can't translate; the table's CHECKs refuse bad translations and unknown surfaces. Then it counts what the content (or a sample of it) added. Paste the migration above it to rehearse |
 | `staff-registry-check.sql` | Staff registration (2026-10-01), one self-rolling-back DO block run as postgres. 21 checks: the employee-ID format; the work email from a two-word, accented, one-word, three-word and Devanagari name; the `2` suffix when taken; a personal email registered twice refused with `already_registered`; the password events; `admin_staff_get`; the Admin Log's staff rows (and a refusal for any other table); every service-role function refused to a signed-in caller; the directory read by a manager and refused to support and anon. Paste the migration above it to rehearse |
 | `support-role-simulation.sql` | Help & Support (2026-09-30), one self-rolling-back SQL statement run as postgres with MCP `execute_sql`. 61 checks over the support tables, functions, bucket and grants: user A can't read B's requests, messages or files; internal notes never reach the requester; a fraud reporter can't read their own evidence; manager reads and every manager write is 42501; other admin roles and anon get nothing; a suspended user can open a request and a deleted one can't; rate limits trip; rollout Staff refuses a normal user; storage refuses a path outside the caller's ticket; one overload per function; phone masks. It reports in its final error message. Re-run after any change to a support function, policy or grant |
 | `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads. Expected cells are in each file's header |
@@ -162,6 +163,21 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 ---
 
 ## Test Run History
+
+### 2026-10-01 — Help & Support P5, content (migrations rehearsed, NOT applied: 13/13; typecheck 0 in both apps; i18n 7,132/7,132; browser check, nothing written)
+
+- **Rehearsal:** `20261001130000` in full, plus a sample of `20261001130100` made by the same generator (two catalogue strings, one seller FAQ, one MPF-14 draft, one guide), plus `scripts/faqs-p5-check.sql`, in one transaction the check aborts: **0 failed of 13**, and the sample rows landed (1, 1, 1, 1). Afterwards the surface CHECK, the column, the rows and the fixture role are all as before.
+- **Not rehearsed in full:** the content file (88 KB, mostly Hindi and Gujarati). Every row was validated by the generator against the database's rules instead: non-empty, length limits, hi and gu only, guide slugs, and the same number of steps in each language.
+- **Two attempts were refused by the tool** before running: they contained `drop function admin_faq_list`. That design was replaced by a second reader, `admin_faq_translations`. Dropping and re-adding the surface CHECK was allowed.
+- **Catalogue coverage:** 27 of the 30 active FAQs have both their question and answer in the catalogues, measured by md5 against the live rows. The content migration's check expects at least 27.
+- **Browser** (`.claude/tmp/p5-check.mjs`, not committed): the local dev servers against production. The `seller_help` snapshot and the active guide were answered in the browser, and the admin writes were caught. Results:
+  - demo-vendor sees "17 questions across 6 topics", the KYC question, the category heading, no buyer note, and the Quick Guide. Search finds the lead-limit answer, and the guide's steps are numbered.
+  - In Hindi: the stored question, marked `data-no-translate`; the heading "KYC और वेरिफ़िकेशन"; the guide's Hindi title.
+  - With no seller rows, the note comes back.
+  - demo-buyer still sees "12 questions across 4 topics" and no seller questions, with no overflow at 390.
+  - Admin: the Seller Help tab, the `hi` badge, Hindi prefilled in Edit, a half-filled Gujarati refused. Save sent `admin_faq_update`, then `admin_faq_set_translations` with both languages.
+  - No page errors.
+- **Not run:** the FAQ specs and `faq-snapshot-check.mjs` (they need the migration applied and `faqs-snapshot` v2 deployed).
 
 ### 2026-10-01 — Staff registration (migration rehearsed, NOT applied: 21/21; Cosora-Admin typecheck and build; edge function typechecked)
 
