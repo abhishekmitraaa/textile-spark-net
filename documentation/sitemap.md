@@ -193,8 +193,8 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 `/support/feedback`, `/support/:ticketNo` (one request, e.g. `CS-000001`) and
 `/support/settings`. It reads this project's `public.support_*` tables through the
 `admin_support_*` functions. The buyer and vendor routes that feed it (`/help/chat`,
-`/help/requests`, `/help/callback`, `/feedback`, the `/report-fraud` wizard) are planned in
-`help-feature-plan.md` P3 and not built.
+`/help/requests`, `/help/callback`, `/feedback`, the `/report-fraud` wizard) are live since
+2026-10-02. While rollout is Off they show the phone and email instead of the forms.
 
 ---
 
@@ -228,7 +228,7 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | `/feedback` | `AppFeedback` | A bug or an idea; My Store's "App Feedback" |
 | `/grievance` | `Grievance` | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
 | `/terms` | `TermsConditions` | |
-| `/about` | `About` | |
+| `/about` | redirect | Permanent redirect to `/blogs/about` (`vercel.json`): the About page lives in the Journal (cosora-blogs) since 2026-09-29 |
 | `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
 | `*` | `NotFound` | Fallback |
 

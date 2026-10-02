@@ -715,62 +715,6 @@ with no need to dictate format, context, or reference each time.
   exist.
 - Status: Open
 
-### Give vendors a real support destination, and stop the canned chats posing as live support (MPF-15) — added 2026-09-25
-- Task: two separate pieces of work.
-  1. **A decision, then the build.** Decide where a vendor who asks for help should land:
-     either a real vendor Help page (a new `seller_help` FAQ surface), or honest copy on
-     `/help` for vendors. Then build the one chosen.
-  2. **Simpler, and independent of the decision.** Label the canned support chats as not
-     staffed, or remove them. This applies on the buyer side too.
-- Context:
-  - **Where vendors land.** Vendor Settings → "Help Center" (`src/pages/VendorSettings.tsx`)
-    and the seller sidebar's "Help & Support" (`src/components/layout/DashboardSidebar.tsx`)
-    both open `/help`. That is the buyer Help page (`Help.tsx`, also served at
-    `/profile/help`). A vendor gets buyer FAQs about posting RFQs, comparing quotes and paying
-    vendors, plus a Delete account card that sends vendors to support.
-  - **The chats are canned.** Neither one sends anything anywhere: no Supabase call, no API.
-    Both present an invented agent, "Abdul, Cosora support executive".
-    - On `/help` and `/profile/help`, "Contact Us · Chat with us" and "Start Live Chat" open
-      `ChatModal` in `Help.tsx`. It shows a greeting and, after each message, a 2-second
-      "typing" indicator, then never replies.
-    - `/profile/help/chat` (`SupportChat.tsx`, opened from `/profile`'s "Chat with Us")
-      replies on a timer with one of three stock lines from its `CANNED` array.
-  - **The only real channel is email to hello@cosora.in.** It appears as Help's "Email
-    Support", on `VendorLanding.tsx` and `About.tsx`, and, since Phase 24, as the Subscription
-    FAQ's "Contact us" (`mailto:hello@cosora.in?subject=Subscription%20question`). That last
-    one is in the code only: the live site still opens `/help` until the buyer app is
-    deployed. Help also
-    has a Call button (a `tel:` link in `Help.tsx`). Whether anyone answers that number wasn't
-    checked.
-  - **Option (a): a vendor Help page.** FAQs live in `public.faqs` and render with
-    `<FaqSection surface="…">`, so the page itself is small. But the surface names are listed
-    in several places, and `seller_help` has to be added to all of them:
-    - the `faqs_surface_check` constraint and `admin_faq_add()`'s own surface check (a
-      migration);
-    - `SURFACES` in `supabase/functions/faqs-snapshot/index.ts` (redeploy it);
-    - `FaqSurface` in `src/lib/queries/faqs.ts`;
-    - `Surface` and the surface list in Cosora-Admin `src/pages/Faqs.tsx`;
-    - `SURFACES` in `scripts/faq-snapshot-check.mjs`.
-
-    Then point the two vendor links at the new page, and write its content.
-  - **Option (b): honest copy.** When a vendor opens `/help`, say that it is buyer help and
-    give hello@cosora.in as the way to reach support.
-  - **The chat fix, whichever option is chosen.** Either say plainly that nobody answers the
-    chats and give the email address, or remove both chats and the buttons that open them. Any
-    chat that stays must show the chat-monitoring disclosure, which is legally required in
-    every chat flow (`claude.md`). `SupportChat` shows it (`CHAT_MONITORING_NOTICE`), but
-    `ChatModal` in `Help.tsx` doesn't, so it needs adding if that chat stays. A real support
-    chat would be a feature of its own.
-- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
-  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
-  itself came from Phase 9 (2026-09-23), which checked where a vendor's "Contact us" should
-  go. The correction found on 2026-09-25: there are two canned chats, `ChatModal` in `Help.tsx`
-  (never replies, and has no chat-monitoring disclosure) and `SupportChat` at
-  `/profile/help/chat` (canned replies).
-  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
-- Priority: Medium (MPF-15's severity)
-- Status: Open. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships. **P5 built (2026-10-01, branch `help-support/p5-content`):** 17 Seller Help FAQs on `/help` for sellers; live once the migrations are applied and the branch is merged.
-
 ### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
 - Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it
   in Cosora-Admin `/faqs` (no deploy) or the product changes to match it. Each row in the
@@ -960,6 +904,63 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Give vendors a real support destination, and stop the canned chats posing as live support (MPF-15) — added 2026-09-25
+- Task: two separate pieces of work.
+  1. **A decision, then the build.** Decide where a vendor who asks for help should land:
+     either a real vendor Help page (a new `seller_help` FAQ surface), or honest copy on
+     `/help` for vendors. Then build the one chosen.
+  2. **Simpler, and independent of the decision.** Label the canned support chats as not
+     staffed, or remove them. This applies on the buyer side too.
+- Context:
+  - **Where vendors land.** Vendor Settings → "Help Center" (`src/pages/VendorSettings.tsx`)
+    and the seller sidebar's "Help & Support" (`src/components/layout/DashboardSidebar.tsx`)
+    both open `/help`. That is the buyer Help page (`Help.tsx`, also served at
+    `/profile/help`). A vendor gets buyer FAQs about posting RFQs, comparing quotes and paying
+    vendors, plus a Delete account card that sends vendors to support.
+  - **The chats are canned.** Neither one sends anything anywhere: no Supabase call, no API.
+    Both present an invented agent, "Abdul, Cosora support executive".
+    - On `/help` and `/profile/help`, "Contact Us · Chat with us" and "Start Live Chat" open
+      `ChatModal` in `Help.tsx`. It shows a greeting and, after each message, a 2-second
+      "typing" indicator, then never replies.
+    - `/profile/help/chat` (`SupportChat.tsx`, opened from `/profile`'s "Chat with Us")
+      replies on a timer with one of three stock lines from its `CANNED` array.
+  - **The only real channel is email to hello@cosora.in.** It appears as Help's "Email
+    Support", on `VendorLanding.tsx` and `About.tsx`, and, since Phase 24, as the Subscription
+    FAQ's "Contact us" (`mailto:hello@cosora.in?subject=Subscription%20question`). That last
+    one is in the code only: the live site still opens `/help` until the buyer app is
+    deployed. Help also
+    has a Call button (a `tel:` link in `Help.tsx`). Whether anyone answers that number wasn't
+    checked.
+  - **Option (a): a vendor Help page.** FAQs live in `public.faqs` and render with
+    `<FaqSection surface="…">`, so the page itself is small. But the surface names are listed
+    in several places, and `seller_help` has to be added to all of them:
+    - the `faqs_surface_check` constraint and `admin_faq_add()`'s own surface check (a
+      migration);
+    - `SURFACES` in `supabase/functions/faqs-snapshot/index.ts` (redeploy it);
+    - `FaqSurface` in `src/lib/queries/faqs.ts`;
+    - `Surface` and the surface list in Cosora-Admin `src/pages/Faqs.tsx`;
+    - `SURFACES` in `scripts/faq-snapshot-check.mjs`.
+
+    Then point the two vendor links at the new page, and write its content.
+  - **Option (b): honest copy.** When a vendor opens `/help`, say that it is buyer help and
+    give hello@cosora.in as the way to reach support.
+  - **The chat fix, whichever option is chosen.** Either say plainly that nobody answers the
+    chats and give the email address, or remove both chats and the buttons that open them. Any
+    chat that stays must show the chat-monitoring disclosure, which is legally required in
+    every chat flow (`claude.md`). `SupportChat` shows it (`CHAT_MONITORING_NOTICE`), but
+    `ChatModal` in `Help.tsx` doesn't, so it needs adding if that chat stays. A real support
+    chat would be a feature of its own.
+- Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
+  MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
+  itself came from Phase 9 (2026-09-23), which checked where a vendor's "Contact us" should
+  go. The correction found on 2026-09-25: there are two canned chats, `ChatModal` in `Help.tsx`
+  (never replies, and has no chat-monitoring disclosure) and `SupportChat` at
+  `/profile/help/chat` (canned replies).
+  Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Priority: Medium (MPF-15's severity)
+- Status: Completed: 2026-10-02. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships. **P5 built (2026-10-01, branch `help-support/p5-content`):** 17 Seller Help FAQs on `/help` for sellers; live once the migrations are applied and the branch is merged.
+- Completed: 2026-10-02. Both parts are live: the canned chats are gone (P1, 2026-10-01), and sellers get Seller Help (19 questions, P5 and the FAQ input) and real support chat (P3, rollout Off until G1).
 
 ### Give the support tables' four foreign keys a covering index — added 2026-10-01
 - Task: one small migration adding indexes on `support_messages (author_id, created_at)`,

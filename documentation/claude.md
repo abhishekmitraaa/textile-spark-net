@@ -40,13 +40,12 @@ Rules decided before or outside of Claude Code sessions.
   login; a buyer-first user lands on the buyer homepage. Vendor → Buyer is a direct toggle
   for a vendor who completed onboarding (Mitra, 2026-09-25, MPF-22);
   **Buyer → Vendor requires completing full vendor onboarding first.**
-  > **This is the product INTENT and is not what ships today (as of 2026-09-08).** No SMS
-  > provider is configured — `signInWithOtp({ phone })` returns `phone_provider_disabled` —
-  > so live auth is **email + password with email confirmation ON**, and the phone control
-  > is a labelled "coming soon" row. `/auth/otp-verify` was deleted because it accepted any
-  > six digits and then hardcoded `setRole("buyer")`. The routing and toggle rules above are
-  > unchanged and still hold. Restoring OTP means configuring a provider first, not
-  > rebuilding the form.
+  > **What ships today (2026-10-02):** mobile number + OTP, through a **dummy OTP** that
+  > accepts any six digits (edge function `otp-dev-verify`, live since 2026-09-27, logged in
+  > `securityflags.md`), because no SMS provider is configured yet. No real-user launch while
+  > it is on (Help & Support D-14). The routing and toggle rules above hold. Replacing the
+  > dummy means configuring an SMS provider, not rebuilding the form. Sign-in is not changed
+  > by other work.
 - **"Video Closeups", never "Reels"** — product videos in the buyer feed are called Video
   Closeups. Deliberate brand/product naming decision.
 - **Audio-first matters** — many Indian manufacturers are more comfortable speaking than
