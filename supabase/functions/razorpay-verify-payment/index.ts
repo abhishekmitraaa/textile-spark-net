@@ -19,6 +19,18 @@
 //     Ad pricing doesn't vary by city count, so clamping removes no paid-for
 //     line item; failing the whole order over a targeting detail would deny a
 //     vendor who legitimately paid. (This is the deliberate choice.)
+//
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29):
+//   * A claimed order's code use is confirmed: the vendor was charged the
+//     discounted price, so the use is theirs even if the reservation lapsed
+//     while they paid. (A Free vendor's order still goes to refund review; its
+//     use stays confirmed, because the money moved.)
+//   * Demo mode applies a code the way a live order does: after the plan check,
+//     reserved against a demo_<uuid> reference, confirmed once the campaigns are
+//     in (released if not).
+//   * { orderId, free: true } fulfils an order a code took to ₹0 (no Razorpay
+//     order, so no signature), only when the order is the caller's, its stored
+//     amount is 0 and its redemption confirms.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -43,6 +55,7 @@ function json(body: unknown, status = 200): Response {
 // 'pending_review' by guard_ad_activation on INSERT, service_role included —
 // payment is never approval.
 import { buildAdRows, computeOrderPaise, type AdSpec } from "../_shared/adPricing.ts";
+import { adAmounts, confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 
 // ── Plan ad-location-scope resolution + enforcement ──
 function scopeAllowance(scope: string): number | null {
@@ -176,6 +189,8 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return { ok: true, count: 0 }; // already paid / unknown
   const order = claimed[0];
+  // Charged the discounted price, so the code's use is the vendor's.
+  if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
   const scope = await resolveAdScope(url, key, order.vendor_id);
   const decision = applyScopeToSpec(order.spec as AdSpec, scope);
   if (decision.blocked) {
@@ -203,11 +218,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ ok: false, error: "server_misconfigured" }, 500);
 
-  let body: { orderId?: string; paymentId?: string; signature?: string; spec?: AdSpec; demo?: boolean };
+  let body: { orderId?: string; paymentId?: string; signature?: string; spec?: AdSpec; demo?: boolean; free?: boolean; discountCode?: string };
   try {
     body = await req.json();
   } catch {
     return json({ error: "bad_json" }, 400);
+  }
+
+  // A code took this order to ₹0: create-order made no Razorpay order, so there
+  // is no signature to check. The stored order is the proof instead.
+  if (body.free) {
+    const vendorId = vendorIdFromJwt(req);
+    if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
+    const orderId = body.orderId;
+    if (!orderId || !orderId.startsWith("free_")) return json({ ok: false, error: "not_free" }, 400);
+    const r = await fetch(
+      `${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}&select=vendor_id,amount,status,discount_redemption_id`,
+      { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } },
+    );
+    const rows = r.ok ? await r.json() : [];
+    const o = Array.isArray(rows) && rows.length ? rows[0] : null;
+    if (!o || o.vendor_id !== vendorId) return json({ ok: false, error: "unknown_order", count: 0 });
+    if (o.status !== "created") return json({ ok: true, count: 0, already: true });
+    if (Number(o.amount) !== 0 || !o.discount_redemption_id) return json({ ok: false, error: "not_free", count: 0 });
+    if (!(await confirmDiscount(url, serviceKey, o.discount_redemption_id, orderId))) {
+      return json({ ok: false, error: "discount_unconfirmed", count: 0 });
+    }
+    return json(await publishOrder(url, serviceKey, orderId));
   }
 
   const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
@@ -224,10 +261,28 @@ Deno.serve(async (req: Request): Promise<Response> => {
       const trace = await recordDemoRefundTrace(url, serviceKey, vendorId, body.spec);
       return json({ ok: false, demo: true, error: "plan_not_eligible", refundFlagged: trace.ok, orderId: trace.orderId, count: 0 });
     }
+    // A code in demo mode goes through the same reservation a live order does,
+    // priced from the spec as the plan check left it.
+    const code = normaliseCode(body.discountCode);
+    let held: { id: string; ref: string } | null = null;
+    if (code) {
+      const lines = adAmounts(decision.spec);
+      const ref = `demo_${crypto.randomUUID()}`;
+      const v = await reserveDiscount(url, serviceKey, code, vendorId, "ad", ref, null,
+        { adRupees: lines.ads, certificateRupees: lines.certificate });
+      if (!v.ok || !v.redemption_id) {
+        return json({ ok: false, demo: true, error: "discount", reason: v.reason ?? "unavailable", count: 0 });
+      }
+      held = { id: v.redemption_id, ref };
+    }
     // Demo mode has no ad_orders row to point at, so ad_order_id stays null —
     // which is exactly why demo campaigns are unattributable revenue.
     const rows = buildAdRows(vendorId, decision.spec);
     const ok = await insertAds(url, serviceKey, rows);
+    if (held) {
+      if (ok) await confirmDiscount(url, serviceKey, held.id, held.ref);
+      else await releaseDiscount(url, serviceKey, held.id, held.ref);
+    }
     // Demo mode gets no seal grant either, and its campaigns land on
     // `pending_review` like any other, so it can no longer publish unreviewed
     // inventory or hand out a verified badge. It can still create campaigns

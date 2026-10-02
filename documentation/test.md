@@ -97,7 +97,9 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads; `12` live activity; `13` site content; `14` (2026-09-29) discount codes: pricing, reservation, expiry, supersede, confirm, release, the guessing limit and the admin RPCs. Expected cells are in each file's header |
+| `discount-race-check.sql` | Admin completion Phase 10, real concurrency: four steps run with MCP `execute_sql`. Step 2 fires simultaneous `net.http_post` calls at PostgREST `/rpc/discount_reserve`, each its own transaction. LAST: ten vendors at a code's last use, exactly one reserves. SAME: one vendor's ten checkouts on one code, exactly one stays open. Replace `SUFFIX` before running; step 4 deletes what the run made |
+| `discount-flow-check.mjs` | Admin completion Phase 10, no network: bundles the seven payment functions with esbuild and drives them against a stubbed Deno, Razorpay and database. 53 checks: the discounted price and GST, ₹0 orders, reserve and release on every failure path, confirm on verify and webhook, and demo mode |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
 | `contact-gate-check.mjs` | Vendor contact-detail gating, including caller-beats-target ordering. Since MPF-3 it also checks `call_buyer_contact()`, the server-side gate for a buyer's phone, from the vendor's side in every state (13 checks). Records the world-readable `vendor_profiles.phone` finding as INFO rather than asserting it away |
 | `profile-contact-privacy-check.mjs` | MPF-3, read-only: `profiles.email`/`phone` over HTTP as each role. Signed out: 7 routes refused 42501 with no count, the other columns readable, the 4 new functions refused. demo-buyer: others' columns refused, own row from `my_contact_info()`, admin functions refused. demo-vendor: the phone of a buyer it quoted, and a refusal for one it never quoted. demo-admin: emails. It showed 20/24 by design while the interim grant stood (MPF-19), and 24/24 since the revoke on 2026-09-24 |
@@ -202,6 +204,54 @@ file was created; they record real runs, but only those the changelog captured.
 - **Bugs the rehearsals found, fixed before the final run:** a CASE inside an IF condition ended the condition early (now parenthesised); `jsonb_array_elements(...) s` read a record, not jsonb (now `as s(slot)`); callback slots could loop forever when a time wrapped at midnight; a record field was read after a failed `select into`; the owner-argument form of `admin.audit_row_change()` wrote a NULL `own_row` for an unassigned request, so the support tables use the no-argument form and `support_ticket_staff` has no audit trigger.
 - **Not run:** the edge function (not deployed); Playwright (P7, local stack only); k6; the buyer screens (not built).
 - **Cosora-Admin:** `npm run typecheck` 0 errors; `npm run build` passes (the existing large-chunk warning only). The pages weren't opened in a browser: their functions don't exist until the migrations are applied.
+
+### 2026-09-29 — Admin completion Phase 10: discount codes (harness 19/19 twice; race 1 of 10; flow 53/53)
+- **Migrations** `20260929080502_discount_codes` and `20260929084703_discount_code_save_defaults`: each
+  rehearsed with its harness in one transaction that raised, applied, md5 matched (`a694b60d…`,
+  `464931b4…`).
+- **`scripts/admin-completion/14_discounts.sql`** (rolled back), 19/19 in the rehearsal, live, and live
+  again after the follow-up:
+  - super_admin and finance_admin list codes; vendor_ops, product_moderator, support, ads_moderator,
+    manager and a buyer get 42501; anon has no EXECUTE.
+  - A signed-in vendor can't call the four service-role RPCs or read the tables (42501).
+  - 17 bad saves → 22023, a duplicate in another case → 23505, an unknown id → P0002.
+  - Every refusal reason, and the arithmetic: 25% of ₹2,299 = ₹575; 10% of Gold = ₹230; ₹500 off a
+    ₹199 certificate = ₹199; 10% of ₹1,000 of ad lines beside a ₹199 certificate = ₹100.
+  - Ten unknown codes lock one vendor out (a real code then answers `too_many_attempts`), not another,
+    and not an hour later.
+  - The last use held by one vendor and refused to another; replaced by the same vendor's next checkout;
+    free again when it lapses (held 30 minutes); `changed`; a reused order → 23505; no order → 22023.
+  - Confirm is idempotent (same `confirmed_at`), a wrong order is `unknown`, release never undoes a
+    confirmation, a replaced order paid anyway confirms, the per-vendor limit holds.
+  - After a confirmed use the text, kind, value and plans are refused, the cap can't go below the uses;
+    dates, caps, note and on/off save.
+  - The discount columns' CHECKs refuse five inconsistent rows and take a ₹0 order.
+  - The ledger shows each discounted row, the summary totals ₹2,974 off over 3 rows, and a ₹0 invoice
+    counts as verified.
+- **`scripts/discount-race-check.sql`** (real concurrency: pg_net → PostgREST `/rpc/discount_reserve`,
+  the service-role key read from Vault inside the database): ten vendors racing for a code with one use
+  → 1 reserved, 9 `exhausted`; one vendor's ten simultaneous checkouts → all accepted, exactly 1 left
+  open and 9 released, transaction starts spread over 64 ms, 3 reservations released by a transaction
+  that began before they existed (it could only have been waiting on the lock). A two-session lock test
+  through two `execute_sql` calls didn't overlap (the tool runs them one after the other), so it isn't
+  counted. Test codes and 12 redemptions deleted; no audit rows.
+- **`scripts/discount-flow-check.mjs`** (no network): 53/53 across the seven functions, including every
+  no-code path sending exactly what it sent before. Mutation check: breaking the discount arithmetic
+  failed 10 checks; removing verify's confirm failed 1.
+- **`scripts/gst-check.mjs`**: the functions reach `gstOn` through `subscriptionAmounts()`; no code =
+  the same charge for every rupee to ₹1,00,000; 25% off Gold = ₹1,724 + ₹310; `src/lib/gst.ts` equals the
+  charged formula for every rupee to ₹1,00,000. **`scripts/ad-pricing-check.mjs`**: certificate line +
+  ad lines = the order across 4,000 generated orders.
+- **Deployed functions**: `discount-quote` v1, `subscription-create-order` v5, `-verify-payment` v6,
+  `-webhook` v5, `razorpay-create-order` v6, `-verify-payment` v11, `-webhook` v8. Sources read back.
+  Smoke with the anon key: create-order `not_configured`, verify and quote `unauthenticated`, webhooks
+  `not_configured`, CORS preflight 200.
+- **Render checks** (local builds, made-up sessions, every Supabase request answered in the browser, no
+  real writes): buyer plan checkout, refused and applied code, demo purchase body, invoice and receipt
+  lines, the ad panel's quote and re-quote and demo pay; Cosora-Admin Discounts (list, create with
+  field validation, locked edit, switch off, uses) and the ledger's discount. 0 page errors.
+- **Typecheck, i18n (7,029/7,029 hi and gu) and build**: pass in both apps. Admin `dist` holds none of
+  the old fixture's codes.
 
 ### 2026-09-29 — Reviews pipeline (migration applied, md5 matches; 14/14 SQL cases; new spec passes; 8/8 related specs)
 

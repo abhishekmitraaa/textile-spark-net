@@ -248,6 +248,22 @@ undocumented. Deep technical rationale for each lives in
   - A tax figure the browser shows needs a client mirror and a check script, as with
     `adPricing`.
   - Nothing buyer-facing charges money today: don't build or simulate a charge to use it.
+- **A discount is worked out by the server, never the browser** (admin completion Phase 10, 2026-09-29).
+  Discounts are for vendor purchases only: a plan, an ad campaign's lines, or the Verified Certificate line.
+  - The browser sends a code, never a discount or an amount. `discount-quote` gives the checkout its
+    numbers; `subscription-create-order` / `razorpay-create-order` price the order again, and the database
+    (`discount_check` / `discount_reserve`) decides what the code takes off.
+  - A code's use is held for one order under the code's row lock, then confirmed when the order is claimed
+    (verify or webhook) or released if the checkout failed. Every payment path that claims an order confirms
+    its redemption; a new one must too.
+  - Invoices come from the order's stored list price and discount (`subscription_payment_orders.list_rupees`
+    / `discount_rupees`), GST on the discounted price through `subscriptionAmounts()` in
+    `_shared/discounts.ts`, never from the plan's price at activation.
+  - A ₹0 order has no Razorpay order (`free_<uuid>`) and is fulfilled only when it is the caller's, its
+    stored amount is 0 and its redemption confirms.
+  - A certificate code discounts only `verifiedCertificate`; the Trusted Seal is an ad line
+    (`CERTIFICATE_TYPES` / `orderLineRupees()` in `_shared/adPricing.ts`).
+  - Detail: `technicalimplementation.md` → "Discount codes".
 - **A buyer's location nudges For You, and never filters it** (Phase 5 of the My Profile
   brief, 2026-09-23).
   - `for_you_products()` subtracts a small boost from the cosine distance, for ordering
@@ -477,7 +493,9 @@ undocumented. Deep technical rationale for each lives in
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
 - **Payment amounts are computed server-side, never accepted from the client**, and the
-  Razorpay account is in **live mode** — checkouts move real money. Refunds are manual.
+  Razorpay account is in **live mode**, but its keys aren't set in Supabase (checked 2026-09-29: both
+  create-order functions answer `not_configured`), so vendor checkouts run the simulated demo path and move
+  no money yet. Setting `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` makes them real charges. Refunds are manual.
 - **Total Order Value is the retention metric.** The cumulative figure of orders won through
   Cosora is the single strongest reason a vendor stays. **It is computed in exactly one
   place** — `useVendorOrderValue` in `src/lib/queries/vendorAnalytics.ts` — and both the
@@ -834,6 +852,10 @@ undocumented. Deep technical rationale for each lives in
     vendor dashboard only (Mitra: none on the buyer side). A banner's destination is a path on Cosora
     and its image is in `site-content/banners/`; the theme keeps its contrast floors. The rules live
     in the tables and the RPCs, and the buyer app checks them again.
+  - **Discount codes are `admin.discount_codes`** (admin completion Phase 10, `20260929080502`),
+    managed through the `admin_discount_*` RPCs by super_admin and finance_admin. Uses are counted from
+    `admin.discount_redemptions`, never kept as a counter. Once a code has a confirmed use, its text, discount
+    and target are fixed; make a new code instead.
 
 - **The email-confirmation link is the primary signup path, and it has to FINISH the signup.**
   `handle_new_user()` writes exactly email, full_name, phone and active_role — nothing else.

@@ -12,6 +12,9 @@
 // list is clamped to the allowed count. (Without this the webhook would be an
 // unguarded second publish path — a closed browser must not bypass the check.)
 //
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29): a claimed order's
+// code use is confirmed here too, since either path may be the one that claims.
+//
 // Setup: in the Razorpay dashboard add a webhook →
 //   URL:    https://<project>.supabase.co/functions/v1/razorpay-webhook
 //   events: payment.captured (and optionally order.paid)
@@ -22,6 +25,7 @@
 // billing fix: trustedSeal / verifiedCertificate now produce ONE campaign row
 // with product_id = null instead of one per product.
 import { buildAdRows, type AdSpec } from "../_shared/adPricing.ts";
+import { confirmDiscount } from "../_shared/discounts.ts";
 
 // ── Plan ad-location-scope resolution + enforcement (mirrors verify-payment) ──
 function scopeAllowance(scope: string): number | null {
@@ -109,6 +113,8 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return 0;
   const order = claimed[0];
+  // Charged the discounted price, so the code's use is the vendor's.
+  if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
   const scope = await resolveAdScope(url, key, order.vendor_id);
   const decision = applyScopeToSpec(order.spec as AdSpec, scope);
   if (decision.blocked) {

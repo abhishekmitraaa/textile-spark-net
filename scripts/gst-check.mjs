@@ -10,8 +10,11 @@
 //      from subscription_plans, public), both cycles, and a sweep of amounts,
 //      including the x.5 rounding edges;
 //   2. total = base + gst, and the paise amount create-order sends is total × 100;
-//   3. none of the three functions keeps its own copy: each imports gstOn and
-//      no longer defines GST_RATE.
+//   3. none of the three functions keeps its own copy: each imports gstOn, or
+//      subscriptionAmounts() from _shared/discounts.ts, which imports gstOn
+//      (admin completion Phase 10, 2026-09-29), and none defines GST_RATE;
+//   4. with no discount, subscriptionAmounts() charges exactly what gstOn() did,
+//      and with one, GST is on the discounted price.
 // Nothing buyer-facing calls gstOn() yet: buyers pay Cosora nothing today.
 //
 //   node scripts/gst-check.mjs
@@ -68,12 +71,49 @@ check("x.5 rounds as before (Math.round, half up)", edges.every((b) => gstOn(b).
   edges.map((b) => `₹${b}→${gstOn(b).gst}`).join(" "));
 check("a different rate can be passed", gstOn(1000, 0.05).gst === 50, `₹1000 @5% → ${gstOn(1000, 0.05).gst}`);
 
-// 3. No function keeps its own copy.
+// 3. No function keeps its own copy. Since Phase 10 they reach gstOn() through
+//    subscriptionAmounts(), which takes the discount off first.
+const discountsSrc = readFileSync("supabase/functions/_shared/discounts.ts", "utf8");
+check("_shared/discounts.ts imports gstOn from gst.ts", discountsSrc.includes('import { gstOn } from "./gst.ts";'));
+check("_shared/discounts.ts has no inline GST_RATE or formula", !/GST_RATE|\* 0\.18/.test(discountsSrc));
 for (const f of ["subscription-create-order", "subscription-verify-payment", "subscription-webhook"]) {
   const src = readFileSync(`supabase/functions/${f}/index.ts`, "utf8");
-  check(`${f} imports gstOn from _shared/gst.ts`, src.includes('import { gstOn } from "../_shared/gst.ts";'));
+  const viaShared = src.includes('import { gstOn } from "../_shared/gst.ts";')
+    || /import \{[^}]*\bsubscriptionAmounts\b[^}]*\} from "\.\.\/_shared\/discounts\.ts";/.test(src);
+  check(`${f} gets GST from _shared/gst.ts`, viaShared);
   check(`${f} has no inline GST_RATE or formula`, !/GST_RATE|base \* 0\.18/.test(src));
 }
+
+// 4. The discounted path: nothing changes without a code, and GST follows the discount.
+const discountsOut = path.join(dir, "discounts.mjs");
+await build({ entryPoints: ["supabase/functions/_shared/discounts.ts"], outfile: discountsOut, format: "esm", platform: "node", bundle: true, logLevel: "silent" });
+const { subscriptionAmounts } = await import(pathToFileURL(discountsOut).href);
+let noCodeBad = 0;
+for (let list = 1; list <= 100000; list += 7) {
+  const m = subscriptionAmounts(list, 0);
+  if (m.gst !== old(list) || m.paise !== (list + old(list)) * 100) noCodeBad++;
+}
+check("no code: the same charge as before", noCodeBad === 0, `${noCodeBad} differences`);
+const gold = subscriptionAmounts(2299, 575);
+check("25% off Gold monthly: GST on ₹1,724", gold.base === 1724 && gold.gst === 310 && gold.total === 2034 && gold.paise === 203400,
+  `base ₹${gold.base}, gst ₹${gold.gst}, total ₹${gold.total}`);
+// 5. The browser's copy (src/lib/gst.ts), which the plan checkout shows before a
+//    vendor pays, gives the charged answer for every whole rupee.
+const clientOut = path.join(dir, "client-gst.mjs");
+await build({ entryPoints: ["src/lib/gst.ts"], outfile: clientOut, format: "esm", platform: "node", bundle: false, logLevel: "silent" });
+const client = await import(pathToFileURL(clientOut).href);
+let mirrorBad = 0;
+for (let base = 0; base <= 100000; base++) {
+  const a = client.gstOn(base), b = gstOn(base);
+  if (a.gst !== b.gst || a.total !== b.total) mirrorBad++;
+}
+check("shown GST (src/lib/gst.ts) === charged GST, ₹0 – ₹1,00,000", mirrorBad === 0 && client.GST_RATE === GST_RATE,
+  `${mirrorBad} differences`);
+
+const full = subscriptionAmounts(699, 699);
+check("100% off: ₹0, no GST", full.total === 0 && full.gst === 0 && full.paise === 0, `total ₹${full.total}`);
+const over = subscriptionAmounts(699, 5000);
+check("a discount never exceeds the price", over.discount === 699 && over.total === 0, `discount ₹${over.discount}`);
 
 console.table(rows);
 console.log(planDetail.join("\n"));

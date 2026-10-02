@@ -477,6 +477,13 @@ rather than a supplier directory.
 
 ---
 
+### Changed 2026-09-29 (admin completion, Phase 10: discount codes)
+- **A vendor can enter a discount code** when buying a plan, an ad campaign or the Verified Certificate.
+  The server checks it and shows the new price before anything is charged; the invoice and the ad receipt
+  show the discount.
+- **Choosing a plan now opens a checkout** with the price, the code field, GST (18%) and the total,
+  before payment.
+
 ### Changed 2026-09-29 (reviews)
 - **`/reviews` has Store reviews and Product reviews tabs.** Reviews left on any of the vendor's listings (whatever its status) show with the product's name and photo and the buyer's photos. The vendor can reply once to each, as with store reviews. The buyer sees the reply on My Reviews and on the product page.
 - With no reviews, the rating reads "–" and "No reviews yet", not "0/5 POOR". Loading, a failed read and an empty list look different.
@@ -661,6 +668,15 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Quick Guides** tab on `/faqs`: the Help page's step-by-step guides in English, Hindi
   and Gujarati, for support and super_admin.
 - **The requester always sees "Cosora Support"**, never the staff member's name (D-06).
+
+### Added 2026-09-29 (admin completion, Phase 10)
+- **Discounts is real.** It used to edit sample data.
+  - Codes for a subscription plan (optionally only some plans), an ad campaign's lines, or the Verified
+    Certificate; a percentage or a flat amount; a cap, a limit per vendor, dates, on/off and a note.
+  - Each code's state (live, scheduled, expired, used up, off), its paid uses, the checkouts holding one,
+    and every order that carried it.
+  - Once a code has been used, its text, discount and target can't change.
+- **Payments:** each row shows what a discount code took off, and a search matches a code.
 
 ### Added 2026-09-29 (admin completion, Phase 9)
 - **Site content is real.** It used to edit sample data.

@@ -84,6 +84,29 @@ for (let i = 0; i < 4000; i++) {
 check(`shown price === charged price (${sweeps} generated orders)`, mismatches.length === 0,
   mismatches.slice(0, 3).join(" | "));
 
+// 3b. The split discount codes use (admin completion Phase 10): the certificate
+//     line plus the rest is the whole order, and the certificate line is ₹199 per
+//     verifiedCertificate in the order, whatever the days or products.
+let splitBad = [];
+seed = 54321;
+for (let i = 0; i < 4000; i++) {
+  const n = 1 + Math.floor(rnd() * 4);
+  const placements = Array.from({ length: n }, () => TYPES[Math.floor(rnd() * TYPES.length)]);
+  const spec = {
+    placementIds: placements, days: 1 + Math.floor(rnd() * 400),
+    items: Array.from({ length: Math.floor(rnd() * 12) }, (_, k) => ({ productId: `p${k}`, title: `P${k}`, imageUrl: null })),
+  };
+  const s = edge.orderLineRupees(spec);
+  const certs = placements.filter((p) => p === "verifiedCertificate").length;
+  if (s.certificate + s.ads !== edge.computeOrderRupees(spec) || s.total !== edge.computeOrderRupees(spec)
+      || s.certificate !== certs * edge.AD_PRICE.verifiedCertificate || s.ads < 0) {
+    splitBad.push(`[${placements}] -> cert ₹${s.certificate} + ads ₹${s.ads} vs total ₹${edge.computeOrderRupees(spec)}`);
+  }
+}
+check("certificate line + ad lines = the order (4000 generated orders)", splitBad.length === 0, splitBad.slice(0, 3).join(" | "));
+check("only the Verified Certificate is a certificate line",
+  [...edge.CERTIFICATE_TYPES].join(",") === "verifiedCertificate", [...edge.CERTIFICATE_TYPES].join(","));
+
 // 4. THE FIX: a vendor-level placement costs the same regardless of how many
 //    products the order covers. Before 2026-09-14 verifiedCertificate at 30 days
 //    across 3 products billed ₹17,910 for one printed certificate.

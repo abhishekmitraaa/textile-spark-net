@@ -10,6 +10,20 @@
 // planId + billingCycle using the vendor id from the JWT, so the subscription
 // flow works before the gateway is wired — exactly like the ad flow's
 // simulated checkout. The amount is still computed SERVER-SIDE from the plan.
+//
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29):
+//   * A claimed intent is invoiced from its own list price and discount (GST on
+//     the discounted base), not from the plan's price today, and its code's use
+//     is confirmed. An intent from before 2026-09-29 has no list price and is
+//     invoiced from the plan, as before.
+//   * The signature-verified payment id is stored on the invoice. It used to be
+//     verified and then dropped, so a live invoice read as "not
+//     gateway-verified" in the payments ledger.
+//   * Demo mode applies a code the way a live order does: reserved against a
+//     demo_<uuid> reference, confirmed once the plan is active (released if not).
+//   * { orderId, free: true } fulfils an order a code took to ₹0 (no Razorpay
+//     order, so no signature), only when the order is the caller's, its stored
+//     amount is 0 and its redemption confirms.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,8 +34,9 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "content-type": "application/json" } });
 }
 
-// GST is computed in one place for all three subscription functions (MPF-11).
-import { gstOn } from "../_shared/gst.ts";
+// GST is computed in one place for all three subscription functions (MPF-11);
+// subscriptionAmounts() applies it after the discount.
+import { confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -56,13 +71,19 @@ async function fetchPlan(url: string, key: string, planId: string): Promise<Plan
   return Array.isArray(rows) && rows.length ? rows[0] as PlanRow : null;
 }
 
+/** What the order was priced at: its list price, and the code that came off it. */
+interface Pricing { list: number; discount: number; code: string | null }
+
 interface ActivateInput {
   vendorId: string; planId: string; billingCycle: "monthly" | "yearly";
   gstNumber: string | null; paymentId: string | null; orderId: string | null;
+  /** Absent: priced from the plan (a demo activation with no code, or an intent from before the discount columns). */
+  pricing?: Pricing;
 }
 
 // Shared: upsert the subscription, cache the plan on vendor_profiles, and write
-// a paid invoice. The amount is always recomputed from the plan (server-side).
+// a paid invoice. The amount is always computed server-side: from the order's
+// stored price when it has one, else from the plan.
 async function activateSubscription(url: string, key: string, input: ActivateInput): Promise<{ ok: boolean; error?: string; planId?: string }> {
   const plan = await fetchPlan(url, key, input.planId);
   if (!plan) return { ok: false, error: "unknown_plan" };
@@ -70,8 +91,8 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
   // mode, where create-order returns not_configured before it can reject them.
   // Admins provision VIP directly; the self-serve activation path must refuse it.
   if (plan.is_invite_only) return { ok: false, error: "invite_only" };
-  const base = input.billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
-  const { gst } = gstOn(base);
+  const list = input.pricing?.list ?? (input.billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price);
+  const money = subscriptionAmounts(list, input.pricing?.discount ?? 0);
 
   const start = new Date();
   const end = new Date(start);
@@ -115,14 +136,19 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
     if (inv.ok) invoiceNumber = await inv.json();
   } catch { /* fall through with null */ }
 
+  // amount is the taxable value (after any discount) and gst_amount the GST on
+  // it, as every reader of this table already assumes; the discount sits beside.
+  const discounted = money.discount > 0;
   await fetch(`${url}/rest/v1/subscription_invoices`, {
     method: "POST",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify({
       vendor_id: input.vendorId, subscription_id: subscriptionId, plan_id: input.planId,
-      amount: base, currency: "INR", gst_amount: gst, gst_number: input.gstNumber, tds_amount: null,
+      amount: money.base, currency: "INR", gst_amount: money.gst, gst_number: input.gstNumber, tds_amount: null,
       status: "paid", razorpay_payment_id: input.paymentId, razorpay_order_id: input.orderId,
       invoice_number: invoiceNumber, billing_period_start: startIso, billing_period_end: endIso,
+      discount_amount: discounted ? money.discount : null,
+      discount_code: discounted ? input.pricing?.code ?? null : null,
     }),
   });
 
@@ -130,7 +156,7 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
 }
 
 // Claim the intent ('created' → 'paid') and activate exactly once.
-async function activateFromOrder(url: string, key: string, orderId: string): Promise<{ ok: boolean; planId?: string; already?: boolean }> {
+async function activateFromOrder(url: string, key: string, orderId: string, paymentId: string | null): Promise<{ ok: boolean; planId?: string; already?: boolean }> {
   const claim = await fetch(`${url}/rest/v1/subscription_payment_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
     method: "PATCH",
     headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=representation" },
@@ -139,9 +165,15 @@ async function activateFromOrder(url: string, key: string, orderId: string): Pro
   const claimed = claim.ok ? await claim.json() : [];
   if (!Array.isArray(claimed) || claimed.length === 0) return { ok: true, already: true }; // already paid / unknown
   const o = claimed[0];
+  // The vendor was charged the discounted price, so the code's use is theirs,
+  // even if the reservation lapsed while they paid.
+  if (o.discount_redemption_id) await confirmDiscount(url, key, o.discount_redemption_id, orderId);
   const res = await activateSubscription(url, key, {
     vendorId: o.vendor_id, planId: o.plan_id, billingCycle: o.billing_cycle,
-    gstNumber: o.gst_number ?? null, paymentId: null, orderId,
+    gstNumber: o.gst_number ?? null, paymentId, orderId,
+    pricing: o.list_rupees != null
+      ? { list: Number(o.list_rupees), discount: Number(o.discount_rupees ?? 0), code: o.discount_code ?? null }
+      : undefined,
   });
   return { ok: res.ok, planId: res.planId };
 }
@@ -154,11 +186,36 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ ok: false, error: "server_misconfigured" }, 500);
 
-  let body: { orderId?: string; paymentId?: string; signature?: string; demo?: boolean; planId?: string; billingCycle?: string; gstNumber?: string };
+  let body: {
+    orderId?: string; paymentId?: string; signature?: string; demo?: boolean; free?: boolean;
+    planId?: string; billingCycle?: string; gstNumber?: string; discountCode?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return json({ error: "bad_json" }, 400);
+  }
+
+  // A code took this order to ₹0: create-order made no Razorpay order, so there
+  // is no signature to check. The stored order is the proof instead.
+  if (body.free) {
+    const vendorId = vendorIdFromJwt(req);
+    if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
+    const orderId = body.orderId;
+    if (!orderId || !orderId.startsWith("free_")) return json({ ok: false, error: "not_free" }, 400);
+    const r = await fetch(
+      `${url}/rest/v1/subscription_payment_orders?order_id=eq.${encodeURIComponent(orderId)}&select=vendor_id,plan_id,amount,status,discount_redemption_id`,
+      { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } },
+    );
+    const rows = r.ok ? await r.json() : [];
+    const o = Array.isArray(rows) && rows.length ? rows[0] : null;
+    if (!o || o.vendor_id !== vendorId) return json({ ok: false, error: "unknown_order" });
+    if (o.status !== "created") return json({ ok: true, already: true, planId: o.plan_id });
+    if (Number(o.amount) !== 0 || !o.discount_redemption_id) return json({ ok: false, error: "not_free" });
+    if (!(await confirmDiscount(url, serviceKey, o.discount_redemption_id, orderId))) {
+      return json({ ok: false, error: "discount_unconfirmed" });
+    }
+    return json(await activateFromOrder(url, serviceKey, orderId, null));
   }
 
   const keySecret = Deno.env.get("RAZORPAY_KEY_SECRET");
@@ -170,9 +227,32 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const planId = body.planId;
     if (!planId || planId === "free") return json({ ok: false, error: "bad_plan" }, 400);
     const billingCycle = body.billingCycle === "yearly" ? "yearly" : "monthly";
+    const gstNumber = body.gstNumber ?? null;
+
+    const code = normaliseCode(body.discountCode);
+    if (!code) {
+      const res = await activateSubscription(url, serviceKey, {
+        vendorId, planId, billingCycle, gstNumber, paymentId: null, orderId: null,
+      });
+      return json({ ...res, demo: true });
+    }
+
+    // A code in demo mode goes through the same reservation a live order does.
+    const plan = await fetchPlan(url, serviceKey, planId);
+    if (!plan) return json({ ok: false, error: "unknown_plan", demo: true });
+    if (plan.is_invite_only) return json({ ok: false, error: "invite_only", demo: true });
+    const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
+    const ref = `demo_${crypto.randomUUID()}`;
+    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", ref, null, { planId, planRupees: list });
+    if (!held.ok || !held.redemption_id) {
+      return json({ ok: false, demo: true, error: "discount", reason: held.reason ?? "unavailable" });
+    }
     const res = await activateSubscription(url, serviceKey, {
-      vendorId, planId, billingCycle, gstNumber: body.gstNumber ?? null, paymentId: null, orderId: null,
+      vendorId, planId, billingCycle, gstNumber, paymentId: null, orderId: null,
+      pricing: { list, discount: held.discount_rupees ?? 0, code: held.code ?? code },
     });
+    if (res.ok) await confirmDiscount(url, serviceKey, held.redemption_id, ref);
+    else await releaseDiscount(url, serviceKey, held.redemption_id, ref);
     return json({ ...res, demo: true });
   }
 
@@ -182,6 +262,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const expected = await hmacHex(keySecret, `${orderId}|${paymentId}`);
   if (!safeEqual(expected, signature)) return json({ ok: false, error: "bad_signature" }, 200);
 
-  const result = await activateFromOrder(url, serviceKey, orderId);
+  const result = await activateFromOrder(url, serviceKey, orderId, paymentId);
   return json(result);
 });

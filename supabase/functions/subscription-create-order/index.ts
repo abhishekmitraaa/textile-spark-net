@@ -10,9 +10,21 @@
 // One-time / renewal charge only — NO Razorpay Subscriptions API, NO autopay.
 // Each billing period is its own discrete order the vendor pays explicitly.
 //
+// DISCOUNT CODES (admin completion Phase 10, 2026-09-29). `discountCode` is
+// optional. The database checks it against this plan before anything is
+// created (a refused code costs nothing), the discount comes off the plan price
+// and GST is charged on what's left (_shared/discounts.ts). Once the Razorpay
+// order exists, one use of the code is reserved against its id, under the
+// code's lock: if the last use went to someone else in between, the vendor is
+// told here and the unpaid Razorpay order simply expires. The intent stores the
+// list price, the discount and the redemption, so verify-payment and the webhook
+// invoice exactly what was charged. A code that takes the total to ₹0 makes no
+// Razorpay order: the id is free_<uuid> and verify-payment fulfils it.
+//
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET (+ platform SUPABASE_URL /
 // SUPABASE_SERVICE_ROLE_KEY). Returns { error:"not_configured" } until the
-// Razorpay keys are set, so the client falls back to the simulated checkout.
+// Razorpay keys are set, so the client falls back to the simulated checkout
+// (which applies a code itself: subscription-verify-payment, demo mode).
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,8 +39,9 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-// GST is computed in one place for all three subscription functions (MPF-11).
-import { gstOn } from "../_shared/gst.ts";
+// GST is computed in one place for all three subscription functions (MPF-11);
+// subscriptionAmounts() applies it after the discount.
+import { checkDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -69,7 +82,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const vendorId = vendorIdFromJwt(req);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
-  let payload: { planId?: string; billingCycle?: string; gstNumber?: string };
+  let payload: { planId?: string; billingCycle?: string; gstNumber?: string; discountCode?: string };
   try {
     payload = await req.json();
   } catch {
@@ -84,29 +97,56 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!plan) return json({ error: "unknown_plan" }, 400);
   if (plan.is_invite_only) return json({ error: "invite_only" }, 200); // VIP: not self-serve
 
-  const base = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
-  if (!base || base <= 0) return json({ error: "zero_amount" }, 400);
-  const { gst, total } = gstOn(base);
-  const amount = total * 100; // paise
+  const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
+  if (!list || list <= 0) return json({ error: "zero_amount" }, 400);
 
-  // 1) Create the Razorpay order.
+  // 0) The code, if any, before anything exists that it could leave behind.
+  const code = normaliseCode(payload.discountCode);
+  let discount = 0;
+  if (code) {
+    const check = await checkDiscount(url, serviceKey, code, vendorId, "subscription", { planId, planRupees: list });
+    if (!check.ok) return json({ error: "discount", reason: check.reason ?? "unavailable" }, 200);
+    discount = check.discount_rupees ?? 0;
+  }
+  const money = subscriptionAmounts(list, discount);
+  const free = money.paise === 0;
+
+  // 1) Create the Razorpay order: none when the code took the total to ₹0.
   let orderId: string;
-  try {
-    const resp = await fetch("https://api.razorpay.com/v1/orders", {
-      method: "POST",
-      headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
-      body: JSON.stringify({
-        amount, currency: "INR", receipt: `sub_${Date.now()}`,
-        notes: { kind: "subscription", vendor: vendorId, plan: planId, cycle: billingCycle },
-      }),
-    });
-    if (!resp.ok) return json({ error: "order_failed", detail: (await resp.text()).slice(0, 300) }, 200);
-    orderId = (await resp.json()).id;
-  } catch (e) {
-    return json({ error: "request_failed", detail: String(e) }, 200);
+  if (free) {
+    orderId = `free_${crypto.randomUUID()}`;
+  } else {
+    try {
+      const resp = await fetch("https://api.razorpay.com/v1/orders", {
+        method: "POST",
+        headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
+        body: JSON.stringify({
+          amount: money.paise, currency: "INR", receipt: `sub_${Date.now()}`,
+          notes: {
+            kind: "subscription", vendor: vendorId, plan: planId, cycle: billingCycle,
+            ...(code ? { discount_code: code } : {}),
+          },
+        }),
+      });
+      if (!resp.ok) return json({ error: "order_failed", detail: (await resp.text()).slice(0, 300) }, 200);
+      orderId = (await resp.json()).id;
+    } catch (e) {
+      return json({ error: "request_failed", detail: String(e) }, 200);
+    }
   }
 
-  // 2) Record the intent (service role) so activation is driven server-side.
+  // 2) Hold the code's use for this order. Refused here means another vendor
+  //    took the last use (or an admin changed the code) since step 0.
+  let redemptionId: string | null = null;
+  let heldCode: string | null = null;
+  if (code) {
+    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", orderId, discount, { planId, planRupees: list });
+    if (!held.ok || !held.redemption_id) return json({ error: "discount", reason: held.reason ?? "unavailable" }, 200);
+    redemptionId = held.redemption_id;
+    heldCode = held.code ?? code;
+  }
+
+  // 3) Record the intent (service role) so activation is driven server-side.
   //
   // Must succeed before the client opens Checkout — see the same guard in
   // razorpay-create-order. Without this row a completed payment hits
@@ -117,10 +157,19 @@ Deno.serve(async (req: Request): Promise<Response> => {
     headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}`, "content-type": "application/json", prefer: "return=minimal" },
     body: JSON.stringify({
       order_id: orderId, vendor_id: vendorId, plan_id: planId, billing_cycle: billingCycle,
-      amount, gst_number: payload.gstNumber ?? null, status: "created",
+      amount: money.paise, gst_number: payload.gstNumber ?? null, status: "created",
+      list_rupees: money.list, discount_rupees: money.discount,
+      discount_code: heldCode, discount_redemption_id: redemptionId,
     }),
   });
-  if (!ins.ok) return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
+  if (!ins.ok) {
+    // Nobody can pay an order with no intent, so its use goes back.
+    if (redemptionId) await releaseDiscount(url, serviceKey, redemptionId, orderId);
+    return json({ error: "intent_failed", detail: (await ins.text()).slice(0, 300) }, 200);
+  }
 
-  return json({ configured: true, orderId, amount, currency: "INR", keyId, base, gst, planId, billingCycle });
+  return json({
+    configured: true, orderId, amount: money.paise, currency: "INR", keyId, base: money.base, gst: money.gst,
+    planId, billingCycle, list: money.list, discount: money.discount, discountCode: heldCode, free,
+  });
 });

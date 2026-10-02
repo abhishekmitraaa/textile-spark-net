@@ -61,6 +61,10 @@ export default function InvoiceDetail() {
 
   const gst = invoice.gstAmount ?? 0;
   const total = invoice.amount + gst;
+  // `amount` is the taxable value, after any discount code (admin completion
+  // Phase 10); the plan's price is that plus the discount.
+  const discount = invoice.discountAmount ?? 0;
+  const listPrice = invoice.amount + discount;
   const fmtDate = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
   const addr = [billTo?.address_line, billTo?.area, billTo?.city, billTo?.state, billTo?.postal_code].filter(Boolean).join(", ");
 
@@ -122,8 +126,25 @@ export default function InvoiceDetail() {
           <tbody>
             <tr className="border-b border-border">
               <td className="py-3 text-sm text-foreground">{planName} plan subscription</td>
-              <td className="py-3 text-right text-sm text-foreground">{formatINR(invoice.amount)}</td>
+              <td className="py-3 text-right text-sm text-foreground">{formatINR(listPrice)}</td>
             </tr>
+            {discount > 0 && (
+              <>
+                <tr className="border-b border-border">
+                  <td className="py-3 text-sm text-muted-foreground">
+                    <span>Discount</span>
+                    {invoice.discountCode && (
+                      <span className="ml-1.5 font-mono text-xs" data-no-translate>{invoice.discountCode}</span>
+                    )}
+                  </td>
+                  <td className="py-3 text-right text-sm text-muted-foreground">−{formatINR(discount)}</td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="py-3 text-sm text-foreground">Taxable value</td>
+                  <td className="py-3 text-right text-sm text-foreground">{formatINR(invoice.amount)}</td>
+                </tr>
+              </>
+            )}
             <tr className="border-b border-border">
               <td className="py-3 text-sm text-muted-foreground">GST (18%)</td>
               <td className="py-3 text-right text-sm text-muted-foreground">{formatINR(gst)}</td>
