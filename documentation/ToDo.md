@@ -15,20 +15,168 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
-### Give the support tables' four foreign keys a covering index — added 2026-10-01
-- Task: one small migration adding indexes on `support_messages (author_id, created_at)`,
-  `support_attachments (uploader_id, created_at)`, `support_ticket_staff (reviewed_by)` and
-  `support_tickets (category)`, rehearsed, applied with Mitra's approval.
-- Context: the performance advisor lists them as unindexed foreign keys (INFO). The first two matter most:
-  `admin.support_rate_check()` filters messages and uploads by author and time on every send, so without an index
-  each send scans the whole table once it grows. The tables are empty today (rollout Off), so there is no rush
-  before P3. It wasn't part of the three migrations Mitra approved on 2026-10-01, so it wasn't added then.
-- Reference: 2026-10-01, Help & Support apply; `test.md` 2026-10-01.
+### Make "Is there any cost to register?" true, or reword it — added 2026-10-02
+- Task: either build what the Seller Registration answer lists, or have Andy reword it in Cosora-Admin `/faqs`.
+- Context: the live answer says "NO, Basic registration is free. You only pay if you opt for: • Premium listings
+  • Pay-per-lead access • Featured vendor badges". Registration is free (the Free plan), but "Basic" is the name of
+  the ₹699/month plan, so the answer reads as if that plan were free. Pay-per-lead doesn't exist (the leads answer
+  itself calls it future). "Premium listings" and "featured vendor badges" aren't products either: what sellers buy
+  are the plans and the ad placements on /advertise. Detail: the MPF-16 entry below.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Build the "Unverified Seller" label the GST answer promises, or reword it — added 2026-10-02
+- Task: either mark sellers who registered without GST as "Unverified Seller" (and decide what that does to their
+  visibility and lead access), or have Andy reword the answer.
+- Context: the live answer to "I don't have a GST number. Can I still register?" says "Yes, but your account will
+  be marked as 'Unverified Seller', which may affect visibility and lead access." Registering without GST is allowed
+  (the new documents step keeps that), but no such label exists, and nothing in search or leads looks at GST.
+  Deciding the effect on visibility and leads is a product call, not a wording one.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Tell sellers about new leads by dashboard, email or WhatsApp, as "How are leads managed?" says — added 2026-10-02
+- Task: send a seller a notification when a buyer's requirement matches them, in the app first, then by email and
+  WhatsApp; or have Andy reword the answer to what exists (leads appear on the Leads page).
+- Context: the live answer says "You'll get notified via dashboard, email, or WhatsApp when a buyer is interested.
+  In future, you can also choose pay-per-lead plans". Nothing notifies a seller about a new requirement today, in
+  the app or outside it. Email waits on Resend (the MPF-4 entry below) and WhatsApp on Meta setup (MPF-24); the
+  in-app notification could come first, through `public.notify()`.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
+- Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy
+  reword the answer.
+- Context: the live Subscription answer to "What happens when I reach my lead limit?" says "You'll receive
+  notifications as you approach your limit." Nothing sends one: the Leads page shows "N/cap leads used", and a quote
+  at the cap is refused with an upgrade prompt. (The Seller Help answer to the same question, P5, describes this
+  truthfully.) An in-app notification needs no outside service.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Send the renewal reminder the billing answer promises — added 2026-10-02
+- Task: remind a seller before their paid period ends, in the app first and by email once Resend works; or have
+  Andy reword the answer.
+- Context: the live Subscription answer to "How does billing work — is there autopay?" says "When your period nears
+  its end you'll get a renew reminder; if you don't renew, your account falls back to the Free plan." The fall-back
+  is true (the daily `subscription-expiry-sweep`); the reminder isn't sent by anything. A daily check for periods
+  ending in, say, 3 days could sit in the same sweep and notify through `public.notify()`.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Counsel: confirm collecting a masked Aadhaar at seller registration — added 2026-10-02
+- Task: counsel confirms (or changes) how registration collects the owner's Aadhaar, before it goes live.
+- Context:
+  - Andy asked for every document in the Seller Registration FAQ to be collected, Aadhaar included (2026-10-02).
+    The code had left Aadhaar out on purpose, citing the Aadhaar Act 2016 and UIDAI rules for entities that aren't
+    an authorised KUA/AUA.
+  - As built (not merged): the seller uploads a **masked** Aadhaar only (UIDAI's masked copy, first 8 digits
+    hidden), ticks a consent line, and the file goes to the private `business-docs` bucket like every KYC scan,
+    opened only by Cosora's team and deleted with the account. The number is never asked for or stored, and the
+    database refuses an Aadhaar row not marked masked (`vendor_documents_detail_check`).
+  - Open questions for counsel: whether a private marketplace may *require* it (the 2018 Puttaswamy judgment limits
+    private use of Aadhaar), or should accept another photo ID as an alternative; the consent wording; how long to
+    keep it.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "all the above DOCUMENTS should be collected during the
+  registration").
+- Status: Open
+
+### Settle the staff work-email and employee-ID formats — added 2026-10-01
+- Task: decide the template for the work email address and the employee ID that Cosora-Admin generates when a
+  manager or super admin registers a staff member. Then change the two generators to match.
+- Context:
+  - Andy, 2026-10-01: staff are registered in the admin panel with their name and contact details (personal email,
+    phone). The panel generates the employee ID, the work email and a temporary password, and the temporary password
+    goes to the personal email. Managers can register people for now. The formats are "yet to be formed".
+  - **Interim convention, used until then:**
+    - employee ID `EMP-0001`, `EMP-0002`, …, from one sequence, never reused;
+    - work email `firstname.lastname@cosora.in`, lowercase ASCII letters only, with `2`, `3`, … added when it's taken
+      (`asha.patel2@cosora.in`). A one-word name gives `firstname@cosora.in`.
+  - The work email is the admin-panel sign-in name. Nothing creates a mailbox for it, so mail sent to it (including
+    Supabase's "forgot password" email) goes nowhere until cosora.in has those mailboxes. Meanwhile a manager uses
+    "Send a new temporary password" on the Admins page.
+  - Where to change it: `admin.staff_next_employee_id()` and `admin.staff_work_email()` (the staff-registry
+    migration in `supabase/migrations/`). Existing staff keep the IDs and emails they were given.
+- Reference: 2026-10-01, the Help & Support owner answers (P0 "name the Support staff, with the email each signs in
+  with"; Andy: "for now you do the convention but also add this task in the todo.md").
+- Status: Open
+
+### Set the date the dummy sign-in code is switched off — added 2026-10-01
+- Task: give the date the dummy OTP (`otp-dev-verify`) is switched off. On that day set the edge-function secret
+  `OTP_DEV_BYPASS=off`, then review the accounts it created (`app_metadata.created_by = otp-dev-verify`).
+- Context:
+  - Decision D-14 (`documentation/help-feature-plan.md`): Help & Support doesn't launch to real users while the
+    dummy is on. It is part of launch gate G1, so support stays at rollout Off or Staff until then.
+  - The dummy accepts any 6 digits for any phone number (`securityflags.md`, 2026-09-27, High). Switching it off
+    before real SMS delivery works leaves phone sign-in with no way in, so the date depends on "Wire up mobile OTP
+    delivery" below as well.
+- Reference: 2026-10-01, the Help & Support owner answers (Andy: "i'll tell you, keep that in todo.md").
+- Status: Open, waiting for the date.
+
+### Plan the Supabase upgrade — added 2026-10-01
+- Task: choose the paid plan and the date, upgrade, then run the checks below.
+- Context:
+  - Decision D-05: the project is on the Free plan, and an upgrade is planned. Andy, 2026-10-01: "supabase upgrade
+    will happen soon."
+  - Free-plan limits this project already runs into: the 500 MB database cap (cron history once reached 63% of it,
+    `securityflags.md` 2026-09-23); 5 GB of egress a month, shared with support attachments; 200 Realtime
+    connections, shared by chat, notifications and support (help plan A3).
+  - Waiting for it: video attachments in support (D-09); a branch database for the Playwright specs, the test plan's
+    fallback when the local stack isn't available (help plan section 4); headroom for the 10k-concurrent-user target
+    (admin completion plan).
+  - Check the plan page for the paid tier's current limits and price before choosing.
+  - **After the upgrade:** run the security and performance advisors; check that every cron job still runs
+    (`admin_cron_status()`); check that edge-function secrets are unchanged; then decide on video (P8).
+- Reference: 2026-10-01, the Help & Support owner answers (P0 "plan the Supabase upgrade"; Andy: "keep that in
+  todo.md").
+- Status: Open
+
+### Counsel: word the Terms' refund clause — added 2026-10-01
+- Task: counsel writes or approves the refund wording in the Terms, so that the Terms state the Subscription page's
+  7-day money-back guarantee instead of contradicting it. Then update `src/pages/TermsConditions.tsx`.
+- Context:
+  - The live Subscription FAQ says: "We offer a 7-day money-back guarantee for first-time subscribers. If you're not
+    satisfied, contact us for a full refund." The Terms say "Fees are non-refundable unless stated otherwise."
+    Detail: the MPF-17 entry below.
+  - Decision D-11: refunds are a manual process (support passes the request to finance, who refund by hand in
+    Razorpay). That process is Mitra's to write and is still open. The Help billing topic stays switched off until
+    both the wording and the process exist (launch gate G1).
+  - Update 2026-10-02: the process now exists in the app (built, not merged; see MPF-17 below): the seller asks on
+    `/subscription`, finance refunds through Razorpay and closes the request in Cosora-Admin. Only the Terms
+    wording remains for counsel.
+- Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the Terms wording on refunds; add to todo.md").
+- Status: Open
+
+### Add a Privacy Policy page — added 2026-10-01
+- Task: counsel writes a Privacy Policy; the app gets a page for it, and every "Privacy Policy" link points there.
+- Context:
+  - No such page exists. Its links go to `/terms` (`MyStore.tsx`) or `#` (`Register.tsx`), found on 2026-09-30.
+  - Help & Support adds personal data the policy should cover: support chats, photos, voice notes and PDFs, callback
+    numbers, fraud reports with their evidence, and feedback. Retention: a fraud report is kept for a year, and a
+    confirmed fraud is kept as a lasting record of who did what and the action taken (D-16, revised 2026-10-01). A
+    deleted account's support messages and files are scrubbed.
+  - Also to cover: Microsoft Clarity's session replay once it's switched on (`securityflags.md`, 2026-09-28).
+  - Which law applies, and the wording, are for counsel.
+- Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the missing Privacy Policy page. add to
+  todo.md").
 - Status: Open
 
 ### Name Cosora's Grievance Officer and publish the grievance page — added 2026-09-30
 - Task: choose who is Cosora's Grievance Officer and record their name, designation and a contact email. Then switch
-  on the `/grievance` page, which the Help build creates hidden (Help plan P6c).
+  on the `/grievance` page, which the Help build creates hidden (Help plan P6c). **Built 2026-10-01 (branch
+  `help-support/p6-background`):** fill in `GRIEVANCE_OFFICER` in `src/lib/grievance.ts`, with the reply times counsel
+  confirms; then link the page from Help and the Terms, and add it to the sitemap.
 - Context:
   - Indian rules may require a named Grievance Officer with published contact details and reply times. The IT
     (Intermediary Guidelines) Rules 2021 ask for acknowledgement within 24 hours and resolution within 15 days; the
@@ -213,7 +361,7 @@ with no need to dictate format, context, or reference each time.
   "faqs"). An FAQ edited in the admin shows in English until its new text is added there and
   translated in code. The same applies to `subscription_plans.display` values and `notify()` texts.
 - Reference: 2026-09-26, the language-translation fix.
-- Status: Open
+- Status: Built 2026-10-01 in Help & Support P5 (branch `help-support/p5-content`): `faqs.translations`, Hindi and Gujarati fields in Cosora-Admin Edit, and the app shows a stored translation first. Done once `20261001130000` and `20261001130100` are applied and the branch is merged. `subscription_plans.display` and `notify()` texts still use the catalogues.
 
 ### Decide whether the Supplier Agreement gets a reviewed translation — added 2026-09-26
 - Task: if vendors should read the agreement in Hindi or Gujarati, have the text translated and
@@ -414,10 +562,18 @@ with no need to dictate format, context, or reference each time.
   - **Not the same as** "Configure a custom SMTP provider for Supabase Auth" (above). That is
     an Auth setting, and this is a secret on one edge function. One Resend account can serve
     both, but setting one doesn't set the other.
+  - **Now needed for more than deletion (2026-10-01).** Two more functions send through the same key:
+    - `support-receipt`, Help & Support's email receipt for feedback and fraud reports (D-20, D-22). Resend is part
+      of support's launch gate G1 (D-23).
+    - `admin-staff-register`, which emails a newly registered staff member their temporary password at their
+      personal address. Until Resend works, the panel shows the password once to the person registering them.
+
+    Edge-function secrets are project-wide, so setting `RESEND_API_KEY` and `RESEND_FROM` once serves all three.
 - Reference: My Profile brief, Phase 25 (2026-09-25). That docs-only phase asked for MPF-4,
   MPF-10, MPF-14 and MPF-15 to be logged here and left as they are for now, not fixed. The flag
   itself was found in Phase 2 (2026-09-23), when account deletion was built.
   Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+  Extended 2026-10-01, Help & Support owner answers (Andy: "set up Resend; add this to TODO.md").
 - Priority: High for the feature (MPF-4's severity). Until it's done, no buyer can delete an
   email-based account online.
 - Status: Open
@@ -564,7 +720,7 @@ with no need to dictate format, context, or reference each time.
   `/profile/help/chat` (canned replies).
   Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
 - Priority: Medium (MPF-15's severity)
-- Status: Open (waiting on the decision; the chat fix doesn't need it)
+- Status: Open. Part 2 is done in Help & Support P1 (branch `help-support/p1-honesty`, 2026-10-01): both canned chats are gone. Part 1 was decided as D-01/D-02 (vendor help gets its own FAQ surface, `seller_help`, in P5). Until then, P1 shows sellers on `/help` a note that the answers are for buyers, with the phone and email. Close this when P5 ships. **P5 built (2026-10-01, branch `help-support/p5-content`):** 17 Seller Help FAQs on `/help` for sellers; live once the migrations are applied and the branch is merged.
 
 ### Decide whether Andy's Seller Registration and Subscription FAQ answers change, or the product catches up (MPF-16) — added 2026-09-25
 - Task: decide, for each of Andy's answers that doesn't match the product, whether Andy rewords it
@@ -605,8 +761,15 @@ with no need to dictate format, context, or reference each time.
     catches up. Each row is independent.
 
 - Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Update 2026-10-02 (Andy: the product should do what these say): the documents row and both
+  upgrade/downgrade rows are built (branch `faq-truth/registration-plans-refunds`, not merged). Registration now
+  asks for the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, an
+  incorporation certificate, a shop licence or a partnership deed), a masked Aadhaar, and a catalogue or a first
+  product; an upgrade is prorated and a downgrade starts at the next period. The other rows (cost to register,
+  "Unverified Seller", lead notifications, lead-limit notifications, and the renewal reminder) have their own entries
+  at the top of Open.
 - Priority: Medium (vendors are told about proration, alerts and documents that don't match)
-- Status: Open
+- Status: Open (until the branch is merged and live)
 
 ### Resolve the Subscription FAQ's 7-day money-back promise against the Terms, and make a refund possible (MPF-17) — added 2026-09-25
 - Task: make the public 7-day money-back promise on `/subscription` true: state it in the Terms,
@@ -634,8 +797,14 @@ with no need to dictate format, context, or reference each time.
       process support follows.
 
 - Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Update 2026-10-02 (Andy: "the app should do what the FAQ says"): built, not merged. A first-time
+  subscriber asks on `/subscription` within 7 days of their first payment (`refund_guarantee_request`); finance
+  refunds each payment through Razorpay in Cosora-Admin (`admin-refund-payment`, unchanged) and closes the request,
+  which ends the plan (`admin_refund_guarantee_close`). Only money that went through Razorpay is offered back, so
+  nothing shows until the Razorpay keys are set ("Turn on real vendor payments" above). The Terms still say fees are
+  non-refundable: "Counsel: word the Terms' refund clause" above.
 - Priority: Medium (a public financial promise the Terms contradict)
-- Status: Open
+- Status: Open (until the branch is merged, the keys are set and the Terms are reworded)
 
 ### Never deploy otp-dev-verify as it is; harden it or delete it once SMS works (MPF-21) — added 2026-09-25
 - Task: keep `supabase/functions/otp-dev-verify/` undeployed and uncommitted. Before it is ever
@@ -742,6 +911,20 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Give the support tables' four foreign keys a covering index — added 2026-10-01
+- Task: one small migration adding indexes on `support_messages (author_id, created_at)`,
+  `support_attachments (uploader_id, created_at)`, `support_ticket_staff (reviewed_by)` and
+  `support_tickets (category)`, rehearsed, applied with Mitra's approval.
+- Context: the performance advisor lists them as unindexed foreign keys (INFO). The first two matter most:
+  `admin.support_rate_check()` filters messages and uploads by author and time on every send, so without an index
+  each send scans the whole table once it grows. The tables are empty today (rollout Off), so there is no rush
+  before P3. It wasn't part of the three migrations Mitra approved on 2026-10-01, so it wasn't added then.
+- Reference: 2026-10-01, Help & Support apply; `test.md` 2026-10-01.
+- Status: Done
+- Completed: 2026-10-01 — migration `20261001113143_support_fk_indexes.sql`, rehearsed and applied (Andy: "fix if
+  needed"); the file matches the live statement (md5). Its self-check fails if any support foreign key is left
+  without a leading index.
 
 ### Revoke the vendor private columns (admin completion Phase 4b) — added 2026-09-28
 - Task: once both apps run the Phase 4a code in production, replace table SELECT on

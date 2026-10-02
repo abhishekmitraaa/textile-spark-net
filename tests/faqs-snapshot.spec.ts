@@ -55,6 +55,7 @@ const TRACKING = /\/rest\/v1\/rpc\/(log_engagement_event|ad_impression|ad_click|
 const snapshotUrl = (surface: Surface) => `${SUPABASE_URL}/storage/v1/object/public/faq-snapshots/${surface}.json`;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+// seller_help (P5) is served at /help to signed-in sellers; scripts/faq-snapshot-check.mjs covers its file.
 type Surface = "buyer_help" | "seller_registration" | "subscription";
 type Row = { id: string; category_label: string | null; question: string };
 

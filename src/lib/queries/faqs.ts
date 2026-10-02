@@ -23,7 +23,12 @@ import { supabase } from "@/lib/supabase";
 // open keeps what it has for FAQ_STALE_TIME_MS.
 // ─────────────────────────────────────────────────────────────
 
-export type FaqSurface = "buyer_help" | "seller_registration" | "subscription";
+// seller_help (Help & Support P5, 2026-10-01): the Help page for sellers. A new surface is
+// listed in five places; the migration 20261001130000 names them all.
+export type FaqSurface = "buyer_help" | "seller_help" | "seller_registration" | "subscription";
+
+/** Stored translations (P5, 2026-10-01): written in Cosora-Admin, cleared when the English changes. */
+export type FaqTranslations = Partial<Record<"hi" | "gu", { question: string; answer: string }>>;
 
 export interface FaqRow {
   id: string;
@@ -31,6 +36,31 @@ export interface FaqRow {
   question: string;
   answer: string;
   position: number;
+  translations?: FaqTranslations;
+}
+
+/**
+ * The question and answer in the reader's language. A stored translation wins; without
+ * one, the English comes back with `stored: false` and the page translator (AutoTranslate)
+ * may still find it in the catalogues, as before P5. Render stored text inside
+ * data-no-translate so the translator leaves it alone.
+ */
+export function faqText(row: FaqRow, lang: string): { question: string; answer: string; stored: boolean } {
+  const t = lang === "hi" || lang === "gu" ? row.translations?.[lang] : undefined;
+  if (t?.question && t.answer) return { question: t.question, answer: t.answer, stored: true };
+  return { question: row.question, answer: row.answer, stored: false };
+}
+
+function parseTranslations(v: unknown): FaqTranslations | undefined {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return undefined;
+  const out: FaqTranslations = {};
+  for (const lang of ["hi", "gu"] as const) {
+    const t = (v as Record<string, unknown>)[lang] as { question?: unknown; answer?: unknown } | undefined;
+    if (t && typeof t.question === "string" && typeof t.answer === "string" && t.question && t.answer) {
+      out[lang] = { question: t.question, answer: t.answer };
+    }
+  }
+  return out;
 }
 
 export const FAQ_SNAPSHOT_BUCKET = "faq-snapshots";
@@ -62,7 +92,12 @@ export function parseFaqSnapshot(doc: unknown, surface: FaqSurface): FaqRow[] | 
     ) {
       return null;
     }
-    rows.push({ id: r.id, category_label: r.category_label as string | null, question: r.question, answer: r.answer, position: r.position });
+    rows.push({
+      id: r.id, category_label: r.category_label as string | null, question: r.question, answer: r.answer,
+      position: r.position,
+      // Optional: files written before P5 have none, and still parse.
+      translations: parseTranslations(r.translations),
+    });
   }
   return rows;
 }
@@ -91,16 +126,24 @@ async function fromSnapshot(surface: FaqSurface): Promise<FaqRow[] | null> {
  * by whatever RLS lets them see, not by what buyers get.
  */
 async function fromTable(surface: FaqSurface): Promise<FaqRow[]> {
-  const { data, error } = await supabase
-    .from("faqs")
-    .select("id, category_label, question, answer, position")
-    .eq("surface", surface)
-    .eq("active", true)
-    .order("position", { ascending: true })
-    .order("created_at", { ascending: true })
-    .order("id", { ascending: true });
+  const query = (columns: string) =>
+    supabase
+      .from("faqs")
+      .select(columns)
+      .eq("surface", surface)
+      .eq("active", true)
+      .order("position", { ascending: true })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+  let { data, error } = await query("id, category_label, question, answer, position, translations");
+  // 42703: no translations column yet (this build reached users before the P5
+  // migration). Read what there is rather than showing no FAQs.
+  if (error?.code === "42703") ({ data, error } = await query("id, category_label, question, answer, position"));
   if (error) throw error;
-  return data ?? [];
+  return ((data ?? []) as unknown as (FaqRow & { translations?: unknown })[]).map((r) => ({
+    ...r,
+    translations: parseTranslations(r.translations),
+  }));
 }
 
 /** One surface's active FAQs, in admin order: the CDN snapshot, or the table if that fails. */

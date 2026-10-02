@@ -18,7 +18,10 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
-import { useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription } from "@/lib/queries/subscriptions";
+import {
+  useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription, type ChangeKind,
+} from "@/lib/queries/subscriptions";
+import { RefundGuaranteeCard } from "@/components/vendor/RefundGuaranteeCard";
 import { discountRefusal } from "@/lib/queries/discounts";
 import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
 import { PlanCheckoutDialog } from "@/components/vendor/PlanCheckoutDialog";
@@ -120,8 +123,9 @@ export default function Subscription() {
   };
 
   // The dialog's Pay. Resolves to why a discount code was refused (the dialog
-  // shows it and drops the code), or null.
-  const completePurchase = async (plan: Plan, discountCode?: string): Promise<string | null> => {
+  // shows it and drops the code), or null. `kind` is what the database said this
+  // purchase is (new, renewal, upgrade, downgrade), so the toast says what happened.
+  const completePurchase = async (plan: Plan, discountCode?: string, kind?: ChangeKind): Promise<string | null> => {
     setBusyPlan(plan.id);
     try {
       const res = await purchaseSubscription({
@@ -134,9 +138,26 @@ export default function Subscription() {
       if (res.ok) {
         qc.invalidateQueries({ queryKey: ["vendor_plan"] });
         qc.invalidateQueries({ queryKey: ["subscription_invoices"] });
+        qc.invalidateQueries({ queryKey: ["plan_change_preview"] });
+        qc.invalidateQueries({ queryKey: ["refund_guarantee"] });
         setCheckoutPlan(null);
-        toast.success(res.demo ? `${plan.name} activated (demo mode)` : `You're now on ${plan.name}!`, {
-          description: res.demo ? "Simulated checkout — add Razorpay keys for live payments." : "Your new plan is active.",
+        const demoNote = "Simulated checkout — add Razorpay keys for live payments.";
+        if (kind === "downgrade") {
+          toast.success(res.demo ? `${plan.name} is paid for (demo mode)` : `${plan.name} is paid for`, {
+            description: res.demo ? demoNote : "It starts when your current plan ends.",
+          });
+        } else if (kind === "renewal") {
+          toast.success(res.demo ? `${plan.name} renewed (demo mode)` : `${plan.name} renewed`, {
+            description: res.demo ? demoNote : "Your plan now runs for another period.",
+          });
+        } else {
+          toast.success(res.demo ? `${plan.name} activated (demo mode)` : `You're now on ${plan.name}!`, {
+            description: res.demo ? demoNote : "Your new plan is active.",
+          });
+        }
+      } else if (res.error === "already_scheduled") {
+        toast("You've already paid for your next plan period", {
+          description: "You can change plans again once it starts.",
         });
       } else if (res.error === "invite_only") {
         toast("Cosora VIP is invite-only");
@@ -206,6 +227,13 @@ export default function Subscription() {
                       <Clock className="h-3.5 w-3.5" />
                       {daysRemaining != null ? `${daysRemaining} days until renewal` : "No renewal — free forever"}
                     </CardDescription>
+                    {/* A paid downgrade waiting for this period to end (Subscription
+                        FAQ: "Downgrades will take effect from your next billing cycle"). */}
+                    {vplan?.scheduled_plan_id && vplan.scheduled_from && (
+                      <p className="mt-1 text-xs font-medium text-foreground">
+                        {`Switching to ${vplan.scheduled_plan_name ?? vplan.scheduled_plan_id} on ${new Date(vplan.scheduled_from).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}. It's paid for.`}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <div className="text-right">
@@ -244,6 +272,9 @@ export default function Subscription() {
           </Card>
         </motion.div>
 
+        {/* The 7-day money-back guarantee, while it applies (shows nothing otherwise). */}
+        <RefundGuaranteeCard vendorId={user?.id} />
+
         {/* Plan cards — all five tiers, live */}
         {plansLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
@@ -255,6 +286,20 @@ export default function Subscription() {
               const style = tierStyle(plan.id);
               const popular = plan.id === "gold";
               const busy = busyPlan === plan.id;
+              // What choosing this card does, in the database's terms (plan changes,
+              // 2026-10-02): the current plan renews; a higher one is an upgrade
+              // that starts now; a lower one starts when this period ends.
+              const paidActive = currentPlanId !== "free";
+              const sameCycle = (vplan?.billing_cycle ?? "monthly") === billingCycle;
+              const nextPaid = Boolean(vplan?.scheduled_plan_id);
+              const renewBlocked = isCurrent && sameCycle && nextPaid;
+              const action = !paidActive || plan.is_invite_only
+                ? `Choose ${plan.name}`
+                : isCurrent
+                  ? (sameCycle ? `Renew ${plan.name}` : billingCycle === "yearly" ? "Switch to yearly" : "Switch to monthly")
+                  : plan.sort_order > (currentPlan?.sort_order ?? 0)
+                    ? `Upgrade to ${plan.name}`
+                    : `Switch to ${plan.name}`;
               return (
                 <motion.div key={plan.id} variants={listItem} className="relative">
                   {popular && (
@@ -304,15 +349,15 @@ export default function Subscription() {
                         <Button
                           variant={popular ? "gold" : "outline"}
                           className="w-full"
-                          disabled={isCurrent || busy || plan.id === "free"}
+                          disabled={busy || plan.id === "free" || renewBlocked || (isCurrent && plan.is_invite_only)}
                           onClick={() => buy(plan)}
                         >
                           {busy ? (
                             <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Processing…</>
-                          ) : isCurrent ? "Current Plan"
-                            : plan.id === "free" ? "Default"
+                          ) : plan.id === "free" ? (isCurrent ? "Current Plan" : "Default")
+                            : renewBlocked || (isCurrent && plan.is_invite_only) ? "Current Plan"
                             : plan.is_invite_only ? (<><Lock className="mr-1 h-3.5 w-3.5" /> Request access</>)
-                            : (<>Choose {plan.name}<ArrowRight className="ml-1 h-4 w-4" /></>)}
+                            : (<>{action}<ArrowRight className="ml-1 h-4 w-4" /></>)}
                         </Button>
                       </div>
                     </CardContent>

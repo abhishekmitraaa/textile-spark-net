@@ -39,3 +39,5 @@ playwright-report/
 # Machine-local; never publish them from a public repo.
 .claude/tmp/
 .impeccable/
+# Local-stack Playwright report (playwright.local.config.ts)
+playwright-report-local/

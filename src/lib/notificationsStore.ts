@@ -276,7 +276,12 @@ const KIND_META: Record<string, {
   /** Where this kind sends the vendor, when it is not a chat notification. */
   href?: string;
 }> = {
-  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support" },
+  account_suspended:   { type: "system",  tone: "warning",  group: "updates", actionLabel: "Contact support", href: "/help/chat?category=account" },
+  // Help & Support (plan P3e): what Cosora Support's functions send through support_notify().
+  support_reply:       { type: "message", tone: "neutral",  group: "updates", actionLabel: "See the reply",   href: "/help/requests" },
+  support_status:      { type: "system",  tone: "neutral",  group: "updates", actionLabel: "See the request", href: "/help/requests" },
+  support_callback:    { type: "system",  tone: "neutral",  group: "updates", actionLabel: "See the request", href: "/help/requests" },
+  support_receipt:     { type: "system",  tone: "positive", group: "updates", actionLabel: "See the request", href: "/help/requests" },
   account_reinstated:  { type: "system",  tone: "positive", group: "updates", actionLabel: "Go to dashboard" },
   chat_locked:         { type: "message", tone: "warning",  group: "updates", actionLabel: "Open chat" },
   chat_resumed:        { type: "message", tone: "positive", group: "updates", actionLabel: "Open chat" },
@@ -287,6 +292,11 @@ const KIND_META: Record<string, {
   // an approval is positive and goes to the same place to show the new status.
   kyc_approved:        { type: "system",  tone: "positive", group: "updates", actionLabel: "View KYC",   href: "/kyc" },
   kyc_rejected:        { type: "system",  tone: "warning",  group: "updates", actionLabel: "Re-check KYC", href: "/kyc" },
+  // Plans (2026-10-02): a paid downgrade starting, and the 7-day money-back guarantee.
+  subscription_changed:  { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  subscription_canceled: { type: "system", tone: "warning",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  refund_requested:      { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  refund_processed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your plan", href: "/subscription" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {

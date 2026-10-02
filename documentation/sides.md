@@ -132,6 +132,13 @@ the demand side of India's fashion and textile supply chain.
     saved items, follows, recently viewed, video likes and notifications. A session
     still open elsewhere can't change anything afterwards.
   - Sellers, admins and suspended accounts are sent to support instead.
+- **Help & Support** (P3, 2026-10-01; works once rollout includes the person, call and email always):
+  - chat with "Cosora Support", with photos, PDFs and voice notes;
+  - book a callback in support hours;
+  - report fraud in the app, with evidence only Cosora can open;
+  - send app feedback;
+  - follow everything in **My requests** (`/help/requests`), with in-app notifications on replies;
+  - "Contact support" in KYC, payments, ads, calls, chats, account deletion and the suspension notice opens a chat about that item.
 - **Help FAQs are managed by the Cosora team** (2026-09-23). The questions on Help & Support
   come from the admin panel, so they can be corrected without an app release. Several
   current answers describe things Cosora doesn't do yet (escrow, order tracking, team
@@ -410,8 +417,9 @@ rather than a supplier directory.
   order the vendor pays explicitly.
   The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
   button that opens the Help page, as Andy asked. That's the buyer help page: its email
-  link (hello@cosora.in) is the only real support channel a vendor has, and its chat sends
-  canned replies (MPF-15). Some of Andy's plan answers promise what billing doesn't do yet:
+  link (hello@cosora.in) and phone line (+91 88155 78226) are the real support channels a vendor
+  has; since Help & Support P1 (2026-10-01) it has no canned chat, and it tells sellers its
+  answers are written for buyers (MPF-15). Some of Andy's plan answers promise what billing doesn't do yet:
   proration, limit notifications and a 7-day refund (MPF-16, MPF-17).
 - **Seller FAQ on the landing page** (`/seller`, 2026-09-23): Andy's 10 registration
   questions, editable from the admin panel. They're published verbatim, though some don't
@@ -467,6 +475,16 @@ rather than a supplier directory.
 5. Receive leads and quote requests; respond with quotes.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
+
+### Changed 2026-10-02 (FAQ input; built, not live)
+- **Registration asks for the Seller Registration FAQ's documents:** the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, incorporation certificate, shop licence or partnership deed), the owner's masked Aadhaar with consent, and a catalogue or a first product. The documents step can't be skipped.
+- **`/kyc`** shows all five; a seller registered earlier adds what's missing on its row.
+- **Plans:** an upgrade starts now, less what's left of the current plan; a lower plan is paid now and starts when the current period ends ("Switching to Silver on …"); renewing adds a period from the end. Buttons say Upgrade, Switch or Renew.
+- **7-day money-back guarantee:** for a first plan, the seller asks for a full refund on `/subscription` within 7 days of the first payment (shown only when money went through Razorpay).
+
+### Changed 2026-10-01 (Help & Support P5; built, not live)
+- **Seller Help:** `/help` shows sellers their own questions: KYC, leads, listings and videos, advertising, plans and billing, account and suspension. Each is in Hindi and Gujarati, edited in Cosora-Admin `/faqs`.
+- **Quick Guide:** "How to Complete Verification".
 
 ### Constraints that shape the vendor UI
 - Every vendor page must wrap in `DashboardLayout`.
@@ -643,6 +661,15 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-01 (staff registration; built, not live)
+- **Register a staff member** (Admins page, super admin and manager; a manager registers into the team roles only): name, personal email, mobile number and role. The panel generates the employee ID (`EMP-0001`) and the work email the person signs in with, and sends a temporary password to their personal email, or shows it once while email isn't set up. The person chooses their own password at first sign-in.
+- **Staff directory:** everyone registered, with "New temporary password" for someone locked out. The Admin Log records both.
+- The ID and email formats are interim (`ToDo.md`).
+
+### Added 2026-10-02 (FAQ input; built, not live)
+- **Subscriptions:** a "7-day money-back guarantee" panel lists each request with its payments; refund each through Razorpay, then "Close and end the plan". A paid downgrade shows under the current period.
+- **KYC panel:** names the business registration (with its kind and number), the masked Aadhaar and each catalogue file.
 
 ### Added 2026-09-30, live 2026-10-01 (Help & Support P4; rollout Off, so no requests arrive yet)
 - **Support section** in Cosora-Admin, for super_admin and the Support role, with the

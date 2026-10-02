@@ -57,6 +57,11 @@ const IGNORE = new Set([
   "wght@300;400;500;600;700;800", "wght@300;400;500;700;900", "wght@300;400;500;600;700", "wght@300;400;700",
   // components/ui/carousel.tsx: thrown only when a developer misuses the hook.
   "useCarousel must be used within a <Carousel />",
+  // pages/ReportFraud.tsx: lines of the email body Cosora staff receive. English on
+  // purpose, and never on the page, so the translator never sees them.
+  "What happened:", "(Screenshots attached, if any.)",
+  // hooks/useVoiceRecorder.ts: MediaRecorder formats (a MIME type with a codec), not text.
+  "audio/webm;codecs=opus", "audio/ogg;codecs=opus",
 ]);
 
 const DISPLAY_ATTRS = new Set([

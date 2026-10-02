@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -141,6 +142,8 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
     { label: "Star chat", icon: StarIcon, onClick: () => { setMenuOpen(false); toast.success("Chat starred"); } },
     { label: "Archive chat", icon: Archive, onClick: () => { setMenuOpen(false); toast.success("Chat archived"); } },
     { label: "Report", icon: Flag, onClick: () => { setMenuOpen(false); setReportOpen(true); } },
+    // Help & Support P3e: a chat with Cosora Support about this conversation.
+    { label: "Get help with this chat", icon: Flag, onClick: () => { setMenuOpen(false); navigate(supportChatHref({ category: "buyer_chat", entityType: "conversation", entityId: conversationId })); } },
     { label: "Block Vendor", icon: Ban, danger: true, onClick: () => { setMenuOpen(false); blockVendor(); } },
     { label: "Delete chat", icon: Trash2, danger: true, onClick: () => { setMenuOpen(false); toast.success("Chat deleted"); navigate(inboxHref); } },
   ];

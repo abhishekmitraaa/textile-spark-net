@@ -64,8 +64,18 @@ function reset(over = {}) {
     failIntent: false, failSubscription: false, failAds: false,
     adScope: "pan_india",
     razorpaySeq: 0,
+    // Plan changes (2026-10-02): what subscription_quote_for / subscription_activate
+    // answer. null = a first purchase at the plan's price.
+    quote: null, activation: null,
     ...over,
   };
+}
+const PERIOD = { period_start: "2026-10-02T00:00:00.000Z", period_end: "2026-11-02T00:00:00.000Z" };
+function defaultQuote(body) {
+  const plan = S.plans[body.p_plan];
+  const price = plan ? (body.p_cycle === "yearly" ? plan.yearly_price : plan.monthly_price) : 0;
+  return { ok: true, kind: "new", plan_id: body.p_plan, billing_cycle: body.p_cycle, list_rupees: price,
+           credit_rupees: 0, charge_rupees: price, starts_now: true, ...PERIOD };
 }
 const res = (body, status = 200) => new Response(body === undefined ? null : JSON.stringify(body), { status });
 const q = (u, k) => new URL(u).searchParams.get(k);
@@ -86,6 +96,12 @@ globalThis.fetch = async (input, init = {}) => {
   if (p === "/rest/v1/rpc/discount_confirm") return res({ ok: S.confirmOk });
   if (p === "/rest/v1/rpc/discount_release") return res({ ok: true });
   if (p === "/rest/v1/rpc/next_invoice_number") return res("INV-0001");
+  if (p === "/rest/v1/rpc/subscription_quote_for") return res(S.quote ?? defaultQuote(body));
+  if (p === "/rest/v1/rpc/subscription_activate") {
+    if (S.failSubscription) return res({ message: "boom" }, 500);
+    S.subsUpserts.push(body);
+    return res({ ...(S.activation ?? S.quote ?? defaultQuote(body)), subscription_id: "sub-1" });
+  }
 
   if (p === "/rest/v1/subscription_plans") {
     const plan = S.plans[eqv(url, "id")];
@@ -406,6 +422,71 @@ check("G4 no code: invalid, no database call", r.body.reason === "invalid" && S.
 reset();
 r = await call("discount-quote", { kind: "subscription", planId: "vip", billingCycle: "monthly", code: "LAUNCH25" });
 check("G5 invite-only plan: not quoted", r.body.reason === "invite_only" && rpcCalls("discount_check").length === 0);
+
+// ── H. plan changes (2026-10-02): the charge comes from the database's rule ──
+const UPGRADE = { ok: true, kind: "upgrade", plan_id: "gold", billing_cycle: "monthly", list_rupees: 2299,
+                  credit_rupees: 466, charge_rupees: 1833, starts_now: true, ...PERIOD };
+reset({ quote: UPGRADE });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+intent = [...S.subIntents.values()][0];
+check("H1 upgrade: Razorpay gets the charge (₹2,299 − ₹466 credit) + GST", rzpCalls()[0]?.body.amount === 216300, rzpCalls()[0]?.body.amount);
+check("H1 upgrade: the intent stores the charge, the credit and the kind",
+  intent?.list_rupees === 1833 && intent.credit_rupees === 466 && intent.change_kind === "upgrade", JSON.stringify(intent));
+check("H1 upgrade: the response says so", r.body.change === "upgrade" && r.body.credit === 466 && r.body.planPrice === 2299 && r.body.list === 1833,
+  JSON.stringify(r.body));
+
+reset({ quote: UPGRADE, check: { ok: true, code: "LAUNCH25", applies_to: "vendor_plan", kind: "percent", value: 25, discount_rupees: 458 } });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly", discountCode: "LAUNCH25" });
+check("H2 upgrade + code: the code is judged against the charge, not the plan's price",
+  rpcCalls("discount_check")[0]?.body.p_plan_rupees === 1833 && rpcCalls("discount_reserve")[0]?.body.p_plan_rupees === 1833
+  && rzpCalls()[0]?.body.amount === (1375 + 248) * 100, `${rpcCalls("discount_check")[0]?.body.p_plan_rupees} / ${rzpCalls()[0]?.body.amount}`);
+
+reset({ quote: { ok: false, reason: "already_scheduled" } });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "yearly" });
+check("H3 a second paid next period: refused, nothing created", r.body.error === "already_scheduled" && rzpCalls().length === 0 && S.subIntents.size === 0,
+  JSON.stringify(r.body));
+
+reset({ activation: { ...UPGRADE, period_start: "2026-10-02T10:00:00.000Z", period_end: "2026-11-02T10:00:00.000Z" } });
+seedSubIntent({ amount: 216300, list_rupees: 1833, discount_rupees: 0, discount_code: null, discount_redemption_id: null, credit_rupees: 466, change_kind: "upgrade" });
+r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_u", signature: sign("order_T1", "pay_u") });
+inv = S.invoices[0];
+check("H4 paid upgrade: activated through the rule, invoiced at the charge with its credit and period",
+  r.body.ok && S.subsUpserts[0]?.p_plan === "gold" && inv?.amount === 1833 && inv.gst_amount === 330 && inv.credit_rupees === 466
+  && inv.change_kind === "upgrade" && inv.billing_period_start === "2026-10-02T10:00:00.000Z" && inv.billing_period_end === "2026-11-02T10:00:00.000Z",
+  JSON.stringify(inv));
+
+reset({ activation: { ok: false, reason: "already_scheduled" } });
+seedSubIntent({ discount_rupees: 0, discount_code: null, discount_redemption_id: null, list_rupees: 2299, amount: 271300 });
+r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_x", signature: sign("order_T1", "pay_x") });
+check("H5 activation refused after payment: said so, no invoice", r.body.ok === false && S.invoices.length === 0, JSON.stringify(r.body));
+
+reset({ quote: { ...UPGRADE, credit_rupees: 2299, charge_rupees: 0 } });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+const coveredOrder = r.body.orderId;
+check("H6 credit covers it all: no Razorpay order, a free_ id", rzpCalls().length === 0 && r.body.free === true && /^free_/.test(coveredOrder ?? ""),
+  JSON.stringify(r.body));
+r = await call("subscription-verify-payment", { orderId: coveredOrder, free: true });
+inv = S.invoices[0];
+check("H6 and it activates with no code to confirm, invoiced at ₹0 with the credit",
+  r.body.ok === true && rpcCalls("discount_confirm").length === 0 && inv?.amount === 0 && inv.credit_rupees === 2299, JSON.stringify(inv));
+
+reset({ quote: UPGRADE });
+r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
+inv = S.invoices[0];
+check("H7 demo upgrade: priced by the same rule", r.body.ok && inv?.amount === 1833 && inv.credit_rupees === 466 && inv.change_kind === "upgrade",
+  JSON.stringify(inv));
+
+reset();
+seedSubIntent({ discount_rupees: 0, discount_code: null, discount_redemption_id: null, list_rupees: 1833, amount: 216300, credit_rupees: 466, change_kind: "upgrade" });
+h = await hook("subscription-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_h", order_id: "order_T1" } } } });
+inv = S.invoices[0];
+check("H8 webhook: the invoice keeps the order's credit and kind", h.status === 200 && inv?.credit_rupees === 466 && inv.change_kind === "upgrade" && inv.amount === 1833,
+  JSON.stringify(inv));
+
+reset({ quote: UPGRADE });
+r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "LAUNCH25" });
+check("H9 the checkout's code quote is off the charge too", r.body.ok && r.body.list === 1833 && rpcCalls("discount_check")[0]?.body.p_plan_rupees === 1833,
+  JSON.stringify(r.body));
 
 console.table(rows);
 console.log(failures === 0

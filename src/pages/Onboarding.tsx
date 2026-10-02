@@ -27,7 +27,8 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
 import {
   saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage, uploadSignature,
-  discardUnreferencedKycUploads,
+  discardUnreferencedKycUploads, BUSINESS_REGISTRATION_KINDS, KYC_FILE_TYPES, MAX_KYC_BYTES,
+  CATALOGUE_ACCEPT, MAX_CATALOGUE_FILES, catalogueFileProblem, type BusinessRegistrationKind,
 } from "@/lib/queries/vendorOnboarding";
 import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
@@ -89,13 +90,14 @@ function OnboardingMenuLinks() {
  * must not imply it has.
  */
 function KycDocumentUpload({
-  label, attached, name, onPick, onRemove,
+  label, attached, name, onPick, onRemove, hint = "jpeg, png or pdf up to 5MB",
 }: {
   label: string;
   attached: boolean;
   name: string;
   onPick: () => void;
   onRemove: () => void;
+  hint?: string;
 }) {
   return (
     <div className="space-y-2">
@@ -108,7 +110,7 @@ function KycDocumentUpload({
         <p className="mt-2 text-sm font-semibold text-brand-vendor">
           {attached ? `Replace ${label}` : `Upload ${label}`}
         </p>
-        <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or pdf — optional</p>
+        <p className="mt-1 text-xs text-brand-ink/70">{hint}</p>
       </button>
       {attached && (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-border bg-white px-3 py-2">
@@ -192,8 +194,6 @@ export default function Onboarding() {
   const [pan, setPan] = useState("");
   const [panStatus, setPanStatus] = useState<"idle" | "invalid" | "submitted">("idle");
   const [panNameStatus, setPanNameStatus] = useState<"idle" | "invalid" | "submitted">("idle");
-  const [cin, setCin] = useState("");
-  const [aadhaar, setAadhaar] = useState("");
   const [hasGstin, setHasGstin] = useState(false);
   const [gstin, setGstin] = useState("");
   const [panFullName, setPanFullName] = useState("");
@@ -210,8 +210,18 @@ export default function Onboarding() {
   // both, so an admin approved or rejected a string the vendor typed.
   const [gstDocumentFile, setGstDocumentFile] = useState<File | null>(null);
   const [gstDocumentName, setGstDocumentName] = useState("");
-  const [cinDocumentFile, setCinDocumentFile] = useState<File | null>(null);
-  const [cinDocumentName, setCinDocumentName] = useState("");
+  // The rest of the Seller Registration FAQ's list (2026-10-02): a business
+  // registration (its kind, number and certificate; a certificate of incorporation's
+  // number is the CIN), the owner's masked Aadhaar with their consent, and a product
+  // catalogue, which a first product in step 8 can stand in for.
+  const [regKind, setRegKind] = useState<BusinessRegistrationKind | "">("");
+  const [regNumber, setRegNumber] = useState("");
+  const [regDocumentFile, setRegDocumentFile] = useState<File | null>(null);
+  const [regDocumentName, setRegDocumentName] = useState("");
+  const [aadhaarFile, setAadhaarFile] = useState<File | null>(null);
+  const [aadhaarFileName, setAadhaarFileName] = useState("");
+  const [aadhaarConsent, setAadhaarConsent] = useState(false);
+  const [catalogueFiles, setCatalogueFiles] = useState<File[]>([]);
   const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
   const [documentsSuccess, setDocumentsSuccess] = useState(false);
 
@@ -245,7 +255,9 @@ export default function Onboarding() {
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const gstDocumentInputRef = useRef<HTMLInputElement | null>(null);
-  const cinDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const regDocumentInputRef = useRef<HTMLInputElement | null>(null);
+  const aadhaarInputRef = useRef<HTMLInputElement | null>(null);
+  const catalogueInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const signatureStrokeRef = useRef<{ x: number; y: number }[][]>([]);
   const signatureIsDrawingRef = useRef(false);
@@ -325,8 +337,7 @@ export default function Onboarding() {
    * `business-docs` bucket and the `${vendorId}/kyc/…` path that
    * `business_docs_owner_select` keys on.
    */
-  const KYC_TYPES = /^(image\/(jpeg|png)|application\/pdf)$/;
-  const MAX_KYC_BYTES = 5 * 1024 * 1024;
+  const KYC_TYPES = KYC_FILE_TYPES;
   const makeKycFileHandler = (
     label: string,
     setFile: (v: File | null) => void,
@@ -349,7 +360,34 @@ export default function Onboarding() {
 
   const handlePanDocumentFile = makeKycFileHandler("your PAN", setPanDocumentFile, setPanDocumentName);
   const handleGstDocumentFile = makeKycFileHandler("your GST certificate", setGstDocumentFile, setGstDocumentName);
-  const handleCinDocumentFile = makeKycFileHandler("your incorporation certificate", setCinDocumentFile, setCinDocumentName);
+  const handleRegDocumentFile = makeKycFileHandler("your business registration", setRegDocumentFile, setRegDocumentName);
+  const handleAadhaarFile = makeKycFileHandler("your masked Aadhaar", setAadhaarFile, setAadhaarFileName);
+
+  // Catalogue files: PDF, Excel, CSV or images, up to 5 (vendorOnboarding.ts).
+  const handleCatalogueFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    const keep = [...catalogueFiles];
+    for (const f of picked) {
+      const problem = catalogueFileProblem(f);
+      if (problem) {
+        toast.error("That file can't be used for your catalogue", { description: problem });
+        continue;
+      }
+      if (keep.length >= MAX_CATALOGUE_FILES) {
+        toast.error(`Up to ${MAX_CATALOGUE_FILES} catalogue files.`);
+        break;
+      }
+      keep.push(f);
+    }
+    setCatalogueFiles(keep);
+  };
+  const regKindInfo = BUSINESS_REGISTRATION_KINDS.find((k) => k.id === regKind);
+  const regNumberValid = !regKindInfo
+    ? false
+    : regKindInfo.numberRequired
+      ? Boolean(regKindInfo.pattern?.test(regNumber.trim().toUpperCase()))
+      : true;
 
   const MAX_PRODUCT_IMAGES = 6;
   const handleProductImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -486,7 +524,14 @@ export default function Onboarding() {
 
       const panFileUrl = await uploadKyc(pan.trim() ? panDocumentFile : null);
       const gstFileUrl = await uploadKyc(hasGstin && gstin.trim() ? gstDocumentFile : null);
-      const cinFileUrl = await uploadKyc(cin.trim() ? cinDocumentFile : null);
+      const regFileUrl = await uploadKyc(regKind ? regDocumentFile : null);
+      const aadhaarFileUrl = await uploadKyc(aadhaarConsent ? aadhaarFile : null);
+      const catalogue: { fileUrl: string; name: string; mime: string }[] = [];
+      for (const f of catalogueFiles) {
+        const fileUrl = await uploadKyc(f);
+        if (fileUrl) catalogue.push({ fileUrl, name: f.name, mime: f.type });
+      }
+      const regNo = regNumber.trim().toUpperCase();
 
       await saveVendorOnboarding(user.id, {
         businessName: businessName || contractName,
@@ -504,13 +549,15 @@ export default function Onboarding() {
         country: country === "IN" ? "India" : country || undefined,
         pan: pan || undefined,
         gstin: hasGstin ? gstin : undefined,
-        cin: cin || undefined,
-        aadhaar: aadhaar || undefined,
+        // A certificate of incorporation's number is the CIN (vendor_profiles.cin).
+        cin: regKind === "incorporation" && regNo ? regNo : undefined,
         category: businessCategories.length ? businessCategories : undefined,
         officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
         panFileUrl,
         gstFileUrl,
-        cinFileUrl,
+        businessRegistration: regKind && regFileUrl ? { kind: regKind, number: regNo || undefined, fileUrl: regFileUrl } : undefined,
+        aadhaar: aadhaarFileUrl ? { fileUrl: aadhaarFileUrl, consentAt: new Date().toISOString() } : undefined,
+        catalogue: catalogue.length ? catalogue : undefined,
         contract: { signedName: contractName.trim(), signatureUrl },
         product: productName
           ? {
@@ -674,15 +721,23 @@ export default function Onboarding() {
     country.trim().length > 0;
   const canContinueCategories = businessCategories.length > 0;
   const canUploadBusinessImages = businessImageUploads.length > 0 && uploadingBusinessImages === 0;
+  // Step 7 can't be skipped and needs the Seller Registration FAQ's documents
+  // (2026-10-02): the PAN card; the GST certificate when registered for GST (a seller
+  // without GST can still register, as the FAQ says); a business registration of some
+  // kind, with its number where it has a fixed format; and the owner's masked Aadhaar
+  // with their consent. The catalogue can wait for step 8, where a first product can
+  // stand in for it. Files are attached here and uploaded at submit.
   const canSubmitPanDocuments =
     pan.trim().length > 0 &&
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
-    // GST and CIN are OPTIONAL — not every vendor is registered for GST and
-    // only incorporated entities have a CIN (there is no entity-type field in
-    // this form to infer it from). Nothing uploads on this step any more (files
-    // are attached, then uploaded at submit), so there is no upload to wait on.
-    panDocumentFile !== null;
+    panDocumentFile !== null &&
+    (!hasGstin || (gstin.trim().length > 0 && gstDocumentFile !== null)) &&
+    regKind !== "" && regNumberValid && regDocumentFile !== null &&
+    aadhaarFile !== null && aadhaarConsent;
+  // Step 8: a catalogue from step 7, or a first product with a name and a photo.
+  const hasProduct = productName.trim().length > 0 && productImages.length > 0;
+  const canFinishProducts = (catalogueFiles.length > 0 || hasProduct) && uploadingProductImages === 0;
 
   if (showWelcome) {
     return (
@@ -1260,14 +1315,15 @@ export default function Onboarding() {
                         </DialogTitle>
                       </DialogHeader>
                       <div className="mt-4 space-y-3 text-sm text-brand-ink">
-                        {/* This list must name only what the form can actually
-                            take. It used to ask for an Aadhaar card that no
-                            field anywhere collects — see the Aadhaar note in
-                            saveVendorOnboarding() for why it is not collected. */}
+                        {/* This list must name only what the form actually takes
+                            (step 7, and step 8 for the product). Since 2026-10-02
+                            it is the Seller Registration FAQ's list. */}
                         {[
                           "PAN card",
-                          "GST certificate and GSTIN, if registered",
-                          "Certificate of incorporation and CIN, if incorporated",
+                          "GST certificate and GSTIN, if registered for GST",
+                          "Business registration: Udyam (MSME), incorporation certificate, shop licence or partnership deed",
+                          "Masked Aadhaar of the owner",
+                          "A product catalogue (PDF, Excel or images), or your first product",
                           "Primary information",
                         ].map((item) => (
                           <div key={item} className="flex items-center gap-2">
@@ -2067,32 +2123,120 @@ export default function Onboarding() {
                   )}
                 </div>
 
-                {/* CIN — optional, because only incorporated entities have one.
-                    A sole proprietorship or partnership has no CIN, and this
-                    form has no entity-type field to infer it from, so it is
-                    never required and never blocks submit. */}
+                {/* Business registration (Seller Registration FAQ: "Business
+                    registration (or MSME/Udyam)"). Every business has one of these;
+                    a company's or LLP's is the certificate of incorporation, whose
+                    number is the CIN or LLPIN. */}
                 <div className="space-y-2">
-                  <h4 className="text-sm font-semibold text-brand-ink">Certificate of incorporation (if applicable)</h4>
+                  <h4 className="text-sm font-semibold text-brand-ink">Business registration*</h4>
                   <p className="text-xs text-brand-ink/70">
-                    Only companies and LLPs registered with the MCA have a CIN. Leave this blank if
-                    you trade as a proprietorship or partnership.
+                    Choose the one your business has. Proprietors usually have a Udyam (MSME) certificate or a shop licence.
                   </p>
-                  <Input
-                    id="cin-number"
-                    value={cin}
-                    onChange={(e) => setCin(e.target.value.toUpperCase())}
-                    placeholder="CIN (optional)"
-                    className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
-                  />
-                  {cin.trim().length > 0 && (
-                    <KycDocumentUpload
-                      label="incorporation certificate"
-                      attached={cinDocumentFile !== null}
-                      name={cinDocumentName}
-                      onPick={() => cinDocumentInputRef.current?.click()}
-                      onRemove={() => { setCinDocumentFile(null); setCinDocumentName(""); }}
-                    />
+                  <Select value={regKind} onValueChange={(v) => { setRegKind(v as BusinessRegistrationKind); setRegNumber(""); }}>
+                    <SelectTrigger id="reg-kind" aria-label="Business registration" className="h-11 rounded-xl border-brand-border">
+                      <SelectValue placeholder="Choose a registration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {BUSINESS_REGISTRATION_KINDS.map((k) => <SelectItem key={k.id} value={k.id}>{k.label}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  {regKindInfo && (
+                    <>
+                      <Label htmlFor="reg-number" className="text-xs font-medium text-brand-ink">{regKindInfo.numberLabel}</Label>
+                      <Input
+                        id="reg-number"
+                        value={regNumber}
+                        onChange={(e) => setRegNumber(e.target.value.toUpperCase())}
+                        placeholder={regKindInfo.placeholder}
+                        maxLength={60}
+                        className={cn(
+                          "h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor",
+                          regNumber.trim() && !regNumberValid && "border-brand-buyer",
+                        )}
+                      />
+                      {regNumber.trim() && !regNumberValid && regKindInfo.patternHint && (
+                        <p className="text-xs text-brand-buyer">{regKindInfo.patternHint}</p>
+                      )}
+                      <KycDocumentUpload
+                        label="registration certificate"
+                        attached={regDocumentFile !== null}
+                        name={regDocumentName}
+                        onPick={() => regDocumentInputRef.current?.click()}
+                        onRemove={() => { setRegDocumentFile(null); setRegDocumentName(""); }}
+                      />
+                    </>
                   )}
+                </div>
+
+                {/* The owner's Aadhaar, MASKED only (Seller Registration FAQ:
+                    "Aadhar card"). The number is never asked for or kept; see
+                    saveVendorOnboarding(). */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-brand-ink">Masked Aadhaar of the owner*</h4>
+                  <p className="text-xs text-brand-ink/70">
+                    Upload a masked Aadhaar, where only the last 4 digits show. You can download one from myAadhaar
+                    (uidai.gov.in). Don't upload a copy with all 12 digits.
+                  </p>
+                  <KycDocumentUpload
+                    label="masked Aadhaar"
+                    attached={aadhaarFile !== null}
+                    name={aadhaarFileName}
+                    onPick={() => aadhaarInputRef.current?.click()}
+                    onRemove={() => { setAadhaarFile(null); setAadhaarFileName(""); }}
+                  />
+                  <Label className="flex items-start gap-2 text-xs font-normal leading-5 text-brand-ink">
+                    <input
+                      type="checkbox"
+                      className="mt-1"
+                      checked={aadhaarConsent}
+                      onChange={(e) => setAadhaarConsent(e.target.checked)}
+                    />
+                    <span>
+                      I agree to share my masked Aadhaar with Cosora to verify who runs this business. It is stored
+                      privately, only Cosora's team can open it, and it is deleted if I delete my account.
+                    </span>
+                  </Label>
+                </div>
+
+                {/* The product catalogue, or a first product in the next step
+                    (Andy, 2026-10-02: "instead of the catalog, they can also just
+                    post 1 product"). */}
+                <div className="space-y-2">
+                  <h4 className="text-sm font-semibold text-brand-ink">Product catalogue</h4>
+                  <p className="text-xs text-brand-ink/70">
+                    {`A PDF, Excel or CSV file, or photos of your range, up to ${MAX_CATALOGUE_FILES} files. No catalogue? Add your first product in the next step instead.`}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => catalogueInputRef.current?.click()}
+                    disabled={catalogueFiles.length >= MAX_CATALOGUE_FILES}
+                    className="block w-full rounded-xl border-2 border-dashed border-brand-border bg-[#f5f5f5] px-4 py-5 text-center disabled:opacity-60"
+                  >
+                    <UploadIcon className="mx-auto h-6 w-6 text-brand-vendor" />
+                    <p className="mt-2 text-sm font-semibold text-brand-vendor">Upload catalogue files</p>
+                    <p className="mt-1 text-xs text-brand-ink/70">pdf, xlsx, csv up to 10MB · jpeg, png up to 5MB</p>
+                  </button>
+                  {catalogueFiles.map((f, i) => (
+                    <div key={`${f.name}-${i}`} className="flex items-center justify-between gap-3 rounded-xl border border-brand-border bg-white px-3 py-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-vendor/10">
+                          <FileText className="h-4 w-4 text-brand-vendor" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="truncate text-xs font-semibold text-brand-ink" data-no-translate>{f.name}</p>
+                          <p className="text-[10px] text-brand-ink/60">Attached · uploaded when you submit</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        aria-label={`Remove ${f.name}`}
+                        className="shrink-0 rounded-full p-1 text-brand-ink/60 hover:bg-[#f5f5f5]"
+                        onClick={() => setCatalogueFiles(catalogueFiles.filter((_, j) => j !== i))}
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
 
                 <Button
@@ -2121,11 +2265,29 @@ export default function Onboarding() {
                   onChange={handleGstDocumentFile}
                 />
                 <input
-                  ref={cinDocumentInputRef}
+                  ref={regDocumentInputRef}
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,application/pdf"
                   className="hidden"
-                  onChange={handleCinDocumentFile}
+                  aria-label="Business registration certificate file"
+                  onChange={handleRegDocumentFile}
+                />
+                <input
+                  ref={aadhaarInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,application/pdf"
+                  className="hidden"
+                  aria-label="Masked Aadhaar file"
+                  onChange={handleAadhaarFile}
+                />
+                <input
+                  ref={catalogueInputRef}
+                  type="file"
+                  multiple
+                  accept={CATALOGUE_ACCEPT}
+                  className="hidden"
+                  aria-label="Catalogue files"
+                  onChange={handleCatalogueFiles}
                 />
               </div>
             )}
@@ -2243,9 +2405,14 @@ export default function Onboarding() {
                     </p>
                   )}
                 </div>
+                {!canFinishProducts && uploadingProductImages === 0 && (
+                  <p className="text-xs text-brand-ink/70">
+                    Add your first product with a name and a photo, or go back and upload a product catalogue.
+                  </p>
+                )}
                 <Button
                   onClick={goNext}
-                  disabled={uploadingProductImages > 0}
+                  disabled={!canFinishProducts}
                   className="w-full bg-brand-vendor text-white rounded-full font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Submit
@@ -2270,11 +2437,14 @@ export default function Onboarding() {
         {/* The OTP dialog stood here. It asked for a code nothing had sent
             and accepted any six digits — see the phone field in step 2. */}
 
-        {/* Nav */}
+        {/* Nav. The documents (step 7) can't be skipped, and neither can the
+            product (step 8) unless a catalogue stands in for it (2026-10-02). */}
         {currentStep > 4 && currentStep < TOTAL_STEPS && !documentsSuccess && !productSuccess && (
           <div className="flex items-center justify-between mt-8">
             <Button variant="outline" onClick={goPrev}><ArrowLeft className="w-4 h-4 mr-1" /> Previous</Button>
-            <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>
+            {currentStep !== 7 && !(currentStep === 8 && catalogueFiles.length === 0) && (
+              <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>
+            )}
           </div>
         )}
       </div>

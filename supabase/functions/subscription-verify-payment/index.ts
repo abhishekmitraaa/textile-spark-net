@@ -24,6 +24,14 @@
 //   * { orderId, free: true } fulfils an order a code took to ₹0 (no Razorpay
 //     order, so no signature), only when the order is the caller's, its stored
 //     amount is 0 and its redemption confirms.
+//
+// PLAN CHANGES (2026-10-02): the plan, its period and the plan cached on
+// vendor_profiles come from subscription_activate (_shared/planChange.ts), which
+// applies the database's rule at this moment: an upgrade starts now, a renewal or
+// downgrade at the current end. The invoice covers the period it returns and
+// records the credit and the kind. Demo mode prices with the same rule. An order
+// whose charge was ₹0 before any code (an upgrade fully covered by credit) is a
+// free order too.
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +45,7 @@ function json(body: unknown, status = 200): Response {
 // GST is computed in one place for all three subscription functions (MPF-11);
 // subscriptionAmounts() applies it after the discount.
 import { confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
+import { activatePlanChange, quotePlanChange, type ChangeKind } from "../_shared/planChange.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -71,8 +80,11 @@ async function fetchPlan(url: string, key: string, planId: string): Promise<Plan
   return Array.isArray(rows) && rows.length ? rows[0] as PlanRow : null;
 }
 
-/** What the order was priced at: its list price, and the code that came off it. */
-interface Pricing { list: number; discount: number; code: string | null }
+/**
+ * What the order was priced at: the charge before a code (list), the code that came
+ * off it, and the plan change behind it (the credit an upgrade got, and its kind).
+ */
+interface Pricing { list: number; discount: number; code: string | null; credit?: number; kind?: ChangeKind | null }
 
 interface ActivateInput {
   vendorId: string; planId: string; billingCycle: "monthly" | "yearly";
@@ -94,36 +106,18 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
   const list = input.pricing?.list ?? (input.billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price);
   const money = subscriptionAmounts(list, input.pricing?.discount ?? 0);
 
-  const start = new Date();
-  const end = new Date(start);
-  if (input.billingCycle === "yearly") end.setFullYear(end.getFullYear() + 1);
-  else end.setMonth(end.getMonth() + 1);
-  const startIso = start.toISOString();
-  const endIso = end.toISOString();
-
-  // Upsert the one-per-vendor subscription row; get its id back for the invoice.
-  const subResp = await fetch(`${url}/rest/v1/vendor_subscriptions?on_conflict=vendor_id`, {
-    method: "POST",
-    headers: {
-      apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json",
-      prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify({
-      vendor_id: input.vendorId, plan_id: input.planId, billing_cycle: input.billingCycle,
-      status: "active", current_period_start: startIso, current_period_end: endIso,
-      auto_renew: true, updated_at: startIso,
-    }),
-  });
-  if (!subResp.ok) return { ok: false, error: "subscription_upsert_failed" };
-  const subRows = await subResp.json();
-  const subscriptionId = Array.isArray(subRows) && subRows.length ? subRows[0].id : null;
-
-  // Cache the plan on vendor_profiles (denormalised, used by buyer-facing reads).
-  await fetch(`${url}/rest/v1/vendor_profiles?id=eq.${input.vendorId}`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ plan_id: input.planId, plan_expires_at: endIso }),
-  });
+  // The plan, its period and the vendor_profiles cache, by the database's rule
+  // (new and upgrade start now; renewal and downgrade at the current end).
+  const activation = await activatePlanChange(url, key, input.vendorId, input.planId, input.billingCycle);
+  if (!activation.ok || !activation.period_start || !activation.period_end) {
+    // Only a race gets here (two conflicting orders paid at once). The money is
+    // taken and the order claimed, so it must be looked at, not lost quietly.
+    console.error("subscription-verify-payment: activation refused after payment", input.orderId, activation.reason);
+    return { ok: false, error: activation.reason === "already_scheduled" ? "already_scheduled" : "activation_failed" };
+  }
+  const startIso = activation.period_start;
+  const endIso = activation.period_end;
+  const subscriptionId = activation.subscription_id ?? null;
 
   // Invoice number from the DB sequence (RPC).
   let invoiceNumber: string | null = null;
@@ -149,6 +143,8 @@ async function activateSubscription(url: string, key: string, input: ActivateInp
       invoice_number: invoiceNumber, billing_period_start: startIso, billing_period_end: endIso,
       discount_amount: discounted ? money.discount : null,
       discount_code: discounted ? input.pricing?.code ?? null : null,
+      change_kind: input.pricing?.kind ?? activation.kind ?? null,
+      credit_rupees: (input.pricing?.credit ?? 0) > 0 ? input.pricing?.credit : null,
     }),
   });
 
@@ -172,7 +168,10 @@ async function activateFromOrder(url: string, key: string, orderId: string, paym
     vendorId: o.vendor_id, planId: o.plan_id, billingCycle: o.billing_cycle,
     gstNumber: o.gst_number ?? null, paymentId, orderId,
     pricing: o.list_rupees != null
-      ? { list: Number(o.list_rupees), discount: Number(o.discount_rupees ?? 0), code: o.discount_code ?? null }
+      ? {
+          list: Number(o.list_rupees), discount: Number(o.discount_rupees ?? 0), code: o.discount_code ?? null,
+          credit: Number(o.credit_rupees ?? 0), kind: o.change_kind ?? null,
+        }
       : undefined,
   });
   return { ok: res.ok, planId: res.planId };
@@ -204,16 +203,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const orderId = body.orderId;
     if (!orderId || !orderId.startsWith("free_")) return json({ ok: false, error: "not_free" }, 400);
     const r = await fetch(
-      `${url}/rest/v1/subscription_payment_orders?order_id=eq.${encodeURIComponent(orderId)}&select=vendor_id,plan_id,amount,status,discount_redemption_id`,
+      `${url}/rest/v1/subscription_payment_orders?order_id=eq.${encodeURIComponent(orderId)}&select=vendor_id,plan_id,amount,status,discount_redemption_id,list_rupees`,
       { headers: { apikey: serviceKey, authorization: `Bearer ${serviceKey}` } },
     );
     const rows = r.ok ? await r.json() : [];
     const o = Array.isArray(rows) && rows.length ? rows[0] : null;
     if (!o || o.vendor_id !== vendorId) return json({ ok: false, error: "unknown_order" });
     if (o.status !== "created") return json({ ok: true, already: true, planId: o.plan_id });
-    if (Number(o.amount) !== 0 || !o.discount_redemption_id) return json({ ok: false, error: "not_free" });
-    if (!(await confirmDiscount(url, serviceKey, o.discount_redemption_id, orderId))) {
-      return json({ ok: false, error: "discount_unconfirmed" });
+    if (Number(o.amount) !== 0) return json({ ok: false, error: "not_free" });
+    if (o.discount_redemption_id) {
+      if (!(await confirmDiscount(url, serviceKey, o.discount_redemption_id, orderId))) {
+        return json({ ok: false, error: "discount_unconfirmed" });
+      }
+    } else if (o.list_rupees == null || Number(o.list_rupees) !== 0) {
+      // ₹0 with no code is only an upgrade the credit covered in full.
+      return json({ ok: false, error: "not_free" });
     }
     return json(await activateFromOrder(url, serviceKey, orderId, null));
   }
@@ -229,27 +233,33 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const billingCycle = body.billingCycle === "yearly" ? "yearly" : "monthly";
     const gstNumber = body.gstNumber ?? null;
 
-    const code = normaliseCode(body.discountCode);
+    // Priced by the same rule a live order is: what this change costs now.
+    const plan = await fetchPlan(url, serviceKey, planId);
+    if (!plan) return json({ ok: false, error: "unknown_plan", demo: true });
+    if (plan.is_invite_only) return json({ ok: false, error: "invite_only", demo: true });
+    const change = await quotePlanChange(url, serviceKey, vendorId, planId, billingCycle);
+    if (!change.ok) return json({ ok: false, error: change.reason ?? "unavailable", demo: true });
+    const charge = change.charge_rupees ?? (billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price);
+    const planned = { credit: change.credit_rupees ?? 0, kind: change.kind ?? null };
+
+    const code = charge > 0 ? normaliseCode(body.discountCode) : null;
     if (!code) {
       const res = await activateSubscription(url, serviceKey, {
         vendorId, planId, billingCycle, gstNumber, paymentId: null, orderId: null,
+        pricing: { list: charge, discount: 0, code: null, ...planned },
       });
       return json({ ...res, demo: true });
     }
 
     // A code in demo mode goes through the same reservation a live order does.
-    const plan = await fetchPlan(url, serviceKey, planId);
-    if (!plan) return json({ ok: false, error: "unknown_plan", demo: true });
-    if (plan.is_invite_only) return json({ ok: false, error: "invite_only", demo: true });
-    const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
     const ref = `demo_${crypto.randomUUID()}`;
-    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", ref, null, { planId, planRupees: list });
+    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", ref, null, { planId, planRupees: charge });
     if (!held.ok || !held.redemption_id) {
       return json({ ok: false, demo: true, error: "discount", reason: held.reason ?? "unavailable" });
     }
     const res = await activateSubscription(url, serviceKey, {
       vendorId, planId, billingCycle, gstNumber, paymentId: null, orderId: null,
-      pricing: { list, discount: held.discount_rupees ?? 0, code: held.code ?? code },
+      pricing: { list: charge, discount: held.discount_rupees ?? 0, code: held.code ?? code, ...planned },
     });
     if (res.ok) await confirmDiscount(url, serviceKey, held.redemption_id, ref);
     else await releaseDiscount(url, serviceKey, held.redemption_id, ref);

@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { supportChatHref } from "@/lib/supportContact";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
@@ -78,12 +79,25 @@ export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_r
 // — `if (!gate.ok)` leaves the union unnarrowed and every field access errors.
 export type CallBlock = CallBlockReason | null;
 
-export interface BlockCopy { title: string; description?: string }
+export interface BlockCopy {
+  title: string;
+  description?: string;
+  /** Offer "Contact support": a chat about their own account (Help & Support P3e). */
+  support?: boolean;
+}
+
+/** Toast a refusal; a suspended caller gets a "Contact support" button. */
+export function toastBlock(copy: BlockCopy, navigate: (to: string) => void) {
+  toast.error(copy.title, {
+    description: copy.description,
+    action: copy.support ? { label: "Contact support", onClick: () => navigate(supportChatHref({ category: "account" })) } : undefined,
+  });
+}
 
 // Someone tried to place a call. Wording unchanged from before the reason-code
 // refactor — this is what the Call Now button has always said.
 const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
-  caller_suspended: { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this." },
+  caller_suspended: { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this.", support: true },
   target_suspended: { title: "Calling is unavailable", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review — calling is paused", description: "Our team will follow up." },
 };
@@ -91,7 +105,7 @@ const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
 // Someone is looking at a contact card. Same three reasons, phrased as "why
 // can't I see this" rather than "why can't I call".
 const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
-  caller_suspended: { title: "Contact details aren't available", description: "Your account is suspended. Contact support to resolve this." },
+  caller_suspended: { title: "Contact details aren't available", description: "Your account is suspended. Contact support to resolve this.", support: true },
   target_suspended: { title: "Contact details aren't available", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review", description: "Contact details aren't available right now. Our team will follow up." },
 };
@@ -319,7 +333,7 @@ export function useCallVendor() {
       }
       if (result.refusal) {
         const copy = CALL_REFUSAL_COPY[result.refusal];
-        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+        toastBlock(copy, navigate);
         return;
       }
       const phone = result.numbers?.phone ?? null;
@@ -389,7 +403,7 @@ export function useCallBuyer() {
             : error.message === "no_rfq_relationship"
               ? NO_RFQ_RELATIONSHIP_COPY
               : { title: "Couldn't get the buyer's number", description: errorMessage(error) };
-        toast.error(copy.title, copy.description ? { description: copy.description } : undefined);
+        toastBlock(copy, navigate);
         return;
       }
       const p = rows?.[0];

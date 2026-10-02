@@ -21,6 +21,12 @@
 // invoice exactly what was charged. A code that takes the total to ₹0 makes no
 // Razorpay order: the id is free_<uuid> and verify-payment fulfils it.
 //
+// PLAN CHANGES (2026-10-02). What the order charges comes from the database's
+// rule (_shared/planChange.ts): an upgrade is the plan's price less a credit for
+// the unused part of what's paid; a renewal or downgrade is paid now and starts at
+// the current end. A code comes off that charge, then GST. The intent stores the
+// charge (list_rupees), the credit and the kind, so the invoice says what happened.
+//
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET (+ platform SUPABASE_URL /
 // SUPABASE_SERVICE_ROLE_KEY). Returns { error:"not_configured" } until the
 // Razorpay keys are set, so the client falls back to the simulated checkout
@@ -42,6 +48,7 @@ function json(body: unknown, status = 200): Response {
 // GST is computed in one place for all three subscription functions (MPF-11);
 // subscriptionAmounts() applies it after the discount.
 import { checkDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
+import { quotePlanChange } from "../_shared/planChange.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -100,15 +107,21 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
   if (!list || list <= 0) return json({ error: "zero_amount" }, 400);
 
-  // 0) The code, if any, before anything exists that it could leave behind.
-  const code = normaliseCode(payload.discountCode);
+  // What this change costs this seller now: new, renewal, upgrade or downgrade.
+  const change = await quotePlanChange(url, serviceKey, vendorId, planId, billingCycle);
+  if (!change.ok) return json({ error: change.reason ?? "unavailable" }, 200);
+  const charge = change.charge_rupees ?? list;
+
+  // 0) The code, if any, before anything exists that it could leave behind. It
+  //    comes off the charge, so an upgrade's code takes a share of the difference.
+  const code = charge > 0 ? normaliseCode(payload.discountCode) : null;
   let discount = 0;
   if (code) {
-    const check = await checkDiscount(url, serviceKey, code, vendorId, "subscription", { planId, planRupees: list });
+    const check = await checkDiscount(url, serviceKey, code, vendorId, "subscription", { planId, planRupees: charge });
     if (!check.ok) return json({ error: "discount", reason: check.reason ?? "unavailable" }, 200);
     discount = check.discount_rupees ?? 0;
   }
-  const money = subscriptionAmounts(list, discount);
+  const money = subscriptionAmounts(charge, discount);
   const free = money.paise === 0;
 
   // 1) Create the Razorpay order: none when the code took the total to ₹0.
@@ -123,7 +136,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         body: JSON.stringify({
           amount: money.paise, currency: "INR", receipt: `sub_${Date.now()}`,
           notes: {
-            kind: "subscription", vendor: vendorId, plan: planId, cycle: billingCycle,
+            kind: "subscription", vendor: vendorId, plan: planId, cycle: billingCycle, change: change.kind ?? "new",
             ...(code ? { discount_code: code } : {}),
           },
         }),
@@ -140,7 +153,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   let redemptionId: string | null = null;
   let heldCode: string | null = null;
   if (code) {
-    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", orderId, discount, { planId, planRupees: list });
+    const held = await reserveDiscount(url, serviceKey, code, vendorId, "subscription", orderId, discount, { planId, planRupees: charge });
     if (!held.ok || !held.redemption_id) return json({ error: "discount", reason: held.reason ?? "unavailable" }, 200);
     redemptionId = held.redemption_id;
     heldCode = held.code ?? code;
@@ -160,6 +173,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
       amount: money.paise, gst_number: payload.gstNumber ?? null, status: "created",
       list_rupees: money.list, discount_rupees: money.discount,
       discount_code: heldCode, discount_redemption_id: redemptionId,
+      change_kind: change.kind ?? "new", credit_rupees: change.credit_rupees ?? 0,
     }),
   });
   if (!ins.ok) {
@@ -171,5 +185,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   return json({
     configured: true, orderId, amount: money.paise, currency: "INR", keyId, base: money.base, gst: money.gst,
     planId, billingCycle, list: money.list, discount: money.discount, discountCode: heldCode, free,
+    change: change.kind ?? "new", credit: change.credit_rupees ?? 0, planPrice: change.list_rupees ?? list,
+    periodStart: change.period_start ?? null,
   });
 });

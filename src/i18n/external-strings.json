@@ -1,6 +1,6 @@
 {
  "_about": "Text the page shows that is not in this codebase. scripts/i18n-coverage-check.mjs requires every string here in src/i18n/hi.json and gu.json. Each group's _source says where it comes from.",
- "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3.",
+ "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01.",
  "notifications": [
   "Account deletion cancelled",
   "Your account will not be deleted.",
@@ -42,9 +42,27 @@
   "Promoted product is not live",
   "Trademark or brand misuse",
   "Suspected invalid traffic / fraud",
-  "Other policy breach"
+  "Other policy breach",
+  "Cosora Support replied",
+  "There's a new reply on your request {0}.",
+  "Request resolved",
+  "Your request {0} was marked resolved.",
+  "Request closed",
+  "Your request {0} was closed.",
+  "We missed you",
+  "We tried to call you about request {0}.",
+  "Check your number",
+  "We couldn't reach you about request {0}.",
+  "Report reviewed",
+  "We've reviewed your report {0}.",
+  "Callback booked",
+  "Request {0}: we'll call you on {1}.",
+  "Report recorded",
+  "We've recorded your report {0}.",
+  "Feedback recorded",
+  "We've recorded your feedback {0}."
  ],
- "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated.",
+ "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated. Since Help & Support P5 (2026-10-01) an FAQ can carry its own Hindi and Gujarati (faqs.translations), which the app shows first; this list is then the fallback. The category headings are listed at the end.",
  "faqs": [
   "How do I find the right vendors for my needs?",
   "Use our smart matching system by posting your requirements. We'll connect you with verified vendors who specialize in your product category. You can also browse vendor profiles and view their ratings and reviews.",
@@ -105,7 +123,17 @@
   "What information should I include in my requirement?",
   "Include product category, quantity, preferred fabric/material, size range, any specific designs or prints, target price range, and delivery timeline. The more details you provide, the better quotes you'll receive.",
   "Can I edit my listings after uploading?",
-  "Yes. You can log in to your dashboard to update prices, product details, or contact information anytime."
+  "Yes. You can log in to your dashboard to update prices, product details, or contact information anytime.",
+  "Getting Started",
+  "Orders & Quotes",
+  "Payments & Billing",
+  "Account Management",
+  "KYC and verification",
+  "Leads and quotes",
+  "Listings and videos",
+  "Advertising",
+  "Plans and billing",
+  "Account and suspension"
  ],
  "categories_source": "public.categories.name, as of 2026-09-26.",
  "categories": [
