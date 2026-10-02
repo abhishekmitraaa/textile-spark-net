@@ -9,7 +9,7 @@ doesn't read this file**, so change a live answer in the admin, not here.
 ## Rewritten 2026-10-03: leads are the same on every plan (RFQ/leads R2)
 
 Mitra decided on 2026-10-02 that no plan caps leads and every plan gets the same ranked feed.
-Migration `20261003090100_leads_same_on_every_plan.sql` rewrote the live answers that said otherwise, in English, Hindi
+Migration `20261002200900_leads_same_on_every_plan.sql` rewrote the live answers that said otherwise, in English, Hindi
 and Gujarati. The source text below is kept as supplied; the answers marked **[R2]** no longer
 match what is published:
 - "What happens when I reach my lead limit?" (Subscription and Seller Help) became "Is there a

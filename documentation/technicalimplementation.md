@@ -182,7 +182,7 @@ must not be undone.
 **The lead cap is off (RFQ/leads R2, Mitra 2026-10-02).** Every plan's `leads_per_month` is -1
 and `enforce_lead_cap()` returns early for a negative cap, so no quote is refused for a count.
 The trigger, `lead_cap_used()` and `get_vendor_plan()`'s `leads_used` stay as they are; nothing
-in the app shows the count. The product cap below is unchanged. Migration `20261003090100_leads_same_on_every_plan.sql`.
+in the app shows the count. The product cap below is unchanged. Migration `20261002200900_leads_same_on_every_plan.sql`.
 
 `get_vendor_plan()` is the source of truth for what a vendor is shown; the four BEFORE
 triggers (`enforce_product_cap`, `enforce_lead_cap`, `enforce_catalogue_plan`,
@@ -3023,13 +3023,13 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 ## RFQ / leads pipeline (2026-10-03, `documentation/rfq-leads-pipeline-design-2026-10-02.md`)
 
 ### R1: signed-out visitors read no RFQ
-- `rfqs_select` is `TO authenticated`; its predicate is unchanged (open active RFQs to any signed-in user, a direct request to its vendor, everything to the buyer and admins). Anon matches no SELECT policy on `rfqs`, so the open board, embeds through `quotes` and every count read nothing signed out. Migration `20261003090000_rfqs_select_signed_in_only.sql`.
+- `rfqs_select` is `TO authenticated`; its predicate is unchanged (open active RFQs to any signed-in user, a direct request to its vendor, everything to the buyer and admins). Anon matches no SELECT policy on `rfqs`, so the open board, embeds through `quotes` and every count read nothing signed out. Migration `20261002195808_rfqs_select_signed_in_only.sql`.
 - `quotes_select` was already safe for anon: `vendor_id = auth.uid()` and `owns_rfq()` are false when `auth.uid()` is null.
 - The vendor pages don't query without a user (`enabled: Boolean(vendorId)`), so the UI leaked nothing, but it said there were no requirements. `SignInForLeads` replaces that state on `/leads` and seller home once `useAuth().loading` is false.
 - Tests: `scripts/rfq-leads/r1_anon_lockdown.sql` (anon, a signed-in stranger, the buyer, the target vendor, an admin), `tests/local/rfq-leads.spec.ts` (R1 block).
 
 ### R2: the same leads on every plan
-- `leads_per_month = -1` on every plan; `enforce_lead_cap()` returns early for a negative cap (see "Plan caps"). Migration `20261003090100_leads_same_on_every_plan.sql`.
+- `leads_per_month = -1` on every plan; `enforce_lead_cap()` returns early for a negative cap (see "Plan caps"). Migration `20261002200900_leads_same_on_every_plan.sql`.
 - `fetchOpenRfqs()` scores every vendor through `match_vendor_rfqs(p_vendor_id, 200)`: 0.7 × cosine similarity to the vendor's catalogue embedding + 0.3 × category match. With no embedding on either side the score is the category term alone, and a failed call leaves the chronological order.
 - Nothing in the vendor app shows a lead count or limit. `get_vendor_plan().usage.leads_used` is still returned.
 - Tests: `scripts/rfq-leads/r2_same_leads.sql`, `tests/local/rfq-leads.spec.ts` (R2 block).

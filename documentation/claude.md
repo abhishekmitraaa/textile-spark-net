@@ -973,7 +973,7 @@ undocumented. Deep technical rationale for each lives in
 - **Superseded 2026-10-02 (Mitra): there is no lead cap.** Every plan's `leads_per_month` is
   -1, which `enforce_lead_cap()` treats as unlimited; the trigger stays installed so a cap could
   come back as a data change, and if one does, the rule below applies again. Migration
-  `20261003090100_leads_same_on_every_plan.sql` (RFQ/leads R2, not yet applied). Kept for the record:
+  `20261002200900_leads_same_on_every_plan.sql` (RFQ/leads R2, applied 2026-10-03). Kept for the record:
 - **The lead cap applies to the open marketplace only (Andy, 2026-09-22).** A lead is a
   distinct open-marketplace RFQ (`rfqs.vendor_id is null`) the vendor quoted in the window.
   A reply to a request addressed directly to the vendor is never counted and never refused
@@ -1012,7 +1012,7 @@ undocumented. Deep technical rationale for each lives in
   `rfqs_select` works like an open sourcing board on purpose. It does not check that the
   reader is a vendor. Settled; do not "fix" it. Signed-out visitors read none: the policy is
   `TO authenticated` (RFQ/leads R1, Mitra 2026-10-02, migration
-  `20261003090000_rfqs_select_signed_in_only.sql`, not yet applied), and `/leads` and seller home ask
+  `20261002195808_rfqs_select_signed_in_only.sql`, applied 2026-10-03), and `/leads` and seller home ask
   them to sign in instead of saying there are no requirements. Harness
   `scripts/rfq-leads/r1_anon_lockdown.sql`.
 - **Every migration is a committed file named by its LIVE version (Master Prompt 12,
