@@ -3,7 +3,8 @@ import { ChevronRight, Flag, Lightbulb, Loader2, MessageCircle, PhoneCall } from
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { labelIn, useMyRequests, type MyRequest } from "@/lib/queries/support";
+import { istFormat, labelIn, useMyRequests, type MyRequest } from "@/lib/queries/support";
+import { useLang } from "@/lib/i18n";
 import { CallOrEmail, SignInForSupport, SupportFrame, useSupportSide } from "@/components/support/SupportFrame";
 
 /** Every request this person has made, newest activity first (plan P3e). */
@@ -21,10 +22,10 @@ const STATUS_TEXT: Record<MyRequest["status"], string> = {
   closed: "Closed",
 };
 
-const WHEN = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 export default function MyRequests() {
   const { user, loading } = useAuth();
+  useLang(); // dates follow the language (istFormat)
   const { accent } = useSupportSide();
   const mine = useMyRequests(Boolean(user));
 
@@ -69,7 +70,7 @@ export default function MyRequests() {
                         <span className="min-w-0 flex-1">
                           <span className="block truncate text-sm font-medium text-gray-900" data-no-translate>{r.subject}</span>
                           <span className="block text-[11px] text-gray-500">
-                            {labelIn(r.category_label)} · {STATUS_TEXT[r.status]} · {WHEN.format(new Date(r.last_message_at))}
+                            {labelIn(r.category_label)} · {STATUS_TEXT[r.status]} · {istFormat(new Date(r.last_message_at), { day: "numeric", month: "short", year: "numeric" })}
                           </span>
                         </span>
                         {r.unread && <span className={cn("w-2 h-2 shrink-0 rounded-full", accent.bg)} aria-label="New reply" />}

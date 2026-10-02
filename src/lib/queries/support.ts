@@ -96,13 +96,33 @@ export function useSupportStatus(userId: string | null | undefined) {
   });
 }
 
-const IST_TIME = new Intl.DateTimeFormat("en-IN", {
-  timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false,
-});
+// Dates on India time, in the reader's language: the sentences around them are
+// translated as templates ("We'll reply from {0}."), so the date that fills {0} has to
+// be in the same language. Formatters are cached per language and shape.
+const LOCALES: Record<Lang, string> = { en: "en-IN", hi: "hi-IN", gu: "gu-IN" };
+const FORMATS = new Map<string, Intl.DateTimeFormat>();
 
-/** "Mon, 5 Oct, 10:00 IST" */
+export function istFormat(value: Date, opts: Intl.DateTimeFormatOptions): string {
+  const lang = getLang();
+  const key = `${lang}|${JSON.stringify(opts)}`;
+  let f = FORMATS.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(LOCALES[lang] ?? "en-IN", { timeZone: "Asia/Kolkata", ...opts });
+    FORMATS.set(key, f);
+  }
+  return f.format(value);
+}
+
+/** "Mon, 5 Oct, 10:00 IST" (सोम, 5 अक्टू॰, 10:00 IST in Hindi) */
 export function istLabel(iso: string | null | undefined): string {
-  return iso ? `${IST_TIME.format(new Date(iso))} IST` : "";
+  return iso
+    ? `${istFormat(new Date(iso), { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false })} IST`
+    : "";
+}
+
+/** A calendar day the database gives as "2026-10-02": "Fri, 2 Oct". */
+export function istDayLabel(day: string): string {
+  return istFormat(new Date(`${day}T00:00:00+05:30`), { weekday: "short", day: "numeric", month: "short" });
 }
 
 const DAY_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -336,9 +356,39 @@ export async function requestCallback(input: {
   return data as unknown as { ticket_no: string; date: string; start: string; end: string };
 }
 
+/**
+ * What a fraud report is about, when it's something on Cosora: a seller or a listing.
+ * support_report_fraud checks it exists; the confirmed-fraud record then names the
+ * account and its status (admin.fraud_findings). Without it, a report only carries
+ * the name and link the person typed, and the record says "Not linked to an account".
+ */
+export type FraudTarget = { type: "vendor" | "product"; id: string };
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** From a "Report" link's ?entity_type=&entity_id=. */
+export function fraudTargetFromParams(params: URLSearchParams): FraudTarget | null {
+  const type = params.get("entity_type");
+  const id = params.get("entity_id") ?? "";
+  return (type === "vendor" || type === "product") && UUID_RE.test(id) ? { type, id } : null;
+}
+
+/** From a Cosora store or listing link the person pasted (/vendor/<id>, /product/<id>). */
+export function fraudTargetFromLink(raw: string): FraudTarget | null {
+  let url: URL;
+  try {
+    url = new URL(raw.trim(), window.location.origin);
+  } catch {
+    return null;
+  }
+  const own = url.host === window.location.host || /(^|\.)cosora\.in$/i.test(url.hostname);
+  const m = url.pathname.match(/^\/(vendor|product)\/([^/?#]+)\/?$/);
+  return own && m && UUID_RE.test(m[2]) ? { type: m[1] as FraudTarget["type"], id: m[2] } : null;
+}
+
 export async function reportFraud(input: {
   description: string; reportedName?: string; reportedPhone?: string; reportedUrl?: string;
-  amountInr?: number | null; incidentDate?: string | null; city?: string;
+  amountInr?: number | null; incidentDate?: string | null; city?: string; target?: FraudTarget | null;
 }): Promise<{ ticket_id: string; ticket_no: string }> {
   const data = check(await supabase.rpc("support_report_fraud", {
     p_description: input.description,
@@ -349,6 +399,8 @@ export async function reportFraud(input: {
     p_incident_date: input.incidentDate || undefined,
     p_city: input.city?.trim() || undefined,
     p_language: getLang(),
+    p_reported_entity_type: input.target?.type,
+    p_reported_entity_id: input.target?.id,
   }));
   return data as unknown as { ticket_id: string; ticket_no: string };
 }

@@ -9,6 +9,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import { SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto } from "@/lib/supportContact";
 import { istLabel, useSupportReceipt, type SupportStatus } from "@/lib/queries/support";
+import { useLang } from "@/lib/i18n";
 
 /**
  * The frame and shared states of the Help & Support pages (plan P3).
@@ -136,6 +137,7 @@ export function ReceiptLine({ ticketNo }: { ticketNo: string }) {
 }
 
 export function HoursBanner({ status }: { status: SupportStatus | undefined }) {
+  useLang(); // the next opening time follows the language (istLabel)
   if (!status) return null;
   return (
     <div

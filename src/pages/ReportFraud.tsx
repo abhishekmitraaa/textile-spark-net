@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ import { Flag, AlertTriangle, Mail, Phone, Loader2, CheckCircle2, FileText, Imag
 import { useAuth } from "@/contexts/AuthContext";
 import { SUPPORT_EMAIL, SUPPORT_HOURS_LABEL, SUPPORT_PHONE, SUPPORT_PHONE_LABEL, supportMailto } from "@/lib/supportContact";
 import {
-  PHOTO_TYPES, fileProblem, postMessage, reportFraud, supportError, uploadSupportFile, useSupportStatus,
+  PHOTO_TYPES, fileProblem, fraudTargetFromLink, fraudTargetFromParams, postMessage, reportFraud, supportError,
+  uploadSupportFile, useSupportStatus, type FraudTarget,
 } from "@/lib/queries/support";
 import { ReceiptLine, SignInForSupport, SupportFrame } from "@/components/support/SupportFrame";
 
@@ -31,6 +32,11 @@ import { ReceiptLine, SignInForSupport, SupportFrame } from "@/components/suppor
  *
  * Reachable signed out (the landing page's footer). SupportFrame follows the role:
  * the seller dashboard for sellers, the plain back header otherwise.
+ *
+ * What it's about (2026-10-02): "Report this seller" and "Report this listing" open it
+ * with ?entity_type=vendor|product&entity_id=…, and a Cosora store or listing link typed
+ * into "A link to them" counts the same. The report then names that account, so a
+ * confirmed-fraud record can say whose account it was and what happened to it.
  */
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -204,7 +210,18 @@ function EmailReportForm() {
 type Report = { name: string; phone: string; url: string; city: string; description: string; amount: string; date: string };
 const STEPS = ["Who", "What happened", "Evidence", "Check and send"];
 
+const TARGET_TEXT: Record<FraudTarget["type"], string> = {
+  vendor: "This report is about the seller whose page you came from.",
+  product: "This report is about the listing you came from.",
+};
+const LINKED_TEXT: Record<FraudTarget["type"], string> = {
+  vendor: "A seller on Cosora",
+  product: "A listing on Cosora",
+};
+
 function FraudWizard() {
+  const [params] = useSearchParams();
+  const fromPage = fraudTargetFromParams(params);
   const [step, setStep] = useState(0);
   const [r, setR] = useState<Report>({ name: "", phone: "", url: "", city: "", description: "", amount: "", date: "" });
   const [files, setFiles] = useState<File[]>([]);
@@ -212,6 +229,8 @@ function FraudWizard() {
   const [done, setDone] = useState<{ ticketNo: string; failedFiles: number } | null>(null);
   const set = (k: keyof Report) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setR((v) => ({ ...v, [k]: e.target.value }));
+  // The page it came from wins; otherwise a Cosora link they typed.
+  const target: FraudTarget | null = fromPage ?? fraudTargetFromLink(r.url);
   // Today in IST, the date the database checks against.
   const today = new Date(Date.now() + 5.5 * 3600_000).toISOString().slice(0, 10);
 
@@ -248,7 +267,7 @@ function FraudWizard() {
     try {
       ticket = await reportFraud({
         description: r.description, reportedName: r.name, reportedPhone: r.phone, reportedUrl: r.url, city: r.city,
-        amountInr: r.amount ? Number(r.amount) : null, incidentDate: r.date || null,
+        amountInr: r.amount ? Number(r.amount) : null, incidentDate: r.date || null, target,
       });
     } catch (e) {
       setBusy(null);
@@ -324,6 +343,9 @@ function FraudWizard() {
         <CardContent className="p-4 space-y-4">
           {step === 0 && (
             <>
+              {fromPage && (
+                <p className="rounded-lg bg-destructive/5 px-3 py-2 text-sm text-gray-700">{TARGET_TEXT[fromPage.type]}</p>
+              )}
               <p className="text-sm text-gray-600">Tell us who it was. Fill in what you know; every field here is optional.</p>
               <Field id="fr-name" label="Name or store name" value={r.name} onChange={set("name")} placeholder="Who did this?" />
               <Field id="fr-phone" label="Their phone number" value={r.phone} onChange={set("phone")} placeholder="The number you suspect" type="tel" />
@@ -383,6 +405,12 @@ function FraudWizard() {
           )}
           {step === 3 && (
             <dl className="space-y-2 text-sm">
+              {target && (
+                <div>
+                  <dt className="text-[11px] text-gray-500">About</dt>
+                  <dd className="text-gray-900">{LINKED_TEXT[target.type]}</dd>
+                </div>
+              )}
               <Row label="Name or store name" value={r.name} />
               <Row label="Their phone number" value={r.phone} />
               <Row label="A link to them" value={r.url} />

@@ -26,7 +26,7 @@ import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModa
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
   ChevronDown, BadgeCheck, AlertCircle, ImageOff,
-  CheckCircle2, Play, Package, X,
+  CheckCircle2, Play, Package, X, Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
@@ -538,6 +538,14 @@ const ProductDetail = () => {
               </button>
               <button aria-label="Share" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
                 <Share2 className="h-4 w-4 text-gray-500" />
+              </button>
+              {/* Report this listing (2026-10-02): the report names it, and through it the seller. */}
+              <button
+                aria-label="Report this listing"
+                onClick={() => navigate(/^[0-9a-f-]{36}$/i.test(product.id) ? `/report-fraud?entity_type=product&entity_id=${product.id}` : "/report-fraud")}
+                className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95"
+              >
+                <Flag className="h-4 w-4 text-gray-500" />
               </button>
             </div>
           </div>

@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { fetchMyContactInfo } from "@/lib/queries/myContact";
 import {
-  labelIn, requestCallback, supportError, useCallbackSlots, useSupportStatus, useSupportTopics, type CallbackSlot,
+  istDayLabel, labelIn, requestCallback, supportError, useCallbackSlots, useSupportStatus, useSupportTopics, type CallbackSlot,
 } from "@/lib/queries/support";
+import { useLang } from "@/lib/i18n";
 import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
 
 /**
@@ -19,7 +20,6 @@ import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } fr
  * pending callback at a time. Staff call from their phone and record the outcome,
  * which shows in the request's thread.
  */
-const DAY = new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "numeric", month: "short" });
 
 export default function SupportCallback() {
   const { user, loading } = useAuth();
@@ -50,6 +50,7 @@ export default function SupportCallback() {
 
 function CallbackForm() {
   const { side, accent } = useSupportSide();
+  useLang(); // the days follow the language (istDayLabel)
   const topics = useSupportTopics(side, "callback");
   const slots = useCallbackSlots(true);
   const [topic, setTopic] = useState("");
@@ -77,7 +78,7 @@ function CallbackForm() {
     setBusy(true);
     try {
       const r = await requestCallback({ category: topic, phone, date: slot.date, start: slot.start, note });
-      setDone({ ticket_no: r.ticket_no, when: `${DAY.format(new Date(`${r.date}T00:00:00`))}, ${r.start}–${r.end} IST` });
+      setDone({ ticket_no: r.ticket_no, when: `${istDayLabel(r.date)}, ${r.start}–${r.end} IST` });
     } catch (e) {
       toast.error(supportError(e));
     } finally {
@@ -143,8 +144,8 @@ function CallbackForm() {
               <div className="space-y-3">
                 {byDay.map(([date, list]) => (
                   <div key={date}>
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">{DAY.format(new Date(`${date}T00:00:00`))}</p>
-                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={DAY.format(new Date(`${date}T00:00:00`))}>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">{istDayLabel(date)}</p>
+                    <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={istDayLabel(date)}>
                       {list.map((s) => {
                         const on = slot?.date === s.date && slot.start === s.start;
                         return (

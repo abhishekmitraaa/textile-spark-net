@@ -10,9 +10,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { CHAT_MONITORING_NOTICE } from "@/lib/chatData";
 import { cn } from "@/lib/utils";
 import {
-  AUDIO_TYPES, PHOTO_TYPES, endChat, fileProblem, istLabel, labelIn, markRead, postMessage, supportError, supportFileUrl,
+  AUDIO_TYPES, PHOTO_TYPES, endChat, fileProblem, istDayLabel, istFormat, istLabel, labelIn, markRead, postMessage, supportError, supportFileUrl,
   uploadSupportFile, useSupportStatus, useSupportThread, type RequestDetail, type ThreadAttachment, type ThreadMessage,
 } from "@/lib/queries/support";
+import { useLang } from "@/lib/i18n";
 import { useVoiceRecorder } from "@/hooks/useVoiceRecorder";
 import { SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
 import {
@@ -50,7 +51,7 @@ const CHANNEL_TEXT: Record<string, string> = {
 function systemText(m: ThreadMessage): string {
   const meta = m.meta ?? {};
   const slot = typeof meta.date === "string" && typeof meta.start === "string" && typeof meta.end === "string"
-    ? `${meta.date}, ${meta.start}–${meta.end} IST`
+    ? `${istDayLabel(meta.date)}, ${meta.start}–${meta.end} IST`
     : "";
   switch (m.event) {
     case "received": return "Thanks. Cosora Support will reply here.";
@@ -79,7 +80,6 @@ function systemText(m: ThreadMessage): string {
   }
 }
 
-const DAY = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 const TIME = new Intl.DateTimeFormat("en-IN", { hour: "2-digit", minute: "2-digit", hour12: false });
 function dayLabel(iso: string): string {
   const d = new Date(iso);
@@ -87,7 +87,7 @@ function dayLabel(iso: string): string {
   const yesterday = new Date(Date.now() - 86_400_000);
   if (d.toDateString() === today.toDateString()) return "Today";
   if (d.toDateString() === yesterday.toDateString()) return "Yesterday";
-  return DAY.format(d);
+  return istFormat(d, { day: "numeric", month: "short", year: "numeric" });
 }
 
 type Pending = { key: string; file: File; durationMs?: number; label: string };
@@ -110,6 +110,7 @@ function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: st
   const reduced = useReducedMotion();
   const qc = useQueryClient();
   const { accent } = useSupportSide();
+  useLang(); // dates follow the language (lib/queries/support.ts istFormat)
   const thread = useSupportThread(ticketNo);
   const status = useSupportStatus(userId);
   const d = thread.data;
@@ -167,7 +168,8 @@ function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: st
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-gray-900 leading-tight truncate">Cosora Support</p>
               <p className="text-[11px] text-gray-500 truncate">
-                {CHANNEL_TEXT[t.channel]} · {labelIn(t.category_label)} · <span className="font-mono" data-no-translate>{t.ticket_no}</span>
+                {/* A fraud report's topic is "Fraud report" too: say it once. */}
+                {CHANNEL_TEXT[t.channel]}{t.channel !== "fraud_report" && <> · {labelIn(t.category_label)}</>} · <span className="font-mono" data-no-translate>{t.ticket_no}</span>
               </p>
             </div>
             <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[11px] font-medium text-gray-600">{STATUS_TEXT[t.status]}</span>

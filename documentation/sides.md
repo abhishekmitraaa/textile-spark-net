@@ -13,9 +13,6 @@ Routes for each side are listed in `documentation/sitemap.md`.
 
 ## Buyer Side
 
-**Primary colour:** Cosora red / coral `#EF4D62`.
-**Shell:** `BuyerShell` — BuyerTopBar + content + `MobileBottomNav` + ToTop.
-
 ### Purpose
 Give a sourcing buyer one place to discover suppliers, state what they need, and get
 comparable quotes back — instead of chasing WhatsApp contacts, brokers and trade-fair
@@ -201,6 +198,13 @@ the demand side of India's fashion and textile supply chain.
   tiles, the office pictures (stock photos, though vendors can now upload their own), the
   catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
   contact and business details were fixed on 2026-09-28 (below).
+
+### Changed 2026-10-02 (Help & Support follow-ups)
+- **Report this seller** (a seller's page, three-dot menu) and **Report this listing** (a product page, beside Share) open the fraud report about it. A Cosora store or listing link typed into the report counts the same.
+- Support dates (opening times, callbacks, My requests) are in the reader's language.
+
+**Primary colour:** Cosora red / coral `#EF4D62`.
+**Shell:** `BuyerShell` — BuyerTopBar + content + `MobileBottomNav` + ToTop.
 
 ### Changed 2026-09-29 (reviews)
 - **My Reviews shows the seller's reply** under each store and product review, and so does the product page.

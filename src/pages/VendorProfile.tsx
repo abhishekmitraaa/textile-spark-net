@@ -3,6 +3,7 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supportChatHref } from "@/lib/supportContact";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -29,7 +30,7 @@ import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
   Bookmark, BookmarkCheck, Star, ChevronDown, Users, Globe,
   Search, ArrowUpDown, Filter, Grid2X2, Grid3X3, Play, Factory, Send,
-  FileText, ExternalLink, LogIn,
+  FileText, ExternalLink, LogIn, Flag,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import catTshirt from "@/assets/categories/brand/tshirt.png";
@@ -414,10 +415,23 @@ const VendorProfile = () => {
             {vendor.isVerified && (
               <img src={trustedSeal} alt="TrustedSEAL" className="absolute top-3 right-3 z-10 h-9 w-auto drop-shadow" />
             )}
-            {/* 3-dot menu */}
-            <button aria-label="More" className="absolute right-3 top-14 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
-              <MoreVertical className="h-4 w-4" />
-            </button>
+            {/* 3-dot menu: report this seller (2026-10-02; the button had no action before).
+                The report names this account, so a confirmed finding can say whose it was. */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button aria-label="More" className="absolute right-3 top-14 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onSelect={() => navigate(/^[0-9a-f-]{36}$/i.test(vendorId) ? `/report-fraud?entity_type=vendor&entity_id=${vendorId}` : "/report-fraud")}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <Flag className="mr-2 h-4 w-4" /> Report this seller
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             {/* Info — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
