@@ -2419,7 +2419,7 @@ by hand there.
 
 **How it was verified:** `scripts/admin-completion/01`–`04`, see `test.md` (2026-09-27).
 
-### Reads (admin completion Phase 11, 2026-10-02; migration `20261002120000_admin_least_privilege_reads.sql`, rehearsed, not applied)
+### Reads (admin completion Phase 11, 2026-10-02; migration `20261002064904_admin_least_privilege_reads.sql`)
 
 Seven tables let every admin role read every row through `... or is_admin()`. Each read policy now names the
 roles whose Cosora-Admin section reads the table (`roles.ts` `SECTION_READ`):

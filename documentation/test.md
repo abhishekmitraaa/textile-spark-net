@@ -166,7 +166,7 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-02 — Admin completion Phase 11: least-privilege admin reads (rehearsed with harness 15, 17/17; harness 04 11/12, the twelfth a stale reason code; not applied)
+### 2026-10-02 — Admin completion Phase 11: least-privilege admin reads (harness 15 17/17 rehearsed and live; harness 04 12/12 live; migration applied, md5 matches)
 - **Baseline, live, before the migration** (harness 15 alone): every admin role read all seven tables. finance_admin, support, product_moderator, vendor_ops, ads_moderator and manager each reported MISMATCH: product_moderator and manager, for example, read 6 KYC documents, 5 contracts, 9 invoices, 2 subscriptions and 2,305 analytics events.
 - **Rehearsal: migration + harness 15 in one `execute_sql` that raises, so nothing committed.** The self-check passed, then 17/17:
   - read matrix, ok for all ten personas: super_admin docs 6, contracts 5, inv 9, subs 2, ads 1 (the harness's fixture order), cert 2, events 2,305; finance_admin inv/subs/ads/cert only; support docs/contracts/inv/subs/ads; vendor_ops docs/contracts; ads_moderator ads; product_moderator and manager nothing; demo-vendor its own (inv 7, subs 1, ads 1, events 532); demo-buyer and anon nothing;
@@ -177,6 +177,10 @@ file was created; they record real runs, but only those the changelog captured.
   - `vendor_cap_plan()`: the vendor about itself, `free` (its gold plan expired 2026-08-16); demo-buyer about the vendor, 42501; anon, 42501 (no EXECUTE).
 - **Harness 04 (ordinary app paths) with the migration, rolled back:** 11/12. The failure, `suspend_ad_campaign` with `suspected_fraud`, is the harness: Phase 3 made `admin.ad_reason_codes` the only list and that code isn't on it. Changed to `fraud_review`.
 - Cosora-Admin with the dev seed removed: `npm run typecheck` 0, `npm run build` passes, `dist` holds no seed code.
+- **Applied** through MCP `apply_migration` as `20261002064904` (the trigger bodies' md5s re-read first, unchanged since the rehearsal); its self-check passed. The file's statements md5-match the recorded ones (`3fd3b15d…`).
+- **Harness 15 live: 17/17**, the same cells as the rehearsal (events 2,328 for super_admin and 536 for demo-vendor: live traffic since).
+- **Harness 04 live, with `fraud_review`: 12/12.**
+- **Advisors:** performance, `auth_rls_initplan` 59 → 53 (32 tables), the six policies rewritten here gone; `multiple_permissive_policies` 50, unchanged. Security: the only new line is `vendor_cap_plan` executable by `authenticated` (by design: the triggers run as the caller; anon has no EXECUTE).
 
 ### 2026-10-01 — Help & Support applied (3 migrations, md5s match; role simulation 61/61 live; edge function deployed and probed; admin render check)
 
