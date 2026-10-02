@@ -666,8 +666,9 @@ undocumented. Deep technical rationale for each lives in
   opened**. The `${vendorId}/kyc/…` prefix is load-bearing —
   `business_docs_owner_select` keys on `foldername(name)[1]`. Never call `getPublicUrl()` on a
   private bucket: it returns a string that 400s, which reads as success.
-- **A vendor must never be able to mark themselves verified.** `vendor_documents_all` is one
-  `ALL` policy with `vendor_id = auth.uid() OR is_admin()`, which let a vendor `update … set
+- **A vendor must never be able to mark themselves verified.** `vendor_documents_all` was one
+  `ALL` policy with `vendor_id = auth.uid() OR is_admin()` (split per command in admin completion
+  Phase 12), which let a vendor `update … set
   verified = true` on their own KYC from the browser. The `vendor_documents_guard_review`
   trigger refuses the four review columns to non-admins; `set_vendor_document_verified()` is
   the only writer. Before adding a self-service column to any table with a permissive `ALL`
@@ -856,6 +857,13 @@ undocumented. Deep technical rationale for each lives in
     managed through the `admin_discount_*` RPCs by super_admin and finance_admin. Uses are counted from
     `admin.discount_redemptions`, never kept as a counter. Once a code has a confirmed use, its text, discount
     and target are fixed; make a new code instead.
+  - **A policy checks the caller once per query** (admin completion Phase 12, `20261002072403`). Write
+    `(select auth.uid())`, `(select public.is_admin())`, `(select public.admin_role())` and
+    `(select public.account_is_active((select auth.uid())))`, never the bare call: the bare form runs per row,
+    and the three definer helpers are a table lookup each time. Helpers that take the row (`owns_product(product_id)`,
+    `owns_rfq(rfq_id)`, `is_conversation_member(conversation_id)`) stay per row. Give each command its own policy;
+    a FOR ALL policy beside a SELECT policy makes every read evaluate both. The migration's self-check is the test
+    to copy, and `scripts/admin-completion/16_rls_equivalence.sql` proves a rewrite changes nobody's access.
   - **Admin reads name their roles too** (admin completion Phase 11, `20261002064904`, applied
     2026-10-02). The read policies on `vendor_documents`, `vendor_contracts`, `subscription_invoices`,
     `vendor_subscriptions`, `ad_orders`, `certificate_orders` and `engagement_events` admit only the roles whose
