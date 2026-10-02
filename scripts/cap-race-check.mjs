@@ -2,6 +2,10 @@
  * Concurrent inserts against a plan cap with ONE slot left — real HTTP
  * (Master Prompt 12, Part E).
  *
+ * RETIRED for leads 2026-10-03: the lead cap is off on every plan (RFQ/leads R2,
+ * leads_per_month = -1). The lead half now reports no refusal; keep it for if a cap
+ * ever returns. The product-cap half is still live.
+ *
  * enforce_product_cap() and enforce_lead_cap() both COUNT and then decide. Two
  * requests that count before either commits both see the free slot. The
  * 2026-09-16 probe could not show this: it ran its "concurrent" inserts one

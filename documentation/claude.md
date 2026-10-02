@@ -51,8 +51,9 @@ Rules decided before or outside of Claude Code sessions.
 - **Audio-first matters** — many Indian manufacturers are more comfortable speaking than
   typing. Audio messages in chat and voice-to-text in the RFQ form are critical for the
   real user base, not nice-to-haves.
-- **Subscription tiers (Basic / Silver / Gold)** determine vendor lead volume, product
-  listing caps, and geographic ad reach.
+- **Subscription tiers (Basic / Silver / Gold)** determine product listing caps and
+  geographic ad reach. **Leads are the same on every plan** (Mitra, 2026-10-02): the same
+  ranked feed and no cap on how many a vendor quotes on (RFQ/leads R2).
 - **Seller registration documents** (Seller Registration FAQ, Andy 2026-10-02): PAN card;
   GST certificate when registered for GST (registering without GST is allowed); a business
   registration (Udyam/MSME, incorporation certificate, shop licence, partnership deed or
@@ -968,6 +969,10 @@ undocumented. Deep technical rationale for each lives in
   `verify_jwt` (the anon key gets 403 — verified), because the anon key ships in the bundle
   and would otherwise let anyone burn OpenAI credits. They are separate functions so an auth
   mistake on the buyer-facing path cannot expose the drainer.
+- **Superseded 2026-10-02 (Mitra): there is no lead cap.** Every plan's `leads_per_month` is
+  -1, which `enforce_lead_cap()` treats as unlimited; the trigger stays installed so a cap could
+  come back as a data change, and if one does, the rule below applies again. Migration
+  `20261003090100_leads_same_on_every_plan.sql` (RFQ/leads R2, not yet applied). Kept for the record:
 - **The lead cap applies to the open marketplace only (Andy, 2026-09-22).** A lead is a
   distinct open-marketplace RFQ (`rfqs.vendor_id is null`) the vendor quoted in the window.
   A reply to a request addressed directly to the vendor is never counted and never refused

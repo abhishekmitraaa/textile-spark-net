@@ -6,6 +6,22 @@ text as supplied and records what was published from it.
 The published FAQs live in `public.faqs` and are edited in Cosora-Admin `/faqs`. **The app
 doesn't read this file**, so change a live answer in the admin, not here.
 
+## Rewritten 2026-10-03: leads are the same on every plan (RFQ/leads R2)
+
+Mitra decided on 2026-10-02 that no plan caps leads and every plan gets the same ranked feed.
+Migration `20261003090100_leads_same_on_every_plan.sql` rewrote the live answers that said otherwise, in English, Hindi
+and Gujarati. The source text below is kept as supplied; the answers marked **[R2]** no longer
+match what is published:
+- "What happens when I reach my lead limit?" (Subscription and Seller Help) became "Is there a
+  limit on how many leads I can quote on?" — No; your plan doesn't change which requirements you
+  see or their order.
+- "Lowest billing plan?" no longer quotes lead counts.
+- "What counts as a lead?" no longer mentions a limit.
+- "Is there any cost to register?" lost its "Pay-per-lead access" bullet.
+- "How are leads managed on Cosora?" now says requirements appear on the Leads page, ranked to the
+  catalogue (it also no longer claims email or WhatsApp alerts, which nothing sends).
+- "I don't have a GST number…" no longer says it affects lead access.
+
 ## What was published (2026-09-23)
 
 Loaded through the `admin_faq_*` RPCs as demo-admin (super_admin), the same path the admin
@@ -73,7 +89,7 @@ Manufacturers, wholesalers, exporters, or distributors of:
 **3. Is there any cost to register?**
 NO, Basic registration is **free**. You only pay if you opt for:
 - **Premium listings**
-- **Pay-per-lead access**
+- **Pay-per-lead access** **[R2]**
 - **Featured vendor badges**
 
 **4. What documents are required to register?**
@@ -84,13 +100,13 @@ NO, Basic registration is **free**. You only pay if you opt for:
 - Product catalog (PDF, Excel, or images)
 
 **5. I don't have a GST number. Can I still register?**
-Yes, but your account will be marked as **"Unverified Seller"**, which may affect visibility and lead access. We recommend registering your business officially.
+Yes, but your account will be marked as **"Unverified Seller"**, which may affect visibility and lead access. We recommend registering your business officially. **[R2]**
 
 **6. How do buyers contact me?**
 Buyers can **call or chat** with you directly through the platform once your product listings are approved.
 
 **7. How are leads managed on Cosora?**
-You'll get notified via dashboard, email, or WhatsApp when a buyer is interested. In future, you can also choose **pay-per-lead plans** to access high-intent buyers.
+You'll get notified via dashboard, email, or WhatsApp when a buyer is interested. In future, you can also choose **pay-per-lead plans** to access high-intent buyers. **[R2]**
 
 **8. How long does it take to get verified?**
 Verification usually takes **3 - 5 days**, depending on the documents submitted.
@@ -111,7 +127,7 @@ Yes, you can upgrade your plan at any time and the difference will be prorated. 
 **Is there a refund policy?**
 We offer a 7-day money-back guarantee for first-time subscribers. If you're not satisfied, contact us for a full refund.
 
-**What happens when I reach my lead limit?**
+**What happens when I reach my lead limit?** **[R2]**
 You'll receive notifications as you approach your limit. You can always upgrade your plan to get more leads or wait for the next billing cycle.
 
 **Do you offer discounts for annual billing?**

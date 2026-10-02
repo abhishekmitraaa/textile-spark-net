@@ -1,6 +1,10 @@
 /**
  * Targeted requests vs the lead cap — live check (Master Prompt 12, Part A).
  *
+ * RETIRED 2026-10-03: the lead cap is off on every plan (RFQ/leads R2,
+ * leads_per_month = -1), so nothing here is refused any more. Keep it for if a cap
+ * ever returns: the exemption it checks would apply again.
+ *
  * Decision (Andy, 2026-09-22): a quote on a request addressed DIRECTLY to the
  * vendor is never gated by the lead cap, even when the vendor has used every
  * open-marketplace lead. The open-marketplace side stays capped.
