@@ -994,7 +994,11 @@ undocumented. Deep technical rationale for each lives in
   rounds. Any new count-then-decide trigger takes the same lock.
 - **Any signed-in user may read any ACTIVE open-marketplace RFQ (Andy, 2026-09-22).**
   `rfqs_select` works like an open sourcing board on purpose. It does not check that the
-  reader is a vendor. Settled; do not "fix" it.
+  reader is a vendor. Settled; do not "fix" it. Signed-out visitors read none: the policy is
+  `TO authenticated` (RFQ/leads R1, Mitra 2026-10-02, migration
+  `20261003090000_rfqs_select_signed_in_only.sql`, not yet applied), and `/leads` and seller home ask
+  them to sign in instead of saying there are no requirements. Harness
+  `scripts/rfq-leads/r1_anon_lockdown.sql`.
 - **Every migration is a committed file named by its LIVE version (Master Prompt 12,
   2026-09-23).** Applying through the MCP is not enough. Apply, read the version the
   database stamped, and name the file `<that version>_<name>.sql` with statements equal to
