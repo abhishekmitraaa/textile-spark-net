@@ -70,7 +70,7 @@ begin
       elsif i = 3  then perform public.ad_click(t_ad_active, 'h04-session');
       elsif i = 4  then perform public.increment_product_view(t_prod_live);
       elsif i = 5  then t := public.approve_ad_campaign(t_ad_pending, null);
-      elsif i = 6  then perform public.suspend_ad_campaign(t_ad_active, 'suspected_fraud', 'H04 probe');
+      elsif i = 6  then perform public.suspend_ad_campaign(t_ad_active, 'fraud_review', 'H04 probe');
       elsif i = 7  then perform public.set_vendor_document_verified(t_doc, true, null);
       elsif i = 8  then insert into public.buyer_profiles (id, company) values (who, 'H04 Co')
                          on conflict (id) do update set company = excluded.company;

@@ -97,7 +97,7 @@ the **live Supabase project**, set state in SQL and restore it afterwards. Run w
 | Script | Covers |
 |---|---|
 | `check-seller-fields.mjs` | Seller/vendor field presence. Also wired as `npm run check:fields` |
-| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads; `12` live activity; `13` site content; `14` (2026-09-29) discount codes: pricing, reservation, expiry, supersede, confirm, release, the guessing limit and the admin RPCs. Expected cells are in each file's header |
+| `admin-completion/*.sql` | Admin-completion harnesses (2026-09-27), each a self-rolling-back SQL statement run with MCP `execute_sql`. `01` who may write what (10 personas × 14 checks); `02` moderation and campaign guards; `03` guards inside the admin RPCs; `04` 12 ordinary app paths still work; `05` review RPCs; `06` subscription RPCs; `07` (2026-09-28) the vendor private-field readers, every refusal code, the reveal limits and the ledger prune; `08` `vendor_profiles` after the Phase 4b revoke; `09` the payments ledger; `10` customers; `11` leads; `12` live activity; `13` site content; `14` (2026-09-29) discount codes: pricing, reservation, expiry, supersede, confirm, release, the guessing limit and the admin RPCs; `15` (2026-10-02) least-privilege admin reads: each persona's row counts in seven tables, and the plan-cap triggers run by a moderator. Expected cells are in each file's header |
 | `discount-race-check.sql` | Admin completion Phase 10, real concurrency: four steps run with MCP `execute_sql`. Step 2 fires simultaneous `net.http_post` calls at PostgREST `/rpc/discount_reserve`, each its own transaction. LAST: ten vendors at a code's last use, exactly one reserves. SAME: one vendor's ten checkouts on one code, exactly one stays open. Replace `SUFFIX` before running; step 4 deletes what the run made |
 | `discount-flow-check.mjs` | Admin completion Phase 10, no network: bundles the seven payment functions with esbuild and drives them against a stubbed Deno, Razorpay and database. 53 checks: the discounted price and GST, ₹0 orders, reserve and release on every failure path, confirm on verify and webhook, and demo mode |
 | `suspension-gate-check.mjs` | `account_is_active()` gating on the eight INSERT policies, and (since MPF-2) on `log_call()`. Runs each case **twice — active and suspended — and passes only if the answer changes**. While active it also asserts that direct INSERT/UPDATE/DELETE on `calls` are refused (42501) and that `log_call()` refuses a non-vendor target. Mutating as before; each run leaves one tagged call (`product_context` `zz-gate-…`), because clients can't delete `calls` |
@@ -165,6 +165,22 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-10-02 — Admin completion Phase 11: least-privilege admin reads (harness 15 17/17 rehearsed and live; harness 04 12/12 live; migration applied, md5 matches)
+- **Baseline, live, before the migration** (harness 15 alone): every admin role read all seven tables. finance_admin, support, product_moderator, vendor_ops, ads_moderator and manager each reported MISMATCH: product_moderator and manager, for example, read 6 KYC documents, 5 contracts, 9 invoices, 2 subscriptions and 2,305 analytics events.
+- **Rehearsal: migration + harness 15 in one `execute_sql` that raises, so nothing committed.** The self-check passed, then 17/17:
+  - read matrix, ok for all ten personas: super_admin docs 6, contracts 5, inv 9, subs 2, ads 1 (the harness's fixture order), cert 2, events 2,305; finance_admin inv/subs/ads/cert only; support docs/contracts/inv/subs/ads; vendor_ops docs/contracts; ads_moderator ads; product_moderator and manager nothing; demo-vendor its own (inv 7, subs 1, ads 1, events 532); demo-buyer and anon nothing;
+  - a product moderator re-approves a paying (gold) vendor's rejected listing: 1 row updated. Before the helper, with the narrowed policy, this path would have read no subscription and applied the free cap;
+  - the same over the free cap (expired plan, 5 other live listings): refused, "your free plan allows 2";
+  - demo-vendor resubmits its own rejected listing: 1 row;
+  - a moderator approves a paying vendor's rejected catalogue: 1 row;
+  - `vendor_cap_plan()`: the vendor about itself, `free` (its gold plan expired 2026-08-16); demo-buyer about the vendor, 42501; anon, 42501 (no EXECUTE).
+- **Harness 04 (ordinary app paths) with the migration, rolled back:** 11/12. The failure, `suspend_ad_campaign` with `suspected_fraud`, is the harness: Phase 3 made `admin.ad_reason_codes` the only list and that code isn't on it. Changed to `fraud_review`.
+- Cosora-Admin with the dev seed removed: `npm run typecheck` 0, `npm run build` passes, `dist` holds no seed code.
+- **Applied** through MCP `apply_migration` as `20261002064904` (the trigger bodies' md5s re-read first, unchanged since the rehearsal); its self-check passed. The file's statements md5-match the recorded ones (`3fd3b15d…`).
+- **Harness 15 live: 17/17**, the same cells as the rehearsal (events 2,328 for super_admin and 536 for demo-vendor: live traffic since).
+- **Harness 04 live, with `fraud_review`: 12/12.**
+- **Advisors:** performance, `auth_rls_initplan` 59 → 53 (32 tables), the six policies rewritten here gone; `multiple_permissive_policies` 50, unchanged. Security: the only new line is `vendor_cap_plan` executable by `authenticated` (by design: the triggers run as the caller; anon has no EXECUTE).
 
 ### 2026-10-01 — Help & Support applied (3 migrations, md5s match; role simulation 61/61 live; edge function deployed and probed; admin render check)
 
