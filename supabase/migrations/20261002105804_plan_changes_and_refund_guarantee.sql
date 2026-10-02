@@ -31,11 +31,11 @@
 -- checkout took none, so it isn't offered.
 
 -- ── 1. Columns ───────────────────────────────────────────────────────────────
+-- The constraints below are new, so they are added directly.
 alter table public.vendor_subscriptions
   add column if not exists scheduled_plan_id text references public.subscription_plans (id),
   add column if not exists scheduled_billing_cycle text,
   add column if not exists scheduled_from timestamptz;
-alter table public.vendor_subscriptions drop constraint if exists vendor_subscriptions_scheduled_check;
 alter table public.vendor_subscriptions add constraint vendor_subscriptions_scheduled_check
   check ((scheduled_plan_id is null) = (scheduled_billing_cycle is null)
      and (scheduled_plan_id is null) = (scheduled_from is null)
@@ -44,7 +44,6 @@ alter table public.vendor_subscriptions add constraint vendor_subscriptions_sche
 alter table public.subscription_payment_orders
   add column if not exists change_kind text,
   add column if not exists credit_rupees integer not null default 0;
-alter table public.subscription_payment_orders drop constraint if exists subscription_payment_orders_change_check;
 alter table public.subscription_payment_orders add constraint subscription_payment_orders_change_check
   check ((change_kind is null or change_kind in ('new', 'renewal', 'upgrade', 'downgrade')) and credit_rupees >= 0);
 
@@ -52,7 +51,6 @@ alter table public.subscription_invoices
   add column if not exists change_kind text,
   add column if not exists credit_rupees integer,
   add column if not exists superseded_at timestamptz;
-alter table public.subscription_invoices drop constraint if exists subscription_invoices_change_check;
 alter table public.subscription_invoices add constraint subscription_invoices_change_check
   check ((change_kind is null or change_kind in ('new', 'renewal', 'upgrade', 'downgrade'))
      and (credit_rupees is null or credit_rupees > 0));
@@ -433,15 +431,14 @@ alter table public.refund_guarantee_requests enable row level security;
 revoke all on public.refund_guarantee_requests from public, anon, authenticated;
 grant select on public.refund_guarantee_requests to authenticated;
 -- The seller's own request, and the roles Phase 11 gives the Subscriptions section
--- (20261002064904: super_admin, finance_admin, support).
-drop policy if exists refund_guarantee_requests_read on public.refund_guarantee_requests;
+-- (20261002064904: super_admin, finance_admin, support). The table is new here, so the
+-- policy and the audit trigger are created directly.
 create policy refund_guarantee_requests_read on public.refund_guarantee_requests
   for select to authenticated
   using (vendor_id = (select auth.uid())
          or ((select public.is_admin())
              and (select public.admin_role()) = any (array['super_admin', 'finance_admin', 'support']::public.admin_role_type[])));
 
-drop trigger if exists trg_admin_audit on public.refund_guarantee_requests;
 create trigger trg_admin_audit after insert or update or delete on public.refund_guarantee_requests
   for each row execute function admin.audit_row_change('vendor_id');
 

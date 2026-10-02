@@ -24,7 +24,7 @@ import { supabase } from "@/lib/supabase";
 // ─────────────────────────────────────────────────────────────
 
 // seller_help (Help & Support P5, 2026-10-01): the Help page for sellers. A new surface is
-// listed in five places; the migration 20261001130000 names them all.
+// listed in five places; the migration 20261002104545 names them all.
 export type FaqSurface = "buyer_help" | "seller_help" | "seller_registration" | "subscription";
 
 /** Stored translations (P5, 2026-10-01): written in Cosora-Admin, cleared when the English changes. */

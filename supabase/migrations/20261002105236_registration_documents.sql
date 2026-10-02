@@ -14,7 +14,7 @@
 --     catalog                {"name": "<file name>", "mime": "<type>"}  one row per file
 --
 -- Nothing else changes: the rows are still written by the seller under the existing
--- vendor_documents_all policy, still forced unreviewed by
+-- vendor_documents_insert policy (Phase 12, 20261002072403), still forced unreviewed by
 -- vendor_documents_guard_review_columns(), and still reviewed through
 -- set_vendor_document_verified(). Grants are table-wide, so the new column needs none.
 

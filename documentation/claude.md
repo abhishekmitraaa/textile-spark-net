@@ -27,7 +27,7 @@ Rules decided before or outside of Claude Code sessions.
 - **Product moderation** — all product listings go through admin moderation before going
   live (24–48 hours).
 - **Aadhaar** — only a **masked** copy (first 8 digits hidden), with the owner's consent, in
-  private storage; never the number. Counsel to confirm before it goes live (2026-10-02).
+  private storage; never the number. Live 2026-10-02; counsel still to confirm (ToDo.md).
 
 ### Locale
 - **Currency & timezone** — default to **INR** and **IST** for all Indian users.

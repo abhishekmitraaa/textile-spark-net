@@ -2,7 +2,7 @@
 // PLAN CHANGES — the payment functions' side (2026-10-02).
 //
 // What a plan purchase costs and when it starts is decided in the database, in one
-// place: admin.subscription_quote (migration 20261002100100). The Subscription FAQ
+// place: admin.subscription_quote (migration 20261002105804). The Subscription FAQ
 // promises it: "you can upgrade your plan at any time and the difference will be
 // prorated. Downgrades will take effect from your next billing cycle."
 //

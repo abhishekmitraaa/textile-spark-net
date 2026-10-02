@@ -1,8 +1,8 @@
 # Help & Support P5: the new Help content, for review
 
 Written 2026-10-01 for Andy (content owner) and Mitra. Everything here is seeded by
-`supabase/migrations/20261001130000_faqs_seller_help_and_translations.sql`, which is rehearsed but
-**not applied** yet. Once it's applied, every row can be edited in Cosora-Admin → FAQs with no deploy.
+`supabase/migrations/20261002104545_faqs_seller_help_and_translations.sql`, applied on
+2026-10-02 (with its content, `20261002104949_help_content_p5.sql`). Every row can be edited in Cosora-Admin → FAQs with no deploy.
 
 Each English answer was checked against the code and the live database on 2026-10-01. The Hindi
 and Gujarati were written alongside. Like the app's other translations, they still need a native

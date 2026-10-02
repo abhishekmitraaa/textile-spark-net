@@ -1,5 +1,5 @@
 -- Plan changes, the 7-day money-back guarantee and the registration documents
--- (2026-10-02; migrations 20261002100000 and 20261002100100).
+-- (2026-10-02; migrations 20261002105236 and 20261002105804).
 --
 -- One DO block, run as postgres. It changes rows only inside its own transaction and
 -- ends with RAISE EXCEPTION, so nothing is kept; the result is the exception text.

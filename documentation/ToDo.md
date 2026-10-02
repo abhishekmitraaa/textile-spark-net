@@ -81,7 +81,7 @@ with no need to dictate format, context, or reference each time.
   - Andy asked for every document in the Seller Registration FAQ to be collected, Aadhaar included (2026-10-02).
     The code had left Aadhaar out on purpose, citing the Aadhaar Act 2016 and UIDAI rules for entities that aren't
     an authorised KUA/AUA.
-  - As built (not merged): the seller uploads a **masked** Aadhaar only (UIDAI's masked copy, first 8 digits
+  - Live since 2026-10-02 (released at the user's instruction before counsel answered). As built: the seller uploads a **masked** Aadhaar only (UIDAI's masked copy, first 8 digits
     hidden), ticks a consent line, and the file goes to the private `business-docs` bucket like every KYC scan,
     opened only by Cosora's team and deleted with the account. The number is never asked for or stored, and the
     database refuses an Aadhaar row not marked masked (`vendor_documents_detail_check`).

@@ -4,7 +4,7 @@
 --
 -- One DO block, run as postgres (MCP execute_sql). It changes rows only inside its own
 -- transaction and ends with RAISE EXCEPTION, so nothing is kept. To rehearse, paste
--- 20261001130000_faqs_seller_help_and_translations.sql (and optionally the content
+-- 20261002104545_faqs_seller_help_and_translations.sql (and optionally the content
 -- migration, or a sample of it) above this block in the same call.
 --
 -- Fixture, rolled back: demo-buyer (1111…) is made a support admin; demo-vendor (2222…)
