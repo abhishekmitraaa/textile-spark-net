@@ -248,6 +248,54 @@ with no need to dictate format, context, or reference each time.
 - Priority: Low (only matters once someone changes the theme)
 - Status: Open
 
+### Fix a stale policy name in the pending registration-documents migration — added 2026-10-02
+- Task: before `supabase/migrations/20261002100000_registration_documents.sql` is applied, change its header
+  comment "the rows are still written by the seller under the existing vendor_documents_all policy" to name
+  the policies that exist now: the seller writes through `vendor_documents_insert` / `_update` / `_delete` and
+  reads through `vendor_documents_select`.
+- Context: admin completion Phase 12 (`20261002072403_rls_per_statement`, applied 2026-10-02) replaced the FOR ALL
+  policy `vendor_documents_all` with one policy per command, using the same expressions, so the migration still
+  behaves as written; only the comment is out of date. Fix it before the apply: a migration file must match the
+  statements recorded when it is applied (the md5 rule in `claude.md`), so after that the comment stays in
+  history. The file is on the Help & Support / FAQ-input release branch (`release/2026-10-02`), not on `main`.
+- Reference: 2026-10-02, the wrap-up of admin completion Phase 12; Mitra asked for it to go in ToDo.
+- Status: Open
+
+### Check every new RLS policy for the once-per-query pattern before it is applied — added 2026-10-02
+- Task: in any migration that creates or changes a policy, write `(select auth.uid())`,
+  `(select public.is_admin())`, `(select public.admin_role())` and
+  `(select public.account_is_active((select auth.uid())))` instead of the bare calls, and give each command its
+  own policy (no FOR ALL policy beside a SELECT policy). After the apply, run the performance advisor:
+  `auth_rls_initplan` and `multiple_permissive_policies` must both stay at 0.
+- Context: Phase 12 took them from 53 and 50 to 0. A bare call in a policy runs once for every row scanned;
+  `is_admin()`, `admin_role()` and `account_is_active()` are SECURITY DEFINER, so each call is a table lookup,
+  and the advisor only flags the `auth.uid()` half. Helpers that take the row (`owns_product(product_id)`,
+  `owns_rfq(rfq_id)`, `is_conversation_member(conversation_id)`) stay per row, and calls inside function bodies
+  are fine (once per call). The rule is in `claude.md` ("A policy checks the caller once per query"). To prove a
+  policy rewrite changes nobody's access, paste it into `scripts/admin-completion/16_rls_equivalence.sql`.
+  Checked 2026-10-02: the migrations waiting on `release/2026-10-02` add one policy,
+  `refund_guarantee_requests_read`, and it already follows the pattern.
+- Reference: 2026-10-02, the wrap-up of admin completion Phase 12; Mitra asked for it to go in ToDo.
+- Status: Open
+
+### Turn on leaked-password protection (needs the Supabase Pro plan) — added 2026-10-02
+- Task: in the Supabase dashboard, Authentication → Providers → Email (the password settings), switch on
+  "Prevent use of leaked passwords". Then re-run the security advisor: the `auth_leaked_password_protection`
+  warning should be gone.
+- Context:
+  - What it does: when a password is set or changed, Supabase Auth checks it against the HaveIBeenPwned "Pwned
+    Passwords" list and refuses one that is known from breaches (credential stuffing).
+  - Who it protects here: buyers and vendors sign in by mobile + OTP and have no password, so it matters for the
+    password accounts: Cosora-Admin staff (email + password; staff registration on the release branch issues a
+    temporary password that is replaced at first sign-in) and the demo and fixture accounts.
+  - Plan: Supabase documents it as "available on the Pro Plan and above" (docs checked 2026-10-02). This project
+    is on the Free plan, so the switch isn't available yet; do it as part of the Pro upgrade, alongside the
+    video size cap steps in `claude.md` ("Raising MAX_VIDEO_BYTES").
+  - It is the only Auth warning in the security advisor.
+- Reference: 2026-10-02, the wrap-up of admin completion Phase 12 (the plan's manual step 3); Mitra asked for it to
+  go in ToDo.
+- Status: Open
+
 ### Switch on Microsoft Clarity, after a legal read of the notice — added 2026-09-28
 - Task:
   1. Have the Terms page's "Analytics and session replay" section read for legal wording, and
@@ -274,7 +322,8 @@ with no need to dictate format, context, or reference each time.
 - Context: it's 2–10 ms today on ~2,100 events, and each open Live Activity tab calls it every
   30 seconds. At 10,000 concurrent buyers the log could take millions of rows an hour, and the
   24-hour window would scan all of them per call. While there: the performance advisor lists
-  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys (Phase 12 material).
+  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys. Admin completion Phase 12 (2026-10-02)
+  covered the RLS warnings only; 40 unindexed foreign keys and 19 unused indexes (INFO) remain.
 - Reference: 2026-09-28, admin completion Phase 8 (Live Activity, native).
 - Priority: Low today; High before a traffic launch
 - Status: Open
