@@ -6,11 +6,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useOpenRfqs, useDirectQuoteRequests } from "@/lib/queries/rfqs";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
 import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
+import SignInForLeads from "@/components/vendor/SignInForLeads";
 
 // Vendor Leads = the live buyer-RFQ pool. All lead browsing + quoting is the
 // real OpenRfqLeads panel (RFQ→quote loop). Previously this page also carried a
 // large fixture of fake buyers; that mock feed + its filters were removed so the
-// page only ever shows real requirements.
+// page only ever shows real requirements. A signed-out visitor reads no RFQ at all
+// (RFQ/leads R1), so they're asked to sign in rather than told there are none.
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -20,7 +22,7 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 
 const Leads = () => {
   const reduced = useReducedMotion();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
   const { data: direct = [] } = useDirectQuoteRequests(user?.id);
   // Direct requests count as leads: without this the page would claim there is
@@ -38,34 +40,40 @@ const Leads = () => {
         </motion.div>
 
         <motion.div variants={section}>
-          <DirectQuoteRequests />
-          <OpenRfqLeads />
+          {!loading && !user ? (
+            <SignInForLeads />
+          ) : (
+            <>
+              <DirectQuoteRequests />
+              <OpenRfqLeads />
 
-          {!isLoading && !hasLeads && (
-            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-              <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-vendor/10">
-                <Inbox className="h-6 w-6 text-brand-vendor" />
-              </div>
-              <p className="text-base font-bold text-gray-900">No open buyer requirements right now</p>
-              <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
-                When buyers post requirements that match your catalogue, they'll appear here for you to quote on. Keep your
-                products live and visible to get matched faster.
-              </p>
-              <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
-                <Link to="/products">
-                  <motion.span whileTap={TAP} transition={TAP_T}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors">
-                    <Package className="h-4 w-4" /> Manage products
-                  </motion.span>
-                </Link>
-                <Link to="/advertisements">
-                  <motion.span whileTap={TAP} transition={TAP_T}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-brand-vendor/90 transition-colors">
-                    <Megaphone className="h-4 w-4" /> Boost visibility <ArrowRight className="h-3.5 w-3.5" />
-                  </motion.span>
-                </Link>
-              </div>
-            </div>
+              {!isLoading && !hasLeads && (
+                <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-brand-vendor/10">
+                    <Inbox className="h-6 w-6 text-brand-vendor" />
+                  </div>
+                  <p className="text-base font-bold text-gray-900">No open buyer requirements right now</p>
+                  <p className="mx-auto mt-1 max-w-sm text-sm text-gray-500">
+                    When buyers post requirements that match your catalogue, they'll appear here for you to quote on. Keep your
+                    products live and visible to get matched faster.
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+                    <Link to="/products">
+                      <motion.span whileTap={TAP} transition={TAP_T}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-4 py-2 text-xs font-bold text-gray-700 hover:bg-gray-50 transition-colors">
+                        <Package className="h-4 w-4" /> Manage products
+                      </motion.span>
+                    </Link>
+                    <Link to="/advertisements">
+                      <motion.span whileTap={TAP} transition={TAP_T}
+                        className="inline-flex items-center gap-1.5 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-brand-vendor/90 transition-colors">
+                        <Megaphone className="h-4 w-4" /> Boost visibility <ArrowRight className="h-3.5 w-3.5" />
+                      </motion.span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </motion.div>
       </motion.div>

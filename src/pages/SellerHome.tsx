@@ -15,6 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
 import { useMyProducts } from "@/lib/queries/products";
 import { useOpenRfqs } from "@/lib/queries/rfqs";
+import SignInForLeads from "@/components/vendor/SignInForLeads";
 import { useConversations } from "@/lib/queries/chat";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
@@ -46,7 +47,7 @@ const TAP_T = { duration: 0.13, ease: E };
 
 const SellerHome = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const { data: dash } = useVendorDashboard(user?.id);
   const { data: myProducts = [] } = useMyProducts(user?.id);
   const { data: openRfqs = [] } = useOpenRfqs(user?.id);
@@ -397,7 +398,10 @@ const SellerHome = () => {
                 </motion.div>
               ))}
               {recentLeads.length === 0 && (
-                <p className="py-6 text-center text-sm text-gray-400">No open buyer requirements right now. Check back soon.</p>
+                // Signed out, there's nothing to read (RFQ/leads R1): ask, don't claim "none".
+                !loading && !user
+                  ? <SignInForLeads compact />
+                  : <p className="py-6 text-center text-sm text-gray-400">No open buyer requirements right now. Check back soon.</p>
               )}
             </motion.div>
           </div>
