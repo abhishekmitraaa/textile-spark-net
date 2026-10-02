@@ -332,13 +332,12 @@ export interface LeadRfq {
   id: string; title: string; productName: string; units: number; priceMin: number; priceMax: number;
   image: string; date: string; alreadyQuoted: boolean;
   categoryId: string | null;
-  /** True when this RFQ's category is one of a PAID vendor's live product
+  /** True when this RFQ's category is one of the vendor's live product
    *  categories. Still the exact-overlap signal the badge has always meant —
    *  it is now one input to `score` rather than the whole ranking. */
   matched: boolean;
   /** Cosine similarity between the RFQ and the vendor's catalogue centroid.
-   *  null for a free vendor (not scored), or when either side has no embedding
-   *  yet — which is every row until the embedding pipeline runs. */
+   *  null when either side has no embedding yet, or when scoring failed. */
   similarity: number | null;
   /** 0.7 * similarity + 0.3 * matched, from match_vendor_rfqs. Sort key. */
   score: number;
@@ -360,34 +359,20 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data: myQuotes } = await supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId);
   const quoted = new Set((myQuotes ?? []).map((q) => q.rfq_id));
 
-  // The paywall is unchanged and deliberately so: free-tier vendors see the
-  // plain unranked pool, paid vendors (Basic+, i.e. an active plan cached on
-  // vendor_profiles) get relevance. That gate is the business model — the same
-  // one IndiaMART and Alibaba run — and only the computation behind it moved.
-  const { data: vp } = await supabase
-    .from("vendor_profiles").select("plan_expires_at").eq("id", vendorId).maybeSingle();
-  const isPaid = Boolean(vp?.plan_expires_at && new Date(vp.plan_expires_at).getTime() > Date.now());
-
-  // What moved: this used to be a client-side Set intersection of the vendor's
-  // product category_ids against rfqs.category_id — one tag against one tag,
-  // blind to everything the buyer actually wrote. Ranking now happens in one
-  // place server-side (match_vendor_rfqs), the same way match_products owns
-  // product ranking, so the weighting is a single visible expression instead of
-  // a sort key invented in the browser.
+  // Every vendor gets the same ranking (Mitra, 2026-10-02: leads are the same on
+  // every plan; documentation/rfq-leads-pipeline-design-2026-10-02.md, R2). The
+  // weighting lives in one place server-side (match_vendor_rfqs), the same way
+  // match_products owns product ranking.
   //
-  // Degrades to the old behaviour rather than failing. Until the embedding
-  // pipeline has run — it is waiting on OpenAI billing and on the
-  // service_role_key vault secret; the OPENAI_API_KEY itself is already set —
-  // every similarity comes back null and score collapses to the category term
-  // alone. A failed RPC does the same.
+  // Degrades to the chronological list rather than failing: until both sides
+  // have an embedding, similarity comes back null and score collapses to the
+  // category term alone; a failed RPC leaves every score at 0.
   let matchOf = new Map<string, { similarity: number | null; categoryMatch: boolean; score: number }>();
-  if (isPaid) {
-    const { data: scores, error: scoreErr } = await supabase
-      .rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: 200 });
-    if (!scoreErr && scores) {
-      matchOf = new Map((scores as { rfq_id: string; similarity: number | null; category_match: boolean; score: number }[])
-        .map((s) => [s.rfq_id, { similarity: s.similarity, categoryMatch: s.category_match, score: s.score }]));
-    }
+  const { data: scores, error: scoreErr } = await supabase
+    .rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: 200 });
+  if (!scoreErr && scores) {
+    matchOf = new Map((scores as { rfq_id: string; similarity: number | null; category_match: boolean; score: number }[])
+      .map((s) => [s.rfq_id, { similarity: s.similarity, categoryMatch: s.category_match, score: s.score }]));
   }
 
   const leads: LeadRfq[] = rows.map((r) => {
@@ -398,15 +383,14 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
       alreadyQuoted: quoted.has(r.id),
       categoryId: r.category_id ?? null,
-      matched: isPaid && (m?.categoryMatch ?? false),
-      similarity: isPaid ? (m?.similarity ?? null) : null,
-      score: isPaid ? (m?.score ?? 0) : 0,
-      strongMatch: isPaid && (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
+      matched: m?.categoryMatch ?? false,
+      similarity: m?.similarity ?? null,
+      score: m?.score ?? 0,
+      strongMatch: (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
     };
   });
 
-  // Best fit first; ties keep the created_at desc the query already applied, so
-  // a free vendor (every score 0) sees the untouched chronological pool.
+  // Best fit first; ties keep the created_at desc the query already applied.
   return leads.sort((a, b) => b.score - a.score);
 }
 export function useOpenRfqs(vendorId: string | undefined) {

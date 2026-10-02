@@ -11,7 +11,9 @@ export type PlanId = "free" | "basic" | "silver" | "gold" | "vip";
 export type AdLocationScope = "none" | "state_1" | "state_4" | "pan_india" | "global";
 
 // Enforceable limits (subscription_plans.limits jsonb). product_cap = -1 means
-// unlimited; leads_per_month is the monthly lead allowance.
+// unlimited. leads_per_month is -1 on every plan since RFQ/leads R2 (Mitra,
+// 2026-10-02): leads are the same on every plan. enforce_lead_cap() treats a
+// negative value as unlimited; nothing in the app shows it.
 export interface PlanLimits {
   leads_per_month: number;
   product_cap: number;

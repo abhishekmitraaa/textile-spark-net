@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaqSection } from "@/components/FaqSection";
 import {
-  Check, X, Crown, Package, Users, Download, ChevronDown, ChevronUp, Sparkles,
+  Check, X, Crown, Package, Download, ChevronDown, ChevronUp, Sparkles,
   Shield, Star, Clock, Percent, ArrowRight, Loader2, Lock, FileText,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -39,7 +39,6 @@ const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 // Comparison-table rows are modelled from the plan's `display` jsonb (one entry
 // per spec row) so the whole table is data-driven — no hardcoded matrix.
 const FEATURE_ROWS: { key: keyof PlanDisplay; label: string }[] = [
-  { key: "leads", label: "Leads / month (est.)" },
   { key: "products", label: "Products listed" },
   { key: "international", label: "International buyer access" },
   { key: "ad", label: "Ad location" },
@@ -246,16 +245,11 @@ export default function Subscription() {
               </div>
             </CardHeader>
             <CardContent className="relative">
-              <div className="grid gap-4 sm:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2">
                 {/* Products */}
                 <UsageTile
                   icon={Package} label="Products"
                   used={usage?.products_used ?? 0} cap={limits?.product_cap ?? -1}
-                />
-                {/* Leads */}
-                <UsageTile
-                  icon={Users} label="Monthly Leads"
-                  used={usage?.leads_used ?? 0} cap={limits?.leads_per_month ?? -1}
                 />
                 {/* Renewal / status */}
                 <div className="rounded-xl border border-border bg-card/80 p-4 backdrop-blur-sm">
@@ -264,7 +258,7 @@ export default function Subscription() {
                   </div>
                   <p className="mt-3 text-lg font-bold text-foreground capitalize">{vplan?.status ?? "free"}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {daysRemaining != null ? `Renews in ${daysRemaining} days` : "Upgrade for more leads & products"}
+                    {daysRemaining != null ? `Renews in ${daysRemaining} days` : "Upgrade for more products"}
                   </p>
                 </div>
               </div>
@@ -333,7 +327,6 @@ export default function Subscription() {
                     <CardContent className="relative flex flex-1 flex-col gap-4">
                       <ul className="space-y-2 text-left">
                         {[
-                          `${plan.display.leads} leads / month`,
                           `${plan.display.products} products`,
                           plan.display.ad === "None" ? "No ad targeting" : `Ads: ${plan.display.ad}`,
                           plan.display.trust === "None" ? null : plan.display.trust,
