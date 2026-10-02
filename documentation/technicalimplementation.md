@@ -2474,6 +2474,55 @@ Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 
 - **Adding or changing a job** needs Mitra's say-so. A job whose work is conditional must RAISE when it can't do the work (see "A SQL statement that does nothing still SUCCEEDS" in `claude.md`).
 - **Off:** `embedding-worker`, `vendor-catalog-recompute`, `embedding-health-alarm`, `prune-query-embedding-cache`, `prune-embed-rate-limit` (`ToDo.md`).
 
+## Support: tickets, messages and the admin console (Help & Support, 2026-09-30; live 2026-10-01, rollout Off)
+
+The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to D-23, A1 to A9). Migrations `20260930212818_support_schema`, `20260930213143_support_requester_rpcs` and `20260930213451_support_admin_rpcs`, and the edge function `support-attachment-verify`, are live (2026-10-01). Rollout is **off** until the launch gate (plan P7, G1).
+
+### One request, one ticket (A1)
+- Every request is one `support_tickets` row. `channel` is chat, callback, fraud_report or feedback; `category` is a `support_categories` code; `ticket_no` is `CS-` plus a six-digit sequence. `status` is new → open → resolved → closed. Resolved reopens when the requester replies within 7 days; closed is final.
+- **Separate tables, not `conversations` (A2).** A chat message insert needs an active account and runs the moderation triggers, which would stop a suspended user appealing. So support has its own tables, and no requester function checks `account_is_active()`. `account_not_deleted()` still applies.
+- **Staff-only fields live in `support_ticket_staff`** (assignee, the server-built `context`, fraud outcome, reviewed by and at). The requester's RLS reads `support_tickets` but never this table, so realtime can't carry the assignee to them (D-06).
+- **No column a requester can read names a staff member (D-06).** `support_messages` and `support_attachments` are granted to `authenticated` column by column, leaving out `author_id` and `uploader_id`. Those would resolve to a name through `profiles.full_name`. Realtime drops columns the subscriber can't select, and staff read both tables through the definer RPCs. The schema self-check and test T5e both fail if either column becomes readable.
+- `context` is built by `admin.support_context()` when the ticket opens: account status, side, and for a vendor the brand, plan and KYC counts; for a linked conversation, RFQ or quote, facts about it (last message by each side, quote state). The requester can't write it (A9).
+- `support_events` records every status change by requester, staff or the system. `admin.audit_row_change()` only logs active admins, so it can't be the history (A8).
+
+### Messages and visibility
+- `support_messages.author_kind` is requester, staff or system; `visibility` is public or internal. The requester's select policy requires `visibility = 'public'`. Mutation check M1 proves the tests would notice if that filter went.
+- Messages and events are append-only (`admin.support_append_only`). The only exceptions are nested trigger writes and the deletion scrub (`cosora.support_scrub = 'on'`, P6). An attachment's `status` changes once, `pending` to `clean` or `rejected`, through `support_attachment_checked()` (it updates only `where status = 'pending'`). Sending the file sets `message_id` once, and for a staff file `requester_can_view = not internal`. Clients have SELECT only; there is no append-only trigger on this table.
+- Bodies are at most 4,000 characters and plain text. Render with `data-no-translate`.
+
+### Access (A5)
+- `admin.support_can_read()`: super_admin, support, manager. `admin.support_can_write()`: super_admin, support. Settings: super_admin (`admin.require_content_admin()`). Quick Guides: super_admin and support (`admin.help_content_require()`).
+- Change a gate in four places together: the SQL helper, Cosora-Admin `roles.ts`, the RLS policies, and these docs. The table policies and the storage helper `support_attachment_read_allowed()` each repeat the role list rather than calling the helper, so search for the list.
+- Phones are never in a readable column for staff. The admin functions return `admin.support_mask_phone()` (`+91•••••••226`; a number shorter than 12 characters shows only its last 3 digits, so at least 5 stay hidden); `admin_support_reveal_contact()` returns the full number after inserting a `reveal_contact` row in `admin.audit_log` (the action check was widened for it).
+- EXECUTE is revoked from `public` and `anon` on every function except `support_status()`. One overload each; each migration's self-check fails the migration otherwise.
+
+### Rollout and hours (A6)
+- `support_settings.rollout`: off, staff (active admins plus up to 20 `test_profile_ids`), all. It starts **off**. `admin.support_rollout_allows()` is checked (through `admin.support_requester(true)`) by every function that starts a request or adds to one. With rollout Off a requester can still list and open their own requests, mark them read and end an open chat (`support_requester(false)`). `support_status()` is ungated. Tickets from test accounts are marked `is_test`. They are counted like any other request, and the inbox list can leave them out ("Include test requests").
+- `support_hours` (0 = Sunday) and `support_holidays` drive `admin.support_is_open_at()` and `admin.support_next_open_at()`. After hours a chat still accepts messages (D-07); `support_status()` tells Help when the next reply can come.
+
+### Attachments (A4)
+- Private bucket `support-attachments`, path `{ticket_id}/{uuid}.{ext}`, 10 MB cap and a MIME allowlist. Photos and audio up to 5 MB, PDFs up to 10 MB, 30 files per ticket (`admin.support_reserve_upload()`).
+- Upload order: a prepare function reserves the row and path (status `pending`) → the browser uploads → `support-attachment-verify` reads the first 64 bytes with the service key and calls `support_attachment_checked()` (service_role only). It checks the size cap, that storage serves the file as the type it was reserved as (the bucket only checks the type is on its list), and the signature. A refused file is deleted. Rejected files don't count toward the 30. **Only `clean` files can be sent** (`admin.support_check_files`, hint `file_unchecked`). A file whose check never ran can't sit on a message for good, because only its uploader can run the check. Cosora-Admin's `uploadStaffFile()` asks again on "pending" and reuses checked files when a send is retried. Storage policies go through `support_attachment_read_allowed()`, which admits only `clean` files, to the ticket's requester (unless `requester_can_view` is false) or to `support_can_read()`.
+- **Fraud evidence is write-only for the reporter:** `requester_can_view = false`, and they see "N files received". Mutation check M3 covers it.
+- Not a malware scanner. PDFs download in Cosora-Admin, never render inline. A scanner is chosen before video or signed-out uploads.
+
+### "Waiting on us" (`admin.support_ticket_rows`)
+- A request is waiting on staff while it is new or open and either its channel's own to-do is outstanding, or the requester wrote after staff last did. A system line asking them to reply doesn't count as a staff reply. Chat: the requester wrote last. Callback: the call is still to be made, or they wrote after the latest reply or call attempt. Fraud report: no outcome yet, or they wrote after the latest reply. Feedback: not marked reviewed and not waiting on the requester (taking it doesn't count as reading it).
+- `waiting_at` is when the wait began. For a callback still to be made it is the booked slot, which can be in the future: the inbox shows "due in …", and the oldest-waiting figure leaves future slots out. The rules were rehearsed on their own (14/14, `test.md` 2026-09-30).
+
+### Live updates (A3)
+- `support_tickets`, `support_ticket_staff` and `support_messages` are in `supabase_realtime`. Clients treat an event as "refetch". Register `.on()` before `.subscribe()`, and give every mount its own topic (see "Realtime channels are shared by topic" below). The Free plan allows 200 connections; if that binds, swap to Broadcast behind the one hook.
+
+### Notifications
+- `admin.support_notify()` wraps `notify()` with kinds `support_reply`, `support_status`, `support_callback`, `support_receipt`. Email receipts (feedback and fraud only, D-22) are P6 and depend on Resend.
+
+### Rate limits (`admin.support_rate_check()`)
+- 5 new tickets an hour, 20 a day, 5 open at once (3 of them chats); 30 messages in 5 minutes; 20 uploads an hour; 3 fraud reports and 5 feedback notes a day; one pending callback.
+
+### Tests
+- `scripts/support-role-simulation.sql`: 61 checks in one call; it writes nothing (the last statement aborts the transaction). 61/61 against the live functions on 2026-10-01 (`test.md`). Re-run it after any change to the support functions or policies.
+
 ## Integrations
 
 ### Supabase

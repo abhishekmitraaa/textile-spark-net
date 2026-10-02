@@ -129,7 +129,7 @@ const testimonials = [
 const menuLinks = [
   { label: "Cosora FAQ", href: "/help" },
   { label: "Blogs", href: "/seller/blogs" },
-  { label: "About Us", href: "/about" },
+  { label: "About Us", href: "/blogs/about" },
   { label: "Contact Us", href: "mailto:hello@cosora.in", external: true },
   { label: "Work with us!", href: "https://cosora.in/careers", external: true },
   { label: "Terms and conditions", href: "/auth/terms" },
@@ -183,7 +183,12 @@ const VendorLanding = () => {
                   {menuLinks.map((item) => {
                     const isExternal = Boolean(item.external);
                     const isHash = item.href.startsWith("#");
-                    if (isExternal || isHash) {
+                    // /blogs is the Journal app, reverse-proxied onto this
+                    // origin. Same origin, but outside this router, so it needs
+                    // a real anchor; a <Link> would match nothing and 404.
+                    // Not target="_blank": it is the same site, not a new one.
+                    const isProxied = item.href.startsWith("/blogs");
+                    if (isExternal || isHash || isProxied) {
                       return (
                         <a
                           key={item.label}

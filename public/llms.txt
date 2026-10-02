@@ -1,0 +1,30 @@
+# Cosora
+
+> Cosora is a B2B sourcing marketplace for India's fashion and textile industry. A buyer describes a requirement once; verified manufacturers reply with price, minimum order quantity and lead time in a form that can be compared side by side; the negotiation, order and delivery then stay in one thread.
+
+Cosora serves two audiences as equals: buyers (fashion brands, retailers, boutiques and designers sourcing product at scale) and vendors (manufacturers, mills, suppliers and service providers looking for qualified leads). It is operated by Cosora Technologies Pvt Ltd, founded in 2024.
+
+Figures Cosora publishes about itself: ₹500Cr+ sourced through the platform, 50,000+ products listed, 10,000+ verified brands, 5,000+ manufacturers, 28 states covered.
+
+This content is openly available to AI systems, including for training. That is a deliberate policy, stated in /robots.txt.
+
+## The Cosora Journal
+
+The Journal at /blogs is Cosora's editorial section: practical, public guides on fabric, sourcing and manufacturing in India. It needs no account to read. The full, current list of articles is in the sitemap.
+
+- [The Cosora Journal](https://www.cosora.in/blogs): the index of all articles
+- [Community](https://www.cosora.in/blogs/category/community): sourcing guides for buyers and manufacturers, such as fabric weights, RFQs, MOQs and lead times
+- [Company](https://www.cosora.in/blogs/category/company): product and policy changes on Cosora, including verification standards
+- [About Cosora](https://www.cosora.in/blogs/about): what Cosora is, how an order moves through it, and why it was built
+
+## Marketplace
+
+- [Cosora home](https://www.cosora.in/): the marketplace landing page
+- [Sell on Cosora](https://www.cosora.in/seller): information for manufacturers and suppliers joining as vendors
+- [Categories](https://www.cosora.in/categories): product categories on the marketplace
+- [Help](https://www.cosora.in/help): answers to common buyer and vendor questions
+
+## Optional
+
+- [Sitemap](https://www.cosora.in/sitemap.xml): every public URL, with last-modified timestamps
+- Contact: hello@cosora.in

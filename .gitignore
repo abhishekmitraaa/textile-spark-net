@@ -34,3 +34,8 @@ dist-ssr
 # video-closeups-bunny.spec.ts also stages a ~4 MB video fixture under here.
 test-results/
 playwright-report/
+
+# Local agent scratch notes and the Impeccable design-tool cache/config.
+# Machine-local; never publish them from a public repo.
+.claude/tmp/
+.impeccable/

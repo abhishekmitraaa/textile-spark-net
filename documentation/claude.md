@@ -130,6 +130,29 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
+- **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
+  `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with
+  rollout Off; the technical side is "Support" in `technicalimplementation.md`.
+  - The support phone is **+91 88155 78226**.
+  - Hours are **Mon–Fri 10:00–19:00 IST**, closed weekends and holidays. They are data
+    (`support_hours`, `support_holidays`, edited in Cosora-Admin's Support settings), so never
+    hardcode them.
+  - **Users only ever see "Cosora Support"**, never a staff member's name (D-06). No column a
+    requester can select names who answered: `author_id` and `uploader_id` aren't granted to
+    them, and the schema's self-check fails if they are.
+  - Staff reply in **Hindi and English** (D-19).
+  - **Super admin and Support act; Manager reads only** (D-08). Phone numbers are masked, and
+    every reveal is written to the Admin Log.
+  - Attachments are **photos, voice notes and PDFs**. No video until the Supabase plan is
+    upgraded (D-09). A file is shown only once `support-attachment-verify` marks it clean.
+  - **Suspended accounts can use support**, because that is how they appeal; deleted accounts
+    can't. No support function checks `account_is_active()`.
+  - **Email receipts go out for feedback and fraud reports only**, and only once Resend is set
+    up (D-20, D-22). A screen says "We've emailed you" only when the send succeeded.
+  - **When an account is deleted, its support messages and files are erased.** Fraud reports
+    are kept until counsel sets a retention period (D-16).
+  - **No launch to real users** (rollout "Everyone") while the dummy sign-in code is on (D-14).
+
 - **A buyer account is anonymized, never deleted, and only after a confirmation code and 14
   days** (Phase 2 of the My Profile brief, 2026-09-23; design approved by Mitra).
   - The flow runs from `/profile/help`: a 6-digit code goes to the **auth** email, or, for an

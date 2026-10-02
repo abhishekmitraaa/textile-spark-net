@@ -1,6 +1,432 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": false,
+  "headers": [
+    {
+      "source": "/((?!blogs(?:/|$)).*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+        },
+        {
+          "key": "Content-Security-Policy-Report-Only",
+          "value": "default-src 'self'; script-src 'self' https://checkout.razorpay.com 'sha256-vAwrGKk0oqqTe+dTbvte+sn2QO+4yTPc+faYbP2v0KQ='; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://vxdhhgdfubqedfpwfyrb.supabase.co https://images.unsplash.com https://picsum.photos https://fastly.picsum.photos https://*.googleusercontent.com https://cdn.razorpay.com; media-src 'self' blob: https://vxdhhgdfubqedfpwfyrb.supabase.co https://test-videos.co.uk; connect-src 'self' https://vxdhhgdfubqedfpwfyrb.supabase.co wss://vxdhhgdfubqedfpwfyrb.supabase.co https://api.bigdatacloud.net https://api.razorpay.com https://lumberjack.razorpay.com; frame-src https://www.youtube.com https://maps.google.com https://www.google.com https://api.razorpay.com https://checkout.razorpay.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; report-uri /api/csp-report; report-to csp"
+        },
+        {
+          "key": "Reporting-Endpoints",
+          "value": "csp=\"/api/csp-report\""
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/about",
+      "destination": "/blogs/about",
+      "permanent": true
+    }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    {
+      "source": "/blogs",
+      "destination": "https://cosora-blogs.vercel.app/blogs"
+    },
+    {
+      "source": "/blogs/:path*",
+      "destination": "https://cosora-blogs.vercel.app/blogs/:path*"
+    },
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/add-social-links",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/advertisement-slideshow",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/advertisements",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/analytics",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/account-info",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/callback",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/interest-preference",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/otp-verify",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/role-selection",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/sub-role",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/auth/welcome",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/browse",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/business-profile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/business-profile-score",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/categories",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/chat",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/chats",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/chats/:vendorId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/competitor-ads",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cosora-studio",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cosora-studio/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/dashboard",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/for-you",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/freelancers",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/freelancers/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/go/post-rfq",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/help",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/followings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/followings/view-all",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/for-you",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/for-you/onboarding",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/new-arrivals",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/sale",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/home/trends",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/kyc",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/leads",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-payments",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-payments/receipt/:orderId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-store",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-store/business",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/my-store/business/tools",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/old-advertisements",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/onboarding",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/post-requirement",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/product/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/products",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/business-details",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/data-export",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/edit",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/help",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/help/chat",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/interest-preference",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/notifications",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/regional-settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/reviews",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/social-links",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/profile/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/quotes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/recently-viewed",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/register",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/report-fraud",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement/my-quotes",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement/post-requirement",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement/post-requirement/form",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement/post-requirement/success",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/requirement/quick-rfq",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/reviews",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/saved",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/saved/:collectionId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/search/results",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller-home",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller/blogs",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/seller/blogs/:blogId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/service-vendors",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/services",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/services/:vendorId",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/subscription",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/subscription/invoice/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/terms",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/upload",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/upload-catalogue",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/upload-video",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/vendor/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/video-closeups",
+      "destination": "/index.html"
+    }
   ]
 }

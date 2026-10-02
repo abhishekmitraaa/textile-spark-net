@@ -15,6 +15,43 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Give the support tables' four foreign keys a covering index — added 2026-10-01
+- Task: one small migration adding indexes on `support_messages (author_id, created_at)`,
+  `support_attachments (uploader_id, created_at)`, `support_ticket_staff (reviewed_by)` and
+  `support_tickets (category)`, rehearsed, applied with Mitra's approval.
+- Context: the performance advisor lists them as unindexed foreign keys (INFO). The first two matter most:
+  `admin.support_rate_check()` filters messages and uploads by author and time on every send, so without an index
+  each send scans the whole table once it grows. The tables are empty today (rollout Off), so there is no rush
+  before P3. It wasn't part of the three migrations Mitra approved on 2026-10-01, so it wasn't added then.
+- Reference: 2026-10-01, Help & Support apply; `test.md` 2026-10-01.
+- Status: Open
+
+### Name Cosora's Grievance Officer and publish the grievance page — added 2026-09-30
+- Task: choose who is Cosora's Grievance Officer and record their name, designation and a contact email. Then switch
+  on the `/grievance` page, which the Help build creates hidden (Help plan P6c).
+- Context:
+  - Indian rules may require a named Grievance Officer with published contact details and reply times. The IT
+    (Intermediary Guidelines) Rules 2021 ask for acknowledgement within 24 hours and resolution within 15 days; the
+    Consumer Protection (E-Commerce) Rules 2020 ask for 48 hours and one month. Whether either applies to a B2B
+    marketplace is a question for counsel.
+  - Today no page names a Grievance Officer. There is no Privacy Policy page either: its links go to `/terms`
+    (`MyStore.tsx:517`) or `#` (`Register.tsx:346`).
+  - Decision D-15 in `documentation/help-feature-plan.md`: name one later; build the page hidden until named.
+- Reference: 2026-09-30, the Help & Support planning session, Stage 3 (Andy: "name one later, be sure to add it to
+  Todo.md").
+- Status: Open
+
+### Replace the personal address in the Terms' Contact Information — added 2026-09-30
+- Task: decide which address the Terms page gives for legal queries, and change it in `TermsConditions.tsx`.
+- Context:
+  - Section 15, "Contact Information" (`src/pages/TermsConditions.tsx:141`), names "Cosora Legal Department" with a
+    personal Gmail address, not a Cosora address. Everywhere else the app uses hello@cosora.in.
+  - Options: hello@cosora.in (one shared, monitored inbox), or a new legal address such as legal@cosora.in. Take
+    counsel's view if the Grievance Officer entry above lands first, so both pages use the same address.
+  - Decision D-17 in `documentation/help-feature-plan.md`: logged here, not changed in the Help build.
+- Reference: 2026-09-30, the Help & Support planning session, Stage 3 (Andy: "add this to todo.md").
+- Status: Open
+
 ### Decide what a refund does to a discount code's use — added 2026-09-29
 - Task: decide whether refunding an order that used a discount code gives the code's use back (and
   whether a Free vendor's ad order sent to refund review should keep its use). If yes, add an admin

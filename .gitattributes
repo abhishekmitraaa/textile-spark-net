@@ -1,0 +1,4 @@
+# The CSP allows index.html's inline script by its SHA-256 hash, and a hash is
+# byte-exact: CRLF and LF give different hashes. Pin LF in every checkout so a
+# local build, a CLI deploy and the git-based Vercel build all hash the same bytes.
+index.html text eol=lf

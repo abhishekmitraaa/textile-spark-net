@@ -43,10 +43,41 @@ const UNITS = ["pieces", "kg", "meters", "sets", "pairs"];
 
 const onboardingMenuLinks = [
   { label: "Cosora FAQ", href: "/help" },
-  { label: "About Us", href: "/about" },
+  { label: "About Us", href: "/blogs/about" },
   { label: "Terms and conditions", href: "/auth/terms" },
   { label: "Report Fraud", href: "/report-fraud" },
 ];
+
+const menuLinkClass =
+  "flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]";
+
+/**
+ * The Cosora menu sheet's links, rendered from three different headers in this
+ * file. Extracted so the /blogs special case lives in one place.
+ *
+ * /blogs is the Journal app, a separate deployment reverse-proxied onto this
+ * origin. Same origin, but outside this router: a react-router <Link> would
+ * navigate client side, match nothing, and render the 404 screen.
+ */
+function OnboardingMenuLinks() {
+  return (
+    <nav className="mt-4 space-y-2">
+      {onboardingMenuLinks.map((item) =>
+        item.href.startsWith("/blogs") ? (
+          <a key={item.label} href={item.href} className={menuLinkClass}>
+            {item.label}
+            <ChevronRight className="h-4 w-4 text-brand-ink/60" />
+          </a>
+        ) : (
+          <Link key={item.label} to={item.href} className={menuLinkClass}>
+            {item.label}
+            <ChevronRight className="h-4 w-4 text-brand-ink/60" />
+          </Link>
+        ),
+      )}
+    </nav>
+  );
+}
 
 /**
  * The upload control shared by every KYC document except PAN, whose block also
@@ -722,18 +753,7 @@ export default function Onboarding() {
                         Cosora Menu
                       </SheetTitle>
                     </SheetHeader>
-                    <nav className="mt-4 space-y-2">
-                      {onboardingMenuLinks.map((item) => (
-                        <Link
-                          key={item.label}
-                          to={item.href}
-                          className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
-                        >
-                          {item.label}
-                          <ChevronRight className="h-4 w-4 text-brand-ink/60" />
-                        </Link>
-                      ))}
-                    </nav>
+                    <OnboardingMenuLinks />
                   </SheetContent>
                 </Sheet>
               </div>
@@ -847,18 +867,7 @@ export default function Onboarding() {
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
-                  <nav className="mt-4 space-y-2">
-                    {onboardingMenuLinks.map((item) => (
-                      <Link
-                        key={item.label}
-                        to={item.href}
-                        className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
-                      >
-                        {item.label}
-                        <ChevronRight className="h-4 w-4 text-brand-ink/60" />
-                      </Link>
-                    ))}
-                  </nav>
+                  <OnboardingMenuLinks />
                 </SheetContent>
               </Sheet>
             </div>
@@ -1168,18 +1177,7 @@ export default function Onboarding() {
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
-                  <nav className="mt-4 space-y-2">
-                    {onboardingMenuLinks.map((item) => (
-                      <Link
-                        key={item.label}
-                        to={item.href}
-                        className="flex items-center justify-between rounded-xl border border-brand-border px-3 py-2 text-sm font-medium text-brand-ink transition-colors hover:bg-[#f5f5f5]"
-                      >
-                        {item.label}
-                        <ChevronRight className="h-4 w-4 text-brand-ink/60" />
-                      </Link>
-                    ))}
-                  </nav>
+                  <OnboardingMenuLinks />
                 </SheetContent>
               </Sheet>
             </div>

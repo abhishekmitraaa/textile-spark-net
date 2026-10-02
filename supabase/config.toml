@@ -110,3 +110,8 @@ verify_jwt = true
 # kill switch is the OTP_DEV_BYPASS=off secret.
 [functions.otp-dev-verify]
 verify_jwt = true
+
+# Help & Support (plan A4): checks an uploaded support file's signature before it is
+# shown. The platform verifies the JWT; the function reads the uploader from the row.
+[functions.support-attachment-verify]
+verify_jwt = true
