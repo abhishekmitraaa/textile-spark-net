@@ -96,7 +96,7 @@ and stays so.
 
 | Row | Today | Proposed |
 |---|---|---|
-| `8df64c7b` subscription · "What happens when I reach my lead limit?" | Notifications near the limit; upgrade or wait. | **Q:** "Is there a limit on how many leads I can quote on?" **A:** "No. Every plan, Free included, can quote on as many buyer requirements as you like, and every plan sees the same requirements in the same order." |
+| `8df64c7b` subscription · "What happens when I reach my lead limit?" | Notifications near the limit; upgrade or wait. | **Q:** "Is there a limit on how many leads I can quote on?" **A:** "No. Every plan, Free included, can quote on as many buyer requirements as you like. Your plan doesn't change which requirements you see or the order they're in." |
 | `28d6da8b` seller help · same question | Can't quote until the next period or an upgrade. | Same new question and answer as above. |
 | `8b7e9d19` seller help · "What counts as a lead?" | Counts once towards the plan's limit. | "A lead is a buyer's open requirement that you can quote on. There's no limit on any plan. Requests a buyer sends to you directly have their own list on the Leads page." |
 | `8394ec5f` subscription · "Lowest billing plan?" | "…Basic: 10 product listings and 150 leads a month… Free… 2 listings and 10 leads a month." | "Yes! Plans start at just ₹699/month (or ₹6,990/year) with Basic: 10 product listings. Just getting started? Our Free plan costs nothing and gives you 2 listings. Every plan can quote on unlimited buyer leads. Prices exclude GST." |
