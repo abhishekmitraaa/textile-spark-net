@@ -1,7 +1,7 @@
 # Help & Support: build plan
 
 - **Date:** 2026-09-30.
-- **Status (2026-10-02):** P1-P7 built and live, with rollout **Off**. Not live: P6's migration `20261001140000` (run it in the SQL editor; the Supabase tool declines it), and so `support-receipt` and `support-sweep` (not deployed) and the sweep's schedule (D-21). What remains before `rollout = all` is gate G1 (P7), all owner actions.
+- **Status (2026-10-02):** P1-P7 built and live, with rollout **Off**, P6 included (its migration run by hand in the SQL editor; `support-receipt` and `support-sweep` deployed). Not live: the sweep's schedule (D-21, Mitra). What remains before `rollout = all` is gate G1 (P7), all owner actions.
 - **Decided by:** Andy (product owner), with the items marked for Mitra or counsel still open.
 - **Inputs:** `help-feature-audit-research-and-implementation-report.md` (the "report", 2026-09-30), and the planning
   session that checked it against both repos and the live database.
