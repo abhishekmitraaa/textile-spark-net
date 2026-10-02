@@ -33,6 +33,10 @@ export interface Rfq {
   priceMax: number;
   image: string;
   status: RfqStatus;
+  /** Why Cosora removed this request (RFQ/leads R3). Non-null exactly when it
+   *  was removed; such a request is closed and can't be reopened. Optional so
+   *  the static fixtures below need no change. */
+  removedReason?: string | null;
   newCount: number;         // "N new" badge
   lowest: number;           // lowest quote (₹) shown on the request card
   date: string;             // "March 30, 2024"

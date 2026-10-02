@@ -71,3 +71,27 @@ test.describe("R2: the same leads on every plan", () => {
     }
   });
 });
+
+test.describe("R3: a removed request", () => {
+  test("the buyer sees Removed by Cosora with the reason", async ({ browser }) => {
+    const db = service();
+    const { data: rfq } = await db.from("rfqs")
+      .insert({ buyer_id: "11111111-1111-1111-1111-111111111111", title: "R3 spec removed", status: "active" })
+      .select("id").single();
+    try {
+      const admin = await clientAs("admin");
+      const { error } = await admin.rpc("admin_lead_remove", { p_rfq_id: rfq!.id, p_reason: "Duplicate of an earlier request" });
+      expect(error).toBeNull();
+
+      const ctx = await signedInContext(browser, "buyer");
+      const page = await ctx.newPage();
+      await page.goto(`${BUYER_URL}/requirement/my-quotes`);
+      const card = page.getByRole("button", { name: /R3 spec removed/ });
+      await expect(card.getByText("Removed by Cosora")).toBeVisible();
+      await expect(card.getByText("Duplicate of an earlier request")).toBeVisible();
+      await ctx.close();
+    } finally {
+      sql(`delete from public.rfqs where id = '${rfq!.id}'`);
+    }
+  });
+});

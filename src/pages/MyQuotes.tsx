@@ -205,9 +205,10 @@ const MyQuotes = () => {
                           <div className="flex flex-wrap items-center gap-1.5 mb-1.5">
                             <span className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-bold",
-                              r.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"
+                              r.removedReason != null ? "bg-red-50 text-red-600"
+                                : r.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"
                             )}>
-                              {r.status === "active" ? "Active" : "Closed"}
+                              {r.removedReason != null ? "Removed by Cosora" : r.status === "active" ? "Active" : "Closed"}
                             </span>
                             {r.newCount > 0 && (
                               <span className="rounded-full bg-brand-buyer text-white px-2 py-0.5 text-[10px] font-bold">{r.newCount} new</span>
@@ -224,6 +225,13 @@ const MyQuotes = () => {
                           </div>
                           <h3 data-no-translate className="text-sm font-bold text-gray-900 leading-snug line-clamp-1">{r.title}</h3>
                           <p className="text-xs text-gray-500 mt-0.5">{r.units} units • {showText(`₹${r.priceMin} - ₹${r.priceMax}/unit`)}</p>
+                          {/* Cosora removed it (RFQ/leads R3): say so, and why, in the admin's words. */}
+                          {r.removedReason != null && (
+                            <p className="mt-1 text-xs text-red-600">
+                              <span className="font-semibold">Reason:</span>{" "}
+                              <span data-no-translate>{r.removedReason}</span>
+                            </p>
+                          )}
                         </div>
                         <img src={r.image} alt={r.title} className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
                       </div>
