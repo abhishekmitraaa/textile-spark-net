@@ -126,7 +126,8 @@ with no need to dictate format, context, or reference each time.
 - Context: it's 2–10 ms today on ~2,100 events, and each open Live Activity tab calls it every
   30 seconds. At 10,000 concurrent buyers the log could take millions of rows an hour, and the
   24-hour window would scan all of them per call. While there: the performance advisor lists
-  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys (Phase 12 material).
+  `engagement_events.product_id` and `viewer_id` as unindexed foreign keys. Admin completion Phase 12 (2026-10-02)
+  covered the RLS warnings only; 40 unindexed foreign keys and 19 unused indexes (INFO) remain.
 - Reference: 2026-09-28, admin completion Phase 8 (Live Activity, native).
 - Priority: Low today; High before a traffic launch
 - Status: Open

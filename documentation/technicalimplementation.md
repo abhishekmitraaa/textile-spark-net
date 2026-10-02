@@ -913,7 +913,7 @@ in the PUBLIC `product-images` bucket, with `getPublicUrl()` stored in
   (copy → verify → repoint the row → delete) and proves the negative afterwards.
 
 **A vendor could mark their own KYC verified, and now cannot (2026-09-08).**
-`vendor_documents_all` is a single `ALL` policy with `(vendor_id = auth.uid()) OR is_admin()`
+`vendor_documents_all` was a single `ALL` policy (split per command in admin completion Phase 12, 2026-10-02) with `(vendor_id = auth.uid()) OR is_admin()`
 on both USING and WITH CHECK, so `update vendor_documents set verified = true` from the
 client worked — proved against the live project before it was fixed. The anon key ships in
 the bundle, so this was a one-line self-service trust badge. The policy is unchanged (a
@@ -2452,6 +2452,37 @@ roles whose Cosora-Admin section reads the table (`roles.ts` `SECTION_READ`):
 - **Checks:** the migration's self-check (no read policy on the seven tables with `is_admin()` and no
   `admin_role()`; the helper's definer flag, path and grants; the triggers INVOKER and reading through the helper),
   and `scripts/admin-completion/15_admin_reads.sql`.
+
+### Policies are evaluated once per query (admin completion Phase 12, 2026-10-02; migration `20261002072403_rls_per_statement.sql`)
+
+A policy expression is evaluated for every row the query scans. A bare `auth.uid()` there is a function call per
+row; a bare `is_admin()` or `admin_role()` is worse, because both are SECURITY DEFINER SQL functions, which
+Postgres never inlines, so each call is a query against `admin.admin_users`. Wrapped as a scalar subquery,
+`(select public.is_admin())`, the planner turns it into an InitPlan that runs once per statement and reuses the
+value. All four helpers involved are STABLE and depend only on the caller, so the answer is the same.
+
+- **Rewritten:** 87 policies in `public` and `admin` (the advisor's `auth_rls_initplan` counted 53, the
+  `auth.uid()` ones; it doesn't see `is_admin()`). The statements were generated from the live `pg_policies`
+  text by a query that only adds the wrapping, and the file's statements were md5-compared with its output.
+- **Per row on purpose:** `owns_product(product_id)`, `owns_rfq(rfq_id)` and `is_conversation_member(conversation_id)`
+  take the row's id, so they can't be hoisted.
+- **One policy per command on ten tables** (`buyer_profiles`, `catalogues`, `categories`, `follows`,
+  `product_images`, `recently_viewed`, `subscription_invoices`, `subscription_plans`, `vendor_documents`,
+  `vendor_subscriptions`). Each had FOR ALL beside FOR SELECT, so reads OR-ed both. The ALL policy became
+  INSERT/UPDATE/DELETE with identical expressions. Reads stayed the same because each ALL policy's USING was
+  contained in the SELECT policy (e.g. catalogues: owner or super/product_moderator ⊆ live or owner or any admin;
+  product_images: `owns_product()` is the caller's own product, which `products_select` shows). On
+  `buyer_profiles` and `vendor_documents` the owner's rows came from the ALL policy and the admins' from a separate
+  SELECT policy, so the new SELECT policy is their union.
+- **Proof of no change:** `scripts/admin-completion/16_rls_equivalence.sql` counts what each of 10 personas sees in
+  every RLS table, and how many rows an update and a delete reach on the ten split tables, before and after the
+  change inside one REPEATABLE READ transaction (so live traffic can't move a count): 1,020 cells, 0 differ. Two
+  injected faults gave 24 differences, so the zero is meaningful.
+- **Plans:** `scripts/admin-completion/17_rls_explain.sql`. Before, every plan's Filter called `is_admin()` per row;
+  after, it is an InitPlan. Buffers fell where the admin branch was reached (vendor messages 98 → 18). On 20,000
+  open RFQs timing didn't move, because `rfqs_select` checks the open-RFQ branch first and that decides most rows;
+  the saving is on rows the cheap branches reject (closed RFQs, non-live listings, other people's messages).
+- **Not touched:** `storage.objects` policies (owned by `supabase_storage_admin`).
 
 ## Scheduled jobs: what runs, and the bounded history (2026-09-27)
 
