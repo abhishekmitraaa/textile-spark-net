@@ -84,6 +84,38 @@ export async function signedInContext(browser: Browser, key: string, viewport = 
   return ctx;
 }
 
+/**
+ * A brand-new account for one spec run, so a flow that changes an account for good
+ * (registering as a seller, buying a plan) starts clean every time. Local only.
+ * `seller: true` also gives it a vendor profile, as a finished registration would.
+ */
+export async function freshAccount(prefix: string, { seller = false } = {}): Promise<{ id: string; email: string; session: Session }> {
+  const s = stack();
+  const email = `${prefix}-${Date.now().toString(36)}@cosora.test`;
+  const { data, error } = await service().auth.admin.createUser({
+    email, password: s.PASSWORD, email_confirm: true,
+    user_metadata: { active_role: seller ? "seller" : "buyer", full_name: `${prefix} test` },
+  });
+  if (error || !data.user) throw new Error(`createUser: ${error?.message}`);
+  const id = data.user.id;
+  sql(`update public.profiles set onboarded = true where id = '${id}';`);
+  if (seller) {
+    sql(`insert into public.vendor_profiles (id, brand_name, city, country, business_type, onboarding_complete)
+         values ('${id}', '${prefix} Textiles', 'Surat', 'India', 'Manufacturer', true) on conflict (id) do nothing;`);
+  }
+  const anon = createClient(s.API, s.ANON, { auth: { persistSession: false } });
+  const signedIn = await anon.auth.signInWithPassword({ email, password: s.PASSWORD });
+  if (signedIn.error || !signedIn.data.session) throw new Error(`${email}: ${signedIn.error?.message}`);
+  return { id, email, session: signedIn.data.session };
+}
+
+/** A browser context signed in with a session from freshAccount(). */
+export async function contextWithSession(browser: Browser, session: Session, viewport = { width: 390, height: 900 }): Promise<BrowserContext> {
+  const ctx = await browser.newContext({ viewport });
+  await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), [storageKey(), JSON.stringify(session)]);
+  return ctx;
+}
+
 /** Collect page errors so a spec can assert the page ran clean. */
 export function watchErrors(page: Page): string[] {
   const problems: string[] = [];
@@ -104,8 +136,14 @@ export function sql(query: string): string {
   }).trim();
 }
 
+/**
+ * Support's rollout, with the test list the specs assume: local-buyer and local-vendor
+ * on it, everyone else off it (the role simulation empties the list when it runs).
+ */
 export function setRollout(rollout: "off" | "staff" | "all"): void {
-  sql(`update public.support_settings set rollout = '${rollout}';`);
+  const { ids } = stack();
+  sql(`update public.support_settings set rollout = '${rollout}',
+         test_profile_ids = array['${ids.buyer}', '${ids.vendor}']::uuid[];`);
 }
 
 /** Support hours open all week, so a spec isn't at the mercy of the clock. */

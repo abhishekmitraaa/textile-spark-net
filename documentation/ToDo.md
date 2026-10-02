@@ -15,6 +15,83 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Make "Is there any cost to register?" true, or reword it — added 2026-10-02
+- Task: either build what the Seller Registration answer lists, or have Andy reword it in Cosora-Admin `/faqs`.
+- Context: the live answer says "NO, Basic registration is free. You only pay if you opt for: • Premium listings
+  • Pay-per-lead access • Featured vendor badges". Registration is free (the Free plan), but "Basic" is the name of
+  the ₹699/month plan, so the answer reads as if that plan were free. Pay-per-lead doesn't exist (the leads answer
+  itself calls it future). "Premium listings" and "featured vendor badges" aren't products either: what sellers buy
+  are the plans and the ad placements on /advertise. Detail: the MPF-16 entry below.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Build the "Unverified Seller" label the GST answer promises, or reword it — added 2026-10-02
+- Task: either mark sellers who registered without GST as "Unverified Seller" (and decide what that does to their
+  visibility and lead access), or have Andy reword the answer.
+- Context: the live answer to "I don't have a GST number. Can I still register?" says "Yes, but your account will
+  be marked as 'Unverified Seller', which may affect visibility and lead access." Registering without GST is allowed
+  (the new documents step keeps that), but no such label exists, and nothing in search or leads looks at GST.
+  Deciding the effect on visibility and leads is a product call, not a wording one.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Tell sellers about new leads by dashboard, email or WhatsApp, as "How are leads managed?" says — added 2026-10-02
+- Task: send a seller a notification when a buyer's requirement matches them, in the app first, then by email and
+  WhatsApp; or have Andy reword the answer to what exists (leads appear on the Leads page).
+- Context: the live answer says "You'll get notified via dashboard, email, or WhatsApp when a buyer is interested.
+  In future, you can also choose pay-per-lead plans". Nothing notifies a seller about a new requirement today, in
+  the app or outside it. Email waits on Resend (the MPF-4 entry below) and WhatsApp on Meta setup (MPF-24); the
+  in-app notification could come first, through `public.notify()`.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
+- Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy
+  reword the answer.
+- Context: the live Subscription answer to "What happens when I reach my lead limit?" says "You'll receive
+  notifications as you approach your limit." Nothing sends one: the Leads page shows "N/cap leads used", and a quote
+  at the cap is refused with an upgrade prompt. (The Seller Help answer to the same question, P5, describes this
+  truthfully.) An in-app notification needs no outside service.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Send the renewal reminder the billing answer promises — added 2026-10-02
+- Task: remind a seller before their paid period ends, in the app first and by email once Resend works; or have
+  Andy reword the answer.
+- Context: the live Subscription answer to "How does billing work — is there autopay?" says "When your period nears
+  its end you'll get a renew reminder; if you don't renew, your account falls back to the Free plan." The fall-back
+  is true (the daily `subscription-expiry-sweep`); the reminder isn't sent by anything. A daily check for periods
+  ending in, say, 3 days could sit in the same sweep and notify through `public.notify()`.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+
+### Counsel: confirm collecting a masked Aadhaar at seller registration — added 2026-10-02
+- Task: counsel confirms (or changes) how registration collects the owner's Aadhaar, before it goes live.
+- Context:
+  - Andy asked for every document in the Seller Registration FAQ to be collected, Aadhaar included (2026-10-02).
+    The code had left Aadhaar out on purpose, citing the Aadhaar Act 2016 and UIDAI rules for entities that aren't
+    an authorised KUA/AUA.
+  - As built (not merged): the seller uploads a **masked** Aadhaar only (UIDAI's masked copy, first 8 digits
+    hidden), ticks a consent line, and the file goes to the private `business-docs` bucket like every KYC scan,
+    opened only by Cosora's team and deleted with the account. The number is never asked for or stored, and the
+    database refuses an Aadhaar row not marked masked (`vendor_documents_detail_check`).
+  - Open questions for counsel: whether a private marketplace may *require* it (the 2018 Puttaswamy judgment limits
+    private use of Aadhaar), or should accept another photo ID as an alternative; the consent wording; how long to
+    keep it.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "all the above DOCUMENTS should be collected during the
+  registration").
+- Status: Open
+
 ### Settle the staff work-email and employee-ID formats — added 2026-10-01
 - Task: decide the template for the work email address and the employee ID that Cosora-Admin generates when a
   manager or super admin registers a staff member. Then change the two generators to match.
@@ -75,6 +152,9 @@ with no need to dictate format, context, or reference each time.
   - Decision D-11: refunds are a manual process (support passes the request to finance, who refund by hand in
     Razorpay). That process is Mitra's to write and is still open. The Help billing topic stays switched off until
     both the wording and the process exist (launch gate G1).
+  - Update 2026-10-02: the process now exists in the app (built, not merged; see MPF-17 below): the seller asks on
+    `/subscription`, finance refunds through Razorpay and closes the request in Cosora-Admin. Only the Terms
+    wording remains for counsel.
 - Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the Terms wording on refunds; add to todo.md").
 - Status: Open
 
@@ -681,8 +761,15 @@ with no need to dictate format, context, or reference each time.
     catches up. Each row is independent.
 
 - Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Update 2026-10-02 (Andy: the product should do what these say): the documents row and both
+  upgrade/downgrade rows are built (branch `faq-truth/registration-plans-refunds`, not merged). Registration now
+  asks for the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, an
+  incorporation certificate, a shop licence or a partnership deed), a masked Aadhaar, and a catalogue or a first
+  product; an upgrade is prorated and a downgrade starts at the next period. The other rows (cost to register,
+  "Unverified Seller", lead notifications, lead-limit notifications, and the renewal reminder) have their own entries
+  at the top of Open.
 - Priority: Medium (vendors are told about proration, alerts and documents that don't match)
-- Status: Open
+- Status: Open (until the branch is merged and live)
 
 ### Resolve the Subscription FAQ's 7-day money-back promise against the Terms, and make a refund possible (MPF-17) — added 2026-09-25
 - Task: make the public 7-day money-back promise on `/subscription` true: state it in the Terms,
@@ -710,8 +797,14 @@ with no need to dictate format, context, or reference each time.
       process support follows.
 
 - Reference: found in Phase 9's content load (2026-09-23). Moved here from `myprofileflags.md` on 2026-09-25 (Mitra: "leave it alone, shift it to todo.md"); this entry is now the flag's record.
+- Update 2026-10-02 (Andy: "the app should do what the FAQ says"): built, not merged. A first-time
+  subscriber asks on `/subscription` within 7 days of their first payment (`refund_guarantee_request`); finance
+  refunds each payment through Razorpay in Cosora-Admin (`admin-refund-payment`, unchanged) and closes the request,
+  which ends the plan (`admin_refund_guarantee_close`). Only money that went through Razorpay is offered back, so
+  nothing shows until the Razorpay keys are set ("Turn on real vendor payments" above). The Terms still say fees are
+  non-refundable: "Counsel: word the Terms' refund clause" above.
 - Priority: Medium (a public financial promise the Terms contradict)
-- Status: Open
+- Status: Open (until the branch is merged, the keys are set and the Terms are reworded)
 
 ### Never deploy otp-dev-verify as it is; harden it or delete it once SMS works (MPF-21) — added 2026-09-25
 - Task: keep `supabase/functions/otp-dev-verify/` undeployed and uncommitted. Before it is ever

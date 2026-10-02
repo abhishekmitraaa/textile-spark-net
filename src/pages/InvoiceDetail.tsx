@@ -62,9 +62,11 @@ export default function InvoiceDetail() {
   const gst = invoice.gstAmount ?? 0;
   const total = invoice.amount + gst;
   // `amount` is the taxable value, after any discount code (admin completion
-  // Phase 10); the plan's price is that plus the discount.
+  // Phase 10) and an upgrade's credit for the unused part of the previous plan
+  // (2026-10-02); the plan's price is that plus both.
   const discount = invoice.discountAmount ?? 0;
-  const listPrice = invoice.amount + discount;
+  const credit = invoice.creditAmount ?? 0;
+  const listPrice = invoice.amount + discount + credit;
   const fmtDate = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }) : "—";
   const addr = [billTo?.address_line, billTo?.area, billTo?.city, billTo?.state, billTo?.postal_code].filter(Boolean).join(", ");
 
@@ -125,25 +127,35 @@ export default function InvoiceDetail() {
           </thead>
           <tbody>
             <tr className="border-b border-border">
-              <td className="py-3 text-sm text-foreground">{planName} plan subscription</td>
+              <td className="py-3 text-sm text-foreground">
+                {invoice.changeKind === "upgrade" ? `${planName} plan subscription (upgrade)`
+                  : invoice.changeKind === "renewal" ? `${planName} plan subscription (renewal)`
+                  : `${planName} plan subscription`}
+              </td>
               <td className="py-3 text-right text-sm text-foreground">{formatINR(listPrice)}</td>
             </tr>
+            {credit > 0 && (
+              <tr className="border-b border-border">
+                <td className="py-3 text-sm text-muted-foreground">Credit for the unused part of your previous plan</td>
+                <td className="py-3 text-right text-sm text-muted-foreground">−{formatINR(credit)}</td>
+              </tr>
+            )}
             {discount > 0 && (
-              <>
-                <tr className="border-b border-border">
-                  <td className="py-3 text-sm text-muted-foreground">
-                    <span>Discount</span>
-                    {invoice.discountCode && (
-                      <span className="ml-1.5 font-mono text-xs" data-no-translate>{invoice.discountCode}</span>
-                    )}
-                  </td>
-                  <td className="py-3 text-right text-sm text-muted-foreground">−{formatINR(discount)}</td>
-                </tr>
-                <tr className="border-b border-border">
-                  <td className="py-3 text-sm text-foreground">Taxable value</td>
-                  <td className="py-3 text-right text-sm text-foreground">{formatINR(invoice.amount)}</td>
-                </tr>
-              </>
+              <tr className="border-b border-border">
+                <td className="py-3 text-sm text-muted-foreground">
+                  <span>Discount</span>
+                  {invoice.discountCode && (
+                    <span className="ml-1.5 font-mono text-xs" data-no-translate>{invoice.discountCode}</span>
+                  )}
+                </td>
+                <td className="py-3 text-right text-sm text-muted-foreground">−{formatINR(discount)}</td>
+              </tr>
+            )}
+            {(discount > 0 || credit > 0) && (
+              <tr className="border-b border-border">
+                <td className="py-3 text-sm text-foreground">Taxable value</td>
+                <td className="py-3 text-right text-sm text-foreground">{formatINR(invoice.amount)}</td>
+              </tr>
             )}
             <tr className="border-b border-border">
               <td className="py-3 text-sm text-muted-foreground">GST (18%)</td>

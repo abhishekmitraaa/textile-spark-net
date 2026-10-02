@@ -76,6 +76,15 @@ export interface VendorPlan {
   plan: Plan;
   limits: PlanLimits;
   usage: PlanUsage;
+  /**
+   * A paid downgrade (or yearly → monthly) waiting for the current period to end
+   * (2026-10-02). subscription_end already includes it; the plan switches on
+   * scheduled_from. Absent before that migration is applied.
+   */
+  scheduled_plan_id?: PlanId | null;
+  scheduled_plan_name?: string | null;
+  scheduled_billing_cycle?: "monthly" | "yearly" | null;
+  scheduled_from?: string | null;
 }
 
 // ── Limit helpers ─────────────────────────────────────────────

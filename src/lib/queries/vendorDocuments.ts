@@ -16,7 +16,7 @@ import { KYC_BUCKET, assertKycBucket } from "@/lib/queries/vendorOnboarding";
 // verified. There is no fifth "looks fine to us" state.
 // ─────────────────────────────────────────────────────────────
 
-export type KycDocType = "pan" | "gst" | "cin" | "aadhaar";
+export type KycDocType = "pan" | "gst" | "cin" | "aadhaar" | "business_registration" | "catalog";
 
 export interface VendorDocumentRow {
   id: string;
@@ -28,6 +28,8 @@ export interface VendorDocumentRow {
    *  review timestamp, because a never-reviewed document is not a rejected one. */
   rejectionReason: string | null;
   reviewedAt: string | null;
+  /** A registration's kind and number, an Aadhaar's consent, a catalogue file's name (2026-10-02). */
+  detail: Record<string, unknown>;
 }
 
 /** Human labels for the doc_type values saveVendorOnboarding writes. */
@@ -35,7 +37,9 @@ export const DOC_TYPE_LABELS: Record<string, string> = {
   pan: "PAN",
   gst: "GST",
   cin: "CIN",
-  aadhaar: "Aadhaar",
+  aadhaar: "Aadhaar (masked)",
+  business_registration: "Business registration",
+  catalog: "Product catalogue",
 };
 
 interface RawDoc {
@@ -46,16 +50,23 @@ interface RawDoc {
   created_at: string;
   rejection_reason: string | null;
   reviewed_at: string | null;
+  detail?: Record<string, unknown> | null;
 }
 
+const DOC_COLUMNS = "id, doc_type, file_url, verified, created_at, rejection_reason, reviewed_at";
+
 async function fetchMyVendorDocuments(vendorId: string): Promise<VendorDocumentRow[]> {
-  const { data, error } = await supabase
+  const read = (columns: string) => supabase
     .from("vendor_documents")
-    .select("id, doc_type, file_url, verified, created_at, rejection_reason, reviewed_at")
+    .select(columns)
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: true });
+  let { data, error } = await read(`${DOC_COLUMNS}, detail`);
+  // Before the 2026-10-02 migration there's no `detail` column (42703).
+  if (error?.code === "42703") ({ data, error } = await read(DOC_COLUMNS));
   if (error) throw error;
-  return ((data ?? []) as RawDoc[]).map((d) => ({
+  return ((data ?? []) as unknown as RawDoc[]).map((d) => ({
+    detail: d.detail ?? {},
     id: d.id,
     docType: d.doc_type,
     fileUrl: d.file_url,

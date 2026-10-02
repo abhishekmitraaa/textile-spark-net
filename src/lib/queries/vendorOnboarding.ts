@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import type { Json } from "@/lib/database.types";
 import { resolveCategoryId } from "@/lib/queries/products";
 import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { syncProfileScore } from "@/lib/queries/vendorDashboard";
@@ -38,6 +39,36 @@ export interface OnboardingProduct {
   images?: string[];
 }
 
+/** The kinds of business registration onboarding accepts (vendor_documents.detail.kind). */
+export type BusinessRegistrationKind = "udyam" | "incorporation" | "shop_establishment" | "partnership" | "other";
+
+export const BUSINESS_REGISTRATION_KINDS: {
+  id: BusinessRegistrationKind;
+  label: string;
+  /** What the number is called, and whether it's required. */
+  numberLabel: string;
+  numberRequired: boolean;
+  placeholder: string;
+  /** A format check only: nothing here can look a number up. */
+  pattern?: RegExp;
+  patternHint?: string;
+}[] = [
+  {
+    id: "udyam", label: "Udyam (MSME) registration certificate", numberLabel: "Udyam registration number",
+    numberRequired: true, placeholder: "UDYAM-GJ-01-0000001",
+    pattern: /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/, patternHint: "A Udyam number looks like UDYAM-GJ-01-0000001.",
+  },
+  {
+    id: "incorporation", label: "Certificate of incorporation (company or LLP)", numberLabel: "CIN or LLPIN",
+    numberRequired: true, placeholder: "U17110GJ2015PTC012345",
+    pattern: /^([LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}|[A-Z]{3}-\d{4})$/,
+    patternHint: "A CIN has 21 characters (for example U17110GJ2015PTC012345); an LLPIN looks like AAA-1234.",
+  },
+  { id: "shop_establishment", label: "Shop and establishment licence", numberLabel: "Licence number (optional)", numberRequired: false, placeholder: "" },
+  { id: "partnership", label: "Partnership deed", numberLabel: "Registration number, if registered (optional)", numberRequired: false, placeholder: "" },
+  { id: "other", label: "Other business registration", numberLabel: "Registration number (optional)", numberRequired: false, placeholder: "" },
+];
+
 export interface VendorOnboardingPayload {
   businessName: string;
   phone?: string;
@@ -54,8 +85,8 @@ export interface VendorOnboardingPayload {
   country?: string;
   pan?: string;
   gstin?: string;
+  /** CIN or LLPIN, when the business registration is a certificate of incorporation (vendor_profiles.cin). */
   cin?: string;
-  aadhaar?: string;
   /** Business categories (vendor_profiles.category). Empty = invisible to category search. */
   category?: string[];
   /** Public storage URLs of the premises photos (vendor_profiles.office_photos). */
@@ -64,8 +95,18 @@ export interface VendorOnboardingPayload {
   panFileUrl?: string;
   /** Storage PATH of the uploaded GST certificate (business-docs). */
   gstFileUrl?: string;
-  /** Storage PATH of the uploaded incorporation certificate (business-docs). */
-  cinFileUrl?: string;
+  /**
+   * The business registration (Seller Registration FAQ: "Business registration (or
+   * MSME/Udyam)", 2026-10-02): which kind, its number, and the uploaded certificate.
+   */
+  businessRegistration?: { kind: BusinessRegistrationKind; number?: string; fileUrl: string };
+  /**
+   * The owner's MASKED Aadhaar (first 8 digits hidden), with the time they agreed to
+   * share it. The Aadhaar number itself is never asked for or stored.
+   */
+  aadhaar?: { fileUrl: string; consentAt: string };
+  /** Catalogue files (PDF, Excel, CSV or images). A first product can stand in for these. */
+  catalogue?: { fileUrl: string; name: string; mime: string }[];
   /** The signed supplier agreement. Written in the same call as the profile, so
    *  a vendor with onboarding_complete = true always has a contract on file. */
   contract?: {
@@ -99,9 +140,17 @@ export interface VendorOnboardingPayload {
  * pointing at a missing file. Legacy rows may hold a full public URL from
  * before KYC moved to the private bucket; those are skipped, not guessed at.
  */
+export interface VendorDocumentInsert {
+  vendor_id: string;
+  doc_type: string;
+  file_url: string | null;
+  /** vendor_documents.detail: a registration's kind and number, an Aadhaar's consent, a catalogue file's name. */
+  detail?: Record<string, unknown>;
+}
+
 export async function replaceVendorDocuments(
   vendorId: string,
-  docs: { vendor_id: string; doc_type: string; file_url: string | null }[],
+  docs: VendorDocumentInsert[],
 ): Promise<void> {
   if (!docs.length) return;
   const docTypes = docs.map((d) => d.doc_type);
@@ -113,7 +162,9 @@ export async function replaceVendorDocuments(
     .in("doc_type", docTypes);
   if (re) throw re;
 
-  const { error: ie } = await supabase.from("vendor_documents").insert(docs);
+  const { error: ie } = await supabase
+    .from("vendor_documents")
+    .insert(docs.map((d) => ({ ...d, detail: (d.detail ?? {}) as Json })));
   if (ie) throw ie;
 
   const oldIds = (superseded ?? []).map((d) => d.id as string);
@@ -167,24 +218,32 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
   // Record which KYC documents were supplied, with the uploaded scan where
   // there is one. `verified` stays false: an admin flips it after review — this
   // app has no way to verify a PAN and must not claim it did.
-  const docs = (
-    [
-      // Each type carries the scan the vendor actually uploaded. gst and cin
-      // used to hardcode `file_url: null`, so an admin was asked to rule on a
-      // number the vendor typed with nothing to look at.
-      //
-      // `aadhaar` stays null-only and has no upload control on purpose: nothing
-      // in the form collects an Aadhaar number either. Retaining Aadhaar numbers
-      // or images is constrained by the Aadhaar Act 2016 / UIDAI rules for
-      // entities that are not an authorised KUA/AUA, so collecting it is a
-      // compliance decision rather than a form field. The payload key and the
-      // doc_type are kept so nothing that reads them breaks.
-      p.pan ? { doc_type: "pan", file_url: p.panFileUrl ?? null } : null,
-      p.gstin ? { doc_type: "gst", file_url: p.gstFileUrl ?? null } : null,
-      p.cin ? { doc_type: "cin", file_url: p.cinFileUrl ?? null } : null,
-      p.aadhaar ? { doc_type: "aadhaar", file_url: null } : null,
-    ].filter(Boolean) as { doc_type: string; file_url: string | null }[]
-  ).map((d) => ({ vendor_id: vendorId, ...d }));
+  //
+  // The set is the Seller Registration FAQ's (Andy, 2026-10-01/02): PAN card, GST
+  // certificate (when registered for GST), a business registration (Udyam/MSME, an
+  // incorporation certificate, a shop licence or a partnership deed), the owner's
+  // Aadhaar, and a product catalogue, for which a first product can stand in.
+  //
+  // Aadhaar is the MASKED copy only (first 8 digits hidden, as UIDAI's masked Aadhaar
+  // shows it), with the moment the owner agreed to share it. The number is never
+  // asked for or stored: Aadhaar Act 2016 / UIDAI rules constrain what an entity
+  // that isn't an authorised KUA/AUA may keep. Counsel to confirm before launch
+  // (ToDo.md); the database refuses an Aadhaar row not marked masked.
+  const docs: VendorDocumentInsert[] = [];
+  if (p.pan) docs.push({ vendor_id: vendorId, doc_type: "pan", file_url: p.panFileUrl ?? null });
+  if (p.gstin) docs.push({ vendor_id: vendorId, doc_type: "gst", file_url: p.gstFileUrl ?? null });
+  if (p.businessRegistration) {
+    docs.push({
+      vendor_id: vendorId, doc_type: "business_registration", file_url: p.businessRegistration.fileUrl,
+      detail: { kind: p.businessRegistration.kind, ...(p.businessRegistration.number ? { number: p.businessRegistration.number } : {}) },
+    });
+  }
+  if (p.aadhaar) {
+    docs.push({ vendor_id: vendorId, doc_type: "aadhaar", file_url: p.aadhaar.fileUrl, detail: { masked: true, consent_at: p.aadhaar.consentAt } });
+  }
+  for (const c of p.catalogue ?? []) {
+    docs.push({ vendor_id: vendorId, doc_type: "catalog", file_url: c.fileUrl, detail: { name: c.name, mime: c.mime } });
+  }
   await replaceVendorDocuments(vendorId, docs);
   // The step-7 product becomes a real listing (buyers see it once approved).
   if (p.product?.name) {
@@ -365,14 +424,55 @@ export async function discardUnreferencedKycUploads(vendorId: string, paths: str
  * write fails, the new object is referenced by nothing, so it is removed
  * rather than left as an orphan identity scan.
  */
-export async function resubmitKycDocument(vendorId: string, docType: string, file: File): Promise<void> {
+export async function resubmitKycDocument(
+  vendorId: string, docType: string, file: File, detail?: Record<string, unknown>,
+): Promise<void> {
   const path = await uploadKycDocument(vendorId, file);
   try {
-    await replaceVendorDocuments(vendorId, [{ vendor_id: vendorId, doc_type: docType, file_url: path }]);
+    await replaceVendorDocuments(vendorId, [{ vendor_id: vendorId, doc_type: docType, file_url: path, detail }]);
   } catch (err) {
     await supabase.storage.from(KYC_BUCKET).remove([path]);
     throw err;
   }
+}
+
+/**
+ * /kyc: add the catalogue (or replace it) as a set of files, one row each. A seller
+ * registered before 2026-10-02 was never asked for one. Same bucket and path rules
+ * as every KYC upload; if the rows can't be written the new objects are removed.
+ */
+export async function submitCatalogue(vendorId: string, files: File[]): Promise<void> {
+  const paths: string[] = [];
+  try {
+    for (const f of files) paths.push(await uploadKycDocument(vendorId, f));
+    await replaceVendorDocuments(vendorId, files.map((f, i) => ({
+      vendor_id: vendorId, doc_type: "catalog", file_url: paths[i], detail: { name: f.name, mime: f.type },
+    })));
+  } catch (err) {
+    if (paths.length) await supabase.storage.from(KYC_BUCKET).remove(paths);
+    throw err;
+  }
+}
+
+// ── File rules for the registration documents ─────────────────
+/** Scans and certificates: "jpeg, png or pdf formats up to 5MB", as the form says. */
+export const KYC_FILE_TYPES = /^(image\/(jpeg|png)|application\/pdf)$/;
+export const MAX_KYC_BYTES = 5 * 1024 * 1024;
+
+/** A catalogue: PDF, Excel or CSV up to 10 MB, or images up to 5 MB; up to 5 files. */
+export const CATALOGUE_ACCEPT =
+  "application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,image/jpeg,image/png,image/webp";
+export const MAX_CATALOGUE_FILES = 5;
+
+/** Why a catalogue file can't be used, or null when it can. */
+export function catalogueFileProblem(file: File): string | null {
+  const isImage = /^image\/(jpeg|png|webp)$/.test(file.type);
+  const isDoc = /^(application\/pdf|application\/vnd\.ms-excel|application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet|text\/csv)$/.test(file.type)
+    || /\.(xlsx|xls|csv)$/i.test(file.name);
+  if (!isImage && !isDoc) return `${file.name} isn't a PDF, an Excel or CSV file, or an image.`;
+  if (isImage && file.size > MAX_KYC_BYTES) return `${file.name} is over 5 MB.`;
+  if (!isImage && file.size > 2 * MAX_KYC_BYTES) return `${file.name} is over 10 MB.`;
+  return null;
 }
 
 /**

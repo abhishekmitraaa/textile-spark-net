@@ -18,9 +18,14 @@
 //   events: payment.captured (and optionally order.paid)
 //   secret: set the same value as the RAZORPAY_WEBHOOK_SECRET function secret
 
+// PLAN CHANGES (2026-10-02): as in verify-payment, the plan and its period come
+// from subscription_activate (_shared/planChange.ts) and the invoice records the
+// order's credit and kind.
+
 // GST is computed in one place for all three subscription functions (MPF-11);
 // subscriptionAmounts() applies it after the discount.
 import { confirmDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
+import { activatePlanChange } from "../_shared/planChange.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -57,33 +62,15 @@ async function activateSubscription(url: string, key: string, o: Record<string, 
     : (billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price);
   const money = subscriptionAmounts(list, Number(o.discount_rupees ?? 0));
 
-  const start = new Date();
-  const end = new Date(start);
-  if (billingCycle === "yearly") end.setFullYear(end.getFullYear() + 1);
-  else end.setMonth(end.getMonth() + 1);
-  const startIso = start.toISOString();
-  const endIso = end.toISOString();
-
-  const subResp = await fetch(`${url}/rest/v1/vendor_subscriptions?on_conflict=vendor_id`, {
-    method: "POST",
-    headers: {
-      apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json",
-      prefer: "resolution=merge-duplicates,return=representation",
-    },
-    body: JSON.stringify({
-      vendor_id: o.vendor_id, plan_id: planId, billing_cycle: billingCycle, status: "active",
-      current_period_start: startIso, current_period_end: endIso, auto_renew: true, updated_at: startIso,
-    }),
-  });
-  if (!subResp.ok) return false;
-  const subRows = await subResp.json();
-  const subscriptionId = Array.isArray(subRows) && subRows.length ? subRows[0].id : null;
-
-  await fetch(`${url}/rest/v1/vendor_profiles?id=eq.${o.vendor_id}`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ plan_id: planId, plan_expires_at: endIso }),
-  });
+  // The plan, its period and the vendor_profiles cache, by the database's rule.
+  const activation = await activatePlanChange(url, key, String(o.vendor_id), planId, billingCycle);
+  if (!activation.ok || !activation.period_start || !activation.period_end) {
+    console.error("subscription-webhook: activation refused after payment", o.order_id, activation.reason);
+    return false;
+  }
+  const startIso = activation.period_start;
+  const endIso = activation.period_end;
+  const subscriptionId = activation.subscription_id ?? null;
 
   let invoiceNumber: string | null = null;
   try {
@@ -106,6 +93,8 @@ async function activateSubscription(url: string, key: string, o: Record<string, 
       billing_period_start: startIso, billing_period_end: endIso,
       discount_amount: discounted ? money.discount : null,
       discount_code: discounted ? (o.discount_code ?? null) : null,
+      change_kind: o.change_kind ?? activation.kind ?? null,
+      credit_rupees: Number(o.credit_rupees ?? 0) > 0 ? Number(o.credit_rupees) : null,
     }),
   });
   return true;

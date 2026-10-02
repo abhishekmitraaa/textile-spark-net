@@ -160,7 +160,8 @@ begin
   j := public.support_request_detail(v_tno);
   r := r || case when j::text not like '%INTERNAL-NOTE-MARKER%' and j::text like '%Cosora Support has joined%'
                  then 'ok T5c the detail has the reply, the join line, and no internal note' else 'FAIL T5c' end;
-  select count(*) into v_n from public.notifications where profile_id = v_a and kind = 'support_reply';
+  -- This run's only (now() is the transaction's start): an account used before keeps older ones.
+  select count(*) into v_n from public.notifications where profile_id = v_a and kind = 'support_reply' and created_at >= now();
   r := r || case when v_n = 1 then 'ok T5d the reply notified the requester' else 'FAIL T5d ' || v_n end;
   -- D-06: the requester sees "Cosora Support", so no column they can read names who answered.
   begin

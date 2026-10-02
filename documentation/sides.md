@@ -476,6 +476,12 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-02 (FAQ input; built, not live)
+- **Registration asks for the Seller Registration FAQ's documents:** the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, incorporation certificate, shop licence or partnership deed), the owner's masked Aadhaar with consent, and a catalogue or a first product. The documents step can't be skipped.
+- **`/kyc`** shows all five; a seller registered earlier adds what's missing on its row.
+- **Plans:** an upgrade starts now, less what's left of the current plan; a lower plan is paid now and starts when the current period ends ("Switching to Silver on …"); renewing adds a period from the end. Buttons say Upgrade, Switch or Renew.
+- **7-day money-back guarantee:** for a first plan, the seller asks for a full refund on `/subscription` within 7 days of the first payment (shown only when money went through Razorpay).
+
 ### Changed 2026-10-01 (Help & Support P5; built, not live)
 - **Seller Help:** `/help` shows sellers their own questions: KYC, leads, listings and videos, advertising, plans and billing, account and suspension. Each is in Hindi and Gujarati, edited in Cosora-Admin `/faqs`.
 - **Quick Guide:** "How to Complete Verification".
@@ -660,6 +666,10 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Register a staff member** (Admins page, super admin and manager; a manager registers into the team roles only): name, personal email, mobile number and role. The panel generates the employee ID (`EMP-0001`) and the work email the person signs in with, and sends a temporary password to their personal email, or shows it once while email isn't set up. The person chooses their own password at first sign-in.
 - **Staff directory:** everyone registered, with "New temporary password" for someone locked out. The Admin Log records both.
 - The ID and email formats are interim (`ToDo.md`).
+
+### Added 2026-10-02 (FAQ input; built, not live)
+- **Subscriptions:** a "7-day money-back guarantee" panel lists each request with its payments; refund each through Razorpay, then "Close and end the plan". A paid downgrade shows under the current period.
+- **KYC panel:** names the business registration (with its kind and number), the masked Aadhaar and each catalogue file.
 
 ### Added 2026-09-30, live 2026-10-01 (Help & Support P4; rollout Off, so no requests arrive yet)
 - **Support section** in Cosora-Admin, for super_admin and the Support role, with the

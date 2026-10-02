@@ -26,6 +26,8 @@ Rules decided before or outside of Claude Code sessions.
   **legally required** in all chat flows. Never remove or hide it.
 - **Product moderation** — all product listings go through admin moderation before going
   live (24–48 hours).
+- **Aadhaar** — only a **masked** copy (first 8 digits hidden), with the owner's consent, in
+  private storage; never the number. Counsel to confirm before it goes live (2026-10-02).
 
 ### Locale
 - **Currency & timezone** — default to **INR** and **IST** for all Indian users.
@@ -52,6 +54,16 @@ Rules decided before or outside of Claude Code sessions.
   real user base, not nice-to-haves.
 - **Subscription tiers (Basic / Silver / Gold)** determine vendor lead volume, product
   listing caps, and geographic ad reach.
+- **Seller registration documents** (Seller Registration FAQ, Andy 2026-10-02): PAN card;
+  GST certificate when registered for GST (registering without GST is allowed); a business
+  registration (Udyam/MSME, incorporation certificate, shop licence, partnership deed or
+  other); the owner's masked Aadhaar; a product catalogue, or a first product instead.
+- **Plan changes** (Subscription FAQ): an upgrade starts now and the unused part of what's
+  paid comes off; a downgrade (or yearly → monthly) is paid now and starts at the next period;
+  one period paid ahead at most. One rule, in `admin.subscription_quote`.
+- **7-day money-back guarantee** (Subscription FAQ): a first-time subscriber can ask for a
+  full refund within 7 days of their first payment; finance refunds it through Razorpay and
+  the plan ends. Once per seller. The Terms' wording is counsel's (ToDo.md).
 
 ### Brand colours
 | Usage | Hex |

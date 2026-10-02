@@ -13,6 +13,8 @@
 //
 // POST { kind: "subscription", planId, billingCycle, code }
 //    → { ok: true, code, appliesTo, kind, value, list, discount, base, gst, total }
+//    `list` is the charge before the code: the plan's price, less an upgrade's
+//    credit (2026-10-02, _shared/planChange.ts).
 // POST { kind: "ad", spec, code }
 //    → { ok: true, code, appliesTo, kind, value, gross, ads, certificate, discount, total }
 // or  { ok: false, reason, appliesTo? }   (reasons: _shared/discounts.ts)
@@ -20,6 +22,7 @@
 
 import type { AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, checkDiscount, normaliseCode, subscriptionAmounts } from "../_shared/discounts.ts";
+import { quotePlanChange } from "../_shared/planChange.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -81,8 +84,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const plan = await fetchPlan(url, serviceKey, planId);
     if (!plan) return json({ error: "unknown_plan" }, 400);
     if (plan.is_invite_only) return json({ ok: false, reason: "invite_only" });
-    const list = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
-    if (!list || list <= 0) return json({ error: "zero_amount" }, 400);
+    const planPrice = billingCycle === "yearly" ? plan.yearly_price : plan.monthly_price;
+    if (!planPrice || planPrice <= 0) return json({ error: "zero_amount" }, 400);
+    // The charge this seller would pay (an upgrade's price less its credit), as
+    // subscription-create-order prices it (_shared/planChange.ts).
+    const change = await quotePlanChange(url, serviceKey, vendorId, planId, billingCycle);
+    if (!change.ok) return json({ ok: false, reason: change.reason ?? "unavailable" });
+    const list = change.charge_rupees ?? planPrice;
+    if (list <= 0) return json({ ok: false, reason: "no_discount" });
 
     const v = await checkDiscount(url, serviceKey, code, vendorId, "subscription", { planId, planRupees: list });
     if (!v.ok) return json({ ok: false, reason: v.reason ?? "unavailable", appliesTo: v.applies_to ?? null });

@@ -14,7 +14,8 @@ async function openFaqs(page: import("@playwright/test").Page) {
 }
 
 test("a seller sees the Seller Help questions; a buyer doesn't", async ({ browser }) => {
-  expect(Number(sql(`select count(*) from public.faqs where surface = 'seller_help' and active`))).toBe(17);
+  // 17 from P5, plus "Can I change my plan?" and "Can I get a refund?" (2026-10-02).
+  expect(Number(sql(`select count(*) from public.faqs where surface = 'seller_help' and active`))).toBe(19);
 
   const vendorCtx = await signedInContext(browser, "vendor");
   const vendor = await vendorCtx.newPage();
