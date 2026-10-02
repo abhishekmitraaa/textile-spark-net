@@ -395,7 +395,9 @@ rather than a supplier directory.
   vendor can act on it instead of resubmitting blind. (A rejected *product* still does
   not — the vendor-facing product list has no equivalent surface yet.)
 - **Leads** — buyer inquiries arriving in the dashboard.
-- **Quote requests** — respond to RFQs. The plan's lead cap applies to **open-marketplace
+- **Quote requests** — respond to RFQs. **No plan caps leads since 2026-10-03 (RFQ/leads
+  R2): every plan gets the same ranked feed.** What follows describes the cap while it
+  existed. The plan's lead cap applied to **open-marketplace
   RFQs only**: the dashboard's "leads used" and the cap check count exactly the same quotes
   (fixed 2026-09-16; before, the check also counted replies to direct requests, so a vendor
   shown 7/10 was refused as having "already quoted 171"). A quote on a request **addressed
@@ -730,6 +732,8 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 
 ### Added 2026-09-28 (admin completion, Phase 7)
 - **Leads**, a new read-only page under Insight: every buyer request (RFQ) and its stage.
+  (Since RFQ/leads R3, super admins and product moderators can also remove a lead, with a
+  reason the buyer reads, or flag it; a removed request has its own stage.)
   - Stages: new, unanswered, overdue after 48 hours without a quote, quoted, won, closed. A
     direct request is marked.
   - The numbers: what's waiting for a first quote, the median time to a first quote, and the

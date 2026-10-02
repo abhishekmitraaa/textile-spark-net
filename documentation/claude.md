@@ -856,8 +856,9 @@ undocumented. Deep technical rationale for each lives in
       there and in Cosora-Admin's `lib/customers.ts` together.
     - Active Cosora staff (`admin.admin_users`) aren't customers.
   - **Leads is `admin.lead_rows`** (admin completion Phase 7, `20260928071643`): the one
-    definition of an RFQ's stage (new, unanswered, overdue at 48 hours, quoted, won,
-    closed). A page or report that needs a stage reads it, never its own copy of the rules.
+    definition of an RFQ's stage (removed, won, closed, quoted, new, unanswered, overdue at
+    48 hours; `removed` is checked first, RFQ/leads R3). A page or report that needs a stage
+    reads it, never its own copy of the rules.
   - **Live Activity is `admin_live_activity()`** (admin completion Phase 8, `20260928145827`),
     computed from `engagement_events` on each call. A search shows only once at least 3
     different visitors made it in the window, the same floor as `vendor_buyer_geography`: it
@@ -985,6 +986,16 @@ undocumented. Deep technical rationale for each lives in
   an existing quote after the buyer closed the request. Enforced by `trg_quotes_accepting_rfq`
   (migration `20260923081708`), which fires before the lead cap so a closed request reports
   "closed", not a cap hit. Accepting or rejecting a quote is unaffected.
+- **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
+  is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
+  (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,
+  `removed_by`, `removed_reason`, and the buyer sees "Removed by Cosora" and the reason in My
+  Quotes. `trg_rfqs_removal_guard` freezes a removed RFQ for every browser client, the buyer
+  and admins included, and only that function writes the removal columns. No browser role
+  may DELETE an RFQ (the policy is gone and the grant revoked): a delete cascades to every
+  quote, accepted ones included. Admins may flag a lead (`admin_flags` entity `'rfq'`, same
+  two roles). Admin changes to `rfqs` reach the Admin Log. Migration `20261003090200_rfq_admin_oversight.sql` (not yet
+  applied); harness `scripts/rfq-leads/r3_oversight.sql`.
 - **The buyer decides a quote's status; the vendor sets its terms** (MPF-18, 2026-09-25,
   `trg_quotes_update_roles`).
   - The RFQ's owner may change only `status`.

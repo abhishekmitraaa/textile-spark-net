@@ -91,7 +91,10 @@ const CASES = {
   "rfqs.insert": {
     run: () =>
       vendor.db.from("rfqs").insert({ buyer_id: vendor.id, title: TAG }).select("id"),
-    cleanup: () => vendor.db.from("rfqs").delete().eq("title", TAG),
+    // No browser role may DELETE an RFQ since RFQ/leads R3 (a delete would cascade to
+    // every quote on it). Close it instead: it leaves every feed, and the closed row
+    // stays on this test account, as quotes and chats already do.
+    cleanup: () => vendor.db.from("rfqs").update({ status: "closed" }).eq("title", TAG).eq("buyer_id", vendor.id),
   },
   "advertisements.insert": {
     run: () =>

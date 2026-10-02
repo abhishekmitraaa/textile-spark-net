@@ -3034,3 +3034,13 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - Nothing in the vendor app shows a lead count or limit. `get_vendor_plan().usage.leads_used` is still returned.
 - Tests: `scripts/rfq-leads/r2_same_leads.sql`, `tests/local/rfq-leads.spec.ts` (R2 block).
 
+### R3: admin oversight, remove and flag
+- **State.** A removal is `status = 'closed'` plus `removed_at`, `removed_by`, `removed_reason` (`rfqs_removal_shape`: all or none, and only on a closed RFQ). Everything that shows only active RFQs drops it with no change of its own: `rfqs_select`, `trg_quotes_accepting_rfq`, `match_vendor_rfqs`, the vendor pool, the Direct inbox.
+- **Writes.** `admin_lead_remove(p_rfq_id, p_reason)` is definer, `search_path ''`, super_admin and product_moderator only; 22023 blank reason, P0002 unknown RFQ, 55000 already removed. It sets `cosora.audit_reason`, so the Admin Log row (`trg_admin_audit` on `rfqs`, owner `buyer_id`) carries the reason.
+- **Guard.** `trg_rfqs_removal_guard` (BEFORE INSERT OR UPDATE, invoker) acts only when `current_user = 'authenticated'`: the removal columns can't be set or changed, and a removed RFQ can't be updated. The definer function runs as the owner, so it passes; so do service-role jobs.
+- **No deletes.** No DELETE policy on `rfqs`, and DELETE revoked from anon and authenticated, so a browser delete fails with 42501 instead of quietly reaching 0 rows.
+- **Flags.** `admin.admin_flags.entity_type` accepts `'rfq'`; `admin_flag_add` refuses an `'rfq'` flag from anyone but super_admin and product_moderator.
+- **Reads.** `admin.lead_rows.stage = 'removed'` is checked before `won`. `admin_leads_list` keeps its signature (the reason is in the detail, not the list); `admin_leads_summary.window.removed`; `admin_lead_detail.removal = {at, by, reason}` (`by` from `admin.audit_actor_name`).
+- **Apps.** Buyer: `RFQ_COLUMNS` reads `removed_at, removed_reason`; `Rfq.removedReason`; the My Quotes card. Cosora-Admin: `useRemoveLead()`, the Leads detail's Remove panel and `FlagLog entityType="rfq"` (`canAdd` for the two roles), `roles.ts` `leads` write list.
+- Tests: `scripts/rfq-leads/r3_oversight.sql` (27 cases), `tests/local/rfq-leads.spec.ts` (R3 blocks).
+
