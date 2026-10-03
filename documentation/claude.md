@@ -994,8 +994,8 @@ undocumented. Deep technical rationale for each lives in
   and admins included, and only that function writes the removal columns. No browser role
   may DELETE an RFQ (the policy is gone and the grant revoked): a delete cascades to every
   quote, accepted ones included. Admins may flag a lead (`admin_flags` entity `'rfq'`, same
-  two roles). Admin changes to `rfqs` reach the Admin Log. Migration `20261003090200_rfq_admin_oversight.sql` (not yet
-  applied); harness `scripts/rfq-leads/r3_oversight.sql`.
+  two roles). Admin changes to `rfqs` reach the Admin Log. Migration `20261003090200_rfq_admin_oversight.sql` (applied
+  2026-10-03 in the SQL editor, so not in the migration ledger); harness `scripts/rfq-leads/r3_oversight.sql`.
 - **The buyer decides a quote's status; the vendor sets its terms** (MPF-18, 2026-09-25,
   `trg_quotes_update_roles`).
   - The RFQ's owner may change only `status`.
