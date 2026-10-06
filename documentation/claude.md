@@ -986,6 +986,14 @@ undocumented. Deep technical rationale for each lives in
   an existing quote after the buyer closed the request. Enforced by `trg_quotes_accepting_rfq`
   (migration `20260923081708`), which fires before the lead cap so a closed request reports
   "closed", not a cap hit. Accepting or rejecting a quote is unaffected.
+- **The product and requirement forms keep every answer (Ranking Part 1, F1, Mitra 2026-10-07).** A
+  field with a column of its own writes that column; every other answer goes into `products.attributes` or
+  `rfqs.attributes` (jsonb object, at most 8 KB), keyed by the form's own field id. `productAttributes()` and
+  `requirementAttributes()` (`src/lib/formAttributes.ts`) decide what goes in: trimmed strings, non-empty lists, a
+  ticked box as `true`, nothing blank. Keep `PRODUCT_COLUMN_FIELDS` in step with Upload.tsx's insert and update, or a
+  column field ends up in both places. Attribute values are part of `search_text` (`attributes_search_text()`), so
+  search and the embeddings use them, and both embedding triggers fire when they change. Migration `20261007100000_attributes_capture.sql`
+  (not yet applied); harness `scripts/ranking/f1_attributes.sql`; spec `documentation/ranking-foundations-design-2026-10-07.md`.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
   is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
   (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,

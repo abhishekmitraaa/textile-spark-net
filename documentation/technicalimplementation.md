@@ -3044,3 +3044,15 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 - **Apps.** Buyer: `RFQ_COLUMNS` reads `removed_at, removed_reason`; `Rfq.removedReason`; the My Quotes card. Cosora-Admin: `useRemoveLead()`, the Leads detail's Remove panel and `FlagLog entityType="rfq"` (`canAdd` for the two roles), `roles.ts` `leads` write list.
 - Tests: `scripts/rfq-leads/r3_oversight.sql` (27 cases), `tests/local/rfq-leads.spec.ts` (R3 blocks).
 
+## Personalised ranking (2026-10-07, `documentation/ranking-foundations-design-2026-10-07.md`)
+
+Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (vendors ranked for buyers).
+
+### Part 1, F1: the forms keep every answer
+- `products.attributes` and `rfqs.attributes` are `jsonb` objects (`*_attributes_shape`: an object, at most 8 KB). The product form writes the answers that have no column (`productAttributes()`), and `location`, which has a column but was dropped. The requirement form writes all its category answers (`requirementAttributes()`), alongside the guessed title, quantity and budget. Migration `20261007100000_attributes_capture.sql`.
+- `attributes_search_text(jsonb)` (immutable) returns `''` for none, else a leading space and the string, number and list values ordered by key. It's appended to `products.search_text`, `products.fts` and `rfqs.search_text` (changed in place with `SET EXPRESSION`), so a row without attributes keeps exactly its old text and embedding.
+- Both embedding triggers (`CREATE OR REPLACE TRIGGER`) also fire on `attributes`.
+- Shown: up to four answers on a vendor's lead card, the rest behind "+N more" (`LeadDetails` in `OpenRfqLeads.tsx`); all of them in Cosora-Admin's lead detail (`admin_lead_detail()` returns `attributes`). Labels are humanised from the keys until F3 brings labelled definitions.
+- Editing a product loads its attributes and location back into the form, so a save never blanks them.
+- Tests: `scripts/ranking/f1_attributes.sql` (11 cases), `tests/local/ranking-f1.spec.ts` (helpers, product create and edit, requirement, lead card and admin detail).
+
