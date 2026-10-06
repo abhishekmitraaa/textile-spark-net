@@ -347,7 +347,10 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-09-27, admin completion Phase 2, Mitra's choice of "Restore essentials +
   prune".
 - Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
-- Status: Open
+- Status: **Completed 2026-10-06** (Mitra: "fix the embedding issue"). All five restored by `20261006165817_restore_embedding_jobs.sql`,
+  verbatim. Before: health CRITICAL, 2 jobs waiting (the oldest 7 days, a vendor product from
+  2026-09-29, and a buyer's quote request from 2026-10-06). After two ticks: queue 0, recompute
+  queue 0, health OK.
 
 ### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
 - Task: make the vendor's Advertise page show the reason an admin gave in words. Today
