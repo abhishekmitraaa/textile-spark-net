@@ -7455,5 +7455,6 @@
  "Buyer requirements are shown to signed-in sellers only.": "खरीदार की आवश्यकताएँ केवल साइन इन किए हुए विक्रेताओं को दिखती हैं।",
  "Upgrade for more products": "ज़्यादा उत्पादों के लिए अपग्रेड करें",
  "Removed by Cosora": "कोसोरा ने हटाया",
- "Reason:": "कारण:"
+ "Reason:": "कारण:",
+ "+{0} more": "+{0} और"
 }

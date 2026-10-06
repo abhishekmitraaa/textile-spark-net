@@ -22,6 +22,31 @@ import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
 
 const BLUE = brand("vendor");
 
+// A lead card shows this many of the buyer's answers; the rest open on request, so a
+// requirement with a dozen answers doesn't crowd out the pool (Ranking F1).
+const SHOWN_DETAILS = 4;
+
+function LeadDetails({ details }: { details: { label: string; value: string }[] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? details : details.slice(0, SHOWN_DETAILS);
+  const hidden = details.length - SHOWN_DETAILS;
+  return (
+    <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-600 lg:text-xs">
+      {shown.map((d) => (
+        <span key={d.label}>
+          <span className="text-gray-400">{d.label}:</span>{" "}
+          <span data-no-translate className="font-medium text-gray-700">{d.value}</span>
+        </span>
+      ))}
+      {!all && hidden > 0 && (
+        <button type="button" onClick={() => setAll(true)} className="font-semibold text-brand-vendor hover:underline">
+          {`+${hidden} more`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function OpenRfqLeads() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -93,6 +118,7 @@ export default function OpenRfqLeads() {
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}
                   {r.priceMin || r.priceMax ? `₹${r.priceMin}–₹${r.priceMax}/unit · ` : ""}{r.date}
                 </p>
+                {r.details.length > 0 && <LeadDetails details={r.details} />}
               </div>
               {r.image && <img src={r.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0 lg:w-14 lg:h-14" />}
             </div>

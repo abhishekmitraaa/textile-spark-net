@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import type { Attributes } from "@/lib/formAttributes";
+import { attributeDetails, type Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
 import { ensureConversation } from "@/lib/queries/chat";
@@ -29,6 +29,8 @@ interface RawRfq {
   customization_images: string[] | null;
   // Set when Cosora removed the RFQ (RFQ/leads R3); the buyer reads both.
   removed_at: string | null; removed_reason: string | null;
+  // The buyer's category answers (Ranking F1).
+  attributes: Record<string, unknown> | null;
 }
 
 // Every rfqs read names its columns rather than using select("*"), because the
@@ -41,7 +43,7 @@ interface RawRfq {
 // select string at the TYPE level to shape the result, and a `string` it cannot
 // read statically degrades every one of these queries to GenericStringError[].
 const RFQ_COLUMNS =
-  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason" as const;
+  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes" as const;
 
 interface RawQuote {
   id: string; rfq_id: string; vendor_id: string; currency: string;
@@ -351,6 +353,8 @@ export interface LeadRfq {
   /** Semantic fit strong enough to say so in the UI. Distinct from `matched`:
    *  that one claims a category match specifically, and must stay truthful. */
   strongMatch: boolean;
+  /** The buyer's category answers as label/value pairs (Ranking F1). */
+  details: { label: string; value: string }[];
 }
 async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data, error } = await supabase
@@ -394,6 +398,7 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       similarity: m?.similarity ?? null,
       score: m?.score ?? 0,
       strongMatch: (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
+      details: attributeDetails(r.attributes),
     };
   });
 

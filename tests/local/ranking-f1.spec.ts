@@ -5,7 +5,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { productAttributes, requirementAttributes, attributeDetails } from "../../src/lib/formAttributes";
-import { BUYER_URL, contextWithSession, freshAccount, signedInContext, sql } from "./stack";
+import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, signedInContext, sql } from "./stack";
 
 async function continueTo(page: Page, times: number) {
   for (let i = 0; i < times; i++) await page.getByRole("button", { name: /^Continue/ }).click();
@@ -138,6 +138,42 @@ test.describe("F1: the requirement form keeps its answers", () => {
     } finally {
       await ctx.close();
       sql(`delete from public.rfqs where attributes ->> 'composition' = '${composition}'`);
+    }
+  });
+});
+
+test.describe("F1: vendors and admins see a requirement's details", () => {
+  test("the vendor's lead card shows four details and the rest on request; the admin sees all", async ({ browser }) => {
+    test.setTimeout(120_000);
+    const title = `F1 details ${Date.now()}`;
+    sql(`insert into public.rfqs (buyer_id, title, status, attributes) values ('11111111-1111-1111-1111-111111111111', '${title}', 'active',
+           '{"productType": "Linen", "composition": "Linen 100%", "gsm": "180", "width": "58 inch", "finish": "Enzyme wash", "certifications": ["GOTS", "OEKO-TEX"]}')`);
+    try {
+      const vctx = await signedInContext(browser, "vendor", { width: 1440, height: 1000 });
+      const vpage = await vctx.newPage();
+      await vpage.goto(`${BUYER_URL}/leads`);
+      const card = vpage.locator("div.rounded-xl", { hasText: title }).first();
+      await expect(card.getByText("Certifications:")).toBeVisible();
+      await expect(card.getByText("GOTS, OEKO-TEX")).toBeVisible();
+      await expect(card.getByText("Width:")).toHaveCount(0);
+      await card.getByRole("button", { name: "+2 more" }).click();
+      await expect(card.getByText("Width:")).toBeVisible();
+      await expect(card.getByText("58 inch")).toBeVisible();
+      await vctx.close();
+
+      const actx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+      const apage = await actx.newPage();
+      await apage.goto(`${ADMIN_URL}/leads`);
+      await apage.getByLabel("Search").fill(title);
+      await apage.getByRole("row", { name: new RegExp(title) }).getByRole("button", { name: "View" }).click();
+      const dialog = apage.getByRole("dialog");
+      for (const label of ["Certifications", "Composition", "Finish", "Gsm", "Product type", "Width"]) {
+        await expect(dialog.getByText(label, { exact: true })).toBeVisible();
+      }
+      await expect(dialog.getByText("Enzyme wash")).toBeVisible();
+      await actx.close();
+    } finally {
+      sql(`delete from public.rfqs where title = '${title}'`);
     }
   });
 });
