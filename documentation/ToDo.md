@@ -15,6 +15,29 @@ with no need to dictate format, context, or reference each time.
 - Priority: (only if stated or obviously implied — otherwise omit)
 - Status: Open
 
+### Remove or relabel the three plan-comparison rows that promise lead features nothing delivers — added 2026-10-06
+- Task: on the Subscription page's plan comparison, remove these three rows, mark them "Coming soon", or build
+  what they promise:
+
+  | Row | Free | Basic | Silver | Gold | VIP |
+  |---|---|---|---|---|---|
+  | Lead access channel | Website only | Web + email | App + email | Full access (SMS) | Full access + priority |
+  | Real-time lead alerts | None | No | App notification | WhatsApp + email | Sales concierge |
+  | CRM & lead management | None | No | Web + mobile | Analytics + follow-ups | Dedicated success team |
+- Context: the two flags behind these rows (`has_realtime_alerts`, `has_crm` in `subscription_plans.limits`) are
+  declared in `src/lib/plan.ts` but never read, and `NOTIFICATION_DELIVERY_LIVE = false`
+  (`src/lib/notificationDelivery.ts`). So no plan gets email, SMS or WhatsApp lead alerts or a CRM today; a Gold
+  vendor pays partly for "WhatsApp + email alerts" that never arrive. RFQ/leads R2 (2026-10-03, no lead cap on any
+  plan) didn't cause this, but it stands out more now that leads are otherwise identical across plans.
+  - Options: remove the three rows; mark them "Coming soon"; build the delivery.
+  - Claude's recommendation: remove them, or mark them "Coming soon", until delivery exists, which matches the
+    project's rule against promising what isn't real.
+  - The change is small: three entries in `FEATURE_ROWS` in `src/pages/Subscription.tsx`, plus each plan's
+    `display.lead_channel`, `display.alerts` and `display.crm` in `subscription_plans`.
+- Reference: 2026-10-06, after the RFQ/leads R1–R3 release and the embedding-jobs restore, from Claude's list of
+  open items; the user pasted the write-up and asked to add it here.
+- Status: Open
+
 ### Make "Is there any cost to register?" true, or reword it — added 2026-10-02
 - Task: either build what the Seller Registration answer lists, or have Andy reword it in Cosora-Admin `/faqs`.
 - Context: the live answer says "NO, Basic registration is free. You only pay if you opt for: • Premium listings
