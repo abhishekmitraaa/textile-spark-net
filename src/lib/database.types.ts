@@ -1427,6 +1427,7 @@ export type Database = {
       }
       products: {
         Row: {
+          attributes: Json
           category_id: string | null
           category_name: string | null
           collar_type: string | null
@@ -1467,6 +1468,7 @@ export type Database = {
           waist_sizes: string[] | null
         }
         Insert: {
+          attributes?: Json
           category_id?: string | null
           category_name?: string | null
           collar_type?: string | null
@@ -1507,6 +1509,7 @@ export type Database = {
           waist_sizes?: string[] | null
         }
         Update: {
+          attributes?: Json
           category_id?: string | null
           category_name?: string | null
           collar_type?: string | null
@@ -1797,6 +1800,7 @@ export type Database = {
       }
       rfqs: {
         Row: {
+          attributes: Json
           budget_max: number | null
           budget_min: number | null
           buyer_id: string
@@ -1824,6 +1828,7 @@ export type Database = {
           vendor_id: string | null
         }
         Insert: {
+          attributes?: Json
           budget_max?: number | null
           budget_min?: number | null
           buyer_id: string
@@ -1851,6 +1856,7 @@ export type Database = {
           vendor_id?: string | null
         }
         Update: {
+          attributes?: Json
           budget_max?: number | null
           budget_min?: number | null
           buyer_id?: string
@@ -4552,6 +4558,7 @@ export type Database = {
         Returns: number
       }
       archive_ad_campaign: { Args: { p_ad_id: string }; Returns: undefined }
+      attributes_search_text: { Args: { p: Json }; Returns: string }
       block_account_from_review: {
         Args: {
           p_profile_id: string

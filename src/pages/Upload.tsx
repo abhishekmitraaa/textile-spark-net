@@ -49,6 +49,7 @@ import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
 import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields } from "@/data/sellerCategories";
+import { productAttributes } from "@/lib/formAttributes";
 import { Progress } from "@/components/ui/progress";
 
 // Shown on the Pricing step only for categories whose Details fields have no
@@ -134,8 +135,17 @@ const Upload = () => {
     // fields render and the vendor never re-answers them. Seeding formValues
     // here is what makes handleSubmit write the existing values straight back —
     // without it every save would null out attributes set at listing time.
+    //
+    // The other category answers (Ranking F1) are seeded too, first, so the column
+    // fields below win on a shared key. A ticked checkbox comes back as "true", the
+    // form's own value for it.
+    const fromAttributes = Object.fromEntries(
+      Object.entries(editing.attributes ?? {}).map(([k, v]) => [k, v === true ? "true" : v]),
+    ) as Record<string, string | string[]>;
     setFormValues((prev) => ({
       ...prev,
+      ...fromAttributes,
+      location: editing.location ?? "",
       fabric: editing.fabric ?? "",
       gsm: editing.gsm ?? "",
       fit: editing.fit_type ?? "",
@@ -366,6 +376,11 @@ const Upload = () => {
       const countryOfOrigin = str("originCountry");
       const waistSizes = arr("waistSizes");
       const lengths = arr("lengths");
+      // Asked on every product ("Location / Origin") and has a column, but was never saved.
+      const location = str("location");
+      // Every other answer the category asked (Ranking F1). Before this, the form
+      // collected them and kept only the fields above.
+      const attributes = productAttributes(formValues);
 
       if (isEdit && editId) {
         // Edit: update the row + append any newly-picked images (existing ones stay).
@@ -385,6 +400,8 @@ const Upload = () => {
           country_of_origin: countryOfOrigin,
           waist_sizes: waistSizes,
           lengths,
+          location,
+          attributes,
           customization_available: customizationAvailable,
           status: nextStatus,
         });
@@ -443,6 +460,8 @@ const Upload = () => {
           country_of_origin: countryOfOrigin,
           waist_sizes: waistSizes,
           lengths,
+          location,
+          attributes,
           customization_available: customizationAvailable,
           status: nextStatus,
         })

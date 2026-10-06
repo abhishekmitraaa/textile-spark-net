@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
 
@@ -875,12 +876,16 @@ export interface EditableProduct {
   waist_sizes: string[] | null;
   lengths: string[] | null;
   customization_available: boolean;
+  // The listing's other category answers (Ranking F1) and its "Location / Origin",
+  // read back for the same reason as the columns above.
+  location: string | null;
+  attributes: Attributes;
 }
 
 async function fetchProductForEdit(id: string): Promise<EditableProduct | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, product_images ( url, position )")
+    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, attributes, product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -901,6 +906,8 @@ async function fetchProductForEdit(id: string): Promise<EditableProduct | null> 
     waist_sizes: row.waist_sizes ?? null,
     lengths: row.lengths ?? null,
     customization_available: row.customization_available ?? false,
+    location: row.location ?? null,
+    attributes: (row.attributes ?? {}) as Attributes,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
   };
 }
@@ -935,6 +942,8 @@ export interface ProductPatch {
   waist_sizes?: string[] | null;
   lengths?: string[] | null;
   customization_available?: boolean;
+  location?: string | null;
+  attributes?: Attributes;
 }
 export async function updateProduct(id: string, patch: ProductPatch): Promise<void> {
   const { data, error } = await supabase.from("products").update(patch).eq("id", id).select("id");
