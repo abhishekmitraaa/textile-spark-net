@@ -5,7 +5,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { productAttributes, requirementAttributes, attributeDetails } from "../../src/lib/formAttributes";
-import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { BUYER_URL, contextWithSession, freshAccount, signedInContext, sql } from "./stack";
 
 async function continueTo(page: Page, times: number) {
   for (let i = 0; i < times; i++) await page.getByRole("button", { name: /^Continue/ }).click();
@@ -108,5 +108,36 @@ test.describe("F1 helpers", () => {
       { label: "Sample available", value: "Yes" },
       { label: "Sizes", value: "S, M" },
     ]);
+  });
+});
+
+test.describe("F1: the requirement form keeps its answers", () => {
+  test("a knitted-fabric requirement keeps its composition", async ({ browser }) => {
+    test.setTimeout(120_000);
+    const composition = `F1 cotton ${Date.now()}`;
+    const ctx = await signedInContext(browser, "buyer", { width: 1280, height: 1000 });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/requirement/post-requirement`);
+      await page.getByRole("button", { name: /Create New Requirement/ }).click();
+      await page.getByRole("button", { name: /Raw Materials/ }).first().click();
+      await page.getByRole("button", { name: /Knitted Fabrics/ }).first().click();
+      await page.getByRole("button", { name: "Save" }).click();
+      const field = (label: RegExp) =>
+        page.locator("div", { has: page.locator(":scope > label", { hasText: label }) }).locator(":scope > input").first();
+      await field(/^Composition/).fill(composition);
+      // The set's required questions: Fabric Type (a custom dropdown) and Quantity.
+      const fabricType = page.locator("div", { has: page.locator(":scope > label", { hasText: /^Fabric Type/ }) }).first();
+      await fabricType.getByRole("button").first().click();
+      await fabricType.getByRole("button", { name: "Linen", exact: true }).click();
+      await field(/^Quantity/).fill("500 metres");
+      await page.getByRole("button", { name: /Submit Quote Request/ }).click();
+      await expect(page).toHaveURL(/\/requirement\/my-quotes$/, { timeout: 30_000 });
+      expect(sql(`select count(*) || '|' || max(attributes ->> 'productType') from public.rfqs
+                   where buyer_id = '11111111-1111-1111-1111-111111111111' and attributes ->> 'composition' = '${composition}'`)).toBe("1|Linen");
+    } finally {
+      await ctx.close();
+      sql(`delete from public.rfqs where attributes ->> 'composition' = '${composition}'`);
+    }
   });
 });

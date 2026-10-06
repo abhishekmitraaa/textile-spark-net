@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
 import { ensureConversation } from "@/lib/queries/chat";
@@ -170,6 +171,8 @@ export interface NewRfq {
    *  when no confident resolution exists; a wrong id is worse than none,
    *  because it scores the RFQ against vendors who do not sell the thing. */
   categoryId?: string | null;
+  /** The form's category answers (Ranking F1), from requirementAttributes(). */
+  attributes?: Attributes;
 }
 export async function createRfq(buyerId: string, input: NewRfq): Promise<string> {
   const { data, error } = await supabase
@@ -179,6 +182,7 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
       quantity: input.quantity ?? null, budget_min: input.budgetMin ?? null, budget_max: input.budgetMax ?? null,
       description: input.description ?? null, image: input.image ?? null,
       category_id: input.categoryId ?? null, status: "active",
+      attributes: input.attributes ?? {},
     })
     .select("id").single();
   if (error) throw error;

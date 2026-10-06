@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { createRfq } from "@/lib/queries/rfqs";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
 import { getCategoryById } from "@/data/sellerCategories";
+import { requirementAttributes } from "@/lib/formAttributes";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -625,6 +626,9 @@ const PostRequirement = () => {
       await createRfq(user.id, {
         title, productName, quantity, budgetMin, budgetMax, description,
         categoryId: categoryDbId,
+        // Every category answer, as asked (Ranking F1). The guesses above still fill
+        // the title, quantity and budget columns.
+        attributes: requirementAttributes(values),
       });
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
     } catch (e) {
