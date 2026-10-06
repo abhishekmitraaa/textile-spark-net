@@ -47,8 +47,12 @@ begin
       elsif i = 2 then
         select count(*)::text into got from public.quotes;
       else
-        select coalesce(string_agg(case r.id when a then 'A' when b then 'B' else 'C' end, ',' order by 1), '')
-          into got from public.rfqs r where r.id in (a, b, c);
+        -- Sorted by the label itself: `order by 1` inside an aggregate sorts by the constant 1,
+        -- which left the order to the table's physical layout (it changed when F1 rewrote rfqs).
+        select coalesce(string_agg(x.l, ',' order by x.l), '')
+          into got
+          from (select case r.id when a then 'A' when b then 'B' else 'C' end as l
+                  from public.rfqs r where r.id in (a, b, c)) x;
       end if;
       reset role;
       raise exception using errcode = 'P0099',
