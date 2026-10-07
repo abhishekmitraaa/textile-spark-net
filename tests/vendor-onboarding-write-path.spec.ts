@@ -220,7 +220,7 @@ test("8.1 completing /onboarding writes every collected field to the database", 
   await page.getByPlaceholder("Floor / tower (optional)").fill(FORM.floor);
   await page.getByPlaceholder("Area / Sector / Locality*").fill(FORM.area);
   await page.getByPlaceholder("City").fill(FORM.city);
-  await page.getByPlaceholder("State").fill(FORM.state);
+  await page.locator("#onboarding-state").selectOption({ label: FORM.state });
   await page.getByPlaceholder("6-digit pincode").fill(FORM.pincode);
   await page.getByPlaceholder("Add any nearby landmark (optional)").fill(FORM.landmark);
   await page.getByRole("button", { name: "Add business address" }).click();

@@ -5,6 +5,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import StateSelect from "@/components/StateSelect";
+import { stateCodeFor } from "@/data/indiaStates";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
@@ -259,6 +261,11 @@ function EditContactModal({ isOpen, onClose, initial, onSave }: { isOpen: boolea
   if (!isOpen) return null;
   const set = (k: keyof ContactForm) => (v: string) => setForm((f) => ({ ...f, [k]: v }));
   const submit = async () => {
+    // A state from the list is required: ranking compares it with buyers' states (Ranking F2).
+    if (!stateCodeFor(form.state)) {
+      toast.error("Pick the state your business is in");
+      return;
+    }
     setSaving(true);
     try { await onSave(form); onClose(); } finally { setSaving(false); }
   };
@@ -286,7 +293,10 @@ function EditContactModal({ isOpen, onClose, initial, onSave }: { isOpen: boolea
             <LabelledInput label="Landmark" value={form.landmark} onChange={set("landmark")} placeholder="Opposite Udhna Depot" />
             <div className="grid grid-cols-2 gap-3">
               <LabelledInput label="City" value={form.city} onChange={set("city")} placeholder="Surat" />
-              <LabelledInput label="State" value={form.state} onChange={set("state")} placeholder="Gujarat" />
+              <label className="block">
+                <span className="mb-1 block text-xs font-semibold text-gray-700">State</span>
+                <StateSelect value={form.state} onChange={set("state")} className={fieldClass} />
+              </label>
             </div>
             <LabelledInput label="Postal code" value={form.postalCode} onChange={set("postalCode")} placeholder="395002" />
           </div>

@@ -44,7 +44,9 @@ const ts = require("typescript");
 // lib/supplierAgreement.ts is the contract a vendor signs, stored by version: it
 // is shown in English only (data-no-translate in Onboarding.tsx) until a reviewed
 // translation exists and the version names it.
-const SKIP_FILES = [/lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /database\.types\.ts$/, /\.test\.tsx?$/];
+// data/indiaStates.ts carries each state's Hindi and Gujarati itself (StateSelect shows them by
+// language), and its `aliases` are spellings for matching typed input, never shown.
+const SKIP_FILES = [/data[\\/]indiaStates\.ts$/, /lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /database\.types\.ts$/, /\.test\.tsx?$/];
 
 // Found by the extractor but never shown as text. "s" and "es" are English
 // plural endings rendered as their own text node ({n === 1 ? "" : "es"}); both

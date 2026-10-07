@@ -33,7 +33,7 @@ test("a new seller registers with every document the FAQ lists", async ({ browse
   await page.getByRole("button", { name: "Next" }).click();
   await page.getByPlaceholder("Area / Sector / Locality*").fill("Ring Road");
   await page.getByPlaceholder("City").fill("Surat");
-  await page.getByPlaceholder("State").fill("Gujarat");
+  await page.locator("#onboarding-state").selectOption({ label: "Gujarat" });
   await page.getByPlaceholder("6-digit pincode").fill("395002");
   await page.getByRole("button", { name: "Add business address" }).click();
   await page.getByRole("button", { name: "Save business address" }).click();

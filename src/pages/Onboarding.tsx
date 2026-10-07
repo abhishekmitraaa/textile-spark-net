@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import StateSelect from "@/components/StateSelect";
 import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
@@ -1565,12 +1566,14 @@ export default function Onboarding() {
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-sm font-medium text-brand-ink">State*</Label>
-                      <Input
+                      <Label htmlFor="onboarding-state" className="text-sm font-medium text-brand-ink">State*</Label>
+                      {/* One list for every state field (Ranking F2); the pincode lookup's
+                          state name is matched to it, older spellings included. */}
+                      <StateSelect
+                        id="onboarding-state"
                         value={state}
-                        onChange={(e) => setState(e.target.value)}
-                        placeholder="State"
-                        className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                        onChange={setState}
+                        className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor"
                       />
                     </div>
                   </div>

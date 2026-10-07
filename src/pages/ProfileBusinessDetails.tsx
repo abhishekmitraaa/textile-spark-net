@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import StateSelect from "@/components/StateSelect";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import {
   Field, inputCls, ProfileSubpageHeader, ProfileSignedOut, ProfileFormLoading, ProfileFormActions,
@@ -72,7 +73,7 @@ const ProfileBusinessDetails = () => {
                     <input id="bd-city" className={inputCls} value={form.businessCity} onChange={(e) => set({ businessCity: e.target.value })} />
                   </Field>
                   <Field label="State/Province" htmlFor="bd-state">
-                    <input id="bd-state" className={inputCls} value={form.state} onChange={(e) => set({ state: e.target.value })} />
+                    <StateSelect id="bd-state" className={inputCls} value={form.state} onChange={(state) => set({ state })} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
