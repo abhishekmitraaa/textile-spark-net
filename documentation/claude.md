@@ -165,6 +165,32 @@ undocumented. Deep technical rationale for each lives in
   is the two-digit state code a GSTIN starts with. Cosora's own GSTIN, legal name, address and SAC code are
   `admin.billing_entity` (Cosora-Admin Billing details, super admin and finance admin). Onboarding still saves
   a GSTIN unchecked (ToDo).
+- **A plan order is completed by one database transaction, and nothing else** (subscriptions P1, 2026-10-08;
+  migration `20261008120000_subscriptions_p1_billing_core.sql`).
+  - `public.subscription_fulfil(order, payment, source)` (service role) claims the order, confirms its code,
+    activates the plan and issues the invoice together. verify-payment, the webhook and `billing-reconcile` call
+    it through `_shared/fulfil.ts`; no function writes a plan or an invoice itself. A new way to pay calls it too.
+  - A refusal after money was taken opens a **billing incident** (Cosora-Admin Subscriptions; super and finance admins
+    are told and resolve it with a note). A demo or ₹0 order that can't be activated keeps nothing and frees its code.
+- **An issued invoice never changes** (P1). No browser role may update or delete one, admins included (a trigger);
+  a refund is a credit note, issued automatically when the refund is processed. An invoice is shown and printed from
+  what was frozen when it was issued (supplier, recipient, place of supply, tax split), never from today's profile.
+- **Every plan order and invoice says what money it was** (P1): `payment_mode` live, test (Razorpay test keys),
+  demo (no gateway) or free.
+  - Test and demo documents are numbered in their own series and say they are not tax invoices.
+  - A tax invoice needs a live (or ₹0) order and Cosora's billing details; a live payment before those are set gets
+    a receipt and an `invoice_incomplete` incident.
+  - Numbers run per document series and Indian financial year: `PFX/2627/000001`, at most 16 characters.
+  - Once the first live payment is fulfilled (`admin.billing_settings.live_since`), only live invoices earn
+    upgrade credit (S-7).
+- **GST on a plan invoice: CGST + SGST when the place of supply is Cosora's own state, IGST otherwise** (P1). The
+  place of supply is the vendor's GSTIN state, else its address state. The GST amount is what the order charged less
+  its taxable value, so `_shared/gst.ts` stays the only GST formula.
+- **Razorpay webhook events are recorded once, by Razorpay's event id** (P1, `admin.payment_events`). The
+  subscription webhook answers 500 only when the database couldn't be reached, so Razorpay retries; an event with an
+  outcome is never processed twice.
+- **Invoice PDFs live in the private `invoices` bucket** (P1): `invoice-render` draws one once, at
+  `<vendor>/<number>.v<version>.pdf`; the browser signs a 5-minute link with its own session.
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with

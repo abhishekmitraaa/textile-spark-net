@@ -3120,3 +3120,81 @@ Plan: build every vendor subscription feature, phase by phase behind switches (M
 - **Tests:** `scripts/subscriptions/p0_foundations.sql` (29 cases), `scripts/discount-flow-check.mjs` section I,
   `scripts/tax-id-check.mjs`, `tests/local/subscriptions-p0.spec.ts`. Local specs that buy a plan list their fresh
   seller with `allowFeature("subscription_checkout", id)` and remove it in `afterEach`.
+
+## Subscriptions P1: billing core (2026-10-08)
+
+Migrations `20261008120000_subscriptions_p1_billing_core.sql` (guard: `admin.subscription_quote` md5
+`c61474b3…`) and `20261008120100_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, applied only with
+Mitra's say-so). Built on branch `subscriptions/p1-billing-core`; not applied.
+
+- **`public.subscription_fulfil(p_order_ref, p_payment_ref, p_source)`** (definer; service role only; source verify,
+  webhook, free, demo or reconcile). One transaction:
+  1. `FOR UPDATE` on the order. Not `created` → `{ok: status = 'paid', already: true, invoice_id}`; unknown →
+     `unknown_order`.
+  2. A ₹0 order confirms its redemption first (`discount_unconfirmed`), or must have a list price of 0 (`not_free`).
+  3. Claim (`paid`, `paid_at`, `payment_ref`); confirm a paid order's code; the first live order sets
+     `admin.billing_settings.live_since`.
+  4. `subscription_activate()`. Refused on a demo or ₹0 order → raises `activation refused: <reason>` (P0001), so
+     nothing is kept. Refused on a paid order → an `activation_failed` incident, and
+     `{ok:false, reason:'activation_failed', incident_id}` with the order kept paid (the money's record).
+  5. The invoice. Taxable value = list − discount (rupees); GST paise = order amount − taxable × 100. Place of supply
+     = the recipient GSTIN's state, else the vendor's `state_code`, else Cosora's. Intra-state: CGST = GST / 2
+     (floor), SGST the rest; inter-state: IGST. Document type: demo → `demo` (DMO), test → `test` (TST), live and
+     free → `tax_invoice` (billing_entity's prefix) with billing details set, else `receipt` (RCT), plus an
+     `invoice_incomplete` incident for a live one. Supplier and recipient frozen as jsonb.
+- **Numbering:** `admin.document_series(series, fy, last_no)`; `admin.next_document_number(series, prefix, at)` →
+  `PFX/2627/000001` (≤ 16 characters with a 2–4 letter prefix, CGST rule 46). `admin.financial_year(at)` turns at
+  midnight IST on 1 April. Test and demo documents and credit notes have their own series.
+- **Columns:** orders `payment_mode` (not null), `payment_ref`, `reconciled_at`; invoices `payment_mode`,
+  `document_type` (not null), `supplier`, `recipient`, `place_of_supply` → india_states, `supply_type`,
+  `sac_code`, `cgst_paise`, `sgst_paise`, `igst_paise`, `total_paise`. Backfill: nothing before P1 was live
+  (production on 2026-10-08: 9 invoices, all demo; 0 orders), so gateway rows would be `test` and the rest `demo`.
+- **Transitional shim (expand phase; remove in P13):** BEFORE INSERT `trg_subscription_payment_orders_mode` and
+  `trg_subscription_invoices_mode` fill a missing mode (free_ / demo_ prefix, else test) so the functions deployed
+  before P1 keep working until P1's replace them. Once `live_since` is set a missing mode raises 23502.
+- **Immutability (S-3):** `trg_subscription_invoices_immutable` (BEFORE UPDATE OR DELETE) refuses `authenticated`
+  and `anon`. The admin UPDATE/DELETE policies still exist (the MCP refuses DROP POLICY) but can't change a row.
+  Service-role writers (admin-refund-payment, the webhook, invoice-render's `pdf_url`) and definer functions pass.
+- **Credit notes:** `public.subscription_credit_notes` (RLS: the vendor's own; super, finance and support admins),
+  written only by `trg_subscription_invoices_credit_note` when `refund_status` becomes `processed`: taxable value
+  and tax in the invoice's proportion, CGST/SGST or IGST like the invoice, series `credit_<document_type>`
+  (CN, RCN, TCN, DCN).
+- **Billing incidents:** `admin.billing_incidents` (kind `activation_failed` | `invoice_incomplete` | `dispute` |
+  `reconcile_mismatch`; vendor, order and payment refs, detail, resolution), audited. `admin.billing_incident_open()`
+  notifies active super and finance admins (`notify`, kind `billing_incident`). `admin_billing_incidents(p_open_only)`
+  (super, finance, support; newest 200); `admin_billing_incident_resolve(id, resolution)` (super, finance; a blank
+  note is 22023; the note is the Admin Log reason).
+- **Webhook events:** `admin.payment_events` (event_id pk, event, source, order/payment/refund refs, payload hash,
+  outcome, detail, processed_at); `payment_event_record()` → `{duplicate, outcome}`, `payment_event_finish()`.
+  `subscription-webhook` keys an event by `x-razorpay-event-id` (else `sha256:<payload hash>`), returns early for a
+  duplicate with an outcome, and answers 500 when fulfilment couldn't reach the database (the event stays unfinished
+  and the retry processes it). Handled: payment.captured / order.paid → fulfil; refund.processed / refund.failed →
+  `subscription_refund_event()` (a full refund also sets `status = 'refunded'`); payment.dispute.* →
+  `billing_dispute_event()` (an incident); payment.failed recorded; the rest ignored.
+- **S-7:** `admin.subscription_quote`'s credit counts only `payment_mode = 'live'` invoices once `live_since` is set.
+- **Reconciliation:** `billing_reconcile_candidates(limit)` (unpaid live/test orders 15 minutes to 3 days old, not
+  checked in the last 15 minutes) and `billing_reconcile_mark()`, service role. `billing-reconcile` (service-role
+  token only) asks `GET /v1/orders/{id}/payments`: captured → recorded as `reconcile:<order>:<payment>` and fulfilled
+  as `reconcile`; authorised only → recorded `authorized_not_captured`; a Razorpay error leaves the order unmarked.
+  The `*/15` job posts only when a candidate exists and raises without the Vault key.
+- **PDF:** `invoice-render` (verify_jwt; the caller confirmed by Auth must be the invoice's vendor, or a super, finance
+  or support admin; anyone else gets 404). `invoice-render/document.ts` builds the text (rule-46 fields, amount in
+  words, a WinAnsi sanitiser: the standard fonts have no ₹, so "Rs."); `npm:pdf-lib@1.17.1` draws it; it is stored in
+  the private `invoices` bucket at `<vendor>/<number>.v<RENDER_VERSION>.pdf` and the path kept in `pdf_url`. Answers
+  `{path, fileName}`; the browser signs the path for 5 minutes (`invoices_read` storage policy: its own folder, or
+  super, finance and support), so the link carries the browser's own Supabase host.
+- **Edge functions:** `_shared/fulfil.ts` (`fulfilOrder`, `paymentModeForKey`, event, refund and dispute helpers; a
+  raised "activation refused" maps to `activation_failed`, any other failure to `unavailable`).
+  `subscription-verify-payment`: live → HMAC, then fulfil; free → owner and ₹0 checks, then fulfil (a refusal releases
+  the code and fails the order); demo → gate, quote, reserve, a `demo_` order with `payment_mode = 'demo'`, fulfil (a
+  refusal releases and fails). `subscription-create-order` records `payment_mode` from the key id
+  (`rzp_test_` → test). Cosora-Admin's admin-refund-payment refunds `total_paise` when present.
+- **App:** `subscriptions.ts` reads the P1 columns (stepping back on 42703) and `invoicePdfLink()`;
+  `PurchaseResult.paid` when Razorpay took the money but the browser couldn't finish; `InvoiceDetail.tsx` renders
+  the frozen document in vendor blue. Cosora-Admin: `BillingIncidentsPanel`, invoice document badges, exact totals
+  and a PDF button on Subscriptions.
+- **Local stack:** `supabase start` serves only the functions present when it started; `invoice-render` and
+  `billing-reconcile` were tested on a second edge-runtime container with the same environment
+  (`LOCAL_INVOICE_RENDER_URL` routes the specs' calls there).
+- **Tests:** `scripts/subscriptions/p1_billing_core.sql` (26 cases), `scripts/discount-flow-check.mjs` (B, C and H
+  rewritten for the fulfilment call; J new), `tests/local/subscriptions-p1.spec.ts`.

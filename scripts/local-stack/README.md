@@ -33,6 +33,10 @@ reads the same objects from `pg_catalog`.
 6. **Accounts**: `LOAD_USERS=60 node scripts/local-stack/bootstrap.mjs`. It writes
    `.claude/tmp/local-stack-env.json` (local keys, accounts, one local-only password).
 7. **Functions**: `node scripts/local-stack/copy-functions.mjs` (served by `supabase start`).
+   `supabase start` only serves the functions that were in the folder when it started: a function added later
+   answers 404 until the stack restarts. On a stack other sessions share, run a second edge runtime instead, with
+   the stack's container environment and `SUPABASE_INTERNAL_FUNCTIONS_CONFIG` extended by the new function, on
+   another port, and point the spec at it (`LOCAL_INVOICE_RENDER_URL` in `subscriptions-p1.spec.ts`).
 8. **Apps**, on their own ports so a normal dev server isn't disturbed:
    - buyer: `VITE_SUPABASE_URL=<local API> VITE_SUPABASE_ANON_KEY=<local anon> npx vite --port 8090 --strictPort`
    - Cosora-Admin: the same, `--port 5184`.

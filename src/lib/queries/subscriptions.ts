@@ -73,6 +73,35 @@ export interface SubscriptionInvoice {
   billingPeriodStart: string | null;
   billingPeriodEnd: string | null;
   createdAt: string;
+  // ── Subscriptions P1 (2026-10-08): null on a database without the billing-core migration ──
+  /** live or test (Razorpay keys), demo (no gateway), free (a code took it to ₹0). */
+  paymentMode: PaymentMode | null;
+  /** tax_invoice, receipt (money taken before Cosora's GST details were set, and every invoice before 8 Oct 2026), test, demo. */
+  documentType: InvoiceDocumentType | null;
+  /** Cosora's billing details as they were when the invoice was issued. */
+  supplier: InvoiceSupplier | null;
+  /** The vendor's details as they were when the invoice was issued. */
+  recipient: InvoiceRecipient | null;
+  placeOfSupply: string | null;
+  supplyType: "intra" | "inter" | null;
+  sacCode: string | null;
+  cgstPaise: number | null;
+  sgstPaise: number | null;
+  igstPaise: number | null;
+  /** What was charged, in paise; null on invoices from before 8 Oct 2026 (amount + gstAmount). */
+  totalPaise: number | null;
+}
+
+export type PaymentMode = "live" | "test" | "demo" | "free";
+export type InvoiceDocumentType = "tax_invoice" | "receipt" | "test" | "demo";
+export interface InvoiceSupplier {
+  legal_name: string | null; trade_name: string | null; address: string | null; city: string | null;
+  state_code: string | null; state_name: string | null; gst_state_code: string | null; postal_code: string | null;
+  gstin: string | null; pan: string | null; email: string | null; phone: string | null;
+}
+export interface InvoiceRecipient {
+  name: string | null; owner_name: string | null; address: string | null; city: string | null; state: string | null;
+  state_code: string | null; gst_state_code: string | null; postal_code: string | null; gstin: string | null; email: string | null;
 }
 
 interface RawInvoice {
@@ -83,26 +112,32 @@ interface RawInvoice {
   billing_period_start: string | null; billing_period_end: string | null; created_at: string;
   discount_amount: number | null; discount_code: string | null;
   credit_rupees?: number | null; change_kind?: ChangeKind | null;
+  payment_mode?: PaymentMode | null; document_type?: InvoiceDocumentType | null;
+  supplier?: InvoiceSupplier | null; recipient?: InvoiceRecipient | null;
+  place_of_supply?: string | null; supply_type?: "intra" | "inter" | null; sac_code?: string | null;
+  cgst_paise?: number | null; sgst_paise?: number | null; igst_paise?: number | null; total_paise?: number | null;
 }
 
 const BASE_INVOICE_COLUMNS =
   "id, vendor_id, plan_id, amount, currency, gst_amount, gst_number, tds_amount, status, invoice_number, razorpay_payment_id, razorpay_order_id, billing_period_start, billing_period_end, created_at, discount_amount, discount_code";
-const INVOICE_COLUMNS = `${BASE_INVOICE_COLUMNS}, credit_rupees, change_kind`;
+const PLAN_CHANGE_COLUMNS = `${BASE_INVOICE_COLUMNS}, credit_rupees, change_kind`;
+const INVOICE_COLUMNS = `${PLAN_CHANGE_COLUMNS}, payment_mode, document_type, supplier, recipient, place_of_supply, supply_type, sac_code, cgst_paise, sgst_paise, igst_paise, total_paise`;
 
 /**
- * Invoices with their plan-change columns. Until the 2026-10-02 migration is applied
- * those columns don't exist (42703), so the read retries without them rather than
- * leaving Billing History empty.
+ * Invoices with their newest columns. A database that hasn't had the billing-core
+ * migration (2026-10-08) or the plan-change one (2026-10-02) answers 42703, so the read
+ * steps back through the older column sets rather than leaving Billing History empty.
  */
 async function selectInvoices<T>(run: (columns: string) => PromiseLike<{ data: T | null; error: { code?: string } | null }>): Promise<T | null> {
-  const first = await run(INVOICE_COLUMNS);
-  if (first.error?.code === "42703") {
-    const second = await run(BASE_INVOICE_COLUMNS);
-    if (second.error) throw second.error;
-    return second.data;
+  for (const columns of [INVOICE_COLUMNS, PLAN_CHANGE_COLUMNS]) {
+    const r = await run(columns);
+    if (r.error?.code === "42703") continue;
+    if (r.error) throw r.error;
+    return r.data;
   }
-  if (first.error) throw first.error;
-  return first.data;
+  const last = await run(BASE_INVOICE_COLUMNS);
+  if (last.error) throw last.error;
+  return last.data;
 }
 
 function mapInvoice(r: RawInvoice): SubscriptionInvoice {
@@ -118,7 +153,30 @@ function mapInvoice(r: RawInvoice): SubscriptionInvoice {
     razorpayPaymentId: r.razorpay_payment_id, razorpayOrderId: r.razorpay_order_id,
     billingPeriodStart: r.billing_period_start, billingPeriodEnd: r.billing_period_end,
     createdAt: r.created_at,
+    paymentMode: r.payment_mode ?? null, documentType: r.document_type ?? null,
+    supplier: r.supplier ?? null, recipient: r.recipient ?? null,
+    placeOfSupply: r.place_of_supply ?? null, supplyType: r.supply_type ?? null, sacCode: r.sac_code ?? null,
+    cgstPaise: r.cgst_paise != null ? Number(r.cgst_paise) : null,
+    sgstPaise: r.sgst_paise != null ? Number(r.sgst_paise) : null,
+    igstPaise: r.igst_paise != null ? Number(r.igst_paise) : null,
+    totalPaise: r.total_paise != null ? Number(r.total_paise) : null,
   };
+}
+
+/**
+ * A 5-minute download link for an invoice's PDF (subscriptions P1). invoice-render draws
+ * it the first time and stores it in the private invoices bucket; the link is signed with
+ * the caller's own session, which the bucket's read policy allows for the invoice's vendor
+ * (and finance and support staff).
+ */
+export async function invoicePdfLink(invoiceId: string): Promise<{ url: string; fileName: string }> {
+  const { data, error } = await supabase.functions.invoke("invoice-render", { body: { invoiceId } });
+  const path = (data as { path?: string } | null)?.path;
+  if (error || !path) throw new Error("The PDF couldn't be prepared. Try again in a moment.");
+  const fileName = (data as { fileName?: string }).fileName ?? "invoice.pdf";
+  const signed = await supabase.storage.from("invoices").createSignedUrl(path, 300, { download: fileName });
+  if (signed.error || !signed.data?.signedUrl) throw new Error("The PDF couldn't be prepared. Try again in a moment.");
+  return { url: signed.data.signedUrl, fileName };
 }
 
 async function fetchInvoices(vendorId: string): Promise<SubscriptionInvoice[]> {
@@ -335,6 +393,12 @@ export interface PurchaseResult {
   error?: string;
   /** Why the discount code was refused (DiscountReason); show discountRefusal() of it. */
   discountReason?: string;
+  /**
+   * Razorpay took the payment but this browser couldn't finish the order (subscriptions P1).
+   * The webhook or the reconciler finishes it, and a refused activation is already with
+   * finance as a billing incident, so the vendor is told the money is safe, not "failed".
+   */
+  paid?: boolean;
 }
 
 // One call the UI uses for buy/upgrade/renew: create the order; if Razorpay is
@@ -385,6 +449,9 @@ export async function purchaseSubscription(opts: {
   });
   const verified = await verifySubscriptionPayment({
     orderId: rp.razorpay_order_id, paymentId: rp.razorpay_payment_id, signature: rp.razorpay_signature,
-  });
-  return { ok: Boolean(verified.ok), planId: verified.planId, error: verified.error };
+  }).catch(() => ({ ok: false, planId: undefined, error: "unavailable" }));
+  return {
+    ok: Boolean(verified.ok), planId: verified.planId, error: verified.error,
+    paid: !verified.ok && verified.error !== "bad_signature",
+  };
 }

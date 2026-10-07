@@ -482,6 +482,14 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-08 (subscriptions P1; built, not live)
+- **A plan invoice says what it is:** a tax invoice (with CGST + SGST or IGST, place of supply and SAC) once Cosora's
+  GST details are set, a payment receipt before that, or a test or demo document that took no money. It shows the
+  details as they were when it was issued and never changes; a refund issues a credit note.
+- **Download PDF** on the invoice page.
+- **If the payment went through but the page couldn't finish**, the seller is told the payment was received and the
+  plan will update shortly (or that the billing team has been alerted), not that it failed.
+
 ### Changed 2026-10-08 (subscriptions P0; built, not live)
 - **Plan purchases can be closed while payments are tested.** /subscription then says "Plan purchases open soon"
   and offers no checkout; listed test accounts can buy as usual.
@@ -673,6 +681,13 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-08 (subscriptions P1; built, not live)
+- **Billing incidents** on Subscriptions: a payment whose plan didn't activate, a receipt issued without Cosora's GST
+  details, a disputed payment. Super and finance admins are told (bell) and resolve each with a note that goes to
+  the Admin Log; support can read them.
+- **Invoices list:** each invoice's document type (tax invoice, receipt, test, demo), its exact total, and a **PDF**
+  button.
 
 ### Added 2026-10-08 (subscriptions P0; built, not live)
 - **Feature switches** (`/feature-flags`): turn a new feature on for listed test accounts, then for everyone, with a

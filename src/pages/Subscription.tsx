@@ -206,6 +206,23 @@ export default function Subscription() {
       } else if (isCheckoutRefusal(res.error)) {
         setCheckoutPlan(null);
         toast(CHECKOUT_REFUSAL_TEXT[res.error].title, { description: CHECKOUT_REFUSAL_TEXT[res.error].description });
+      } else if (res.paid) {
+        // Razorpay has the money; the webhook or the reconciler finishes the order (P1).
+        qc.invalidateQueries({ queryKey: ["vendor_plan"] });
+        qc.invalidateQueries({ queryKey: ["subscription_invoices"] });
+        if (res.error === "activation_failed") {
+          toast.warning("Payment received, but your plan didn't switch", {
+            description: "Our billing team has been alerted and will sort it out. You won't be charged again.",
+            duration: 15000,
+          });
+        } else {
+          toast("Payment received. Your plan will update shortly", {
+            description: "If it hasn't changed in a few minutes, contact Cosora Support. You won't be charged again.",
+            duration: 15000,
+          });
+        }
+      } else if (res.demo && res.error === "activation_failed") {
+        toast.error("Couldn't complete purchase", { description: "Nothing was charged. Please try again in a minute." });
       } else {
         toast.error("Couldn't complete purchase", { description: res.error });
       }

@@ -3,30 +3,37 @@
 // "A discount code changes what is charged and invoiced, and nothing else."
 // (admin completion Phase 10, 2026-09-29)
 //
-// Runs the seven payment edge functions' real code in Node: each is bundled with
+// Runs the eight payment edge functions' real code in Node: each is bundled with
 // esbuild, Deno.serve / Deno.env are stubbed, and fetch() answers from an
 // in-memory stand-in for PostgREST and Razorpay that records every call. No
 // network, no database: the database side (discount_check / reserve / confirm /
-// release) is scripts/admin-completion/14_discounts.sql and the race is
-// scripts/discount-race-check.sql. This proves the functions around them:
+// release) is scripts/admin-completion/14_discounts.sql, the race is
+// scripts/discount-race-check.sql, and the fulfilment transaction with its invoice
+// arithmetic is scripts/subscriptions/p1_billing_core.sql. This proves the functions
+// around them:
 //
 //   * with no code, every function sends exactly what it sent before Phase 10
 //   * a code is checked before a Razorpay order exists, reserved against the
 //     order id after it, and a failed intent write releases it
 //   * a lost race (reserve refused after check) leaves no intent, so nothing
 //     can be paid for it
-//   * invoices come from the stored list price and discount, GST on the rest,
-//     and carry the verified payment id
+//   * the intent stores what was charged (list, discount, credit, kind, payment
+//     mode); since subscriptions P1 (2026-10-08) a plan order is completed by ONE
+//     database call, public.subscription_fulfil, from verify, the webhook and the
+//     reconciler alike, and no function writes a plan or an invoice itself
 //   * a ₹0 order has no Razorpay order and is fulfilled only when it is the
-//     caller's, its stored amount is 0 and its redemption confirms
-//   * demo mode applies a code through the same reserve / confirm / release
-//   * the webhooks confirm the use when they are the ones to claim the order
+//     caller's and its stored amount is 0
+//   * demo mode applies a code through the same reserve / confirm / release, and a
+//     refused demo or ₹0 fulfilment releases the code and closes the order
+//   * the subscription webhook records each event once, retries what the database
+//     couldn't take, and handles refund and dispute events
+//   * the ad webhooks confirm the use when they are the ones to claim the order
 //
 //   node scripts/discount-flow-check.mjs
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { build } from "esbuild";
-import { createHmac } from "node:crypto";
+import { createHash, createHmac } from "node:crypto";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -71,6 +78,13 @@ function reset(over = {}) {
     // the token's own sub; false = Auth refuses it), and what the checkout gate answers.
     authId: null, authOk: true,
     gate: { ok: true }, gateFails: false,
+    // Subscriptions P1 (2026-10-08): subscription_fulfil's answer (null = the default
+    // model below; { status, body } = an error response), the database being down,
+    // the webhook event store, and Razorpay's payments per order for the reconciler.
+    fulfil: null, fulfilDown: false, fulfilled: [],
+    events: new Map(),
+    candidates: [], rzpPayments: {}, rzpPaymentsFail: false,
+    refundMatched: true,
     ...over,
   };
 }
@@ -85,6 +99,23 @@ const res = (body, status = 200) => new Response(body === undefined ? null : JSO
 const q = (u, k) => new URL(u).searchParams.get(k);
 const eqv = (u, k) => (q(u, k) ?? "").replace(/^eq\./, "");
 
+/**
+ * public.subscription_fulfil's contract, as the SQL harness proves it: an unknown order
+ * is refused, a done one answers `already`, a ₹0 order whose redemption won't confirm
+ * claims nothing; otherwise the order is claimed and invoiced in one go.
+ */
+function fulfilModel(body) {
+  if (S.fulfilDown) return res({ message: "connection refused" }, 503);
+  const o = S.subIntents.get(body.p_order_ref);
+  if (!o) return res({ ok: false, reason: "unknown_order" });
+  if (o.status !== "created") return res({ ok: o.status === "paid", already: true, plan_id: o.plan_id, invoice_id: "inv-1" });
+  if (S.fulfil) return S.fulfil.status ? res(S.fulfil.body, S.fulfil.status) : res(S.fulfil);
+  if (Number(o.amount) === 0 && o.discount_redemption_id && !S.confirmOk) return res({ ok: false, reason: "discount_unconfirmed" });
+  o.status = "paid";
+  S.fulfilled.push({ ...body });
+  return res({ ok: true, plan_id: o.plan_id, invoice_id: "inv-1", invoice_number: "RCT/2627/000001", document_type: "receipt" });
+}
+
 globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
   const method = (init.method ?? "GET").toUpperCase();
@@ -93,6 +124,12 @@ globalThis.fetch = async (input, init = {}) => {
   S.calls.push({ method, url, body });
   const p = new URL(url).pathname;
 
+  // Razorpay: an order's payments (the reconciler), then order creation.
+  const pays = /^\/v1\/orders\/([^/]+)\/payments$/.exec(p);
+  if (url.startsWith("https://api.razorpay.com") && pays) {
+    if (S.rzpPaymentsFail) return res({ error: { description: "server error" } }, 502);
+    return res({ items: S.rzpPayments[decodeURIComponent(pays[1])] ?? [] });
+  }
   if (url.startsWith("https://api.razorpay.com/v1/orders")) return res({ id: `order_T${++S.razorpaySeq}`, amount: body.amount });
 
   // Supabase Auth: the user behind the bearer token (subscriptions P0, S-5).
@@ -116,6 +153,24 @@ globalThis.fetch = async (input, init = {}) => {
     S.subsUpserts.push(body);
     return res({ ...(S.activation ?? S.quote ?? defaultQuote(body)), subscription_id: "sub-1" });
   }
+
+  // Subscriptions P1: the fulfilment transaction, the event store, refunds, disputes, reconciling.
+  if (p === "/rest/v1/rpc/subscription_fulfil") return fulfilModel(body);
+  if (p === "/rest/v1/rpc/payment_event_record") {
+    const seen = S.events.get(body.p_event_id);
+    if (seen) return res({ duplicate: true, outcome: seen.outcome ?? null });
+    S.events.set(body.p_event_id, { ...body, outcome: null });
+    return res({ duplicate: false });
+  }
+  if (p === "/rest/v1/rpc/payment_event_finish") {
+    const e = S.events.get(body.p_event_id);
+    if (e) Object.assign(e, { outcome: body.p_outcome, detail: body.p_detail });
+    return res(undefined, 204);
+  }
+  if (p === "/rest/v1/rpc/subscription_refund_event") return res({ matched: S.refundMatched, invoice_id: S.refundMatched ? "inv-r" : null });
+  if (p === "/rest/v1/rpc/billing_dispute_event") return res("inc-d");
+  if (p === "/rest/v1/rpc/billing_reconcile_candidates") return res(S.candidates);
+  if (p === "/rest/v1/rpc/billing_reconcile_mark") return res(undefined, 204);
 
   if (p === "/rest/v1/subscription_plans") {
     const plan = S.plans[eqv(url, "id")];
@@ -160,7 +215,8 @@ globalThis.fetch = async (input, init = {}) => {
 // ── Load the functions ──────────────────────────────────────────────────────
 const dir = mkdtempSync(path.join(tmpdir(), "cosora-discount-flow-"));
 const FUNCTIONS = ["subscription-create-order", "subscription-verify-payment", "subscription-webhook",
-                   "razorpay-create-order", "razorpay-verify-payment", "razorpay-webhook", "discount-quote"];
+                   "razorpay-create-order", "razorpay-verify-payment", "razorpay-webhook", "discount-quote",
+                   "billing-reconcile"];
 for (const f of FUNCTIONS) {
   const outfile = path.join(dir, `${f}.mjs`);
   await build({ entryPoints: [`supabase/functions/${f}/index.ts`], outfile, format: "esm", platform: "node", bundle: true, logLevel: "silent" });
@@ -168,25 +224,29 @@ for (const f of FUNCTIONS) {
   await import(pathToFileURL(outfile).href);
 }
 
-const jwt = (sub) => `x.${Buffer.from(JSON.stringify({ sub, role: "authenticated" })).toString("base64url")}.y`;
-async function call(fn, body, { sub = VENDOR, env = LIVE } = {}) {
+const jwt = (sub, role = "authenticated") => `x.${Buffer.from(JSON.stringify({ sub, role })).toString("base64url")}.y`;
+async function call(fn, body, { sub = VENDOR, env = LIVE, token } = {}) {
   ENV = env;
   const r = await handlers[fn](new Request(`${SB}/functions/v1/${fn}`, {
-    method: "POST", headers: { authorization: `Bearer ${jwt(sub)}`, "content-type": "application/json" }, body: JSON.stringify(body),
+    method: "POST", headers: { authorization: `Bearer ${token ?? jwt(sub)}`, "content-type": "application/json" }, body: JSON.stringify(body),
   }));
   return { status: r.status, body: await r.json() };
 }
-async function hook(fn, evt, { sign = true } = {}) {
+async function hook(fn, evt, { sign = true, eventId } = {}) {
   ENV = LIVE;
   const raw = JSON.stringify(evt);
   const sig = sign ? createHmac("sha256", HOOK_SECRET).update(raw).digest("hex") : "bad";
-  const r = await handlers[fn](new Request(`${SB}/functions/v1/${fn}`, { method: "POST", headers: { "x-razorpay-signature": sig }, body: raw }));
+  const headers = { "x-razorpay-signature": sig, ...(eventId ? { "x-razorpay-event-id": eventId } : {}) };
+  const r = await handlers[fn](new Request(`${SB}/functions/v1/${fn}`, { method: "POST", headers, body: raw }));
   return { status: r.status, text: await r.text() };
 }
 const sign = (orderId, paymentId) => createHmac("sha256", KEY_SECRET).update(`${orderId}|${paymentId}`).digest("hex");
 const rpcCalls = (fn) => S.calls.filter((c) => c.url.endsWith(`/rpc/${fn}`));
 const rzpCalls = () => S.calls.filter((c) => c.url.startsWith("https://api.razorpay.com"));
 const indexOf = (pred) => S.calls.findIndex(pred);
+/** A function wrote a plan or an invoice itself, instead of through subscription_fulfil. */
+const edgeWrites = () => rpcCalls("subscription_activate").length + S.invoices.length + rpcCalls("next_invoice_number").length;
+const captured = (payId, orderId) => ({ event: "payment.captured", payload: { payment: { entity: { id: payId, order_id: orderId } } } });
 
 let failures = 0;
 const rows = [];
@@ -212,6 +272,11 @@ check("A1 no code: intent stores the list price, no discount",
   JSON.stringify(intent));
 check("A1 no code: response unchanged in substance", r.body.configured && r.body.amount === 271300 && r.body.base === 2299 && r.body.gst === 414 && r.body.free === false,
   JSON.stringify(r.body));
+check("A1 test keys: the intent is a test-mode order", intent?.payment_mode === "test", intent?.payment_mode);
+
+reset();
+await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" }, { env: { ...LIVE, RAZORPAY_KEY_ID: "rzp_live_key" } });
+check("A1 live keys: the intent is a live order", [...S.subIntents.values()][0]?.payment_mode === "live", [...S.subIntents.values()][0]?.payment_mode);
 
 reset();
 r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly", discountCode: "  launch25 " });
@@ -250,7 +315,8 @@ check("A5 intent write fails: the use is released", r.body.error === "intent_fai
 reset({ check: { ok: true, code: "FREEMONTH", applies_to: "vendor_plan", kind: "percent", value: 100, discount_rupees: 2299 } });
 r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly", discountCode: "FREEMONTH" });
 intent = [...S.subIntents.values()][0];
-check("A6 100% off: no Razorpay order, a free_ id, ₹0 intent", rzpCalls().length === 0 && r.body.free === true && /^free_/.test(r.body.orderId) && intent?.amount === 0 && intent.discount_rupees === 2299,
+check("A6 100% off: no Razorpay order, a free_ id, ₹0 intent in free mode",
+  rzpCalls().length === 0 && r.body.free === true && /^free_/.test(r.body.orderId) && intent?.amount === 0 && intent.discount_rupees === 2299 && intent.payment_mode === "free",
   JSON.stringify(r.body));
 const freeSubOrder = r.body.orderId;
 
@@ -262,84 +328,145 @@ reset();
 r = await call("subscription-create-order", { planId: "vip", billingCycle: "monthly", discountCode: "LAUNCH25" });
 check("A8 invite-only plan: refused before the code is looked at", r.body.error === "invite_only" && rpcCalls("discount_check").length === 0);
 
-// ── B. subscription-verify-payment ──────────────────────────────────────────
+// ── B. subscription-verify-payment: one database call completes the order (P1) ──
 function seedSubIntent(over = {}) {
   S.subIntents.set("order_T1", {
     order_id: "order_T1", vendor_id: VENDOR, plan_id: "gold", billing_cycle: "monthly", amount: 203400, gst_number: "27ABCDE1234F1Z5",
-    status: "created", list_rupees: 2299, discount_rupees: 575, discount_code: "LAUNCH25", discount_redemption_id: "red-1", ...over,
+    status: "created", list_rupees: 2299, discount_rupees: 575, discount_code: "LAUNCH25", discount_redemption_id: "red-1",
+    payment_mode: "test", ...over,
   });
 }
 reset(); seedSubIntent();
 r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_1", signature: sign("order_T1", "pay_1") });
-let inv = S.invoices[0];
-check("B1 paid: the use is confirmed for this order", rpcCalls("discount_confirm")[0]?.body.p_redemption === "red-1" && rpcCalls("discount_confirm")[0]?.body.p_order_ref === "order_T1");
-check("B1 paid: invoice is the stored price less the discount, GST on the rest",
-  inv?.amount === 1724 && inv.gst_amount === 310 && inv.discount_amount === 575 && inv.discount_code === "LAUNCH25", JSON.stringify(inv));
-check("B1 paid: invoice records the verified payment id", inv?.razorpay_payment_id === "pay_1" && inv.razorpay_order_id === "order_T1", inv?.razorpay_payment_id);
+let fc = rpcCalls("subscription_fulfil");
+check("B1 paid: fulfilled by one database call with the verified payment",
+  fc.length === 1 && fc[0].body.p_order_ref === "order_T1" && fc[0].body.p_payment_ref === "pay_1" && fc[0].body.p_source === "verify",
+  JSON.stringify(fc.map((c) => c.body)));
+check("B1 paid: the function claims, confirms, activates and invoices nothing itself",
+  edgeWrites() === 0 && rpcCalls("discount_confirm").length === 0 && !S.calls.some((c) => c.method === "PATCH" && c.url.includes("/subscription_payment_orders")),
+  `edge writes ${edgeWrites()}`);
+check("B1 paid: the browser gets the plan and the invoice", r.body.ok === true && r.body.planId === "gold" && r.body.invoiceId === "inv-1", JSON.stringify(r.body));
 r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_1", signature: sign("order_T1", "pay_1") });
-check("B1 paid twice: second call activates nothing", r.body.already === true && S.invoices.length === 1);
+check("B1 paid twice: the database says it's done; nothing more happens", r.body.ok === true && r.body.already === true && S.fulfilled.length === 1,
+  JSON.stringify(r.body));
 
-reset(); seedSubIntent({ amount: 271300, list_rupees: undefined, discount_rupees: 0, discount_code: null, discount_redemption_id: null });
-await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_2", signature: sign("order_T1", "pay_2") });
-inv = S.invoices[0];
-check("B2 an intent from before Phase 10: invoiced from the plan as before", inv?.amount === 2299 && inv.gst_amount === 414 && inv.discount_amount === null && rpcCalls("discount_confirm").length === 0,
-  JSON.stringify(inv));
+reset(); seedSubIntent(); S.fulfilDown = true;
+r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_2", signature: sign("order_T1", "pay_2") });
+check("B2 database unreachable after a good signature: 'unavailable' (the webhook or the reconciler finishes it)",
+  r.body.ok === false && r.body.error === "unavailable" && S.subIntents.get("order_T1").status === "created", JSON.stringify(r.body));
 
 reset(); seedSubIntent();
 r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_1", signature: "0".repeat(64) });
-check("B3 bad signature: nothing claimed", r.body.error === "bad_signature" && S.subIntents.get("order_T1").status === "created");
+check("B3 bad signature: nothing claimed, the database never asked",
+  r.body.error === "bad_signature" && S.subIntents.get("order_T1").status === "created" && rpcCalls("subscription_fulfil").length === 0);
 
 reset(); S.subIntents.set(freeSubOrder, { order_id: freeSubOrder, vendor_id: VENDOR, plan_id: "gold", billing_cycle: "monthly", amount: 0,
-  status: "created", list_rupees: 2299, discount_rupees: 2299, discount_code: "FREEMONTH", discount_redemption_id: "red-9" });
+  status: "created", list_rupees: 2299, discount_rupees: 2299, discount_code: "FREEMONTH", discount_redemption_id: "red-9", payment_mode: "free" });
 r = await call("subscription-verify-payment", { orderId: freeSubOrder, free: true }, { sub: OTHER });
-check("B4 free order, someone else's: refused", r.body.error === "unknown_order" && rpcCalls("discount_confirm").length === 0 && S.invoices.length === 0);
+check("B4 free order, someone else's: refused before the database is asked", r.body.error === "unknown_order" && rpcCalls("subscription_fulfil").length === 0);
 r = await call("subscription-verify-payment", { orderId: "order_T1", free: true });
 check("B4 free: a real order id isn't a free order", r.body.error === "not_free");
 S.confirmOk = false;
 r = await call("subscription-verify-payment", { orderId: freeSubOrder, free: true });
-check("B4 free, redemption won't confirm: nothing activated", r.body.error === "discount_unconfirmed" && S.subIntents.get(freeSubOrder).status === "created" && S.invoices.length === 0);
+check("B4 free, redemption won't confirm: nothing activated", r.body.error === "discount_unconfirmed" && S.subIntents.get(freeSubOrder).status === "created");
 S.confirmOk = true;
 r = await call("subscription-verify-payment", { orderId: freeSubOrder, free: true });
-inv = S.invoices[0];
-check("B4 free: confirmed first, then claimed and invoiced at ₹0",
-  r.body.ok === true && indexOf((c) => c.url.endsWith("/rpc/discount_confirm")) < indexOf((c) => c.method === "PATCH" && c.url.includes("/subscription_payment_orders"))
-  && inv?.amount === 0 && inv.gst_amount === 0 && inv.discount_amount === 2299 && inv.razorpay_payment_id === null, JSON.stringify(inv));
+fc = rpcCalls("subscription_fulfil").at(-1)?.body;
+check("B4 free: fulfilled as 'free', with no payment", r.body.ok === true && fc?.p_source === "free" && fc.p_payment_ref === null && edgeWrites() === 0,
+  JSON.stringify(fc));
 S.subIntents.set("free_amount", { order_id: "free_amount", vendor_id: VENDOR, plan_id: "gold", billing_cycle: "monthly", amount: 100, status: "created", discount_redemption_id: "red-8" });
 r = await call("subscription-verify-payment", { orderId: "free_amount", free: true });
 check("B4 free: a stored amount above ₹0 is refused", r.body.error === "not_free" && S.subIntents.get("free_amount").status === "created");
 
+reset({ fulfil: { status: 400, body: { code: "P0001", message: "activation refused: already_scheduled" } } });
+S.subIntents.set("free_ref", { order_id: "free_ref", vendor_id: VENDOR, plan_id: "gold", billing_cycle: "monthly", amount: 0, status: "created",
+  discount_redemption_id: "red-7", payment_mode: "free" });
+r = await call("subscription-verify-payment", { orderId: "free_ref", free: true });
+check("B4 free, plan refused: the code's use goes back and the order is closed",
+  r.body.error === "activation_failed" && rpcCalls("discount_release")[0]?.body.p_redemption === "red-7" && S.subIntents.get("free_ref").status === "failed",
+  JSON.stringify(r.body));
+
 reset();
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
-inv = S.invoices[0];
-check("B5 demo, no code: exactly as before (₹2,299 + ₹414, no discount calls)",
-  r.body.ok && r.body.demo && inv?.amount === 2299 && inv.gst_amount === 414 && inv.discount_amount === null && inv.discount_code === null
-  && S.calls.filter((c) => c.url.includes("/rpc/discount_")).length === 0, JSON.stringify(inv));
+intent = [...S.subIntents.values()][0];
+fc = rpcCalls("subscription_fulfil")[0]?.body;
+check("B5 demo, no code: a demo order at ₹2,299 + ₹414, no discount calls",
+  r.body.ok && r.body.demo && /^demo_/.test(intent?.order_id ?? "") && intent.amount === 271300 && intent.list_rupees === 2299 && intent.discount_rupees === 0
+  && intent.payment_mode === "demo" && S.calls.filter((c) => c.url.includes("/rpc/discount_")).length === 0, JSON.stringify(intent));
+check("B5 demo: fulfilled by the same database call, as 'demo'", fc?.p_order_ref === intent?.order_id && fc.p_source === "demo" && edgeWrites() === 0,
+  JSON.stringify(fc));
 
 reset();
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly", discountCode: "launch25" }, { env: DEMO });
-inv = S.invoices[0];
+intent = [...S.subIntents.values()][0];
 const drs = rpcCalls("discount_reserve")[0]?.body;
 check("B6 demo, code: reserved on a demo_ reference with no expected price",
   /^demo_/.test(drs?.p_order_ref ?? "") && drs.p_expected_rupees === null && drs.p_plan_rupees === 2299, JSON.stringify(drs));
-check("B6 demo, code: invoiced with the discount, then the same use confirmed",
-  inv?.amount === 1724 && inv.gst_amount === 310 && inv.discount_amount === 575 && rpcCalls("discount_confirm")[0]?.body.p_order_ref === drs?.p_order_ref, JSON.stringify(inv));
+check("B6 demo, code: the demo order carries the discount and its redemption into fulfilment",
+  intent?.order_id === drs?.p_order_ref && intent.amount === 203400 && intent.discount_rupees === 575 && intent.discount_redemption_id === "red-1"
+  && rpcCalls("subscription_fulfil")[0]?.body.p_order_ref === drs?.p_order_ref, JSON.stringify(intent));
 
 reset({ reserve: { ok: false, reason: "already_used" } });
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly", discountCode: "LAUNCH25" }, { env: DEMO });
-check("B7 demo, code refused: says why, activates nothing", r.body.ok === false && r.body.reason === "already_used" && S.subsUpserts.length === 0 && S.invoices.length === 0);
+check("B7 demo, code refused: says why, creates nothing", r.body.ok === false && r.body.reason === "already_used" && S.subIntents.size === 0
+  && rpcCalls("subscription_fulfil").length === 0);
 
-reset({ failSubscription: true });
+reset({ fulfil: { status: 400, body: { code: "P0001", message: "activation refused: already_scheduled" } } });
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly", discountCode: "LAUNCH25" }, { env: DEMO });
-check("B8 demo, activation fails: the use is released", r.body.ok === false && rpcCalls("discount_release").length === 1 && rpcCalls("discount_confirm").length === 0);
+intent = [...S.subIntents.values()][0];
+check("B8 demo, plan refused: the use is released and the demo order closed",
+  r.body.ok === false && r.body.error === "activation_failed" && rpcCalls("discount_release").length === 1 && intent?.status === "failed",
+  JSON.stringify(r.body));
 
-// ── C. subscription-webhook ─────────────────────────────────────────────────
+// ── C. subscription-webhook: events once, fulfilment, refunds, disputes (P1) ──
 reset(); seedSubIntent();
-let h = await hook("subscription-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_7", order_id: "order_T1" } } } });
-inv = S.invoices[0];
-check("C1 webhook claims: use confirmed, invoice discounted, payment id kept",
-  h.status === 200 && rpcCalls("discount_confirm").length === 1 && inv?.amount === 1724 && inv.discount_amount === 575 && inv.razorpay_payment_id === "pay_7", JSON.stringify(inv));
-h = await hook("subscription-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_7", order_id: "order_T1" } } } }, { sign: false });
-check("C1 webhook, bad signature: 400", h.status === 400 && S.invoices.length === 1);
+let h = await hook("subscription-webhook", captured("pay_7", "order_T1"), { eventId: "evt_1" });
+fc = rpcCalls("subscription_fulfil");
+check("C1 captured: recorded under Razorpay's event id, then fulfilled as 'webhook'",
+  h.status === 200 && rpcCalls("payment_event_record")[0]?.body.p_event_id === "evt_1"
+  && fc.length === 1 && fc[0].body.p_payment_ref === "pay_7" && fc[0].body.p_source === "webhook" && edgeWrites() === 0,
+  h.text);
+check("C1 captured: the event is finished with its outcome", S.events.get("evt_1")?.outcome === "fulfilled", S.events.get("evt_1")?.outcome);
+h = await hook("subscription-webhook", captured("pay_7", "order_T1"), { eventId: "evt_1" });
+check("C2 the same event again: answered from the record, the database not asked to fulfil",
+  h.status === 200 && JSON.parse(h.text).duplicate === true && rpcCalls("subscription_fulfil").length === 1, h.text);
+h = await hook("subscription-webhook", captured("pay_7", "order_T1"), { eventId: "evt_2" });
+check("C2 a second event for a done order: 'already_fulfilled'", S.events.get("evt_2")?.outcome === "already_fulfilled", S.events.get("evt_2")?.outcome);
+h = await hook("subscription-webhook", captured("pay_7", "order_T1"), { sign: false });
+check("C3 bad signature: 400, nothing recorded", h.status === 400 && S.events.size === 2);
+
+reset(); seedSubIntent(); S.fulfilDown = true;
+h = await hook("subscription-webhook", captured("pay_8", "order_T1"), { eventId: "evt_d" });
+check("C4 database down: 500 so Razorpay retries, the event left unfinished", h.status === 500 && S.events.get("evt_d")?.outcome === null, h.text);
+S.fulfilDown = false;
+h = await hook("subscription-webhook", captured("pay_8", "order_T1"), { eventId: "evt_d" });
+check("C4 the retry: the unfinished event is processed", h.status === 200 && S.events.get("evt_d")?.outcome === "fulfilled", S.events.get("evt_d")?.outcome);
+
+reset();
+const noIdEvt = captured("pay_9", "order_T1");
+h = await hook("subscription-webhook", noIdEvt);
+const sha = createHash("sha256").update(JSON.stringify(noIdEvt)).digest("hex");
+check("C5 no event id header: keyed by the payload's hash", rpcCalls("payment_event_record")[0]?.body.p_event_id === `sha256:${sha}`);
+check("C5 an order that isn't a plan order: 'not_ours'", h.status === 200 && JSON.parse(h.text).outcome === "not_ours", h.text);
+
+reset();
+h = await hook("subscription-webhook", { event: "refund.processed", payload: { refund: { entity: { id: "rfnd_1", payment_id: "pay_1", amount: 203400 } } } }, { eventId: "evt_r" });
+const rfe = rpcCalls("subscription_refund_event")[0]?.body;
+check("C6 refund.processed: completes the invoice's refund with Razorpay's amount",
+  rfe?.p_payment_ref === "pay_1" && rfe.p_refund_ref === "rfnd_1" && rfe.p_status === "processed" && rfe.p_amount_paise === 203400
+  && S.events.get("evt_r")?.outcome === "refund.processed", JSON.stringify(rfe));
+reset({ refundMatched: false });
+h = await hook("subscription-webhook", { event: "refund.failed", payload: { refund: { entity: { id: "rfnd_2", payment_id: "pay_ad" } } } }, { eventId: "evt_rf" });
+check("C6 a refund on someone else's payment (an ad): 'not_ours'",
+  rpcCalls("subscription_refund_event")[0]?.body.p_status === "failed" && S.events.get("evt_rf")?.outcome === "not_ours");
+
+reset();
+h = await hook("subscription-webhook", { event: "payment.dispute.created", payload: { dispute: { entity: { id: "disp_1", payment_id: "pay_1", amount: 203400, reason_code: "fraud" } } } }, { eventId: "evt_x" });
+check("C7 dispute: opens a billing incident", rpcCalls("billing_dispute_event")[0]?.body.p_payment_ref === "pay_1" && S.events.get("evt_x")?.outcome === "incident_opened");
+
+reset();
+h = await hook("subscription-webhook", { event: "payment.failed", payload: { payment: { entity: { id: "pay_f", order_id: "order_T1" } } } }, { eventId: "evt_f" });
+check("C8 payment.failed: recorded only", h.status === 200 && S.events.get("evt_f")?.outcome === "recorded" && rpcCalls("subscription_fulfil").length === 0);
 
 // ── D. razorpay-create-order ────────────────────────────────────────────────
 reset();
@@ -461,19 +588,19 @@ r = await call("subscription-create-order", { planId: "gold", billingCycle: "yea
 check("H3 a second paid next period: refused, nothing created", r.body.error === "already_scheduled" && rzpCalls().length === 0 && S.subIntents.size === 0,
   JSON.stringify(r.body));
 
-reset({ activation: { ...UPGRADE, period_start: "2026-10-02T10:00:00.000Z", period_end: "2026-11-02T10:00:00.000Z" } });
+reset();
 seedSubIntent({ amount: 216300, list_rupees: 1833, discount_rupees: 0, discount_code: null, discount_redemption_id: null, credit_rupees: 466, change_kind: "upgrade" });
 r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_u", signature: sign("order_T1", "pay_u") });
-inv = S.invoices[0];
-check("H4 paid upgrade: activated through the rule, invoiced at the charge with its credit and period",
-  r.body.ok && S.subsUpserts[0]?.p_plan === "gold" && inv?.amount === 1833 && inv.gst_amount === 330 && inv.credit_rupees === 466
-  && inv.change_kind === "upgrade" && inv.billing_period_start === "2026-10-02T10:00:00.000Z" && inv.billing_period_end === "2026-11-02T10:00:00.000Z",
-  JSON.stringify(inv));
+check("H4 paid upgrade: the stored charge, credit and kind go to the database untouched; the function writes none of it",
+  r.body.ok && rpcCalls("subscription_fulfil").length === 1 && edgeWrites() === 0
+  && S.subIntents.get("order_T1").credit_rupees === 466 && S.subIntents.get("order_T1").list_rupees === 1833, JSON.stringify(r.body));
 
-reset({ activation: { ok: false, reason: "already_scheduled" } });
+reset({ fulfil: { ok: false, reason: "activation_failed", detail: "already_scheduled", incident_id: "inc-1" } });
 seedSubIntent({ discount_rupees: 0, discount_code: null, discount_redemption_id: null, list_rupees: 2299, amount: 271300 });
 r = await call("subscription-verify-payment", { orderId: "order_T1", paymentId: "pay_x", signature: sign("order_T1", "pay_x") });
-check("H5 activation refused after payment: said so, no invoice", r.body.ok === false && S.invoices.length === 0, JSON.stringify(r.body));
+check("H5 plan refused after payment: said so; nothing released or closed (the money is real, finance has an incident)",
+  r.body.ok === false && r.body.error === "activation_failed" && rpcCalls("discount_release").length === 0
+  && !S.calls.some((c) => c.method === "PATCH" && c.url.includes("/subscription_payment_orders")), JSON.stringify(r.body));
 
 reset({ quote: { ...UPGRADE, credit_rupees: 2299, charge_rupees: 0 } });
 r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
@@ -481,22 +608,21 @@ const coveredOrder = r.body.orderId;
 check("H6 credit covers it all: no Razorpay order, a free_ id", rzpCalls().length === 0 && r.body.free === true && /^free_/.test(coveredOrder ?? ""),
   JSON.stringify(r.body));
 r = await call("subscription-verify-payment", { orderId: coveredOrder, free: true });
-inv = S.invoices[0];
-check("H6 and it activates with no code to confirm, invoiced at ₹0 with the credit",
-  r.body.ok === true && rpcCalls("discount_confirm").length === 0 && inv?.amount === 0 && inv.credit_rupees === 2299, JSON.stringify(inv));
+check("H6 and it is fulfilled as 'free' with no code to confirm",
+  r.body.ok === true && rpcCalls("discount_confirm").length === 0 && rpcCalls("subscription_fulfil").at(-1)?.body.p_source === "free"
+  && S.subIntents.get(coveredOrder).credit_rupees === 2299, JSON.stringify(r.body));
 
 reset({ quote: UPGRADE });
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
-inv = S.invoices[0];
-check("H7 demo upgrade: priced by the same rule", r.body.ok && inv?.amount === 1833 && inv.credit_rupees === 466 && inv.change_kind === "upgrade",
-  JSON.stringify(inv));
+intent = [...S.subIntents.values()][0];
+check("H7 demo upgrade: priced by the same rule", r.body.ok && intent?.list_rupees === 1833 && intent.credit_rupees === 466 && intent.change_kind === "upgrade"
+  && intent.amount === 216300, JSON.stringify(intent));
 
 reset();
 seedSubIntent({ discount_rupees: 0, discount_code: null, discount_redemption_id: null, list_rupees: 1833, amount: 216300, credit_rupees: 466, change_kind: "upgrade" });
-h = await hook("subscription-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_h", order_id: "order_T1" } } } });
-inv = S.invoices[0];
-check("H8 webhook: the invoice keeps the order's credit and kind", h.status === 200 && inv?.credit_rupees === 466 && inv.change_kind === "upgrade" && inv.amount === 1833,
-  JSON.stringify(inv));
+h = await hook("subscription-webhook", captured("pay_h", "order_T1"), { eventId: "evt_h" });
+check("H8 webhook: the same order, the same database call, as 'webhook'",
+  h.status === 200 && rpcCalls("subscription_fulfil")[0]?.body.p_source === "webhook" && edgeWrites() === 0, h.text);
 
 reset({ quote: UPGRADE });
 r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "LAUNCH25" });
@@ -529,13 +655,13 @@ check("I4 create-order: an unanswered gate refuses", r.body.error === "unavailab
 
 reset({ gate: { ok: false, reason: "payments_not_open" } });
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
-check("I5 demo checkout: the gate refuses before any plan or invoice",
-  r.body.ok === false && r.body.error === "payments_not_open" && rpcCalls("subscription_activate").length === 0 && S.invoices.length === 0,
+check("I5 demo checkout: the gate refuses before any order or fulfilment",
+  r.body.ok === false && r.body.error === "payments_not_open" && rpcCalls("subscription_fulfil").length === 0 && S.subIntents.size === 0,
   JSON.stringify(r.body));
 
 reset({ authOk: false });
 r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
-check("I6 demo checkout: a token Auth refuses gets 401", r.status === 401 && S.invoices.length === 0, r.status);
+check("I6 demo checkout: a token Auth refuses gets 401", r.status === 401 && S.subIntents.size === 0, r.status);
 
 reset({ authOk: false });
 r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "LAUNCH25" });
@@ -545,6 +671,37 @@ reset();
 r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
 check("I8 create-order: an allowed vendor still checks out as before",
   r.body.configured === true && rzpCalls()[0]?.body.amount === 271300 && rpcCalls("subscription_checkout_gate").length === 1, JSON.stringify(r.body));
+
+// ── J. billing-reconcile (subscriptions P1): payments that never reached us ──
+const SERVICE = jwt(undefined, "service_role");
+reset();
+r = await call("billing-reconcile", {});
+check("J1 a signed-in user's token is refused", r.status === 403 && rpcCalls("billing_reconcile_candidates").length === 0, r.status);
+
+reset();
+r = await call("billing-reconcile", {}, { token: SERVICE, env: DEMO });
+check("J2 no Razorpay keys: nothing to check", r.body.note === "not_configured" && S.calls.length === 0, JSON.stringify(r.body));
+
+reset({ candidates: [{ order_id: "order_T1", vendor_id: VENDOR, payment_mode: "test", created_at: "2026-10-08T00:00:00Z" },
+                     { order_id: "order_T2", vendor_id: VENDOR, payment_mode: "test", created_at: "2026-10-08T00:00:00Z" },
+                     { order_id: "order_T3", vendor_id: VENDOR, payment_mode: "test", created_at: "2026-10-08T00:00:00Z" }],
+        rzpPayments: { order_T1: [{ id: "pay_c", status: "captured", amount: 203400 }], order_T2: [{ id: "pay_a", status: "authorized", amount: 271300 }] } });
+seedSubIntent();
+r = await call("billing-reconcile", {}, { token: SERVICE });
+fc = rpcCalls("subscription_fulfil");
+check("J3 a captured payment: recorded, then fulfilled as 'reconcile'",
+  fc.length === 1 && fc[0].body.p_order_ref === "order_T1" && fc[0].body.p_payment_ref === "pay_c" && fc[0].body.p_source === "reconcile"
+  && S.events.get("reconcile:order_T1:pay_c")?.outcome === "fulfilled", JSON.stringify(fc.map((c) => c.body)));
+check("J4 authorised but not captured: recorded, not fulfilled",
+  S.events.get("reconcile:order_T2:pay_a:authorized")?.outcome === "authorized_not_captured", S.events.get("reconcile:order_T2:pay_a:authorized")?.outcome);
+check("J5 every order checked is marked; the tally adds up",
+  rpcCalls("billing_reconcile_mark").map((c) => c.body.p_order_ref).join() === "order_T1,order_T2,order_T3"
+  && r.body.checked === 3 && r.body.fulfilled === 1 && r.body.unpaid === 2 && r.body.failed === 0, JSON.stringify(r.body));
+
+reset({ candidates: [{ order_id: "order_T1", vendor_id: VENDOR, payment_mode: "test", created_at: "2026-10-08T00:00:00Z" }], rzpPaymentsFail: true });
+r = await call("billing-reconcile", {}, { token: SERVICE });
+check("J6 Razorpay unreachable: counted as failed and left unmarked for the next run",
+  r.body.failed === 1 && rpcCalls("billing_reconcile_mark").length === 0 && rpcCalls("subscription_fulfil").length === 0, JSON.stringify(r.body));
 
 console.table(rows);
 console.log(failures === 0

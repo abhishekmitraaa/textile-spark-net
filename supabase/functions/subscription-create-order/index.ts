@@ -56,6 +56,7 @@ import { checkDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscri
 import { quotePlanChange } from "../_shared/planChange.ts";
 import { verifiedUserId } from "../_shared/auth.ts";
 import { checkoutGate } from "../_shared/checkoutGate.ts";
+import { paymentModeForKey } from "../_shared/fulfil.ts";
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
 
@@ -170,6 +171,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
     body: JSON.stringify({
       order_id: orderId, vendor_id: vendorId, plan_id: planId, billing_cycle: billingCycle,
       amount: money.paise, gst_number: payload.gstNumber ?? null, status: "created",
+      // Live or test keys, or no Razorpay order at all (P1): decides the document issued.
+      payment_mode: free ? "free" : paymentModeForKey(keyId),
       list_rupees: money.list, discount_rupees: money.discount,
       discount_code: heldCode, discount_redemption_id: redemptionId,
       change_kind: change.kind ?? "new", credit_rupees: change.credit_rupees ?? 0,

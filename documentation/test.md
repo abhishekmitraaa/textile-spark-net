@@ -187,6 +187,42 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-08 — Subscriptions P1: billing core (local stack: harness 26/26; P0 harness 29/29; flow check 97/97; tax ids 18/18; browser 7/7; typecheck 0 in both apps; i18n 7,307/7,307; admin build)
+- **Where:** the local stack with P0 and P1 applied, apps on :8092 and :5186 from the `subscriptions/p1-billing-core`
+  worktrees, the branch's functions copied into the local edge runtime. `invoice-render` and `billing-reconcile`
+  ran on a second edge-runtime container with the stack's environment (the stack serves only the functions present
+  when it started; it is shared, so it wasn't restarted).
+- **Harness `scripts/subscriptions/p1_billing_core.sql`**: 26/26, on the stack and in a full replay of the migration
+  file in one rolled-back transaction. Covers fulfil refused to a browser; a live order with no billing details (a
+  receipt, CGST + SGST, an incident, the code confirmed, the plan active); a second fulfil doing nothing; IGST for a
+  Gujarat seller and CGST + SGST when the seller's GSTIN is in Cosora's state; a test document in its own series;
+  demo and ₹0 refusals undoing everything; a paid refusal keeping the order and opening an incident; ₹0 orders
+  claimed only when the redemption confirms; full and partial credit notes; S-3 (finance can't edit or delete);
+  S-7 (a demo invoice earns credit only before live payments); events once; refund and dispute events; reconcile
+  candidates; incidents read by finance and refused to a moderator; resolution needing a note and reaching the Admin
+  Log; credit notes per vendor; the invoices bucket per folder; the transitional mode shim. **Mutation:** without the
+  S-7 filter and the immutability trigger, cases 13, 14 and 16 fail; against the old fulfil function, case 24 fails.
+- **`node scripts/discount-flow-check.mjs`**: 97/97 across 8 functions. B (verify-payment), C (webhook) and H (plan
+  changes) now assert what the functions send to `subscription_fulfil` and do around it: one call per order, no
+  edge-side plan or invoice writes, `unavailable` when the database is down, codes released and orders closed on a
+  demo or ₹0 refusal, nothing released on a paid one; webhook events recorded once, duplicates answered from the
+  record, a 500 then a successful retry, refund, dispute and failed-payment events. J is `billing-reconcile`
+  (service role only; not configured; captured → fulfilled; authorised → recorded; tally; Razorpay errors left
+  unmarked). **Mutation:** removing the webhook's 500-on-unavailable fails both C4 checks.
+- **End to end (scratch script against the stack):** a demo Basic purchase through the real functions (DMO series,
+  ₹825, CGST and SGST ₹63), its PDF rendered, stored and downloaded with the vendor's own signed link; reused on the
+  second call; another account and a moderator get 404 and can't sign it; a super admin can; an IGST tax invoice for
+  a Gujarat GSTIN against a Maharashtra supplier (`CSR/2627/000001`, ₹2,299 + ₹414) and its PDF; a super admin's
+  browser refused an invoice edit (403). Both PDFs were looked at.
+- **Browser (`npx playwright test -c playwright.local.config.ts`, with `LOCAL_INVOICE_RENDER_URL`):** `subscriptions-p1`
+  2/2 (demo purchase → invoice page title, notice, recipient, CGST/SGST, total; Download PDF gives a `%PDF-` file named
+  after the number; another seller sees "Invoice not found"; an incident resolved with a note in the Admin Log; the
+  admin PDF button returns `application/pdf`), `subscriptions-p0` 3/3, `plans-and-refunds` 2/2.
+- **Typecheck:** buyer `tsc -p tsconfig.app.json` 0; Cosora-Admin `npm run typecheck` 0; admin `npm run build` ok;
+  eslint clean on the changed buyer files. `npm run i18n:check` 7,307/7,307. `tax-id-check` 18/18.
+- **Not run:** `gst-check` (needs a `.env`; P1 adds no GST formula); Razorpay itself (test mode end to end waits for
+  the release with Mitra).
+
 ### 2026-10-08 — Subscriptions P0: foundations and safety (local stack: harness 29/29; flow check 76/76; tax ids 18/18; browser 11/11; typecheck 0 in both apps; i18n 7,283/7,283; admin build)
 - **Where:** the local stack (production's schema plus the P0 migration), apps on :8092 and :5186 from the
   `subscriptions/p0-foundations` worktrees, the branch's functions copied into the local edge runtime.
