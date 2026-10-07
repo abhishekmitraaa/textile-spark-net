@@ -992,8 +992,8 @@ undocumented. Deep technical rationale for each lives in
   `requirementAttributes()` (`src/lib/formAttributes.ts`) decide what goes in: trimmed strings, non-empty lists, a
   ticked box as `true`, nothing blank. Keep `PRODUCT_COLUMN_FIELDS` in step with Upload.tsx's insert and update, or a
   column field ends up in both places. Attribute values are part of `search_text` (`attributes_search_text()`), so
-  search and the embeddings use them, and both embedding triggers fire when they change. Migration `20261007100000_attributes_capture.sql`
-  (not yet applied); harness `scripts/ranking/f1_attributes.sql`; spec `documentation/ranking-foundations-design-2026-10-07.md`.
+  search and the embeddings use them, and both embedding triggers fire when they change. Migration `20261007035941_attributes_capture.sql`
+  (applied 2026-10-07); harness `scripts/ranking/f1_attributes.sql`; spec `documentation/ranking-foundations-design-2026-10-07.md`.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
   is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
   (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,
