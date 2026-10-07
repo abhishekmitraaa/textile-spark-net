@@ -230,13 +230,9 @@ begin
 end;
 $function$;
 
-alter policy products_insert on public.products
-  with check (
-    (select public.account_is_active((select auth.uid())))
-    and (vendor_id = (select auth.uid())
-         or ((select public.is_admin())
-             and (select public.admin_role()) = any (array['super_admin', 'product_moderator', 'manager']::public.admin_role_type[])))
-  );
+-- UPDATE only: moderating is changing a listing's status. Insert and delete keep their
+-- roles (super_admin, product_moderator): a manager never creates a vendor's listing, and a
+-- takedown is a removal on the record, never a hard delete.
 alter policy products_update on public.products
   using (
     vendor_id = (select auth.uid())
@@ -244,13 +240,6 @@ alter policy products_update on public.products
         and (select public.admin_role()) = any (array['super_admin', 'product_moderator', 'manager']::public.admin_role_type[]))
   )
   with check (
-    (vendor_id = (select auth.uid())
-     or ((select public.is_admin())
-         and (select public.admin_role()) = any (array['super_admin', 'product_moderator', 'manager']::public.admin_role_type[])))
-    and (select public.account_not_deleted((select auth.uid())))
-  );
-alter policy products_delete on public.products
-  using (
     (vendor_id = (select auth.uid())
      or ((select public.is_admin())
          and (select public.admin_role()) = any (array['super_admin', 'product_moderator', 'manager']::public.admin_role_type[])))
@@ -368,6 +357,18 @@ as $$
   select coalesce(public.is_admin()
     and public.admin_role() = any (array['super_admin', 'manager']::public.admin_role_type[]), false)
 $$;
+-- Who reads listings' moderation (the Products section): the moderators, plus support read-only.
+create or replace function admin.product_moderation_can_read()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select coalesce(public.is_admin()
+    and public.admin_role() = any (array['super_admin', 'product_moderator', 'manager', 'support']::public.admin_role_type[]), false)
+$$;
+revoke execute on function admin.product_moderation_can_read() from public, anon, authenticated;
 revoke execute on function admin.product_moderation_can_act() from public, anon, authenticated;
 revoke execute on function admin.product_reasons_can_edit() from public, anon, authenticated;
 
@@ -381,8 +382,8 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 begin
-  if not coalesce(public.is_admin(), false) then
-    raise exception 'not authorized: admins only' using errcode = '42501';
+  if not admin.product_moderation_can_read() then
+    raise exception 'not authorized: moderation reasons are for the roles that moderate listings' using errcode = '42501';
   end if;
   if coalesce(p_include_inactive, false) and not admin.product_reasons_can_edit() then
     raise exception 'not authorized: switched-off reasons are for super admins and managers' using errcode = '42501';
@@ -625,8 +626,8 @@ set search_path = ''
 as $$
 #variable_conflict use_column
 begin
-  if not coalesce(public.is_admin(), false) then
-    raise exception 'not authorized: admins only' using errcode = '42501';
+  if not admin.product_moderation_can_read() then
+    raise exception 'not authorized: listing history is for the roles that moderate listings' using errcode = '42501';
   end if;
   return query
     select a.id, a.action, r.label, a.message, a.note,

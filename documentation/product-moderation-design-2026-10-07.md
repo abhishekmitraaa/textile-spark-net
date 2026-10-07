@@ -76,8 +76,12 @@ The vendor-facing message is `vendor_message` plus the note. The Admin Log reaso
   reason" comparison, so the two triggers don't depend on firing order.
 
 ### Manager joins product moderation
-`enforce_products_moderation`, the `products_insert` / `products_update` / `products_delete` admin arms
-(`alter policy`), and the `products` branch of `approve_vendor_content` / `reject_vendor_content` admit `manager`.
+`enforce_products_moderation`, the `products_update` admin arm (`alter policy`), and the `products` branch of
+`approve_vendor_content` / `reject_vendor_content` admit `manager`. Insert and delete keep their roles: a manager
+never creates a vendor's listing, and a takedown is a removal on the record, never a hard delete (narrowed after
+the commit's security review flagged the wider grant).
+The two read RPCs (`admin_product_reasons`, `admin_product_moderation_history`) admit the roles that open Products:
+super_admin, product_moderator, manager and support (`admin.product_moderation_can_read()`).
 `admin_flag_add` refuses a `'product'` flag from anyone but the three moderation roles.
 
 ## Screens

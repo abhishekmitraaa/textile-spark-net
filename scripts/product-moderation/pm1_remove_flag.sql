@@ -68,7 +68,11 @@ declare
     array['moderator sees switched-off: refused','product_moderator', '',        '42501'],
     array['history names the actor',            'manager',           'removed', 'remove|Prohibited item|named'],
     array['reject_vendor_content as manager',    'manager',           '',        'rejected'],
-    array['reject_vendor_content skips removed', 'manager',           'removed', 'P0002']];
+    array['reject_vendor_content skips removed', 'manager',           'removed', 'P0002'],
+    array['manager cannot hard-delete a listing','manager',           '',        'deleted 0'],
+    array['vendor_ops cannot read the reasons',  'vendor_ops',        '',        '42501'],
+    array['support reads the history',           'support',           'removed', '1'],
+    array['manager cannot insert a listing',     'manager',           '',        '42501']];
   r_remove uuid; r_flag uuid; r_both uuid;
   p uuid; q uuid; who text; setup text; got text; i int; n int; m int; s text;
   actor uuid; out text := ''; passed int := 0;
@@ -246,6 +250,15 @@ begin
             reset role;
             select status::text into got from public.products where id = p;
           when 48 then perform public.reject_vendor_content('products', p, 'Again'); got := 'accepted';
+          when 49 then
+            delete from public.products where id = p;
+            get diagnostics n = row_count;
+            got := 'deleted ' || n;
+          when 50 then perform public.admin_product_reasons(false); got := 'accepted';
+          when 51 then select count(*)::text into got from public.admin_product_moderation_history(p);
+          when 52 then
+            insert into public.products (vendor_id, name, status) values (vendor, 'PM1 by manager', 'draft');
+            got := 'accepted';
         end case;
       exception when others then
         got := sqlstate;
