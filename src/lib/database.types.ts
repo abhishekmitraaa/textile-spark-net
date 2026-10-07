@@ -545,6 +545,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "buyer_profiles_state_code_fkey"
+            columns: ["state_code"]
+            isOneToOne: false
+            referencedRelation: "india_states"
+            referencedColumns: ["code"]
+          },
         ]
       }
       calls: {
@@ -3337,6 +3344,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "subscription_plans"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_profiles_state_code_fkey"
+            columns: ["state_code"]
+            isOneToOne: false
+            referencedRelation: "india_states"
+            referencedColumns: ["code"]
           },
         ]
       }

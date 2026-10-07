@@ -1007,7 +1007,8 @@ undocumented. Deep technical rationale for each lives in
   to the vendor and admins; ranking will read it through a definer function. It is not the buyer-facing capacity
   bands (`vendor_profiles.capacity`), which stay. Nothing ranks on any of this until Part 3 (Fit); the buyer
   location nudge waits for Fit too, so it never promises nearby suppliers before location counts. Migration
-  `20261007150000_vendor_type_location_capacity.sql`; harness `scripts/ranking/f2_vendor_profile.sql`.
+  `20261007052605_vendor_type_location_capacity.sql`
+  (applied 2026-10-07); harness `scripts/ranking/f2_vendor_profile.sql`.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
   is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
   (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,

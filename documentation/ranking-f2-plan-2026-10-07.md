@@ -33,7 +33,7 @@
 
 ### Task 1: Database — states, codes, type, reach, capacity
 
-Files: `src/data/indiaStates.ts`, `scripts/ranking/f2_vendor_profile.sql`, `supabase/migrations/20261007150000_vendor_type_location_capacity.sql` (generated seed from the TS list).
+Files: `src/data/indiaStates.ts`, `scripts/ranking/f2_vendor_profile.sql`, `supabase/migrations/20261007052605_vendor_type_location_capacity.sql` (written as `20261007150000`; generated seed from the TS list).
 
 - [ ] Harness cases: 36 states; `state_code_for` on names, case, `&`, aliases, an unknown → null; vendor state change sets the code; an explicit `state_code` wins; buyer state change sets the code; served states with an unknown code refused; primary type outside the list refused; capability outside the list refused; backfill mapping on a fixture vendor (labels → type + capabilities); capacity: the vendor writes and reads its own, another vendor reads nothing, anon reads nothing, an admin reads it; a capacity of 0 or an unknown unit refused.
 - [ ] RED locally; write the migration; GREEN; R1–R3 and F1 harnesses still pass; commit.

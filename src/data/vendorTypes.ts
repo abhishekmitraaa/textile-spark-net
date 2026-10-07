@@ -1,7 +1,7 @@
 // What a vendor is, what it can do, and how its capacity is counted (Ranking Part 1, F2).
 // The values are checked by vendor_profiles_primary_type_known,
 // vendor_profiles_capabilities_known and vendor_capacity's unit check; keep them in step
-// with migration 20261007150000_vendor_type_location_capacity.
+// with migration 20261007052605_vendor_type_location_capacity.
 
 import { sellerCategories } from "@/data/sellerCategories";
 
