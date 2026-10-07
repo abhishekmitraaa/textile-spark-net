@@ -297,6 +297,11 @@ const KIND_META: Record<string, {
   subscription_canceled: { type: "system", tone: "warning",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
   refund_requested:      { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
   refund_processed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  // Product moderation (2026-10-07), written by admin_product_remove / _flag / _reinstate.
+  // The body names the listing and carries Cosora's reason; My Products shows it in full.
+  product_removed:       { type: "system", tone: "warning",  group: "updates", actionLabel: "See your products", href: "/products" },
+  product_flagged:       { type: "system", tone: "warning",  group: "updates", actionLabel: "See your products", href: "/products" },
+  product_reinstated:    { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {

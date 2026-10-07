@@ -54,6 +54,14 @@ const STATUS = {
   draft:   { label: "Draft",        pill: "bg-gray-100 text-gray-500" },
 } as const;
 
+// Cosora's decision overrides the plain status pill, so a removed or rejected listing
+// never reads as an ordinary draft (product moderation, 2026-10-07).
+const MODERATION = {
+  removed:  { label: "Removed by Cosora",      pill: "bg-red-100 text-red-700",     note: "Cosora removed this listing. It can't be edited or resubmitted.", box: "border-red-200 bg-red-50 text-red-800" },
+  flagged:  { label: "Under review: flagged",  pill: "bg-amber-100 text-amber-700", note: "Hidden from buyers while Cosora reviews it.",                     box: "border-amber-200 bg-amber-50 text-amber-900" },
+  rejected: { label: "Rejected",               pill: "bg-red-100 text-red-700",     note: "Fix the listing and submit it again.",                             box: "border-red-200 bg-red-50 text-red-800" },
+} as const;
+
 // ─────────────────────────────────────────────────────────────
 // PRODUCT ROW CARD
 // Mobile keeps the compact stacked card; desktop spreads the same data across
@@ -140,7 +148,9 @@ function ProductRow({ product, onDelete, onDuplicate }: {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const [menuOpen, setMenuOpen] = useState(false);
-  const status = STATUS[product.status];
+  const mod = product.moderation ? MODERATION[product.moderation.state] : null;
+  const status = mod ?? STATUS[product.status];
+  const removed = product.moderation?.state === "removed";
   const editHref = `/upload?id=${product.id}`;
 
   return (
@@ -159,8 +169,9 @@ function ProductRow({ product, onDelete, onDuplicate }: {
           being nested inside another button. */}
       <button
         type="button"
+        disabled={removed}
         onClick={() => navigate(editHref)}
-        aria-label={`Edit ${product.name}`}
+        aria-label={removed ? `${product.name}: removed by Cosora` : `Edit ${product.name}`}
         className="absolute inset-0 z-0 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-vendor focus-visible:ring-inset"
       />
 
@@ -193,7 +204,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
           </div>
           <div className="flex items-center gap-2 mt-1.5">
             <ScoreBar value={product.profileScore} />
-            {product.status !== "active" && (
+            {(product.status !== "active" || mod) && (
               <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", status.pill)}>
                 {status.label}
               </span>
@@ -207,12 +218,14 @@ function ProductRow({ product, onDelete, onDuplicate }: {
             <RowMenu id={product.id} open={menuOpen} onOpenChange={setMenuOpen} onDelete={onDelete} onDuplicate={onDuplicate} />
           </div>
           <span className="text-[9px] text-gray-300 font-mono">{product.productCode}</span>
-          <button
-            onClick={() => navigate(editHref)}
-            className="flex items-center gap-1 px-2.5 py-1 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
-          >
-            <Edit2 className="w-3 h-3" /> Edit
-          </button>
+          {!removed && (
+            <button
+              onClick={() => navigate(editHref)}
+              className="flex items-center gap-1 px-2.5 py-1 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
+            >
+              <Edit2 className="w-3 h-3" /> Edit
+            </button>
+          )}
         </div>
       </div>
 
@@ -263,16 +276,30 @@ function ProductRow({ product, onDelete, onDuplicate }: {
 
         {/* Actions */}
         <div className="pointer-events-auto flex items-center justify-end gap-1">
-          <button
-            onClick={() => navigate(editHref)}
-            className="flex items-center gap-1.5 px-3 py-1.5 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
-          >
-            <Edit2 className="w-3.5 h-3.5" /> Edit
-          </button>
+          {!removed && (
+            <button
+              onClick={() => navigate(editHref)}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-brand-vendor text-brand-vendor rounded-lg text-xs font-semibold hover:bg-blue-50 transition-colors"
+            >
+              <Edit2 className="w-3.5 h-3.5" /> Edit
+            </button>
+          )}
           <ShareButton id={product.id} />
           <RowMenu id={product.id} open={menuOpen} onOpenChange={setMenuOpen} onDelete={onDelete} onDuplicate={onDuplicate} />
         </div>
       </div>
+
+      {/* Cosora's reason, in full: what was wrong and, where it can be fixed, what to do. */}
+      {mod && product.moderation && (
+        <div
+          role="note"
+          data-testid="product-moderation-note"
+          className={cn("relative z-10 pointer-events-none mx-3 mb-3 lg:mx-4 rounded-lg border px-3 py-2 text-xs", mod.box)}
+        >
+          <p className="font-semibold">{mod.note}</p>
+          <p className="mt-0.5 whitespace-pre-wrap">{product.moderation.reason}</p>
+        </div>
+      )}
     </motion.div>
   );
 }

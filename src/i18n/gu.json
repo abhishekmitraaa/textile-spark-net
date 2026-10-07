@@ -7511,5 +7511,22 @@
  "Enter how much you can make or handle in a month": "તમે એક મહિનામાં કેટલું બનાવી કે સંભાળી શકો છો તે દાખલ કરો",
  "How much you can make or handle in a month, per category. Only you and Cosora see these numbers.": "દરેક શ્રેણીમાં તમે એક મહિનામાં કેટલું બનાવી કે સંભાળી શકો છો. આ આંકડા ફક્ત તમે અને કોસોરા જુઓ છો.",
  "Select a category": "શ્રેણી પસંદ કરો",
- "Per month": "દર મહિને"
+ "Per month": "દર મહિને",
+ "Cosora removed this listing. It can't be edited or resubmitted.": "કોસોરાએ આ લિસ્ટિંગ દૂર કરી છે. તેને બદલી કે ફરી સબમિટ કરી શકાશે નહીં.",
+ "Under review: flagged": "સમીક્ષા હેઠળ: ફ્લેગ કરેલ",
+ "Hidden from buyers while Cosora reviews it.": "કોસોરા તેની સમીક્ષા કરે ત્યાં સુધી તે ખરીદદારોથી છુપાયેલી છે.",
+ "Fix the listing and submit it again.": "લિસ્ટિંગ સુધારો અને તેને ફરી સબમિટ કરો.",
+ "{0}: removed by Cosora": "{0}: કોસોરાએ દૂર કરી",
+ "See your products": "તમારા પ્રોડક્ટ જુઓ",
+ "Cosora removed your listing": "કોસોરાએ તમારી લિસ્ટિંગ દૂર કરી",
+ "Your listing is back under review": "તમારી લિસ્ટિંગ ફરી સમીક્ષા હેઠળ છે",
+ "Your listing is back in your drafts": "તમારી લિસ્ટિંગ તમારા ડ્રાફ્ટમાં પાછી આવી છે",
+ "This listing appears to use another brand's name, logo or design without permission. Cosora doesn't allow counterfeit or infringing products.": "આ લિસ્ટિંગ પરવાનગી વિના બીજી બ્રાન્ડનું નામ, લોગો કે ડિઝાઇન વાપરતી લાગે છે. કોસોરા નકલી કે હકોનું ઉલ્લંઘન કરતા પ્રોડક્ટની મંજૂરી આપતું નથી.",
+ "This product isn't allowed on Cosora under our listing rules.": "અમારા લિસ્ટિંગ નિયમો મુજબ આ પ્રોડક્ટને કોસોરા પર મંજૂરી નથી.",
+ "The listing's details (price, MOQ, fabric, GSM or specifications) look misleading or don't match the product.": "લિસ્ટિંગની વિગતો (કિંમત, MOQ, ફેબ્રિક, GSM કે સ્પેસિફિકેશન) ભ્રામક લાગે છે અથવા પ્રોડક્ટ સાથે મેળ ખાતી નથી.",
+ "This listing is in a category that doesn't match the product. Move it to the right category and submit it again.": "આ લિસ્ટિંગ એવી શ્રેણીમાં છે જે પ્રોડક્ટ સાથે મેળ ખાતી નથી. તેને સાચી શ્રેણીમાં મૂકો અને ફરી સબમિટ કરો.",
+ "The photos are low quality, copied from elsewhere, or show content that isn't allowed.": "ફોટા ઓછી ગુણવત્તાના છે, બીજે ક્યાંકથી કૉપિ કરેલા છે, અથવા તેમાં મંજૂરી ન હોય તેવી સામગ્રી છે.",
+ "This product is already listed in your catalogue. Keep one listing per product.": "આ પ્રોડક્ટ તમારા કૅટલૉગમાં પહેલેથી લિસ્ટ થયેલું છે. દરેક પ્રોડક્ટની એક જ લિસ્ટિંગ રાખો.",
+ "The listing shows a phone number, email address or outside link. Buyers reach you through Cosora.": "લિસ્ટિંગમાં ફોન નંબર, ઇમેઇલ સરનામું કે બહારની લિંક દેખાય છે. ખરીદદારો તમારો સંપર્ક કોસોરા દ્વારા કરે છે.",
+ "Buyers reported a problem with this listing, and Cosora is checking it.": "ખરીદદારોએ આ લિસ્ટિંગમાં સમસ્યા જણાવી છે, અને કોસોરા તેની તપાસ કરી રહ્યું છે."
 }

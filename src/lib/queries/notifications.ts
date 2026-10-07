@@ -36,7 +36,11 @@ export type NotificationKind =
   // vendor_documents.verified. Both are real and observed in production data —
   // this is not UI groundwork for something unwired.
   | "kyc_approved"
-  | "kyc_rejected";
+  | "kyc_rejected"
+  // Product moderation (2026-10-07): admin_product_remove / _flag / _reinstate.
+  | "product_removed"
+  | "product_flagged"
+  | "product_reinstated";
 
 export interface NotificationRow {
   id: string;
