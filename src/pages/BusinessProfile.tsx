@@ -6,11 +6,16 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import StateSelect from "@/components/StateSelect";
-import { stateCodeFor } from "@/data/indiaStates";
+import { EditSheet, editFieldClass as fieldClass } from "@/components/vendor/EditSheet";
+import { stateByCode, stateCodeFor } from "@/data/indiaStates";
+import { BusinessTypeSheet, CapacitySheet, ServedStatesSheet } from "@/components/vendor/BusinessReachSheets";
+import { capabilityLabel, categoryRootName, primaryTypeLabel } from "@/data/vendorTypes";
+import { useLang } from "@/lib/i18n";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   useMyVendorProfile, saveVendorProfile, uploadVendorGalleryImage, uploadVendorImage,
+  useVendorCapacity, saveVendorCapacity, type CapacityRow,
 } from "@/lib/queries/vendorStore";
 import { memberSinceLabel } from "@/lib/memberSince";
 import { useVendorReviews } from "@/lib/queries/reviews";
@@ -185,26 +190,7 @@ function RangePickerModal({
 // /onboarding uses the SAME picker rather than a copy: both write
 // vendor_profiles.category, and two copies would drift.
 
-// Shared chrome for the edit sheets below: bottom sheet on mobile, centered
-// card on desktop, back-arrow header. Lifted out of AddBusinessCategoriesModal
-// so the new sheets can't drift from the existing one.
-function EditSheet({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
-          <h3 className="text-base font-bold text-gray-900">{title}</h3>
-        </div>
-        <div className="flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        <div className="px-5 py-4 border-t border-gray-100">{footer}</div>
-      </div>
-    </div>
-  );
-}
 
-const fieldClass =
-  "w-full rounded-xl border border-gray-300 px-3 py-2 text-sm text-gray-800 placeholder-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600";
 
 function LabelledInput({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) {
   return (
@@ -355,6 +341,10 @@ function YearEstablishedModal({ isOpen, onClose, selected, onSave }: { isOpen: b
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────
 
+// A stable empty list for the sheets' `initial` props (a fresh [] each render would re-run their reset).
+const EMPTY: string[] = [];
+const EMPTY_CAPACITY: CapacityRow[] = [];
+
 const BusinessProfile = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -401,6 +391,10 @@ const BusinessProfile = () => {
   const [showEmployeesModal, setShowEmployeesModal]   = useState(false);
   const [showAboutModal, setShowAboutModal]           = useState(false);
   const [showContactModal, setShowContactModal]       = useState(false);
+  // "Business type & reach" (Ranking Part 1, F2).
+  const [showTypeSheet, setShowTypeSheet]             = useState(false);
+  const [showStatesSheet, setShowStatesSheet]         = useState(false);
+  const [showCapacitySheet, setShowCapacitySheet]     = useState(false);
   const [showYearModal, setShowYearModal]             = useState(false);
   const [showRecommendPicker, setShowRecommendPicker] = useState(false);
   const [showTurnoverModal, setShowTurnoverModal] = useState(false);
@@ -658,8 +652,40 @@ const BusinessProfile = () => {
   // shows the same label (lib/memberSince.ts).
   const memberSince = useMemo(() => memberSinceLabel(store?.createdAt), [store?.createdAt]);
 
+  // What the business is, where it sells and how much it makes (Ranking Part 1, F2).
+  // Choosing a type also writes its label to business_type, which the header and
+  // review cards show.
+  const lang = useLang();
+  const { data: capacityRows = EMPTY_CAPACITY } = useVendorCapacity(user?.id);
+  const typeSummary = [primaryTypeLabel(store?.primaryType), ...(store?.capabilities ?? []).map(capabilityLabel)]
+    .filter(Boolean).join(" · ");
+  const servedSummary = (store?.servedStates ?? [])
+    .map((code) => stateByCode(code))
+    .map((st) => (st ? (lang === "hi" ? st.hi : lang === "gu" ? st.gu : st.name) : ""))
+    .filter(Boolean).join(", ");
+  const capacitySummary = capacityRows
+    .map((r) => `${categoryRootName(r.categoryRoot)}: ${r.monthlyCapacity.toLocaleString("en-IN")} ${r.unit}`)
+    .join("; ");
+  const saveType = (type: string, capabilities: string[]) =>
+    persist({ primaryType: type, capabilities, businessType: primaryTypeLabel(type) }, "Business type updated");
+  const saveServedStates = (servedStates: string[]) => persist({ servedStates }, "States updated");
+  const saveCapacity = async (rows: CapacityRow[]): Promise<boolean> => {
+    if (!user) { toast.error("Sign in to edit your business profile"); return false; }
+    try {
+      await saveVendorCapacity(user.id, rows);
+      qc.invalidateQueries({ queryKey: ["vendor_capacity", user.id] });
+      toast.success("Capacity updated");
+      return true;
+    } catch (e) {
+      toast.error("Couldn't save", { description: errorMessage(e) });
+      return false;
+    }
+  };
+
   const detailRows = useMemo(() => [
-    { label: "Business Type",          value: vendorTypeLabel || "Not set" },
+    { label: "Business Type",          value: typeSummary || vendorTypeLabel || "Add business type", clickable: true, onClick: () => setShowTypeSheet(true) },
+    { label: "States You Serve",       value: servedSummary || "Add states you serve", clickable: true, onClick: () => setShowStatesSheet(true) },
+    { label: "Monthly Capacity",       value: capacitySummary || "Add monthly capacity", clickable: true, onClick: () => setShowCapacitySheet(true) },
     // Same field as the Contact Details "owner name" row, so it has to show the
     // same empty state rather than a fabricated fallback name.
     { label: "Company MD",             value: store?.ownerName?.trim() || "Add owner name", clickable: true, onClick: () => setShowContactModal(true) },
@@ -678,7 +704,7 @@ const BusinessProfile = () => {
     // Was the literal "Rs 2 - 5 Cr" with no column behind it. Now a real
     // column with a range picker, empty until the vendor sets one.
     { label: "Annual Turnover",        value: annualTurnover || "Add turnover range", clickable: true, onClick: () => setShowTurnoverModal(true) },
-  ], [employeeCount, annualTurnover, vendorTypeLabel, memberSince, navigate, store?.ownerName, store?.pan, store?.gstin, store?.cin, store?.yearEstablished]);
+  ], [employeeCount, annualTurnover, vendorTypeLabel, typeSummary, servedSummary, capacitySummary, memberSince, navigate, store?.ownerName, store?.pan, store?.gstin, store?.cin, store?.yearEstablished]);
 
   const reduced = useReducedMotion();
 
@@ -1687,6 +1713,26 @@ const BusinessProfile = () => {
         onClose={() => setShowAboutModal(false)}
         initial={store?.about ?? ""}
         onSave={async (about) => { await persist({ about }, "About Us updated"); }}
+      />
+
+      <BusinessTypeSheet
+        isOpen={showTypeSheet}
+        onClose={() => setShowTypeSheet(false)}
+        initialType={store?.primaryType ?? null}
+        initialCapabilities={store?.capabilities ?? EMPTY}
+        onSave={saveType}
+      />
+      <ServedStatesSheet
+        isOpen={showStatesSheet}
+        onClose={() => setShowStatesSheet(false)}
+        initial={store?.servedStates ?? EMPTY}
+        onSave={saveServedStates}
+      />
+      <CapacitySheet
+        isOpen={showCapacitySheet}
+        onClose={() => setShowCapacitySheet(false)}
+        initial={capacityRows}
+        onSave={saveCapacity}
       />
 
       <EditContactModal

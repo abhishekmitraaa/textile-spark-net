@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { CapacityUnit } from "@/data/vendorTypes";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
 
@@ -101,6 +102,12 @@ export interface VendorStoreData {
   /** ISO timestamp the vendor row was created — drives "Cosora Member Since",
    *  which was the literal string "1 Year" for every vendor. */
   createdAt: string;
+  // Ranking Part 1, F2: what the business is and where it sells. stateCode follows
+  // `state` in the database (sync_state_code); servedStates are india_states codes.
+  stateCode: string | null;
+  primaryType: string | null;
+  capabilities: string[];
+  servedStates: string[];
 }
 
 // Every column the store screens show, named. Not `*`: that pulled the 1,536-
@@ -109,7 +116,7 @@ export interface VendorStoreData {
 const MY_STORE_COLUMNS = `id, brand_name, about, city, state, country, business_type, website, logo_url, banner_url,
   owner_name, gstin, cin, is_verified, plan_expires_at, ad_verified_until, followers_count, rating_avg, reviews_count,
   profile_score, onboarding_complete, category, office_photos, year_established, employee_count, annual_turnover,
-  capacity, social, recommended_product_ids, created_at`;
+  capacity, social, recommended_product_ids, created_at, state_code, primary_type, capabilities, served_states`;
 
 /** The vendor's eight private fields. */
 export type VendorPrivate = Database["public"]["Functions"]["my_vendor_private"]["Returns"][number];
@@ -174,6 +181,10 @@ async function fetchMyVendorProfile(id: string): Promise<VendorStoreData | null>
     social: (data.social as Record<string, string[]> | null) ?? {},
     recommendedProductIds: data.recommended_product_ids ?? [],
     createdAt: data.created_at,
+    stateCode: data.state_code ?? null,
+    primaryType: data.primary_type ?? null,
+    capabilities: data.capabilities ?? [],
+    servedStates: data.served_states ?? [],
   };
 }
 
@@ -239,6 +250,9 @@ export interface VendorStorePatch {
   capacity?: string[];
   social?: Record<string, string[]>;
   recommendedProductIds?: string[];
+  primaryType?: string | null;
+  capabilities?: string[];
+  servedStates?: string[];
 }
 
 export async function saveVendorProfile(id: string, p: VendorStorePatch): Promise<void> {
@@ -271,7 +285,66 @@ export async function saveVendorProfile(id: string, p: VendorStorePatch): Promis
   if (p.capacity !== undefined) row.capacity = p.capacity;
   if (p.social !== undefined) row.social = p.social;
   if (p.recommendedProductIds !== undefined) row.recommended_product_ids = p.recommendedProductIds;
+  if (p.primaryType !== undefined) row.primary_type = p.primaryType;
+  if (p.capabilities !== undefined) row.capabilities = p.capabilities;
+  if (p.servedStates !== undefined) row.served_states = p.servedStates;
   await writeOwnVendorRow(row);
+}
+
+// ── Monthly capacity per category (Ranking Part 1, F2) ──
+// public.vendor_capacity: one row per top-level seller category. Private to the vendor
+// and admins (RLS); ranking reads it through definer functions.
+
+export interface CapacityRow {
+  categoryRoot: string;
+  monthlyCapacity: number;
+  unit: CapacityUnit;
+}
+
+async function fetchVendorCapacity(vendorId: string): Promise<CapacityRow[]> {
+  const { data, error } = await supabase
+    .from("vendor_capacity")
+    .select("category_root, monthly_capacity, unit")
+    .eq("vendor_id", vendorId)
+    .order("category_root");
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    categoryRoot: r.category_root,
+    monthlyCapacity: Number(r.monthly_capacity),
+    unit: r.unit as CapacityUnit,
+  }));
+}
+
+export function useVendorCapacity(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["vendor_capacity", vendorId],
+    queryFn: () => fetchVendorCapacity(vendorId as string),
+    enabled: Boolean(vendorId),
+  });
+}
+
+/** Makes the vendor's capacity rows exactly `rows`: upserts these, deletes the rest. */
+export async function saveVendorCapacity(vendorId: string, rows: CapacityRow[]): Promise<void> {
+  const keep = rows.map((r) => r.categoryRoot);
+  const existing = await fetchVendorCapacity(vendorId);
+  const gone = existing.map((r) => r.categoryRoot).filter((c) => !keep.includes(c));
+  if (gone.length > 0) {
+    const { error } = await supabase.from("vendor_capacity").delete().eq("vendor_id", vendorId).in("category_root", gone);
+    if (error) throw error;
+  }
+  if (rows.length > 0) {
+    const { error } = await supabase.from("vendor_capacity").upsert(
+      rows.map((r) => ({
+        vendor_id: vendorId,
+        category_root: r.categoryRoot,
+        monthly_capacity: r.monthlyCapacity,
+        unit: r.unit,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: "vendor_id,category_root" },
+    );
+    if (error) throw error;
+  }
 }
 
 // Upload a store asset (logo/banner) to the public product-images bucket under
