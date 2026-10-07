@@ -2507,8 +2507,8 @@ value. All four helpers involved are STABLE and depend only on the caller, so th
 
 ## Scheduled jobs: what runs, and the bounded history (2026-09-27)
 
-Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 2026-09-27 restore
-(`20260927153142`):
+Thirteen pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`), the 2026-09-27 restore
+(`20260927153142`) and the 2026-10-06 restore of the embedding jobs (`20261006165817_restore_embedding_jobs.sql`):
 
 | Job | Schedule (UTC) | Does |
 |---|---|---|
@@ -2520,11 +2520,16 @@ Eight pg_cron jobs run after the 2026-09-26 deletion (`20260926082046`) and the 
 | `embedding-health-log` | every 10 min | `record_embedding_pipeline_health()` (System Health's history) |
 | `fx-rates-refresh` | 16:30 daily | Posts to `fx-rates-refresh`; raises without the Vault key |
 | `cron-history-prune` | 03:11 daily | Deletes `cron.job_run_details` rows older than 14 days |
+| `embedding-worker` | every minute | Returns at once when nothing waits; otherwise posts to `generate-embedding` once per 20 waiting jobs (at most 10); raises if the Vault key is missing while work waits |
+| `vendor-catalog-recompute` | every minute | `drain_vendor_catalog_recompute(50)` |
+| `embedding-health-alarm` | :05, :15, … | Raises while `embedding_pipeline_health()` isn't OK |
+| `prune-query-embedding-cache` | 03:17 daily | `prune_search_query_embeddings()` |
+| `prune-embed-rate-limit` | 03:23 daily | Deletes `embed_query_rate_limit` rows older than a day (not the global one) |
 
 - **Why the prune exists:** `cron.job_run_details` is never pruned by pg_cron and has no jobid index. It was 60,950 rows and 145 MB of the 212 MB database on 2026-09-27. At today's ~460 runs a day it now holds about 6,500 rows.
 - **Reading it:** walk the `runid` primary key (`order by runid desc limit …`, or `runid > max(runid) - N`). `admin_cron_status()` does both.
 - **Adding or changing a job** needs Mitra's say-so. A job whose work is conditional must RAISE when it can't do the work (see "A SQL statement that does nothing still SUCCEEDS" in `claude.md`).
-- **Off:** `embedding-worker`, `vendor-catalog-recompute`, `embedding-health-alarm`, `prune-query-embedding-cache`, `prune-embed-rate-limit` (`ToDo.md`).
+- **Restored 2026-10-06:** the five embedding jobs. On the first two ticks the worker drained the 2 waiting jobs (one 7 days old), the recompute drained its 1 vendor, and `embedding_pipeline_health()` went from CRITICAL to OK. The worker's `net.http_post` has no `timeout_milliseconds`, so pg_net records a 5-second timeout when `generate-embedding` runs longer (a cold start); the function still finishes and writes the embeddings.
 
 ## Support: tickets, messages and the admin console (Help & Support, 2026-09-30; live 2026-10-01, rollout Off)
 

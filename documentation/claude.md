@@ -1096,9 +1096,10 @@ undocumented. Deep technical rationale for each lives in
   - a new `cron-history-prune` (03:11), which deletes `cron.job_run_details` rows older than
     14 days. That table was 145 MB of a 212 MB database.
 
-  Still off, on purpose: `embedding-worker` and `vendor-catalog-recompute` (the two every-minute
-  jobs; embeddings need OpenAI billing), `embedding-health-alarm`, and the two cache/rate-limit
-  prunes (`ToDo.md`). Admins see every job's last run on Cosora-Admin's System Health page
+  Restored 2026-10-06 (Mitra, `20261006165817_restore_embedding_jobs.sql`): `embedding-worker` and
+  `vendor-catalog-recompute` (every minute), `embedding-health-alarm` (:05, :15, …), and the two
+  cache/rate-limit prunes (03:17, 03:23), each from its last definition, verbatim. OpenAI answered
+  again (a search was embedded on 2026-10-05). Admins see every job's last run on Cosora-Admin's System Health page
   (`admin_cron_status()`). Don't add or re-create a job without Mitra's say-so.
 - **A SQL statement that does nothing still SUCCEEDS — that is how a cron job lies.**
   The embedding worker was `select net.http_post(...) where exists (<vault secret>)`.
