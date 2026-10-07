@@ -481,7 +481,7 @@ create table admin.billing_entity (
   gstin         text not null check (public.gstin_is_valid(gstin)),
   pan           text not null check (pan ~ '^[A-Z]{5}[0-9]{4}[A-Z]$'),
   sac_code      text check (sac_code is null or sac_code ~ '^[0-9]{6}$'),
-  invoice_prefix text not null default 'INV' check (invoice_prefix ~ '^[A-Z]{2,6}$'),
+  invoice_prefix text not null default 'INV' check (invoice_prefix ~ '^[A-Z]{2,4}$'),  -- PREFIX/2627/000123 stays within GST's 16 characters
   email         text check (email is null or email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$'),
   phone         text check (phone is null or phone ~ '^\+?[0-9 ]{8,16}$'),
   updated_at    timestamptz not null default now(),
