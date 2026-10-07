@@ -446,15 +446,30 @@ returns uuid
 language plpgsql volatile security definer set search_path = '' as $function$
 declare
   v_vendor uuid;
-  v_order text;
+  v_order  text;
+  v_id     uuid;
+  v_step   jsonb := coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('event', p_event, 'at', now());
 begin
   if coalesce(auth.role(), '') <> 'service_role' then
     raise exception 'billing_dispute_event is for the payment functions only' using errcode = '42501';
   end if;
+  -- One incident per disputed payment: a later event (under review, action required, won,
+  -- lost, closed) is added to the open one instead of opening another.
+  select i.id into v_id from admin.billing_incidents i
+   where i.kind = 'dispute' and i.payment_ref = p_payment_ref and i.resolved_at is null
+   order by i.created_at desc limit 1
+   for update;
+  if v_id is not null then
+    update admin.billing_incidents
+       set detail = detail || jsonb_build_object('event', p_event,
+                      'events', coalesce(detail -> 'events', '[]'::jsonb) || jsonb_build_array(v_step))
+     where id = v_id;
+    return v_id;
+  end if;
   select i.vendor_id, i.razorpay_order_id into v_vendor, v_order
     from public.subscription_invoices i where i.razorpay_payment_id = p_payment_ref limit 1;
   return admin.billing_incident_open('dispute', v_vendor, v_order, p_payment_ref,
-    coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('event', p_event));
+    coalesce(p_detail, '{}'::jsonb) || jsonb_build_object('event', p_event, 'events', jsonb_build_array(v_step)));
 end
 $function$;
 

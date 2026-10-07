@@ -13,16 +13,22 @@
 //     for a browser that closed before verify-payment ran.
 //   * refund.processed / refund.failed: completes or fails the refund recorded on the
 //     invoice; a processed refund issues a credit note.
-//   * payment.dispute.*: opens a billing incident for finance.
+//   * payment.dispute.*: one billing incident per disputed payment; each later event
+//     (under review, action required, won, lost, closed) is added to it.
 //   * payment.failed and anything else: recorded only.
-// Both webhook URLs (this and razorpay-webhook, for ads) receive every event for the
-// account; an order that isn't a subscription order is recorded as not ours.
+// A payment that isn't a plan payment (an ad, say) is recorded as not ours.
 //
-// Setup: Razorpay dashboard → Webhooks →
+// Setup: Razorpay dashboard → Account & Settings → Webhooks, once in Test mode and again
+// in Live mode (each mode keeps its own webhooks):
 //   URL:    https://<project>.supabase.co/functions/v1/subscription-webhook
-//   events: payment.captured, order.paid, payment.failed, refund.processed, refund.failed,
-//           payment.dispute.created, payment.dispute.won, payment.dispute.lost, payment.dispute.closed
-//   secret: the RAZORPAY_WEBHOOK_SECRET function secret
+//   secret: the same value as the RAZORPAY_WEBHOOK_SECRET function secret (razorpay-webhook,
+//           for ads, reads the same secret, so its webhook uses the same value)
+//   events: payment.captured, payment.failed, order.paid, refund.processed, refund.failed,
+//           payment.dispute.created, payment.dispute.under_review, payment.dispute.action_required,
+//           payment.dispute.won, payment.dispute.lost, payment.dispute.closed
+// Payments must be captured automatically (Account & Settings → Payment capture): an
+// authorised payment that is never captured is refunded by Razorpay, and the reconciler
+// only records it.
 
 import { disputeEvent, finishPaymentEvent, fulfilOrder, recordPaymentEvent, refundEvent, sha256Hex } from "../_shared/fulfil.ts";
 

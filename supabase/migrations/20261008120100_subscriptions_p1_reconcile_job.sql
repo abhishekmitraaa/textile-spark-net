@@ -1,8 +1,8 @@
 -- Subscriptions P1: the billing-reconcile schedule (2026-10-08).
 --
--- A NEW SCHEDULED JOB: apply only with Mitra's say-so (claude.md: every new pg_cron job
--- needs his approval). It is separate from 20261008120000 so the billing core can ship
--- without it.
+-- A new scheduled job, approved by Mitra on 2026-10-08 (claude.md: every new pg_cron job
+-- needs his approval). Applied with P1's release, right after 20261008120000 and once
+-- billing-reconcile is deployed (before that the job would call a missing function).
 --
 --   billing-reconcile   */15 * * * *   calls the billing-reconcile edge function
 --

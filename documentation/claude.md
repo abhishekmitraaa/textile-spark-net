@@ -191,6 +191,9 @@ undocumented. Deep technical rationale for each lives in
   outcome is never processed twice.
 - **Invoice PDFs live in the private `invoices` bucket** (P1): `invoice-render` draws one once, at
   `<vendor>/<number>.v<version>.pdf`; the browser signs a 5-minute link with its own session.
+- **Invoices are written in English only** (Mitra, 2026-10-08). The invoice document
+  (`src/components/vendor/InvoiceSheet.tsx`) is marked `data-no-translate` and skipped by the i18n check; the PDF is
+  English; the page around it (buttons, messages) is translated as usual.
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with

@@ -3124,8 +3124,9 @@ Plan: build every vendor subscription feature, phase by phase behind switches (M
 ## Subscriptions P1: billing core (2026-10-08)
 
 Migrations `20261008120000_subscriptions_p1_billing_core.sql` (guard: `admin.subscription_quote` md5
-`c61474b3…`) and `20261008120100_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, applied only with
-Mitra's say-so). Built on branch `subscriptions/p1-billing-core`; not applied.
+`c61474b3…`) and `20261008120100_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, approved by Mitra on
+2026-10-08, applied with P1's release after `billing-reconcile` is deployed). Built on branch
+`subscriptions/p1-billing-core`; not applied.
 
 - **`public.subscription_fulfil(p_order_ref, p_payment_ref, p_source)`** (definer; service role only; source verify,
   webhook, free, demo or reconcile). One transaction:
@@ -3170,7 +3171,8 @@ Mitra's say-so). Built on branch `subscriptions/p1-billing-core`; not applied.
   duplicate with an outcome, and answers 500 when fulfilment couldn't reach the database (the event stays unfinished
   and the retry processes it). Handled: payment.captured / order.paid → fulfil; refund.processed / refund.failed →
   `subscription_refund_event()` (a full refund also sets `status = 'refunded'`); payment.dispute.* →
-  `billing_dispute_event()` (an incident); payment.failed recorded; the rest ignored.
+  `billing_dispute_event()`: one incident per disputed payment, each later event (under review, action required, won,
+  lost, closed) appended to `detail.events` with `detail.event` the latest; payment.failed recorded; the rest ignored.
 - **S-7:** `admin.subscription_quote`'s credit counts only `payment_mode = 'live'` invoices once `live_since` is set.
 - **Reconciliation:** `billing_reconcile_candidates(limit)` (unpaid live/test orders 15 minutes to 3 days old, not
   checked in the last 15 minutes) and `billing_reconcile_mark()`, service role. `billing-reconcile` (service-role
@@ -3191,7 +3193,8 @@ Mitra's say-so). Built on branch `subscriptions/p1-billing-core`; not applied.
   (`rzp_test_` → test). Cosora-Admin's admin-refund-payment refunds `total_paise` when present.
 - **App:** `subscriptions.ts` reads the P1 columns (stepping back on 42703) and `invoicePdfLink()`;
   `PurchaseResult.paid` when Razorpay took the money but the browser couldn't finish; `InvoiceDetail.tsx` renders
-  the frozen document in vendor blue. Cosora-Admin: `BillingIncidentsPanel`, invoice document badges, exact totals
+  the frozen document in vendor blue through `src/components/vendor/InvoiceSheet.tsx`, English only (Mitra,
+  2026-10-08: `data-no-translate`, skipped by `scripts/i18n-coverage-check.mjs`). Cosora-Admin: `BillingIncidentsPanel`, invoice document badges, exact totals
   and a PDF button on Subscriptions.
 - **Local stack:** `supabase start` serves only the functions present when it started; `invoice-render` and
   `billing-reconcile` were tested on a second edge-runtime container with the same environment

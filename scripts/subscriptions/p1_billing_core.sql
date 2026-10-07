@@ -45,7 +45,7 @@ declare
     'S-7 after live: only live invoices earn credit',               -- 16
     'event recorded once',                                          -- 17
     'refund event completes the refund',                            -- 18
-    'dispute event opens an incident',                              -- 19
+    'dispute events: one incident per payment, each step added',    -- 19
     'reconcile lists unpaid live intents, skips marked ones',       -- 20
     'incidents: finance reads, a moderator is refused',             -- 21
     'incidents: resolving needs a reason and is logged',            -- 22
@@ -239,9 +239,12 @@ begin
       elsif i = 19 then
         j := public.subscription_fulfil('order_p1_live', 'pay_p1', 'verify');
         perform public.billing_dispute_event('pay_p1', 'payment.dispute.created', '{"amount": 203400}');
+        perform public.billing_dispute_event('pay_p1', 'payment.dispute.under_review', '{"amount": 203400}');
+        perform public.billing_dispute_event('pay_p1', 'payment.dispute.won', '{"amount": 203400}');
         reset role;
-        select kind || ' ' || (vendor_id = vendor) into got from admin.billing_incidents where kind = 'dispute' and payment_ref = 'pay_p1';
-        want := 'dispute true';
+        select string_agg(kind || ' ' || (vendor_id = vendor) || ' ' || (detail ->> 'event') || ' events=' || jsonb_array_length(detail -> 'events'), ';')
+          into got from admin.billing_incidents where kind = 'dispute' and payment_ref = 'pay_p1';
+        want := 'dispute true payment.dispute.won events=3';
       elsif i = 20 then
         select string_agg(order_id, ',' order by order_id) into got from public.billing_reconcile_candidates(50) where order_id like '%p1%';
         perform public.billing_reconcile_mark('order_p1_live');

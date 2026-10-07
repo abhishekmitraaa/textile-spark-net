@@ -3,7 +3,7 @@
 // Catches payments that reached Razorpay but never reached us (subscriptions P1,
 // 2026-10-08): the browser closed before verify-payment ran AND the webhook didn't
 // arrive or failed. Every 15 minutes (cron job billing-reconcile, migration
-// 20261008120100, scheduled only with Mitra's say-so) it asks the database for unpaid
+// 20261008120100, approved by Mitra on 2026-10-08) it asks the database for unpaid
 // live or test plan orders between 15 minutes and 3 days old
 // (billing_reconcile_candidates), asks Razorpay for each order's payments, and fulfils
 // any order with a captured payment through the same transaction verify-payment uses.

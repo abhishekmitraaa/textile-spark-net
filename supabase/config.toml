@@ -128,7 +128,7 @@ verify_jwt = true
 verify_jwt = true
 
 # Subscriptions P1 (2026-10-08): catches plan payments that reached Razorpay but never
-# reached us. Posted to by the billing-reconcile cron job (once approved) with the
+# reached us. Posted to by the billing-reconcile cron job (approved 2026-10-08) with the
 # service-role key from Vault; the handler also requires role = service_role.
 [functions.billing-reconcile]
 verify_jwt = true

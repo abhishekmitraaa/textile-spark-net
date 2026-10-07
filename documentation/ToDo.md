@@ -6,6 +6,18 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Give Cosora's GST details for the tax invoice — added 2026-10-08
+- Task: Mitra sends Cosora's registered legal name, trade name (if any), registered address with PIN code, state,
+  GSTIN, PAN, the SAC code the CA confirms for the subscription service, and the invoice number prefix (2–4 capital
+  letters, e.g. INV). They are entered on Cosora-Admin → Billing details (`/billing-details`, super admin or finance
+  admin, with a reason); the form checks the GSTIN's checksum, that it matches the state, and that the PAN matches it.
+- Context: subscriptions P1 issues a GST tax invoice only when these are set. Until then a live payment gets a
+  payment receipt and an `invoice_incomplete` billing incident, so they must be in place before Razorpay's live keys
+  go in. Invoices are written in English only (Mitra, 2026-10-08).
+- Reference: 2026-10-08, vendor subscriptions session, prompt 6 ("i'll give you the gst details later, for now add
+  that to todo.md").
+- Status: Open
+
 ### Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08
 - Task: design and build Gold's "We do it for you" catalogue upload and VIP's "AI smart catalog": a seller uploads a
   PDF, Excel sheet or photos, and listings are drafted (by Cosora's team for Gold, by AI for VIP) for review before
