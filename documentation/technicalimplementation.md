@@ -3061,3 +3061,14 @@ Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (ven
 - Editing a product loads its attributes and location back into the form, so a save never blanks them.
 - Tests: `scripts/ranking/f1_attributes.sql` (11 cases), `tests/local/ranking-f1.spec.ts` (helpers, product create and edit, requirement, lead card and admin detail).
 
+### Part 1, F2: who the vendor is, and where
+- `public.india_states` (code, name, `name_hi`, `name_gu`, aliases): the 36 states and union territories, ISO 3166-2:IN codes without `IN-`, readable by everyone. Seeded from `src/data/indiaStates.ts`.
+- `state_name_key(text)` lower-cases, reads `&` as "and" and drops everything but letters; `state_code_for(text)` matches that key against names and aliases ("Orissa", "J&K", "Pondicherry") and returns the code or null. `stateCodeFor()` is the same in TypeScript.
+- `vendor_profiles.state_code` and `buyer_profiles.state_code` (FK to `india_states`) are set by `sync_state_code()` (BEFORE INSERT / UPDATE OF `state`, `state_code`): a writer's own code wins, otherwise the code follows the name. Backfilled where the name matches.
+- `vendor_profiles` gains `served_states text[]` (codes), `primary_type` and `capabilities text[]`, each checked against its list and granted column by column to anon and authenticated (the table's columns are granted one by one since the PII revoke).
+- `vendor_type_from_labels(labels, business_type)` maps the onboarding business labels (`businessCategoryGroups.ts`) to a primary type (the first group ticked: manufacturer, trader / wholesaler, retailer, service provider) and capabilities. The backfill fills only empty values; the "Export-grade" capacity band also counts as export-ready.
+- `public.vendor_capacity` (vendor, `category_root`, `monthly_capacity` > 0, unit in pieces / metres / kg / litres / orders / projects): RLS owner-or-admin read and owner write, nothing for anon, audited by `admin.audit_row_change`. `saveVendorCapacity()` makes the vendor's rows exactly the list: deletes the ones removed, upserts the rest.
+- UI: one `StateSelect` in onboarding, the vendor's contact details and the buyer's business details. The business profile's Business Type row opens `BusinessTypeSheet`; two new rows, States You Serve and Monthly Capacity, open `ServedStatesSheet` and `CapacitySheet` (`src/components/vendor/BusinessReachSheets.tsx`, sharing `EditSheet`). Capacity units default by category (`defaultCapacityUnit()`).
+- The buyer location nudge moved to Part 3: nothing reads buyer location until Fit ranks leads.
+- Tests: `scripts/ranking/f2_vendor_profile.sql` (18 cases), `tests/local/ranking-f2.spec.ts` (state required and coded; buyer state code; type, served states and capacity end to end).
+

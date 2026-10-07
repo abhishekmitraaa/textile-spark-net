@@ -4,7 +4,7 @@
 
 **Goal:** Every vendor and buyer has a canonical state; vendors can say which states they serve, what kind of business they are, and how much they can make a month.
 
-**Architecture:** One migration adds `india_states` (36 rows), `state_code_for()`, `state_code` on vendor and buyer profiles kept in step with the free-text `state` by a trigger, `served_states` / `primary_type` / `capabilities` on vendor profiles (backfilled from today's business labels), and a private `vendor_capacity` table. One shared `StateSelect` replaces three free-text state inputs. The business profile gets a "Business type & reach" section. Buyers without a location get a one-line nudge.
+**Architecture:** One migration adds `india_states` (36 rows), `state_code_for()`, `state_code` on vendor and buyer profiles kept in step with the free-text `state` by a trigger, `served_states` / `primary_type` / `capabilities` on vendor profiles (backfilled from today's business labels), and a private `vendor_capacity` table. One shared `StateSelect` replaces three free-text state inputs. The business profile gets a "Business type & reach" section. (The buyer location nudge moved to Part 3; see Task 4.)
 
 **Tech Stack:** Postgres 17, React 18 + TypeScript, Playwright (local stack).
 
@@ -52,7 +52,16 @@ Files: `src/lib/queries/vendorStore.ts` (type, capabilities, served states; capa
 - [ ] Spec: a vendor picks Manufacturer + Private label, serves Gujarat and Maharashtra, and enters 5,000 pieces a month for Apparel; all four persist and reload.
 - [ ] RED; implement; checks; GREEN; commit.
 
-### Task 4: Buyer location nudge
+### Task 4: Buyer location nudge (moved to Part 3, Fit)
+
+Moved during F2. Nothing reads buyer location before Fit: `match_vendor_rfqs` ranks by catalogue similarity only,
+and leads don't show the buyer's location. "Add your business location to get nearby suppliers first" would
+promise something not yet live, so the nudge ships with Fit, when it becomes true. F2 still collects buyer state
+through the business-details picker (Task 2). On the profile it shares the one banner slot with the existing
+"Add your city" nudge rather than stacking a second banner.
+
+Original task, carried into the Fit plan:
+
 
 Files: `src/components/buyer/LocationNudge.tsx`; `src/pages/Profile.tsx`, `src/pages/MyQuotes.tsx`; i18n.
 

@@ -10,7 +10,7 @@ read what it stores.
 |---|---|
 | Where vendor ranking is used | Two scores. **Fit** (vendor ↔ requirement) orders each vendor's lead feed; every vendor still sees every lead. **Standing** (reviews, traffic, activity, company type, trust) ranks vendors for buyers: suggested suppliers on a requirement, quote order in My Quotes, search. |
 | Location | The vendor's base location (profile) plus optional "states I serve", against the buyer's profile location. The requirement form never asks for a delivery city. |
-| Buyer location source | The buyer's profile city/state. When missing, location is neutral for that requirement; a gentle nudge on the profile and My Quotes, never on the requirement form. |
+| Buyer location source | The buyer's profile city/state. When missing, location is neutral for that requirement; a gentle nudge on the profile and My Quotes (shipping with Part 3, when location starts to count), never on the requirement form. |
 | "How often and how many people" | Both: buyer interest (unique buyers, repeat visits) weighted more; vendor activity (how often they answer requirements, how fast). Part 2. |
 | Category attributes | Vendors fill them on products; the requirement form shows the same category's attributes as optional fields. |
 | Company type | One required primary type plus optional capability tags. |
@@ -76,8 +76,9 @@ read what it stores.
 - **Capacity:** `public.vendor_capacity` (vendor, top-level category, monthly number). The unit comes from the
   category (garments: pieces; fabric: metres; yarn, chemicals: kg; services: projects or orders). Readable by the
   vendor and admins only; ranking reads it through a definer function. The buyer-facing capacity bands stay.
-- **Buyer:** `buyer_profiles.state_code`; the buyer profile edit uses the same picker; a one-line nudge on the
-  profile and My Quotes when the location is missing.
+- **Buyer:** `buyer_profiles.state_code`; the buyer profile edit uses the same picker. The one-line nudge on the
+  profile and My Quotes moved to Part 3: nothing reads buyer location until Fit ships, so "get nearby suppliers
+  first" would promise something not yet live.
 
 ## F3 — One vocabulary, editable by admins
 

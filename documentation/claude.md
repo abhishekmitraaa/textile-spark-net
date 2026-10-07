@@ -994,6 +994,20 @@ undocumented. Deep technical rationale for each lives in
   column field ends up in both places. Attribute values are part of `search_text` (`attributes_search_text()`), so
   search and the embeddings use them, and both embedding triggers fire when they change. Migration `20261007035941_attributes_capture.sql`
   (applied 2026-10-07); harness `scripts/ranking/f1_attributes.sql`; spec `documentation/ranking-foundations-design-2026-10-07.md`.
+- **A state is picked, never typed, and carries a code (Ranking Part 1, F2, Mitra 2026-10-07).** Every state input
+  is `StateSelect` (`src/components/StateSelect.tsx`); the list is `src/data/indiaStates.ts`, and
+  `public.india_states` was seeded from it, so change both together. `state` stays the display name; `state_code`
+  (on `vendor_profiles` and `buyer_profiles`) follows it through `sync_state_code()` unless the writer sets the code
+  itself. `stateCodeFor()` mirrors `state_code_for()`; a name that matches nothing gets a null code, never a guess.
+  A vendor's contact details can't be saved without a state.
+- **What a vendor is, where it sells and how much it makes (Ranking Part 1, F2).** `primary_type` (one of six) and
+  `capabilities` (five) are checked by constraints that `src/data/vendorTypes.ts` mirrors; keep them in step. Saving
+  the type also writes its English label to `business_type`, which the header and review cards read. `served_states`
+  holds codes beyond the vendor's own. `vendor_capacity` (monthly number and unit per top-level category) is private
+  to the vendor and admins; ranking will read it through a definer function. It is not the buyer-facing capacity
+  bands (`vendor_profiles.capacity`), which stay. Nothing ranks on any of this until Part 3 (Fit); the buyer
+  location nudge waits for Fit too, so it never promises nearby suppliers before location counts. Migration
+  `20261007150000_vendor_type_location_capacity.sql`; harness `scripts/ranking/f2_vendor_profile.sql`.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
   is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
   (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,
