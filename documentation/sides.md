@@ -482,6 +482,11 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-07 (product moderation)
+- **My Products says what Cosora decided:** "Removed by Cosora" with the reason (no Edit; the listing can only be
+  deleted), "Under review: flagged" with the reason (hidden from buyers until it's reviewed), or "Rejected" with the
+  moderator's reason (it used to look like a plain draft). Each comes with a notification that opens My Products.
+
 ### Changed 2026-10-02 (FAQ input; built, not live)
 - **Registration asks for the Seller Registration FAQ's documents:** the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, incorporation certificate, shop licence or partnership deed), the owner's masked Aadhaar with consent, and a catalogue or a first product. The documents step can't be skipped.
 - **`/kyc`** shows all five; a seller registered earlier adds what's missing on its row.
@@ -672,6 +677,16 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - **Register a staff member** (Admins page, super admin and manager; a manager registers into the team roles only): name, personal email, mobile number and role. The panel generates the employee ID (`EMP-0001`) and the work email the person signs in with, and sends a temporary password to their personal email, or shows it once while email isn't set up. The person chooses their own password at first sign-in.
 - **Staff directory:** everyone registered, with "New temporary password" for someone locked out. The Admin Log records both.
 - The ID and email formats are interim (`ToDo.md`).
+
+### Added 2026-10-07 (product moderation)
+- **Products:** product moderators, managers and super admins **remove** a listing (a final takedown) or **flag** a live
+  one (hidden and back in the queue), picking the reason in the dialog from the managed list, with optional details for
+  the vendor and a preview of what they'll read. A **Removed** tab; super admins and managers **reinstate** a removal
+  to the vendor's drafts. Each listing shows its moderation history. The vendor is notified every time, and every
+  action is in the Admin Log with its reason.
+- **Moderation reasons** (`/moderation-reasons`): super admins and managers add, edit, switch off and reorder the
+  reasons; product moderators read them.
+- **Managers moderate products** in full (approve, reject, flag, remove).
 
 ### Added 2026-10-02 (FAQ input; built, not live)
 - **Subscriptions:** a "7-day money-back guarantee" panel lists each request with its payments; refund each through Razorpay, then "Close and end the plan". A paid downgrade shows under the current period.
