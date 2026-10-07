@@ -109,6 +109,19 @@ export async function freshAccount(prefix: string, { seller = false } = {}): Pro
   return { id, email, session: signedIn.data.session };
 }
 
+/**
+ * Put an account on, or take it off, a feature switch's list (subscriptions P0). Plan
+ * checkouts are closed unless `subscription_checkout` is on for the account, so a spec
+ * that buys a plan lists its fresh seller first.
+ */
+export function allowFeature(key: string, id: string): void {
+  sql(`update public.feature_flags set allow_profile_ids = array(select distinct unnest(allow_profile_ids || '{${id}}'::uuid[]))
+        where key = '${key}';`);
+}
+export function disallowFeature(key: string, id: string): void {
+  sql(`update public.feature_flags set allow_profile_ids = array_remove(allow_profile_ids, '${id}'::uuid) where key = '${key}';`);
+}
+
 /** A browser context signed in with a session from freshAccount(). */
 export async function contextWithSession(browser: Browser, session: Session, viewport = { width: 390, height: 900 }): Promise<BrowserContext> {
   const ctx = await browser.newContext({ viewport });

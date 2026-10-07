@@ -6,6 +6,26 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08
+- Task: design and build Gold's "We do it for you" catalogue upload and VIP's "AI smart catalog": a seller uploads a
+  PDF, Excel sheet or photos, and listings are drafted (by Cosora's team for Gold, by AI for VIP) for review before
+  moderation.
+- Context: the subscriptions build plan (`~/.claude/plans/now-i-wnat-you-refactored-crane.md`, approved 2026-10-08)
+  builds every other tier feature. Mitra asked to hold these two: "hold this off in Todo.md". The proposal was OpenAI
+  (already used for search) turning an upload into draft listings (name, category, attributes, price, MOQ),
+  rate-limited per vendor and still moderated. Until built, the plan comparison shows "Coming soon" for the Gold and
+  VIP catalogue rows (subscriptions P11). Basic's PDF catalogue and Silver's bulk import are in the plan.
+- Reference: 2026-10-08, vendor subscriptions session, planning round 4 (the AI catalogue question).
+- Status: Open
+
+### Check GSTIN and PAN at seller registration — added 2026-10-08
+- Task: validate the GSTIN (with its checksum) and PAN in `Onboarding.tsx` before saving, using `src/lib/taxIds.ts`,
+  and upper-case them.
+- Context: subscriptions P0 checks them on /subscription, but onboarding still saves whatever is typed, and both are
+  printed on tax invoices. A database CHECK was left out because onboarding would then fail on lower-case input.
+- Reference: 2026-10-08, subscriptions P0 (securityflags S-6).
+- Status: Open
+
 ### <short task title> — added YYYY-MM-DD
 - Task: plain description of what needs to be done
 - Context: why this came up, what it depends on or relates to, and any detail needed

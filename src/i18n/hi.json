@@ -7511,5 +7511,21 @@
  "Enter how much you can make or handle in a month": "बताएँ कि आप एक महीने में कितना बना या संभाल सकते हैं",
  "How much you can make or handle in a month, per category. Only you and Cosora see these numbers.": "हर श्रेणी में आप एक महीने में कितना बना या संभाल सकते हैं। ये आँकड़े सिर्फ़ आप और कोसोरा देखते हैं।",
  "Select a category": "श्रेणी चुनें",
- "Per month": "प्रति माह"
+ "Per month": "प्रति माह",
+ "Plan purchases open soon": "प्लान की खरीद जल्द शुरू होगी",
+ "Buying, renewing and changing plans isn't open yet. Your current plan stays as it is.": "प्लान खरीदना, रिन्यू करना और बदलना अभी शुरू नहीं हुआ है। आपका मौजूदा प्लान जैसा है वैसा ही रहेगा।",
+ "Finish your seller registration first": "पहले अपना विक्रेता पंजीकरण पूरा करें",
+ "Plans are for registered sellers. Complete onboarding, then choose a plan.": "प्लान पंजीकृत विक्रेताओं के लिए हैं। ऑनबोर्डिंग पूरी करें, फिर प्लान चुनें।",
+ "Your account is suspended": "आपका खाता निलंबित है",
+ "You can't buy or change a plan while it's suspended. Contact Cosora Support.": "खाता निलंबित रहते हुए आप प्लान नहीं खरीद या बदल सकते। Cosora Support से संपर्क करें।",
+ "This account can't buy a plan": "यह खाता प्लान नहीं खरीद सकता",
+ "It has been deleted.": "इसे हटा दिया गया है।",
+ "Couldn't start the checkout": "चेकआउट शुरू नहीं हो सका",
+ "Nothing was charged. Please try again in a minute.": "कोई राशि नहीं ली गई। कृपया एक मिनट में फिर कोशिश करें।",
+ "Enter a valid 15-character GSTIN, for example 27AAPFU0939F1ZV.": "15 अक्षरों का मान्य GSTIN डालें, जैसे 27AAPFU0939F1ZV।",
+ "Enter a valid 10-character PAN, for example AAPFU0939F.": "10 अक्षरों का मान्य PAN डालें, जैसे AAPFU0939F।",
+ "Tax details saved": "टैक्स विवरण सहेजा गया",
+ "This plan is by invitation": "यह प्लान केवल आमंत्रण पर है",
+ "Contact Cosora to ask about it.": "इसके बारे में पूछने के लिए Cosora से संपर्क करें।",
+ "By invitation": "आमंत्रण पर"
 }

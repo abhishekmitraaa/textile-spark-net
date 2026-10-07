@@ -19,11 +19,14 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import {
-  useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription, type ChangeKind,
+  useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription, isCheckoutRefusal,
+  type ChangeKind, type CheckoutRefusal,
 } from "@/lib/queries/subscriptions";
 import { RefundGuaranteeCard } from "@/components/vendor/RefundGuaranteeCard";
 import { discountRefusal } from "@/lib/queries/discounts";
-import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
+import { fetchMyVendorPrivate, writeOwnVendorRow } from "@/lib/queries/vendorStore";
+import { useFeatureFlag } from "@/lib/queries/featureFlags";
+import { isValidGstin, isValidPan, normaliseTaxId } from "@/lib/taxIds";
 import { PlanCheckoutDialog } from "@/components/vendor/PlanCheckoutDialog";
 import {
   formatINR, tierStyle, isUnlimited, usagePct, yearlySavingsPct, yearlySavingsAmount,
@@ -50,6 +53,15 @@ const FEATURE_ROWS: { key: keyof PlanDisplay; label: string }[] = [
   { key: "crm", label: "CRM & lead management" },
   { key: "catalog", label: "Automatic catalog upload" },
 ];
+
+// What a vendor reads when the checkout gate refuses them (subscriptions P0).
+const CHECKOUT_REFUSAL_TEXT: Record<CheckoutRefusal, { title: string; description: string }> = {
+  payments_not_open: { title: "Plan purchases open soon", description: "Buying, renewing and changing plans isn't open yet. Your current plan stays as it is." },
+  not_vendor: { title: "Finish your seller registration first", description: "Plans are for registered sellers. Complete onboarding, then choose a plan." },
+  suspended: { title: "Your account is suspended", description: "You can't buy or change a plan while it's suspended. Contact Cosora Support." },
+  deleted: { title: "This account can't buy a plan", description: "It has been deleted." },
+  unavailable: { title: "Couldn't start the checkout", description: "Nothing was charged. Please try again in a minute." },
+};
 
 function isNegative(v: string): boolean {
   return v === "No" || v === "None" || v === "—" || v === "";
@@ -85,22 +97,52 @@ export default function Subscription() {
   // they land on the invoice for input credit). Loaded once on mount.
   const [gstin, setGstin] = useState("");
   const [pan, setPan] = useState("");
+  // What was last loaded or saved, so leaving a field unchanged saves nothing.
+  const [savedTax, setSavedTax] = useState<{ gstin: string; pan: string }>({ gstin: "", pan: "" });
+  const [taxError, setTaxError] = useState<{ gstin?: string; pan?: string }>({});
   useEffect(() => {
     if (!user) return;
     // GSTIN is a public column; PAN is private (admin completion Phase 4) and
     // comes from my_vendor_private(), the vendor's own row only.
     supabase.from("vendor_profiles").select("gstin").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) setGstin(data.gstin ?? ""); });
+      .then(({ data }) => {
+        if (data) { setGstin(data.gstin ?? ""); setSavedTax((s) => ({ ...s, gstin: data.gstin ?? "" })); }
+      });
     fetchMyVendorPrivate(user.id)
-      .then((priv) => { if (priv) setPan(priv.pan ?? ""); })
+      .then((priv) => { if (priv) { setPan(priv.pan ?? ""); setSavedTax((s) => ({ ...s, pan: priv.pan ?? "" })); } })
       .catch(() => { /* the field stays empty; saving still works */ });
   }, [user]);
 
-  const saveTax = async (patch: { gstin?: string; pan?: string }) => {
+  // A GSTIN or PAN is printed on every invoice, so a malformed one is refused here
+  // (subscriptions P0, S-6). Saved through writeOwnVendorRow(), as every vendor_profiles
+  // write must be, and only when the value changed.
+  const saveTax = async (field: "gstin" | "pan") => {
     if (!user) return;
-    const { error } = await supabase.from("vendor_profiles").update(patch).eq("id", user.id);
-    if (error) toast.error("Couldn't save tax details", { description: error.message });
+    const value = normaliseTaxId(field === "gstin" ? gstin : pan);
+    if (field === "gstin") setGstin(value); else setPan(value);
+    if (value === savedTax[field]) { setTaxError((e) => ({ ...e, [field]: undefined })); return; }
+    if (value && field === "gstin" && !isValidGstin(value)) {
+      setTaxError((e) => ({ ...e, gstin: "Enter a valid 15-character GSTIN, for example 27AAPFU0939F1ZV." }));
+      return;
+    }
+    if (value && field === "pan" && !isValidPan(value)) {
+      setTaxError((e) => ({ ...e, pan: "Enter a valid 10-character PAN, for example AAPFU0939F." }));
+      return;
+    }
+    setTaxError((e) => ({ ...e, [field]: undefined }));
+    try {
+      await writeOwnVendorRow(field === "gstin" ? { id: user.id, gstin: value || null } : { id: user.id, pan: value || null });
+      setSavedTax((s) => ({ ...s, [field]: value }));
+      toast.success("Tax details saved");
+    } catch (e) {
+      toast.error("Couldn't save tax details", { description: errorMessage(e) });
+    }
   };
+
+  // Plan checkouts can be closed while payments are tested (the subscription_checkout
+  // switch). The payment functions refuse anyway; this only says so up front.
+  const checkoutOpen = useFeatureFlag("subscription_checkout");
+  const checkoutClosed = checkoutOpen === false;
 
   const currentPlanId = vplan?.effective_plan_id ?? "free";
   const currentPlan = vplan?.plan;
@@ -114,8 +156,9 @@ export default function Subscription() {
   const buy = (plan: Plan) => {
     if (!user) { toast.error("Sign in as a vendor to subscribe"); return; }
     if (plan.id === "free") { toast.info("Free is the default plan — no purchase needed."); return; }
+    if (checkoutClosed) { toast(CHECKOUT_REFUSAL_TEXT.payments_not_open.title, { description: CHECKOUT_REFUSAL_TEXT.payments_not_open.description }); return; }
     if (plan.is_invite_only) {
-      toast("Cosora VIP is invite-only", { description: "Our team hand-picks VIP vendors. Ask your account manager to request access." });
+      toast("This plan is by invitation", { description: "Contact Cosora to ask about it." });
       return;
     }
     setCheckoutPlan(plan);
@@ -159,7 +202,10 @@ export default function Subscription() {
           description: "You can change plans again once it starts.",
         });
       } else if (res.error === "invite_only") {
-        toast("Cosora VIP is invite-only");
+        toast("This plan is by invitation");
+      } else if (isCheckoutRefusal(res.error)) {
+        setCheckoutPlan(null);
+        toast(CHECKOUT_REFUSAL_TEXT[res.error].title, { description: CHECKOUT_REFUSAL_TEXT[res.error].description });
       } else {
         toast.error("Couldn't complete purchase", { description: res.error });
       }
@@ -269,6 +315,18 @@ export default function Subscription() {
         {/* The 7-day money-back guarantee, while it applies (shows nothing otherwise). */}
         <RefundGuaranteeCard vendorId={user?.id} />
 
+        {/* Plan checkouts closed while payments are tested (subscription_checkout switch). */}
+        {checkoutClosed && (
+          <motion.div variants={section} role="status"
+            className="flex items-start gap-3 rounded-xl border border-brand-vendor/30 bg-brand-vendor/5 p-4">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-brand-vendor" />
+            <div>
+              <p className="text-sm font-semibold text-foreground">{CHECKOUT_REFUSAL_TEXT.payments_not_open.title}</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{CHECKOUT_REFUSAL_TEXT.payments_not_open.description}</p>
+            </div>
+          </motion.div>
+        )}
+
         {/* Plan cards — all five tiers, live */}
         {plansLoading ? (
           <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
@@ -310,7 +368,7 @@ export default function Subscription() {
                       </div>
                       {plan.is_invite_only && (
                         <div className="mb-1 flex items-center justify-center gap-1 text-[11px] font-semibold text-muted-foreground">
-                          <Lock className="h-3 w-3" /> Invite-only
+                          <Lock className="h-3 w-3" /> By invitation
                         </div>
                       )}
                       <div className="mt-1">
@@ -342,14 +400,14 @@ export default function Subscription() {
                         <Button
                           variant={popular ? "gold" : "outline"}
                           className="w-full"
-                          disabled={busy || plan.id === "free" || renewBlocked || (isCurrent && plan.is_invite_only)}
+                          disabled={busy || plan.id === "free" || renewBlocked || (isCurrent && plan.is_invite_only) || checkoutClosed}
                           onClick={() => buy(plan)}
                         >
                           {busy ? (
                             <><Loader2 className="mr-1 h-4 w-4 animate-spin" /> Processing…</>
                           ) : plan.id === "free" ? (isCurrent ? "Current Plan" : "Default")
                             : renewBlocked || (isCurrent && plan.is_invite_only) ? "Current Plan"
-                            : plan.is_invite_only ? (<><Lock className="mr-1 h-3.5 w-3.5" /> Request access</>)
+                            : plan.is_invite_only ? (<><Lock className="mr-1 h-3.5 w-3.5" /> By invitation</>)
                             : (<>{action}<ArrowRight className="ml-1 h-4 w-4" /></>)}
                         </Button>
                       </div>
@@ -423,12 +481,16 @@ export default function Subscription() {
                 <div className="space-y-2">
                   <Label htmlFor="gstin">GSTIN</Label>
                   <Input id="gstin" value={gstin} onChange={(e) => setGstin(e.target.value.toUpperCase())}
-                    onBlur={() => saveTax({ gstin: gstin || null } as { gstin: string })} placeholder="22AAAAA0000A1Z5" maxLength={15} />
+                    onBlur={() => saveTax("gstin")} placeholder="22AAAAA0000A1Z5" maxLength={15}
+                    aria-invalid={Boolean(taxError.gstin)} aria-describedby={taxError.gstin ? "gstin-error" : undefined} />
+                  {taxError.gstin && <p id="gstin-error" className="text-xs text-destructive">{taxError.gstin}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="pan">PAN (for TDS)</Label>
+                  <Label htmlFor="pan">PAN</Label>
                   <Input id="pan" value={pan} onChange={(e) => setPan(e.target.value.toUpperCase())}
-                    onBlur={() => saveTax({ pan: pan || null } as { pan: string })} placeholder="AAAAA0000A" maxLength={10} />
+                    onBlur={() => saveTax("pan")} placeholder="AAAAA0000A" maxLength={10}
+                    aria-invalid={Boolean(taxError.pan)} aria-describedby={taxError.pan ? "pan-error" : undefined} />
+                  {taxError.pan && <p id="pan-error" className="text-xs text-destructive">{taxError.pan}</p>}
                 </div>
               </div>
               <p className="mt-3 text-xs text-muted-foreground">Plan prices are exclusive of GST; 18% GST is added at checkout.</p>

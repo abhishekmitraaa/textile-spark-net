@@ -482,6 +482,12 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-08 (subscriptions P0; built, not live)
+- **Plan purchases can be closed while payments are tested.** /subscription then says "Plan purchases open soon"
+  and offers no checkout; listed test accounts can buy as usual.
+- **Cosora VIP is open to every seller** at its list price; it used to be invite-only.
+- **GSTIN and PAN are checked before they are saved** on /subscription (a GSTIN's last character is a checksum).
+
 ### Changed 2026-10-02 (FAQ input; built, not live)
 - **Registration asks for the Seller Registration FAQ's documents:** the PAN card, the GST certificate when registered for GST, a business registration (Udyam/MSME, incorporation certificate, shop licence or partnership deed), the owner's masked Aadhaar with consent, and a catalogue or a first product. The documents step can't be skipped.
 - **`/kyc`** shows all five; a seller registered earlier adds what's missing on its row.
@@ -667,6 +673,12 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-08 (subscriptions P0; built, not live)
+- **Feature switches** (`/feature-flags`): turn a new feature on for listed test accounts, then for everyone, with a
+  reason recorded in the Admin Log. Super admins change them; managers read.
+- **Billing details** (`/billing-details`): Cosora's legal name, registered address, GSTIN, PAN and SAC code for the
+  tax invoice. Super admins and finance admins edit them.
 
 ### Added 2026-10-01 (staff registration; built, not live)
 - **Register a staff member** (Admins page, super admin and manager; a manager registers into the team roles only): name, personal email, mobile number and role. The panel generates the employee ID (`EMP-0001`) and the work email the person signs in with, and sends a temporary password to their personal email, or shows it once while email isn't set up. The person chooses their own password at first sign-in.

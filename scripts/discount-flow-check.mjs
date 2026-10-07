@@ -67,6 +67,10 @@ function reset(over = {}) {
     // Plan changes (2026-10-02): what subscription_quote_for / subscription_activate
     // answer. null = a first purchase at the plan's price.
     quote: null, activation: null,
+    // Subscriptions P0 (2026-10-08): what Auth says about the bearer token (null =
+    // the token's own sub; false = Auth refuses it), and what the checkout gate answers.
+    authId: null, authOk: true,
+    gate: { ok: true }, gateFails: false,
     ...over,
   };
 }
@@ -90,6 +94,16 @@ globalThis.fetch = async (input, init = {}) => {
   const p = new URL(url).pathname;
 
   if (url.startsWith("https://api.razorpay.com/v1/orders")) return res({ id: `order_T${++S.razorpaySeq}`, amount: body.amount });
+
+  // Supabase Auth: the user behind the bearer token (subscriptions P0, S-5).
+  if (p === "/auth/v1/user") {
+    if (!S.authOk) return res({ message: "invalid JWT" }, 401);
+    const authz = init.headers?.authorization ?? init.headers?.Authorization ?? "";
+    let sub = null;
+    try { sub = JSON.parse(Buffer.from(authz.replace(/^Bearer\s+/i, "").split(".")[1], "base64url").toString()).sub; } catch { /* none */ }
+    return sub ? res({ id: S.authId ?? sub }) : res({ message: "no user" }, 401);
+  }
+  if (p === "/rest/v1/rpc/subscription_checkout_gate") return S.gateFails ? res({ message: "boom" }, 500) : res(S.gate);
 
   if (p === "/rest/v1/rpc/discount_check") return res(S.check);
   if (p === "/rest/v1/rpc/discount_reserve") return res(S.reserve ?? (S.check.ok ? { ...S.check, redemption_id: "red-1" } : S.check));
@@ -417,7 +431,8 @@ check("G3 refusal: reason and what the code is for", r.body.ok === false && r.bo
 
 reset();
 r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "   " });
-check("G4 no code: invalid, no database call", r.body.reason === "invalid" && S.calls.length === 0);
+// Only the Auth lookup of the caller (subscriptions P0) happens; nothing reaches the database.
+check("G4 no code: invalid, no database call", r.body.reason === "invalid" && S.calls.filter((c) => c.url.includes("/rest/v1/")).length === 0);
 
 reset();
 r = await call("discount-quote", { kind: "subscription", planId: "vip", billingCycle: "monthly", code: "LAUNCH25" });
@@ -487,6 +502,49 @@ reset({ quote: UPGRADE });
 r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "LAUNCH25" });
 check("H9 the checkout's code quote is off the charge too", r.body.ok && r.body.list === 1833 && rpcCalls("discount_check")[0]?.body.p_plan_rupees === 1833,
   JSON.stringify(r.body));
+
+// ── I. subscriptions P0 (2026-10-08): Auth confirms the caller; the gate decides ──
+reset({ authOk: false });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+check("I1 create-order: a token Auth refuses gets 401, and nothing is created",
+  r.status === 401 && rzpCalls().length === 0 && S.subIntents.size === 0, `${r.status} ${JSON.stringify(r.body)}`);
+
+reset({ authId: OTHER });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+intent = [...S.subIntents.values()][0];
+check("I2 create-order: the vendor is who Auth says, not the token's sub",
+  rpcCalls("subscription_checkout_gate")[0]?.body.p_vendor === OTHER && intent?.vendor_id === OTHER, JSON.stringify(intent));
+
+for (const reason of ["payments_not_open", "not_vendor", "suspended", "deleted"]) {
+  reset({ gate: { ok: false, reason } });
+  r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+  check(`I3 create-order: gate '${reason}' answers it and creates nothing`,
+    r.body.error === reason && rzpCalls().length === 0 && S.subIntents.size === 0 && rpcCalls("discount_check").length === 0,
+    JSON.stringify(r.body));
+}
+
+reset({ gateFails: true });
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+check("I4 create-order: an unanswered gate refuses", r.body.error === "unavailable" && rzpCalls().length === 0, JSON.stringify(r.body));
+
+reset({ gate: { ok: false, reason: "payments_not_open" } });
+r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
+check("I5 demo checkout: the gate refuses before any plan or invoice",
+  r.body.ok === false && r.body.error === "payments_not_open" && rpcCalls("subscription_activate").length === 0 && S.invoices.length === 0,
+  JSON.stringify(r.body));
+
+reset({ authOk: false });
+r = await call("subscription-verify-payment", { demo: true, planId: "gold", billingCycle: "monthly" }, { env: DEMO });
+check("I6 demo checkout: a token Auth refuses gets 401", r.status === 401 && S.invoices.length === 0, r.status);
+
+reset({ authOk: false });
+r = await call("discount-quote", { kind: "subscription", planId: "gold", billingCycle: "monthly", code: "LAUNCH25" });
+check("I7 discount-quote: a token Auth refuses gets 401", r.status === 401 && rpcCalls("discount_check").length === 0, r.status);
+
+reset();
+r = await call("subscription-create-order", { planId: "gold", billingCycle: "monthly" });
+check("I8 create-order: an allowed vendor still checks out as before",
+  r.body.configured === true && rzpCalls()[0]?.body.amount === 271300 && rpcCalls("subscription_checkout_gate").length === 1, JSON.stringify(r.body));
 
 console.table(rows);
 console.log(failures === 0

@@ -23,6 +23,7 @@
 import type { AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, checkDiscount, normaliseCode, subscriptionAmounts } from "../_shared/discounts.ts";
 import { quotePlanChange } from "../_shared/planChange.ts";
+import { verifiedUserId } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -33,17 +34,6 @@ function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "content-type": "application/json" } });
 }
 
-function vendorIdFromJwt(req: Request): string | null {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    const payload = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch {
-    return null;
-  }
-}
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
 async function fetchPlan(url: string, key: string, planId: string): Promise<PlanRow | null> {
@@ -64,7 +54,8 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ error: "server_misconfigured" }, 500);
 
-  const vendorId = vendorIdFromJwt(req);
+  // Confirmed by Auth, not read out of the token (S-5, subscriptions P0).
+  const vendorId = await verifiedUserId(req, url, serviceKey);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
 
   let body: { kind?: string; planId?: string; billingCycle?: string; spec?: AdSpec; code?: string };

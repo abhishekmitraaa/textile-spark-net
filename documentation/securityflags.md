@@ -12,6 +12,14 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
+| 2026-10-07 | **Signed-out callers could read any vendor's plan, period end and usage** (`get_vendor_plan` guard not coalesced; anon held EXECUTE) | Low–Medium | `public.get_vendor_plan(uuid)` | Fixed on branch `subscriptions/p0-foundations` (`20261008100000_subscriptions_p0_foundations.sql`): guard coalesced, anon EXECUTE revoked. Open until applied. Verified live 2026-10-07 in a rolled-back probe as anon |
+| 2026-10-07 | **Any signed-in account could take a paid plan, its trust seal and its search boost without paying** (demo path, and now Razorpay test cards) | High | `subscription-verify-payment` demo path; `subscription-create-order` | Fixed on branch (P0): `subscription_checkout_gate()` + the `subscription_checkout` switch, off by default. Open until applied and deployed. The ad checkout's demo path (2026-09-12 row) is unchanged |
+| 2026-10-07 | Issued tax invoices can be edited and deleted by super and finance admins through the API | Medium | RLS `subscription_invoices_admin_update/_delete` | Open; subscriptions P1 makes invoices insert-only with credit notes |
+| 2026-10-07 | `subscription_payment_orders` and `subscription_usage` readable by every admin role | Low | their SELECT policies (bare `is_admin()`) | Fixed on branch (P0): roles named. Open until applied |
+| 2026-10-07 | Payment functions read the vendor id out of an unverified token, relying on the platform's verify_jwt alone | Low (design) | `subscription-create-order`, `-verify-payment`, `discount-quote` | Fixed on branch (P0): Supabase Auth confirms the caller (`_shared/auth.ts`). Open until deployed. The ad functions still decode the token |
+| 2026-10-07 | GSTIN and PAN saved unchecked and printed on the tax invoice | Low | `Subscription.tsx`; onboarding | Fixed on branch for /subscription (P0). Onboarding still saves them unchecked (ToDo) |
+| 2026-10-07 | Upgrade credit counts demo invoices (no gateway payment) as money paid | Medium (latent until live payments) | `admin.subscription_quote` credit query | Open; subscriptions P1 |
+| 2026-10-07 | A charge that fails to activate after its order is claimed is only logged to the console | Medium (latent until live payments) | `subscription-verify-payment`, `subscription-webhook` | Open; subscriptions P1 (one fulfilment transaction, incidents, reconciliation) |
 | 2026-10-02 | Seller registration collects the owner's masked Aadhaar (live 2026-10-02) | Medium (compliance, for counsel) | `src/pages/Onboarding.tsx`, `src/pages/Kyc.tsx`, `vendor_documents` (`aadhaar`), bucket `business-docs` | Open: live without counsel's confirmation, at the user's instruction (ToDo.md) |
 | 2026-10-01 | Signed-out callers can raise any live product's views and enquiries, a video's views and an ad's clicks, with no limit | Low (metrics integrity: these counts order the related-products fallback, and vendors read them as demand) | `increment_product_view`, `increment_product_enquiry`, `increment_video_view`, `ad_click` (SECURITY DEFINER, EXECUTE for anon by design) | Open, follow-up from the 2026-10-01 review. `ad_impression` has a per-session daily cap and a throttle; these four have none, and `ad_click` doesn't take a session into account at all. Fix shape: a per-session limit in the database like `ad_impression`'s, or count from `engagement_events` instead. The session id comes from the browser, so a database limit stops only naive repeats; a per-IP limit needs an edge function in front. Log entry below |
 | 2026-09-29 | A review's display name is client-supplied: `reviewer_name` / `reviewer_company` are written by the browser, so a buyer can post under any name | Low (impersonation in review text; the author's uid is still recorded) | `src/lib/queries/reviews.ts` (`resolveReviewer`); `reviews` / `product_reviews` / `service_reviews` insert policies | Open: fill them in a BEFORE INSERT trigger from `buyer_profiles` / `profiles` |
@@ -90,6 +98,17 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-10-07 — Vendor subscriptions audit: eight findings — Severity: High / Medium / Low
+- Found during the subscription audit (`cosora testing/subscription-session/SUBSCRIPTION-ANALYSIS-REPORT.md`), read
+  against origin/main and the live database. The open-table rows above, dated 2026-10-07, are its findings S-1 to S-8.
+- **S-1 was verified live:** in a transaction that rolled back, as `anon` with no JWT, `get_vendor_plan('<vendor>')`
+  returned that vendor's usage and `subscription_end`. The cause is the uncoalesced guard this file warns about for
+  `ad_category_benchmarks`.
+- **S-2:** production had 9 "paid" invoices and none carried a Razorpay payment id. With Razorpay in test mode
+  (Mitra, 2026-10-08), published test cards would do the same through a real checkout.
+- Fixes S-1, S-2, S-4, S-5 and S-6 (for /subscription) are built on `subscriptions/p0-foundations` (2026-10-08);
+  S-3, S-7 and S-8 are planned for subscriptions P1.
 
 ### 2026-10-02 — Collecting a masked Aadhaar at seller registration — Severity: Medium (compliance, for counsel)
 - **What:** Andy asked for every document in the Seller Registration FAQ to be collected, Aadhaar included. The code had left Aadhaar out on purpose (Aadhaar Act 2016 / UIDAI rules for entities that aren't an authorised KUA/AUA).

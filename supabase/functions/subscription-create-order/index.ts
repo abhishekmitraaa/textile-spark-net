@@ -27,6 +27,11 @@
 // the current end. A code comes off that charge, then GST. The intent stores the
 // charge (list_rupees), the credit and the kind, so the invoice says what happened.
 //
+// WHO MAY BUY (subscriptions P0, 2026-10-08). The caller is confirmed by Auth, not by
+// reading the token (S-5), and public.subscription_checkout_gate must agree: a
+// registered vendor, not suspended or deleted, with the subscription_checkout switch
+// on for them. A refusal answers { error: <reason> } and creates nothing.
+//
 // Secrets: RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET (+ platform SUPABASE_URL /
 // SUPABASE_SERVICE_ROLE_KEY). Returns { error:"not_configured" } until the
 // Razorpay keys are set, so the client falls back to the simulated checkout
@@ -49,18 +54,8 @@ function json(body: unknown, status = 200): Response {
 // subscriptionAmounts() applies it after the discount.
 import { checkDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 import { quotePlanChange } from "../_shared/planChange.ts";
-
-function vendorIdFromJwt(req: Request): string | null {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    const payload = JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/")));
-    return typeof payload.sub === "string" ? payload.sub : null;
-  } catch {
-    return null;
-  }
-}
+import { verifiedUserId } from "../_shared/auth.ts";
+import { checkoutGate } from "../_shared/checkoutGate.ts";
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
 
@@ -86,8 +81,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json({ error: "server_misconfigured" }, 500);
 
-  const vendorId = vendorIdFromJwt(req);
+  // Auth confirms the caller (S-5), and the database says whether they may buy:
+  // a registered, active vendor, with checkouts open to them (P0, 2026-10-08).
+  const vendorId = await verifiedUserId(req, url, serviceKey);
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
+  const gate = await checkoutGate(url, serviceKey, vendorId);
+  if (!gate.ok) return json({ error: gate.reason ?? "unavailable" }, 200);
 
   let payload: { planId?: string; billingCycle?: string; gstNumber?: string; discountCode?: string };
   try {

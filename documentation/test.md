@@ -187,6 +187,32 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-08 — Subscriptions P0: foundations and safety (local stack: harness 29/29; flow check 76/76; tax ids 18/18; browser 11/11; typecheck 0 in both apps; i18n 7,283/7,283; admin build)
+- **Where:** the local stack (production's schema plus the P0 migration), apps on :8092 and :5186 from the
+  `subscriptions/p0-foundations` worktrees, the branch's functions copied into the local edge runtime.
+- **Harness `scripts/subscriptions/p0_foundations.sql`** (`begin; <migration>; <harness>; rollback;`): 29/29. Covers anon
+  refused `get_vendor_plan`, another vendor null, the vendor and an admin answered; a scheduled downgrade counted
+  at read time in `get_vendor_plan`, `vendor_cap_plan` and `vendor_entitlements`; the product cap still refuses the
+  third Free listing; entitlements own/other/seal; switches off, listed, manager refused, reason required, Admin Log
+  row; the gate refused to a browser and answering not_vendor, suspended, payments_not_open and ok; payment orders
+  read by the vendor (own), finance (all) and not a product moderator; VIP quoted as an upgrade; the GSTIN checksum;
+  billing entity saved by finance, a bad checksum and a wrong state refused, a moderator refused, the Admin Log row.
+  **Run against the old schema it fails** S-1 (`ran: gold`) and the read-time rule (`gold` for `silver`).
+- **`node scripts/discount-flow-check.mjs`**: 76/76 (65 before, 11 new in section I: a token Auth refuses gets 401 and
+  creates nothing; the vendor is Auth's user, not the token's `sub`; each gate refusal creates nothing; an unanswered
+  gate refuses; the demo path asks the gate; `discount-quote` 401). G4 now counts database calls only, since the Auth
+  lookup is the one call made.
+- **`node scripts/tax-id-check.mjs`**: 18/18 (5 published GSTINs valid, 6 malformed refused, PAN cases, and the local
+  database's `gstin_is_valid` matching the browser on all 11 GSTIN cases).
+- **Browser (`npx playwright test -c playwright.local.config.ts`)**: `subscriptions-p0` 3/3 (closed switch: banner,
+  disabled button, a direct demo call answered `payments_not_open`; listed on Feature switches with a reason; VIP
+  bought; GSTIN/PAN refused then saved; billing details refuse a Gujarat state for a Maharashtra GSTIN, then save),
+  `plans-and-refunds` 2/2 (now listing its sellers), `rfq-leads` 6/6. The allowlist was empty again afterwards.
+- **Typecheck:** buyer `tsc -p tsconfig.app.json` 0 (an injected error reported 1); Cosora-Admin `npm run typecheck` 0;
+  admin `npm run build` ok. `npm run i18n:check` 7,283/7,283 in Hindi and Gujarati.
+- **Not run:** `scripts/gst-check.mjs` needs a `.env` with live credentials (it fails the same way on origin/main);
+  nothing in P0 touches GST arithmetic.
+
 ### 2026-10-02 — Help & Support release check: synthetic data and a manual pass (local stack = production + P6; SQL suites all pass; flow checks 65/65; browser 18/18; load 60 VUs 0 errors)
 
 - **The local stack matches production:** Phase 12 (`20261002072403`) applied to it; then policies 169 = 169 with the same digest, and 349 functions identical by body (line endings ignored), leaving out P6's seven (local only) and the six repointed at local URLs.

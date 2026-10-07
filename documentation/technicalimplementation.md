@@ -3072,3 +3072,51 @@ Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (ven
 - The buyer location nudge moved to Part 3: nothing reads buyer location until Fit ranks leads.
 - Tests: `scripts/ranking/f2_vendor_profile.sql` (18 cases), `tests/local/ranking-f2.spec.ts` (state required and coded; buyer state code; type, served states and capacity end to end).
 
+## Subscriptions P0: foundations and safety (2026-10-08)
+
+Plan: build every vendor subscription feature, phase by phase behind switches (Mitra, 2026-10-08). Migration `20261008100000_subscriptions_p0_foundations.sql`.
+
+- **`admin.vendor_effective_plan(p_vendor, p_at)`** (SQL, stable, no client grant) returns the plan, status
+  (`active`/`free`), cycle, period, scheduled downgrade, auto_renew, subscription id and the raw period end. A
+  scheduled downgrade switches at `scheduled_from`; `expire_subscriptions()` still renames it at 03:29, which is
+  now tidying, not the rule. Callers: `vendor_cap_plan()`, `get_vendor_plan()`, `vendor_entitlements()`.
+  `enforce_ad_location_scope` and `enforce_lead_cap` still read `vendor_subscriptions` themselves (P5 rewrites the
+  first; the second is a no-op since R2).
+- **`get_vendor_plan(v)`**: the same JSON shape; guard `coalesce(vid = auth.uid(), false) or is_admin() or
+  service_role`; EXECUTE revoked from PUBLIC and anon (every caller in both repos is signed in).
+- **`vendor_entitlements(p_vendor)`** (definer; raises 42501 unless the vendor, an admin or the service role):
+  `{ plan_id, plan_name, status, paid, billing_cycle, period_start, period_end, scheduled_plan_id, scheduled_from,
+  limits, features: { product_cap, ad_location_scope, search_boost_tier, seal_tier, crm, realtime_alerts,
+  account_manager, auto_catalog, international } }`. `seal_tier` is vip/gold/verified for a paid plan with the
+  badge, else verified for an admin-verified vendor or an unexpired ad seal, else none.
+- **Feature switches:** `public.feature_flags(key, description, enabled, allow_profile_ids ≤ 200, updated_at,
+  updated_by)`, RLS on with no policy and no client privilege; `trg_admin_audit`. Readers: `feature_on(key)`
+  (authenticated), `feature_on_for(key, profile)` (service role), `my_feature_flags()` (authenticated). Admin:
+  `admin_feature_flags()` (super_admin, manager), `admin_feature_flag_set(key, enabled, ids, reason)` (super_admin;
+  unknown key P0002, blank reason 22023, unknown account 22023). Seeded: `subscription_checkout`, off.
+- **`subscription_checkout_gate(p_vendor)`** (service role): `{ok}` or `{ok:false, reason}` with reason not_vendor
+  (no profile or no finished registration), deleted, suspended, payments_not_open. `_shared/checkoutGate.ts` calls it
+  and refuses on any failure (`unavailable`). `subscription-create-order` asks before pricing; the demo path of
+  `-verify-payment` asks before activating. The live verify path needs no gate: its intent was created through it.
+- **`_shared/auth.ts` `verifiedUserId(req, url, apikey)`**: `GET /auth/v1/user` with the caller's bearer token; null
+  on any failure. Used by `subscription-create-order`, `-verify-payment` (free and demo paths) and
+  `discount-quote`. The webhooks authenticate by HMAC and are unchanged.
+- **Reads (S-4):** `subscription_payment_orders_select` and `subscription_usage_select` admit the vendor or
+  super_admin, finance_admin, support (`alter policy`, the `(select …)` form).
+- **VIP:** `subscription_plans.is_invite_only = false` for `vip`. The invite-only checks stay generic.
+- **Tax ids:** `india_states.gst_code` (unique, two digits, column grant to anon and authenticated);
+  `gstin_is_valid(text)` (immutable; shape, then the GSTN mod-36 check character over 14 characters);
+  `src/lib/taxIds.ts` mirrors it, `scripts/tax-id-check.mjs` runs published GSTINs through both.
+- **`admin.billing_entity`** (one row): legal_name, trade_name, address lines, city, state_code → india_states,
+  postal_code, gstin (checksum), pan (= GSTIN characters 3–12), sac_code (6 digits, optional until the CA confirms
+  it), invoice_prefix, email, phone; a trigger refuses a GSTIN whose first two digits aren't the state's GST code;
+  `trg_admin_audit`. RPCs `admin_billing_entity()` / `admin_billing_entity_save(p jsonb, p_reason)`: super_admin,
+  finance_admin.
+- **App:** `src/lib/queries/featureFlags.ts` (`useFeatureFlags`, `useFeatureFlag`); `subscriptions.ts` maps the gate's
+  refusals (`CHECKOUT_REFUSALS`); `Subscription.tsx` shows "Plan purchases open soon" and disables the checkout
+  buttons while the switch is off for the account, and validates GSTIN/PAN before `writeOwnVendorRow()`.
+- **Cosora-Admin:** `/feature-flags` (section `feature-flags`), `/billing-details` (section `billing-entity`),
+  `src/lib/subscriptionSettings.ts`.
+- **Tests:** `scripts/subscriptions/p0_foundations.sql` (29 cases), `scripts/discount-flow-check.mjs` section I,
+  `scripts/tax-id-check.mjs`, `tests/local/subscriptions-p0.spec.ts`. Local specs that buy a plan list their fresh
+  seller with `allowFeature("subscription_checkout", id)` and remove it in `afterEach`.

@@ -46,6 +46,8 @@ function json(body: unknown, status = 200): Response {
 // subscriptionAmounts() applies it after the discount.
 import { confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount, subscriptionAmounts } from "../_shared/discounts.ts";
 import { activatePlanChange, quotePlanChange, type ChangeKind } from "../_shared/planChange.ts";
+import { verifiedUserId } from "../_shared/auth.ts";
+import { checkoutGate } from "../_shared/checkoutGate.ts";
 
 async function hmacHex(secret: string, data: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
@@ -57,16 +59,6 @@ function safeEqual(a: string, b: string): boolean {
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return out === 0;
-}
-function vendorIdFromJwt(req: Request): string | null {
-  const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
-  const part = token.split(".")[1];
-  if (!part) return null;
-  try {
-    return JSON.parse(atob(part.replace(/-/g, "+").replace(/_/g, "/"))).sub ?? null;
-  } catch {
-    return null;
-  }
 }
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
@@ -198,7 +190,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
   // A code took this order to ₹0: create-order made no Razorpay order, so there
   // is no signature to check. The stored order is the proof instead.
   if (body.free) {
-    const vendorId = vendorIdFromJwt(req);
+    const vendorId = await verifiedUserId(req, url, serviceKey);
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     const orderId = body.orderId;
     if (!orderId || !orderId.startsWith("free_")) return json({ ok: false, error: "not_free" }, 400);
@@ -226,8 +218,12 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   // Demo mode — no gateway configured; activate from the client request.
   if (!keySecret) {
-    const vendorId = vendorIdFromJwt(req);
+    // The demo checkout activates a plan with no money taken, so it asks the same
+    // gate a real checkout does (P0, 2026-10-08).
+    const vendorId = await verifiedUserId(req, url, serviceKey);
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
+    const gate = await checkoutGate(url, serviceKey, vendorId);
+    if (!gate.ok) return json({ ok: false, demo: true, error: gate.reason ?? "unavailable" });
     const planId = body.planId;
     if (!planId || planId === "free") return json({ ok: false, error: "bad_plan" }, 400);
     const billingCycle = body.billingCycle === "yearly" ? "yearly" : "monthly";

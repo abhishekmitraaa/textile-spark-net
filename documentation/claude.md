@@ -51,7 +51,8 @@ Rules decided before or outside of Claude Code sessions.
 - **Audio-first matters** — many Indian manufacturers are more comfortable speaking than
   typing. Audio messages in chat and voice-to-text in the RFQ form are critical for the
   real user base, not nice-to-haves.
-- **Subscription tiers (Basic / Silver / Gold)** determine product listing caps and
+- **Five plans: Free, Basic, Silver, Gold and Cosora VIP** (VIP open to every vendor at its list
+  price since 2026-10-08, Mitra; it was invite-only). They determine product listing caps and
   geographic ad reach. **Leads are the same on every plan** (Mitra, 2026-10-02): the same
   ranked feed and no cap on how many a vendor quotes on (RFQ/leads R2).
 - **Seller registration documents** (Seller Registration FAQ, Andy 2026-10-02): PAN card;
@@ -141,6 +142,29 @@ Rules decided before or outside of Claude Code sessions.
 Rules that emerged while building. Append here the moment one is settled — never leave one
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
+
+- **A new feature ships behind a feature switch** (subscriptions P0, 2026-10-08; migration `20261008100000_subscriptions_p0_foundations.sql`).
+  - `public.feature_flags`: on for everyone (`enabled`) or only for `allow_profile_ids`. The migration that ships
+    the code reading a switch creates it, switched off. Super admins change it on Cosora-Admin's Feature switches
+    page, with a reason that reaches the Admin Log; managers read.
+  - The app reads `my_feature_flags()` (`useFeatureFlag()`), and the database and the edge functions read the same
+    switch (`feature_on()`, `feature_on_for()`), so hiding a button is the courtesy and never the control.
+- **The plan a vendor is on now has one rule, and a read model** (subscriptions P0).
+  - `admin.vendor_effective_plan(vendor, at)`: an active subscription whose period hasn't ended; a paid downgrade
+    takes over at `scheduled_from` at read time, without waiting for the daily sweep; anything else is Free.
+  - `vendor_entitlements(vendor)` (the vendor, an admin or the service role) returns the plan, its limits and the
+    derived features (seal tier, CRM, alerts, account manager, international…). A new tier feature reads it, and a
+    page for a tier feature is shown only to vendors it entitles. `vendor_cap_plan()` and `get_vendor_plan()` use
+    the same rule. A self-guarded definer function coalesces its guard (`get_vendor_plan` didn't, S-1).
+- **Only an allowed, registered, active vendor starts a plan checkout** (subscriptions P0).
+  `subscription_checkout_gate()` (service role) decides before anything is created: `not_vendor`, `suspended`,
+  `deleted` or `payments_not_open` (the `subscription_checkout` switch). The payment functions confirm the caller
+  with Supabase Auth (`_shared/auth.ts`), never by reading the token. A new payment path asks the same gate.
+- **A GSTIN is checked with its checksum, the same way in the browser and the database** (subscriptions P0).
+  `gstin_is_valid()` and `src/lib/taxIds.ts` (`scripts/tax-id-check.mjs` compares them); `india_states.gst_code`
+  is the two-digit state code a GSTIN starts with. Cosora's own GSTIN, legal name, address and SAC code are
+  `admin.billing_entity` (Cosora-Admin Billing details, super admin and finance admin). Onboarding still saves
+  a GSTIN unchecked (ToDo).
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with
@@ -506,10 +530,10 @@ undocumented. Deep technical rationale for each lives in
   - Detail: `technicalimplementation.md` → "Site content — banners and theme".
 - **There is no `/orders` route.** "Track Orders" maps to `/requirement/my-quotes`; "View
   Order Details" maps to `/chat`.
-- **Payment amounts are computed server-side, never accepted from the client**, and the
-  Razorpay account is in **live mode**, but its keys aren't set in Supabase (checked 2026-09-29: both
-  create-order functions answer `not_configured`), so vendor checkouts run the simulated demo path and move
-  no money yet. Setting `RAZORPAY_KEY_ID` and `RAZORPAY_KEY_SECRET` makes them real charges. Refunds are manual.
+- **Payment amounts are computed server-side, never accepted from the client.** Razorpay is in **test mode**
+  and its test keys are set in Supabase (Mitra, 2026-10-08; no order has gone through since, so this is as stated,
+  not yet observed). Test cards take no money, so plan checkouts are **closed unless the `subscription_checkout`
+  switch is on for the account** (subscriptions P0). Refunds are manual.
 - **Total Order Value is the retention metric.** The cumulative figure of orders won through
   Cosora is the single strongest reason a vendor stays. **It is computed in exactly one
   place** — `useVendorOrderValue` in `src/lib/queries/vendorAnalytics.ts` — and both the

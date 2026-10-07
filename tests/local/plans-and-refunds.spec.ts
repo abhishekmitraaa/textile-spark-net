@@ -10,7 +10,11 @@
  * once each payment is refunded.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, signedInContext, sql, watchErrors } from "./stack";
+import { ADMIN_URL, BUYER_URL, allowFeature, contextWithSession, disallowFeature, freshAccount, signedInContext, sql, watchErrors } from "./stack";
+
+// Fresh sellers put on the checkout switch's list come off it after each test.
+const listed: string[] = [];
+test.afterEach(() => { while (listed.length) disallowFeature("subscription_checkout", listed.pop() as string); });
 
 async function choose(page: Page, button: RegExp) {
   await page.getByRole("button", { name: button }).first().click();
@@ -20,6 +24,8 @@ async function choose(page: Page, button: RegExp) {
 test("upgrade is prorated, a downgrade waits for the next period, and only one is paid ahead", async ({ browser }) => {
   test.setTimeout(120_000);
   const who = await freshAccount("p-plan", { seller: true });
+  allowFeature("subscription_checkout", who.id); // checkouts are closed to unlisted accounts (subscriptions P0)
+  listed.push(who.id);
   const ctx = await contextWithSession(browser, who.session, { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   const errors = watchErrors(page);
@@ -80,6 +86,8 @@ test("upgrade is prorated, a downgrade waits for the next period, and only one i
 test("the 7-day guarantee: the seller asks, finance refunds and closes, the plan ends", async ({ browser }) => {
   test.setTimeout(120_000);
   const who = await freshAccount("p-refund", { seller: true });
+  allowFeature("subscription_checkout", who.id); // checkouts are closed to unlisted accounts (subscriptions P0)
+  listed.push(who.id);
   const ctx = await contextWithSession(browser, who.session, { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   const errors = watchErrors(page);

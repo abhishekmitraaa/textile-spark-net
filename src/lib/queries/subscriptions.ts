@@ -254,6 +254,16 @@ export async function requestRefundGuarantee(reason: string): Promise<RefundGuar
 // ── Checkout ──
 export type BillingCycle = "monthly" | "yearly";
 
+/**
+ * Why the payment functions refused to start a checkout (subscriptions P0,
+ * 2026-10-08; public.subscription_checkout_gate). Nothing was created for any of them.
+ */
+export const CHECKOUT_REFUSALS = ["payments_not_open", "not_vendor", "suspended", "deleted", "unavailable"] as const;
+export type CheckoutRefusal = (typeof CHECKOUT_REFUSALS)[number];
+export function isCheckoutRefusal(error: string | undefined): error is CheckoutRefusal {
+  return (CHECKOUT_REFUSALS as readonly string[]).includes(error ?? "");
+}
+
 interface CreateOrderResult {
   configured: boolean;
   orderId?: string;
@@ -286,6 +296,8 @@ async function createSubscriptionOrder(
   if (data.error === "discount") return { configured: true, error: "discount", discountReason: data.reason ?? "unavailable" };
   // A paid next period is already waiting (plan changes, 2026-10-02): nothing created.
   if (data.error === "already_scheduled") return { configured: true, error: "already_scheduled" };
+  // The checkout gate refused this account (P0): nothing was created.
+  if (isCheckoutRefusal(data.error)) return { configured: true, error: data.error };
   if (data.error) throw new Error(String(data.detail || data.error));
   if (!data.configured) return { configured: false, error: data.error };
   return {
@@ -344,6 +356,7 @@ export async function purchaseSubscription(opts: {
   const order = await createSubscriptionOrder(opts.planId, opts.billingCycle, opts.gstNumber, opts.discountCode);
   if (order.discountReason) return { ok: false, error: "discount", discountReason: order.discountReason };
   if (order.error === "already_scheduled") return { ok: false, error: "already_scheduled" };
+  if (isCheckoutRefusal(order.error)) return { ok: false, error: order.error };
 
   if (!order.configured) {
     if (order.error === "invite_only") return { ok: false, error: "invite_only" };
