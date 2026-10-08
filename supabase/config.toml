@@ -143,3 +143,8 @@ verify_jwt = true
 # approved) with the service-role key from Vault; the handler also requires role = service_role.
 [functions.notification-dispatch]
 verify_jwt = true
+
+# Subscriptions P3 (2026-10-08): autopay through Razorpay Subscriptions (start, verify,
+# cancel). Browser-called; the caller is confirmed by Auth.
+[functions.subscription-autopay]
+verify_jwt = true

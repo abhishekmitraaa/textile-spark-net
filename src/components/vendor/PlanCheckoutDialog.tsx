@@ -4,6 +4,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
 import { quotePlanDiscount, type PlanQuote } from "@/lib/queries/discounts";
 import { usePlanChangePreview, type BillingCycle, type ChangeKind, type PlanChangePreview } from "@/lib/queries/subscriptions";
@@ -36,29 +37,40 @@ function whatHappens(p: PlanChangePreview | undefined, billingCycle: BillingCycl
  * charges it. Without a code the GST line comes from src/lib/gst.ts, the browser's
  * copy of the formula the payment function charges with (scripts/gst-check.mjs keeps
  * them equal). With one, every number is the server's quote.
+ *
+ * Autopay (subscriptions P3): where it is offered, "Renew automatically" is ticked by
+ * default (Mitra, 2026-10-08). This payment is the same either way; autopay adds a
+ * Razorpay mandate that renews the plan at its list price with GST from the end of the
+ * period being bought. With autopay already on, the purchase keeps it on (a one-off
+ * payment would be charged twice), so the box is ticked and fixed.
  */
 export function PlanCheckoutDialog({
   plan,
   billingCycle,
   onClose,
   onConfirm,
+  autopay,
 }: {
   /** The plan being bought; the dialog is open while this is set. */
   plan: Plan | null;
   billingCycle: BillingCycle;
   onClose: () => void;
   /** Runs the purchase. Resolves to why the code was refused, or null. */
-  onConfirm: (plan: Plan, discountCode?: string, kind?: ChangeKind) => Promise<string | null>;
+  onConfirm: (plan: Plan, discountCode?: string, kind?: ChangeKind, autopay?: boolean) => Promise<string | null>;
+  /** Whether autopay is offered to this account, and whether one is on (useAutopay). */
+  autopay?: { available: boolean; on: boolean };
 }) {
   const [quote, setQuote] = useState<PlanQuote | null>(null);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const [renewAuto, setRenewAuto] = useState(true);
   const preview = usePlanChangePreview(plan?.id, billingCycle);
 
-  // A quote is for one plan and one billing cycle.
+  // A quote is for one plan and one billing cycle; each checkout starts with autopay ticked.
   useEffect(() => {
     setQuote(null);
     setRefusal(null);
+    setRenewAuto(true);
   }, [plan?.id, billingCycle]);
 
   if (!plan) return null;
@@ -75,6 +87,11 @@ export function PlanCheckoutDialog({
     ? { discount: quote.discount, base: quote.base, gst: quote.gst, total: quote.total }
     : { discount: 0, base: charge, gst: plain.gst, total: plain.total };
 
+  // Autopay renews at the plan's own price with GST, whatever this first payment came to.
+  const renewal = gstOn(list);
+  const withAutopay = Boolean(autopay?.available) && (Boolean(autopay?.on) || renewAuto);
+  const renewsOn = p?.ok && p.periodEnd ? DAY.format(new Date(p.periodEnd)) : null;
+
   const apply = async (code: string) => {
     setRefusal(null);
     const res = await quotePlanDiscount(plan.id, billingCycle, code);
@@ -87,7 +104,7 @@ export function PlanCheckoutDialog({
     setBusy(true);
     setRefusal(null);
     try {
-      const message = await onConfirm(plan, quote?.code, p?.ok ? p.kind : undefined);
+      const message = await onConfirm(plan, quote?.code, p?.ok ? p.kind : undefined, withAutopay);
       if (message) {
         // The code was refused at the last step (its last use went, or it changed).
         setQuote(null);
@@ -159,6 +176,41 @@ export function PlanCheckoutDialog({
                 onRemove={() => setQuote(null)}
                 disabled={busy}
               />
+            )}
+
+            {autopay?.available && (
+              <div className="flex items-start gap-3 rounded-lg border border-border p-3" data-testid="autopay-option">
+                <Checkbox
+                  id="autopay"
+                  className="mt-0.5"
+                  checked={withAutopay}
+                  disabled={busy || autopay.on}
+                  onCheckedChange={(v) => setRenewAuto(v === true)}
+                />
+                <div className="space-y-1">
+                  <label htmlFor="autopay" className="block text-sm font-medium text-foreground">Renew automatically (autopay)</label>
+                  <p className="text-xs text-muted-foreground">
+                    {renewsOn
+                      ? (billingCycle === "yearly"
+                        ? `From ${renewsOn} your plan renews at ${formatINR(renewal.total)} every year, until you turn autopay off.`
+                        : `From ${renewsOn} your plan renews at ${formatINR(renewal.total)} every month, until you turn autopay off.`)
+                      : (billingCycle === "yearly"
+                        ? `Your plan renews at ${formatINR(renewal.total)} every year, until you turn autopay off.`
+                        : `Your plan renews at ${formatINR(renewal.total)} every month, until you turn autopay off.`)}
+                  </p>
+                  {autopay.on && (
+                    <p className="text-xs text-muted-foreground">Autopay is already on, so it moves to the plan you're buying.</p>
+                  )}
+                  {lines.discount > 0 && withAutopay && (
+                    <p className="text-xs text-muted-foreground">The discount applies to this payment only.</p>
+                  )}
+                  {renewal.total > 15000 && withAutopay && (
+                    <p className="text-xs text-muted-foreground">
+                      Above ₹15,000, UPI and cards ask you to approve each renewal. A net banking or debit card mandate doesn't.
+                    </p>
+                  )}
+                </div>
+              </div>
             )}
           </>
         )}

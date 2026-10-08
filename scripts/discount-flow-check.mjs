@@ -141,6 +141,8 @@ globalThis.fetch = async (input, init = {}) => {
     return sub ? res({ id: S.authId ?? sub }) : res({ message: "no user" }, 401);
   }
   if (p === "/rest/v1/rpc/subscription_checkout_gate") return S.gateFails ? res({ message: "boom" }, 500) : res(S.gate);
+  // Autopay (P3): no mandate here; scripts/subscriptions/autopay-flow-check.mjs covers the refusal.
+  if (p === "/rest/v1/rpc/autopay_vendor_open") return res(null);
 
   if (p === "/rest/v1/rpc/discount_check") return res(S.check);
   if (p === "/rest/v1/rpc/discount_reserve") return res(S.reserve ?? (S.check.ok ? { ...S.check, redemption_id: "red-1" } : S.check));

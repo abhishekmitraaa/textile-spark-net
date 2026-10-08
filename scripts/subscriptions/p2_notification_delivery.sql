@@ -194,14 +194,14 @@ begin
         if i = 14 then
           select o.template_key || ' ' || o.channel || ' ' || (o.payload ->> 'total') || ' | ' || (o.payload ->> 'document_label')
                  || ' | ' || (o.payload ->> 'invoice_number' = (j ->> 'invoice_number')) || ' ' || (o.dedupe_key = ('invoice_issued:' || (j ->> 'invoice_id')))
-            into got from admin.notification_outbox o where o.template_key = 'invoice_issued';
+            into got from admin.notification_outbox o where o.template_key = 'invoice_issued' and o.profile_id = vendor;
           want := 'invoice_issued email ₹2,713.00 | test document | true true';
         elsif i = 15 then
-          got := (j ->> 'document_type') || ' rows=' || (select count(*) from admin.notification_outbox where template_key = 'invoice_issued');
+          got := (j ->> 'document_type') || ' rows=' || (select count(*) from admin.notification_outbox where template_key = 'invoice_issued' and profile_id = vendor);
           want := 'demo rows=0';
         else
           got := coalesce(j ->> 'ok', 'null') || ' invoices=' || (select count(*) from public.subscription_invoices where razorpay_order_id = 'order_p2')
-                 || ' rows=' || (select count(*) from admin.notification_outbox where template_key = 'invoice_issued');
+                 || ' rows=' || (select count(*) from admin.notification_outbox where template_key = 'invoice_issued' and profile_id = vendor);
           want := 'true invoices=1 rows=0';
         end if;
       elsif i = 17 then

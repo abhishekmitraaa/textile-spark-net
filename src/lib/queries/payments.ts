@@ -69,9 +69,18 @@ interface RazorpayHandlerResponse {
   razorpay_payment_id: string;
   razorpay_signature: string;
 }
+/** What Checkout hands back for a Razorpay subscription (autopay, subscriptions P3). */
+export interface RazorpaySubscriptionResponse {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
+}
 interface RazorpayOptions {
   key: string;
-  order_id: string;
+  /** A one-off order, or… */
+  order_id?: string;
+  /** …a Razorpay subscription (autopay): Checkout sets up the mandate and takes its first payment. */
+  subscription_id?: string;
   amount?: number;
   currency?: string;
   name: string;
@@ -80,7 +89,8 @@ interface RazorpayOptions {
   prefill?: { name?: string; email?: string; contact?: string };
   /** Seconds before Checkout closes itself. */
   timeout?: number;
-  handler: (r: RazorpayHandlerResponse) => void;
+  // Checkout answers with the order's fields or the subscription's, by which id it was given.
+  handler: (r: RazorpayHandlerResponse & RazorpaySubscriptionResponse) => void;
   modal?: { ondismiss?: () => void };
 }
 interface RazorpayInstance { open: () => void }
@@ -135,6 +145,34 @@ export function openRazorpayCheckout(opts: CheckoutOpts): Promise<RazorpayHandle
       theme: { color: "#ff2160" },
       prefill: opts.prefill,
       ...(opts.timeout ? { timeout: opts.timeout } : {}),
+      handler: (r) => { done = true; resolve(r); },
+      modal: { ondismiss: () => { if (!done) reject(new Error("dismissed")); } },
+    });
+    rzp.open();
+  });
+}
+
+/**
+ * Opens Razorpay Checkout for a Razorpay subscription (autopay, subscriptions P3): the
+ * vendor approves the mandate and pays its first amount in one step. Resolves with the
+ * payment, subscription and signature; rejects with Error("dismissed") if it is closed.
+ */
+export async function openRazorpaySubscriptionCheckout(opts: {
+  keyId: string; subscriptionId: string; name?: string; description?: string;
+  prefill?: { name?: string; email?: string; contact?: string };
+}): Promise<RazorpaySubscriptionResponse> {
+  await loadRazorpayScript();
+  const Razorpay = window.Razorpay;
+  if (!Razorpay) throw new Error("Razorpay unavailable");
+  return new Promise((resolve, reject) => {
+    let done = false;
+    const rzp = new Razorpay({
+      key: opts.keyId,
+      subscription_id: opts.subscriptionId,
+      name: opts.name || "Cosora",
+      description: opts.description,
+      theme: { color: "#256fef" },
+      prefill: opts.prefill,
       handler: (r) => { done = true; resolve(r); },
       modal: { ondismiss: () => { if (!done) reject(new Error("dismissed")); } },
     });

@@ -214,6 +214,18 @@ undocumented. Deep technical rationale for each lives in
   sessions load safeupdate, which refuses them ("UPDATE requires a WHERE clause", 21000) even inside a definer
   function. psql doesn't load it, so a SQL harness passes regardless: call every new RPC once through PostgREST in its
   end-to-end check. A one-row settings table uses `where id`.
+- **Autopay is a Razorpay subscription whose first period is ours** (subscriptions P3, 2026-10-08; migration
+  `20261008140000_subscriptions_p3_autopay.sql`; optional and ticked by default, Mitra).
+  - The first period is priced by the plan-change rule, a code and GST, and charged as the subscription's upfront
+    amount; Razorpay charges the plan's list price with GST from the end of that period. A code applies to the first
+    payment only. Every charge is fulfilled by `subscription_fulfil`, like any other payment.
+  - **A vendor has one autopay** (`public.subscription_mandates`). A plan change or a new payment method is a new
+    Razorpay subscription; the old one is cancelled once the new one is authenticated, and a failure to cancel is a
+    billing incident. One-off checkout is refused while autopay is on (`autopay_active`).
+  - **`vendor_subscriptions.auto_renew` means autopay is on**, kept by `admin.autopay_sync()`; nothing else writes it.
+  - A plan's period never depends on Razorpay's status: turning autopay off, or Razorpay stopping it, leaves the plan
+    running to the end of what was paid for.
+  - Offered only to accounts the `subscription_autopay` switch allows.
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with

@@ -99,6 +99,18 @@ in the next one.
 
 ## Log
 
+### 2026-10-08 — Subscriptions P3: autopay reviewed — Severity: Info (one thing to verify before go-live)
+- **Who can set one up:** an Auth-confirmed, registered, active vendor the `subscription_autopay` switch lists, through
+  the same checkout gate as a one-off order. The mandate's functions are service-role only (the migration's
+  self-check); a vendor reads only its own mandates.
+- **Proof of payment:** the checkout signature is HMAC of `payment_id|subscription_id` with the key secret, checked
+  in constant time; the subscription must be the caller's. The flow check fails if the order is reversed.
+- **Double charging:** one-off checkout is refused while autopay is on; a replaced mandate is cancelled at Razorpay
+  and, if that fails, opens a billing incident. A charge of an unexpected amount opens one too.
+- **To verify before go-live:** the Razorpay behaviour here is from Razorpay's documentation and a local mock, not
+  from Razorpay's test mode. In particular whether `subscription.charged` fires for the upfront payment (handled both
+  ways) and the exact authorisation amount with a future start.
+
 ### 2026-10-08 — Subscriptions P2: outbound messages reviewed — Severity: Info (no open flag)
 - **Addresses at rest:** the outbox keeps each message's email address or phone number. It is in the `admin` schema
   with RLS on and no client privilege; Cosora-Admin sees only masked addresses (`admin_notification_health`); finished

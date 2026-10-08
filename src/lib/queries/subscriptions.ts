@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { openRazorpayCheckout } from "@/lib/queries/payments";
+import { openRazorpayCheckout, openRazorpaySubscriptionCheckout } from "@/lib/queries/payments";
 import { DISCOUNT_CHECKOUT_TIMEOUT_S } from "@/lib/queries/discounts";
 import type { Plan, PlanId, VendorPlan } from "@/lib/plan";
 
@@ -393,6 +393,8 @@ export interface PurchaseResult {
   error?: string;
   /** Why the discount code was refused (DiscountReason); show discountRefusal() of it. */
   discountReason?: string;
+  /** The purchase set up autopay (subscriptions P3). */
+  autopay?: boolean;
   /**
    * Razorpay took the payment but this browser couldn't finish the order (subscriptions P1).
    * The webhook or the reconciler finishes it, and a refused activation is already with
@@ -416,7 +418,17 @@ export async function purchaseSubscription(opts: {
    * Radix makes everything outside an open dialog unclickable, Checkout included.
    */
   onGatewayOpen?: () => void;
+  /**
+   * Pay with autopay (subscriptions P3): this payment sets up a Razorpay mandate that
+   * renews the plan each period. Falls back to a one-off payment where autopay isn't
+   * available (no gateway, or the switch is off for the account).
+   */
+  autopay?: boolean;
 }): Promise<PurchaseResult> {
+  if (opts.autopay) {
+    const auto = await startAutopay(opts);
+    if (auto.error !== "not_configured" && auto.error !== "autopay_not_open") return auto;
+  }
   const order = await createSubscriptionOrder(opts.planId, opts.billingCycle, opts.gstNumber, opts.discountCode);
   if (order.discountReason) return { ok: false, error: "discount", discountReason: order.discountReason };
   if (order.error === "already_scheduled") return { ok: false, error: "already_scheduled" };
@@ -454,4 +466,102 @@ export async function purchaseSubscription(opts: {
     ok: Boolean(verified.ok), planId: verified.planId, error: verified.error,
     paid: !verified.ok && verified.error !== "bad_signature",
   };
+}
+
+// ── Autopay (subscriptions P3, 2026-10-08) ──
+// A Razorpay mandate that renews the plan each period. my_autopay() says whether it is
+// offered to this account (the subscription_autopay switch), whether one is on, and what it
+// will charge next. subscription-autopay starts one (with a purchase, or for the plan
+// already paid for), verifies Checkout's answer, and cancels it.
+
+export interface Autopay {
+  /** The switch allows this account to use autopay. */
+  available: boolean;
+  /** A mandate is set up: authenticated, active, or retrying a failed charge. */
+  on: boolean;
+  /** Razorpay's status; halted means retries ran out and autopay stopped. */
+  status: "authenticated" | "active" | "pending" | "halted" | null;
+  /** card, upi, emandate…, once Razorpay has said. */
+  method: string | null;
+  planId: string | null;
+  planName: string | null;
+  billingCycle: BillingCycle | null;
+  /** What each renewal charges, in paise (the plan's price with GST). */
+  amountPaise: number | null;
+  nextChargeAt: string | null;
+}
+
+const NO_AUTOPAY: Autopay = {
+  available: false, on: false, status: null, method: null, planId: null, planName: null, billingCycle: null, amountPaise: null, nextChargeAt: null,
+};
+
+export function useAutopay(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["autopay", vendorId],
+    enabled: Boolean(vendorId),
+    queryFn: async (): Promise<Autopay> => {
+      const { data, error } = await supabase.rpc("my_autopay");
+      // Before the P3 migration the function doesn't exist: there is no autopay.
+      if (error?.code === "PGRST202") return NO_AUTOPAY;
+      if (error) throw error;
+      const r = (data ?? {}) as Record<string, unknown>;
+      return {
+        available: Boolean(r.available), on: Boolean(r.on), status: (r.status as Autopay["status"]) ?? null,
+        method: (r.method as string) ?? null, planId: (r.plan_id as string) ?? null, planName: (r.plan_name as string) ?? null,
+        billingCycle: (r.billing_cycle as BillingCycle) ?? null,
+        amountPaise: r.amount_paise != null ? Number(r.amount_paise) : null, nextChargeAt: (r.next_charge_at as string) ?? null,
+      };
+    },
+  });
+}
+
+/**
+ * Start an autopay: with a purchase (planId and billingCycle), or, with `existing`, for the
+ * plan already paid for (also how the payment method is changed). Opens Razorpay Checkout
+ * for the mandate and has the server verify its answer.
+ */
+export async function startAutopay(opts: {
+  planId?: PlanId;
+  billingCycle?: BillingCycle;
+  gstNumber?: string;
+  discountCode?: string;
+  existing?: boolean;
+  planName?: string;
+  prefill?: { name?: string; email?: string; contact?: string };
+  onGatewayOpen?: () => void;
+}): Promise<PurchaseResult> {
+  const { data, error } = await supabase.functions.invoke("subscription-autopay", {
+    body: opts.existing
+      ? { action: "start", existing: true }
+      : { action: "start", planId: opts.planId, billingCycle: opts.billingCycle, gstNumber: opts.gstNumber, discountCode: opts.discountCode },
+  });
+  if (error) throw error;
+  if (!data) return { ok: false, error: "no_response" };
+  if (data.error === "discount") return { ok: false, error: "discount", discountReason: data.reason ?? "unavailable" };
+  if (data.error) return { ok: false, error: String(data.error) };
+
+  opts.onGatewayOpen?.();
+  const rp = await openRazorpaySubscriptionCheckout({
+    keyId: data.keyId, subscriptionId: data.subscriptionId, name: "Cosora",
+    description: opts.planName ? `${opts.planName} · autopay` : "Autopay",
+    prefill: opts.prefill,
+  });
+  const verified = await supabase.functions
+    .invoke("subscription-autopay", {
+      body: { action: "verify", subscriptionId: rp.razorpay_subscription_id, paymentId: rp.razorpay_payment_id, signature: rp.razorpay_signature },
+    })
+    .then((v) => (v.error || !v.data ? { ok: false, error: "unavailable", paid: true } : v.data))
+    .catch(() => ({ ok: false, error: "unavailable", paid: true }));
+  return {
+    ok: Boolean(verified.ok), planId: verified.planId, error: verified.error, autopay: true,
+    // Razorpay has the payment; the webhook or the reconciler finishes what this browser couldn't.
+    paid: !verified.ok && verified.error !== "bad_signature",
+  };
+}
+
+/** Turn autopay off. The plan runs to the end of the period already paid for. */
+export async function cancelAutopay(): Promise<{ ok: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke("subscription-autopay", { body: { action: "cancel" } });
+  if (error) throw error;
+  return data ?? { ok: false, error: "no_response" };
 }

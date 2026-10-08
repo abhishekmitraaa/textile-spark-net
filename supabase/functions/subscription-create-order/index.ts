@@ -7,8 +7,10 @@
 // SERVER-SIDE from subscription_plans (never trust a client amount); the vendor
 // id comes from the caller's JWT.
 //
-// One-time / renewal charge only — NO Razorpay Subscriptions API, NO autopay.
-// Each billing period is its own discrete order the vendor pays explicitly.
+// One period at a time: this function never sets up autopay. Autopay (Razorpay
+// Subscriptions, subscriptions P3) is subscription-autopay; while a vendor has one, this
+// function refuses (autopay_active), because Razorpay renews the plan itself and a one-off
+// order would be paid for twice.
 //
 // DISCOUNT CODES (admin completion Phase 10, 2026-09-29). `discountCode` is
 // optional. The database checks it against this plan before anything is
@@ -57,6 +59,7 @@ import { quotePlanChange } from "../_shared/planChange.ts";
 import { verifiedUserId } from "../_shared/auth.ts";
 import { checkoutGate } from "../_shared/checkoutGate.ts";
 import { paymentModeForKey } from "../_shared/fulfil.ts";
+import { openMandate } from "../_shared/autopay.ts";
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
 
@@ -88,6 +91,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
   if (!vendorId) return json({ error: "unauthenticated" }, 401);
   const gate = await checkoutGate(url, serviceKey, vendorId);
   if (!gate.ok) return json({ error: gate.reason ?? "unavailable" }, 200);
+  // With autopay on, Razorpay renews the plan itself: a one-off order here would be paid
+  // for twice. Plan changes then go through subscription-autopay, which replaces the mandate (P3).
+  if (await openMandate(url, serviceKey, vendorId)) return json({ error: "autopay_active" }, 200);
 
   let payload: { planId?: string; billingCycle?: string; gstNumber?: string; discountCode?: string };
   try {

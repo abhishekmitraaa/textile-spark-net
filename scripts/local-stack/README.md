@@ -40,6 +40,12 @@ reads the same objects from `pg_catalog`.
    Give that runtime a persistent Deno cache (`-v <name>:/root/.cache/deno`): a function with `npm:` imports
    (`invoice-render`'s pdf-lib) downloads them on its first request, and without the cache a later run needs the
    internet again. For delivery tests, `RESEND_API_URL` and `WHATSAPP_API_URL` can point the adapters at a local mock.
+   The first request to such a function downloads its packages and can outlast the worker's time limit; if the
+   function then stops answering after its first request timed out, delete `dep_analysis_cache_v2*` and
+   `node_analysis_cache_v2*` from the cache volume and restart that runtime. `RAZORPAY_API_URL` points the autopay
+   calls at a mock Razorpay (`LOCAL_SIDE_FUNCTIONS_URL` in `subscriptions-p3.spec.ts`). The local stack's own config
+   puts the JWT gate on `subscription-webhook` (production deploys it without), so a local webhook call carries the
+   anon key.
 8. **Apps**, on their own ports so a normal dev server isn't disturbed:
    - buyer: `VITE_SUPABASE_URL=<local API> VITE_SUPABASE_ANON_KEY=<local anon> npx vite --port 8090 --strictPort`
    - Cosora-Admin: the same, `--port 5184`.

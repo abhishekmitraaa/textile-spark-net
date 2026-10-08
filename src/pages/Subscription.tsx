@@ -20,8 +20,10 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 import {
   useSubscriptionPlans, useVendorPlan, useVendorInvoices, purchaseSubscription, isCheckoutRefusal,
+  useAutopay, startAutopay, cancelAutopay,
   type ChangeKind, type CheckoutRefusal,
 } from "@/lib/queries/subscriptions";
+import { AutopayCard } from "@/components/vendor/AutopayCard";
 import { RefundGuaranteeCard } from "@/components/vendor/RefundGuaranteeCard";
 import { discountRefusal } from "@/lib/queries/discounts";
 import { fetchMyVendorPrivate, writeOwnVendorRow } from "@/lib/queries/vendorStore";
@@ -61,6 +63,16 @@ const CHECKOUT_REFUSAL_TEXT: Record<CheckoutRefusal, { title: string; descriptio
   suspended: { title: "Your account is suspended", description: "You can't buy or change a plan while it's suspended. Contact Cosora Support." },
   deleted: { title: "This account can't buy a plan", description: "It has been deleted." },
   unavailable: { title: "Couldn't start the checkout", description: "Nothing was charged. Please try again in a minute." },
+};
+
+// What a vendor reads when autopay can't go ahead (subscriptions P3). Nothing was charged for any of them.
+const AUTOPAY_REFUSAL_TEXT: Record<string, { title: string; description: string }> = {
+  autopay_active: { title: "Autopay is on", description: "Keep \"Renew automatically\" ticked to change plans, or turn autopay off first." },
+  too_close_to_renewal: { title: "Too close to your renewal", description: "Your plan ends within the hour, so autopay can't start now. Renew once, then turn autopay on." },
+  no_paid_plan: { title: "Choose a plan first", description: "Autopay renews a paid plan. Pick one below to set it up." },
+  subscription_failed: { title: "Couldn't set up autopay", description: "Nothing was charged. Please try again in a minute." },
+  plan_failed: { title: "Couldn't set up autopay", description: "Nothing was charged. Please try again in a minute." },
+  mandate_failed: { title: "Couldn't set up autopay", description: "Nothing was charged. Please try again in a minute." },
 };
 
 function isNegative(v: string): boolean {
@@ -167,11 +179,11 @@ export default function Subscription() {
   // The dialog's Pay. Resolves to why a discount code was refused (the dialog
   // shows it and drops the code), or null. `kind` is what the database said this
   // purchase is (new, renewal, upgrade, downgrade), so the toast says what happened.
-  const completePurchase = async (plan: Plan, discountCode?: string, kind?: ChangeKind): Promise<string | null> => {
+  const completePurchase = async (plan: Plan, discountCode?: string, kind?: ChangeKind, withAutopay?: boolean): Promise<string | null> => {
     setBusyPlan(plan.id);
     try {
       const res = await purchaseSubscription({
-        planId: plan.id, billingCycle, gstNumber: gstin || undefined, planName: plan.name, discountCode,
+        planId: plan.id, billingCycle, gstNumber: gstin || undefined, planName: plan.name, discountCode, autopay: withAutopay,
         prefill: { name: profile?.full_name ?? undefined, email: profile?.email ?? undefined },
         // Razorpay's window can't be clicked while the dialog is open.
         onGatewayOpen: () => setCheckoutPlan(null),
@@ -182,7 +194,9 @@ export default function Subscription() {
         qc.invalidateQueries({ queryKey: ["subscription_invoices"] });
         qc.invalidateQueries({ queryKey: ["plan_change_preview"] });
         qc.invalidateQueries({ queryKey: ["refund_guarantee"] });
+        qc.invalidateQueries({ queryKey: ["autopay"] });
         setCheckoutPlan(null);
+        if (res.autopay) toast.success("Autopay is on", { description: "Your plan will renew automatically. You can turn it off any time." });
         const demoNote = "Simulated checkout — add Razorpay keys for live payments.";
         if (kind === "downgrade") {
           toast.success(res.demo ? `${plan.name} is paid for (demo mode)` : `${plan.name} is paid for`, {
@@ -203,6 +217,8 @@ export default function Subscription() {
         });
       } else if (res.error === "invite_only") {
         toast("This plan is by invitation");
+      } else if (res.error && res.error in AUTOPAY_REFUSAL_TEXT) {
+        toast(AUTOPAY_REFUSAL_TEXT[res.error].title, { description: AUTOPAY_REFUSAL_TEXT[res.error].description });
       } else if (isCheckoutRefusal(res.error)) {
         setCheckoutPlan(null);
         toast(CHECKOUT_REFUSAL_TEXT[res.error].title, { description: CHECKOUT_REFUSAL_TEXT[res.error].description });
@@ -233,6 +249,51 @@ export default function Subscription() {
       setBusyPlan(null);
     }
     return null;
+  };
+
+  // Autopay (subscriptions P3): on for the plan already paid for (also how the payment
+  // method is changed), and off.
+  const { data: autopay } = useAutopay(user?.id);
+  const [autopayBusy, setAutopayBusy] = useState(false);
+  const hasPaidPlan = currentPlanId !== "free" && vplan?.status === "active";
+  const turnOnAutopay = async () => {
+    setAutopayBusy(true);
+    try {
+      const res = await startAutopay({
+        existing: true, planName: currentPlan?.name,
+        prefill: { name: profile?.full_name ?? undefined, email: profile?.email ?? undefined },
+      });
+      if (res.ok) {
+        toast.success("Autopay is on", { description: "Your plan will renew automatically when this period ends." });
+      } else if (res.error && res.error in AUTOPAY_REFUSAL_TEXT) {
+        toast(AUTOPAY_REFUSAL_TEXT[res.error].title, { description: AUTOPAY_REFUSAL_TEXT[res.error].description });
+      } else if (isCheckoutRefusal(res.error)) {
+        toast(CHECKOUT_REFUSAL_TEXT[res.error].title, { description: CHECKOUT_REFUSAL_TEXT[res.error].description });
+      } else if (res.paid) {
+        toast("Autopay is being set up", { description: "It will show here in a few minutes. If it doesn't, contact Cosora Support." });
+      } else {
+        toast.error("Couldn't turn autopay on", { description: "Nothing was charged. Please try again in a minute." });
+      }
+    } catch (e) {
+      if (e instanceof Error && e.message === "dismissed") toast.info("Autopay wasn't set up");
+      else toast.error("Couldn't turn autopay on", { description: errorMessage(e) });
+    } finally {
+      setAutopayBusy(false);
+      qc.invalidateQueries({ queryKey: ["autopay"] });
+    }
+  };
+  const turnOffAutopay = async () => {
+    setAutopayBusy(true);
+    try {
+      const res = await cancelAutopay();
+      if (res.ok) toast.success("Autopay is off", { description: "Your plan runs to the end of the period you've paid for." });
+      else toast.error("Couldn't turn autopay off", { description: "Please try again in a minute, or contact Cosora Support." });
+    } catch (e) {
+      toast.error("Couldn't turn autopay off", { description: errorMessage(e) });
+    } finally {
+      setAutopayBusy(false);
+      qc.invalidateQueries({ queryKey: ["autopay"] });
+    }
   };
 
   const savingsPct = currentPlan ? yearlySavingsPct(2299, 22990) : 17; // Gold reference (~17%)
@@ -270,8 +331,11 @@ export default function Subscription() {
 
         {/* Current plan + live usage */}
         <motion.div variants={section}>
-          <Card className="overflow-hidden border-accent/20">
-            <div className="absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/10" />
+          {/* `relative` keeps the decorative gradient inside this card. Without it the layer
+              was positioned against the page once the entrance animation ended, and sat over
+              whatever followed (it swallowed the Autopay card's clicks). */}
+          <Card className="relative overflow-hidden border-accent/20">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/10" />
             <CardHeader className="relative pb-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
@@ -328,6 +392,16 @@ export default function Subscription() {
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* Autopay: on, retrying, stopped or off (shows nothing where it isn't offered). */}
+        <AutopayCard
+          autopay={autopay}
+          hasPaidPlan={hasPaidPlan}
+          periodEnd={vplan?.subscription_end ?? null}
+          busy={autopayBusy}
+          onTurnOn={turnOnAutopay}
+          onTurnOff={turnOffAutopay}
+        />
 
         {/* The 7-day money-back guarantee, while it applies (shows nothing otherwise). */}
         <RefundGuaranteeCard vendorId={user?.id} />
@@ -592,6 +666,7 @@ export default function Subscription() {
         billingCycle={billingCycle}
         onClose={() => setCheckoutPlan(null)}
         onConfirm={completePurchase}
+        autopay={autopay ? { available: autopay.available, on: autopay.on } : undefined}
       />
     </DashboardLayout>
   );

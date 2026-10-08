@@ -172,7 +172,10 @@ revoke all on function admin.next_document_number(text, text, timestamptz) from 
 -- ── 4. Billing incidents ────────────────────────────────────────────────────────────
 create table admin.billing_incidents (
   id            uuid primary key default gen_random_uuid(),
-  kind          text not null check (kind in ('activation_failed', 'invoice_incomplete', 'dispute', 'reconcile_mismatch')),
+  -- autopay_* (subscriptions P3): an old autopay Razorpay wouldn't cancel (it could charge
+  -- twice), and an autopay charge that differs from the plan's amount.
+  kind          text not null check (kind in ('activation_failed', 'invoice_incomplete', 'dispute', 'reconcile_mismatch',
+                                              'autopay_cancel_failed', 'autopay_amount_mismatch')),
   vendor_id     uuid references public.vendor_profiles (id) on delete set null,
   order_ref     text,
   payment_ref   text,

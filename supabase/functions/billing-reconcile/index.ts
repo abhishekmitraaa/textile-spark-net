@@ -12,9 +12,16 @@
 // A payment Razorpay authorised but didn't capture is left alone and recorded: capture is
 // Razorpay's setting, not ours to force.
 //
+// Autopay orders (subscriptions P3) are reconciled their own way: a first order is keyed
+// by its Razorpay subscription (sub_…), so Razorpay is asked whether that subscription was
+// set up and which payment paid its upfront amount; a renewal order (subchg_<payment id>)
+// already names its payment.
+//
 // Answers { checked, fulfilled, already, unpaid, failed }.
 
 import { finishPaymentEvent, fulfilOrder, recordPaymentEvent } from "../_shared/fulfil.ts";
+import { fetchSubscription, firstSubscriptionPayment, orderPayments } from "../_shared/razorpay.ts";
+import { mandateEvent, retireMandates } from "../_shared/autopay.ts";
 
 function json(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -55,18 +62,48 @@ Deno.serve(async (req: Request): Promise<Response> => {
   const candidates = (await c.json()) as Candidate[];
 
   const tally = { checked: 0, fulfilled: 0, already: 0, unpaid: 0, failed: 0 };
-  const basic = `Basic ${btoa(`${keyId}:${keySecret}`)}`;
+  const keys = { keyId, keySecret };
+  const mark = (orderRef: string) =>
+    fetch(`${url}/rest/v1/rpc/billing_reconcile_mark`, { method: "POST", headers: db, body: JSON.stringify({ p_order_ref: orderRef }) });
+  const count = (f: { ok: boolean; already?: boolean }) => {
+    if (f.ok && !f.already) tally.fulfilled++;
+    else if (f.ok) tally.already++;
+    else tally.failed++;
+  };
   for (const o of candidates) {
     tally.checked++;
-    let payments: RazorpayPayment[] = [];
-    try {
-      const r = await fetch(`https://api.razorpay.com/v1/orders/${encodeURIComponent(o.order_id)}/payments`, { headers: { authorization: basic } });
-      if (!r.ok) { tally.failed++; continue; }
-      payments = ((await r.json())?.items ?? []) as RazorpayPayment[];
-    } catch {
-      tally.failed++;
+
+    // Autopay (P3). A renewal order exists only because Razorpay reported its charge, so
+    // the payment is known: it is in the order's own id.
+    if (o.order_id.startsWith("subchg_")) {
+      count(await fulfilOrder(url, serviceKey, o.order_id, o.order_id.slice("subchg_".length), "reconcile"));
+      await mark(o.order_id);
       continue;
     }
+    // An autopay's first order is keyed by its Razorpay subscription: ask Razorpay whether
+    // the subscription was set up, and which payment its upfront amount was.
+    if (o.order_id.startsWith("sub_")) {
+      const s = await fetchSubscription(keys, o.order_id);
+      if (!s.ok || !s.data) { tally.failed++; continue; }
+      const status = s.data.status;
+      if (status === "authenticated" || status === "active") {
+        const ev = await mandateEvent(url, serviceKey, o.order_id, status, s.data.payment_method, s.data.charge_at);
+        const paid = await firstSubscriptionPayment(keys, o.order_id);
+        if (paid) count(await fulfilOrder(url, serviceKey, o.order_id, paid, "reconcile"));
+        else tally.unpaid++;
+        if (ev?.replace?.length) await retireMandates(url, serviceKey, keys, ev.replace);
+      } else {
+        // Not set up: still at checkout (created), or over (cancelled, expired, completed).
+        if (status === "cancelled" || status === "expired" || status === "completed") await mandateEvent(url, serviceKey, o.order_id, status);
+        tally.unpaid++;
+      }
+      await mark(o.order_id);
+      continue;
+    }
+
+    const paid = await orderPayments(keys, o.order_id);
+    if (!paid.ok) { tally.failed++; continue; }
+    const payments: RazorpayPayment[] = paid.data?.items ?? [];
 
     const captured = payments.find((p) => p.status === "captured");
     if (captured) {
@@ -75,9 +112,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         eventId, event: "reconcile.captured", source: "billing-reconcile", orderRef: o.order_id, paymentRef: captured.id,
       });
       const f = await fulfilOrder(url, serviceKey, o.order_id, captured.id, "reconcile");
-      if (f.ok && !f.already) tally.fulfilled++;
-      else if (f.ok) tally.already++;
-      else tally.failed++;
+      count(f);
       if (!seen.duplicate || !seen.outcome) {
         await finishPaymentEvent(url, serviceKey, eventId, f.ok ? (f.already ? "already_fulfilled" : "fulfilled") : `refused:${f.reason}`,
           { invoice_id: f.invoice_id ?? null, incident_id: f.incident_id ?? null });
@@ -93,7 +128,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
         if (!seen.duplicate) await finishPaymentEvent(url, serviceKey, eventId, "authorized_not_captured", { amount: authorised.amount });
       }
     }
-    await fetch(`${url}/rest/v1/rpc/billing_reconcile_mark`, { method: "POST", headers: db, body: JSON.stringify({ p_order_ref: o.order_id }) });
+    await mark(o.order_id);
   }
   return json({ ok: true, ...tally });
 });

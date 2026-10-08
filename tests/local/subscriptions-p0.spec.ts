@@ -58,15 +58,17 @@ test("checkout stays closed until the seller is listed, then VIP can be bought",
   const adminPage = await admin.newPage();
   await adminPage.goto(`${ADMIN_URL}/feature-flags`);
   await expect(adminPage.getByRole("heading", { name: "Plan checkout" })).toBeVisible();
-  await adminPage.getByPlaceholder("Search by name or email").fill("p0-switch");
-  await adminPage.getByRole("button", { name: "Add" }).first().click();
-  await expect(adminPage.getByRole("button", { name: "Save switch" })).toBeDisabled(); // no reason yet
-  await adminPage.getByLabel("Reason").fill(reason);
+  // The page has one panel per switch (checkout, delivery, autopay…): work in this one.
+  const flag = adminPage.getByTestId("flag-subscription_checkout");
+  await flag.getByPlaceholder("Search by name or email").fill("p0-switch");
+  await flag.getByRole("button", { name: "Add" }).first().click();
+  await expect(flag.getByRole("button", { name: "Save switch" })).toBeDisabled(); // no reason yet
+  await flag.getByLabel("Reason").fill(reason);
   listed.push(who.id);
-  await adminPage.getByRole("button", { name: "Save switch" }).click();
+  await flag.getByRole("button", { name: "Save switch" }).click();
   await expect(adminPage.getByText("Switch saved.")).toBeVisible();
   const n = before + 1;
-  await expect(adminPage.getByText(`On for ${n} listed account${n === 1 ? "" : "s"}`)).toBeVisible();
+  await expect(flag.getByText(`On for ${n} listed account${n === 1 ? "" : "s"}`)).toBeVisible();
   expect(sql(`select count(*) from admin.audit_log where target_table = 'public.feature_flags' and reason = '${reason}'`)).toBe("1");
   await admin.close();
 

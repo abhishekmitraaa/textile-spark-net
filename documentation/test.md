@@ -187,6 +187,46 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-08 — Subscriptions P3: autopay (local stack, mock Razorpay: harness 18/18; all four harnesses green; autopay flow check 49/49; end to end 22/22; browser 11/11; typecheck 0 in both apps; i18n 7,333/7,333; admin build)
+- **Where:** the local stack with P0–P3 applied; apps on :8092 and :5186 from the `subscriptions/p3-autopay` worktrees;
+  a second edge runtime serving `subscription-autopay`, `subscription-webhook`, `billing-reconcile`,
+  `notification-dispatch` and `invoice-render` with mock Razorpay keys and `RAZORPAY_API_URL` / `RESEND_API_URL`
+  pointed at a local mock of Razorpay (plans, subscriptions, cancel, invoices) and Resend.
+- **Not Razorpay itself:** every call is as Razorpay documents it (read 2026-10-08) and ran against the mock. A pass in
+  Razorpay's test mode is still owed before the switch is turned on for anyone.
+- **Harness `scripts/subscriptions/p3_autopay.sql`**: 18/18, on the stack and in a full replay of the migration. A plan
+  saved once; the functions refused to a browser; a mandate not yet authenticated isn't autopay; authenticated → on,
+  once; a new mandate lists the old one; the upfront payment is the first order; a renewal order, fulfilled once,
+  the period two months long; another amount → an incident, still renewed; pending → the bell and one email a day;
+  halted → off and told; cancelled is final; an unknown subscription; mandates read per vendor; a purchase no longer
+  claims autopay; the open mandate; incident kinds; nobody's autopay; **a first purchase with autopay shows on once
+  the plan exists (fails without the fix)**. P0 29/29, P1 26/26, P2 21/21 on the same database.
+- **`node scripts/subscriptions/autopay-flow-check.mjs`**: 49/49 (the real code of `subscription-autopay`, the webhook,
+  the reconciler and create-order; PostgREST and Razorpay stubbed). Start: the switch, no keys, the gate, the Razorpay
+  plan and subscription (start, upfront amount, count, expiry), the order and the mandate, a saved plan reused, an
+  upgrade with a code, a lost code and a failed order write leaving nothing behind, a ₹0 first period, a paid plan,
+  no paid plan, too close to renewal. Verify: a bad signature, someone else's subscription, the good path, the
+  order|payment form refused, a ₹0 order, a paid plan, an old mandate that won't cancel, a refused activation.
+  Cancel. The webhook: charged, charged twice, charged before verify, authenticated with and without Razorpay's
+  invoice, pending, halted, cancelled, a late event, not ours, updated, the database down. The reconciler. One-off
+  checkout refused. **Mutation:** signing `subscription|payment` instead fails 8 checks.
+- **End to end (scratch script):** 22/22: start (the mock got a monthly plan at ₹2,713 and a subscription starting in a
+  month with ₹2,713 upfront); a wrong signature refused; verify (Gold active, a test document with the payment,
+  autopay on); one-off checkout refused; a change to yearly as an upgrade with credit, the old subscription cancelled
+  at the mock; a renewal by webhook (a ₹22,990 + ₹4,138 invoice, the period a year longer); the same charge again;
+  a pending event (the bell, an email queued, the dispatcher sending "Your Cosora autopay payment didn't go through");
+  off; on again for the paid plan with nothing invoiced; the reconciler completing an autopay the browser left.
+  **It caught the first-purchase bug** (autopay showing off).
+- **Browser:** `subscriptions-p3` 2/2 (a listed seller: the card off, the ticked option and its wording, Pay, "Autopay
+  is on", the card's next charge, off after confirming, on again; an unlisted seller: no card, no option, the demo
+  checkout as before). **It caught a layout bug:** the current-plan card's gradient layer covered what followed it,
+  and the Autopay card's buttons couldn't be clicked. Regression: `subscriptions-p0` 3/3 (its selectors now scoped to
+  the Plan checkout switch, since the page has three), `subscriptions-p1` 2/2 **including the PDF steps that couldn't
+  run during P2**, `subscriptions-p2` 2/2, `plans-and-refunds` 2/2.
+- **Typecheck:** buyer 0 and Cosora-Admin 0; admin build ok; `i18n:check` 7,333/7,333; `discount-flow-check` 97/97;
+  `notification-dispatch-check` 16/16. eslint: clean on the new files; `payments.ts` keeps one error that was there
+  before (`openRazorpayCheckout`'s async promise executor).
+
 ### 2026-10-08 — Subscriptions P2: notification delivery (local stack: harness 21/21; dispatch check 16/16; end to end 13/13; browser 2/2; flow check 97/97; typecheck 0 in both apps; i18n 7,287/7,287; admin build)
 - **Where:** the local stack with P0–P2 applied; apps on :8092 and :5186 from the `subscriptions/p2-notifications`
   worktrees; `notification-dispatch`, `invoice-render` and `billing-reconcile` on a second edge runtime with the

@@ -419,8 +419,8 @@ rather than a supplier directory.
   what budget. A deliberate retention and upsell mechanic.
 - **Subscriptions** — Basic / Silver / Gold, determining lead volume, product listing caps
   and ad geography. Enforced by `enforce_plan_limits`. Invoices are first-class.
-  **No Razorpay Subscriptions API and no autopay** — every billing period is a discrete
-  order the vendor pays explicitly.
+  A plan is paid for one period at a time, or renewed automatically by **autopay** (Razorpay
+  Subscriptions; subscriptions P3, built 2026-10-08, not live), which the seller can turn off at any time.
   The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
   button that opens the Help page, as Andy asked. That's the buyer help page: its email
   link (hello@cosora.in) and phone line (+91 88155 78226) are the real support channels a vendor
@@ -481,6 +481,16 @@ rather than a supplier directory.
 5. Receive leads and quote requests; respond with quotes.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
+
+### Changed 2026-10-08 (subscriptions P3; built, not live)
+- **Autopay at checkout:** "Renew automatically (autopay)" is ticked by default and says what the plan will renew at,
+  and from when. Unticked, the plan is paid for one period, as before.
+- **An Autopay card on /subscription:** on (with the next charge and the payment method), a renewal payment that
+  failed and is being retried, stopped after failed payments, or off. A seller turns it on for the plan they've
+  already paid for, changes the payment method, or turns it off (asked to confirm; the plan runs to the end of the
+  period paid for).
+- **While autopay is on**, a plan change keeps it on, on the new plan.
+- For accounts on the autopay switch.
 
 ### Changed 2026-10-08 (subscriptions P2; built, not live)
 - **Settings → Notifications** shows a seller where Cosora reaches them (the email invoices go to, masked) and a
@@ -687,6 +697,12 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-08 (subscriptions P3; built, not live)
+- **Subscriptions list:** an **Autopay** column (it was "Auto-renew", which every purchase set to yes).
+- **Feature switches** now lists three: Plan checkout, Email, WhatsApp and SMS delivery, and Autopay.
+- **Billing incidents** can also say an old autopay couldn't be cancelled at Razorpay, or an autopay charge wasn't
+  the plan's amount.
 
 ### Added 2026-10-08 (subscriptions P2; built, not live)
 - **System Health → Notification delivery:** email, WhatsApp and SMS per channel: whether the provider is configured,

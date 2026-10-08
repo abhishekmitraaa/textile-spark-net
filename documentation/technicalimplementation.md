@@ -3255,3 +3255,64 @@ Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `2026
   existing `account-deletion` sender keeps its own copy of the WhatsApp call.
 - **Tests:** `scripts/subscriptions/p2_notification_delivery.sql` (21 cases), `scripts/subscriptions/notification-dispatch-check.mjs`
   (16), `tests/local/subscriptions-p2.spec.ts`.
+
+## Subscriptions P3: autopay (2026-10-08)
+
+Migration `20261008140000_subscriptions_p3_autopay.sql` (guard: `subscription_activate` md5 `0e8ce873…`, the same in
+production on 2026-10-08). Built on branch `subscriptions/p3-autopay`; not applied.
+
+- **Razorpay, as documented (checked 2026-10-08):** `POST /v1/subscriptions` with a future `start_at` and an `addons`
+  upfront amount charges that amount in the authorisation payment (captured, not refunded) and the plan amount from
+  `start_at`; with no addon the authorisation is a small refunded amount. Checkout returns `razorpay_payment_id`,
+  `razorpay_subscription_id` and `razorpay_signature` = HMAC-SHA256(`payment_id|subscription_id`, key secret).
+  `cancel_at_cycle_end` isn't allowed before the first charge, so cancellation is always immediate. UPI and e-mandate
+  subscriptions can't be updated. `subscription.authenticated` carries the subscription only; `subscription.charged`
+  the subscription and the payment.
+- **Tables:** `admin.subscription_gateway_plans` (plan, cycle, mode, list_rupees, amount_paise, razorpay_plan_id; unique
+  per plan, cycle, mode and amount); `public.subscription_mandates` (vendor, razorpay_subscription_id, plan, cycle,
+  mode, list_rupees, amount_paise, first_order_ref, status created → authenticated → active / pending / halted /
+  cancelled / completed / expired, method, start_at, charge_at; RLS: own, or super, finance and support; no client
+  writes); `subscription_payment_orders.autopay`.
+- **`auto_renew`:** reset to false, default false; `subscription_activate` no longer sets it and ends with
+  `admin.autopay_sync(vendor)` (true while a mandate is authenticated, active or pending), because a first purchase
+  authenticates its mandate before the plan row exists.
+- **Service-role RPCs:** `autopay_gateway_plan` / `_save` (first saved wins a race); `autopay_mandate_create`;
+  `autopay_vendor_open(vendor)`; `autopay_mandate_event(sub, status, method, charge_at)` (statuses only move forward;
+  cancelled, completed and expired are final; a late "authenticated" changes nothing; answers `replace`, the vendor's
+  other open mandates, when this one has just been set up; pending and halted ring the bell and queue
+  `autopay_payment_failed` / `autopay_stopped`, one email per mandate per day); `autopay_charge(sub, payment, amount)`
+  → `already` (an order carries the payment), `first` (the unfulfilled upfront order) or `renewal` (inserts
+  `subchg_<payment id>` with the mandate's list price; another amount opens `autopay_amount_mismatch`);
+  `autopay_incident(kind, sub, detail)`. `my_autopay()` (signed in): available, on, status, method, plan, amount,
+  next charge.
+- **`subscription-autopay`** (verify_jwt; Auth-confirmed caller; `not_configured` without Razorpay keys):
+  - `start`: the `subscription_autopay` switch, the checkout gate, then either the plan-change quote (charge, code,
+    GST → the upfront amount; `start_at` = the quote's `period_end`) or, with `existing`, the running plan
+    (`start_at` = its period end, no upfront amount, no order). The Razorpay plan is looked up or created; the
+    subscription gets `total_count` 120 (monthly) or 10 (yearly), `expire_by` 30 minutes; a start less than an hour
+    away is refused (`too_close_to_renewal`). The order's id is the Razorpay subscription id; a ₹0 first period is a
+    `free` order with no addon. A failure after the subscription exists releases the code and cancels it.
+  - `verify`: signature, ownership, `autopay_mandate_event('authenticated')`, `subscription_fulfil` of the first order
+    (payment null for a ₹0 one), then `retireMandates()` on the replaced ones.
+  - `cancel`: cancels the open mandate at Razorpay, then marks it.
+- **`_shared/razorpay.ts`** (plans, subscriptions, cancel, fetch, invoices, order payments; `RAZORPAY_API_URL` for a
+  mock) and **`_shared/autopay.ts`** (`mandateEvent`, `chargeTarget`, `openMandate`, `autopayIncident`,
+  `retireMandates`: Razorpay's "already cancelled" counts as done; any other failure is an incident).
+- **`subscription-webhook`:** `subscription.authenticated` / `activated` / `charged` / `pending` / `halted` /
+  `cancelled` / `completed` / `expired` → `autopay_mandate_event`. `charged` → `autopay_charge` → `subscription_fulfil`
+  (outcome `renewed` or `fulfilled`). Authenticated or activated with the first order unfulfilled → the upfront
+  payment is asked of Razorpay (`GET /v1/invoices?subscription_id=`), never taken from the event (at activation the
+  event's payment is the first renewal's); none yet → `awaiting_payment`. `subscription.updated`, `paused`, `resumed`
+  → ignored. The database unreachable → 500, as for payments.
+- **`billing-reconcile`:** `sub_…` orders ask `GET /v1/subscriptions/{id}`; authenticated or active → the mandate,
+  then the first order with the upfront payment; `subchg_<payment>` orders are fulfilled with that payment.
+- **`subscription-create-order`:** `autopay_active` when `autopay_vendor_open` answers a mandate.
+- **App:** `openRazorpaySubscriptionCheckout` (payments.ts); `useAutopay`, `startAutopay`, `cancelAutopay` and
+  `purchaseSubscription({ autopay })`, which falls back to a one-off payment on `not_configured` or
+  `autopay_not_open` (subscriptions.ts); `PlanCheckoutDialog` (the option, ticked; fixed on when autopay is already
+  on); `AutopayCard` on /subscription. The current-plan card is now `relative` so its gradient layer stays inside it.
+- **Cosora-Admin:** Subscriptions' "Auto-renew" column is "Autopay"; Feature switches names the delivery and autopay
+  switches, and each panel has `data-testid="flag-<key>"`.
+- **Tests:** `scripts/subscriptions/p3_autopay.sql` (18 cases), `scripts/subscriptions/autopay-flow-check.mjs` (49),
+  `tests/local/subscriptions-p3.spec.ts` (needs `LOCAL_SIDE_FUNCTIONS_URL`; Razorpay Checkout is a stand-in that signs
+  with the mock key secret).
