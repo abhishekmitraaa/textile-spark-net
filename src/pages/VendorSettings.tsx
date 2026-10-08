@@ -19,6 +19,7 @@ import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
 import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
+import { useFeatureFlag } from "@/lib/queries/featureFlags";
 import { setContactConsent, useContactChannels } from "@/lib/queries/contactChannels";
 import {
   ChevronLeft, ChevronRight, Building2, Mail, Smartphone,
@@ -153,6 +154,10 @@ const VendorSettings = () => {
   // Where Cosora reaches this seller, and the WhatsApp opt-in (subscriptions P2). Shown only
   // once delivery is switched on for the account (the notification_delivery switch).
   const { data: channels } = useContactChannels(Boolean(user));
+  // Plan reminders are the first of these switches a sender reads (subscriptions P4): where
+  // delivery and the plan lifecycle are both on for the account, its row says what is sent.
+  const lifecycleOn = useFeatureFlag("subscription_lifecycle") === true;
+  const planRemindersLive = Boolean(channels?.deliveryOn) && lifecycleOn;
   const [waBusy, setWaBusy] = useState(false);
   const toggleWhatsApp = async (v: boolean) => {
     setWaBusy(true);
@@ -257,7 +262,10 @@ const VendorSettings = () => {
               )}
               <div className="divide-y divide-gray-100">
                 {EMAIL_ROWS.map((r) => (
-                  <ToggleRow key={r.key} label={r.label} description={r.description}
+                  <ToggleRow key={r.key} label={r.label}
+                    description={r.key === "emailPlanExpiry" && planRemindersLive
+                      ? "Emailed 7, 4, 2 and 1 days before your plan ends, and on the day. Off stops the emails, not the notices in your bell."
+                      : r.description}
                     checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} />
                 ))}
               </div>
@@ -290,7 +298,9 @@ const VendorSettings = () => {
                   />
                   <p className="px-4 pb-1 text-xs text-gray-500" data-testid="email-destination">
                     {channels.email
-                      ? `Invoices and payment receipts are emailed to ${channels.email}.`
+                      ? (planRemindersLive
+                        ? `Invoices, payment receipts and plan reminders are emailed to ${channels.email}.`
+                        : `Invoices and payment receipts are emailed to ${channels.email}.`)
                       : "Add an email to your business profile to get invoices by email."}
                   </p>
                 </div>

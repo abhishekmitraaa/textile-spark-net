@@ -164,6 +164,19 @@ export default function Subscription() {
     ? Math.max(0, Math.ceil((new Date(vplan.subscription_end).getTime() - Date.now()) / 86_400_000))
     : null;
 
+  // The plan's last days (subscriptions P4). In the grace days the period is over and the
+  // plan still in force; before them, a plan without autopay is about to end. With the
+  // subscription_lifecycle switch off there are no grace days and no listings are paused.
+  const lifecycleOn = useFeatureFlag("subscription_lifecycle") === true;
+  const inGrace = vplan?.status === "grace";
+  const day = (iso: string | null | undefined) =>
+    iso ? new Date(iso).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const endsOn = day(vplan?.subscription_end);
+  const graceUntil = day(vplan?.grace_until);
+  const graceDays = vplan?.grace_days ?? 0;
+  const endingSoon = !inGrace && currentPlanId !== "free" && vplan?.status === "active" && !vplan.auto_renew
+    && !vplan.scheduled_plan_id && daysRemaining != null && daysRemaining <= 7;
+
   // "Choose <plan>": the checks that need no server, then the checkout dialog.
   const buy = (plan: Plan) => {
     if (!user) { toast.error("Sign in as a vendor to subscribe"); return; }
@@ -174,6 +187,14 @@ export default function Subscription() {
       return;
     }
     setCheckoutPlan(plan);
+  };
+
+  // "Renew" on the ending and grace notices: the plan and cycle the vendor has now.
+  const renewNow = () => {
+    const plan = plans.find((p) => p.id === currentPlanId);
+    if (!plan) return;
+    setIsYearly(vplan?.billing_cycle === "yearly");
+    buy(plan);
   };
 
   // The dialog's Pay. Resolves to why a discount code was refused (the dialog
@@ -255,7 +276,7 @@ export default function Subscription() {
   // method is changed), and off.
   const { data: autopay } = useAutopay(user?.id);
   const [autopayBusy, setAutopayBusy] = useState(false);
-  const hasPaidPlan = currentPlanId !== "free" && vplan?.status === "active";
+  const hasPaidPlan = currentPlanId !== "free" && (vplan?.status === "active" || inGrace);
   const turnOnAutopay = async () => {
     setAutopayBusy(true);
     try {
@@ -346,12 +367,16 @@ export default function Subscription() {
                     <div className="flex items-center gap-2">
                       <CardTitle className="text-2xl">{currentPlan?.name ?? "Free"} Plan</CardTitle>
                       <Badge className={tierStyle(currentPlanId).chip}>
-                        {currentPlanId === "free" ? "Default" : "Active"}
+                        {currentPlanId === "free" ? "Default" : inGrace ? "Ended" : "Active"}
                       </Badge>
                     </div>
                     <CardDescription className="mt-1 flex items-center gap-2">
                       <Clock className="h-3.5 w-3.5" />
-                      {daysRemaining != null ? `${daysRemaining} days until renewal` : "No renewal — free forever"}
+                      {inGrace
+                        ? `Ended on ${endsOn}. Renew by ${graceUntil} to keep it.`
+                        : daysRemaining == null ? "No renewal — free forever"
+                        : vplan?.auto_renew ? `${daysRemaining} days until renewal`
+                        : daysRemaining === 0 ? "Ends today" : `Ends in ${daysRemaining} days`}
                     </CardDescription>
                     {/* A paid downgrade waiting for this period to end (Subscription
                         FAQ: "Downgrades will take effect from your next billing cycle"). */}
@@ -383,15 +408,47 @@ export default function Subscription() {
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="h-4 w-4" /> Plan status
                   </div>
-                  <p className="mt-3 text-lg font-bold text-foreground capitalize">{vplan?.status ?? "free"}</p>
+                  <p className="mt-3 text-lg font-bold text-foreground capitalize" data-testid="plan-status">{inGrace ? "Grace period" : vplan?.status ?? "free"}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {daysRemaining != null ? `Renews in ${daysRemaining} days` : "Upgrade for more products"}
+                    {inGrace ? `Renew by ${graceUntil}`
+                      : daysRemaining == null ? "Upgrade for more products"
+                      : vplan?.auto_renew ? `Renews in ${daysRemaining} days`
+                      : daysRemaining === 0 ? "Ends today" : `Ends in ${daysRemaining} days`}
                   </p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </motion.div>
+
+        {/* The plan's last days: about to end without autopay, or ended and in its grace days. */}
+        {(inGrace || endingSoon) && (
+          <motion.div variants={section} role="status" data-testid="plan-ending" data-state={inGrace ? "grace" : "ending"}
+            className="flex flex-col gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <Clock className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {inGrace
+                    ? `Your ${currentPlan?.name ?? ""} plan ended on ${endsOn}`
+                    : daysRemaining === 0 ? `Your ${currentPlan?.name ?? ""} plan ends today`
+                    : daysRemaining === 1 ? `Your ${currentPlan?.name ?? ""} plan ends tomorrow`
+                    : `Your ${currentPlan?.name ?? ""} plan ends in ${daysRemaining} days`}
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {inGrace
+                    ? `Nothing has changed yet. Renew by ${graceUntil} to keep your listings, seal and place in search. After that your account moves to the Free plan and listings over its limit are paused.`
+                    : graceDays > 0
+                      ? `Renew by ${endsOn} to keep it. After that you have ${graceDays} more days before your account moves to the Free plan.`
+                      : `Renew by ${endsOn} to keep it. After that your account moves to the Free plan.`}
+                </p>
+              </div>
+            </div>
+            <Button className="shrink-0" onClick={renewNow} disabled={checkoutClosed || busyPlan !== null}>
+              {`Renew ${currentPlan?.name ?? ""}`}
+            </Button>
+          </motion.div>
+        )}
 
         {/* Autopay: on, retrying, stopped or off (shows nothing where it isn't offered). */}
         <AutopayCard
@@ -667,6 +724,7 @@ export default function Subscription() {
         onClose={() => setCheckoutPlan(null)}
         onConfirm={completePurchase}
         autopay={autopay ? { available: autopay.available, on: autopay.on } : undefined}
+        listingsUsed={lifecycleOn ? usage?.products_used ?? 0 : undefined}
       />
     </DashboardLayout>
   );

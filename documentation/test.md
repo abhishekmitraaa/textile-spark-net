@@ -187,6 +187,32 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-08 — Subscriptions P4: reminders, grace days, paused listings (local stack: harness 29/29; all five harnesses green; end to end 23/23; browser 14/14; typecheck 0 in both apps; i18n 7,380/7,380; admin build)
+- **Where:** the local stack with P0–P4 applied; apps on :8092 and :5186 from the `subscriptions/p4-lifecycle`
+  worktrees. No function changed in P4. The daily job was run by hand (`select public.expire_subscriptions()`).
+- **Harness** `scripts/subscriptions/p4_lifecycle.sql`, 29/29, and a full replay of `20261008150100` in one
+  rolled-back transaction (undo, run, compare all 16 functions with what is applied, harness). It covers: active, grace
+  and free; the switch off; `get_vendor_plan` and `vendor_entitlements` in grace; a purchase in grace (renewal from the
+  old end, another plan from now, new after the grace days); reminders at 7, a made-up day, the day itself, the email
+  switch, autopay, the switch off; the grace notice; the lapse with the most viewed kept, with picks, with the switch
+  off; a paid downgrade; resume on purchase and review for a saved listing; refusals from a browser; swap; the
+  Products page's numbers; an admin's cancel; ad targeting in grace; the autopay-stopped template.
+- **Earlier harnesses, again:** P0 29/29, P1 26/26, P2 21/21, P3 18/18.
+- **End to end over HTTP** (PostgREST and the payment functions, a fresh seller), 23/23: a demo purchase and its seal
+  date; grace in `get_vendor_plan`, the preview and `my_product_cap`; a renewal paid in grace and its invoice's period;
+  picks; the job called over PostgREST; the lapse; swap and its limit; a hand resume, a pause-column write and the
+  job refused; an edit while paused; a purchase that brings listings back.
+- **Earlier end-to-end runs, again:** P1 16/16, P3 22/22 (mock Razorpay). Flow checks: discounts 97, dispatch 16,
+  autopay 49.
+- **Browser** (`tests/local/subscriptions-p4.spec.ts`, 3/3): the grace notice and status on /subscription, the lapse,
+  the paused notice, a swap in the picker, the Paused filter; the coming-limit notice, picks, one reminder, the lapse
+  keeping the picks; Cosora-Admin's switch name and Paused tab. With it, all 14 of `subscriptions-p0` to `-p4` and
+  `plans-and-refunds` (`subscriptions-p1` needs `LOCAL_INVOICE_RENDER_URL`, `-p3` needs `LOCAL_SIDE_FUNCTIONS_URL`).
+- **Found and fixed while testing:** a purchase by someone whose old plan had expired compared the two plans and
+  paused listings (the comparison now needs the old row active); a seal date ahead of its plan survived the lapse.
+- **Not checked:** screenshots of the new screens (the capture timed out waiting on fonts); the reminder and grace
+  emails were queued and inspected in the outbox, not sent (P2's dispatcher run covers sending).
+
 ### 2026-10-08 — Subscriptions P3: autopay (local stack, mock Razorpay: harness 18/18; all four harnesses green; autopay flow check 49/49; end to end 22/22; browser 11/11; typecheck 0 in both apps; i18n 7,333/7,333; admin build)
 - **Where:** the local stack with P0–P3 applied; apps on :8092 and :5186 from the `subscriptions/p3-autopay` worktrees;
   a second edge runtime serving `subscription-autopay`, `subscription-webhook`, `billing-reconcile`,

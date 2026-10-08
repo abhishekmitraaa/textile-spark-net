@@ -99,6 +99,22 @@ in the next one.
 
 ## Log
 
+### 2026-10-08 — Subscriptions P4: plan lifecycle reviewed — Severity: Info
+- **Who can pause or resume a listing:** only `admin.apply_product_cap()` (reached from the trigger on
+  `vendor_subscriptions`) and the vendor's own `vendor_set_live_products()`, which checks ownership and the plan's
+  limit under the cap trigger's lock. A browser's write to `paused_at` or `paused_from` is refused, and a vendor
+  can't set `paused` or `live` by hand (the moderation trigger, unchanged). Resubmitting a paused listing is held to
+  the limit by the cap trigger.
+- **No way round moderation:** a listing resumes into the status it was paused from; any save while paused sends it
+  to review on return, so photos or text changed while hidden are reviewed.
+- **Grace can't be stretched:** a renewal paid in the grace days starts at the old period end. `grace_days` is
+  capped at 28.
+- **Internal functions** (`admin.feature_on_for`, `admin.grace_interval`, `admin.apply_product_cap`, the job) are
+  not callable from a browser (the migration's self-check). `admin.feature_on_for` has no role test by design: schema
+  `admin` isn't exposed.
+- **Left as it is:** production has 6 vendors over the Free limit with no plan. P4 doesn't touch them (only a plan
+  getting smaller pauses listings). Mitra to decide whether they should be brought under the limit.
+
 ### 2026-10-08 — Subscriptions P3: autopay reviewed — Severity: Info (one thing to verify before go-live)
 - **Who can set one up:** an Auth-confirmed, registered, active vendor the `subscription_autopay` switch lists, through
   the same checkout gate as a one-off order. The mandate's functions are service-role only (the migration's

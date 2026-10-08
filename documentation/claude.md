@@ -226,6 +226,30 @@ undocumented. Deep technical rationale for each lives in
   - A plan's period never depends on Razorpay's status: turning autopay off, or Razorpay stopping it, leaves the plan
     running to the end of what was paid for.
   - Offered only to accounts the `subscription_autopay` switch allows.
+- **A plan ends in three steps: reminders, grace days, lapse** (subscriptions P4, 2026-10-08; migrations
+  `20261008150000` and `20261008150100`; Mitra: 7, 4, 2, 1 and 0 days, then 7 days' grace).
+  - **The plan in force is `admin.vendor_effective_plan()`**, status `active`, `grace` or `free`. Anything that asks
+    "what plan is this vendor on" asks it (or `vendor_cap_plan`, `get_vendor_plan`, `vendor_entitlements`); never read
+    `vendor_subscriptions` and compare the period end yourself, or the grace days are missed.
+  - **In the grace days the plan is the vendor's in full.** The same plan paid for then is a renewal from the old
+    period end (`admin.subscription_quote`), never from the day of payment.
+  - **`vendor_profiles.plan_expires_at` is "seal and search position until"**: the period end plus the grace days.
+  - **One daily job:** `expire_subscriptions()`. Every notice it sends is logged once per period in
+    `admin.subscription_reminder_log`, so it is safe to run more than once a day.
+  - Off unless the `subscription_lifecycle` switch allows the account: then there are no grace days, no reminders,
+    and nothing is paused.
+- **A listing over the plan's limit is paused, never deleted or sent back to review** (subscriptions P4).
+  - `products.status = 'paused'` with `paused_at` and `paused_from`. Buyers see only `live`, so nothing else changes.
+  - **Only `admin.apply_product_cap()` and `vendor_set_live_products()` pause or resume.** A browser can't write the
+    pause columns or set the status (`products_pause_guard`, `enforce_products_moderation`).
+  - **Pausing happens only when a plan gets smaller**; a purchase only resumes. It runs from a trigger on
+    `vendor_subscriptions` (`trg_vendor_subscriptions_cap`), so new code that changes a plan needs no call of its own.
+  - Kept first: the vendor's picks (`vendor_keep_products`), then published before in-review, then the most viewed.
+  - A listing saved while paused returns to review, not straight to live.
+- **Database code that isn't the service role tests a switch with `admin.feature_on_for()`** (a scheduled job, a
+  trigger inside an admin's request). `public.feature_on_for()` answers the service role only and raises otherwise.
+- **A new enum value is its own migration.** Postgres won't let a value be used in the transaction that adds it
+  (`20261008150000` adds `paused`; `20261008150100` uses it).
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with

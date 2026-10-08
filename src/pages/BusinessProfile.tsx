@@ -1510,9 +1510,10 @@ const BusinessProfile = () => {
                     <span className={`absolute left-2 top-2 rounded-full px-2 py-0.5 text-[9px] font-semibold ${
                       product.status === "active" ? "bg-green-500 text-white"
                         : product.status === "pending" ? "bg-black/60 text-white"
+                        : product.status === "paused" ? "bg-blue-600 text-white"
                         : "bg-gray-200 text-gray-700"
                     }`}>
-                      {product.status === "active" ? "Live" : product.status === "pending" ? "In review" : "Draft"}
+                      {product.status === "active" ? "Live" : product.status === "pending" ? "In review" : product.status === "paused" ? "Paused" : "Draft"}
                     </span>
                     {product.reviewsCount > 0 && (
                       <div className="absolute bottom-2 left-2 flex items-center gap-0.5 rounded-full bg-white/90 px-1.5 py-0.5">

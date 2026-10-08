@@ -225,6 +225,8 @@ export interface PlanChangePreview {
   periodStart: string | null;
   periodEnd: string | null;
   startsNow: boolean;
+  /** Paid in the grace days after the plan's end: a renewal then runs from that end (P4). */
+  inGrace: boolean;
   /** The plan running now, and when it ends (when one is). */
   currentPlanId: string | null;
   currentPeriodEnd: string | null;
@@ -233,7 +235,7 @@ export interface PlanChangePreview {
 interface RawPreview {
   ok: boolean; reason?: string; kind?: ChangeKind; plan_id?: string; plan_name?: string; billing_cycle?: BillingCycle;
   list_rupees?: number; credit_rupees?: number; charge_rupees?: number; period_start?: string; period_end?: string;
-  starts_now?: boolean; current_plan_id?: string | null; current_period_end?: string | null;
+  starts_now?: boolean; current_plan_id?: string | null; current_period_end?: string | null; in_grace?: boolean;
 }
 
 async function fetchPlanChangePreview(planId: string, billingCycle: BillingCycle): Promise<PlanChangePreview> {
@@ -244,6 +246,7 @@ async function fetchPlanChangePreview(planId: string, billingCycle: BillingCycle
     ok: Boolean(r.ok), reason: r.reason, kind: r.kind, planId: r.plan_id, planName: r.plan_name, billingCycle: r.billing_cycle,
     listRupees: Number(r.list_rupees ?? 0), creditRupees: Number(r.credit_rupees ?? 0), chargeRupees: Number(r.charge_rupees ?? 0),
     periodStart: r.period_start ?? null, periodEnd: r.period_end ?? null, startsNow: Boolean(r.starts_now),
+    inGrace: Boolean(r.in_grace),
     currentPlanId: r.current_plan_id ?? null, currentPeriodEnd: r.current_period_end ?? null,
   };
 }

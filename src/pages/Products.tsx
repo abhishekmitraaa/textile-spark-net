@@ -1,18 +1,19 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyProducts, deleteProduct, duplicateProduct, type VendorProductRow } from "@/lib/queries/products";
+import { useMyProducts, useProductCap, deleteProduct, duplicateProduct, type VendorProductRow } from "@/lib/queries/products";
+import { LiveListingsDialog } from "@/components/vendor/LiveListingsDialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   Plus, Search, Share2, MoreVertical,
   Eye, MessageSquare, Edit2, Trash2, Copy,
-  ChevronDown, Camera, PackageOpen, SearchX, LogIn,
+  ChevronDown, Camera, PackageOpen, SearchX, LogIn, PauseCircle,
 } from "lucide-react";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -52,7 +53,11 @@ const STATUS = {
   active:  { label: "Published",    pill: "bg-green-100 text-green-700" },
   pending: { label: "Under review", pill: "bg-amber-100 text-amber-700" },
   draft:   { label: "Draft",        pill: "bg-gray-100 text-gray-500" },
+  // Over the plan's limit: hidden from buyers until the plan allows it again (subscriptions P4).
+  paused:  { label: "Paused",       pill: "bg-blue-100 text-blue-700" },
 } as const;
+
+const DAY = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
 // ─────────────────────────────────────────────────────────────
 // PRODUCT ROW CARD
@@ -331,7 +336,24 @@ const Products = () => {
   const { data: products = [], isLoading } = useMyProducts(user?.id);
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
-  const [statusFilter, setStatusFilter] = useState("all");
+  // /products?status=paused is where the "listings paused" notice sends the vendor.
+  const [params] = useSearchParams();
+  const [statusFilter, setStatusFilter] = useState(params.get("status") === "paused" ? "paused" : "all");
+
+  // Listings and the plan's limit (subscriptions P4): what is paused, and a smaller limit
+  // that is coming. The picker saves picks (keep) or swaps which are live (swap).
+  const { data: cap } = useProductCap(user?.id);
+  const [picker, setPicker] = useState<"keep" | "swap" | null>(null);
+  const pausedNow = cap?.paused ?? 0;
+  const pickerLimit = picker === "keep" ? cap?.next?.cap ?? 0 : cap?.cap ?? 0;
+  const counted = products.filter((p) => p.status === "active" || p.status === "pending");
+  // Keep starts from the vendor's earlier picks, else from what the database would keep
+  // (published before in-review, then the most viewed); swap starts from what is live.
+  const pickerIds = picker === "keep"
+    ? (cap?.keepIds.length
+      ? cap.keepIds
+      : [...counted].sort((a, b) => (a.status === "active" ? 0 : 1) - (b.status === "active" ? 0 : 1) || b.views - a.views).map((p) => p.id))
+    : counted.map((p) => p.id);
 
   const filtered = products.filter(p => {
     const matchSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
@@ -409,6 +431,75 @@ const Products = () => {
             </Link>
           </motion.div>
 
+          {/* ── Listings over the plan's limit: paused now, or about to be ── */}
+          {user && cap && pausedNow > 0 ? (
+            <motion.div
+              variants={section} role="status" data-testid="listings-cap-banner" data-state="paused"
+              className="flex flex-col gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex items-start gap-3">
+                <PauseCircle className="mt-0.5 h-5 w-5 shrink-0 text-brand-vendor" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {pausedNow === 1 ? "1 listing is paused" : `${pausedNow} listings are paused`}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600 lg:text-sm">
+                    {cap.cap === 1
+                      ? `Your ${cap.planName} plan allows 1 listing. Paused listings are hidden from buyers, not deleted.`
+                      : `Your ${cap.planName} plan allows ${cap.cap} listings. Paused listings are hidden from buyers, not deleted.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                {cap.cap > 0 && (
+                  <button
+                    onClick={() => setPicker("swap")}
+                    className="rounded-lg border border-brand-vendor px-3 py-2 text-xs font-semibold text-brand-vendor transition-colors hover:bg-blue-100 lg:text-sm"
+                  >
+                    Choose which are live
+                  </button>
+                )}
+                <Link to="/subscription" className="rounded-lg bg-brand-vendor px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-vendor/90 lg:text-sm">
+                  Upgrade plan
+                </Link>
+              </div>
+            </motion.div>
+          ) : user && cap?.next ? (
+            <motion.div
+              variants={section} role="status" data-testid="listings-cap-banner" data-state="next"
+              className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="flex items-start gap-3">
+                <PauseCircle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {cap.next.reason === "downgrade"
+                      ? `Your plan changes to ${cap.next.planName} on ${DAY.format(new Date(cap.next.at))}`
+                      : "Your plan is about to end"}
+                  </p>
+                  <p className="mt-0.5 text-xs text-gray-600 lg:text-sm">
+                    {cap.next.reason === "downgrade"
+                      ? `${cap.next.planName} allows ${cap.next.cap} listings and you have ${cap.active}. Choose which stay live, or the most viewed ones will.`
+                      : `If it isn't renewed by ${DAY.format(new Date(cap.next.at))}, your account moves to the Free plan, which allows ${cap.next.cap} listings. You have ${cap.active}. Choose which stay live, or the most viewed ones will.`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  onClick={() => setPicker("keep")}
+                  className="rounded-lg border border-amber-600 px-3 py-2 text-xs font-semibold text-amber-800 transition-colors hover:bg-amber-100 lg:text-sm"
+                >
+                  Choose listings
+                </button>
+                {cap.next.reason === "plan_end" && (
+                  <Link to="/subscription" className="rounded-lg bg-brand-vendor px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-brand-vendor/90 lg:text-sm">
+                    Renew plan
+                  </Link>
+                )}
+              </div>
+            </motion.div>
+          ) : null}
+
           {/* ── Search + Filter ── */}
           <motion.div
             variants={section}
@@ -458,6 +549,7 @@ const Products = () => {
                   <option value="active">Published</option>
                   <option value="draft">Draft</option>
                   <option value="pending">Pending Review</option>
+                  <option value="paused">Paused</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>
@@ -553,6 +645,27 @@ const Products = () => {
           )}
 
         </motion.div>
+
+        <LiveListingsDialog
+          open={picker !== null}
+          mode={picker ?? "swap"}
+          limit={pickerLimit}
+          planName={picker === "keep" ? cap?.next?.planName ?? "" : cap?.planName ?? ""}
+          products={products}
+          initialIds={pickerIds}
+          onClose={() => setPicker(null)}
+          onSaved={(res) => {
+            setPicker(null);
+            refresh();
+            if (res.mode === "keep") {
+              toast.success("Your choice is saved", { description: "These listings stay live when your plan changes. You can change them until then." });
+            } else {
+              toast.success("Your live listings are updated", {
+                description: res.resumed > 0 ? "A listing you edited while it was paused goes through review first." : undefined,
+              });
+            }
+          }}
+        />
 
         {/* ── Floating Upload button (mobile only — desktop has it in the header) ── */}
         <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 lg:hidden">

@@ -18,6 +18,12 @@ function whatHappens(p: PlanChangePreview | undefined, billingCycle: BillingCycl
   const start = p?.periodStart ? DAY.format(new Date(p.periodStart)) : "";
   if (p?.ok && p.kind === "upgrade") return "Starts now. What's left of your current plan comes off the price.";
   if (p?.ok && p.kind === "downgrade") return `Starts on ${start}, when your current plan ends. You pay for it now.`;
+  if (p?.ok && p.kind === "renewal" && p.inGrace) {
+    // Paid in the grace days: the new period runs from the day the last one ended (P4).
+    return billingCycle === "yearly"
+      ? `Adds a year to your plan, from ${start}, the day your last period ended.`
+      : `Adds a month to your plan, from ${start}, the day your last period ended.`;
+  }
   if (p?.ok && p.kind === "renewal") {
     return billingCycle === "yearly" ? `Adds a year to your plan, from ${start}.` : `Adds a month to your plan, from ${start}.`;
   }
@@ -43,6 +49,9 @@ function whatHappens(p: PlanChangePreview | undefined, billingCycle: BillingCycl
  * Razorpay mandate that renews the plan at its list price with GST from the end of the
  * period being bought. With autopay already on, the purchase keeps it on (a one-off
  * payment would be charged twice), so the box is ticked and fixed.
+ *
+ * Listings (subscriptions P4): moving to a plan that allows fewer listings than the vendor
+ * has pauses the rest when it starts. The dialog says so before the payment.
  */
 export function PlanCheckoutDialog({
   plan,
@@ -50,6 +59,7 @@ export function PlanCheckoutDialog({
   onClose,
   onConfirm,
   autopay,
+  listingsUsed,
 }: {
   /** The plan being bought; the dialog is open while this is set. */
   plan: Plan | null;
@@ -59,6 +69,8 @@ export function PlanCheckoutDialog({
   onConfirm: (plan: Plan, discountCode?: string, kind?: ChangeKind, autopay?: boolean) => Promise<string | null>;
   /** Whether autopay is offered to this account, and whether one is on (useAutopay). */
   autopay?: { available: boolean; on: boolean };
+  /** The vendor's published and in-review listings, where a smaller plan pauses the rest; omitted where it doesn't. */
+  listingsUsed?: number;
 }) {
   const [quote, setQuote] = useState<PlanQuote | null>(null);
   const [busy, setBusy] = useState(false);
@@ -91,6 +103,12 @@ export function PlanCheckoutDialog({
   const renewal = gstOn(list);
   const withAutopay = Boolean(autopay?.available) && (Boolean(autopay?.on) || renewAuto);
   const renewsOn = p?.ok && p.periodEnd ? DAY.format(new Date(p.periodEnd)) : null;
+
+  // A smaller plan pauses the listings over its limit: when it starts (a downgrade), or at
+  // once (another plan bought in the grace days). Buying a first plan never pauses anything.
+  const allowed = plan.limits?.product_cap ?? -1;
+  const pauses = listingsUsed != null && allowed >= 0 && listingsUsed > allowed && Boolean(p?.ok)
+    && (p?.kind === "downgrade" || (p?.kind === "new" && Boolean(p.currentPlanId)));
 
   const apply = async (code: string) => {
     setRefusal(null);
@@ -168,6 +186,14 @@ export function PlanCheckoutDialog({
                 <dd className="tabular-nums text-foreground">{formatINR(lines.total)}</dd>
               </div>
             </dl>
+
+            {pauses && (
+              <p role="note" data-testid="listings-pause-note" className="rounded-lg bg-muted px-3 py-2 text-sm text-foreground">
+                {p?.kind === "downgrade"
+                  ? `${plan.name} allows ${allowed} listings and you have ${listingsUsed}. When it starts, the rest are paused, not deleted. You can choose which stay live from Products.`
+                  : `${plan.name} allows ${allowed} listings and you have ${listingsUsed}. When you pay, the rest are paused, not deleted. You can choose which are live from Products.`}
+              </p>
+            )}
 
             {charge > 0 && (
               <DiscountCodeField

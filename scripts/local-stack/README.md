@@ -65,3 +65,12 @@ except the three functions repointed at local URLs.
 
 The local database is disposable: `supabase stop --no-backup` in `.claude/tmp/localstack`
 throws it away.
+
+## The plan lifecycle (subscriptions P4)
+
+The local stack has no scheduled jobs, so the daily plan job is run by hand:
+
+    docker exec -i supabase_db_localstack psql -U postgres -c "select public.expire_subscriptions()"
+
+Apply `20261008150000` (the status "paused") on its own before `20261008150100`: Postgres won't use a new enum value
+in the transaction that adds it. `scripts/subscriptions/p4_lifecycle.sql` needs both.

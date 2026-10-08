@@ -596,7 +596,8 @@ export interface VendorProductRow {
   price: string;          // price_value as a plain number string ("289")
   unit: string;
   image: string;
-  status: "active" | "draft" | "pending";
+  /** paused: over the plan's limit, hidden from buyers until the plan allows it again (P4). */
+  status: "active" | "draft" | "pending" | "paused";
   /** Denormalised category label off the product row. Drives the real
    *  "Views by Category" breakdown on Analytics; null when uncategorised. */
   categoryName: string | null;
@@ -628,10 +629,11 @@ interface RawMyProduct {
   product_images: RawImage[] | null;
 }
 
-// DB status → the three UI states the vendor Products page renders.
+// DB status → the UI states the vendor Products page renders.
 function toUiStatus(s: string): VendorProductRow["status"] {
   if (s === "live") return "active";
   if (s === "under_review") return "pending";
+  if (s === "paused") return "paused";
   return "draft"; // draft + rejected both render as non-public here
 }
 
@@ -945,6 +947,71 @@ export interface ProductPatch {
   location?: string | null;
   attributes?: Attributes;
 }
+// ── Listings and the plan's limit (subscriptions P4) ──
+// A listing over the vendor's plan limit is paused: hidden from buyers, not deleted, back
+// when the plan allows it. The database decides which (admin.apply_product_cap); the vendor
+// can say which to keep before a smaller plan starts, and swap which are live after.
+export interface ProductCap {
+  /** Whether the plan lifecycle (reminders, grace days, pausing) is on for this account. */
+  available: boolean;
+  planId: string;
+  planName: string;
+  /** Listings the plan allows; below 0 is unlimited. */
+  cap: number;
+  /** Published or in review: what counts against the limit. */
+  active: number;
+  paused: number;
+  /** A smaller limit that is coming, when the vendor has more listings than it allows. */
+  next: { reason: "downgrade" | "plan_end"; planId: string; planName: string; cap: number; at: string } | null;
+  /** What the vendor already chose to keep, most wanted first. */
+  keepIds: string[];
+}
+
+interface RawProductCap {
+  available?: boolean; plan_id?: string; plan_name?: string; cap?: number; active?: number; paused?: number;
+  keep_ids?: string[] | null;
+  next?: { reason: "downgrade" | "plan_end"; plan_id: string; plan_name: string; cap: number; at: string } | null;
+}
+
+async function fetchProductCap(): Promise<ProductCap | null> {
+  const { data, error } = await supabase.rpc("my_product_cap");
+  if (error) {
+    // Before the P4 migration the function doesn't exist: nothing is ever paused.
+    if (error.code === "PGRST202") return null;
+    throw error;
+  }
+  const r = (data ?? {}) as unknown as RawProductCap;
+  return {
+    available: Boolean(r.available), planId: r.plan_id ?? "free", planName: r.plan_name ?? "Free",
+    cap: Number(r.cap ?? -1), active: Number(r.active ?? 0), paused: Number(r.paused ?? 0),
+    next: r.next ? { reason: r.next.reason, planId: r.next.plan_id, planName: r.next.plan_name, cap: Number(r.next.cap), at: r.next.at } : null,
+    keepIds: r.keep_ids ?? [],
+  };
+}
+
+export function useProductCap(vendorId: string | undefined) {
+  return useQuery({
+    queryKey: ["products", "cap", vendorId],
+    queryFn: fetchProductCap,
+    enabled: Boolean(vendorId),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Which listings to keep when the plan next gets smaller, most wanted first. */
+export async function keepProducts(ids: string[]): Promise<void> {
+  const { error } = await supabase.rpc("vendor_keep_products", { p_ids: ids });
+  if (error) throw error;
+}
+
+/** Which listings are live now: the ones named go live (or back to review), the vendor's others are paused. */
+export async function setLiveProducts(ids: string[]): Promise<{ paused: number; resumed: number }> {
+  const { data, error } = await supabase.rpc("vendor_set_live_products", { p_ids: ids });
+  if (error) throw error;
+  const r = (data ?? {}) as unknown as { paused?: number; resumed?: number };
+  return { paused: Number(r.paused ?? 0), resumed: Number(r.resumed ?? 0) };
+}
+
 export async function updateProduct(id: string, patch: ProductPatch): Promise<void> {
   const { data, error } = await supabase.from("products").update(patch).eq("id", id).select("id");
   if (error) throw error;

@@ -56,6 +56,8 @@ export interface Plan {
 
 export interface PlanUsage {
   products_used: number;
+  /** Listings paused for being over the plan's limit (subscriptions P4); absent before it. */
+  products_paused?: number;
   leads_used: number;
   period_start: string;
   period_end: string;
@@ -66,12 +68,17 @@ export interface PlanUsage {
 export interface VendorPlan {
   vendor_id: string;
   effective_plan_id: PlanId;
-  status: string; // active | past_due | expired | canceled | pending | free
+  /** active, grace (the period is over, the grace days aren't: still the plan) or free. */
+  status: string;
   billing_cycle: "monthly" | "yearly";
   auto_renew: boolean;
   current_period_start: string;
   current_period_end: string;
   subscription_end: string | null;
+  /** In the grace days: when they end and the plan lapses to Free (subscriptions P4). */
+  grace_until?: string | null;
+  /** How many grace days this account gets after a plan's end (0: none). */
+  grace_days?: number;
   is_invite_only: boolean;
   is_verified_admin: boolean;
   trust_seal: boolean;

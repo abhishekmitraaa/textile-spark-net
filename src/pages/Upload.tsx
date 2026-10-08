@@ -346,6 +346,7 @@ const Upload = () => {
       // Respect the 24–48h moderation rule: a submitted listing is
       // 'under_review' (buyers can't see it yet); an explicit draft stays hidden.
       const nextStatus = intent === "draft" ? "draft" : "under_review";
+      const pausedEdit = isEdit && editing?.status === "paused" && nextStatus === "under_review";
       const fabric = (formValues["fabric"] as string) || null;
       const gsm = (formValues["gsm"] as string) || null;
       const fitType = (formValues["fit"] as string) || (formValues["fit_type"] as string) || null;
@@ -403,7 +404,10 @@ const Upload = () => {
           location,
           attributes,
           customization_available: customizationAvailable,
-          status: nextStatus,
+          // A paused listing (over the plan's limit, subscriptions P4) stays paused: sending
+          // it to review would count against the limit that paused it. The database marks
+          // the edit, so it goes through review when the plan has room for it again.
+          status: pausedEdit ? undefined : nextStatus,
         });
         if (imageFiles.length > 0) {
           const { count } = await supabase
@@ -419,7 +423,9 @@ const Upload = () => {
         }
         queryClient.invalidateQueries({ queryKey: ["products"] });
         toast.success("Product updated", {
-          description: nextStatus === "under_review" ? "Resubmitted for review (24–48h)." : "Saved as draft.",
+          description: pausedEdit
+            ? "This listing is paused. It goes through review when your plan has room for it again."
+            : nextStatus === "under_review" ? "Resubmitted for review (24–48h)." : "Saved as draft.",
         });
         navigate("/products");
         return;

@@ -297,6 +297,14 @@ const KIND_META: Record<string, {
   subscription_canceled: { type: "system", tone: "warning",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
   refund_requested:      { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
   refund_processed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  // Autopay trouble and its two-days-before notice (subscriptions P3 and P4).
+  autopay:               { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
+  // The plan's last days (subscriptions P4): reminders before the end and the grace
+  // notice, the lapse to Free, and listings paused or brought back by the plan's limit.
+  plan_expiring:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Renew your plan", href: "/subscription" },
+  plan_lapsed:           { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose a plan", href: "/subscription" },
+  listings_paused:       { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose listings", href: "/products?status=paused" },
+  listings_resumed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {

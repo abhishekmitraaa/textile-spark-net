@@ -482,6 +482,21 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-08 (subscriptions P4; built, not live)
+- **Reminders before a plan ends:** 7, 4, 2 and 1 days before, and on the day, in the bell and by email (the
+  "Plan expiry reminders" switch in Settings stops the email only). With autopay on, one notice two days before the charge.
+- **7 grace days after it ends:** the plan keeps working in full. /subscription says the plan has ended and the day
+  to renew by, with a Renew button. Renewing then continues from the day the last period ended.
+- **After the grace days** the account is on Free, and **listings over the limit are paused**: hidden from buyers,
+  nothing deleted. The same happens when a paid downgrade starts.
+- **Products page:** paused listings carry a "Paused" tag and filter; a notice says how many are paused, or that a
+  smaller limit is coming, with **Choose which stay live** (before the change) or **Choose which are live** (after).
+  Left alone, the most viewed stay.
+- **Choosing a plan again** brings paused listings back as they were. One saved while it was paused goes through
+  review first.
+- **Checkout** says so before a payment that would pause listings.
+- For accounts on the plan lifecycle switch.
+
 ### Changed 2026-10-08 (subscriptions P3; built, not live)
 - **Autopay at checkout:** "Renew automatically (autopay)" is ticked by default and says what the plan will renew at,
   and from when. Unticked, the plan is paid for one period, as before.
@@ -697,6 +712,13 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-08 (subscriptions P4; built, not live)
+- **Products:** a **Paused (plan limit)** tab, for looking only: a paused listing has no Approve (its plan resumes
+  it), and can still be rejected.
+- **Subscriptions list:** an active plan whose period is over is marked as in its grace days.
+- **Feature switches** now lists four, with "Reminders, grace days and paused listings".
+- **Reports:** "paused" appears in Products by status.
 
 ### Added 2026-10-08 (subscriptions P3; built, not live)
 - **Subscriptions list:** an **Autopay** column (it was "Auto-renew", which every purchase set to yes).

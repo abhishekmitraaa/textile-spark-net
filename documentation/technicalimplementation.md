@@ -3316,3 +3316,80 @@ production on 2026-10-08). Built on branch `subscriptions/p3-autopay`; not appli
 - **Tests:** `scripts/subscriptions/p3_autopay.sql` (18 cases), `scripts/subscriptions/autopay-flow-check.mjs` (49),
   `tests/local/subscriptions-p3.spec.ts` (needs `LOCAL_SIDE_FUNCTIONS_URL`; Razorpay Checkout is a stand-in that signs
   with the mock key secret).
+
+## Subscriptions P4: reminders, grace days, paused listings (2026-10-08)
+
+Built on `subscriptions/p4-lifecycle`; not applied. Migrations `20261008150000_subscriptions_p4_paused_status.sql`
+(the enum value, alone) and `20261008150100_subscriptions_p4_lifecycle.sql`. No edge function changes and no new
+scheduled job.
+
+### The plan in force
+- `admin.grace_interval(vendor)`: `admin.billing_settings.grace_days` (7; 0 to 28) where the
+  `subscription_lifecycle` switch allows the vendor, else zero.
+- `admin.vendor_effective_plan(vendor, at)` keeps its columns. A row is live while `status = 'active'` and
+  `current_period_end + grace > at`; its status is `grace` once the period has ended. `period_end` stays the end of
+  what was paid for; callers add the grace interval to `raw_period_end` for the day the grace days end.
+- `get_vendor_plan()` and `vendor_entitlements()` treat `grace` as paid and return `grace_until`;
+  `get_vendor_plan()` also returns `grace_days` and `usage.products_paused`.
+- `admin.subscription_quote()`: in the grace days the same plan and cycle is `renewal` with
+  `period_start = current_period_end` (`in_grace: true`); anything else is `new` from now. The invoice's period
+  follows, so no day is given away or billed twice.
+- `subscription_activate()` writes `vendor_profiles.plan_expires_at = period end + grace`.
+- `enforce_ad_location_scope()` reads `vendor_cap_plan()` instead of the subscription row.
+
+### The daily job: `public.expire_subscriptions()`
+Run by `subscription-expiry-sweep` (`29 3 * * *` UTC, 08:59 IST), in this order:
+1. Paid downgrades whose day has come (unchanged).
+2. Reminders for active paid plans ending within 8 days, for vendors the switch allows. Days left are counted on
+   the IST calendar. Without autopay the reminder is the nearest of 7, 4, 2, 1, 0 not yet sent for this period
+   (so a missed day is made up, with the real number of days): bell kind `plan_expiring`, and the `plan_expiring`
+   email (switch `emailPlanExpiry`) and WhatsApp templates through `notify_deliver`. With autopay: one bell notice
+   (kind `autopay`) at two days or fewer.
+3. The grace notice (bell, and the `plan_grace` email) once the period is over, when autopay is off.
+4. The lapse: `status = 'expired'` where the period and its grace days are over; the seal date is cleared; bell
+   kind `plan_lapsed` and the transactional `plan_lapsed` email.
+5. `vendor_profiles.plan_id` and `plan_expires_at` are brought in line for every active paid plan.
+- `admin.subscription_reminder_log (vendor_id, period_end, kind)` is the once-only guard; a renewal moves the period
+  end, so the next period starts clean.
+
+### Paused listings
+- `products.paused_at`, `products.paused_from` (`live` or `under_review`), check `products_paused_check`
+  (paused exactly when both are set).
+- `public.products_pause_guard()` (`trg_products_pause_guard`, before insert or update): a browser can't change the
+  two columns; a browser's save of a paused row sets `paused_from = 'under_review'`; whoever changes the status, the
+  columns are set or cleared to match.
+- `admin.apply_product_cap(vendor, pause)`: under the cap trigger's advisory lock. Over the plan's limit and
+  `pause`: rank by `keep_product_ids` order, then published before in-review, then `views_count`; pause the rest,
+  clear the picks, tell the vendor (bell `listings_paused`, transactional email). Under it: resume paused listings
+  into `paused_from`, picks first (bell `listings_resumed`).
+- `admin.subscription_cap_sync()` (`trg_vendor_subscriptions_cap`, after insert or update of `plan_id`, `status`,
+  `current_period_end`): `pause` is true only when an active row stops being active, or an active row moves to a
+  plan that allows fewer listings.
+- Vendor functions: `vendor_keep_products(ids)` (picks, most wanted first; needs a subscription row),
+  `vendor_set_live_products(ids)` (the named go live or back to review, the rest are paused; within the limit),
+  `my_product_cap()` (limit, active, paused, picks, and `next`: a paid downgrade, or the plan's end without autopay
+  in its last 7 days and grace days, when the vendor has more listings than it allows).
+
+### Switch tests
+- `admin.feature_on_for(key, profile)`: no role test; reachable only from definer functions. `notify_deliver()`
+  uses it (patched in place by the migration, guarded by its md5).
+
+### Client
+- `src/lib/queries/products.ts`: `useProductCap`, `keepProducts`, `setLiveProducts`; `VendorProductRow.status` gains
+  `paused`.
+- `src/components/vendor/LiveListingsDialog.tsx`: one picker, `keep` and `swap` modes.
+- `src/pages/Products.tsx`: the paused / coming-limit notice, the Paused filter, `?status=paused`.
+- `src/pages/Subscription.tsx`: the ending and grace notices (`data-testid="plan-ending"`), Renew.
+- `src/components/vendor/PlanCheckoutDialog.tsx`: `listingsUsed`; the grace renewal's wording.
+- `src/pages/Upload.tsx`: saving a paused listing leaves its status alone.
+- `src/lib/notificationsStore.ts`: kinds `plan_expiring`, `plan_lapsed`, `listings_paused`, `listings_resumed`,
+  `autopay`.
+
+### Checks
+- `scripts/subscriptions/p4_lifecycle.sql` (29 cases, rolls back). The enum value must be committed first.
+- `tests/local/subscriptions-p4.spec.ts` (the job is run by hand with `select public.expire_subscriptions()`).
+
+### Release order (when Mitra says)
+1. Apply `20261008150000`, then `20261008150100`, as two migrations. P0 to P3 must be applied first (the guard).
+2. No functions to deploy. The existing job picks the new function up.
+3. Merge with the switch off. List test accounts on `subscription_lifecycle`, check, then turn it on for everyone.
