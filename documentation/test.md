@@ -187,6 +187,37 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-08 — Subscriptions P2: notification delivery (local stack: harness 21/21; dispatch check 16/16; end to end 13/13; browser 2/2; flow check 97/97; typecheck 0 in both apps; i18n 7,287/7,287; admin build)
+- **Where:** the local stack with P0–P2 applied; apps on :8092 and :5186 from the `subscriptions/p2-notifications`
+  worktrees; `notification-dispatch`, `invoice-render` and `billing-reconcile` on a second edge runtime with the
+  stack's environment, plus `RESEND_API_URL` and `WHATSAPP_API_URL` pointed at a local mock of Resend and Meta.
+- **Harness `scripts/subscriptions/p2_notification_delivery.sql`**: 21/21, on the stack and in a full replay of the
+  migration. Server-only queueing; the switch; email queued while WhatsApp and SMS wait for opt-in; opt-in → WhatsApp to
+  the normalised number; dedupe; an email switch off vs a transactional template; language and version; a phone
+  sign-in placeholder skipped; claim, a second run getting nothing, an expired lock reclaimed; sent once; backoff then
+  failed; not configured → skipped; the invoice email's payload; nothing for a demo document; an outbox that refuses
+  the insert doesn't block the invoice; opt-in only through the RPC, logged once per change; masked addresses;
+  System Health for vendor ops and not a moderator; the test send for super admins only, five an hour; the heartbeat
+  and the 90-day prune.
+- **`node scripts/subscriptions/notification-dispatch-check.mjs`**: 16/16 (the function's real code with PostgREST,
+  Resend and Meta stubbed): service role only; nothing configured → all skipped; the email's subject, escaped HTML and
+  encoded link; the WhatsApp template and its parameters in order; SMS skipped; Resend 422 → failed, 429 and
+  unreachable → retried; Meta 131026 → failed, 130429 → retried; a full batch claims again; the run recorded.
+- **End to end (scratch script, mock providers):** 13/13. A listed seller opts in to WhatsApp (masked addresses back);
+  a test-mode payment's invoice queues its email in the same transaction; a WhatsApp test is queued once (the same
+  dedupe key again is refused); `notification-dispatch` through the platform's JWT gate sends both: the mock Resend got
+  "Your Cosora test document TST/2627/000001" with the invoice link, the amount and the no-money note; the mock Meta got
+  `hello_world` to 919876512345; both rows sent with the providers' ids; the heartbeat says email and WhatsApp
+  configured, SMS not; System Health counts them; a second run claims nothing. **It caught a bug the harness couldn't:**
+  the heartbeat's UPDATE had no WHERE, which PostgREST's safeupdate refuses (fixed; claude.md rule).
+- **Browser:** `subscriptions-p2` 2/2 (a listed seller sees the masked number and email, turns WhatsApp alerts on, the
+  opt-in and its log are recorded; an unlisted seller sees no WhatsApp section; System Health's panel per channel and a
+  super admin's test queued to their own address). `subscriptions-p1`: every invoice-page and incident check passed with
+  the English-only `InvoiceSheet`, but its two PDF steps timed out: the machine had lost internet access, so the side
+  runtime couldn't download `npm:pdf-lib` (the PDF code is unchanged since its 2/2 run earlier the same day).
+- **Typecheck:** buyer 0 and Cosora-Admin 0; admin build ok; eslint clean on the changed buyer files; `i18n:check`
+  7,287/7,287; `discount-flow-check` 97/97.
+
 ### 2026-10-08 — Subscriptions P1: billing core (local stack: harness 26/26; P0 harness 29/29; flow check 97/97; tax ids 18/18; browser 7/7; typecheck 0 in both apps; i18n 7,307/7,307; admin build)
 - **Where:** the local stack with P0 and P1 applied, apps on :8092 and :5186 from the `subscriptions/p1-billing-core`
   worktrees, the branch's functions copied into the local edge runtime. `invoice-render` and `billing-reconcile`

@@ -7533,5 +7533,12 @@
  "Our billing team has been alerted and will sort it out. You won't be charged again.": "हमारी बिलिंग टीम को सूचना दे दी गई है और वह इसे ठीक करेगी। आपसे दोबारा शुल्क नहीं लिया जाएगा।",
  "Payment received. Your plan will update shortly": "भुगतान मिल गया। आपका प्लान जल्द ही अपडेट होगा",
  "If it hasn't changed in a few minutes, contact Cosora Support. You won't be charged again.": "अगर कुछ मिनटों में यह नहीं बदलता, तो Cosora Support से संपर्क करें। आपसे दोबारा शुल्क नहीं लिया जाएगा।",
- "Download PDF": "PDF डाउनलोड करें"
+ "Download PDF": "PDF डाउनलोड करें",
+ "WhatsApp alerts on": "WhatsApp अलर्ट चालू",
+ "WhatsApp alerts off": "WhatsApp अलर्ट बंद",
+ "WhatsApp alerts": "WhatsApp अलर्ट",
+ "Cosora may send account, billing and lead alerts to {0}. You can turn this off any time.": "Cosora {0} पर खाते, बिलिंग और लीड से जुड़े अलर्ट भेज सकता है। आप इसे कभी भी बंद कर सकते हैं।",
+ "Add a WhatsApp or phone number to your business profile to get alerts on WhatsApp.": "WhatsApp पर अलर्ट पाने के लिए अपनी बिज़नेस प्रोफ़ाइल में WhatsApp या फ़ोन नंबर जोड़ें।",
+ "Invoices and payment receipts are emailed to {0}.": "इनवॉइस और भुगतान रसीदें {0} पर ईमेल की जाती हैं।",
+ "Add an email to your business profile to get invoices by email.": "इनवॉइस ईमेल पर पाने के लिए अपनी बिज़नेस प्रोफ़ाइल में ईमेल जोड़ें।"
 }

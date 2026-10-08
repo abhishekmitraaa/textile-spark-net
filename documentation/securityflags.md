@@ -99,6 +99,17 @@ in the next one.
 
 ## Log
 
+### 2026-10-08 — Subscriptions P2: outbound messages reviewed — Severity: Info (no open flag)
+- **Addresses at rest:** the outbox keeps each message's email address or phone number. It is in the `admin` schema
+  with RLS on and no client privilege; Cosora-Admin sees only masked addresses (`admin_notification_health`); finished
+  rows are pruned after 90 days.
+- **Opt-in:** WhatsApp and SMS are queued only with a recorded opt-in, written only by the person through
+  `set_contact_consent`, with every change kept (`admin.contact_consent_log`).
+- **Injection:** payload values are HTML-escaped in email bodies and URL-encoded in link paths
+  (`notification-dispatch-check` proves both); WhatsApp and SMS carry plain text.
+- **Abuse:** `notify_deliver` and the dispatcher's RPCs are service-role only (the migration's self-check); the admin
+  test send goes only to the caller's own address, super admins only, five an hour.
+
 ### 2026-10-08 — Subscriptions P1 fixes S-3, S-7 and S-8 on its branch — Severity: Medium
 - **S-3** was proven, not assumed: with the immutability trigger removed, the harness's finance-admin browser session
   edits and deletes an issued invoice (cases 13 and 14 fail); with it, both are refused.

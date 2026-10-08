@@ -194,6 +194,26 @@ undocumented. Deep technical rationale for each lives in
 - **Invoices are written in English only** (Mitra, 2026-10-08). The invoice document
   (`src/components/vendor/InvoiceSheet.tsx`) is marked `data-no-translate` and skipped by the i18n check; the PDF is
   English; the page around it (buttons, messages) is translated as usual.
+- **Outbound messages go through the notification outbox** (subscriptions P2, 2026-10-08; migration
+  `20261008130000_subscriptions_p2_notification_delivery.sql`).
+  - A feature never calls Resend or Meta itself: it calls `notify_deliver(profile, template, payload, dedupe_key,
+    channels)` (service role or a definer function), in the same transaction as its event, with a dedupe key per
+    event. `notification-dispatch` sends; System Health shows the queue.
+  - What a message says is a row in `admin.notification_templates` (key, channel, language, version). A WhatsApp
+    message is a Meta-approved template; an SMS needs its DLT template id; a new message ships its template rows in
+    its migration.
+  - Nothing is queued for an account the `notification_delivery` switch doesn't allow.
+  - An account's language for messages is `ui_language` in its auth metadata, else English.
+- **WhatsApp and SMS need a recorded opt-in** (P2): `set_contact_consent()` writes `contact_consent` and keeps
+  every change in `admin.contact_consent_log` (the Admin Log records only admins). Email needs none for account
+  messages; a non-transactional email follows the vendor's email switch named by its template; invoices ignore them.
+- **Where Cosora reaches someone** (P2, `admin.contact_address`): email is the vendor's owner email, else a confirmed
+  sign-in email that isn't a phone sign-in placeholder; WhatsApp is the vendor's WhatsApp number, else its phone, else
+  the confirmed sign-in phone; numbers are stored as country code and digits (10 digits means India).
+- **A function reachable through PostgREST puts a WHERE on every UPDATE and DELETE** (found 2026-10-08). PostgREST
+  sessions load safeupdate, which refuses them ("UPDATE requires a WHERE clause", 21000) even inside a definer
+  function. psql doesn't load it, so a SQL harness passes regardless: call every new RPC once through PostgREST in its
+  end-to-end check. A one-row settings table uses `where id`.
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with

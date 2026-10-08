@@ -482,6 +482,12 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-08 (subscriptions P2; built, not live)
+- **Settings → Notifications** shows a seller where Cosora reaches them (the email invoices go to, masked) and a
+  **WhatsApp alerts** switch, their opt-in, for accounts on the notification switch. Without a WhatsApp or phone
+  number it says to add one.
+- **A plan invoice is emailed** when it is issued, with a link to it (not for demo checkouts).
+
 ### Changed 2026-10-08 (subscriptions P1; built, not live)
 - **A plan invoice says what it is:** a tax invoice (with CGST + SGST or IGST, place of supply and SAC) once Cosora's
   GST details are set, a payment receipt before that, or a test or demo document that took no money. It shows the
@@ -681,6 +687,11 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-08 (subscriptions P2; built, not live)
+- **System Health → Notification delivery:** email, WhatsApp and SMS per channel: whether the provider is configured,
+  what is due, retrying or being sent, and the last day's sent, failed and skipped, with recent failures in the
+  provider's own words. Super admins can **send a test** to their own address (five an hour).
 
 ### Added 2026-10-08 (subscriptions P1; built, not live)
 - **Billing incidents** on Subscriptions: a payment whose plan didn't activate, a receipt issued without Cosora's GST

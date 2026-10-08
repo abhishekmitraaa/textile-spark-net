@@ -19,9 +19,10 @@ import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
 import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
+import { setContactConsent, useContactChannels } from "@/lib/queries/contactChannels";
 import {
   ChevronLeft, ChevronRight, Building2, Mail, Smartphone,
-  ShieldCheck, Phone, LogOut, Headphones, FileText,
+  ShieldCheck, Phone, LogOut, Headphones, FileText, MessageCircle,
 } from "lucide-react";
 
 // Vendor accent (blue), matching the rest of the vendor app — never the buyer red.
@@ -109,15 +110,15 @@ function InfoRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 }
 
 function ToggleRow({
-  label, description, checked, onChange,
-}: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void }) {
+  label, description, checked, onChange, disabled = false,
+}: { label: string; description: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   return (
     <div className="flex items-start justify-between gap-4 px-4 py-3.5">
       <div className="min-w-0">
         <p className="text-sm font-semibold text-gray-900">{label}</p>
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
       </div>
-      <Switch checked={checked} onCheckedChange={onChange} className="data-[state=checked]:bg-brand-vendor mt-0.5 shrink-0" />
+      <Switch checked={checked} onCheckedChange={onChange} disabled={disabled} aria-label={label} className="data-[state=checked]:bg-brand-vendor mt-0.5 shrink-0" />
     </div>
   );
 }
@@ -148,6 +149,23 @@ const VendorSettings = () => {
   // optimistically (flip now, revert + toast if the write fails).
   const [notif, setNotif] = useState<VendorNotificationSettings>(DEFAULT_VENDOR_NOTIFICATIONS);
   useEffect(() => { if (settings) setNotif(settings.notifications); }, [settings]);
+
+  // Where Cosora reaches this seller, and the WhatsApp opt-in (subscriptions P2). Shown only
+  // once delivery is switched on for the account (the notification_delivery switch).
+  const { data: channels } = useContactChannels(Boolean(user));
+  const [waBusy, setWaBusy] = useState(false);
+  const toggleWhatsApp = async (v: boolean) => {
+    setWaBusy(true);
+    try {
+      await setContactConsent("whatsapp", v);
+      await qc.invalidateQueries({ queryKey: ["contact_channels"] });
+      toast.success(v ? "WhatsApp alerts on" : "WhatsApp alerts off");
+    } catch (e) {
+      toast.error("Couldn't save", { description: errorMessage(e) });
+    } finally {
+      setWaBusy(false);
+    }
+  };
 
   const toggleNotif = async (key: keyof VendorNotificationSettings, v: boolean) => {
     if (!user) { toast.error("Sign in to change notification settings"); return; }
@@ -256,6 +274,27 @@ const VendorSettings = () => {
                     checked={notif[r.key]} onChange={(v) => toggleNotif(r.key, v)} />
                 ))}
               </div>
+
+              {channels?.deliveryOn && (
+                <div data-testid="whatsapp-alerts">
+                  <div className="border-t border-gray-100" />
+                  <SubgroupHeader icon={MessageCircle} label="WhatsApp" />
+                  <ToggleRow
+                    label="WhatsApp alerts"
+                    description={channels.whatsapp
+                      ? `Cosora may send account, billing and lead alerts to ${channels.whatsapp}. You can turn this off any time.`
+                      : "Add a WhatsApp or phone number to your business profile to get alerts on WhatsApp."}
+                    checked={channels.consent.whatsapp}
+                    disabled={waBusy || (!channels.whatsapp && !channels.consent.whatsapp)}
+                    onChange={toggleWhatsApp}
+                  />
+                  <p className="px-4 pb-1 text-xs text-gray-500" data-testid="email-destination">
+                    {channels.email
+                      ? `Invoices and payment receipts are emailed to ${channels.email}.`
+                      : "Add an email to your business profile to get invoices by email."}
+                  </p>
+                </div>
+              )}
               <div className="h-2" />
             </Card>
           </motion.section>

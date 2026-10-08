@@ -11,7 +11,9 @@ const buyer = ["_shared", "faqs-snapshot", "site-config-snapshot", "support-rece
   // Plans and checkout (no Razorpay keys locally, so checkouts take the demo path).
   "subscription-create-order", "subscription-verify-payment", "subscription-webhook", "discount-quote",
   // Invoices as PDFs and the payment reconciler (subscriptions P1).
-  "invoice-render", "billing-reconcile"];
+  "invoice-render", "billing-reconcile",
+  // The notification outbox's sender (subscriptions P2).
+  "notification-dispatch"];
 const admin = ["admin-staff", "admin-refund-payment"];
 for (const f of buyer) cpSync(resolve("supabase/functions", f), resolve(DIR, f), { recursive: true, force: true });
 for (const f of admin) cpSync(resolve(ADMIN_REPO, "supabase/functions", f), resolve(DIR, f), { recursive: true, force: true });

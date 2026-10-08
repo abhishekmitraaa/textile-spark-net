@@ -3201,3 +3201,57 @@ Migrations `20261008120000_subscriptions_p1_billing_core.sql` (guard: `admin.sub
   (`LOCAL_INVOICE_RENDER_URL` routes the specs' calls there).
 - **Tests:** `scripts/subscriptions/p1_billing_core.sql` (26 cases), `scripts/discount-flow-check.mjs` (B, C and H
   rewritten for the fulfilment call; J new), `tests/local/subscriptions-p1.spec.ts`.
+
+## Subscriptions P2: notification delivery (2026-10-08)
+
+Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `20261008130100_subscriptions_p2_dispatch_job.sql`
+(the schedule: a new job, applied only with Mitra's say-so, after `notification-dispatch` is deployed). Built on branch
+`subscriptions/p2-notifications`; not applied.
+
+- **Switch:** `notification_delivery` (seeded off). `notify_deliver` queues nothing for an account it doesn't allow.
+- **`admin.notification_templates`** (RLS on, no client privilege, audited): key, channel (email, whatsapp, sms), locale
+  (en, hi, gu), version, subject, body with `{{payload_key}}`, cta_label and cta_path (email button), wa_template,
+  wa_language, wa_params (payload keys in the template's {{1}}… order), sms_dlt_template_id, transactional,
+  email_switch (the `vendor_profiles.notifications` key that turns a non-transactional email off), active. The highest
+  active version in the account's language, else English, is used; a queued message keeps its template row. Seeded:
+  `invoice_issued` (email) and `delivery_test` (email; WhatsApp = Meta's `hello_world`; SMS).
+- **`admin.notification_outbox`**: profile, template, channel, to_address, payload, dedupe_key (unique with channel),
+  status (queued, sending, sent, failed, skipped), attempts, next_attempt_at, locked_until, provider_id, last_error,
+  sent_at. Indexes: due rows (partial), per profile, recent. No client access.
+- **`public.notify_deliver(p_profile, p_template, p_payload, p_dedupe_key, p_channels)`** (definer; EXECUTE for the
+  service role only, so definer callers such as triggers may use it): per channel → `queued`, `no_template`,
+  `no_consent` (WhatsApp, SMS), `switched_off`, `no_address` or `duplicate`; answers `{queued, channels}` or
+  `{queued: 0, reason: 'delivery_off'}`.
+- **Addresses:** `admin.contact_address(profile, channel)` (see claude.md), `admin.phone_e164_digits()`,
+  `admin.mask_address()` (`a*****@gmail.com`, `+91 *******210`).
+- **Dispatching:** `notification_claim(limit)` (service role): due `queued` rows and `sending` rows whose 5-minute lock
+  expired, `FOR UPDATE SKIP LOCKED`, set to `sending` with attempts + 1, returned with their template fields.
+  `notification_mark(id, outcome, provider_id, error)` on a `sending` row only: sent; not_configured → skipped;
+  failed; retry → queued at +1, 5, 30 or 120 minutes, or failed after 5 attempts. At least once.
+  `notification_dispatch_heartbeat(configured, claimed, sent, failed)` records the run in
+  `admin.notification_dispatcher_state` and prunes finished rows older than 90 days, 1,000 at a time.
+- **`notification-dispatch`** (verify_jwt; service-role token only): claims 50 at a time for up to 40 seconds, sends 5
+  at once, through `_shared/resend.ts` (now returns Resend's message id and whether a refusal is permanent; 4xx other
+  than 429), `_shared/whatsapp.ts` (template messages; Meta's rate-limit and outage codes retry, other 4xx are
+  permanent; an empty parameter is sent as "-"), `_shared/sms.ts` (no provider: not_configured; an Indian number needs
+  the template's DLT id). Rendering is `_shared/notificationRender.ts`: values HTML-escaped in email bodies,
+  URL-encoded in link paths; the button links to `SITE_URL` (default `https://cosora.in`) + the template's path. The
+  job posts only when a message is due and raises without the Vault key.
+- **Invoice email:** `trg_subscription_invoices_notify` (AFTER INSERT; not demo documents, only `paid`) queues
+  `invoice_issued` (name, number, document label, a test-mode note, total in ₹, plan, period) with dedupe key
+  `invoice_issued:<id>`, email only. A failure to queue is a warning, never the invoice's failure.
+- **Consent:** `public.contact_consent(profile_id, channel, opted_in, changed_at, source)` (read own; no direct writes);
+  `set_contact_consent(channel, opted_in, source)` (signed in; whatsapp or sms; source vendor_settings or onboarding)
+  appends a real change to `admin.contact_consent_log`. `my_contact_channels()` answers delivery_on, the masked email,
+  WhatsApp and SMS addresses, and the opt-ins.
+- **Cosora-Admin:** `admin_notification_health()` (super_admin, vendor_ops: per-channel due, waiting, sending, sent,
+  failed and skipped in 24 hours, oldest due; the last run; 20 recent failures and skips, masked);
+  `admin_notification_test(channel)` (super_admin; to their own address; skips the switch and opt-in; 5 an hour).
+  `NotificationDeliveryPanel` on System Health; `roles.ts` `system-health` write = super_admin (the test send).
+- **App:** `src/lib/queries/contactChannels.ts`; Vendor Settings shows the WhatsApp alerts switch and the email
+  address invoices go to when `delivery_on`. `NOTIFICATION_DELIVERY_LIVE` stays false: the email and push switches
+  still have no sender (each phase that adds one says so).
+- **Not in P2:** `notify_entity` (a link target for the bell) comes with the first phase that needs it (P6); the
+  existing `account-deletion` sender keeps its own copy of the WhatsApp call.
+- **Tests:** `scripts/subscriptions/p2_notification_delivery.sql` (21 cases), `scripts/subscriptions/notification-dispatch-check.mjs`
+  (16), `tests/local/subscriptions-p2.spec.ts`.
