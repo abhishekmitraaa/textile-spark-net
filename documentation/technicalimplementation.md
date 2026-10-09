@@ -3489,20 +3489,21 @@ changes: messages go out through P2's outbox and dispatcher.
   on insert and when the embedding first arrives; any error is caught and written to `admin.lead_alert_runs`.
 
 ### Bounds on what a buyer can set off
-- **Where the buyer's words go:** the bell's title, the email's body (quoted as "The buyer's words"), the digest's
-  lines and the page. **Where they don't:** WhatsApp (`wa_params`: name, category, quantity), SMS and the email's
-  subject ("New buyer requirement in {{category}}"). The migration's self-check refuses a `lead_alert` template
-  that breaks this.
-- `admin.alert_text(text, max)`, in order: zero-width, direction and soft-hyphen characters removed; control
-  characters to spaces; Devanagari, Gujarati, Arabic, Persian and full-width digits and the full-width `. @ : /`
-  read as plain ones; then removed: anything with a scheme (`x://`), `www.` tokens, any token with a dot followed
-  by two or more letters (`evil.com/pay`), dotted numbers, tokens with `@`, and eight or more digits however they
-  are spaced or joined; whitespace collapsed; cut to `max`. It errs towards removing ("10000-20000 pcs", or two
-  words run together around a full stop, are dropped); the requirement itself is unchanged and the quantity
-  travels separately. The self-check runs it against eight inputs.
-- **One fan-out at a time:** `admin.lead_alert_fanout` takes `pg_advisory_xact_lock('cosora.lead_alert_fanout')`
-  with `lock_timeout` set to 3 s for the wait (restored after), so the caps below see every earlier fan-out. A
-  wait that times out raises; the trigger records it and the daily run retries.
+- **Nothing the buyer wrote leaves the app:** the `lead_alert` payload is `name` (the vendor's own), `category`
+  (Cosora's list) and `quantity`; the email's subject is "New buyer requirement in {{category}}" and its body has no
+  title; WhatsApp's `wa_params` are name, category, quantity; `lead_digest` lists counts by category
+  ("- 2 in Activewear"). The migration's self-check refuses a template or payload that carries the title.
+- **In the app** the bell's title and the alert history show the title through `admin.alert_text(text, max)`: input
+  cut to 400 characters; zero-width, direction and soft-hyphen characters removed; control characters to spaces;
+  Devanagari, Gujarati, Arabic, Persian and full-width digits and the full-width `. @ : /` read as plain ones; then
+  removed: anything with a scheme, `www.` tokens, any token with a dot followed by two or more letters, dotted
+  numbers, tokens with `@`, and eight or more digits however spaced. It is a tidy, not a control.
+- **One buyer's fan-outs at a time:** `pg_advisory_xact_lock('cosora.lead_alert_fanout:' || buyer_id)` with
+  `lock_timeout` 3 s for the wait (restored after), so the buyer's cap and a requirement's total see every earlier
+  fan-out of theirs. A timeout raises; the trigger records it and the daily run retries. The vendor's hourly cap is
+  counted without a lock across buyers.
+- `admin.trusted_caller()`: `session_user <> 'authenticator' or auth.role() = 'service_role'`. Used by the update
+  pass of `admin.rfq_lead_alert()` and by `lead_digest_run()`.
 - `admin.lead_alert_config.buyer_daily_cap` (5): when that many of a buyer's requirements raised alerts in the last
   24 hours, the next records `admin.lead_alert_runs.skipped = 'buyer_cap'` and tells nobody. The daily run doesn't
   retry it.

@@ -29,14 +29,16 @@
 --
 -- NOT A WAY TO REACH VENDORS. An alert carries a stranger's words out under Cosora's name,
 -- so what a buyer can do with it is bounded:
---   * WhatsApp and SMS carry none of the buyer's words: only the category (Cosora's own)
---     and the quantity. The email's subject carries none either;
---   * where the title does go (the bell, the email's body, the digest) it is filtered by
---     admin.alert_text: nothing a mail or chat app would turn into a link, no address, no
---     number to call, no invisible characters, whatever script or spacing they are written in;
+--   * nothing a buyer wrote leaves the app. The email, WhatsApp and SMS say that a
+--     requirement was posted, in which category (Cosora's own list) and for what quantity,
+--     and send the vendor to their Leads page to read it. The digest counts by category.
+--     There is no filter to get round, because no message carries the text;
+--   * inside the app the bell shows the title, tidied by admin.alert_text (links, addresses
+--     and numbers removed where it recognises them). That is a courtesy, not the control:
+--     the Leads page already shows the vendor the same words as the buyer wrote them;
 --   * a buyer's requirements raise alerts at most buyer_daily_cap times a day (the rest are
---     still on the Leads page, untold). Fan-outs run one at a time, so requirements posted
---     in the same instant are counted like any others;
+--     still on the Leads page, untold). One buyer's fan-outs run one at a time, so
+--     requirements posted in the same instant are counted like any others;
 --   * one requirement tells at most max_vendors vendors over both passes together;
 --   * a browser can't write rfqs.embedding (it could before: the column had no guard), so a
 --     buyer can't choose who is "close" or set the second pass off again.
@@ -138,18 +140,31 @@ comment on table admin.lead_alert_runs is
   'That a requirement was matched for alerts, whether its embedding was there, how many vendors it has told (alerted), why it told nobody when the buyer had raised too many alerts that day (skipped), and the last error if matching failed (it never stops the requirement being posted). The daily run matches requirements with no row here, or with an error.';
 
 -- ── 3. Matching and telling ─────────────────────────────────────────────────────────
--- A stranger's words, made safe to show under Cosora's name: one line, and nothing in it that
--- is, or that a mail or chat app would turn into, a link, an address or a number to call. It
--- reads the text as a person's apps would, not as it was typed: invisible characters are
--- removed first, and digits and marks from other scripts are read as the plain ones. (The
--- email's HTML escapes values itself; this is about what the words say, not markup.)
--- It errs towards removing: a title that runs two words together around a full stop, or
--- lists eight or more digits, loses those. The requirement itself is never changed.
+-- Is this the database's own work (a scheduled job, a migration) or the service role, and
+-- not a browser? Everything that comes through the API connects as "authenticator" and is
+-- trusted only when its token says service_role; a request with no role claim at all is
+-- not. (Testing the claim alone would trust a caller who has none.)
+create or replace function admin.trusted_caller()
+returns boolean
+language sql stable set search_path = '' as $function$
+  select session_user <> 'authenticator' or coalesce(auth.role(), '') = 'service_role'
+$function$;
+
+-- A buyer's title, tidied for the bell and the alert history: one line, without what it
+-- recognises as a link, an address or a number to call. It reads the text as a person's
+-- apps would (invisible characters removed, other scripts' digits read as plain ones) and
+-- errs towards removing.
+-- THIS IS NOT WHAT KEEPS MESSAGES SAFE. A filter over free text can always be written
+-- round (digits as words or emoji, a script it doesn't map). So no message that leaves the
+-- app carries the buyer's words at all; this only keeps the in-app text neat, where the
+-- vendor can already read the requirement as written.
+-- The input is cut to 400 characters first: a title has no length limit, and the patterns
+-- below must not be run over whatever a buyer chooses to send.
 create or replace function admin.alert_text(p text, p_max integer default 120)
 returns text
 language plpgsql immutable set search_path = '' as $function$
 declare
-  t text := coalesce(p, '');
+  t text := left(coalesce(p, ''), 400);
 begin
   -- Not seen, but they change what is read and what the rules below match: zero-width
   -- characters, direction marks, the soft hyphen.
@@ -223,15 +238,17 @@ begin
   if r.created_at < now() - make_interval(hours => cfg.max_age_hours) then
     return 0;
   end if;
-  -- One fan-out at a time. The limits below count what earlier fan-outs wrote, so two
-  -- running together would each find room: a buyer posting several requirements in the
-  -- same instant would pass the daily cap with all of them, and a vendor could be sent
-  -- more than the hourly cap. The wait is bounded: a fan-out that can't start within three
-  -- seconds raises, which its callers record and the daily run retries. It never holds up
-  -- the buyer's own write for longer than that.
+  -- One buyer's fan-outs run one at a time. The buyer's daily cap and a requirement's total
+  -- count what earlier fan-outs wrote, so two running together would each find room: a
+  -- buyer posting several requirements in the same instant would pass the cap with all of
+  -- them. The lock is the buyer's own, so one account can't hold up anyone else's post. (The
+  -- vendor's hourly cap is counted without a lock across buyers: fan-outs from different
+  -- buyers that overlap can exceed it by as many as overlap.) The wait is bounded: a
+  -- fan-out that can't start within three seconds raises, which its callers record and the
+  -- daily run retries.
   v_wait := current_setting('lock_timeout');
   perform set_config('lock_timeout', '3s', true);
-  perform pg_advisory_xact_lock(hashtextextended('cosora.lead_alert_fanout', 0));
+  perform pg_advisory_xact_lock(hashtextextended('cosora.lead_alert_fanout:' || r.buyer_id::text, 0));
   perform set_config('lock_timeout', v_wait, true);
 
   -- One buyer can't use alerts to reach vendors at will: past buyer_daily_cap requirements
@@ -310,10 +327,11 @@ begin
     end if;
     v_ext := array(select c from unnest(v_now) c where c <> 'app');
     if cardinality(v_ext) > 0 then
+      -- The vendor's own name, Cosora's category and a number: nothing the buyer wrote.
       v_res := public.notify_deliver(m.vendor_id, 'lead_alert',
         jsonb_build_object(
           'name', (select coalesce(nullif(btrim(v.brand_name), ''), 'there') from public.vendor_profiles v where v.id = m.vendor_id),
-          'title', v_title, 'category', coalesce(v_cat, 'Uncategorised'), 'quantity', coalesce(v_qty, 'not given')),
+          'category', coalesce(v_cat, 'Uncategorised'), 'quantity', coalesce(v_qty, 'not given')),
         'lead_alert:' || p_rfq || ':' || m.vendor_id, v_ext);
       v_sent := v_sent || array(select t.k from jsonb_each_text(coalesce(v_res -> 'channels', '{}'::jsonb)) as t(k, v)
                                  where t.v = 'queued' order by t.k);
@@ -341,7 +359,7 @@ begin
   -- The second pass belongs to the embedding worker (the service role, or a job with no
   -- role claim). trg_rfqs_embedding_guard already stops a browser changing the column; this
   -- is the same rule said twice.
-  if tg_op = 'UPDATE' and coalesce(auth.role(), 'service_role') <> 'service_role' then
+  if tg_op = 'UPDATE' and not admin.trusted_caller() then
     return null;
   end if;
   begin
@@ -370,7 +388,7 @@ declare
   v_count  integer;
 begin
   -- The scheduled job (no role claim) and the service role. The grant already says so.
-  if coalesce(auth.role(), 'service_role') <> 'service_role' then
+  if not admin.trusted_caller() then
     raise exception 'lead_digest_run is for the scheduled job only' using errcode = '42501';
   end if;
   select * into cfg from admin.lead_alert_config;
@@ -409,26 +427,26 @@ begin
       left join public.lead_alert_settings ls on ls.vendor_id = a.vendor_id
   loop
     if r.wants and admin.feature_on_for('lead_alerts', r.vendor_id) then
-      select count(*),
-             string_agg('- ' || t.title || coalesce(' (' || t.category || ')', ''), E'\n' order by t.created_at desc) filter (where t.rn <= 5)
+      -- Counted by category: Cosora's own list, and nothing the buyers wrote.
+      select coalesce(sum(g.n), 0)::integer,
+             string_agg('- ' || g.n || ' in ' || g.category, E'\n' order by g.n desc, g.category) filter (where g.rn <= 6)
         into v_count, v_lines
-        from (select la.created_at, row_number() over (order by la.created_at desc) as rn,
-                     admin.alert_text(coalesce(nullif(btrim(q.title), ''), q.product_name), 120) as title,
-                     c.name as category
+        from (select coalesce(c.name, 'Uncategorised') as category, count(*) as n,
+                     row_number() over (order by count(*) desc, coalesce(c.name, 'Uncategorised')) as rn
                 from admin.lead_alerts la
                 join public.rfqs q on q.id = la.rfq_id
                 left join public.categories c on c.id = q.category_id
                where la.vendor_id = r.vendor_id and la.digest_at is null
                  and la.created_at > now() - interval '3 days'
                  and q.status::text = 'active' and q.removed_at is null
-                 and (r.has_digest or la.held is not null)) t;
+                 and (r.has_digest or la.held is not null)
+               group by 1) g;
       if v_count > 0 then
         perform public.notify_deliver(r.vendor_id, 'lead_digest',
           jsonb_build_object(
             'name', (select coalesce(nullif(btrim(v.brand_name), ''), 'there') from public.vendor_profiles v where v.id = r.vendor_id),
             'count', case when v_count = 1 then '1 new buyer requirement' else v_count || ' new buyer requirements' end,
-            'lines', v_lines,
-            'more', case when v_count > 5 then 'and ' || (v_count - 5) || ' more on your Leads page.' else '' end),
+            'lines', v_lines),
           'lead_digest:' || r.vendor_id || ':' || to_char(now() at time zone 'Asia/Kolkata', 'YYYY-MM-DD'),
           array['email']);
         v_sent := v_sent + 1;
@@ -614,16 +632,16 @@ insert into admin.notification_templates (key, channel, locale, subject, body, c
 values
   ('lead_alert', 'email', 'en',
    'New buyer requirement in {{category}}',
-   E'Hello {{name}},\n\nA buyer has just posted a requirement that matches what you sell.\n\nCategory: {{category}}\nQuantity: {{quantity}}\nThe buyer''s words: "{{title}}"\n\nThe first quotes a buyer receives get the most attention. Open your leads on Cosora to read it in full and send yours. Cosora never asks you to pay, sign in or call a number from a buyer''s requirement.',
+   E'Hello {{name}},\n\nA buyer has just posted a requirement that matches what you sell.\n\nCategory: {{category}}\nQuantity: {{quantity}}\n\nThe first quotes a buyer receives get the most attention. Open your leads on Cosora to read it and send yours.',
    'Open my leads', '/leads', false, 'emailNewRfq'),
   ('lead_digest', 'email', 'en',
    '{{count}} on Cosora',
-   E'Hello {{name}},\n\n{{count}} matched what you sell since your last summary:\n\n{{lines}}\n\n{{more}}',
+   E'Hello {{name}},\n\n{{count}} matched what you sell since your last summary:\n\n{{lines}}\n\nOpen your leads on Cosora to read them and send your quotes.',
    'Open my leads', '/leads', false, 'emailNewRfq');
 -- WhatsApp and SMS wait for their approvals (Meta's template of this name and these
 -- parameters: {{1}} name, {{2}} category, {{3}} quantity; a DLT template id for SMS):
--- inactive until then. Neither carries the buyer's words: only the vendor's own name,
--- Cosora's category and a number.
+-- inactive until then. Like the email, neither carries the buyer's words: only the
+-- vendor's own name, Cosora's category and a number.
 insert into admin.notification_templates (key, channel, locale, body, wa_template, wa_language, wa_params, transactional, active)
 values ('lead_alert', 'whatsapp', 'en',
         'Hello {{name}}, a buyer just posted a requirement in {{category}} (quantity {{quantity}}) that matches what you sell. Open your leads on Cosora to send a quote.',
@@ -664,7 +682,7 @@ declare
   f text;
 begin
   foreach f in array array['admin.lead_alert_fanout(uuid)', 'admin.rfq_lead_alert()', 'public.lead_digest_run()',
-                           'admin.alert_text(text,integer)', 'public.rfqs_embedding_guard()'] loop
+                           'admin.alert_text(text,integer)', 'public.rfqs_embedding_guard()', 'admin.trusted_caller()'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
   grant execute on function public.lead_digest_run() to service_role;
@@ -712,10 +730,18 @@ begin
      or admin.alert_text('५०० कुर्ती चाहिए, सूती कपड़ा') <> '500 कुर्ती चाहिए, सूती कपड़ा' then
     raise exception 'alert_text lets something through, or removes too much';
   end if;
+  -- No message that leaves the app carries what a buyer wrote: not a template, not a payload.
   if exists (select 1 from admin.notification_templates t
-              where t.key = 'lead_alert' and (t.channel in ('whatsapp', 'sms') and (t.body like '%{{title}}%' or 'title' = any (t.wa_params))
-                                              or t.channel = 'email' and t.subject like '%{{title}}%')) then
-    raise exception 'a lead alert must not carry the buyer''s words on WhatsApp, by SMS or in an email subject';
+              where t.key in ('lead_alert', 'lead_digest')
+                and (coalesce(t.subject, '') || t.body || array_to_string(t.wa_params, ',')) ~ 'title') then
+    raise exception 'a lead alert or digest template must not carry the requirement''s title';
+  end if;
+  if (select prosrc from pg_proc where oid = 'admin.lead_alert_fanout(uuid)'::regprocedure) ~ '''title'',\s*v_title'
+     or (select prosrc from pg_proc where oid = 'public.lead_digest_run()'::regprocedure) ~ 'q\.title' then
+    raise exception 'a lead alert or digest payload must not carry the requirement''s title';
+  end if;
+  if length(admin.alert_text(repeat('a b ', 100000))) > 120 then
+    raise exception 'alert_text must bound its input and its output';
   end if;
 end
 $check$;

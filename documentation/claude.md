@@ -257,20 +257,21 @@ undocumented. Deep technical rationale for each lives in
     `admin.lead_alert_runs`; the daily run retries. Keep any new work in it inside that handler.
   - A vendor's own pacing is `public.lead_alert_settings`, written only through `set_lead_alert_settings()`.
   - Told only where the `lead_alerts` switch lists the vendor.
-- **Words from one user that Cosora sends to another** (subscriptions P6):
-  - **Leave them out where you can.** WhatsApp, SMS and email subjects carry Cosora's own words and data only
-    (a category, a number). A template that takes a user's free text on those channels fails the migration's
-    self-check.
-  - **Where they do go** (the bell, an email's body, quoted and labelled as the buyer's), they pass through
-    `admin.alert_text()`: it removes what a mail or chat app would turn into a link, an address or a number to
-    call, reading the text as those apps would (invisible characters, other scripts' digits). A filter that looks
-    for "http" is not one.
-  - Anything that pushes a user's text out needs a limit on how often one sender can set it off
-    (`buyer_daily_cap`).
+- **Nothing one user wrote leaves the app in a message to another.** (subscriptions P6, after three reviews.)
+  - Email, WhatsApp and SMS carry Cosora's own words and data only: a category from Cosora's list, a number, the
+    recipient's own name. They send the reader to the app to read the rest. A template or payload that carries a
+    requirement's title fails the P6 migration's self-check.
+  - **Don't rely on a filter for this.** Free text can always be written round one (a link with no "http",
+    another script's digits, digits as emoji or words). `admin.alert_text()` only tidies in-app text (the bell,
+    the alert history), where the reader can already see the original; it cuts its input to 400 characters first.
+  - Anything that lets one user set off messages to others needs a limit on how often (`buyer_daily_cap`).
 - **A limit that counts rows must be checked under a lock.** Two transactions each count before either writes, and
-  both pass. Lead alert fan-outs take one advisory lock (`cosora.lead_alert_fanout`), with a bounded wait so the
-  buyer's own write is never held up for long. A test of such a limit must force the overlap (two sessions, one
+  both pass. Lead alert fan-outs take an advisory lock per buyer (`cosora.lead_alert_fanout:<buyer>`), with a bounded wait.
+  Key such a lock on the sender, not globally: a global one lets any account slow everyone else's writes. A test of such a limit must force the overlap (two sessions, one
   holding its transaction open): requests fired "at once" didn't overlap and passed with the lock removed.
+- **"Is this a browser?" is `admin.trusted_caller()`**: everything through the API connects as `authenticator` and
+  is trusted only when its token says `service_role`; jobs and migrations connect as someone else. Don't write
+  `coalesce(auth.role(), 'service_role')`: it trusts a request that has no role claim.
 - **`rfqs.embedding` is the embedding worker's column.** A browser's write is ignored
   (`trg_rfqs_embedding_guard`). Don't compare vectors in a function with an empty search path: their operators
   live in `extensions`.

@@ -50,7 +50,7 @@ declare
     'a browser can''t run the matching or write settings directly',      -- 18
     'the admin''s figures; refused to a vendor',                         -- 19
     'the grace days: still told',                                        -- 20
-    'a buyer''s words go out without links, addresses or phone numbers', -- 21
+    'no message carries a buyer''s words; the bell''s are tidied',        -- 21
     'a buyer''s alerts are capped a day; the next one tells nobody',     -- 22
     'both passes together tell at most max_vendors',                     -- 23
     'a browser can''t write the embedding or set the second pass off',   -- 24
@@ -203,22 +203,21 @@ begin
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 denim jackets', c1), (rfq2, buyer, 'P6 polo shirts', c1);
         j := public.lead_digest_run();
         got := (j ->> 'digests') || ' basic=' || (select o.payload ->> 'count' from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest')
-               || ' lines=' || (select ((o.payload ->> 'lines') like '%P6 denim jackets (Activewear)%' and (o.payload ->> 'lines') like '%P6 polo shirts (Activewear)%')::text
-                                  from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest')
+               || ' lines=' || (select o.payload ->> 'lines' from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest')
                || ' silver=' || (select count(*) from admin.notification_outbox o where o.profile_id = silver and o.template_key = 'lead_digest')
                || ' gold=' || (select count(*) from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_digest')
                || ' waiting=' || (select count(*) from admin.lead_alerts where digest_at is null);
         j := public.lead_digest_run();
         got := got || ' again=' || (j ->> 'digests') || '/' || (select count(*) from admin.notification_outbox o where o.template_key = 'lead_digest');
-        want := '2 basic=2 new buyer requirements lines=true silver=1 gold=0 waiting=0 again=0/2';
+        want := '2 basic=2 new buyer requirements lines=- 2 in Activewear silver=1 gold=0 waiting=0 again=0/2';
       elsif i = 12 then
         update admin.lead_alert_config set hourly_cap = 1;
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 sent at once', c2);
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq2, buyer, 'P6 held back', c2);
         j := public.lead_digest_run();
-        got := (select (o.payload ->> 'count') || ':' || ((o.payload ->> 'lines') like '%P6 held back%')::text || ':' || ((o.payload ->> 'lines') like '%P6 sent at once%')::text
+        got := (select (o.payload ->> 'count') || ':' || (o.payload ->> 'lines') || ':' || ((o.payload::text) like '%P6 %')::text
                   from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_digest');
-        want := '1 new buyer requirement:true:false';
+        want := '1 new buyer requirement:- 1 in Dress:false';
       elsif i = 13 then
         insert into public.lead_alert_settings (vendor_id, digest) values (basic, false);
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 no digest', c1);
@@ -320,7 +319,8 @@ begin
         insert into public.rfqs (id, buyer_id, title, category_id)
         values (rfq, buyer, E'P6 urgent\nhttp://evil.example/pay call +91 98765 43210 or mail a@b.co', c1);
         got := (select nt.title from public.notifications nt where nt.profile_id = gold and nt.kind = 'lead_match')
-               || ' | ' || (select o.payload ->> 'title' from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_alert');
+               || ' | ' || (select coalesce(o.payload ->> 'title', 'no title') || '/' || ((o.payload::text) like '%urgent%')::text
+                              from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_alert');
         j := public.lead_digest_run();
         got := got || ' | ' || (select o.payload ->> 'lines' from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest');
         -- Without a scheme, in another script's digits, with odd separators: still removed.
@@ -328,7 +328,7 @@ begin
         got := got || ' | ' || (select nt.title from public.notifications nt where nt.profile_id = silver and nt.kind = 'lead_match' and nt.title like 'New requirement: P6 pay%')
                || ' | subject=' || (select t.subject from admin.notification_templates t where t.key = 'lead_alert' and t.channel = 'email' and t.active order by t.version desc limit 1)
                || ' | wa=' || (select array_to_string(t.wa_params, ',') from admin.notification_templates t where t.key = 'lead_alert' and t.channel = 'whatsapp');
-        want := 'New requirement: P6 urgent call or mail | P6 urgent call or mail | - P6 urgent call or mail (Activewear) | New requirement: P6 pay at or or | subject=New buyer requirement in {{category}} | wa=name,category,quantity';
+        want := 'New requirement: P6 urgent call or mail | no title/false | - 1 in Activewear | New requirement: P6 pay at or or | subject=New buyer requirement in {{category}} | wa=name,category,quantity';
       elsif i = 22 then
         update admin.lead_alert_config set buyer_daily_cap = 2;
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 first', c1);

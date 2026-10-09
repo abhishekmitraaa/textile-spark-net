@@ -99,6 +99,23 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P6: a filter was the wrong control — Severity: Medium — Fixed before release
+- **Found by** the third background review, of the second fix (filter bypass / parser differential, and two more
+  it didn't name).
+- **The control changed.** Two rounds of tightening a filter were answered by two more ways round it, which is what
+  filters over free text invite. Now **no message that leaves the app carries a buyer's words**: alert email,
+  WhatsApp, SMS and digest carry a category, a quantity and the vendor's own name. There is nothing to bypass. The
+  tidy function remains for in-app text only and is documented as not a control.
+- **Also fixed, from re-reading the commit for what the review didn't name:**
+  - `rfqs.title` has no length limit and the tidy ran eight patterns over all of it, inside the buyer's write. Its
+    input is now cut to 400 characters.
+  - The fan-out's lock was global, so any account posting in a loop could make every other buyer's post wait up
+    to three seconds. It is now per buyer.
+  - `coalesce(auth.role(), 'service_role')` trusted a caller with no role claim. `admin.trusted_caller()` decides
+    by the connection, and fails closed for anything through the API.
+- **What is left:** in the app, a buyer's words are shown to vendors as they always were on Leads. Several accounts
+  can each spend their own daily cap. The vendor's hourly cap can be exceeded by as many fan-outs as overlap.
+
 ### 2026-10-09 — Subscriptions P6: the first fix's filter and limit could be sidestepped — Severity: Medium — Fixed before release
 - **Found by** the background security review of the hardening commit (input validation / parser differential;
   race condition / rate-limit bypass), again by category only.
