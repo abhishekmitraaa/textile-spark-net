@@ -14,7 +14,7 @@ import { useAuth } from "@/contexts/AuthContext";
 // A key here is created by the migration that ships the code reading it.
 // ─────────────────────────────────────────────────────────────
 
-export type FeatureKey = "subscription_checkout" | "subscription_lifecycle";
+export type FeatureKey = "subscription_checkout" | "subscription_lifecycle" | "ad_state_targeting";
 
 async function fetchMyFeatureFlags(): Promise<Record<string, boolean>> {
   const { data, error } = await supabase.rpc("my_feature_flags");

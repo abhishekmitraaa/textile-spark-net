@@ -187,6 +187,33 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P5: ad reach by state (local stack: harness 19/19; all six harnesses green; flow check 109/109; end to end 17/17; browser 17/17; typecheck 0 in both apps; i18n 7,391/7,391; admin build)
+- **Where:** the local stack with P0–P5 applied; apps on :8092 and :5186 from the `subscriptions/p5-ad-reach`
+  worktrees. The ad payment functions on a second edge runtime with no Razorpay keys (:8098), so checkouts take the
+  demo path; the keyed runtime (:8099) still serves the subscription functions.
+- **Harness** `scripts/subscriptions/p5_ad_reach.sql`, 19/19, and a full replay of the migration in one rolled-back
+  transaction (undo, run, compare all 10 functions with what is applied, harness). It covers: the four delivery rules;
+  `active_ads` for a buyer in the state, in another, and signed out; each plan's reach, strict and clamped; none
+  named with and without a state on the profile; tidied and unknown codes; the grace days; the switch off; a
+  browser's insert and edits; who may call what.
+- **Earlier harnesses, again:** P0 29/29, P1 26/26, P2 21/21, P3 18/18, P4 29/29.
+- **Flow check** `scripts/discount-flow-check.mjs`, 109/109 (12 new, D5–D8, E7–E10, F2–F3). `ad-pricing-check`,
+  `notification-dispatch-check` 16 and `autopay-flow-check` 49 unchanged.
+- **End to end over HTTP**, 17/17: the resolver through PostgREST (own state by default, the clamp, refused to a
+  vendor, the check refused for another's ad); the demo publish (two states refused, a country refused, one state
+  published for review, none named → own state); the grace days (published) against no grace (not eligible, traced
+  for review); the switch off (one city, no states); three running ads seen by a buyer in Maharashtra (1), in
+  Gujarat (1), signed out (3), a seller (3) and a buyer with no state (3).
+- **Earlier end-to-end runs, again:** P1 16/16, P3 22/22, P4 23/23.
+- **Browser** (`tests/local/subscriptions-p5.spec.ts`, 3/3; needs `LOCAL_AD_FUNCTIONS_URL`): the picker starts on the
+  seller's own state, a second state is refused, the demo checkout publishes the ad with the chosen state; a seller
+  off the switch keeps the city chips; Cosora-Admin's switch name and the review queue's states. With it, all 17 of
+  `subscriptions-p0` to `-p5` and `plans-and-refunds`.
+- **Tooling notes:** restarting the mock payment server mid-day reused ids it had issued before (the P3 run then
+  failed on a duplicate mandate); the mock now seeds its counter from the clock. The P3 run also needs the local
+  `admin.subscription_gateway_plans` empty, or it finds no plan request in the mock's log.
+- **Not checked:** a paid ad order against Razorpay; screenshots.
+
 ### 2026-10-08 — Subscriptions P4: reminders, grace days, paused listings (local stack: harness 29/29; all five harnesses green; end to end 23/23; browser 14/14; typecheck 0 in both apps; i18n 7,380/7,380; admin build)
 - **Where:** the local stack with P0–P4 applied; apps on :8092 and :5186 from the `subscriptions/p4-lifecycle`
   worktrees. No function changed in P4. The daily job was run by hand (`select public.expire_subscriptions()`).

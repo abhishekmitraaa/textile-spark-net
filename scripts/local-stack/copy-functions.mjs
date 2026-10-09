@@ -15,7 +15,9 @@ const buyer = ["_shared", "faqs-snapshot", "site-config-snapshot", "support-rece
   // The notification outbox's sender (subscriptions P2).
   "notification-dispatch",
   // Autopay (subscriptions P3).
-  "subscription-autopay"];
+  "subscription-autopay",
+  // Paid ad orders, for the reach rule (subscriptions P5).
+  "razorpay-create-order", "razorpay-verify-payment", "razorpay-webhook"];
 const admin = ["admin-staff", "admin-refund-payment"];
 for (const f of buyer) cpSync(resolve("supabase/functions", f), resolve(DIR, f), { recursive: true, force: true });
 for (const f of admin) cpSync(resolve(ADMIN_REPO, "supabase/functions", f), resolve(DIR, f), { recursive: true, force: true });

@@ -246,6 +246,18 @@ undocumented. Deep technical rationale for each lives in
     `vendor_subscriptions` (`trg_vendor_subscriptions_cap`), so new code that changes a plan needs no call of its own.
   - Kept first: the vendor's picks (`vendor_keep_products`), then published before in-review, then the most viewed.
   - A listing saved while paused returns to review, not straight to live.
+- **An ad reaches states, and the plan decides how many** (subscriptions P5, 2026-10-09; migration
+  `20261008160000_subscriptions_p5_ad_reach.sql`).
+  - `advertisements.target_states` (india_states codes) and `target_countries` (VIP). `target_cities` is the older
+    targeting: it stays on ads made before, and is all an account gets while `ad_state_targeting` is off for it.
+  - **`admin.ad_reach()` is the one rule.** A browser's write reaches it through the trigger
+    (`enforce_ad_location_scope` → `ad_reach_check`); the payment functions through `ad_reach_resolve`
+    (`_shared/adReach.ts`). Strict before money moves (refuse with a reason); a paid order is clamped, and goes to
+    refund review only when nothing can be published. Never read a plan's reach anywhere else.
+  - **Who sees an ad is `ad_targeting_matches()`** (five arguments): a buyer known to be in another state doesn't;
+    a buyer whose state isn't known does; a buyer known to be outside India only if their country is listed.
+  - A function that takes more arguments is added beside the old one, not in place of it: Postgres can't change a
+    function's arguments without dropping it, and the migration tool refuses drops.
 - **Database code that isn't the service role tests a switch with `admin.feature_on_for()`** (a scheduled job, a
   trigger inside an admin's request). `public.feature_on_for()` answers the service role only and raises otherwise.
 - **A new enum value is its own migration.** Postgres won't let a value be used in the transaction that adds it

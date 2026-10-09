@@ -482,6 +482,16 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P5; built, not live)
+- **Ads reach states.** On the ad page a seller chooses the states an ad should reach: one on Basic, up to four on
+  Silver, any on Gold and VIP (none chosen means all of India). On Basic and Silver it starts on the seller's own
+  state. VIP can also choose countries outside India.
+- **A buyer known to be in another state doesn't see the ad.** A signed-out buyer, or one whose state Cosora
+  doesn't know, still does.
+- **Refused before payment:** an ad that reaches more than the plan allows is refused, with the reason, before
+  anything is charged.
+- For accounts on the ad reach switch; others keep the city choices as before.
+
 ### Changed 2026-10-08 (subscriptions P4; built, not live)
 - **Reminders before a plan ends:** 7, 4, 2 and 1 days before, and on the day, in the bell and by email (the
   "Plan expiry reminders" switch in Settings stops the email only). With autopay on, one notice two days before the charge.
@@ -712,6 +722,11 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P5; built, not live)
+- **Ads → review queue:** each campaign shows the states it reaches (or "All of India") and any countries outside
+  India, beside the older target cities.
+- **Feature switches** now lists five, with "Ad reach by state".
 
 ### Added 2026-10-08 (subscriptions P4; built, not live)
 - **Products:** a **Paused (plan limit)** tab, for looking only: a paused listing has no Approve (its plan resumes

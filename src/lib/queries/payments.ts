@@ -23,10 +23,26 @@ export interface AdSpec {
   campaignLabel?: string;
   // Real targeting (persisted on the campaign row by the edge functions).
   // targetCategories = categories.id[]; filters buyer-side ad serving where a
-  // category context exists (e.g. product page). targetCities = plan-limited
-  // location keys; recorded but not yet used to filter delivery (no buyer geo).
+  // category context exists (e.g. product page). targetCities = the older,
+  // plan-limited location keys, still sent where state targeting is off.
   targetCategories?: string[];
   targetCities?: string[];
+  // Subscriptions P5: the states the ad reaches (india_states codes) and, on VIP,
+  // countries outside India. The server holds both to the vendor's plan.
+  targetStates?: string[];
+  targetCountries?: string[];
+}
+
+// Why the server wouldn't take an ad's reach (admin.ad_reach's reasons), in the vendor's words.
+const AD_REACH_TEXT: Record<string, string> = {
+  no_ads_on_plan: "Your plan can't run ad campaigns. Upgrade to a paid plan to advertise.",
+  choose_state: "Choose the state this ad should reach, then try again.",
+  too_many_states: "This ad targets more states than your plan reaches. Remove some, or upgrade your plan.",
+  countries_need_vip: "Reaching buyers outside India is part of the VIP plan.",
+  unknown_state: "One of the states chosen for this ad isn't recognised. Choose it again.",
+};
+export function adReachRefusal(reason: string | undefined): string {
+  return AD_REACH_TEXT[reason ?? ""] ?? "We couldn't check what your plan lets this ad reach. Nothing was charged. Please try again in a minute.";
 }
 
 export interface OrderResult {
@@ -56,6 +72,8 @@ export async function createRazorpayOrder(spec: AdSpec, discountCode?: string): 
   if (data.error === "not_configured") return { configured: false };
   // A refused code stops the purchase here, with nothing created and nothing held.
   if (data.error === "discount") return { configured: true, discountReason: data.reason ?? "unavailable" };
+  // The plan doesn't let the ad reach what was chosen: nothing was created or charged (P5).
+  if (data.error === "ad_reach") throw new Error(adReachRefusal(data.reason));
   if (data.error) throw new Error(String(data.detail || data.error));
   if (!data.configured) return { configured: false };
   return {

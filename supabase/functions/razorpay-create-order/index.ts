@@ -43,6 +43,7 @@ function json(body: unknown, status = 200): Response {
 // orders, because a drift here quotes the vendor one price and charges another.
 import type { AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
+import { adReach } from "../_shared/adReach.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -80,10 +81,17 @@ Deno.serve(async (req: Request): Promise<Response> => {
   } catch {
     return json({ error: "bad_json" }, 400);
   }
-  const spec = payload.spec;
-  if (!spec || !Array.isArray(spec.placementIds) || spec.placementIds.length === 0 || !Array.isArray(spec.items) || spec.items.length === 0) {
+  const asked = payload.spec;
+  if (!asked || !Array.isArray(asked.placementIds) || asked.placementIds.length === 0 || !Array.isArray(asked.items) || asked.items.length === 0) {
     return json({ error: "bad_spec" }, 400);
   }
+
+  // What the vendor's plan lets this ad reach, before any money moves (subscriptions P5):
+  // refused with a reason the vendor can act on. The stored intent carries the targeting
+  // as the plan allows it (a one-state plan that named none gets the vendor's own state).
+  const reach = await adReach(url, serviceKey, vendorId, asked, true);
+  if (!reach.ok) return json({ error: "ad_reach", reason: reach.reason ?? "unavailable", message: reach.message }, 200);
+  const spec = reach.spec;
 
   const lines = adAmounts(spec);
   if (lines.gross <= 0) return json({ error: "zero_amount" }, 400);

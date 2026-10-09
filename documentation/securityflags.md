@@ -99,6 +99,20 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P5: ad reach reviewed — Severity: Info
+- **The plan's reach is decided in the database**, from the plan in force, for every path that creates or edits an
+  ad: a browser's write (trigger), the order before payment, and both publish functions. The publish functions run
+  as the service role, so they don't trust the stored spec: they ask again and clamp.
+- **Fails closed:** if the reach can't be read, nothing is published and a paid order goes to refund review.
+- **Who can ask:** `ad_reach_resolve` is the service role's; `ad_reach_check` answers only for the caller's own ad
+  or an admin; `ad_viewer_location` and the eligibility functions aren't callable from a browser (the migration's
+  self-check). `active_ads` stays open to signed-out buyers and returns no location.
+- **A buyer's location is never returned to a vendor.** It is read inside `active_ads` and used only to filter.
+- **Closed here:** a vendor in their grace days was treated as Free by the publish functions (they read the
+  subscription row themselves); `razorpay-create-order` charged a Free vendor before the publish step refused.
+- **Open, for Mitra:** an ad bought on a bigger plan keeps its reach after a downgrade until it ends (reach is
+  decided when the ad is made or edited, not at each view).
+
 ### 2026-10-08 — Subscriptions P4: plan lifecycle reviewed — Severity: Info
 - **Who can pause or resume a listing:** only `admin.apply_product_cap()` (reached from the trigger on
   `vendor_subscriptions`) and the vendor's own `vendor_set_live_products()`, which checks ownership and the plan's

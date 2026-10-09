@@ -3393,3 +3393,66 @@ Run by `subscription-expiry-sweep` (`29 3 * * *` UTC, 08:59 IST), in this order:
 1. Apply `20261008150000`, then `20261008150100`, as two migrations. P0 to P3 must be applied first (the guard).
 2. No functions to deploy. The existing job picks the new function up.
 3. Merge with the switch off. List test accounts on `subscription_lifecycle`, check, then turn it on for everyone.
+
+## Subscriptions P5: ad reach by state (2026-10-09)
+
+Built on `subscriptions/p5-ad-reach`; not applied. Migration `20261008160000_subscriptions_p5_ad_reach.sql`.
+
+### Data
+- `advertisements.target_states text[]` (india_states codes) and `target_countries text[]` (ISO alpha-2), both
+  `not null default '{}'`, each checked for shape (two capital letters) and size.
+- `target_cities` (jsonb) is kept for ads made before and for accounts the switch is off for.
+
+### Who sees an ad
+- `public.ad_viewer_location()`: the signed-in buyer's city, state code and country code (definer; not callable
+  from a browser). The country is read with `to_jsonb`, so it works before and after P7 adds the column.
+- `public.ad_targeting_matches(ad, categories, city, state, country)`, after the category test:
+  1. country known and not `IN` → the country must be in `target_countries`;
+  2. `target_states` not empty → the state is unknown or in the list;
+  3. older ad with `target_cities` → the city is known and listed (unchanged);
+  4. otherwise everyone.
+- `is_ad_eligible` has the same five-argument form. The three-argument forms of both remain and pass nulls.
+- `active_ads()` reads the viewer's location once and passes it on; its signature is unchanged.
+
+### What a plan lets an ad reach
+- `admin.ad_reach(vendor, states, countries, cities, strict)` → jsonb `{ ok, blocked, reason, message, scope,
+  state_targeting, states, countries, cities, requested, allowed, allowance }`.
+  - The plan is `admin.vendor_effective_plan()` (so the grace days count); the reach is
+    `limits.ad_location_scope`: `none`, `state_1`, `state_4`, `pan_india`, `global`.
+  - `none` → blocked (`no_ads_on_plan`).
+  - Switch off for the vendor → no states or countries; cities kept to the plan's count.
+  - Switch on → codes tidied (upper case, once each, in order); unknown states refused (strict) or dropped;
+    countries only on `global`; on a one- or four-state plan, none named becomes the vendor's own state (or
+    `choose_state` when the profile has none), and too many is `too_many_states` (strict) or the first N.
+- `public.ad_reach_resolve(...)`: the same for the service role. `public.ad_reach_check(vendor, ...)`: strict, for
+  the vendor's own ad or an admin, used by the trigger.
+- `public.enforce_ad_location_scope()` (trigger on `advertisements`): checks a browser's insert, and an update
+  only when the targeting changed; writes back the tidied states and countries and clears `target_cities`. With
+  the switch off it applies the city-count rule as it was.
+
+### Edge functions
+- `_shared/adReach.ts` `adReach(url, key, vendor, spec, strict)` → `{ ok, blocked, reason, message, spec, requested,
+  allowed }`. A failure to ask publishes nothing.
+- `razorpay-create-order`: asks strictly before the Razorpay order; answers `{ error: "ad_reach", reason, message }`;
+  stores the spec as the plan allows it.
+- `razorpay-verify-payment` and `razorpay-webhook`: clamp a paid order; `!ok` → `refund_review`. The demo publish
+  asks strictly (nothing was paid).
+- `_shared/adPricing.ts`: `AdSpec.targetStates`, `targetCountries`; `buildAdRows` writes them (account-level rows
+  carry none).
+
+### Client
+- `src/pages/Advertisements.tsx`: with `useFeatureFlag("ad_state_targeting")`, the "States" picker
+  (`data-testid="ad-states"`, chips `ad-state-<code>`) replaces the city chips and, on `global`, adds
+  "Outside India" (`ad-countries`). The selection is seeded once with the vendor's own state on a state plan.
+- `src/lib/queries/payments.ts`: `AdSpec` fields, `adReachRefusal(reason)`. `src/lib/queries/ads.ts`:
+  `useVendorHomeState`.
+
+### Checks
+- `scripts/subscriptions/p5_ad_reach.sql` (19 cases, rolls back); `scripts/discount-flow-check.mjs` (109);
+  `tests/local/subscriptions-p5.spec.ts` (needs `LOCAL_AD_FUNCTIONS_URL`).
+
+### Release order (when Mitra says)
+1. Apply `20261008160000` (P0 to P4 first: the guard).
+2. Deploy `razorpay-create-order`, `razorpay-verify-payment`, `razorpay-webhook` (they call `ad_reach_resolve`,
+   so the migration comes first).
+3. Merge with the switch off; list test accounts on `ad_state_targeting`; then turn it on for everyone.

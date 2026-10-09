@@ -70,6 +70,8 @@ function reset(over = {}) {
     confirmOk: true,
     failIntent: false, failSubscription: false, failAds: false,
     adScope: "pan_india",
+    // Subscriptions P5: whether state targeting is on for the vendor, and their own state.
+    stateTargeting: true, homeState: "GJ", reachFails: false,
     razorpaySeq: 0,
     // Plan changes (2026-10-02): what subscription_quote_for / subscription_activate
     // answer. null = a first purchase at the plan's price.
@@ -173,6 +175,35 @@ globalThis.fetch = async (input, init = {}) => {
   if (p === "/rest/v1/rpc/billing_dispute_event") return res("inc-d");
   if (p === "/rest/v1/rpc/billing_reconcile_candidates") return res(S.candidates);
   if (p === "/rest/v1/rpc/billing_reconcile_mark") return res(undefined, 204);
+
+  // Subscriptions P5: admin.ad_reach, as the database answers it (the plan in force decides).
+  if (p === "/rest/v1/rpc/ad_reach_resolve") {
+    if (S.reachFails) return res({ message: "boom" }, 500);
+    const allow = S.adScope === "state_1" ? 1 : S.adScope === "state_4" ? 4 : null;
+    if (S.adScope === "none") return res({ ok: false, blocked: true, reason: "no_ads_on_plan", message: "Advertising is a paid feature" });
+    const cities = body.p_cities ?? [];
+    if (!S.stateTargeting) {
+      const kept = allow !== null ? cities.slice(0, allow) : cities;
+      return res({ ok: true, blocked: false, state_targeting: false, states: [], countries: [], cities: kept, requested: cities.length, allowed: allow ?? cities.length });
+    }
+    let states = [...new Set((body.p_states ?? []).map((x) => String(x).trim().toUpperCase()).filter(Boolean))];
+    let countries = [...new Set((body.p_countries ?? []).map((x) => String(x).trim().toUpperCase()).filter((x) => /^[A-Z]{2}$/.test(x) && x !== "IN"))];
+    const asked = states.length;
+    if (countries.length && S.adScope !== "global") {
+      if (body.p_strict) return res({ ok: false, blocked: false, reason: "countries_need_vip", message: "Reaching buyers outside India is part of the VIP plan." });
+      countries = [];
+    }
+    if (allow !== null) {
+      if (states.length === 0) {
+        if (!S.homeState) return res({ ok: false, blocked: !body.p_strict, reason: "choose_state", message: "Choose the state this ad should reach." });
+        states = [S.homeState];
+      } else if (states.length > allow) {
+        if (body.p_strict) return res({ ok: false, blocked: false, reason: "too_many_states", message: "Ad targeting exceeds your plan" });
+        states = states.slice(0, allow);
+      }
+    }
+    return res({ ok: true, blocked: false, state_targeting: true, states, countries, cities: [], requested: asked, allowed: allow ?? states.length });
+  }
 
   if (p === "/rest/v1/subscription_plans") {
     const plan = S.plans[eqv(url, "id")];
@@ -497,6 +528,28 @@ reset({ check: { ok: false, reason: "not_applicable", applies_to: "certificate" 
 r = await call("razorpay-create-order", { spec: { ...SPEC, placementIds: ["openListing"] }, discountCode: "CERT500" });
 check("D4 refused: nothing created", r.body.error === "discount" && r.body.reason === "not_applicable" && rzpCalls().length === 0 && S.adOrders.size === 0);
 
+// Subscriptions P5: what the plan lets the ad reach is asked before any money moves.
+reset({ adScope: "none" });
+r = await call("razorpay-create-order", { spec: SPEC });
+check("D5 Free vendor: refused before Razorpay, nothing stored", r.body.error === "ad_reach" && r.body.reason === "no_ads_on_plan" && rzpCalls().length === 0 && S.adOrders.size === 0,
+  JSON.stringify(r.body));
+
+reset({ adScope: "state_1" });
+r = await call("razorpay-create-order", { spec: { ...SPEC, targetStates: ["GJ", "MH"] } });
+check("D6 one-state plan, two states: refused with the reason, nothing created", r.body.error === "ad_reach" && r.body.reason === "too_many_states" && rzpCalls().length === 0 && S.adOrders.size === 0,
+  JSON.stringify(r.body));
+check("D6 the question was asked strictly", rpcCalls("ad_reach_resolve")[0]?.body.p_strict === true && rpcCalls("ad_reach_resolve")[0]?.body.p_vendor === VENDOR);
+
+reset({ adScope: "state_1" });
+r = await call("razorpay-create-order", { spec: { ...SPEC, targetCities: ["mumbai"] } });
+ado = [...S.adOrders.values()][0];
+check("D7 one-state plan, none named: the stored order reaches the vendor's own state, no cities",
+  r.body.orderId && JSON.stringify(ado?.spec.targetStates) === '["GJ"]' && ado.spec.targetCities === undefined && ado.amount === 50700, JSON.stringify(ado?.spec));
+
+reset({ reachFails: true });
+r = await call("razorpay-create-order", { spec: SPEC });
+check("D8 the plan can't be read: refused, nothing created", r.body.error === "ad_reach" && r.body.reason === "unavailable" && rzpCalls().length === 0 && S.adOrders.size === 0);
+
 // ── E. razorpay-verify-payment ──────────────────────────────────────────────
 reset();
 S.adOrders.set("order_A1", { order_id: "order_A1", vendor_id: VENDOR, spec: SPEC, amount: 30800, status: "created",
@@ -526,6 +579,35 @@ reset({ adScope: "none" });
 r = await call("razorpay-verify-payment", { demo: true, spec: SPEC, discountCode: "ADS10" }, { env: DEMO });
 check("E4 demo, Free vendor: blocked before any use is reserved", r.body.error === "plan_not_eligible" && rpcCalls("discount_reserve").length === 0);
 
+// Subscriptions P5: a paid order is clamped to the plan, never refused over its reach.
+reset({ adScope: "state_1" });
+S.adOrders.set("order_A2", { order_id: "order_A2", vendor_id: VENDOR, spec: { ...SPEC, targetStates: ["MH", "GJ", "RJ"], targetCountries: ["US"] }, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A2", paymentId: "pay_b", signature: sign("order_A2", "pay_b") });
+const targeted = S.ads.filter((a) => a.product_id !== null);
+check("E7 paid on a one-state plan with three states and a country: published to the first state only",
+  r.body.ok && targeted.length === 2 && targeted.every((a) => JSON.stringify(a.target_states) === '["MH"]' && a.target_countries.length === 0)
+  && rpcCalls("ad_reach_resolve")[0]?.body.p_strict === false && r.body.requested === 3 && r.body.allowed === 1,
+  JSON.stringify(targeted.map((a) => [a.target_states, a.target_countries])));
+check("E7 the account-level row carries no targeting", S.ads.filter((a) => a.product_id === null).every((a) => a.target_states.length === 0 && a.target_cities === null));
+
+reset({ adScope: "state_4", homeState: null });
+S.adOrders.set("order_A3", { order_id: "order_A3", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A3", paymentId: "pay_c", signature: sign("order_A3", "pay_c") });
+check("E8 paid, a state plan with no state to reach: not published, sent to refund review",
+  r.body.ok === false && S.ads.length === 0 && S.adOrders.get("order_A3").status === "refund_review", JSON.stringify(r.body));
+
+reset({ adScope: "state_1", stateTargeting: false });
+S.adOrders.set("order_A4", { order_id: "order_A4", vendor_id: VENDOR, spec: { ...SPEC, targetCities: ["mumbai", "delhi"], targetStates: ["MH"] }, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A4", paymentId: "pay_d", signature: sign("order_A4", "pay_d") });
+check("E9 state targeting off: cities clamped as before, no states",
+  r.body.ok && S.ads.filter((a) => a.product_id !== null).every((a) => JSON.stringify(a.target_cities) === '["mumbai"]' && a.target_states.length === 0),
+  JSON.stringify(S.ads.map((a) => [a.target_cities, a.target_states])));
+
+reset({ reachFails: true });
+S.adOrders.set("order_A5", { order_id: "order_A5", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A5", paymentId: "pay_e", signature: sign("order_A5", "pay_e") });
+check("E10 the plan can't be read: nothing published (never over-reach), refund review", S.ads.length === 0 && S.adOrders.get("order_A5").status === "refund_review");
+
 reset({ failAds: true });
 r = await call("razorpay-verify-payment", { demo: true, spec: SPEC, discountCode: "ADS10" }, { env: DEMO });
 check("E5 demo, campaigns fail to insert: the use is released", r.body.ok === false && rpcCalls("discount_release").length === 1 && rpcCalls("discount_confirm").length === 0);
@@ -540,6 +622,18 @@ S.adOrders.set("order_A1", { order_id: "order_A1", vendor_id: VENDOR, spec: SPEC
   discount_paise: 19900, discount_code: "CERT500", discount_redemption_id: "red-2" });
 h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_w", order_id: "order_A1" } } } });
 check("F1 webhook claims: use confirmed, campaigns created", h.status === 200 && rpcCalls("discount_confirm").length === 1 && S.ads.length === 3);
+
+reset({ adScope: "state_1" });
+S.adOrders.set("order_A6", { order_id: "order_A6", vendor_id: VENDOR, spec: { ...SPEC, targetStates: ["KA", "TN"] }, amount: 50700, status: "created" });
+h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_x", order_id: "order_A6" } } } });
+check("F2 webhook: the same clamp as verify-payment",
+  h.status === 200 && S.ads.filter((a) => a.product_id !== null).every((a) => JSON.stringify(a.target_states) === '["KA"]'),
+  JSON.stringify(S.ads.map((a) => a.target_states)));
+
+reset({ adScope: "none" });
+S.adOrders.set("order_A7", { order_id: "order_A7", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_y", order_id: "order_A7" } } } });
+check("F3 webhook, Free vendor: not published, refund review", h.status === 200 && S.ads.length === 0 && S.adOrders.get("order_A7").status === "refund_review");
 
 // ── G. discount-quote ───────────────────────────────────────────────────────
 reset();

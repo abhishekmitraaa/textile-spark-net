@@ -26,13 +26,16 @@ import { supportChatHref } from "@/lib/supportContact";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorHomeState, type AdRow } from "@/lib/queries/ads";
+import { useFeatureFlag } from "@/lib/queries/featureFlags";
+import { INDIA_STATES } from "@/data/indiaStates";
+import { useLang } from "@/lib/i18n";
 import { runStateOf } from "@/lib/campaignRunState";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
 import { useLeadFunnelData, funnelForWindow, formatInrCompact } from "@/lib/queries/vendorAnalytics";
-import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, publishFreeAdOrder, type AdSpec } from "@/lib/queries/payments";
+import { createRazorpayOrder, openRazorpayCheckout, verifyRazorpayPayment, publishDemoAds, publishFreeAdOrder, adReachRefusal, type AdSpec } from "@/lib/queries/payments";
 import { quoteAdDiscount, discountRefusal, DISCOUNT_CHECKOUT_TIMEOUT_S, type AdQuote } from "@/lib/queries/discounts";
 import { DiscountCodeField } from "@/components/vendor/DiscountCodeField";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
@@ -378,6 +381,7 @@ function AdCreationSteps({
   selectedGoals, setSelectedGoals,
   showMoreAdTypes, setShowMoreAdTypes,
   cityLimit, scopeLabel, vendorCats, planGrantsSeal, planName,
+  stateTargeting, allowCountries, selectedCountries, setSelectedCountries,
 }: {
   products: VendorProductRow[];
   selectedAdTypes: string[]; setSelectedAdTypes: (v: string[]) => void;
@@ -390,8 +394,25 @@ function AdCreationSteps({
   cityLimit: number; scopeLabel: string;
   vendorCats: { id: string; name: string }[];
   planGrantsSeal: boolean; planName: string;
+  /** State targeting (subscriptions P5): selectedCities then holds state codes, not city keys. */
+  stateTargeting: boolean;
+  /** VIP: the ad may also reach buyers in chosen countries outside India. */
+  allowCountries: boolean;
+  selectedCountries: string[]; setSelectedCountries: (v: string[]) => void;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>("openListing");
+  const lang = useLang();
+  // Country names in the reader's language, from the browser (P7 brings Cosora's own list).
+  const countryName = (code: string) => {
+    try {
+      return new Intl.DisplayNames([lang === "hi" ? "hi" : lang === "gu" ? "gu" : "en"], { type: "region" }).of(code) ?? code;
+    } catch {
+      return code;
+    }
+  };
+  const toggleCountry = (code: string) => {
+    setSelectedCountries(selectedCountries.includes(code) ? selectedCountries.filter((c) => c !== code) : [...selectedCountries, code]);
+  };
 
   const toggleAdType = (ad: AdType) => {
     // Don't let a vendor pay for a trust seal their plan already includes.
@@ -455,6 +476,8 @@ function AdCreationSteps({
   const DURATIONS = [{ value: "3", label: "3" }, { value: "7", label: "7" }, { value: "14", label: "14" }, { value: "30", label: "30" }];
   const CITIES = ["mumbai", "delhi", "allIndia", "south", "chennai", "kolkata", "west", "export", "pune", "ahmedabad"];
   const CITY_LABELS: Record<string, string> = { mumbai: "Mumbai", delhi: "Delhi", allIndia: "All India", south: "South", chennai: "Chennai", kolkata: "Kolkata", west: "West", export: "Export", pune: "Pune", ahmedabad: "Ahmedabad" };
+  // Where Indian textiles are bought most from abroad (ISO codes; names come from the browser).
+  const AD_COUNTRIES = "US GB AE SA DE FR IT ES NL BD LK NP AU CA JP SG".split(" ");
   const GOALS = [
     { value: "visitProfile",  title: "Visit your profile",  desc: "Best for brand awareness and follows"   },
     { value: "visitWebsite",  title: "Visit your website",  desc: "Best for online sales and bookings"     },
@@ -715,9 +738,65 @@ function AdCreationSteps({
                 )}
               </div>
 
-              {/* City — plan-scope-limited selection, persisted on the ad.
-                  Honest note: geo-based delivery filtering isn't live yet. */}
-              <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100">
+              {/* Where the ad reaches (subscriptions P5): states, held to the plan, and on
+                  VIP also countries. A buyer known to be in another state doesn't see it. */}
+              {stateTargeting && (
+                <div className="bg-gray-50/50 p-5 rounded-2xl border border-gray-100" data-testid="ad-states">
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-gray-600" />
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">States</span>
+                    </div>
+                    <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5">
+                      Plan: {scopeLabel}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-500 mb-3">
+                    {Number.isFinite(cityLimit)
+                      ? "Buyers in other states won't see this ad. Buyers whose state we don't know still can."
+                      : "Choose states to reach only those. Leave them all unchosen to reach all of India."}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {INDIA_STATES.map((st) => (
+                      <button key={st.code} onClick={() => toggleCity(st.code)} data-no-translate
+                        aria-pressed={selectedCities.includes(st.code)} data-testid={`ad-state-${st.code}`}
+                        className={cn(
+                          "px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                          selectedCities.includes(st.code)
+                            ? "bg-[#f75f71] text-white shadow-md"
+                            : "bg-white text-gray-600 border border-gray-100 hover:border-gray-200"
+                        )}>
+                        {lang === "hi" ? st.hi : lang === "gu" ? st.gu : st.name}
+                      </button>
+                    ))}
+                  </div>
+                  {allowCountries && (
+                    <div className="mt-5 border-t border-gray-100 pt-4" data-testid="ad-countries">
+                      <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Outside India</span>
+                      <p className="mt-1 text-[11px] text-gray-500 mb-3">
+                        Buyers in the countries you choose see this ad too. Part of your VIP plan.
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {AD_COUNTRIES.map((code) => (
+                          <button key={code} onClick={() => toggleCountry(code)} data-no-translate
+                            aria-pressed={selectedCountries.includes(code)}
+                            className={cn(
+                              "px-3 py-2 rounded-lg text-xs font-bold transition-all",
+                              selectedCountries.includes(code)
+                                ? "bg-[#f75f71] text-white shadow-md"
+                                : "bg-white text-gray-600 border border-gray-100 hover:border-gray-200"
+                            )}>
+                            {countryName(code)}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* City — the older targeting, for accounts state targeting isn't on for yet. */}
+              <div className={cn("bg-gray-50/50 p-5 rounded-2xl border border-gray-100", stateTargeting && "hidden")}>
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
                     <Building2 className="w-4 h-4 text-gray-600" />
@@ -872,6 +951,7 @@ function PaymentModal({
 function buildAdSpec(
   products: VendorProductRow[], selectedAdTypes: string[], selectedProducts: string[], days: number,
   selectedCategories: string[], selectedCities: string[],
+  stateTargeting = false, selectedCountries: string[] = [],
 ): AdSpec {
   return {
     placementIds: selectedAdTypes,
@@ -883,17 +963,22 @@ function buildAdSpec(
     }),
     // Real targeting persisted on the campaign row (see edge functions).
     targetCategories: selectedCategories.length ? selectedCategories : undefined,
-    targetCities: selectedCities.length ? selectedCities : undefined,
+    // With state targeting the selection is state codes; without it, the older city keys.
+    targetCities: !stateTargeting && selectedCities.length ? selectedCities : undefined,
+    targetStates: stateTargeting && selectedCities.length ? selectedCities : undefined,
+    targetCountries: stateTargeting && selectedCountries.length ? selectedCountries : undefined,
   };
 }
 
 // ── CostSummary ──
 function CostSummary({
   products, selectedAdTypes, selectedProducts, selectedDuration, selectedCategories, selectedCities, vendorId, onCreated, canAds,
+  stateTargeting, selectedCountries,
 }: {
   products: VendorProductRow[]; selectedAdTypes: string[]; selectedProducts: string[]; selectedDuration: string;
   selectedCategories: string[]; selectedCities: string[];
   vendorId?: string; onCreated: () => void; canAds: boolean;
+  stateTargeting: boolean; selectedCountries: string[];
 }) {
   const [payOpen, setPayOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -911,7 +996,7 @@ function CostSummary({
     let cancelled = false;
     setRequoting(true);
     const t = setTimeout(async () => {
-      const spec = buildAdSpec(products, selectedAdTypes, selectedProducts, parseInt(selectedDuration) || 1, selectedCategories, selectedCities);
+      const spec = buildAdSpec(products, selectedAdTypes, selectedProducts, parseInt(selectedDuration) || 1, selectedCategories, selectedCities, stateTargeting, selectedCountries);
       const res = await quoteAdDiscount(spec, quote.code);
       if (cancelled) return;
       setRequoting(false);
@@ -990,7 +1075,7 @@ function CostSummary({
   const payable = quote ? quote.total : total;
 
   const buildSpec = (): AdSpec =>
-    buildAdSpec(products, selectedAdTypes, selectedProducts, days, selectedCategories, selectedCities);
+    buildAdSpec(products, selectedAdTypes, selectedProducts, days, selectedCategories, selectedCities, stateTargeting, selectedCountries);
 
   const applyCode = async (code: string): Promise<string | null> => {
     setQuoteNote(null);
@@ -1018,6 +1103,8 @@ function CostSummary({
       toast.error("Your discount code couldn't be used", { description: discountRefusal(res.reason) });
       return;
     }
+    // The plan doesn't let the ad reach what was chosen (subscriptions P5).
+    if (!res.ok && res.error === "ad_reach") throw new Error(adReachRefusal(res.reason));
     if (!res.ok) throw new Error(res.error || "Could not publish ads");
     onCreated();
     setQuote(null);
@@ -1498,6 +1585,10 @@ const Advertisements = () => {
   const canAds = canRunAds(adScope);
   const cityLimit = adStateAllowance(adScope);
   const scopeLabel = AD_SCOPE_LABEL[adScope];
+  // State targeting (subscriptions P5), for accounts the ad_state_targeting switch lists:
+  // the picker offers states, and on VIP countries, in place of the older city chips.
+  const stateTargeting = useFeatureFlag("ad_state_targeting") === true;
+  const { data: homeState } = useVendorHomeState(user?.id, stateTargeting);
   // Whether the vendor's plan already grants the trust seal (so they aren't
   // charged again for the trustedSeal/verifiedCertificate ad types).
   const planGrantsSeal = Boolean(vplan?.limits.has_verified_badge);
@@ -1520,6 +1611,14 @@ const Advertisements = () => {
   // Targeting defaults are empty = untargeted (shown to everyone); the vendor
   // opts in to category/city targeting.
   const [selectedCities, setSelectedCities] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  // A plan that reaches one or four states starts on the vendor's own state, once.
+  const seededState = useRef(false);
+  useEffect(() => {
+    if (!stateTargeting || seededState.current || !homeState || !Number.isFinite(cityLimit) || cityLimit < 1) return;
+    seededState.current = true;
+    setSelectedCities((cur) => (cur.length ? cur : [homeState]));
+  }, [stateTargeting, homeState, cityLimit]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [showMoreAdTypes, setShowMoreAdTypes] = useState(false);
@@ -1570,6 +1669,8 @@ const Advertisements = () => {
                 showMoreAdTypes={showMoreAdTypes} setShowMoreAdTypes={setShowMoreAdTypes}
                 cityLimit={cityLimit} scopeLabel={scopeLabel}
                 vendorCats={vendorCats} planGrantsSeal={planGrantsSeal} planName={planName}
+                stateTargeting={stateTargeting} allowCountries={adScope === "global"}
+                selectedCountries={selectedCountries} setSelectedCountries={setSelectedCountries}
               />
               <div className="min-[1400px]:sticky min-[1400px]:top-24">
                 <CostSummary
@@ -1582,6 +1683,8 @@ const Advertisements = () => {
                   vendorId={user?.id}
                   onCreated={refreshAds}
                   canAds={canAds}
+                  stateTargeting={stateTargeting}
+                  selectedCountries={selectedCountries}
                 />
               </div>
             </motion.div>

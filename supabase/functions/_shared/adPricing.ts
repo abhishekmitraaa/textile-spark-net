@@ -101,7 +101,12 @@ export interface AdSpec {
   items: AdItem[];
   campaignLabel?: string;
   targetCategories?: string[];
+  /** Older ads: a fixed list of cities and regions. Ads made with state targeting carry none. */
   targetCities?: string[];
+  /** The states the ad reaches (india_states codes), and on VIP, countries outside India
+   *  (subscriptions P5). Held to the vendor's plan by ../_shared/adReach.ts. */
+  targetStates?: string[];
+  targetCountries?: string[];
 }
 
 /**
@@ -159,6 +164,8 @@ export interface AdRow {
   ends_at: string;
   target_categories: string[] | null;
   target_cities: string[] | null;
+  target_states: string[];
+  target_countries: string[];
 }
 
 /**
@@ -185,6 +192,8 @@ export function buildAdRows(vendorId: string, spec: AdSpec): AdRow[] {
     Array.isArray(spec?.targetCategories) && spec.targetCategories.length ? spec.targetCategories : null;
   const targetCities =
     Array.isArray(spec?.targetCities) && spec.targetCities.length ? spec.targetCities : null;
+  const targetStates = Array.isArray(spec?.targetStates) ? spec.targetStates : [];
+  const targetCountries = Array.isArray(spec?.targetCountries) ? spec.targetCountries : [];
 
   const rows: AdRow[] = [];
 
@@ -204,6 +213,8 @@ export function buildAdRows(vendorId: string, spec: AdSpec): AdRow[] {
         ends_at: endsAt,
         target_categories: targetCategories,
         target_cities: targetCities,
+        target_states: targetStates,
+        target_countries: targetCountries,
       });
     }
   }
@@ -221,9 +232,11 @@ export function buildAdRows(vendorId: string, spec: AdSpec): AdRow[] {
       status: "active",
       starts_at: startsAt,
       ends_at: endsAt,
-      // A vendor-level entitlement is not targeted at a category or a city.
+      // A vendor-level entitlement is not targeted at a category or a place.
       target_categories: null,
       target_cities: null,
+      target_states: [],
+      target_countries: [],
     });
   }
 

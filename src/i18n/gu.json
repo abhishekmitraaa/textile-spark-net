@@ -7633,5 +7633,16 @@
  "Choose a plan": "એક પ્લાન પસંદ કરો",
  "See your products": "તમારા પ્રોડક્ટ જુઓ",
  "Emailed 7, 4, 2 and 1 days before your plan ends, and on the day. Off stops the emails, not the notices in your bell.": "તમારો પ્લાન પૂરો થાય તેના 7, 4, 2 અને 1 દિવસ પહેલા, અને તે જ દિવસે ઈમેલ મોકલાય છે. બંધ કરવાથી ઈમેલ અટકે છે, ઘંટડીમાં આવતી સૂચનાઓ નહીં.",
- "Invoices, payment receipts and plan reminders are emailed to {0}.": "ઇન્વૉઇસ, ચુકવણીની રસીદો અને પ્લાન રિમાઇન્ડર {0} પર ઈમેલ કરવામાં આવે છે."
+ "Invoices, payment receipts and plan reminders are emailed to {0}.": "ઇન્વૉઇસ, ચુકવણીની રસીદો અને પ્લાન રિમાઇન્ડર {0} પર ઈમેલ કરવામાં આવે છે.",
+ "Your plan can't run ad campaigns. Upgrade to a paid plan to advertise.": "તમારા પ્લાનમાં જાહેરાત કેમ્પેઇન ચલાવી શકાતા નથી. જાહેરાત આપવા માટે ચૂકવણીવાળા પ્લાનમાં અપગ્રેડ કરો.",
+ "Choose the state this ad should reach, then try again.": "આ જાહેરાત કયા રાજ્ય સુધી પહોંચે તે પસંદ કરો, પછી ફરી પ્રયાસ કરો.",
+ "This ad targets more states than your plan reaches. Remove some, or upgrade your plan.": "આ જાહેરાત તમારા પ્લાનની પહોંચ કરતાં વધુ રાજ્યો પસંદ કરે છે. કેટલાક દૂર કરો, અથવા તમારો પ્લાન અપગ્રેડ કરો.",
+ "Reaching buyers outside India is part of the VIP plan.": "ભારત બહારના ખરીદદારો સુધી પહોંચવું એ VIP પ્લાનનો ભાગ છે.",
+ "One of the states chosen for this ad isn't recognised. Choose it again.": "આ જાહેરાત માટે પસંદ કરેલું એક રાજ્ય ઓળખાયું નથી. તેને ફરી પસંદ કરો.",
+ "We couldn't check what your plan lets this ad reach. Nothing was charged. Please try again in a minute.": "તમારો પ્લાન આ જાહેરાતને ક્યાં સુધી પહોંચવા દે છે તે અમે તપાસી શક્યા નથી. કોઈ રકમ લેવામાં આવી નથી. કૃપા કરીને એક મિનિટમાં ફરી પ્રયાસ કરો.",
+ "States": "રાજ્યો",
+ "Buyers in other states won't see this ad. Buyers whose state we don't know still can.": "બીજા રાજ્યોના ખરીદદારો આ જાહેરાત જોશે નહીં. જે ખરીદદારોનું રાજ્ય અમને ખબર નથી, તેઓ હજુ પણ જોઈ શકે છે.",
+ "Choose states to reach only those. Leave them all unchosen to reach all of India.": "ફક્ત તેમના સુધી પહોંચવા રાજ્યો પસંદ કરો. આખા ભારત સુધી પહોંચવા કોઈ પણ પસંદ ન કરો.",
+ "Outside India": "ભારત બહાર",
+ "Buyers in the countries you choose see this ad too. Part of your VIP plan.": "તમે પસંદ કરેલા દેશોના ખરીદદારો પણ આ જાહેરાત જુએ છે. આ તમારા VIP પ્લાનનો ભાગ છે."
 }

@@ -6,11 +6,11 @@
 // RAZORPAY_WEBHOOK_SECRET) and publishes the order's intent idempotently
 // (shares the 'created' → 'paid' claim with verify-payment).
 //
-// Enforces the vendor's ad_location_scope on the stored spec before inserting,
-// identically to razorpay-verify-payment: a Free vendor's order is flagged for
-// refund/admin review and NOT published; a paid tier's over-limit target-city
-// list is clamped to the allowed count. (Without this the webhook would be an
-// unguarded second publish path — a closed browser must not bypass the check.)
+// Holds the stored spec to the vendor's plan before inserting, identically to
+// razorpay-verify-payment (../_shared/adReach.ts, subscriptions P5): an order that
+// can't be published on the plan is flagged for refund/admin review and NOT
+// published; reach beyond the plan is clamped. (Without this the webhook would be
+// an unguarded second publish path — a closed browser must not bypass the check.)
 //
 // DISCOUNT CODES (admin completion Phase 10, 2026-09-29): a claimed order's
 // code use is confirmed here too, since either path may be the one that claims.
@@ -26,42 +26,9 @@
 // with product_id = null instead of one per product.
 import { buildAdRows, type AdSpec } from "../_shared/adPricing.ts";
 import { confirmDiscount } from "../_shared/discounts.ts";
+import { adReach } from "../_shared/adReach.ts";
 
-// ── Plan ad-location-scope resolution + enforcement (mirrors verify-payment) ──
-function scopeAllowance(scope: string): number | null {
-  switch (scope) {
-    case "none": return 0;
-    case "state_1": return 1;
-    case "state_4": return 4;
-    default: return null; // pan_india / global — unlimited
-  }
-}
-async function resolveAdScope(url: string, key: string, vendorId: string): Promise<string> {
-  const headers = { apikey: key, authorization: `Bearer ${key}` };
-  try {
-    const sr = await fetch(`${url}/rest/v1/vendor_subscriptions?vendor_id=eq.${vendorId}&select=plan_id,status,current_period_end`, { headers });
-    const subs = sr.ok ? await sr.json() : [];
-    let planId = "free";
-    const s = Array.isArray(subs) && subs.length ? subs[0] : null;
-    if (s && s.plan_id && s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() > Date.now()) {
-      planId = s.plan_id;
-    }
-    const pr = await fetch(`${url}/rest/v1/subscription_plans?id=eq.${encodeURIComponent(planId)}&select=limits`, { headers });
-    const plans = pr.ok ? await pr.json() : [];
-    const scope = Array.isArray(plans) && plans.length ? plans[0]?.limits?.ad_location_scope : null;
-    return typeof scope === "string" ? scope : "none";
-  } catch {
-    return "none";
-  }
-}
-interface ScopeDecision { blocked: boolean; spec: AdSpec }
-function applyScopeToSpec(spec: AdSpec, scope: string): ScopeDecision {
-  if (scope === "none") return { blocked: true, spec };
-  const allowance = scopeAllowance(scope);
-  const cities = Array.isArray(spec.targetCities) ? spec.targetCities : [];
-  if (allowance === null || cities.length <= allowance) return { blocked: false, spec };
-  return { blocked: false, spec: { ...spec, targetCities: cities.slice(0, allowance) } };
-}
+
 async function flagOrderForRefund(url: string, key: string, orderId: string): Promise<void> {
   await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}`, {
     method: "PATCH",
@@ -115,10 +82,9 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const order = claimed[0];
   // Charged the discounted price, so the code's use is the vendor's.
   if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
-  const scope = await resolveAdScope(url, key, order.vendor_id);
-  const decision = applyScopeToSpec(order.spec as AdSpec, scope);
-  if (decision.blocked) {
-    // Free vendor paid — don't publish; flag for refund/admin review.
+  const decision = await adReach(url, key, order.vendor_id, order.spec as AdSpec);
+  if (!decision.ok) {
+    // Paid, but nothing can be published on this plan: flag for refund/admin review.
     await flagOrderForRefund(url, key, orderId);
     return 0;
   }

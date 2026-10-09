@@ -9,16 +9,17 @@
 // Demo mode (no key secret): publishes directly from the client spec using the
 // vendor id from the JWT, so the ad flow works before the gateway is wired.
 //
-// Plan ad-location-scope enforcement (server-side backstop): the publish path
-// runs as the service role and must NOT trust the spec's target_cities. Before
-// inserting the ad(s) we resolve the vendor's real effective plan and:
-//   * Free (ad_location_scope = 'none') — not a publishable state; we do NOT
-//     publish and flag the order for refund/admin review (never silently drop).
-//   * A paid tier whose spec targets more cities than its scope allows — we
-//     CLAMP the list to the allowed count (keep the first N) and publish anyway.
-//     Ad pricing doesn't vary by city count, so clamping removes no paid-for
-//     line item; failing the whole order over a targeting detail would deny a
-//     vendor who legitimately paid. (This is the deliberate choice.)
+// Plan ad-reach enforcement (server-side backstop): the publish path runs as the
+// service role and must NOT trust the spec's targeting. Before inserting the
+// ad(s) the vendor's plan in force decides (../_shared/adReach.ts, subscriptions P5):
+//   * No ads on the plan (Free), or a one- or four-state plan with no state to
+//     reach — not a publishable state; we do NOT publish and flag the order for
+//     refund/admin review (never silently drop).
+//   * A spec that reaches more than the plan allows — we CLAMP it (the first
+//     states or cities the plan allows; countries only on VIP) and publish anyway.
+//     Ad pricing doesn't vary by reach, so clamping removes no paid-for line item;
+//     failing the whole order over a targeting detail would deny a vendor who
+//     legitimately paid. (This is the deliberate choice.)
 //
 // DISCOUNT CODES (admin completion Phase 10, 2026-09-29):
 //   * A claimed order's code use is confirmed: the vendor was charged the
@@ -56,53 +57,8 @@ function json(body: unknown, status = 200): Response {
 // payment is never approval.
 import { buildAdRows, computeOrderPaise, type AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
+import { adReach } from "../_shared/adReach.ts";
 
-// ── Plan ad-location-scope resolution + enforcement ──
-function scopeAllowance(scope: string): number | null {
-  switch (scope) {
-    case "none": return 0;      // Free — may not advertise at all
-    case "state_1": return 1;
-    case "state_4": return 4;
-    default: return null;       // pan_india / global — unlimited
-  }
-}
-
-// Resolve the vendor's effective ad_location_scope server-side. get_vendor_plan()
-// is self/admin-guarded (returns null when called for another vendor with the
-// service role), so we read the two tables directly — the same effective-plan
-// rule the RPC/triggers use: an active subscription whose period hasn't lapsed
-// gives its plan, otherwise Free.
-async function resolveAdScope(url: string, key: string, vendorId: string): Promise<string> {
-  const headers = { apikey: key, authorization: `Bearer ${key}` };
-  try {
-    const sr = await fetch(`${url}/rest/v1/vendor_subscriptions?vendor_id=eq.${vendorId}&select=plan_id,status,current_period_end`, { headers });
-    const subs = sr.ok ? await sr.json() : [];
-    let planId = "free";
-    const s = Array.isArray(subs) && subs.length ? subs[0] : null;
-    if (s && s.plan_id && s.status === "active" && s.current_period_end && new Date(s.current_period_end).getTime() > Date.now()) {
-      planId = s.plan_id;
-    }
-    const pr = await fetch(`${url}/rest/v1/subscription_plans?id=eq.${encodeURIComponent(planId)}&select=limits`, { headers });
-    const plans = pr.ok ? await pr.json() : [];
-    const scope = Array.isArray(plans) && plans.length ? plans[0]?.limits?.ad_location_scope : null;
-    return typeof scope === "string" ? scope : "none";
-  } catch {
-    return "none"; // fail closed — never over-publish on a lookup error
-  }
-}
-
-interface ScopeDecision { blocked: boolean; spec: AdSpec; requested: number; allowed: number }
-// Free (scope 'none') => blocked. A paid tier over its city allowance => spec
-// with target_cities clamped to the first N. Otherwise the spec is unchanged.
-function applyScopeToSpec(spec: AdSpec, scope: string): ScopeDecision {
-  const cities = Array.isArray(spec.targetCities) ? spec.targetCities : [];
-  if (scope === "none") return { blocked: true, spec, requested: cities.length, allowed: 0 };
-  const allowance = scopeAllowance(scope);
-  if (allowance === null || cities.length <= allowance) {
-    return { blocked: false, spec, requested: cities.length, allowed: allowance ?? cities.length };
-  }
-  return { blocked: false, spec: { ...spec, targetCities: cities.slice(0, allowance) }, requested: cities.length, allowed: allowance };
-}
 
 // Flag a claimed live/webhook order that shouldn't have published (Free vendor)
 // for refund / admin review — a durable trace on the order itself, never a
@@ -177,9 +133,8 @@ function vendorIdFromJwt(req: Request): string | null {
 }
 
 // Claim the intent ('created' → 'paid') and publish its campaigns exactly once.
-// Enforces the vendor's ad_location_scope on the stored spec before inserting:
-// Free is flagged for refund and not published; a paid tier's over-limit city
-// list is clamped.
+// Holds the stored spec to the vendor's plan before inserting: an order that
+// can't be published is flagged for refund; reach beyond the plan is clamped.
 async function publishOrder(url: string, key: string, orderId: string): Promise<{ ok: boolean; count: number; blocked?: boolean; refundFlagged?: boolean; requested?: number; allowed?: number }> {
   const claim = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
     method: "PATCH",
@@ -191,10 +146,9 @@ async function publishOrder(url: string, key: string, orderId: string): Promise<
   const order = claimed[0];
   // Charged the discounted price, so the code's use is the vendor's.
   if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
-  const scope = await resolveAdScope(url, key, order.vendor_id);
-  const decision = applyScopeToSpec(order.spec as AdSpec, scope);
-  if (decision.blocked) {
-    // Free vendor paid — don't publish; flag the order for refund/admin review.
+  const decision = await adReach(url, key, order.vendor_id, order.spec as AdSpec);
+  if (!decision.ok) {
+    // Paid, but nothing can be published on this plan: flag the order for refund/admin review.
     const flagged = await flagOrderForRefund(url, key, orderId);
     return { ok: false, count: 0, blocked: true, refundFlagged: flagged, requested: decision.requested, allowed: 0 };
   }
@@ -254,10 +208,14 @@ Deno.serve(async (req: Request): Promise<Response> => {
     const vendorId = vendorIdFromJwt(req);
     if (!vendorId) return json({ ok: false, error: "unauthenticated" }, 401);
     if (!body.spec) return json({ ok: false, error: "missing_spec" }, 400);
-    const scope = await resolveAdScope(url, serviceKey, vendorId);
-    const decision = applyScopeToSpec(body.spec, scope);
-    if (decision.blocked) {
-      // Free vendor — advertising isn't part of their plan; don't publish.
+    // Nothing has been paid in demo mode, so the spec is checked strictly, as an order
+    // is before payment: reach the plan doesn't allow is refused with its reason.
+    const decision = await adReach(url, serviceKey, vendorId, body.spec, true);
+    if (!decision.ok && !decision.blocked) {
+      return json({ ok: false, demo: true, error: "ad_reach", reason: decision.reason ?? "unavailable", count: 0 });
+    }
+    if (!decision.ok) {
+      // Advertising isn't part of their plan; don't publish.
       const trace = await recordDemoRefundTrace(url, serviceKey, vendorId, body.spec);
       return json({ ok: false, demo: true, error: "plan_not_eligible", refundFlagged: trace.ok, orderId: trace.orderId, count: 0 });
     }

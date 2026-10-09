@@ -74,3 +74,10 @@ The local stack has no scheduled jobs, so the daily plan job is run by hand:
 
 Apply `20261008150000` (the status "paused") on its own before `20261008150100`: Postgres won't use a new enum value
 in the transaction that adds it. `scripts/subscriptions/p4_lifecycle.sql` needs both.
+
+## The ad payment functions (subscriptions P5)
+
+`razorpay-create-order`, `razorpay-verify-payment` and `razorpay-webhook` weren't in the stack's folder when it was
+started, so they are served by a second edge runtime, started with the stack's own environment and no Razorpay keys
+(checkouts then take the demo path). `copy-functions.mjs` copies them in; `subscriptions-p5.spec.ts` reaches the
+runtime through `LOCAL_AD_FUNCTIONS_URL` (for example `http://localhost:8098`).

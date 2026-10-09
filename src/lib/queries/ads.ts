@@ -91,6 +91,20 @@ export function useMyAds(vendorId: string | undefined) {
   });
 }
 
+/** The vendor's own state (india_states code), where a state plan's ad starts; null when the profile has none. */
+export function useVendorHomeState(vendorId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ["vendor_home_state", vendorId],
+    queryFn: async (): Promise<string | null> => {
+      const { data, error } = await supabase.from("vendor_profiles").select("state_code").eq("id", vendorId as string).maybeSingle();
+      if (error) throw error;
+      return data?.state_code ?? null;
+    },
+    enabled: Boolean(vendorId) && enabled,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export interface NewAd {
   title: string;
   productId?: string | null;
