@@ -45,7 +45,7 @@ begin
       ('public.get_vendor_plan(uuid)',                           'fcad5c8f3b0e299f308e998d5b30c07a'),
       ('public.vendor_entitlements(uuid)',                       'e391ebeb1eb8130d4c92d670a1351477'),
       ('admin.subscription_quote(uuid,text,text,timestamptz)',   'd04d4a563006a3d0daa550974107b6cf'),
-      ('public.subscription_activate(uuid,text,text)',           '3b5013a2737a740f5290cebc87b31ed8'),
+      ('public.subscription_activate(uuid,text,text)',           'c208f34e1b4d863a5c3d774bd2f257b5'),
       ('public.enforce_ad_location_scope()',                     'c3171991134575f06aaaced83d613dc1'),
       ('public.notify_deliver(uuid,text,jsonb,text,text[])',     'c771242998921a6c779c4fdb5c87ef32')
     ) as t(fn, want)

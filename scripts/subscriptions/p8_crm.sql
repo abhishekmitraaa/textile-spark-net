@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P8: the CRM (2026-10-09).
--- Migration 20261009120000_subscriptions_p8_crm.sql (on top of P0-P7).
+-- Migration 20261009193707_subscriptions_p8_crm.sql (on top of P0-P7).
 --   levels    Silver pipeline, Gold analytics, VIP success; none without the switch or a plan
 --   writes    track, add, change, notes and follow-ups only through crm_*; each checks the
 --             plan, the owner, the requirement (the overseas rule too) and the limits

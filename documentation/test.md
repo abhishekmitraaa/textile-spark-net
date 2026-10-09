@@ -187,6 +187,26 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-10 — Subscriptions release, the database: production compared with the tested copy (504 functions and 44 tables; only differences with a known cause)
+
+- **Each apply:** the wrapper refused one send to production and applied nothing (P6's escapes, named as lines 171
+  and 725); on the local stack it refused a deliberately changed copy of P4, P8 and P11. After each file: its md5 in
+  the ledger, the switch off, the next file's guards equal to production.
+- **As roles, read-only** (a block that raises at the end, so nothing is kept): a visitor reads no requirements (the
+  policy is for signed-in accounts, as before), 12 ads and 250 countries; a seller reads the open requirements and
+  their own, and `vendor_entitlements`, `get_vendor_plan`, `my_product_cap`, `my_autopay`, `my_lead_alerts` and
+  `overseas_lead_count` all answer, with nothing available while the switches are off.
+- **Functions, production against the local stack** (body without carriage returns, definer flag, volatility,
+  settings, execute for anon / authenticated / service_role): 36 buckets, all equal, 504 functions. Left out by name:
+  10 functions of another session's product-removal work that exist only locally, 4 that work changed
+  (`enforce_products_moderation`, `approve_vendor_content`, `reject_vendor_content`, `admin_flag_add`) and 5 that
+  call the local stack's address. `enforce_products_moderation` was read on both sides, since paused listings pass
+  through its trigger: both versions return at once for anything but a browser's own write.
+- **Tables** (the 44 this build creates or alters; columns, policies and RLS, triggers, constraints and indexes,
+  privileges): 40 equal; `products` differs by that other work, `subscription_usage` and the two payment-mode
+  triggers by P13, which is held back.
+- **Not run:** the browser specs against production (the new app isn't deployed); the edge functions (not deployed).
+
 ### 2026-10-09 — Subscriptions: complete test run (local stack: typecheck 0 in both apps; lint clean on every file the build changed; i18n 7,691/7,691; both production builds; database harnesses 269/269 (14 scripts); P11–P13 replays identical; both race tests hold and catch their mutations; end to end over HTTP 180/180 (10 scripts); browser 73/73; the full-surface sweep 831 visits with no crashes, error screens, broken text, stuck pages, overflow or gating mismatches)
 - **Where:** the local stack with P0–P13 applied; both apps from the `subscriptions/p13-truth-pass` worktrees; mock
   Razorpay, Resend and Meta on :8787; side runtimes on :8099 (P3's), :8098 (ads) and a new :8097 with WhatsApp settings.
@@ -451,7 +471,7 @@ file was created; they record real runs, but only those the changelog captured.
 ### 2026-10-08 — Subscriptions P4: reminders, grace days, paused listings (local stack: harness 29/29; all five harnesses green; end to end 23/23; browser 14/14; typecheck 0 in both apps; i18n 7,380/7,380; admin build)
 - **Where:** the local stack with P0–P4 applied; apps on :8092 and :5186 from the `subscriptions/p4-lifecycle`
   worktrees. No function changed in P4. The daily job was run by hand (`select public.expire_subscriptions()`).
-- **Harness** `scripts/subscriptions/p4_lifecycle.sql`, 29/29, and a full replay of `20261008150100` in one
+- **Harness** `scripts/subscriptions/p4_lifecycle.sql`, 29/29, and a full replay of `20261009175141` in one
   rolled-back transaction (undo, run, compare all 16 functions with what is applied, harness). It covers: active, grace
   and free; the switch off; `get_vendor_plan` and `vendor_entitlements` in grace; a purchase in grace (renewal from the
   old end, another plan from now, new after the grace days); reminders at 7, a made-up day, the day itself, the email

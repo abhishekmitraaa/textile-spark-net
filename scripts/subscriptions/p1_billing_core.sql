@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P1: billing core (2026-10-08).
--- Migration 20261008120000_subscriptions_p1_billing_core.sql (on top of P0).
+-- Migration 20261009171650_subscriptions_p1_billing_core.sql (on top of P0).
 --   fulfil    one transaction: claim, confirm the code, activate, invoice; service role
 --             only; done once; a demo refusal undoes everything; a paid refusal opens an
 --             incident and keeps the money's record

@@ -148,7 +148,7 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
-- **A new feature ships behind a feature switch** (subscriptions P0, 2026-10-08; migration `20261008100000_subscriptions_p0_foundations.sql`).
+- **A new feature ships behind a feature switch** (subscriptions P0, 2026-10-08; migration `20261009171435_subscriptions_p0_foundations.sql`).
   - `public.feature_flags`: on for everyone (`enabled`) or only for `allow_profile_ids`. The migration that ships
     the code reading a switch creates it, switched off. Super admins change it on Cosora-Admin's Feature switches
     page, with a reason that reaches the Admin Log; managers read.
@@ -171,7 +171,7 @@ undocumented. Deep technical rationale for each lives in
   `admin.billing_entity` (Cosora-Admin Billing details, super admin and finance admin). Onboarding still saves
   a GSTIN unchecked (ToDo).
 - **A plan order is completed by one database transaction, and nothing else** (subscriptions P1, 2026-10-08;
-  migration `20261008120000_subscriptions_p1_billing_core.sql`).
+  migration `20261009171650_subscriptions_p1_billing_core.sql`).
   - `public.subscription_fulfil(order, payment, source)` (service role) claims the order, confirms its code,
     activates the plan and issues the invoice together. verify-payment, the webhook and `billing-reconcile` call
     it through `_shared/fulfil.ts`; no function writes a plan or an invoice itself. A new way to pay calls it too.
@@ -220,7 +220,7 @@ undocumented. Deep technical rationale for each lives in
   function. psql doesn't load it, so a SQL harness passes regardless: call every new RPC once through PostgREST in its
   end-to-end check. A one-row settings table uses `where id`.
 - **Autopay is a Razorpay subscription whose first period is ours** (subscriptions P3, 2026-10-08; migration
-  `20261008140000_subscriptions_p3_autopay.sql`; optional and ticked by default, Mitra).
+  `20261009174014_subscriptions_p3_autopay.sql`; optional and ticked by default, Mitra).
   - The first period is priced by the plan-change rule, a code and GST, and charged as the subscription's upfront
     amount; Razorpay charges the plan's list price with GST from the end of that period. A code applies to the first
     payment only. Every charge is fulfilled by `subscription_fulfil`, like any other payment.
@@ -232,7 +232,7 @@ undocumented. Deep technical rationale for each lives in
     running to the end of what was paid for.
   - Offered only to accounts the `subscription_autopay` switch allows.
 - **A plan ends in three steps: reminders, grace days, lapse** (subscriptions P4, 2026-10-08; migrations
-  `20261008150000` and `20261008150100`; Mitra: 7, 4, 2, 1 and 0 days, then 7 days' grace).
+  `20261009174748` and `20261009175141`; Mitra: 7, 4, 2, 1 and 0 days, then 7 days' grace).
   - **The plan in force is `admin.vendor_effective_plan()`**, status `active`, `grace` or `free`. Anything that asks
     "what plan is this vendor on" asks it (or `vendor_cap_plan`, `get_vendor_plan`, `vendor_entitlements`); never read
     `vendor_subscriptions` and compare the period end yourself, or the grace days are missed.
@@ -252,7 +252,7 @@ undocumented. Deep technical rationale for each lives in
   - Kept first: the vendor's picks (`vendor_keep_products`), then published before in-review, then the most viewed.
   - A listing saved while paused returns to review, not straight to live.
 - **Vendors are told about a requirement by their plan's channels** (subscriptions P6, 2026-10-09; migration
-  `20261009100000_subscriptions_p6_lead_alerts.sql`).
+  `20261009175832_subscriptions_p6_lead_alerts.sql`).
   - The channels are data: `subscription_plans.limits.lead_alert_channels` (`app`, `email`, `whatsapp`, `sms`,
     `digest`) and `lead_alert_priority`. Leads themselves are the same on every plan; only being told differs.
   - **`admin.lead_alert_fanout(rfq)` is the one place that matches and tells**, from the trigger on `rfqs` (posted,
@@ -271,7 +271,7 @@ undocumented. Deep technical rationale for each lives in
     the alert history), where the reader can already see the original; it cuts its input to 400 characters first.
   - Anything that lets one user set off messages to others needs a limit on how often (`buyer_daily_cap`).
 - **Overseas requirements are Gold's and VIP's** (subscriptions P7, 2026-10-09; migration
-  `20261009110000_subscriptions_p7_overseas.sql`).
+  `20261009180220_subscriptions_p7_overseas.sql`).
   - **One rule, four places.** Readable when it isn't overseas, or the vendor is VIP, or Gold once
     `overseas_vip_until` has passed, or the vendor already quoted. The `rfqs_select` policy and
     `match_vendor_rfqs` write it out inline (they test every row); `enforce_quote_rfq_open` and
@@ -285,7 +285,7 @@ undocumented. Deep technical rationale for each lives in
   - A buyer's country is `buyer_profiles.country_code` (references `public.countries`). `src/data/countries.ts`
     and the table come from one generated list: change both together. No country counts as India.
 - **The CRM is written only through the `crm_*` functions** (subscriptions P8, 2026-10-09; migration
-  `20261009120000_subscriptions_p8_crm.sql`).
+  `20261009193707_subscriptions_p8_crm.sql`).
   - A vendor reads their own `vendor_lead_pipeline`, `vendor_lead_notes` and `vendor_lead_followups` rows. There are
     no write policies or grants: each function checks `admin.crm_caller()` (the plan's `crm_level` where the `crm`
     switch lists the vendor), the owner, and the limits in `admin.crm_config` under `admin.crm_lock(vendor)`.
@@ -295,7 +295,7 @@ undocumented. Deep technical rationale for each lives in
   - Rows written together that must keep their order (a lead's history) default `created_at` to `clock_timestamp()`;
     `now()` is the same for the whole transaction.
 - **Account managers serve the vendors named for them, and the shared team** (subscriptions P9, 2026-10-09; migration
-  `20261009130100_subscriptions_p9_account_managers.sql`).
+  `20261009193949_subscriptions_p9_account_managers.sql`).
   - Who serves whom is `admin.am_serves(staff, vendor)`: super admins and managers everyone; an account manager their
     named vendors and every entitled vendor without a named manager. Every `admin_am_*` function starts with
     `admin.am_require_serves(vendor)` (or `admin.am_staff()`); only super admins and managers call `admin_am_assign`.
@@ -319,7 +319,7 @@ undocumented. Deep technical rationale for each lives in
   `scripts/subscriptions/p13_truth_pass.sql` checks every row of every plan against the limits and fails on words
   that promise what isn't built ("dedicated", "100%", SMS). Change both together, and re-run it.
 - **Plan prices change through `admin_plan_price_set`, never by editing `subscription_plans`** (subscriptions P12,
-  2026-10-09; migration `20261009160000_subscriptions_p12_admin_tooling.sql`).
+  2026-10-09; migration `20261009194403_subscriptions_p12_admin_tooling.sql`).
   - `subscription_plan_prices` keeps every price and the one change waiting per plan. `admin.apply_due_plan_prices()`
     copies a due change into `subscription_plans.monthly_price / yearly_price`: from the setter when it is "now", and
     from `expire_subscriptions()` every morning. Every reader keeps reading those two columns; don't price a
@@ -343,7 +343,7 @@ undocumented. Deep technical rationale for each lives in
     `category_for_import` (case-insensitive; a sub-category wins; "Parent > Child" to be exact).
   - Row numbers shown to the seller are the spreadsheet's (headings are row 1), not positions in what was sent.
 - **Featured places and the spotlight are chosen by the database** (subscriptions P10, 2026-10-09; migration
-  `20261009140000_subscriptions_p10_visibility.sql`).
+  `20261009194104_subscriptions_p10_visibility.sql`).
   - `featured_listings(category, session)` and `spotlight_listings` decide; the app only moves those products to the
     top, tags them and logs what was seen (`log_featured_impressions`, which checks the product really has that place).
   - The `featured_listings` switch lists VIEWERS, not vendors: the buyer must be on it to see any of it. Its client
@@ -373,7 +373,7 @@ undocumented. Deep technical rationale for each lives in
 - **A page never promises a channel that isn't running.** `my_lead_alerts().live_channels` is what is being sent
   today (an active template; for the digest, its scheduled job). Show the rest as "Starting soon".
 - **An ad reaches states, and the plan decides how many** (subscriptions P5, 2026-10-09; migration
-  `20261008160000_subscriptions_p5_ad_reach.sql`).
+  `20261009175317_subscriptions_p5_ad_reach.sql`).
   - `advertisements.target_states` (india_states codes) and `target_countries` (VIP). `target_cities` is the older
     targeting: it stays on ads made before, and is all an account gets while `ad_state_targeting` is off for it.
   - **`admin.ad_reach()` is the one rule.** A browser's write reaches it through the trigger
@@ -387,7 +387,7 @@ undocumented. Deep technical rationale for each lives in
 - **Database code that isn't the service role tests a switch with `admin.feature_on_for()`** (a scheduled job, a
   trigger inside an admin's request). `public.feature_on_for()` answers the service role only and raises otherwise.
 - **A new enum value is its own migration.** Postgres won't let a value be used in the transaction that adds it
-  (`20261008150000` adds `paused`; `20261008150100` uses it).
+  (`20261009174748` adds `paused`; `20261009175141` uses it).
 
 - **Help & Support: who answers, when, and what users see** (Andy's decisions D-04 to D-23 in
   `documentation/help-feature-plan.md`, confirmed 2026-10-01). Live since 2026-10-01 with
@@ -1474,6 +1474,18 @@ undocumented. Deep technical rationale for each lives in
   writes nothing) are split for exactly this reason, not for tidiness.
   `account-deletion-sweep` and `account-deletion-sweep-alarm` are split the same way (MPF-27,
   2026-09-25): a raise in the sweep would roll back its SQL fallback.
+- **A guard's md5 comes from the migration FILE, not from a database.** A guard such as
+  `if md5(prosrc) <> '…'` must pin the body the earlier file creates, with LF line endings. The local stack can
+  hold the same body with CR LF (a file piped in from PowerShell, or pasted into the SQL editor), and a value read
+  from it refuses on production (subscriptions P4, 2026-10-09). `scratchpad/release/guards.mjs` in that session
+  checks every guard against the files.
+- **The Supabase tool rewrites `\uXXXX` in the SQL it carries** into the character itself. Text that must reach
+  the database as a backslash-u (a regex of invisible characters, an `E''` string) is sent with a placeholder and
+  restored in SQL, `replace(q, '~~BS~~', chr(92))`. Send any long migration inside a statement that checks its md5
+  before `execute`: that is what caught this.
+- **A paste into the SQL editor puts CR LF inside function bodies.** Hand over the file wrapped as
+  `do $a$ declare q text := replace($m$<file>$m$, chr(13), ''); begin if md5(q) <> '<md5>' then raise …; end if;
+  execute q; end $a$;` and the bodies equal the file's.
 - **Inside a PL/pgSQL exception handler, `SQLSTATE` and `SQLERRM` are variables.** A
   statement there that names a column `sqlstate` fails, and a nested
   `exception when others` then swallows that too: a failure log that records nothing. The

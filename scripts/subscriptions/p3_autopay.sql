@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P3: autopay (2026-10-08).
--- Migration 20261008140000_subscriptions_p3_autopay.sql (on top of P0, P1 and P2).
+-- Migration 20261009174014_subscriptions_p3_autopay.sql (on top of P0, P1 and P2).
 --   plans     a Razorpay plan is saved once per plan, cycle, mode and amount
 --   mandate   created → authenticated → active; statuses only move forward; cancelled is
 --             final; auto_renew follows; a new mandate lists the old one for cancelling

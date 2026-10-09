@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P10: featured listings, the spotlight, impressions (2026-10-09).
--- Migration 20261009140000_subscriptions_p10_visibility.sql (on top of P0-P9).
+-- Migration 20261009194104_subscriptions_p10_visibility.sql (on top of P0-P9).
 --   places     up to 10 on a category page: 1-5 by tier (VIP, Gold, then Silver if room), 6-10
 --              rotating among the rest; one per seller, its best seller; the subtree counts
 --   who        lapsed, suspended, Basic and Free sellers never; the viewer's own never

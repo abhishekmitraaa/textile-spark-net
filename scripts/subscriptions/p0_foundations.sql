@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P0: foundations and safety (2026-10-08).
--- Migration 20261008100000_subscriptions_p0_foundations.sql.
+-- Migration 20261009171435_subscriptions_p0_foundations.sql.
 --   S-1   get_vendor_plan: signed-out callers can't run it; another vendor gets null;
 --         the vendor and an admin get the plan
 --   rule  a paid downgrade counts from scheduled_from at read time, in get_vendor_plan,

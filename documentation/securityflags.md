@@ -12,9 +12,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
-| 2026-10-07 | **Signed-out callers could read any vendor's plan, period end and usage** (`get_vendor_plan` guard not coalesced; anon held EXECUTE) | Low–Medium | `public.get_vendor_plan(uuid)` | Fixed on branch `subscriptions/p0-foundations` (`20261008100000_subscriptions_p0_foundations.sql`): guard coalesced, anon EXECUTE revoked. Open until applied. Verified live 2026-10-07 in a rolled-back probe as anon |
+| 2026-10-07 | **Signed-out callers could read any vendor's plan, period end and usage** (`get_vendor_plan` guard not coalesced; anon held EXECUTE) | Low–Medium | `public.get_vendor_plan(uuid)` | Fixed on branch `subscriptions/p0-foundations` (`20261009171435_subscriptions_p0_foundations.sql`): guard coalesced, anon EXECUTE revoked. Open until applied. Verified live 2026-10-07 in a rolled-back probe as anon |
 | 2026-10-07 | **Any signed-in account could take a paid plan, its trust seal and its search boost without paying** (demo path, and now Razorpay test cards) | High | `subscription-verify-payment` demo path; `subscription-create-order` | Fixed on branch (P0): `subscription_checkout_gate()` + the `subscription_checkout` switch, off by default. Open until applied and deployed. The ad checkout's demo path (2026-09-12 row) is unchanged |
-| 2026-10-07 | Issued tax invoices can be edited and deleted by super and finance admins through the API | Medium | RLS `subscription_invoices_admin_update/_delete` | Fixed on branch `subscriptions/p1-billing-core` (`20261008120000`): a BEFORE UPDATE/DELETE trigger refuses every browser role, admins included; a processed refund issues a credit note. Open until applied |
+| 2026-10-07 | Issued tax invoices can be edited and deleted by super and finance admins through the API | Medium | RLS `subscription_invoices_admin_update/_delete` | Fixed on branch `subscriptions/p1-billing-core` (`20261009171650`): a BEFORE UPDATE/DELETE trigger refuses every browser role, admins included; a processed refund issues a credit note. Open until applied |
 | 2026-10-07 | `subscription_payment_orders` and `subscription_usage` readable by every admin role | Low | their SELECT policies (bare `is_admin()`) | Fixed on branch (P0): roles named. Open until applied |
 | 2026-10-07 | Payment functions read the vendor id out of an unverified token, relying on the platform's verify_jwt alone | Low (design) | `subscription-create-order`, `-verify-payment`, `discount-quote` | Fixed on branch (P0): Supabase Auth confirms the caller (`_shared/auth.ts`). Open until deployed. The ad functions still decode the token |
 | 2026-10-07 | GSTIN and PAN saved unchecked and printed on the tax invoice | Low | `Subscription.tsx`; onboarding | Fixed on branch for /subscription (P0). Onboarding still saves them unchecked (ToDo) |
@@ -98,6 +98,18 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-10-10 — Subscriptions: the database half of S-1 to S-8 is live — Severity: Info
+- P0 to P12 were applied to production on 2026-10-09 with every switch off (changelog, 2026-10-10). The fixes that
+  live in the database are in force: **S-1** (`get_vendor_plan` no longer answers a caller with no session; checked
+  after P0), **S-3** (invoices can't be edited; corrections are credit notes), **S-4** (least-privilege reads on plan
+  orders) and **S-7** (upgrade credit counts live invoices only).
+- **Not closed until the edge functions are deployed and `main` is pushed:** **S-2** and **S-5** (the checkout gate
+  and `auth.getUser()` are in the payment functions), **S-6** (the GSTIN and PAN checks are in the app), and **S-8**
+  (`subscription_fulfil` exists, but the deployed functions still make the old separate calls). The old functions
+  keep working on the new database: the two payment-mode triggers fill in what they don't send.
+- New execute grants were compared with the tested copy for anon, authenticated and service_role, function by
+  function: no difference. No new scheduled job was created.
 
 ### 2026-10-09 — Subscriptions P13: truth pass reviewed — Severity: Info
 - **Stricter writes:** with P1's shims off, an order or invoice without its payment mode is refused instead of being

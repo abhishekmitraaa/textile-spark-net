@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P4: reminders, the grace days, paused listings (2026-10-08).
--- Migrations 20261008150000 (status "paused") and 20261008150100 (on top of P0-P3).
+-- Migrations 20261009174748 (status "paused") and 20261009175141 (on top of P0-P3).
 --   grace      the plan in force: active, then grace, then free; what a purchase costs in
 --              the grace days; the seal date runs to the end of them
 --   reminders  7/4/2/1/0 days before, once each, a missed day made up; the email switch;

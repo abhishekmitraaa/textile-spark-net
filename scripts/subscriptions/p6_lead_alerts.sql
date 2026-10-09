@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P6: lead alerts and lead channels (2026-10-09).
--- Migration 20261009100000_subscriptions_p6_lead_alerts.sql (on top of P0-P5).
+-- Migration 20261009175832_subscriptions_p6_lead_alerts.sql (on top of P0-P5).
 --   who      vendors who list in the requirement's category, each by their plan's channels;
 --            VIP first; never the buyer, a vendor off the switch, or for a requirement that
 --            is direct, closed, removed or old

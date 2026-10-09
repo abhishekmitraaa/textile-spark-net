@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P12: admin tooling and KPIs (2026-10-09).
--- Migration 20261009160000_subscriptions_p12_admin_tooling.sql (on top of P0-P11).
+-- Migration 20261009194403_subscriptions_p12_admin_tooling.sql (on top of P0-P11).
 --   who        super/finance set prices and give plans; support only reads; a vendor nothing
 --   prices     now (history, previous, Admin Log); scheduled, replaced, cancelled; the morning
 --              run applies what is due and only that; its failure doesn't stop the run;

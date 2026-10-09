@@ -3074,7 +3074,7 @@ Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (ven
 
 ## Subscriptions P0: foundations and safety (2026-10-08)
 
-Plan: build every vendor subscription feature, phase by phase behind switches (Mitra, 2026-10-08). Migration `20261008100000_subscriptions_p0_foundations.sql`.
+Plan: build every vendor subscription feature, phase by phase behind switches (Mitra, 2026-10-08). Migration `20261009171435_subscriptions_p0_foundations.sql`.
 
 - **`admin.vendor_effective_plan(p_vendor, p_at)`** (SQL, stable, no client grant) returns the plan, status
   (`active`/`free`), cycle, period, scheduled downgrade, auto_renew, subscription id and the raw period end. A
@@ -3123,10 +3123,10 @@ Plan: build every vendor subscription feature, phase by phase behind switches (M
 
 ## Subscriptions P1: billing core (2026-10-08)
 
-Migrations `20261008120000_subscriptions_p1_billing_core.sql` (guard: `admin.subscription_quote` md5
+Migrations `20261009171650_subscriptions_p1_billing_core.sql` (guard: `admin.subscription_quote` md5
 `c61474b3…`) and `20261008120100_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, approved by Mitra on
 2026-10-08, applied with P1's release after `billing-reconcile` is deployed). Built on branch
-`subscriptions/p1-billing-core`; not applied.
+`subscriptions/p1-billing-core`; the first applied 2026-10-09, the job not yet.
 
 - **`public.subscription_fulfil(p_order_ref, p_payment_ref, p_source)`** (definer; service role only; source verify,
   webhook, free, demo or reconcile). One transaction:
@@ -3206,7 +3206,8 @@ Migrations `20261008120000_subscriptions_p1_billing_core.sql` (guard: `admin.sub
 
 Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `20261008130100_subscriptions_p2_dispatch_job.sql`
 (the schedule: a new job, applied only with Mitra's say-so, after `notification-dispatch` is deployed). Built on branch
-`subscriptions/p2-notifications`; not applied.
+`subscriptions/p2-notifications`; the first run by hand in the SQL editor on 2026-10-09 (the tool declined it), followed by
+`20261009173853_subscriptions_p2_function_line_endings.sql`; the job not applied.
 
 - **Switch:** `notification_delivery` (seeded off). `notify_deliver` queues nothing for an account it doesn't allow.
 - **`admin.notification_templates`** (RLS on, no client privilege, audited): key, channel (email, whatsapp, sms), locale
@@ -3258,8 +3259,8 @@ Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `2026
 
 ## Subscriptions P3: autopay (2026-10-08)
 
-Migration `20261008140000_subscriptions_p3_autopay.sql` (guard: `subscription_activate` md5 `0e8ce873…`, the same in
-production on 2026-10-08). Built on branch `subscriptions/p3-autopay`; not applied.
+Migration `20261009174014_subscriptions_p3_autopay.sql` (guard: `subscription_activate` md5 `0e8ce873…`, the same in
+production on 2026-10-08). Built on branch `subscriptions/p3-autopay`; applied 2026-10-09.
 
 - **Razorpay, as documented (checked 2026-10-08):** `POST /v1/subscriptions` with a future `start_at` and an `addons`
   upfront amount charges that amount in the authorisation payment (captured, not refunded) and the plan amount from
@@ -3319,8 +3320,8 @@ production on 2026-10-08). Built on branch `subscriptions/p3-autopay`; not appli
 
 ## Subscriptions P4: reminders, grace days, paused listings (2026-10-08)
 
-Built on `subscriptions/p4-lifecycle`; not applied. Migrations `20261008150000_subscriptions_p4_paused_status.sql`
-(the enum value, alone) and `20261008150100_subscriptions_p4_lifecycle.sql`. No edge function changes and no new
+Built on `subscriptions/p4-lifecycle`; applied 2026-10-09. Migrations `20261009174748_subscriptions_p4_paused_status.sql`
+(the enum value, alone) and `20261009175141_subscriptions_p4_lifecycle.sql`. No edge function changes and no new
 scheduled job.
 
 ### The plan in force
@@ -3390,13 +3391,13 @@ Run by `subscription-expiry-sweep` (`29 3 * * *` UTC, 08:59 IST), in this order:
 - `tests/local/subscriptions-p4.spec.ts` (the job is run by hand with `select public.expire_subscriptions()`).
 
 ### Release order (when Mitra says)
-1. Apply `20261008150000`, then `20261008150100`, as two migrations. P0 to P3 must be applied first (the guard).
+1. Apply `20261009174748`, then `20261009175141`, as two migrations. P0 to P3 must be applied first (the guard).
 2. No functions to deploy. The existing job picks the new function up.
 3. Merge with the switch off. List test accounts on `subscription_lifecycle`, check, then turn it on for everyone.
 
 ## Subscriptions P5: ad reach by state (2026-10-09)
 
-Built on `subscriptions/p5-ad-reach`; not applied. Migration `20261008160000_subscriptions_p5_ad_reach.sql`.
+Built on `subscriptions/p5-ad-reach`; applied 2026-10-09. Migration `20261009175317_subscriptions_p5_ad_reach.sql`.
 
 ### Data
 - `advertisements.target_states text[]` (india_states codes) and `target_countries text[]` (ISO alpha-2), both
@@ -3452,14 +3453,14 @@ Built on `subscriptions/p5-ad-reach`; not applied. Migration `20261008160000_sub
   `tests/local/subscriptions-p5.spec.ts` (needs `LOCAL_AD_FUNCTIONS_URL`).
 
 ### Release order (when Mitra says)
-1. Apply `20261008160000` (P0 to P4 first: the guard).
+1. Apply `20261009175317` (P0 to P4 first: the guard).
 2. Deploy `razorpay-create-order`, `razorpay-verify-payment`, `razorpay-webhook` (they call `ad_reach_resolve`,
    so the migration comes first).
 3. Merge with the switch off; list test accounts on `ad_state_targeting`; then turn it on for everyone.
 
 ## Subscriptions P6: lead alerts and lead channels (2026-10-09)
 
-Built on `subscriptions/p6-lead-alerts`; not applied. Migrations `20261009100000_subscriptions_p6_lead_alerts.sql`
+Built on `subscriptions/p6-lead-alerts`; the first applied 2026-10-09, the job not. Migrations `20261009175832_subscriptions_p6_lead_alerts.sql`
 and `20261009100100_subscriptions_p6_lead_digest_job.sql` (a new scheduled job: Mitra's say-so). No edge function
 changes: messages go out through P2's outbox and dispatcher.
 
@@ -3538,13 +3539,13 @@ changes: messages go out through P2's outbox and dispatcher.
 - `scripts/subscriptions/p6_lead_alerts.sql` (20 cases, rolls back); `tests/local/subscriptions-p6.spec.ts`.
 
 ### Release order (when Mitra says)
-1. Apply `20261009100000` (P0 to P5 first: the guard). No functions to deploy.
+1. Apply `20261009175832` (P0 to P5 first: the guard). No functions to deploy.
 2. With Mitra's say-so, apply `20261009100100` (the digest job). It needs P2's dispatcher job to send anything.
 3. Merge with the switch off; list test accounts on `lead_alerts` (and `notification_delivery` for email); then on.
 
-## Subscriptions P7: overseas requirements (2026-10-09; built, not live)
+## Subscriptions P7: overseas requirements (2026-10-09; database applied 2026-10-09, switch off)
 
-Migration `20261009110000_subscriptions_p7_overseas.sql`; harness `scripts/subscriptions/p7_overseas.sql` (18 cases);
+Migration `20261009180220_subscriptions_p7_overseas.sql`; harness `scripts/subscriptions/p7_overseas.sql` (18 cases);
 spec `tests/local/subscriptions-p7.spec.ts`.
 
 - **Guard.** md5 of `match_vendor_rfqs` (`2842cbb8…`), `enforce_quote_rfq_open` (`dfb7f447…`) and
@@ -3600,9 +3601,9 @@ spec `tests/local/subscriptions-p7.spec.ts`.
 - **Release.** Apply the migration (it refuses if a guarded function or the policy changed), rename it to its live
   version, merge with the switch off, then list test buyers and sellers on `overseas_leads`.
 
-## Subscriptions P8: the CRM (2026-10-09; built, not live)
+## Subscriptions P8: the CRM (2026-10-09; database applied 2026-10-09, switch off)
 
-Migrations `20261009120000_subscriptions_p8_crm.sql` and `20261009120100_subscriptions_p8_crm_followups_job.sql` (the
+Migrations `20261009193707_subscriptions_p8_crm.sql` and `20261009120100_subscriptions_p8_crm_followups_job.sql` (the
 job; needs Mitra's say-so); harness `scripts/subscriptions/p8_crm.sql` (19 cases); spec `tests/local/subscriptions-p8.spec.ts`.
 
 - **Guard.** md5 of `vendor_entitlements` as P7 leaves it (`16f8cc7d…`); none of the three triggers may exist.
@@ -3642,11 +3643,11 @@ job; needs Mitra's say-so); harness `scripts/subscriptions/p8_crm.sql` (19 cases
 - **Release.** Apply the migration, rename it, merge with the switch off, list test sellers on `crm`; the job only with
   Mitra's say-so; activate the WhatsApp template once Meta approves `crm_followup_reminder` (name, count).
 
-## Subscriptions P9: account managers and priority support (2026-10-09; built, not live)
+## Subscriptions P9: account managers and priority support (2026-10-09; database applied 2026-10-09, switch off)
 
-Migrations `20261009130000_subscriptions_p9_account_manager_role.sql` (`alter type admin_role_type add value
+Migrations `20261009193742_subscriptions_p9_account_manager_role.sql` (`alter type admin_role_type add value
 'account_manager'`, alone because a new enum value can't be used in its own transaction) and
-`20261009130100_subscriptions_p9_account_managers.sql`; harness `scripts/subscriptions/p9_account_managers.sql` (20 cases);
+`20261009193949_subscriptions_p9_account_managers.sql`; harness `scripts/subscriptions/p9_account_managers.sql` (20 cases);
 spec `tests/local/subscriptions-p9.spec.ts`.
 
 - **Guard.** md5 of `admin.is_team_role` (`8ea276c1…`), `admin_support_list` (`80b5bccd…`) and
@@ -3680,9 +3681,9 @@ spec `tests/local/subscriptions-p9.spec.ts`.
 - **Release.** Apply the role migration, then the main one; rename both; deploy `admin-invite` and `admin-staff`; merge
   with the switch off; give staff the role; list test vendors on `account_managers`.
 
-## Subscriptions P10: featured listings, spotlight and seal tiers (2026-10-09; built, not live)
+## Subscriptions P10: featured listings, spotlight and seal tiers (2026-10-09; database applied 2026-10-09, switch off)
 
-Migration `20261009140000_subscriptions_p10_visibility.sql`; harness `scripts/subscriptions/p10_visibility.sql` (13 cases, its own test
+Migration `20261009194104_subscriptions_p10_visibility.sql`; harness `scripts/subscriptions/p10_visibility.sql` (13 cases, its own test
 categories); spec `tests/local/subscriptions-p10.spec.ts`.
 
 - **Guard.** md5 of `vendor_entitlements` as P9 leaves it (`bcaef0ad…`).
@@ -3707,7 +3708,7 @@ categories); spec `tests/local/subscriptions-p10.spec.ts`.
   `BuyerProductCard` shows "TradeSEAL · Gold/VIP". `/visibility` behind `TierGate visibility_page`.
 - **Release.** Apply, rename, merge with the switch off, list test buyers (and a test VIP seller for the page).
 
-## Subscriptions P11: bulk catalogue import (2026-10-09; built, not live)
+## Subscriptions P11: bulk catalogue import (2026-10-09; run in the SQL editor 2026-10-09, switch off)
 
 Migration `20261009150000_subscriptions_p11_catalogue.sql`; harness `scripts/subscriptions/p11_catalogue.sql` (9 cases); spec
 `tests/local/subscriptions-p11.spec.ts`.
@@ -3730,9 +3731,9 @@ Migration `20261009150000_subscriptions_p11_catalogue.sql`; harness `scripts/sub
   `src/pages/BulkImport.tsx` at `/catalogue/bulk-import` behind `TierGate bulk_import`; the link on Products.
 - **Release.** Apply, rename, merge with the switch off, list test sellers, then everyone on Silver and up.
 
-## Subscriptions P12: admin tooling and KPIs (2026-10-09; built, not live)
+## Subscriptions P12: admin tooling and KPIs (2026-10-09; database applied 2026-10-09)
 
-Migration `20261009160000_subscriptions_p12_admin_tooling.sql`; harness `scripts/subscriptions/p12_admin_tooling.sql` (13 cases);
+Migration `20261009194403_subscriptions_p12_admin_tooling.sql`; harness `scripts/subscriptions/p12_admin_tooling.sql` (13 cases);
 spec `tests/local/subscriptions-p12.spec.ts`; Cosora-Admin `src/lib/subscriptionAdmin.ts`, `SubscriptionKpis`,
 `PlanPricesPanel`, `GrantPlanModal`, `pages/Subscriptions.tsx`.
 
@@ -3783,3 +3784,37 @@ spec `tests/local/subscriptions-p13.spec.ts`; release order in `subscription-ses
   included). `vercel.json`: rewrites for the eight new pages.
 - **Harness adjustments.** P0's fixture names its orders' mode when the column exists; P1's case 26 checks the
   refusal when the shims are off and the old fill-in when they are on.
+
+## Subscriptions: releasing the database (2026-10-09 and 10)
+
+P0 to P12 went to production in order, with every switch off; the functions and both apps follow. What was learnt
+on the way is in `claude.md` ("Postgres facts that are not guessable"); the list of files and versions is in
+`MIGRATIONS.md`.
+
+- **The wrapper.** A migration typed into the Supabase tool can be mistyped, and a mistyped migration that still
+  parses is applied. So each file went inside one statement that checks the text before running it:
+  `do $cosora_apply$ declare q text := $cosora_mig$<file, LF>$cosora_mig$; begin if md5(q) <> '<md5 of the file>' then
+  raise exception …; end if; execute q; end $cosora_apply$;`. One statement: it applies whole or not at all. The
+  ledger's `statements[1]` is the wrapper; `split_part(split_part(statements[1], '$cosora_mig$', 2), '$cosora_mig$', 1)`
+  is the file. From P4 on the wrapper also carries two hex digits of each line's md5, so a refusal names the lines
+  that differ. Enum additions (`paused`, `account_manager`) went in directly: they are one line and need their own
+  transaction.
+- **`\u` in SQL text.** The tool decodes `\uXXXX` to the character before the database sees it (other
+  backslashes, `\n`, `\.`, `\1`, arrive as written). P6's regex of invisible characters was sent with
+  `~~BS~~u` and `q := replace(q, '~~BS~~', chr(92))` before the check.
+- **A file the tool declines** goes to the SQL editor inside the same idea, with the editor's carriage returns
+  removed first: `q text := replace($cosora_mig$<file>$cosora_mig$, chr(13), '')`. Without that, a paste leaves CR LF
+  inside function bodies (P2), and a later guard on `md5(prosrc)` or a patch by text no longer matches. Which
+  files the tool declines can't be told from their text: it took P8 (two deletes inside functions) and declined
+  P2 (one) and P11 (none).
+- **Guards.** Every guard here compares `md5(prosrc)` with a value written into the file. That value must be the
+  md5 of the body as the earlier FILE creates it (LF), not as some database holds it: P4's guard on
+  `subscription_activate` had been taken from the local stack, where P3 had been piped in with CR LF.
+- **The check afterwards** compared production with the local stack by digest, in buckets sent as a `values` list
+  and narrowed where they differed: for functions, the body without CR, `prosecdef`, `provolatile`, `proconfig`
+  and `has_function_privilege` for anon, authenticated and service_role; for tables, columns with types and
+  defaults, policies with their expressions and roles, triggers with `tgenabled`, constraints, index definitions and
+  table privileges. The only differences were ones with a known cause.
+- **Still to do (2026-10-10):** deploy the fourteen functions (from the committed files, with the Supabase CLI:
+  each function's upload includes every `_shared` file it imports, 9,138 lines in all, too much to type through
+  the tool with no check), apply the reconcile job, push `main` in both repos.

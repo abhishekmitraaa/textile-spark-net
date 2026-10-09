@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P9: account managers and priority support (2026-10-09).
--- Migrations 20261009130000 (the role) and 20261009130100 (on top of P0-P8).
+-- Migrations 20261009193742 (the role) and 20261009193949 (on top of P0-P8).
 --   levels     Silver shared, Gold named, VIP vip; none without the switch or a plan
 --   role       account_manager is a team role (a manager may give it)
 --   vendor     who looks after them; messages, read marks, a callback, VIP notes; limits

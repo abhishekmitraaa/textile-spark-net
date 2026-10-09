@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P5: ad reach by state (2026-10-08).
--- Migration 20261008160000_subscriptions_p5_ad_reach.sql (on top of P0-P4).
+-- Migration 20261009175317_subscriptions_p5_ad_reach.sql (on top of P0-P4).
 --   who sees   states: buyers there and buyers whose state isn't known; an overseas buyer
 --              only a listed country; older city ads as before; untargeted ads everyone
 --   reach      what each plan lets an ad reach, refused (strict) or clamped (a paid order);

@@ -73,7 +73,7 @@ The local stack has no scheduled jobs, so the daily plan job is run by hand:
 
     docker exec -i supabase_db_localstack psql -U postgres -c "select public.expire_subscriptions()"
 
-Apply `20261008150000` (the status "paused") on its own before `20261008150100`: Postgres won't use a new enum value
+Apply `20261009174748` (the status "paused") on its own before `20261009175141`: Postgres won't use a new enum value
 in the transaction that adds it. `scripts/subscriptions/p4_lifecycle.sql` needs both.
 
 ## The ad payment functions (subscriptions P5)

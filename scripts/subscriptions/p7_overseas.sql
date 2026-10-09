@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SUBSCRIPTIONS HARNESS P7: overseas requirements (2026-10-09).
--- Migration 20261009110000_subscriptions_p7_overseas.sql (on top of P0-P6).
+-- Migration 20261009180220_subscriptions_p7_overseas.sql (on top of P0-P6).
 --   country   a typed name becomes a code; the buyer's code follows their country
 --   stamp     an overseas buyer's requirement is marked, with VIP's head start when a VIP
 --             vendor lists in its category; an Indian buyer's, and an unlisted buyer's, isn't
