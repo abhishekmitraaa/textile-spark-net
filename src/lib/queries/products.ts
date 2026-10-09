@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
-import { trustSealFromParts } from "@/lib/plan";
+import { sealTierFromParts, trustSealFromParts, type SealTier } from "@/lib/plan";
 
 // ─────────────────────────────────────────────────────────────
 // Products data access (React Query over Supabase)
@@ -40,6 +40,8 @@ export interface ProductCardData {
   image: string;
   secondaryImage: string;
   verified?: boolean;
+  /** Which seal (P10): verified, gold or vip; shown only where the switch is on for the viewer. */
+  sealTier?: SealTier | null;
   /** Plan search-boost tier of the owning vendor (0 = Free/none … 4 = VIP),
    *  used as a real ranking weight in the buyer feed/search. */
   boost: number;
@@ -55,7 +57,7 @@ interface RawImage { url: string; position: number }
 // plan_expires_at feeds the displayed trust seal (admin is_verified OR active
 // paid plan); plan_id + a resolved searchBoost feed search ranking. All optional
 // so callers that don't need them can omit them.
-export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null; plan_expires_at?: string | null; ad_verified_until?: string | null; plan_id?: string | null; searchBoost?: number }
+export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null; plan_expires_at?: string | null; ad_verified_until?: string | null; plan_id?: string | null; searchBoost?: number; state_code?: string | null; served_states?: string[] | null }
 export interface RawProduct {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
@@ -107,6 +109,7 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     image: imgs[0] ?? PLACEHOLDER,
     secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
     verified: trustSealFromParts(vendor?.is_verified, vendor?.plan_expires_at, vendor?.ad_verified_until),
+    sealTier: sealTierFromParts(vendor?.is_verified, vendor?.plan_id, vendor?.plan_expires_at, vendor?.ad_verified_until),
     boost: vendor?.searchBoost ?? 0,
   };
 }
@@ -232,6 +235,11 @@ export interface CatalogueRow {
   priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: string; colour: string; image: string; secondaryImage: string; verified: boolean; boost: number;
+  /** Which seal (P10); see ProductCardData.sealTier. */
+  sealTier: SealTier | null;
+  /** The vendor's state and the states it serves (Ranking F2), for Gold's "nearby buyers" (P10). */
+  vendorStateCode: string | null;
+  vendorServedStates: string[];
   // Real vendor-entered attributes, so the search facets can filter on the
   // actual product instead of hashPick()ing a stable fake value per id.
   moqValue: number | null;
@@ -290,7 +298,7 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
   if (vendorIds.length) {
     const boosts = await loadPlanBoosts();
     const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id").in("id", vendorIds);
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, state_code, served_states").in("id", vendorIds);
     for (const v of vendors ?? []) {
       const rv = v as RawVendor;
       rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
@@ -325,7 +333,10 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       image: imgs[0] ?? PLACEHOLDER,
       secondaryImage: imgs[1] ?? imgs[0] ?? PLACEHOLDER,
       verified: trustSealFromParts(v?.is_verified, v?.plan_expires_at, v?.ad_verified_until),
+      sealTier: sealTierFromParts(v?.is_verified, v?.plan_id, v?.plan_expires_at, v?.ad_verified_until),
       boost: v?.searchBoost ?? 0,
+      vendorStateCode: v?.state_code ?? null,
+      vendorServedStates: v?.served_states ?? [],
       // `moq` is free text the vendor typed ("100", "100 pcs", "MOQ 500"), so
       // pull the first number out of it rather than trusting the whole string.
       moqValue: (() => {

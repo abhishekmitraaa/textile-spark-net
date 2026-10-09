@@ -187,6 +187,29 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P10: featured listings, spotlight and seal tiers (local stack: harness 13/13; all eleven harnesses green; end to end 8/8; browser 54/54; typecheck 0 in both apps; i18n 7,612/7,612; admin build)
+- **Where:** the local stack with P0–P10 applied; apps on :8092 and :5186 from the `subscriptions/p10-visibility` worktrees.
+- **Harness** `scripts/subscriptions/p10_visibility.sql`, 13/13, with its own two categories and 14 sellers (2 VIP, 6 Gold, 4
+  Silver, Basic, Free), and a full replay (9 functions identical). Cases: the switch by viewer and for everyone; ten
+  places, 1–5 VIP, VIP, Gold ×3, one per seller, never Basic or Free; each seller's best product, from the subtree;
+  lapsed and suspended sellers and the viewer's own left out; a lone Silver seller at place 1; the same order for a
+  session and both VIP sellers leading across sessions; a Gold seller serving the buyer's state first among Gold in 20
+  of 20 sessions; the spotlight; impressions (once, never for the wrong place, 20 at most, none without a session);
+  the seller's figures; entitlements; grants; all four Silver sellers getting turns in places 6–10 over 40 sessions.
+- **Speed:** 300 sellers and 3,000 products in one category: 176 ms per call in the first version (a tier lookup
+  per seller, candidates read twice), 3–5 ms after making it one set-based read.
+- **End to end over HTTP**, 8/8: the switch for a listed buyer, another and a visitor; places VIP, Gold, Silver
+  (9 ms); none for another buyer; the spotlight; impressions once and never for a place the product lacks; the VIP
+  seller's figures; entitlements; impressions not readable directly.
+- **Browser** (`tests/local/subscriptions-p10.spec.ts`, 2/2): a listed buyer on a category page sees the VIP's then the
+  Gold seller's product tagged Featured with the VIP seal chip, the Spotlight, and three impressions logged; the home
+  page's Spotlight; a buyer not listed sees none of it; a VIP seller's Visibility page from the menu; a seller with no
+  plan sent to the plans. With it, 54/54 across `subscriptions-p0` to `-p10`, `plans-and-refunds`, `rfq-leads`,
+  `support-chat`, `staff-registration`, `ranking-f1` and `ranking-f2`. Screens checked at 390 and 1280 wide.
+- **Found and fixed while testing:** category pages arrive with `?category=`, which the page treats as a search, so the
+  first "no query and a category picked" test would almost never have fired. And a pre-existing failure: the home
+  page's Top vendors put every vendor id in one URL, which fails with a few hundred vendors; now chunked.
+
 ### 2026-10-09 — Subscriptions P9: account managers and priority support (local stack: harness 20/20; all ten harnesses green; end to end 14/14; browser 3/3; typecheck 0 in both apps; i18n 7,585/7,585; admin build)
 - **Where:** the local stack with P0–P9 applied; apps on :8092 and :5186 from the `subscriptions/p9-account-managers`
   worktrees. Production was read once (read-only) to confirm the md5s of the three live functions patched.

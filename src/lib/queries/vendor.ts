@@ -204,6 +204,15 @@ interface RawTopVendor {
   is_verified: boolean | null; plan_expires_at: string | null; ad_verified_until: string | null;
 }
 
+// An id list goes in the URL, so a long one is sent in pieces: with a few hundred vendors one
+// `in.(…)` filter outgrew the server's URL limit and the request failed (found 2026-10-09).
+const IN_CHUNK = 100;
+function chunks<T>(xs: T[]): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < xs.length; i += IN_CHUNK) out.push(xs.slice(i, i + IN_CHUNK));
+  return out;
+}
+
 async function fetchTopVendors(max: number): Promise<TopVendor[]> {
   const { data, error } = await supabase
     .from("vendor_profiles")
@@ -215,14 +224,16 @@ async function fetchTopVendors(max: number): Promise<TopVendor[]> {
 
   // Live-product counts and cover images, batched over all candidates rather
   // than one query per vendor.
-  const { data: prods } = await supabase
+  const prodPages = await Promise.all(chunks(rows.map((r) => r.id)).map((ids) => supabase
     .from("products")
     .select("id, vendor_id, created_at")
-    .in("vendor_id", rows.map((r) => r.id))
+    .in("vendor_id", ids)
     .eq("status", "live")
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })));
+  const prods = prodPages.flatMap((r) => r.data ?? [])
+    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
   const productsBy = new Map<string, string[]>();
-  for (const p of (prods ?? []) as { id: string; vendor_id: string }[]) {
+  for (const p of prods as { id: string; vendor_id: string }[]) {
     const list = productsBy.get(p.vendor_id) ?? [];
     list.push(p.id);
     productsBy.set(p.vendor_id, list);
@@ -231,11 +242,12 @@ async function fetchTopVendors(max: number): Promise<TopVendor[]> {
   const firstProductIds = [...productsBy.values()].map((ids) => ids[0]).filter(Boolean);
   const coverOf = new Map<string, string>();
   if (firstProductIds.length) {
-    const { data: imgs } = await supabase
+    const imgPages = await Promise.all(chunks(firstProductIds).map((ids) => supabase
       .from("product_images")
       .select("product_id, url, position")
-      .in("product_id", firstProductIds);
-    for (const img of [...(imgs ?? [])].sort((a, b) => a.position - b.position)) {
+      .in("product_id", ids)));
+    const imgs = imgPages.flatMap((r) => r.data ?? []);
+    for (const img of [...imgs].sort((a, b) => a.position - b.position)) {
       if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
     }
   }

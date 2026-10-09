@@ -300,6 +300,17 @@ undocumented. Deep technical rationale for each lives in
     there; named managers are the deliberate exception, on Gold and VIP only.
   - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
     `admin-invite` and `admin-staff`.
+- **Featured places and the spotlight are chosen by the database** (subscriptions P10, 2026-10-09; migration
+  `20261009140000_subscriptions_p10_visibility.sql`).
+  - `featured_listings(category, session)` and `spotlight_listings` decide; the app only moves those products to the
+    top, tags them and logs what was seen (`log_featured_impressions`, which checks the product really has that place).
+  - The `featured_listings` switch lists VIEWERS, not vendors: the buyer must be on it to see any of it. Its client
+    check is `featured_listings_on()`, callable by visitors too.
+  - Plan placement is `subscription_plans.limits.featured` (none/top10/top5/spotlight); seal tiers come from the cached
+    `vendor_profiles.plan_id` + `plan_expires_at` (`sealTierFromParts` in `plan.ts`).
+  - Anything on every page view must be set-based: no function call per seller or per row (the first version took
+    176 ms; set-based, 3 ms). Compare enum columns as `status = 'live'`, not `status::text`, so partial indexes apply.
+  - Don't put long id lists in a GET URL (`.in()`): chunk them, or move the work into a function.
 - **Keep functions with a `set` clause out of per-row policy tests.** Postgres never inlines them, so each row
   pays a call: 48 ms against 3 ms over 20,000 requirements for the overseas rule. Read a per-user value once with
   `(select fn())`, and write per-row logic inline.

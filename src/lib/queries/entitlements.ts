@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 /** A feature a page can belong to. A key here is one the database returns as a yes or no. */
 export type EntitlementFeature =
   | "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads"
-  | "crm_pipeline" | "crm_analytics" | "am_page";
+  | "crm_pipeline" | "crm_analytics" | "am_page" | "visibility_page";
 
 export interface VendorEntitlements {
   planId: string;
@@ -30,6 +30,8 @@ export interface VendorEntitlements {
     crm_level?: "none" | "pipeline" | "analytics" | "success";
     /** Account managers (P9), where the switch lists the vendor: shared (Silver), named (Gold), vip. */
     am_level?: "none" | "shared" | "named" | "vip";
+    /** Visibility (P10): the place the plan buys on category pages. */
+    featured?: "none" | "top10" | "top5" | "spotlight";
   };
 }
 

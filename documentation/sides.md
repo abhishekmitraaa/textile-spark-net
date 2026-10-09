@@ -199,6 +199,11 @@ the demand side of India's fashion and textile supply chain.
   catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-09 (subscriptions P10; built, not live)
+- **Category pages** start with Featured products from Silver, Gold and VIP sellers (rotating), and a **Spotlight**
+  of VIP sellers' products shows there and on the home page. Gold and VIP sellers carry their seal's Gold or VIP
+  variant. For buyers on the featured listings switch.
+
 ### Changed 2026-10-09 (subscriptions P7; built, not live)
 - **Country on Business details is a list** of every country and territory, in the buyer's language. A buyer
   outside India who chooses their country has their requirements shown to Gold and VIP sellers only (VIP first).
@@ -487,6 +492,11 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P10; built, not live)
+- **Visibility** (Basic and above; in the menu under Advertisements): where the plan places the seller's products
+  (priority, the first 10, the first 5, or place 1 and the Spotlight) and how often buyers saw them there.
+- Silver, Gold and VIP products take Featured places on their category pages; VIP's also appear in the Spotlight.
+
 ### Changed 2026-10-09 (subscriptions P9; built, not live)
 - **Account manager** (Silver, Gold and VIP; first under Support in the menu): who at Cosora looks after the seller
   (the account team on Silver; a named manager, with her name and photo, on Gold and VIP once one is assigned), a
@@ -767,6 +777,9 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P10; built, not live)
+- **Feature switches** now lists ten, with "Featured listings, spotlight and seal tiers" (it lists buyers who see them).
 
 ### Added 2026-10-09 (subscriptions P9; built, not live)
 - **A new role, Account manager**, which a manager may also give.

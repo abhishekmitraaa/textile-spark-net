@@ -24,6 +24,10 @@ const NOT_YOURS: Record<EntitlementFeature, { title: string; description: string
     title: "CRM analytics come with Gold and VIP",
     description: "Choose Gold or VIP to see how your leads turn into orders.",
   },
+  visibility_page: {
+    title: "Visibility comes with a paid plan",
+    description: "Choose Basic or above to see where your plan places your products and how often buyers see them.",
+  },
   am_page: {
     title: "An account manager comes with Silver, Gold and VIP",
     description: "Choose one of them to have Cosora's account team look after you.",

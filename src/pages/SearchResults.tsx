@@ -8,12 +8,16 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useBrandFollows, toggleBrandFollow } from "@/lib/brandFollowStore";
-import { useCatalogue } from "@/lib/queries/products";
+import { fetchCatalogueByIds, useCatalogue } from "@/lib/queries/products";
+import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "@/lib/queries/search";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useResolvedCategoryId } from "@/lib/queries/ads";
+import SpotlightRail from "@/components/buyer/SpotlightRail";
+import { logFeaturedImpressions, useFeaturedListings, useFeaturedListingsOn, useMyStateCode } from "@/lib/queries/visibility";
+import { SEAL_TIER_LABEL, type SealTier } from "@/lib/plan";
 import { AD_SLOTS } from "@/lib/adSlots";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import VideoCloseUpsViewer, { type VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
@@ -87,6 +91,8 @@ interface RProduct {
   neckType?: string; sleeveType?: string; collarType?: string; countryOfOrigin?: string;
   waistSizes?: string[]; lengths?: string[];
   categoryName?: string; parentCategoryName?: string;
+  // Subscriptions P10: the seller's seal variant, plan boost and location (for "nearby buyers").
+  sealTier?: SealTier | null; boost?: number; vendorStateCode?: string | null; vendorServedStates?: string[];
 }
 
 // Thumbnails rendered in the Video Close-Ups teaser rail. The viewer still
@@ -147,7 +153,7 @@ function brandsFromProducts(rows: RProduct[]): BrandResult[] {
 // ─────────────────────────────────────────────────────────────
 // Product card
 // ─────────────────────────────────────────────────────────────
-function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; query?: string }) {
+function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; compact: boolean; query?: string; featured?: boolean; tiers?: boolean }) {
   const { show } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const t = useT();
@@ -177,6 +183,17 @@ function ProductCard({ p, compact, query }: { p: RProduct; compact: boolean; que
         <img src={p.image} alt={p.name} className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")} />
         <img src={p.secondaryImage} alt="" className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-100" : "opacity-0")} />
         {p.verified && <img src={trustedSeal} alt="TrustedSEAL verified vendor" className="absolute top-0 left-0 h-5 lg:h-6 w-auto" />}
+        {/* Subscriptions P10: the seal's Gold and VIP variants, and the Featured tag. */}
+        {tiers && (p.sealTier === "gold" || p.sealTier === "vip") && (
+          <span title={SEAL_TIER_LABEL[p.sealTier]} data-testid="seal-tier"
+            className={cn("absolute left-0 rounded-r-full px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white lg:text-[9px]",
+              p.verified ? "top-5 lg:top-6" : "top-0", p.sealTier === "vip" ? "bg-amber-500" : "bg-yellow-600")}>
+            {p.sealTier === "vip" ? "VIP" : "Gold"}
+          </span>
+        )}
+        {featured && (
+          <span data-testid="featured-tag" className="absolute bottom-7 left-2 rounded-full bg-gray-900/80 px-1.5 py-0.5 text-[9px] font-bold text-white">Featured</span>
+        )}
         <button onClick={(e) => { e.preventDefault(); openSaveModal({ id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location, price: `₹${p.priceValue}`, priceValue: p.priceValue, moq: p.moq, image: p.image }); }}
           aria-label={isSaved ? "Edit saved folders" : "Save product"}
           className={cn("absolute top-2 right-2 bg-white/90 rounded-full flex items-center justify-center shadow-sm", compact ? "w-6 h-6" : "w-7 h-7")}>
@@ -551,6 +568,13 @@ const SearchResults = () => {
   const { data: browseData, isLoading: browseLoading } = useCatalogue(!hasQuery);
 
   const catalogue = hasQuery ? searchData?.rows : browseData;
+
+  // ── Featured places (subscriptions P10) ──
+  // On a category page (a category picked, no typed query), sellers whose plan features them
+  // take the first places, tagged Featured: VIP, then Gold (nearby buyers first), then Silver,
+  // rotating. Only on the default order: a buyer who sorts by price or rating gets that order.
+  const tiersOn = useFeaturedListingsOn();
+  const viewerState = useMyStateCode();
   const isLoading = hasQuery ? searchLoading : browseLoading;
   // False when the query had no cached embedding, so results were keyword-only.
   const semanticActive = hasQuery ? (searchData?.embeddingUsed ?? false) : false;
@@ -661,12 +685,31 @@ const SearchResults = () => {
     });
   };
 
+  // A category page: opened from a category (?category=, no typed q), or browsing with a category picked.
+  const categoryName = (!params.get("q") && params.get("category")) || (!hasQuery ? selections.category?.[0] : null) || null;
+  const categoryBrowse = Boolean(categoryName);
+  const { data: browseCategoryId = null } = useResolvedCategoryId([categoryName]);
+  const { data: featuredPlaces = [] } = useFeaturedListings(categoryBrowse && tiersOn ? browseCategoryId : null);
+  const featuredSlot = useMemo(() => new Map(featuredPlaces.map((f) => [f.productId, f.slot])), [featuredPlaces]);
+  // The featured products themselves, in case the page's own results (a search for the
+  // category's name) didn't bring one back.
+  const featuredIds = useMemo(() => featuredPlaces.map((f) => f.productId), [featuredPlaces]);
+  const { data: featuredRows = [] } = useQuery({
+    queryKey: ["products", "featured-rows", featuredIds],
+    enabled: featuredIds.length > 0,
+    queryFn: () => fetchCatalogueByIds(featuredIds),
+  });
+
   const products = useMemo(() => {
     // No placeholder rows while loading. The page previously stood in 8 fake
     // products to avoid an empty flash, which made a failed fetch look like a
     // populated catalogue — and the project's rule is that an empty catalogue
     // renders empty. Loading is its own state, rendered below.
-    const source = (catalogue ?? []) as unknown as RProduct[];
+    const base = (catalogue ?? []) as unknown as RProduct[];
+    const have = new Set(base.map((p) => p.id));
+    const source = categoryBrowse && sort === "new" && tiersOn
+      ? [...base, ...(featuredRows as unknown as RProduct[]).filter((p) => !have.has(p.id))]
+      : base;
     let list = source.filter((p) => schema.facets.every((f) => matchFacet(p, f, selections[f.id])));
     // "What's new" keeps the incoming order. For a search that order IS the
     // server's fused relevance ranking, so re-sorting here would throw away the
@@ -676,8 +719,31 @@ const SearchResults = () => {
     else if (sort === "popularity") list = [...list].sort((a, b) => b.popularity - a.popularity);
     else if (sort === "discount") list = [...list].sort((a, b) => b.discount - a.discount);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
+    if (categoryBrowse && sort === "new" && tiersOn) {
+      // Gold's "nearby buyers": within the same plan boost, a Gold or VIP seller based in or serving
+      // the buyer's state comes first. Stable, so the existing order holds otherwise. Browsing only:
+      // a search's order is match_products' relevance, which already weighs the plan.
+      if (viewerState && !hasQuery) {
+        const near = (p: RProduct) => (p.boost ?? 0) >= 3
+          && (p.vendorStateCode === viewerState || (p.vendorServedStates ?? []).includes(viewerState));
+        list = [...list].sort((a, b) => ((b.boost ?? 0) - (a.boost ?? 0)) || (Number(near(b)) - Number(near(a))));
+      }
+      if (featuredSlot.size) {
+        const top = list.filter((p) => featuredSlot.has(p.id)).sort((a, b) => (featuredSlot.get(a.id) ?? 0) - (featuredSlot.get(b.id) ?? 0));
+        list = [...top, ...list.filter((p) => !featuredSlot.has(p.id))];
+      }
+    }
     return list;
-  }, [catalogue, schema, selections, sort]);
+  }, [catalogue, schema, selections, sort, categoryBrowse, tiersOn, viewerState, featuredSlot, featuredRows]);
+
+  // What was featured to this visitor, once per product per mount.
+  const loggedFeatured = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!featuredSlot.size || sort !== "new") return;
+    const shown = products.filter((p) => featuredSlot.has(p.id) && !loggedFeatured.current.has(p.id));
+    shown.forEach((p) => loggedFeatured.current.add(p.id));
+    void logFeaturedImpressions(shown.map((p) => ({ productId: p.id, placement: "featured" as const })));
+  }, [products, featuredSlot, sort]);
 
   // ── Search-query performance: one impression per vendor per result set ──
   //
@@ -774,7 +840,10 @@ const SearchResults = () => {
   const feedNodes: JSX.Element[] = [];
   products.forEach((p, i) => {
     feedNodes.push(
-      <motion.div variants={reduced ? {} : listItem} key={p.id}><ProductCard p={p} compact={cols === 3} query={query} /></motion.div>
+      <motion.div variants={reduced ? {} : listItem} key={p.id}>
+        <ProductCard p={p} compact={cols === 3} query={query} tiers={tiersOn}
+          featured={categoryBrowse && sort === "new" && featuredSlot.has(p.id)} />
+      </motion.div>
     );
     const n = i + 1;
     if (n >= products.length) return; // never trail the last loaded product
@@ -1041,6 +1110,7 @@ const SearchResults = () => {
               ) : (
                 <>
                   <ConvertedPriceNote className="mb-3" />
+                  {categoryBrowse && <SpotlightRail categoryId={browseCategoryId} className="mb-4" />}
                   {/* Product grid (Submit Requirement card interleaved every 5 rows) */}
                   <motion.div key={`${JSON.stringify(selections)}-${sort}`} variants={reduced ? {} : listContainer} initial="hidden" animate="show"
                     className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>

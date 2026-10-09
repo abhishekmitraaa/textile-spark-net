@@ -3679,3 +3679,30 @@ spec `tests/local/subscriptions-p9.spec.ts`.
   `my-vendors`), the inbox's VIP/Gold badge and "reply by" (`useSupportPriorities`), role label and team roles.
 - **Release.** Apply the role migration, then the main one; rename both; deploy `admin-invite` and `admin-staff`; merge
   with the switch off; give staff the role; list test vendors on `account_managers`.
+
+## Subscriptions P10: featured listings, spotlight and seal tiers (2026-10-09; built, not live)
+
+Migration `20261009140000_subscriptions_p10_visibility.sql`; harness `scripts/subscriptions/p10_visibility.sql` (13 cases, its own test
+categories); spec `tests/local/subscriptions-p10.spec.ts`.
+
+- **Guard.** md5 of `vendor_entitlements` as P9 leaves it (`bcaef0ad…`).
+- **Plans.** `limits.featured`: none (Free, Basic), top10 (Silver), top5 (Gold), spotlight (VIP).
+  `admin.vendor_featured_tier(vendor)` 3/2/1/0 from the cached plan while `plan_expires_at` is ahead, account active.
+- **Choosing.** `admin.featured_candidates(cats, state, day, session, viewer)`: paid sellers whose plan features them and
+  whose account is active (a join), then their live products in the category subtree (`admin.category_subtree`), one per
+  seller (best by sold + enquiries), with tier, `nearby` (Gold+ and the buyer's `state_code` is the seller's or in its
+  `served_states`) and `turn` = md5(vendor || IST day || session). `featured_listings` reads them once: places 1–5 by
+  (tier desc, nearby desc, turn), places 6–10 by turn among the rest. Returns [{product_id, vendor_id, slot, tier, nearby}].
+  `spotlight_listings(category?, session, limit ≤ 12)`: VIP sellers' live products, each seller's best first, by turn.
+  Both return [] unless `feature_on_for('featured_listings', viewer)`; both are callable by visitors.
+- **Impressions.** `featured_impressions` (vendor, product, placement featured/spotlight, viewer, session, at), RLS on with
+  no policies; `log_featured_impressions(items ≤ 20, session)` inserts only for a live product whose seller's tier has that
+  place, not the viewer's own, and not seen by that account or session in the last 30 minutes.
+- **Seller page.** `my_visibility(days 7–90)`: place, boost, live categories with counts, impressions (featured,
+  spotlight, by IST day) and the vendor's ads' all-time impressions. Entitlements gain `featured` and `visibility_page`
+  (paid, boost ≥ 1, the switch lists the vendor).
+- **Client.** `src/lib/queries/visibility.ts`; `SpotlightRail` (home and category pages); Search Results: a category page
+  is `?category=` without `q`, or browsing with a category picked; featured rows (fetched by id if the results lack them)
+  move to the top on the default order with a Featured tag; nearby Gold+ ahead within a boost when browsing; seal chips.
+  `BuyerProductCard` shows "TradeSEAL · Gold/VIP". `/visibility` behind `TierGate visibility_page`.
+- **Release.** Apply, rename, merge with the switch off, list test buyers (and a test VIP seller for the page).

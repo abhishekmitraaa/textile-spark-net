@@ -140,6 +140,30 @@ export function trustSealFromParts(
   return Boolean(isVerified) || futureTs(planExpiresAt) || futureTs(adVerifiedUntil);
 }
 
+/**
+ * Which seal a vendor carries (subscriptions P10): the same seal, in three variants. "vip"
+ * (VIP trusted) and "gold" (Gold verified) while that paid plan is active; "verified" for any
+ * other reason trustSealFromParts gives one; null for none. The app shows the Gold and VIP
+ * variants only where the featured_listings switch is on for the viewer.
+ */
+export type SealTier = "verified" | "gold" | "vip";
+export function sealTierFromParts(
+  isVerified: boolean | null | undefined,
+  planId: string | null | undefined,
+  planExpiresAt: string | null | undefined,
+  adVerifiedUntil?: string | null | undefined,
+): SealTier | null {
+  if (futureTs(planExpiresAt) && (planId === "vip" || planId === "gold")) return planId;
+  return trustSealFromParts(isVerified, planExpiresAt, adVerifiedUntil) ? "verified" : null;
+}
+
+/** What each seal variant says. */
+export const SEAL_TIER_LABEL: Record<SealTier, string> = {
+  verified: "Verified seller",
+  gold: "Gold verified seller",
+  vip: "VIP trusted seller",
+};
+
 // ── Ad-location scope ─────────────────────────────────────────
 export const AD_SCOPE_LABEL: Record<AdLocationScope, string> = {
   none: "No ad targeting",

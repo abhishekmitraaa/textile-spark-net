@@ -99,6 +99,15 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P10: featured listings reviewed — Severity: Info
+- **What visitors can call:** `featured_listings`, `spotlight_listings`, `featured_listings_on` and
+  `log_featured_impressions`. The first three return only live products and ids that browsing shows anyway.
+- **Impressions can't be faked into someone's figures cheaply:** each insert checks the product is live and that its
+  seller really has that place, skips the viewer's own, and counts an account or session once per product and place
+  per 30 minutes; at most 20 a call. A visitor with many sessions can still add views; the page says "seen", not "sold".
+- **Impressions are private:** RLS on with no policies; a seller reads only their own totals (`my_visibility`).
+- **Seal tiers** are drawn from plan fields already public on `vendor_profiles`.
+
 ### 2026-10-09 — Subscriptions P9: account managers reviewed — Severity: Info
 - **Staff see only the vendors they serve.** Every `admin_am_*` function checks `admin.am_serves()`: an account manager
   gets their named vendors and the shared team, never another manager's vendor; support and other roles get nothing.

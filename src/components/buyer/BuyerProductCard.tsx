@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
+import { useFeaturedListingsOn } from "@/lib/queries/visibility";
+import { SEAL_TIER_LABEL } from "@/lib/plan";
 
 export interface BuyerProductCardData {
   id: string;
@@ -26,6 +28,8 @@ export interface BuyerProductCardData {
   image: string;
   secondaryImage: string;
   verified?: boolean;
+  /** Which seal (subscriptions P10); the Gold and VIP variants show where the switch is on. */
+  sealTier?: "verified" | "gold" | "vip" | null;
 }
 
 interface BuyerProductCardProps {
@@ -34,6 +38,9 @@ interface BuyerProductCardProps {
 }
 
 const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
+  // Subscriptions P10: the seal's Gold and VIP variants, where the switch is on for this visitor.
+  const tiers = useFeaturedListingsOn();
+  const tier = tiers && (product.sealTier === "gold" || product.sealTier === "vip") ? product.sealTier : null;
   const { showText } = useDisplayCurrency();
   const callVendor = useCallVendor();
   const savedState = useSaved();
@@ -59,9 +66,9 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
         </div>
 
         {product.verified && (
-          <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground hover:bg-accent">
+          <Badge className="absolute left-2 top-2 bg-accent text-accent-foreground hover:bg-accent" title={tier ? SEAL_TIER_LABEL[tier] : undefined}>
             <BadgeCheck className="mr-1 h-3 w-3" />
-            TradeSEAL
+            {tier === "vip" ? "TradeSEAL · VIP" : tier === "gold" ? "TradeSEAL · Gold" : "TradeSEAL"}
           </Badge>
         )}
 

@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
+import SpotlightRail from "@/components/buyer/SpotlightRail";
 import EverydayFashionHero from "@/components/buyer/EverydayFashionHero";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
@@ -607,6 +608,9 @@ const NewArrivals = () => {
             Explicit max so Brand Picks below knows exactly how many rows to
             skip; the component itself is unchanged. */}
         <SponsoredRail slot="newArrivalsSponsored" />
+
+        {/* ── Spotlight (subscriptions P10): VIP sellers, rotating. Absent when off or empty. */}
+        <SpotlightRail className="px-4 lg:px-0" />
 
         {/* ── Video Close-Ups — Reels style ──
             Omitted entirely when no supplier has posted one, rather than
