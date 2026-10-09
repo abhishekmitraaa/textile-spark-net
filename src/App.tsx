@@ -27,6 +27,7 @@ import OverseasLeads from "./pages/OverseasLeads";
 import Crm from "./pages/Crm";
 import CrmFollowUps from "./pages/CrmFollowUps";
 import CrmAnalytics from "./pages/CrmAnalytics";
+import AccountManager from "./pages/AccountManager";
 import { TierGate } from "./components/TierGate";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
@@ -279,6 +280,7 @@ const App = () => (
             <Route path="/crm" element={<ClarityMask><TierGate feature="crm_pipeline"><Crm /></TierGate></ClarityMask>} />
             <Route path="/crm/follow-ups" element={<ClarityMask><TierGate feature="crm_pipeline"><CrmFollowUps /></TierGate></ClarityMask>} />
             <Route path="/crm/analytics" element={<ClarityMask><TierGate feature="crm_analytics"><CrmAnalytics /></TierGate></ClarityMask>} />
+            <Route path="/account-manager" element={<ClarityMask><TierGate feature="am_page"><AccountManager /></TierGate></ClarityMask>} />
             <Route path="/notifications" element={<ClarityMask><Notifications /></ClarityMask>} />
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />

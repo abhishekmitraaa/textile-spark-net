@@ -31,6 +31,7 @@ import {
   BellRing,
   Globe2,
   KanbanSquare,
+  Headset,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -149,6 +150,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         ? [item, ...(entitlements?.features.lead_alerts ? [LEAD_ALERTS] : []), ...(entitlements?.features.overseas_leads ? [OVERSEAS_LEADS] : []),
            ...(entitlements?.features.crm_pipeline ? [CRM] : [])]
         : [item]));
+  // Account manager (subscriptions P9): first under Support, for a vendor whose plan includes one.
+  const supportNav = role !== "buyer" && entitlements?.features.am_page
+    ? [{ name: "Account manager", href: "/account-manager", icon: Headset }, ...secondaryNav]
+    : secondaryNav;
 
   // On desktop, sidebar is always visible
   const shouldShow = !isMobile || isOpen;
@@ -273,7 +278,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
           <p className="mb-2 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/50">
             {t("Support")}
           </p>
-          {secondaryNav.map((item) => {
+          {supportNav.map((item) => {
             const isActive = location.pathname === item.href;
             return (
               <Link

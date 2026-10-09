@@ -3641,3 +3641,41 @@ job; needs Mitra's say-so); harness `scripts/subscriptions/p8_crm.sql` (19 cases
   `TierGate` `crm_pipeline` / `crm_analytics`; "Track in CRM" on `OpenRfqLeads`; bell kind `crm_follow_up`.
 - **Release.** Apply the migration, rename it, merge with the switch off, list test sellers on `crm`; the job only with
   Mitra's say-so; activate the WhatsApp template once Meta approves `crm_followup_reminder` (name, count).
+
+## Subscriptions P9: account managers and priority support (2026-10-09; built, not live)
+
+Migrations `20261009130000_subscriptions_p9_account_manager_role.sql` (`alter type admin_role_type add value
+'account_manager'`, alone because a new enum value can't be used in its own transaction) and
+`20261009130100_subscriptions_p9_account_managers.sql`; harness `scripts/subscriptions/p9_account_managers.sql` (20 cases);
+spec `tests/local/subscriptions-p9.spec.ts`.
+
+- **Guard.** md5 of `admin.is_team_role` (`8ea276c1…`), `admin_support_list` (`80b5bccd…`) and
+  `admin_support_counts` (`939873de…`), all equal to production on 2026-10-09, and `vendor_entitlements` as P8
+  leaves it (`d9db97f3…`); the role must exist.
+- **Levels.** `limits.am_level` none/shared/named/vip and `limits.support_priority` 0/0/1/2 (Free, Basic 0; Silver 0;
+  Gold 1; VIP 2). `admin.vendor_am_level()` (plan in force, grace counts, switch). Entitlements: `am_level`, `am_page`
+  (the P0 `account_manager` flag is unchanged).
+- **Tables.** `vendor_account_managers` (one current row per vendor, partial unique index; history; no browser access;
+  audited), `account_manager_threads` (read marks; `clock_timestamp()` like the messages), `account_manager_messages`
+  (author_kind vendor/staff, author_label frozen at writing), `account_manager_callbacks` (date, morning/afternoon/
+  evening, one open per vendor by partial unique index; staff updates audited), `account_manager_notes` (concierge with
+  rfq_id, success_review with the month as period; audited). The vendor reads the last four (RLS own); no writes granted.
+- **Vendor functions:** `my_account_manager()` (available, level, manager {name, photo} on named/vip, unread, open
+  callback, concierge), `am_send` (30 an hour under `admin.am_lock`), `am_mark_read`, `am_request_callback` (today to
+  30 days in IST), `am_cancel_callback`. Refusals: "An account manager comes with the Silver, Gold and VIP plans." (42501).
+- **Staff functions** (super admin, manager, account manager; each checks `am_serves`): `admin_am_managers`,
+  `admin_am_vendors(filter mine/shared/unassigned/all)` (all: super admin and manager), `admin_am_vendor`, `admin_am_send`
+  (bell `account_manager_message` naming who wrote, never the words), `admin_am_mark_read`, `admin_am_callback_set`
+  (done/missed; missed rings the vendor's bell), `admin_am_concierge` (VIP: open requirements from the last 72 hours in
+  the vendor's live categories, the overseas rule applied), `admin_am_note` (VIP: a concierge note, its requirement
+  checked with `admin.crm_rfq_for`, or the month's review once; bell `account_manager_note`), `admin_am_assign`
+  (super admin and manager; the manager must be an active account manager).
+- **Priority support.** `admin.support_requester_priority(requester, side)`; `admin_support_list`'s ordering gains one
+  line (priority desc among those awaiting staff; its row type is unchanged, a change there would need a drop);
+  `admin_support_counts` gains `awaiting_priority`; `admin_support_priorities(ids)` returns {tier, target_at} for
+  support readers, target = (waiting_at, or the next open time if support was closed) + 1 h (VIP) or 4 h (Gold).
+- **Client.** Seller: `src/lib/queries/accountManager.ts`, `src/pages/AccountManager.tsx` behind `TierGate am_page`,
+  sidebar Support item, bell kinds. Admin: `src/lib/accountManagers.ts`, `src/pages/MyVendors.tsx` (section
+  `my-vendors`), the inbox's VIP/Gold badge and "reply by" (`useSupportPriorities`), role label and team roles.
+- **Release.** Apply the role migration, then the main one; rename both; deploy `admin-invite` and `admin-staff`; merge
+  with the switch off; give staff the role; list test vendors on `account_managers`.

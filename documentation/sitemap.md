@@ -121,6 +121,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/crm` | `Crm` | The CRM: leads by stage, board or list (Silver and above; built, not live) |
 | `/crm/follow-ups` | `CrmFollowUps` | Follow-ups overdue, today and coming up (Silver and above; built, not live) |
 | `/crm/analytics` | `CrmAnalytics` | Funnel, win rate, follow-ups kept (Gold and VIP; built, not live) |
+| `/account-manager` | `AccountManager` | Who looks after the seller: messages, a call back, VIP picks and reviews (Silver and above; built, not live) |
 | `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
 | `/chat` | `Chat` | Vendor messages |
 

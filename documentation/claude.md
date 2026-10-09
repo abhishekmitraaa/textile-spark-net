@@ -289,6 +289,17 @@ undocumented. Deep technical rationale for each lives in
     forward and catch every error: they must never fail the write that fires them.
   - Rows written together that must keep their order (a lead's history) default `created_at` to `clock_timestamp()`;
     `now()` is the same for the whole transaction.
+- **Account managers serve the vendors named for them, and the shared team** (subscriptions P9, 2026-10-09; migration
+  `20261009130100_subscriptions_p9_account_managers.sql`).
+  - Who serves whom is `admin.am_serves(staff, vendor)`: super admins and managers everyone; an account manager their
+    named vendors and every entitled vendor without a named manager. Every `admin_am_*` function starts with
+    `admin.am_require_serves(vendor)` (or `admin.am_staff()`); only super admins and managers call `admin_am_assign`.
+  - A vendor's level is `admin.vendor_am_level()` (plan `am_level`, where the `account_managers` switch lists them).
+    Staff words are signed by `admin.am_staff_label()`: the named manager's first name, or "Cosora account team".
+  - The account manager thread is not Help & Support. D-06 ("users see Cosora Support, never a person") still applies
+    there; named managers are the deliberate exception, on Gold and VIP only.
+  - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
+    `admin-invite` and `admin-staff`.
 - **Keep functions with a `set` clause out of per-row policy tests.** Postgres never inlines them, so each row
   pays a call: 48 ms against 3 ms over 20,000 requirements for the overseas rule. Read a per-user value once with
   `(select fn())`, and write per-row logic inline.

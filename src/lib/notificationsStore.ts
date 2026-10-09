@@ -309,6 +309,9 @@ const KIND_META: Record<string, {
   lead_match:            { type: "system", tone: "positive", group: "updates", actionLabel: "Open my leads", href: "/leads" },
   // A CRM follow-up that is due (subscriptions P8).
   crm_follow_up:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Open follow-ups", href: "/crm/follow-ups" },
+  // From the vendor's account manager or team (subscriptions P9): a message, a missed call, a VIP note.
+  account_manager_message: { type: "message", tone: "neutral", group: "updates", actionLabel: "Open", href: "/account-manager" },
+  account_manager_note:    { type: "system",  tone: "positive", group: "updates", actionLabel: "Open", href: "/account-manager" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {

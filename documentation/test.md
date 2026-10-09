@@ -187,6 +187,34 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P9: account managers and priority support (local stack: harness 20/20; all ten harnesses green; end to end 14/14; browser 3/3; typecheck 0 in both apps; i18n 7,585/7,585; admin build)
+- **Where:** the local stack with P0–P9 applied; apps on :8092 and :5186 from the `subscriptions/p9-account-managers`
+  worktrees. Production was read once (read-only) to confirm the md5s of the three live functions patched.
+- **Harness** `scripts/subscriptions/p9_account_managers.sql`, 20/20, and a full replay (the four patched functions back
+  to their pre-P9 text so the guard runs; 29 functions identical), twice. Cases: levels by plan, switch and grace;
+  account_manager as a team role a manager can grant; the vendor page before and after a manager is named; Free and
+  direct writes refused; the thread both ways with read marks and the bell; a named manager signing with her first
+  name and a manager signing as the team; who serves whom (named, shared, managers, super admins); 30 messages an hour;
+  call requests (one at a time, 30 days, cancel, done, missed with the bell); assignments (managers only, history,
+  Admin Log); the staff lists; the VIP concierge; notes and the review once a month; a removed requirement refused; the
+  queue's order (VIP, Gold, then by waiting) with tiers, targets and the count; the switch; RLS between vendors;
+  a deactivated manager handing back to the team; the support role refused.
+- **Found and fixed while testing:** read marks used `now()` while messages use `clock_timestamp()`, which disagree in one
+  transaction; both are `clock_timestamp()` now. The harness's queue case first picked up an older local test request.
+- **End to end over HTTP**, 14/14: the page data by plan; the thread through PostgREST both ways and another vendor
+  reading none of it; an account manager refused an assignment, a manager naming Meera and Gold seeing "Meera"; support
+  refused the workspace, a vendor refused writing the thread, reading assignments or replying as staff; a call booked,
+  a second refused, closed by staff; the VIP concierge and a picked note; the support queue VIP, Gold, buyer with tiers;
+  a vendor refused the priorities. **Forced overlap:** 29 messages in the hour, one session sends and holds two seconds
+  while another sends: the second waits about 1.5 s and is refused (400). **Mutation-checked:** with `admin.am_lock` a
+  no-op, both get in (31) and the check fails.
+- **Browser** (`tests/local/subscriptions-p9.spec.ts`, 3/3): a Silver seller opens Account manager from the menu, writes; an
+  account manager answers on My vendors; the seller reads it signed by the team and books a call, which the account
+  manager closes; a VIP seller sees Asha, her pick and the review on a phone; a seller with no plan sent to the plans;
+  support refused My vendors; the inbox's first row is the VIP request, marked VIP with "reply by". Screens checked at
+  390, 1280 and 1440 wide.
+- **Not checked:** the edge functions `admin-invite` and `admin-staff` with the new role (not deployed locally).
+
 ### 2026-10-09 — Subscriptions P8: the CRM (local stack: harness 19/19; all nine harnesses green; end to end 17/17; browser 33/33; typecheck 0 in both apps; i18n 7,557/7,557; admin build)
 - **Where:** the local stack with P0–P8 applied (the reminder job isn't scheduled locally); apps on :8092 and :5186
   from the `subscriptions/p8-crm` worktrees.

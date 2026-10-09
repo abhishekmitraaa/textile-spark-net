@@ -99,6 +99,19 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P9: account managers reviewed — Severity: Info
+- **Staff see only the vendors they serve.** Every `admin_am_*` function checks `admin.am_serves()`: an account manager
+  gets their named vendors and the shared team, never another manager's vendor; support and other roles get nothing.
+  Only super admins and managers name a manager, and only an active account manager can be named. Assignments,
+  notes and call outcomes are in the Admin Log.
+- **A vendor reads only their own thread, calls and notes** (RLS), and writes only through the functions; the
+  assignments table has no browser access at all.
+- **What leaves the app:** nothing. The bell names who wrote; the words stay on the page.
+- **Volume:** 30 messages an hour per vendor under the vendor's lock (forced-overlap test, mutation-checked); one open
+  call request per vendor by a unique index.
+- **Accepted:** a named manager's first name and photo are shown to their Gold and VIP vendors (the plan); ordinary
+  support still shows "Cosora Support" only (D-06).
+
 ### 2026-10-09 — Subscriptions P8: the CRM reviewed — Severity: Info
 - **A seller's CRM is theirs alone.** RLS lets a vendor read only their own leads, notes and follow-ups; anon nothing;
   staff nothing (P9 will give account managers a summary through a checked function).

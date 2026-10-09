@@ -487,6 +487,15 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P9; built, not live)
+- **Account manager** (Silver, Gold and VIP; first under Support in the menu): who at Cosora looks after the seller
+  (the account team on Silver; a named manager, with her name and photo, on Gold and VIP once one is assigned), a
+  message thread, and a call back on a day and time they choose. VIP also sees requirements the manager picked for
+  them, with why, and a review of each month.
+- **Priority support:** Gold and VIP sellers' Help & Support requests are answered first (VIP within the hour, Gold
+  within four, while support is open).
+- For accounts on the account managers switch.
+
 ### Changed 2026-10-09 (subscriptions P8; built, not live)
 - **The CRM** (Silver, Gold and VIP; "CRM" in the menu under Leads): the buyers a seller is working with, by stage,
   as a board on desktop and a list on a phone. "Track in CRM" on Leads adds a requirement; sending a quote, or a buyer
@@ -758,6 +767,15 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P9; built, not live)
+- **A new role, Account manager**, which a manager may also give.
+- **My vendors** (super admin, manager, account manager): the vendors each serves, unread first, with plan, renewal,
+  autopay, a call asked for, CRM pipeline and VIP review due; replies, calls, VIP concierge picks and monthly reviews;
+  super admins and managers name a vendor's manager (in the Admin Log).
+- **Support inbox:** a VIP or Gold seller's request is marked, comes first among those waiting, and shows when the
+  first reply is due.
+- **Feature switches** now lists nine, with "Account managers and priority support".
 
 ### Added 2026-10-09 (subscriptions P8; built, not live)
 - **Feature switches** now lists eight, with "CRM". Staff can't read a seller's CRM (P9's account managers will see a
