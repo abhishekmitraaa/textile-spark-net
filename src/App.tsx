@@ -29,6 +29,7 @@ import CrmFollowUps from "./pages/CrmFollowUps";
 import CrmAnalytics from "./pages/CrmAnalytics";
 import AccountManager from "./pages/AccountManager";
 import Visibility from "./pages/Visibility";
+import BulkImport from "./pages/BulkImport";
 import { TierGate } from "./components/TierGate";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
@@ -283,6 +284,7 @@ const App = () => (
             <Route path="/crm/analytics" element={<ClarityMask><TierGate feature="crm_analytics"><CrmAnalytics /></TierGate></ClarityMask>} />
             <Route path="/account-manager" element={<ClarityMask><TierGate feature="am_page"><AccountManager /></TierGate></ClarityMask>} />
             <Route path="/visibility" element={<ClarityMask><TierGate feature="visibility_page"><Visibility /></TierGate></ClarityMask>} />
+            <Route path="/catalogue/bulk-import" element={<ClarityMask><TierGate feature="bulk_import"><BulkImport /></TierGate></ClarityMask>} />
             <Route path="/notifications" element={<ClarityMask><Notifications /></ClarityMask>} />
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />

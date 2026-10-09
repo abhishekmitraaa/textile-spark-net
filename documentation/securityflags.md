@@ -99,6 +99,15 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P11: bulk import reviewed — Severity: Info
+- **The product rules can't be skipped:** `import_products` runs with the seller's own rights (the migration refuses a
+  definer version), so the insert policy, the listing limit and moderation apply to every row; nothing goes live.
+- **Bounded:** 500 rows a call, 20 calls a day, one at a time per seller (an advisory lock, so the daily count holds
+  under concurrent calls); a 5 MB file limit in the page. Image links must be https and are stored as links, not fetched.
+- **History rows:** a seller can insert their own `product_import_batches` rows directly (the invoker import needs
+  that); it only changes their own history and their own daily count. Another seller's rows can't be read or written.
+- **Category lookup** (`category_for_import`) is callable by visitors; it returns ids of public categories only.
+
 ### 2026-10-09 — Subscriptions P10: featured listings reviewed — Severity: Info
 - **What visitors can call:** `featured_listings`, `spotlight_listings`, `featured_listings_on` and
   `log_featured_impressions`. The first three return only live products and ids that browsing shows anyway.

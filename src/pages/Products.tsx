@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyProducts, useProductCap, deleteProduct, duplicateProduct, type VendorProductRow } from "@/lib/queries/products";
 import { LiveListingsDialog } from "@/components/vendor/LiveListingsDialog";
+import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -332,6 +333,7 @@ function StatePanel({ icon: Icon, title, body, children }: {
 const Products = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
+  const bulkImport = Boolean(useVendorEntitlements(user?.id).data?.features.bulk_import);
   const queryClient = useQueryClient();
   const { data: products = [], isLoading } = useMyProducts(user?.id);
   const [search, setSearch] = useState("");
@@ -404,6 +406,12 @@ const Products = () => {
             <div>
               <h1 className="text-xl lg:text-2xl font-bold text-gray-900">Products</h1>
               <p className="text-xs lg:text-sm text-gray-400">Manage your product catalog</p>
+              {/* Bulk import (subscriptions P11): Silver and up, where the switch lists the seller. */}
+              {bulkImport && (
+                <Link to="/catalogue/bulk-import" className="mt-1 inline-flex text-xs font-semibold text-brand-vendor hover:underline lg:text-sm" data-testid="bulk-import-link">
+                  Add many at once from a spreadsheet
+                </Link>
+              )}
             </div>
             {/* Desktop keeps the primary action in the header, where it stays in
                 view; mobile gets the full-width button and the floating one. */}

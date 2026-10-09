@@ -123,6 +123,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/crm/analytics` | `CrmAnalytics` | Funnel, win rate, follow-ups kept (Gold and VIP; built, not live) |
 | `/account-manager` | `AccountManager` | Who looks after the seller: messages, a call back, VIP picks and reviews (Silver and above; built, not live) |
 | `/visibility` | `Visibility` | Where the plan places the seller's products, and views in Featured places and the Spotlight (Basic and above; built, not live) |
+| `/catalogue/bulk-import` | `BulkImport` | Add up to 500 products from a spreadsheet (CSV), with a template, a preview and Recent imports (Silver and above; built, not live) |
 | `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
 | `/chat` | `Chat` | Vendor messages |
 

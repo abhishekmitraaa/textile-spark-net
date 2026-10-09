@@ -300,6 +300,18 @@ undocumented. Deep technical rationale for each lives in
     there; named managers are the deliberate exception, on Gold and VIP only.
   - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
     `admin-invite` and `admin-staff`.
+- **Bulk import runs with the seller's own rights** (subscriptions P11, 2026-10-09; migration
+  `20261009150000_subscriptions_p11_catalogue.sql`).
+  - `import_products()` is SECURITY INVOKER on purpose: `enforce_product_cap` and `enforce_products_moderation` act only
+    when `current_user = 'authenticated'`, so a definer import would skip the listing limit and review. The migration's
+    self-check refuses a definer version; keep it that way.
+  - Each row is its own sub-transaction: a bad row is reported and the rest go in. A new check raises inside the row
+    block with a short message; add the message to `src/i18n/external-strings.json` (`catalogue_import_server`) and
+    translate it.
+  - The template's English headings are the keys (`TEMPLATE_COLUMNS` in `src/lib/queries/catalogueImport.ts`). A new
+    column needs the template, the function's insert and the help text together. Categories resolve by name through
+    `category_for_import` (case-insensitive; a sub-category wins; "Parent > Child" to be exact).
+  - Row numbers shown to the seller are the spreadsheet's (headings are row 1), not positions in what was sent.
 - **Featured places and the spotlight are chosen by the database** (subscriptions P10, 2026-10-09; migration
   `20261009140000_subscriptions_p10_visibility.sql`).
   - `featured_listings(category, session)` and `spotlight_listings` decide; the app only moves those products to the

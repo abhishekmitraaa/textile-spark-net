@@ -53,7 +53,7 @@ const FEATURE_ROWS: { key: keyof PlanDisplay; label: string }[] = [
   { key: "lead_channel", label: "Lead access channel" },
   { key: "alerts", label: "Real-time lead alerts" },
   { key: "crm", label: "CRM & lead management" },
-  { key: "catalog", label: "Automatic catalog upload" },
+  { key: "catalog", label: "Catalogue" },
 ];
 
 // What a vendor reads when the checkout gate refuses them (subscriptions P0).

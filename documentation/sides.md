@@ -492,6 +492,13 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P11; built, not live)
+- **Bulk import** (Silver, Gold and VIP; from Products, "Add many at once from a spreadsheet"): download a template,
+  fill it in Excel or Google Sheets, save it as CSV and upload up to 500 products at once. Each goes to review, or is
+  saved as a draft; rows that can't go in are listed with the reason. The listing limit applies as on Upload Product.
+- Each plan's **Catalogue** line now says what it gives (one by one, PDF catalogue, bulk import; the done-for-you and
+  AI catalogues "coming soon").
+
 ### Changed 2026-10-09 (subscriptions P10; built, not live)
 - **Visibility** (Basic and above; in the menu under Advertisements): where the plan places the seller's products
   (priority, the first 10, the first 5, or place 1 and the Spotlight) and how often buyers saw them there.
@@ -777,6 +784,9 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P11; built, not live)
+- **Feature switches** now lists eleven, with "Bulk catalogue import" (it lists sellers).
 
 ### Added 2026-10-09 (subscriptions P10; built, not live)
 - **Feature switches** now lists ten, with "Featured listings, spotlight and seal tiers" (it lists buyers who see them).

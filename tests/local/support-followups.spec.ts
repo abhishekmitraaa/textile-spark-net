@@ -128,9 +128,10 @@ test("support dates follow the language: a callback booked in Hindi reads in Hin
   // And the request's own line about the booking.
   const ticketNo = body.match(/CS-\d{6}/)![0];
   await page.goto(`${BUYER_URL}/help/requests/${ticketNo}`);
+  // Wait for the request to load (the page shows "Loading…" first), then read it.
+  await expect(page.getByText(/(सोम|मंगल|बुध|गुरु|शुक्र|शनि|रवि), \d{1,2}/).first()).toBeVisible({ timeout: 15_000 });
   const thread = await page.locator("body").innerText();
   expect(thread).not.toMatch(/\d{4}-\d{2}-\d{2}/); // the raw date the database gives
-  expect(thread).toMatch(/(सोम|मंगल|बुध|गुरु|शुक्र|शनि|रवि), \d{1,2}/);
   expect(errors).toEqual([]);
   await ctx.close();
 });

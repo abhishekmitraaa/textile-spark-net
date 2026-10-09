@@ -3706,3 +3706,26 @@ categories); spec `tests/local/subscriptions-p10.spec.ts`.
   move to the top on the default order with a Featured tag; nearby Gold+ ahead within a boost when browsing; seal chips.
   `BuyerProductCard` shows "TradeSEAL · Gold/VIP". `/visibility` behind `TierGate visibility_page`.
 - **Release.** Apply, rename, merge with the switch off, list test buyers (and a test VIP seller for the page).
+
+## Subscriptions P11: bulk catalogue import (2026-10-09; built, not live)
+
+Migration `20261009150000_subscriptions_p11_catalogue.sql`; harness `scripts/subscriptions/p11_catalogue.sql` (9 cases); spec
+`tests/local/subscriptions-p11.spec.ts`.
+
+- **Guard.** md5 of `vendor_entitlements` as P10 leaves it (`52f044b2…`).
+- **Plans.** `limits.catalogue`: manual (Free), pdf (Basic), bulk (Silver, Gold, VIP); `display.catalog` rewritten to match.
+  Entitlements gain `catalogue` and `bulk_import` (paid, catalogue = bulk, the switch lists the vendor).
+- **History.** `product_import_batches` (vendor, file name, as_draft, total, created, failed, errors jsonb, at). RLS: the
+  seller selects and inserts their own (the invoker import needs insert); no update or delete.
+- **Categories.** `category_for_import(name)`, stable, invoker: "Parent > Child" exactly, otherwise the name with a
+  sub-category first, case-insensitive.
+- **Import.** `import_products(rows jsonb, file_name, as_draft)`, SECURITY INVOKER, authenticated only. Refuses without
+  `bulk_import`, for 0 or over 500 rows, and past 20 imports in a day; takes a per-seller advisory lock for the call so
+  imports run one at a time and the daily count is exact. Per row, in its own sub-transaction: name (≤ 200), category,
+  prices (₹ and commas allowed, > 0), gender (Men, Women, Unisex, Boys, Girls, Kids), up to 6 https image links, description
+  ≤ 4,000; then the product insert (status `under_review`, or `draft`) with the product triggers, and its images. Returns
+  {batch_id, total, created, failed, results: [{row, product_id | error}]}. 500 full rows: about 1 s locally.
+- **Client.** `src/lib/csv.ts` (RFC 4180 parse and write, byte-order mark for Excel); `src/lib/queries/catalogueImport.ts`
+  (template, `readSheet` with spreadsheet row numbers, `importProducts`, `useImportHistory`, the category list);
+  `src/pages/BulkImport.tsx` at `/catalogue/bulk-import` behind `TierGate bulk_import`; the link on Products.
+- **Release.** Apply, rename, merge with the switch off, list test sellers, then everyone on Silver and up.

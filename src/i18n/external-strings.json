@@ -321,7 +321,7 @@
   "Unisex T-Shirts",
   "Belts"
  ],
- "plans_source": "public.subscription_plans: name and the display jsonb values, as of 2026-09-26.",
+ "plans_source": "public.subscription_plans: name and the display jsonb values, as of 2026-09-26. The catalog lines were added with subscriptions P11 (2026-10-09).",
  "plans": [
   "Free",
   "None",
@@ -363,7 +363,12 @@
   "Unlimited",
   "Full access + priority",
   "First priority",
-  "VIP account manager"
+  "VIP account manager",
+  "Add products one by one",
+  "PDF catalogue",
+  "PDF + bulk import (Excel/CSV)",
+  "Bulk import; done-for-you catalogue coming soon",
+  "Bulk import; AI catalogue coming soon"
  ],
  "dates_source": "Month and weekday names inside formatted dates (lib/i18n.ts translates the name in \"4 Jul 2026\" or \"Jul 4\"), and date-fns relative times.",
  "dates": [
@@ -478,5 +483,20 @@
   "Get Prime Placement Above Competitors",
   "Boost your visibility with featured listings",
   "Claim This Banner"
+ ],
+ "catalogue_import_server_source": "Messages public.import_products() returns for a whole import or per row (migration 20261009150000, subscriptions P11), and the product limit message from enforce_product_cap() that a row can hit. Shown on /catalogue/bulk-import.",
+ "catalogue_import_server": [
+  "Bulk import comes with the Silver, Gold and VIP plans.",
+  "An import is 1 to 500 rows. Split a bigger sheet.",
+  "That's 20 imports today. Try again tomorrow, or put more rows in one sheet.",
+  "not a row",
+  "name is required (up to 200 characters)",
+  "category \"{0}\" isn't one of Cosora's categories",
+  "price must be a number",
+  "price must be above 0",
+  "gender is one of Men, Women, Unisex, Boys, Girls, Kids",
+  "image_urls: up to 6 https links, separated by commas",
+  "description is up to 4,000 characters",
+  "Product limit reached: your {0} plan allows {1} listed product(s); you already have {2}. Upgrade your plan or remove a listing."
  ]
 }

@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 /** A feature a page can belong to. A key here is one the database returns as a yes or no. */
 export type EntitlementFeature =
   | "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads"
-  | "crm_pipeline" | "crm_analytics" | "am_page" | "visibility_page";
+  | "crm_pipeline" | "crm_analytics" | "am_page" | "visibility_page" | "bulk_import";
 
 export interface VendorEntitlements {
   planId: string;
@@ -32,6 +32,8 @@ export interface VendorEntitlements {
     am_level?: "none" | "shared" | "named" | "vip";
     /** Visibility (P10): the place the plan buys on category pages. */
     featured?: "none" | "top10" | "top5" | "spotlight";
+    /** Catalogue (P11): manual (Free), pdf (Basic), bulk (Silver and up). */
+    catalogue?: "manual" | "pdf" | "bulk";
   };
 }
 

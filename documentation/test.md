@@ -187,6 +187,32 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P11: bulk catalogue import (local stack: harness 9/9 and all twelve harnesses green; a forced-overlap race on the daily limit (and its mutation check); browser 68/68; typecheck 0 in both apps; i18n 7,685/7,685; admin build)
+- **Where:** the local stack with P0–P11 applied; apps on :8092 and :5186 from the `subscriptions/p11-catalogue` worktrees.
+- **Harness** `scripts/subscriptions/p11_catalogue.sql`, 9/9, and a full replay (3 functions identical). Cases: who may
+  import (Silver, Gold, VIP on the switch; not Free, Basic, or off it); good rows become products in review with every
+  field and their images, and a batch; seven bad rows each reported (name, category, two prices, images, gender, a row
+  that isn't an object) while the good one goes in; drafts, and the listing limit for the rest; never live, never another
+  seller's; 501 rows and an empty list refused, the 21st import in a day refused; categories by name and by
+  "Parent > Child"; the history is the seller's own and can't be forged for another; the plans' wording.
+- **Race:** two sessions importing for the same seller at its 19th import of the day, the second started while the
+  first was still open: the second waited and was refused (20 imports, not 21). With the lock removed (mutation), both
+  went in, so the test catches it.
+- **Speed:** 500 full rows (two images each) as a VIP seller in about 1 second, under the 8-second request limit.
+- **Browser** (`tests/local/subscriptions-p11.spec.ts`, 3/3): a Silver seller goes from Products to the page, downloads the
+  template (headings checked), uploads it with the example row left in, two good rows and one with an unknown
+  category: the example is left out, two products go to review (prices 240 and 1,250, one image), the bad row is
+  named as spreadsheet row 5, Recent imports shows "2 of 3 added"; in Hindi the heading and the server's row message
+  read in Hindi while the file and the column list keep English headings; a Basic seller and a Silver seller off the
+  switch see no link and are sent to the plans. With it, 68/68 across every local spec. Screens checked at 390 and
+  1280 wide.
+- **Changed while testing:** row numbers are now the spreadsheet's (they drifted when a blank or example row was
+  dropped); the template's example row is left out rather than imported as a product; the server's row messages are
+  translated instead of shown in English.
+- **A test fixed on the way:** `support-followups.spec.ts`'s Hindi callback test read the request page before it
+  had loaded (it showed "Loading…"), so it failed whenever the page was slower than the read. It now waits for the
+  booking line. Not a product change; it passed 6/6 after.
+
 ### 2026-10-09 — Subscriptions P10: featured listings, spotlight and seal tiers (local stack: harness 13/13; all eleven harnesses green; end to end 8/8; browser 54/54; typecheck 0 in both apps; i18n 7,612/7,612; admin build)
 - **Where:** the local stack with P0–P10 applied; apps on :8092 and :5186 from the `subscriptions/p10-visibility` worktrees.
 - **Harness** `scripts/subscriptions/p10_visibility.sql`, 13/13, with its own two categories and 14 sellers (2 VIP, 6 Gold, 4
