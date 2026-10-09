@@ -9,6 +9,8 @@
 --   safe     a failure never stops the requirement; the daily run picks it up
 --   digest   one email a day with what matched, or only what was held
 --   page     settings, the page's data, entitlements, access, the admin's figures
+--   abuse    a buyer's words go out without links or numbers; a buyer's alerts are capped a
+--            day; one requirement tells at most max_vendors; a browser can't write the embedding
 -- HOW TO RUN (local stack with P0-P6 applied, or: begin; <P6>; <this>; rollback;). Never commits.
 -- ─────────────────────────────────────────────────────────────────────────────
 do $p6$
@@ -47,7 +49,13 @@ declare
     'entitlements: the plan''s, and only on the switch',                 -- 17
     'a browser can''t run the matching or write settings directly',      -- 18
     'the admin''s figures; refused to a vendor',                         -- 19
-    'the grace days: still told'];                                       -- 20
+    'the grace days: still told',                                        -- 20
+    'a buyer''s words go out without links, addresses or phone numbers', -- 21
+    'a buyer''s alerts are capped a day; the next one tells nobody',     -- 22
+    'both passes together tell at most max_vendors',                     -- 23
+    'a browser can''t write the embedding or set the second pass off',   -- 24
+    'a requirement Cosora removed keeps no words on the vendor''s page', -- 25
+    'the digest run answers the scheduled job and the service role'];    -- 26
   got text; want text; i int; n int; j jsonb;
   out text := '';
 begin
@@ -308,6 +316,63 @@ begin
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 in grace', c1);
         got := (select string_agg(a.plan_id, ',' order by a.plan_id) from admin.lead_alerts a where a.rfq_id = rfq);
         want := 'basic,gold,silver';   -- the lifecycle switch lists only the Gold vendor: VIP's plan is over
+      elsif i = 21 then
+        insert into public.rfqs (id, buyer_id, title, category_id)
+        values (rfq, buyer, E'P6 urgent\nhttp://evil.example/pay call +91 98765 43210 or mail a@b.co', c1);
+        got := (select nt.title from public.notifications nt where nt.profile_id = gold and nt.kind = 'lead_match')
+               || ' | ' || (select o.payload ->> 'title' from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_alert');
+        j := public.lead_digest_run();
+        got := got || ' | ' || (select o.payload ->> 'lines' from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest');
+        want := 'New requirement: P6 urgent call or mail | P6 urgent call or mail | - P6 urgent call or mail (Activewear)';
+      elsif i = 22 then
+        update admin.lead_alert_config set buyer_daily_cap = 2;
+        insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 first', c1);
+        insert into public.rfqs (id, buyer_id, title, category_id) values (rfq2, buyer, 'P6 second', c1);
+        insert into public.rfqs (id, buyer_id, title, category_id, created_at) values (rfq3, buyer, 'P6 third', c1, now() - interval '20 minutes');
+        got := (select string_agg(x.alerted::text || ':' || coalesce(x.skipped, '-'), ' ' order by q.title) from admin.lead_alert_runs x join public.rfqs q on q.id = x.rfq_id)
+               || ' third=' || (select count(*) from admin.lead_alerts where rfq_id = rfq3);
+        j := public.lead_digest_run();   -- the daily run doesn't tell them after all
+        got := got || ' after=' || (j ->> 'caught_up') || '/' || (select count(*) from admin.lead_alerts where rfq_id = rfq3)
+               || ' open=' || (select count(*) from public.rfqs where id = rfq3 and status = 'active');
+        want := '4:- 4:- 0:buyer_cap third=0 after=0/0 open=1';
+      elsif i = 23 then
+        update admin.lead_alert_config set max_vendors = 3;
+        update public.products set status = 'draft' where vendor_id = free;
+        insert into public.vendor_subscriptions (vendor_id, plan_id, billing_cycle, status, current_period_start, current_period_end)
+        values (free, 'gold', 'monthly', 'active', now() - interval '5 days', now() + interval '25 days');
+        update public.vendor_profiles set catalog_embedding = vec::extensions.halfvec(1536) where id = free;
+        insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 capped', c1);
+        got := (select count(*) from admin.lead_alerts where rfq_id = rfq)::text;
+        update public.rfqs set embedding = vec::extensions.halfvec(1536) where id = rfq;
+        got := got || '/' || (select count(*) from admin.lead_alerts where rfq_id = rfq) || ' alerted=' || (select alerted from admin.lead_alert_runs where rfq_id = rfq);
+        want := '3/3 alerted=3';
+      elsif i = 24 then
+        update public.profiles set account_status = 'active' where id = buyer;
+        perform set_config('request.jwt.claims', json_build_object('sub', buyer, 'role', 'authenticated')::text, true);
+        set local role authenticated;
+        insert into public.rfqs (id, buyer_id, title, category_id, embedding) values (rfq, buyer, 'P6 crafted', c1, vec::extensions.halfvec(1536));
+        update public.rfqs set embedding = vec::extensions.halfvec(1536) where id = rfq;
+        reset role;
+        perform set_config('request.jwt.claims', '', true);
+        got := (select (embedding is null)::text from public.rfqs where id = rfq) || ' alerts=' || (select count(*) from admin.lead_alerts where rfq_id = rfq)
+               || ' run=' || (select with_embedding::text || '/' || alerted from admin.lead_alert_runs where rfq_id = rfq);
+        want := 'true alerts=4 run=false/4';
+      elsif i = 25 then
+        insert into public.rfqs (id, buyer_id, title, category_id, quantity) values (rfq, buyer, 'P6 later removed', c1, 90);
+        update public.rfqs set status = 'closed', removed_at = now(), removed_reason = 'spam' where id = rfq;
+        perform set_config('request.jwt.claims', json_build_object('sub', gold, 'role', 'authenticated')::text, true);
+        set local role authenticated;
+        j := public.my_lead_alerts(5) -> 'alerts' -> 0;
+        reset role;
+        got := (j ->> 'title') || '/' || coalesce(j ->> 'category', 'null') || '/' || coalesce(j ->> 'quantity', 'null') || '/' || (j ->> 'open');
+        want := 'A requirement Cosora removed/null/null/false';
+      elsif i = 26 then
+        got := (public.lead_digest_run() ->> 'digests');
+        perform set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
+        set local role service_role;
+        got := got || '/' || (public.lead_digest_run() ->> 'digests');
+        reset role;
+        want := '0/0';
       end if;
       reset role;
       raise exception using errcode = 'P0099',

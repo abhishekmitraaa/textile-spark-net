@@ -257,6 +257,13 @@ undocumented. Deep technical rationale for each lives in
     `admin.lead_alert_runs`; the daily run retries. Keep any new work in it inside that handler.
   - A vendor's own pacing is `public.lead_alert_settings`, written only through `set_lead_alert_settings()`.
   - Told only where the `lead_alerts` switch lists the vendor.
+- **Words from one user that Cosora sends to another go through `admin.alert_text()`** (subscriptions P6): one
+  line, no links, email addresses or phone numbers. The email renderer escapes markup; this is about what the words
+  say under Cosora's name. Anything that pushes a user's text out (bell, email, WhatsApp, SMS) also needs a limit
+  on how often one sender can set it off (`buyer_daily_cap` for lead alerts).
+- **`rfqs.embedding` is the embedding worker's column.** A browser's write is ignored
+  (`trg_rfqs_embedding_guard`). Don't compare vectors in a function with an empty search path: their operators
+  live in `extensions`.
 - **A page that belongs to a plan is wrapped in `<TierGate feature="…">`** (`src/components/TierGate.tsx`) and
   listed in the sidebar only when `useVendorEntitlements()` says the feature is the vendor's. The database's
   `vendor_entitlements()` decides (plan in force and the feature's switch). The gate is navigation; the page's data

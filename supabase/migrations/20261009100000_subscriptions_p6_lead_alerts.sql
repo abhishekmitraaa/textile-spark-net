@@ -27,6 +27,16 @@
 -- vendor's quiet hours only the bell rings. What was held goes into the next daily digest.
 -- A vendor can turn instant alerts or the digest off, and choose categories.
 --
+-- NOT A WAY TO REACH VENDORS. An alert carries a stranger's words out under Cosora's name,
+-- so what a buyer can do with it is bounded:
+--   * the requirement's title goes out without links, email addresses or phone numbers
+--     (admin.alert_text), in the bell, the email, WhatsApp, SMS and the digest;
+--   * a buyer's requirements raise alerts at most buyer_daily_cap times a day (the rest are
+--     still on the Leads page, untold);
+--   * one requirement tells at most max_vendors vendors over both passes together;
+--   * a browser can't write rfqs.embedding (it could before: the column had no guard), so a
+--     buyer can't choose who is "close" or set the second pass off again.
+--
 -- THE DIGEST. public.lead_digest_run(): one email per vendor with what matched since the
 -- last one. Its schedule is 20261009100100 (a NEW job: Mitra's say-so).
 --
@@ -67,12 +77,13 @@ create table admin.lead_alert_config (
   min_similarity numeric not null default 0.35 check (min_similarity between 0 and 1),
   max_vendors    integer not null default 50 check (max_vendors between 1 and 200),
   hourly_cap     integer not null default 10 check (hourly_cap between 1 and 100),
-  max_age_hours  integer not null default 48 check (max_age_hours between 1 and 168)
+  max_age_hours  integer not null default 48 check (max_age_hours between 1 and 168),
+  buyer_daily_cap integer not null default 5 check (buyer_daily_cap between 1 and 100)
 );
 alter table admin.lead_alert_config enable row level security;
 insert into admin.lead_alert_config default values;
 comment on table admin.lead_alert_config is
-  'One row: how lead alerts are matched and paced. min_similarity: how close a vendor''s catalogue must be when they don''t list in the requirement''s category. max_vendors: how many vendors one requirement may alert. hourly_cap: alerts a vendor gets as they happen in an hour; the rest wait for the digest. max_age_hours: older requirements alert nobody.';
+  'One row: how lead alerts are matched and paced. min_similarity: how close a vendor''s catalogue must be when they don''t list in the requirement''s category. max_vendors: how many vendors one requirement may alert. hourly_cap: alerts a vendor gets as they happen in an hour; the rest wait for the digest. max_age_hours: older requirements alert nobody. buyer_daily_cap: how many of one buyer''s requirements may raise alerts in 24 hours.';
 
 create table public.lead_alert_settings (
   vendor_id    uuid primary key references public.vendor_profiles (id) on delete cascade,
@@ -114,13 +125,50 @@ create table admin.lead_alert_runs (
   rfq_id         uuid primary key references public.rfqs (id) on delete cascade,
   ran_at         timestamptz not null default now(),
   with_embedding boolean not null default false,
+  alerted        integer not null default 0,
+  skipped        text check (skipped in ('buyer_cap')),
   error          text
 );
 alter table admin.lead_alert_runs enable row level security;
 comment on table admin.lead_alert_runs is
-  'That a requirement was matched for alerts, whether its embedding was there, and the last error if matching failed (it never stops the requirement being posted). The daily run matches requirements with no row here, or with an error.';
+  'That a requirement was matched for alerts, whether its embedding was there, how many vendors it has told (alerted), why it told nobody when the buyer had raised too many alerts that day (skipped), and the last error if matching failed (it never stops the requirement being posted). The daily run matches requirements with no row here, or with an error.';
 
 -- ── 3. Matching and telling ─────────────────────────────────────────────────────────
+-- A stranger's words, made safe to send under Cosora's name: one line, no links, email
+-- addresses or phone numbers, and no longer than p_max. (The email's HTML escapes values
+-- itself; this is about what the words say, not markup.)
+create or replace function admin.alert_text(p text, p_max integer default 120)
+returns text
+language sql immutable set search_path = '' as $function$
+  select coalesce(nullif(left(btrim(regexp_replace(
+           regexp_replace(
+             regexp_replace(
+               regexp_replace(
+                 regexp_replace(coalesce(p, ''), '[[:cntrl:]]+', ' ', 'g'),
+                 '(https?://|www\.)[^[:space:]]*', '', 'gi'),
+               '[^[:space:]]+@[^[:space:]]+', '', 'g'),
+             '\+?[0-9][0-9 ().-]{7,}[0-9]', '', 'g'),
+           '[[:space:]]+', ' ', 'g')), greatest(coalesce(p_max, 120), 1)), ''), 'A new requirement')
+$function$;
+
+-- rfqs.embedding is the embedding worker's to write. A browser's write is ignored: left to
+-- the buyer it decides which vendors a requirement is "close" to, and (with the trigger
+-- below) when they are told.
+create or replace function public.rfqs_embedding_guard()
+returns trigger
+language plpgsql set search_path = '' as $function$
+begin
+  if current_user = 'authenticated' then
+    -- No comparison: the trigger fires only when the column is written, and the vector
+    -- type's operators live in another schema than this function's empty search path.
+    new.embedding := case when tg_op = 'INSERT' then null else old.embedding end;
+  end if;
+  return new;
+end
+$function$;
+create trigger trg_rfqs_embedding_guard before insert or update of embedding on public.rfqs
+  for each row execute function public.rfqs_embedding_guard();
+
 create or replace function admin.lead_alert_fanout(p_rfq uuid)
 returns integer
 language plpgsql volatile security definer set search_path = '' as $function$
@@ -140,6 +188,7 @@ declare
   v_title  text;
   v_qty    text;
   v_clock  time := (now() at time zone 'Asia/Kolkata')::time;
+  v_before integer;
   n        integer := 0;
 begin
   select * into r from public.rfqs where id = p_rfq;
@@ -150,12 +199,22 @@ begin
   if r.created_at < now() - make_interval(hours => cfg.max_age_hours) then
     return 0;
   end if;
+  -- One buyer can't use alerts to reach vendors at will: past buyer_daily_cap requirements
+  -- that raised alerts in 24 hours, the next ones tell nobody (they are still on Leads).
+  if (select count(*) from admin.lead_alert_runs x join public.rfqs q on q.id = x.rfq_id
+       where q.buyer_id = r.buyer_id and x.rfq_id <> p_rfq and x.alerted > 0 and x.ran_at > now() - interval '24 hours') >= cfg.buyer_daily_cap then
+    insert into admin.lead_alert_runs (rfq_id, with_embedding, skipped) values (p_rfq, r.embedding is not null, 'buyer_cap')
+    on conflict (rfq_id) do update set ran_at = now(), skipped = 'buyer_cap', error = null;
+    return 0;
+  end if;
   insert into admin.lead_alert_runs (rfq_id, with_embedding) values (p_rfq, r.embedding is not null)
   on conflict (rfq_id) do update
      set ran_at = now(), with_embedding = admin.lead_alert_runs.with_embedding or excluded.with_embedding, error = null;
+  -- Both passes together tell at most max_vendors vendors.
+  select count(*) into v_before from admin.lead_alerts a where a.rfq_id = p_rfq;
 
   select c.name into v_cat from public.categories c where c.id = r.category_id;
-  v_title := left(coalesce(nullif(btrim(r.title), ''), nullif(btrim(r.product_name), ''), 'A new requirement'), 120);
+  v_title := admin.alert_text(coalesce(nullif(btrim(r.title), ''), r.product_name), 120);
   v_qty := case when r.quantity is not null and r.quantity > 0 then r.quantity::text else null end;
 
   -- More candidates than will be told are asked for: before the embedding arrives every
@@ -173,7 +232,7 @@ begin
      -- VIP is told first; then the closest match; between equals, the bigger plan.
      order by coalesce((p.limits ->> 'lead_alert_priority')::boolean, false) desc, x.score desc, p.sort_order desc, x.vendor_id
   loop
-    exit when n >= cfg.max_vendors;
+    exit when v_before + n >= cfg.max_vendors;
     select * into s from public.lead_alert_settings ls where ls.vendor_id = m.vendor_id;
     if s.category_ids is not null and (r.category_id is null or not (r.category_id = any (s.category_ids))) then
       continue;
@@ -228,6 +287,9 @@ begin
       update admin.lead_alerts set channels = v_sent where id = v_id;
     end if;
   end loop;
+  if n > 0 then
+    update admin.lead_alert_runs set alerted = alerted + n where rfq_id = p_rfq;
+  end if;
   return n;
 end
 $function$;
@@ -239,6 +301,12 @@ returns trigger
 language plpgsql security definer set search_path = '' as $function$
 begin
   if tg_op = 'UPDATE' and not (old.embedding is null and new.embedding is not null) then
+    return null;
+  end if;
+  -- The second pass belongs to the embedding worker (the service role, or a job with no
+  -- role claim). trg_rfqs_embedding_guard already stops a browser changing the column; this
+  -- is the same rule said twice.
+  if tg_op = 'UPDATE' and coalesce(auth.role(), 'service_role') <> 'service_role' then
     return null;
   end if;
   begin
@@ -266,6 +334,10 @@ declare
   v_lines  text;
   v_count  integer;
 begin
+  -- The scheduled job (no role claim) and the service role. The grant already says so.
+  if coalesce(auth.role(), 'service_role') <> 'service_role' then
+    raise exception 'lead_digest_run is for the scheduled job only' using errcode = '42501';
+  end if;
   select * into cfg from admin.lead_alert_config;
 
   -- Requirements the trigger never matched (it failed, or the switch was turned on since).
@@ -276,7 +348,7 @@ begin
      where q.status::text = 'active' and q.vendor_id is null and q.removed_at is null
        and q.created_at > now() - make_interval(hours => cfg.max_age_hours)
        and q.created_at < now() - interval '10 minutes'
-       and (x.rfq_id is null or x.error is not null)
+       and (x.rfq_id is null or x.error is not null)   -- not one skipped for its buyer's cap
      order by q.created_at
      limit 500
   loop
@@ -306,7 +378,7 @@ begin
              string_agg('- ' || t.title || coalesce(' (' || t.category || ')', ''), E'\n' order by t.created_at desc) filter (where t.rn <= 5)
         into v_count, v_lines
         from (select la.created_at, row_number() over (order by la.created_at desc) as rn,
-                     left(coalesce(nullif(btrim(q.title), ''), nullif(btrim(q.product_name), ''), 'A new requirement'), 120) as title,
+                     admin.alert_text(coalesce(nullif(btrim(q.title), ''), q.product_name), 120) as title,
                      c.name as category
                 from admin.lead_alerts la
                 join public.rfqs q on q.id = la.rfq_id
@@ -416,8 +488,10 @@ begin
         from (select la.created_at,
                      jsonb_build_object(
                        'id', la.id, 'rfq_id', la.rfq_id, 'at', la.created_at,
-                       'title', left(coalesce(nullif(btrim(q.title), ''), nullif(btrim(q.product_name), ''), 'A new requirement'), 120),
-                       'category', c.name, 'quantity', q.quantity,
+                       'title', case when q.removed_at is not null then 'A requirement Cosora removed'
+                                     else admin.alert_text(coalesce(nullif(btrim(q.title), ''), q.product_name), 120) end,
+                       'category', case when q.removed_at is null then c.name end,
+                       'quantity', case when q.removed_at is null then q.quantity end,
                        'open', q.status::text = 'active' and q.removed_at is null,
                        'channels', to_jsonb(la.channels), 'held', la.held, 'in_digest', la.digest_at is not null) as row
                 from admin.lead_alerts la
@@ -535,6 +609,7 @@ begin
     'since', v_since,
     'requirements_matched', (select count(*) from admin.lead_alert_runs r where r.ran_at >= v_since and r.error is null),
     'match_errors', (select count(*) from admin.lead_alert_runs r where r.error is not null),
+    'skipped_buyer_cap', (select count(*) from admin.lead_alert_runs r where r.ran_at >= v_since and r.skipped = 'buyer_cap'),
     'alerts', (select count(*) from admin.lead_alerts a where a.created_at >= v_since),
     'vendors_told', (select count(distinct a.vendor_id) from admin.lead_alerts a where a.created_at >= v_since),
     'as_it_happened', (select count(*) from admin.lead_alerts a where a.created_at >= v_since and cardinality(a.channels) > 0),
@@ -552,10 +627,12 @@ do $grants$
 declare
   f text;
 begin
-  foreach f in array array['admin.lead_alert_fanout(uuid)', 'admin.rfq_lead_alert()', 'public.lead_digest_run()'] loop
+  foreach f in array array['admin.lead_alert_fanout(uuid)', 'admin.rfq_lead_alert()', 'public.lead_digest_run()',
+                           'admin.alert_text(text,integer)', 'public.rfqs_embedding_guard()'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
   grant execute on function public.lead_digest_run() to service_role;
+  grant execute on function public.rfqs_embedding_guard() to service_role;
   foreach f in array array[
     'public.set_lead_alert_settings(boolean,boolean,uuid[],time,time)', 'public.my_lead_alerts(integer)',
     'public.admin_lead_alert_stats(integer)'] loop
@@ -586,6 +663,9 @@ begin
   end if;
   if (select enabled from public.feature_flags where key = 'lead_alerts') then
     raise exception 'lead_alerts must start switched off';
+  end if;
+  if admin.alert_text(E'Need 500 shirts\nhttp://evil.example/x call +91 98765 43210 or a@b.co now') <> 'Need 500 shirts call or now' then
+    raise exception 'alert_text must strip links, addresses and phone numbers: %', admin.alert_text(E'Need 500 shirts\nhttp://evil.example/x call +91 98765 43210 or a@b.co now');
   end if;
 end
 $check$;

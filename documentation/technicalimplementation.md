@@ -3488,6 +3488,20 @@ changes: messages go out through P2's outbox and dispatcher.
 - `admin.rfq_lead_alert()` (`trg_rfqs_lead_alert`, after insert or update of `embedding` on `rfqs`): runs the fanout
   on insert and when the embedding first arrives; any error is caught and written to `admin.lead_alert_runs`.
 
+### Bounds on what a buyer can set off
+- `admin.alert_text(text, max)`: control characters to spaces; `http(s)://…` and `www.…`, anything with an `@`,
+  and runs of nine or more digits and separators removed; whitespace collapsed; cut to `max`. Used for the bell,
+  the message payloads, the digest lines and the page's titles. (A long number range in a title, such as
+  "10000-20000 pcs", is dropped with it; the requirement itself is unchanged and the quantity travels separately.)
+- `admin.lead_alert_config.buyer_daily_cap` (5): when that many of a buyer's requirements raised alerts in the last
+  24 hours, the next records `admin.lead_alert_runs.skipped = 'buyer_cap'` and tells nobody. The daily run doesn't
+  retry it.
+- `admin.lead_alert_runs.alerted`: vendors told so far; both passes together stop at `max_vendors`.
+- `public.rfqs_embedding_guard()` (`trg_rfqs_embedding_guard`, before insert or update of `embedding`): for the
+  `authenticated` role the column is set to null on insert and left as it was on update.
+- `admin.rfq_lead_alert()` runs its update pass only for the service role or a job with no role claim.
+- `my_lead_alerts`: a removed requirement shows as "A requirement Cosora removed", with no category or quantity.
+
 ### The daily run: `public.lead_digest_run()`
 - Matches requirements from the last `max_age_hours` (older than 10 minutes) with no run row or an error.
 - Per vendor with undigested alerts, when their digest is on and the switch lists them: counts alerts from the

@@ -99,6 +99,24 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P6: lead alerts could be used to reach vendors — Severity: Medium — Fixed before release
+- **Found by** the background security review of the P6 commit (authorization; content injection and abuse), which
+  gave categories only; the specifics below are from re-reading the migration against them.
+- **Content.** A requirement's title is its buyer's text, and P6 pushed it to up to 50 vendors by bell, email,
+  WhatsApp and SMS under Cosora's name. Markup was already escaped by the email renderer, but the words themselves
+  could carry a link or a number to call. **Fixed:** `admin.alert_text()` strips links, email addresses and phone
+  numbers from everything pushed.
+- **Volume.** Nothing limited how many requirements one account could post to set alerts off; the hourly cap is per
+  vendor. **Fixed:** `buyer_daily_cap` (5 in 24 hours); one requirement tells at most `max_vendors` in total.
+- **Authorization.** `rfqs.embedding` was writable by the requirement's buyer (the update policy covers every
+  column and nothing guarded this one, since before P6). With P6 that let a buyer choose which vendors were "close"
+  and re-run the second pass by clearing and setting it. **Fixed:** `trg_rfqs_embedding_guard` ignores a browser's
+  write; the update pass runs only for the service role. This also protects `match_vendor_rfqs` ranking.
+- **Also:** `lead_digest_run` checks its caller as well as its grant; a removed requirement's title no longer shows
+  in a vendor's alert history.
+- **Left:** a title's long number range (for example "10000-20000 pcs") is dropped from alerts along with phone
+  numbers. The requirement itself and the Leads page are unchanged.
+
 ### 2026-10-09 — Subscriptions P6: lead alerts reviewed — Severity: Info
 - **What a vendor learns from an alert** is what the Leads page already shows them for an open requirement: its
   title, category and quantity. Never the buyer's name or contact.
