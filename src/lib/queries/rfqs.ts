@@ -45,6 +45,15 @@ interface RawRfq {
 const RFQ_COLUMNS =
   "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes" as const;
 
+// The vendor's lead pool also reads how a requirement is marked overseas (subscriptions P7):
+// RFQ_COLUMNS plus the three columns the database stamps. Only this read needs them, so a
+// buyer's pages don't depend on them. Keep it in step with RFQ_COLUMNS.
+const OPEN_LEAD_COLUMNS =
+  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, overseas, buyer_country_code, overseas_vip_until" as const;
+interface RawLeadRfq extends RawRfq {
+  overseas: boolean; buyer_country_code: string | null; overseas_vip_until: string | null;
+}
+
 interface RawQuote {
   id: string; rfq_id: string; vendor_id: string; currency: string;
   price_per_unit: number | null; price_inr: number | null; moq: number | null;
@@ -355,17 +364,24 @@ export interface LeadRfq {
   strongMatch: boolean;
   /** The buyer's category answers as label/value pairs (Ranking F1). */
   details: { label: string; value: string }[];
+  /** From a buyer outside India (subscriptions P7). Only Gold and VIP vendors read these;
+   *  the database decides, this only labels them. */
+  overseas: boolean;
+  /** The buyer's country when they posted (ISO code), or null. */
+  buyerCountryCode: string | null;
+  /** While in the future, only VIP vendors see it; it opens to Gold then. */
+  vipUntil: string | null;
 }
 async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data, error } = await supabase
-    .from("rfqs").select(RFQ_COLUMNS).eq("status", "active")
+    .from("rfqs").select(OPEN_LEAD_COLUMNS).eq("status", "active")
     // Open marketplace only. Targeted requests (vendor_id set) belong to the
     // Direct Quote Requests inbox, not the shared lead pool. Every pre-existing
     // RFQ has vendor_id NULL, so this is a no-op for them.
     .is("vendor_id", null)
     .order("created_at", { ascending: false });
   if (error) throw error;
-  const rows = (data ?? []) as RawRfq[];
+  const rows = (data ?? []) as RawLeadRfq[];
 
   const { data: myQuotes } = await supabase.from("quotes").select("rfq_id").eq("vendor_id", vendorId);
   const quoted = new Set((myQuotes ?? []).map((q) => q.rfq_id));
@@ -399,6 +415,9 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       score: m?.score ?? 0,
       strongMatch: (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
       details: attributeDetails(r.attributes),
+      overseas: Boolean(r.overseas),
+      buyerCountryCode: r.buyer_country_code ?? null,
+      vipUntil: r.overseas_vip_until ?? null,
     };
   });
 

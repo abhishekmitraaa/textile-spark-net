@@ -12,7 +12,7 @@ import { supabase } from "@/lib/supabase";
 // ─────────────────────────────────────────────────────────────
 
 /** A feature a page can belong to. A key here is one the database returns as a yes or no. */
-export type EntitlementFeature = "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts";
+export type EntitlementFeature = "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads";
 
 export interface VendorEntitlements {
   planId: string;
@@ -20,7 +20,11 @@ export interface VendorEntitlements {
   /** active, grace or free. */
   status: string;
   paid: boolean;
-  features: Partial<Record<EntitlementFeature, boolean>> & { lead_alert_channels?: string[] };
+  features: Partial<Record<EntitlementFeature, boolean>> & {
+    lead_alert_channels?: string[];
+    /** Overseas requirements (P7): vip sees them first, gold after VIP's head start, none not at all. */
+    overseas_tier?: "vip" | "gold" | "none";
+  };
 }
 
 interface RawEntitlements {

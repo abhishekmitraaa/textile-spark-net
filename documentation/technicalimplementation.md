@@ -3541,3 +3541,57 @@ changes: messages go out through P2's outbox and dispatcher.
 1. Apply `20261009100000` (P0 to P5 first: the guard). No functions to deploy.
 2. With Mitra's say-so, apply `20261009100100` (the digest job). It needs P2's dispatcher job to send anything.
 3. Merge with the switch off; list test accounts on `lead_alerts` (and `notification_delivery` for email); then on.
+
+## Subscriptions P7: overseas requirements (2026-10-09; built, not live)
+
+Migration `20261009110000_subscriptions_p7_overseas.sql`; harness `scripts/subscriptions/p7_overseas.sql` (18 cases);
+spec `tests/local/subscriptions-p7.spec.ts`.
+
+- **Guard.** md5 of `match_vendor_rfqs` (`2842cbb8…`), `enforce_quote_rfq_open` (`dfb7f447…`) and
+  `admin_lead_detail` (`25692619…`), all equal to production on 2026-10-09; of `vendor_entitlements`,
+  `lead_alert_fanout` and `lead_digest_run` as P0/P6 leave them; and of the `rfqs_select` expression
+  (`e93c2cb9…`).
+- **Countries.** `public.countries` (code, name, name_hi, name_gu, aliases): 249 ISO 3166-1 codes plus XK, names
+  from CLDR, read by anyone, written by no one. `country_code_for(text)` matches a name or alias ignoring case,
+  punctuation and "&"/"and" (through `state_name_key`); `countryCodeFor()` in `src/data/countries.ts` mirrors
+  it, and every name and alias round-trips on both sides.
+- **The buyer's code.** `buyer_profiles.country_code` references `countries`. `sync_country_code()` (before
+  insert or update of country, country_code): a code the writer sends wins; otherwise it follows the name. Backfilled
+  from `country`. The client sends both (`saveProfileFull`).
+- **Plans.** `subscription_plans.limits.overseas_tier`: `none` (Free to Silver), `gold`, `vip`.
+  `admin.vendor_overseas_tier(vendor)` reads it from `vendor_effective_plan` (the grace days count; service role
+  only); `my_overseas_tier()` answers for the caller (it is in the policy, so every role may call it).
+  `admin.lead_alert_config.overseas_head_start_hours` (24; 0 to 168).
+- **Stamp.** `rfqs_overseas_stamp()`, definer, before insert or update of the three columns. Insert:
+  `buyer_country_code` from the buyer's profile; `overseas` when that isn't IN and
+  `feature_on_for('overseas_leads', buyer)`; `overseas_vip_until = now() + head start` when the requirement is
+  open (no `vendor_id`), has a category, and an active VIP subscription (inside its grace days) has a live listing
+  in it. Update: the old values are restored unless `admin.trusted_caller()`. Index `rfqs_overseas_idx` on
+  `created_at desc where overseas`.
+- **Read rule.** In `rfqs_select`, for an active open requirement: `not overseas or (select my_overseas_tier()) = 'vip'
+  or ((select my_overseas_tier()) = 'gold' and (overseas_vip_until is null or now() >= overseas_vip_until)) or
+  vendor_quoted_rfq(id)`. The two `(select …)` are InitPlans (once per query); `vendor_quoted_rfq` runs only for
+  overseas rows the others refuse, on the `quotes (rfq_id, vendor_id)` unique index. `match_vendor_rfqs` filters its
+  pool the same way with the vendor's tier read once. `public.overseas_rfq_visible(overseas, vip_until, tier)` is the
+  same rule for the quote guard and the fan-out (service role only).
+- **Quote guard.** `enforce_quote_rfq_open`: on an overseas open requirement the vendor hasn't quoted on, a vendor
+  whose tier can't see it is refused (42501): Gold during the head start with the time it opens (IST), anyone else
+  with "Overseas requirements are part of the Gold and VIP plans."
+- **Lead alerts.** One line added to `admin.lead_alert_fanout` (only vendors who can see it are told) and one to
+  `lead_digest_run`'s catch-up (an overseas requirement whose head start has ended since its last run is matched
+  again, which tells Gold). The fan-out's unique (rfq, vendor) keeps VIP from being told twice. Gold is therefore told
+  at the next daily run after the head start ends.
+- **Count.** `overseas_lead_count()`, definer, signed-in only: `available` (the switch lists the caller), `tier`,
+  `this_month` (IST month) and `open`. No rows, ids or titles.
+- **Entitlements.** `vendor_entitlements` gains `features.overseas_leads` (paid, Gold or VIP, and the switch lists
+  the vendor) and `features.overseas_tier`.
+- **Admin.** `admin_lead_detail` gains `overseas: {country_code, country, vip_until}` (null when not overseas).
+  `admin_leads_list` is unchanged (its row type would need a drop).
+- **Client.** `fetchOpenRfqs` reads `OPEN_LEAD_COLUMNS` (RFQ_COLUMNS plus the three); `LeadRfq` gains
+  `overseas`, `buyerCountryCode`, `vipUntil`. `OpenRfqLeads` shows an "Overseas · country" badge and the VIP
+  countdown (`useNow`, `timeUntil` in `src/lib/queries/overseas.ts`) and takes `overseasOnly`.
+  `OverseasLeads` at `/overseas-leads` behind `<TierGate feature="overseas_leads">`; sidebar item after Leads.
+  `useOverseasLeadCount` drives the Leads teaser. `CountrySelect` (India first, the rest sorted in the reader's
+  language, options `data-no-translate`); `data/countries.ts` is skipped by the i18n check like `indiaStates.ts`.
+- **Release.** Apply the migration (it refuses if a guarded function or the policy changed), rename it to its live
+  version, merge with the switch off, then list test buyers and sellers on `overseas_leads`.

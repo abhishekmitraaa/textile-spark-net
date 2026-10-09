@@ -29,6 +29,7 @@ import {
   Receipt,
   BookOpen,
   BellRing,
+  Globe2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -90,6 +91,7 @@ const sellerNavigation: NavItem[] = [
 // Pages that belong to a plan (subscriptions P6): added after the item named, only for a
 // vendor the database says the feature is theirs.
 const LEAD_ALERTS: NavItem = { name: "Lead alerts", href: "/lead-alerts", icon: BellRing };
+const OVERSEAS_LEADS: NavItem = { name: "Overseas leads", href: "/overseas-leads", icon: Globe2 };
 
 interface DashboardSidebarProps {
   isOpen: boolean;
@@ -141,7 +143,9 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const { data: entitlements } = useVendorEntitlements(role === "seller" ? user?.id : undefined);
   const navigation = role === "buyer"
     ? buyerNavigation
-    : sellerNavigation.flatMap((item) => (item.href === "/leads" && entitlements?.features.lead_alerts ? [item, LEAD_ALERTS] : [item]));
+    : sellerNavigation.flatMap((item) => (item.href === "/leads"
+        ? [item, ...(entitlements?.features.lead_alerts ? [LEAD_ALERTS] : []), ...(entitlements?.features.overseas_leads ? [OVERSEAS_LEADS] : [])]
+        : [item]));
 
   // On desktop, sidebar is always visible
   const shouldShow = !isMobile || isOpen;

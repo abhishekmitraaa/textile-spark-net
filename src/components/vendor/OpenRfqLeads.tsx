@@ -3,9 +3,12 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Send, Check, Loader2, Sparkles } from "lucide-react";
+import { Send, Check, Loader2, Sparkles, Globe2, Clock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
+import { useNow, timeUntil } from "@/lib/queries/overseas";
+import { countryByCode } from "@/data/countries";
+import { useLang } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // Live buyer RFQs (the real lead pool) with inline quoting, for the vendor
@@ -18,6 +21,11 @@ import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
 // the ranked pool with both match badges, and nothing caps how many leads a
 // vendor quotes on. enforce_lead_cap() is still installed but every plan's
 // leads_per_month is -1, which it treats as unlimited.
+//
+// The one exception (subscriptions P7): a requirement from a buyer outside India reaches
+// only Gold and VIP vendors, VIP first. The database leaves it out for everyone else; here
+// it carries an "Overseas" badge with the buyer's country, and during VIP's head start a
+// countdown to when Gold sees it. `overseasOnly` shows just those, for /overseas-leads.
 // ─────────────────────────────────────────────────────────────
 
 const BLUE = brand("vendor");
@@ -47,10 +55,31 @@ function LeadDetails({ details }: { details: { label: string; value: string }[] 
   );
 }
 
-export default function OpenRfqLeads() {
+function OverseasBadge({ code, vipUntil }: { code: string | null; vipUntil: string | null }) {
+  const lang = useLang();
+  const now = useNow();
+  const c = countryByCode(code);
+  const name = c ? (lang === "hi" ? c.hi : lang === "gu" ? c.gu : c.name) : null;
+  const left = timeUntil(vipUntil, now);
+  return (
+    <>
+      <span className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-2 py-0.5 text-[10px] font-bold text-sky-800" data-testid="overseas-badge">
+        <Globe2 className="h-3 w-3" aria-hidden /> Overseas{name && <>{" · "}<span data-no-translate>{name}</span></>}
+      </span>
+      {left && (
+        <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-800" data-testid="vip-head-start">
+          <Clock className="h-3 w-3" aria-hidden /> {`VIP first look: opens to Gold in ${left}`}
+        </span>
+      )}
+    </>
+  );
+}
+
+export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: boolean }) {
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
+  const { data: all = [], isLoading } = useOpenRfqs(user?.id);
+  const rfqs = overseasOnly ? all.filter((r) => r.overseas) : all;
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState({ price: "", moq: "", leadTime: "", comment: "" });
@@ -86,7 +115,7 @@ export default function OpenRfqLeads() {
     <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 lg:p-5">
       <div className="flex items-center justify-between gap-2 mb-3 lg:mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold text-gray-900 lg:text-base">Buyer Requirements</h2>
+          <h2 className="text-sm font-bold text-gray-900 lg:text-base">{overseasOnly ? "Open to you" : "Buyer Requirements"}</h2>
           <span className="rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5 lg:text-[11px]">{rfqs.length} live</span>
         </div>
       </div>
@@ -104,15 +133,20 @@ export default function OpenRfqLeads() {
                     and says so in its own words rather than borrowing the
                     category badge's. The category badge wins when both hold,
                     being the more specific claim. */}
-                {r.matched ? (
-                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
-                    <Sparkles className="h-3 w-3" /> Matches your category
-                  </span>
-                ) : r.strongMatch ? (
-                  <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
-                    <Sparkles className="h-3 w-3" /> Strong match
-                  </span>
-                ) : null}
+                {(r.matched || r.strongMatch || r.overseas) && (
+                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                    {r.matched ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
+                        <Sparkles className="h-3 w-3" /> Matches your category
+                      </span>
+                    ) : r.strongMatch ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
+                        <Sparkles className="h-3 w-3" /> Strong match
+                      </span>
+                    ) : null}
+                    {r.overseas && <OverseasBadge code={r.buyerCountryCode} vipUntil={r.vipUntil} />}
+                  </div>
+                )}
                 <p data-no-translate className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5 lg:text-[13px]">
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}

@@ -46,9 +46,10 @@ const ts = require("typescript");
 // translation exists and the version names it.
 // data/indiaStates.ts carries each state's Hindi and Gujarati itself (StateSelect shows them by
 // language), and its `aliases` are spellings for matching typed input, never shown.
+// data/countries.ts likewise (CountrySelect and the overseas badge, subscriptions P7).
 // components/vendor/InvoiceSheet.tsx is the invoice document: English only (Mitra,
 // 2026-10-08), marked data-no-translate; the invoice page around it is translated.
-const SKIP_FILES = [/data[\\/]indiaStates\.ts$/, /lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /vendor[\\/]InvoiceSheet\.tsx$/, /database\.types\.ts$/, /\.test\.tsx?$/];
+const SKIP_FILES = [/data[\\/]indiaStates\.ts$/, /data[\\/]countries\.ts$/,/lib[\\/]i18n\.ts$/, /i18n[\\/]AutoTranslate\.tsx$/, /lib[\\/]supplierAgreement\.ts$/, /vendor[\\/]InvoiceSheet\.tsx$/, /database\.types\.ts$/, /\.test\.tsx?$/];
 
 // Found by the extractor but never shown as text. "s" and "es" are English
 // plural endings rendered as their own text node ({n === 1 ? "" : "es"}); both

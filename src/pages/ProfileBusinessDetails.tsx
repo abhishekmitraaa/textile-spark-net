@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import StateSelect from "@/components/StateSelect";
+import CountrySelect from "@/components/CountrySelect";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import {
   Field, inputCls, ProfileSubpageHeader, ProfileSignedOut, ProfileFormLoading, ProfileFormActions,
@@ -81,8 +82,8 @@ const ProfileBusinessDetails = () => {
                     <input id="bd-postal" className={inputCls} value={form.postalCode} onChange={(e) => set({ postalCode: e.target.value })} />
                   </Field>
                   <Field label="Country" htmlFor="bd-country">
-                    {/* A placeholder, not a value: it is never saved (MPF-9). */}
-                    <input id="bd-country" className={inputCls} value={form.country} placeholder="India" onChange={(e) => set({ country: e.target.value })} />
+                    {/* Nothing is chosen for the buyer: an unset country is saved as nothing (MPF-9). */}
+                    <CountrySelect id="bd-country" className={inputCls} value={form.country} onChange={(country) => set({ country })} />
                   </Field>
                 </div>
                 <Field label="GSTIN" htmlFor="bd-gstin">

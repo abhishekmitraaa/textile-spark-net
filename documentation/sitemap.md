@@ -79,7 +79,7 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 | `/profile` | `Profile` | |
 | `/profile/settings` | `Settings` (`src/pages/Settings.tsx`) | Buyer account & security (2026-09-23): sign-in number, account email, Log Out, download data, delete account, help & legal. The buyer sidebar's "Settings" and `/profile` → "Account & Security" link here. (`/settings` is the vendor's page.) |
 | `/profile/edit` | `ProfileEdit` | Photo + personal details (was the Edit Profile modal's Photo/Personal tabs; the modal is gone). `?focus=city` focuses City — the `/profile` "Add city" nudge links there |
-| `/profile/business-details` | `ProfileBusinessDetails` | Business name/type/website/industry, address, GSTIN, PAN (was the modal's Business tab) |
+| `/profile/business-details` | `ProfileBusinessDetails` | Business name/type/website/industry, address with a country list (subscriptions P7), GSTIN, PAN (was the modal's Business tab) |
 | `/profile/interest-preference` | `InterestPreference` | |
 | `/profile/reviews` | `MyReviews` | Fans out across `reviews`, `product_reviews`, `service_reviews` |
 | `/profile/notifications` | `ProfileNotifications` | |
@@ -117,6 +117,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 |---|---|---|
 | `/leads` | `Leads` | Buyer inquiries |
 | `/lead-alerts` | `LeadAlerts` | How the seller is told about matching requirements (paid plans; built, not live) |
+| `/overseas-leads` | `OverseasLeads` | Requirements from buyers outside India (Gold and VIP; VIP first; built, not live) |
 | `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
 | `/chat` | `Chat` | Vendor messages |
 

@@ -265,6 +265,21 @@ undocumented. Deep technical rationale for each lives in
     another script's digits, digits as emoji or words). `admin.alert_text()` only tidies in-app text (the bell,
     the alert history), where the reader can already see the original; it cuts its input to 400 characters first.
   - Anything that lets one user set off messages to others needs a limit on how often (`buyer_daily_cap`).
+- **Overseas requirements are Gold's and VIP's** (subscriptions P7, 2026-10-09; migration
+  `20261009110000_subscriptions_p7_overseas.sql`).
+  - **One rule, four places.** Readable when it isn't overseas, or the vendor is VIP, or Gold once
+    `overseas_vip_until` has passed, or the vendor already quoted. The `rfqs_select` policy and
+    `match_vendor_rfqs` write it out inline (they test every row); `enforce_quote_rfq_open` and
+    `admin.lead_alert_fanout` call `public.overseas_rfq_visible()`. Change all four together; the P7 harness
+    reads through each.
+  - **A new definer function that hands requirements to vendors must apply it too:** definer functions skip the policy.
+  - `rfqs.overseas`, `buyer_country_code` and `overseas_vip_until` are stamped by `rfqs_overseas_stamp()`; a
+    browser's write to them is undone (`admin.trusted_caller()`).
+  - A buyer's country is `buyer_profiles.country_code` (references `public.countries`). `src/data/countries.ts`
+    and the table come from one generated list: change both together. No country counts as India.
+- **Keep functions with a `set` clause out of per-row policy tests.** Postgres never inlines them, so each row
+  pays a call: 48 ms against 3 ms over 20,000 requirements for the overseas rule. Read a per-user value once with
+  `(select fn())`, and write per-row logic inline.
 - **A limit that counts rows must be checked under a lock.** Two transactions each count before either writes, and
   both pass. Lead alert fan-outs take an advisory lock per buyer (`cosora.lead_alert_fanout:<buyer>`), with a bounded wait.
   Key such a lock on the sender, not globally: a global one lets any account slow everyone else's writes. A test of such a limit must force the overlap (two sessions, one

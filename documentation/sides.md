@@ -199,6 +199,11 @@ the demand side of India's fashion and textile supply chain.
   catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-09 (subscriptions P7; built, not live)
+- **Country on Business details is a list** of every country and territory, in the buyer's language. A buyer
+  outside India who chooses their country has their requirements shown to Gold and VIP sellers only (VIP first).
+  A buyer who chooses none counts as in India, and nothing changes for them.
+
 ### Changed 2026-10-02 (Help & Support follow-ups)
 - **Report this seller** (a seller's page, three-dot menu) and **Report this listing** (a product page, beside Share) open the fraud report about it. A Cosora store or listing link typed into the report counts the same.
 - Support dates (opening times, callbacks, My requests) are in the reader's language.
@@ -482,6 +487,15 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P7; built, not live)
+- **Overseas requirements.** A requirement from a buyer outside India reaches Gold and VIP sellers only. VIP sees
+  it first, for 24 hours, when a VIP seller lists in its category; then Gold. A seller who already quoted keeps it.
+- **A new page, Overseas leads** (in the menu under Leads, for Gold and VIP): those requirements with the buyer's
+  country; VIP sees a countdown to when Gold sees each, Gold sees how many are still with VIP.
+- **Free to Silver** see on Leads how many requirements came from buyers outside India this month, with a link to
+  the plans. Quoting on one they can't see is refused with the reason.
+- For accounts on the overseas requirements switch.
+
 ### Changed 2026-10-09 (subscriptions P6; built, not live)
 - **Lead alerts.** A seller on a paid plan is told when a buyer posts a requirement that suits what they sell:
   Basic by a daily email summary; Silver in the app as it happens, plus the summary; Gold and VIP in the app, by
@@ -732,6 +746,11 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P7; built, not live)
+- **Leads:** a requirement's detail shows "overseas · <country>" and, during VIP's head start, until when only VIP
+  sellers see it.
+- **Feature switches** now lists seven, with "Overseas requirements".
 
 ### Added 2026-10-09 (subscriptions P6; built, not live)
 - **Leads:** a **Lead alerts** panel with the last 7 days' figures: requirements matched, alerts and vendors

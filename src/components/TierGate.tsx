@@ -16,6 +16,10 @@ const NOT_YOURS: Record<EntitlementFeature, { title: string; description: string
   account_manager: { title: "An account manager comes with Silver and above", description: "Choose a plan that includes one." },
   international: { title: "Overseas requirements come with Gold and VIP", description: "Choose a plan that includes them." },
   realtime_alerts: { title: "Instant alerts come with Silver and above", description: "Choose a plan that includes them." },
+  overseas_leads: {
+    title: "Overseas requirements come with Gold and VIP",
+    description: "Choose Gold or VIP to see and quote on requirements from buyers outside India.",
+  },
 };
 
 /**

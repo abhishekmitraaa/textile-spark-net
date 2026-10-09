@@ -1,6 +1,6 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Inbox, Package, Megaphone, ArrowRight } from "lucide-react";
+import { Inbox, Package, Megaphone, ArrowRight, Globe2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenRfqs, useDirectQuoteRequests } from "@/lib/queries/rfqs";
@@ -8,6 +8,7 @@ import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
 import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
 import SignInForLeads from "@/components/vendor/SignInForLeads";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
+import { useOverseasLeadCount } from "@/lib/queries/overseas";
 
 // Vendor Leads = the live buyer-RFQ pool. All lead browsing + quoting is the
 // real OpenRfqLeads panel (RFQ→quote loop). Previously this page also carried a
@@ -31,6 +32,10 @@ const Leads = () => {
   const hasLeads = rfqs.length > 0 || direct.length > 0;
   // Lead alerts are a plan's (subscriptions P6): the link shows only where the page would.
   const { data: entitlements } = useVendorEntitlements(user?.id);
+  // Overseas requirements are Gold's and VIP's (subscriptions P7). They see a link to their
+  // page; everyone else, once the switch lists them, sees how many there were this month.
+  const { data: overseas } = useOverseasLeadCount(user?.id);
+  const overseasTeaser = Boolean(overseas?.available && overseas.tier === "none" && overseas.thisMonth > 0);
 
   return (
     <DashboardLayout>
@@ -40,10 +45,19 @@ const Leads = () => {
           <p className="text-sm text-muted-foreground mt-0.5">
             Live buyer requirements you can quote on. Your quote reaches the buyer's My Quotes instantly.
           </p>
-          {entitlements?.features.lead_alerts && (
-            <Link to="/lead-alerts" className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-vendor hover:underline" data-testid="lead-alerts-link">
-              How you're told about new requirements <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
+          {(entitlements?.features.lead_alerts || entitlements?.features.overseas_leads) && (
+            <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1">
+              {entitlements?.features.lead_alerts && (
+                <Link to="/lead-alerts" className="inline-flex items-center gap-1 text-sm font-medium text-brand-vendor hover:underline" data-testid="lead-alerts-link">
+                  How you're told about new requirements <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              )}
+              {entitlements?.features.overseas_leads && (
+                <Link to="/overseas-leads" className="inline-flex items-center gap-1 text-sm font-medium text-brand-vendor hover:underline" data-testid="overseas-leads-link">
+                  Overseas requirements <ArrowRight className="h-3.5 w-3.5" />
+                </Link>
+              )}
+            </div>
           )}
         </motion.div>
 
@@ -52,6 +66,24 @@ const Leads = () => {
             <SignInForLeads />
           ) : (
             <>
+              {overseasTeaser && overseas && (
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-sky-200 bg-sky-50 p-4" data-testid="overseas-teaser">
+                  <div className="flex items-start gap-3">
+                    <Globe2 className="mt-0.5 h-5 w-5 shrink-0 text-sky-700" aria-hidden />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">
+                        {overseas.thisMonth === 1
+                          ? "1 requirement from a buyer outside India this month"
+                          : `${overseas.thisMonth} requirements from buyers outside India this month`}
+                      </p>
+                      <p className="mt-0.5 text-xs text-gray-600">Overseas requirements are part of the Gold and VIP plans.</p>
+                    </div>
+                  </div>
+                  <Link to="/subscription#plans" className="inline-flex items-center gap-1 rounded-full bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-brand-vendor/90">
+                    See plans <ArrowRight className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              )}
               <DirectQuoteRequests />
               <OpenRfqLeads />
 

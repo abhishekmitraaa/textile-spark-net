@@ -99,6 +99,20 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P7: overseas requirements reviewed — Severity: Info
+- **The rule is the database's.** Every path that hands a requirement to a vendor applies it: the read policy, the
+  ranked feed (definer), the quote guard (definer) and lead alerts (definer). The page and the badge only label
+  what comes back. The harness reads through each path for every plan.
+- **The marks can't be forged.** `overseas`, `buyer_country_code` and `overseas_vip_until` are stamped by a
+  trigger and a browser's write is undone, so a buyer can't move their requirement to everyone or end VIP's head
+  start, and a seller can't learn more by setting them (checked over PostgREST).
+- **What lower plans learn:** a count (this month, open) and nothing else; no ids or titles. The tier function for
+  another vendor is the service role's.
+- **Accepted:** a buyer chooses their own country, so they decide who sees their requirements; that is the point.
+  `admin.support_check_entity` (Help & Support) still accepts any open requirement's id in a ticket, so a seller
+  who has an overseas requirement's id can learn that it exists. Ids are random UUIDs and the ticket shows staff,
+  not the seller, its title; not changed here.
+
 ### 2026-10-09 — Subscriptions P6: a filter was the wrong control — Severity: Medium — Fixed before release
 - **Found by** the third background review, of the second fix (filter bypass / parser differential, and two more
   it didn't name).

@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
 import { fetchMyContactInfo } from "@/lib/queries/myContact";
+import { countryCodeFor } from "@/data/countries";
 
 type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert"];
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -125,7 +126,13 @@ export async function saveProfileFull(userId: string, p: ProfileChanges): Promis
   if (p.businessCity !== undefined) buyer.business_city = p.businessCity || null;
   if (p.state !== undefined) buyer.state = p.state || null;
   if (p.postalCode !== undefined) buyer.postal_code = p.postalCode || null;
-  if (p.country !== undefined) buyer.country = p.country || null;
+  if (p.country !== undefined) {
+    buyer.country = p.country || null;
+    // Its code too (subscriptions P7): it decides whether the buyer's requirements are
+    // overseas ones. The database would derive it from the name; sending it keeps the two
+    // together whatever the name's spelling.
+    buyer.country_code = countryCodeFor(p.country);
+  }
   if (p.gstin !== undefined) buyer.gstin = p.gstin || null;
   if (p.pan !== undefined) buyer.pan = p.pan || null;
   if (Object.keys(buyer).length > 1) {

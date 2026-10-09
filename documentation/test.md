@@ -187,6 +187,39 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P7: overseas requirements (local stack: harness 18/18; all eight harnesses green; end to end 25/25; browser 29/29; typecheck 0 in both apps; i18n 7,460/7,460; admin build)
+- **Where:** the local stack with P0–P7 applied; apps on :8092 and :5186 from the `subscriptions/p7-overseas`
+  worktrees. Production was read once (read-only) to confirm the guarded md5s and the buyers' countries.
+- **Harness** `scripts/subscriptions/p7_overseas.sql`, 18/18, and a full replay in one rolled-back transaction: the six
+  patched functions and the policy are put back to their pre-P7 text, the migration runs (its guard passes), and
+  all 14 functions it defines plus the policy come out identical to what is applied. Cases: names to codes and the
+  buyer's code following their country; the stamp with and without VIP's head start; Indian and unlisted buyers;
+  no VIP seller in the category; a requirement sent to one seller; who reads it during and after the head start
+  (VIP, Gold, Silver, Basic, Free, the buyer, another buyer, an admin, anon); an Indian requirement as before; a
+  seller who quoted keeps it; the ranked feed; the quote guard's two refusals; the count; entitlements with grace
+  and the switch; lead alerts (VIP at posting, Gold from the daily run after the head start, not twice); a head
+  start of 0; the switch off; what a browser can't call or write; the admin detail.
+- **Earlier harnesses, again:** P0 29/29, P1 26/26, P2 21/21, P3 18/18, P4 29/29, P5 19/19, P6 26/26.
+- **End to end over HTTP**, 25/25: a typed country becomes its code, a picked code is kept, an unknown one refused;
+  anyone reads the list and no one writes it; the overseas buyer's post is stamped, and marks sent with the post or
+  a later PATCH are ignored while their other edits work; reads by plan during and after the head start; the ranked
+  feed; Gold's quote refused with the opening time, Silver's with the plan line, VIP's and later Gold's accepted; a
+  downgraded seller keeps the one they quoted but not a new one; an Indian requirement read by all; Silver's count
+  (four keys, no titles) and anon refused; entitlements; a seller reads only their own tier; the switch off for the
+  buyer; and the plan of a seller's read shows the tier as an InitPlan and no per-row call to the rule's function.
+- **Speed:** over 20,000 requirements a seller's read took 48 ms with the rule in a function and 3 ms inline.
+- **Browser** (`tests/local/subscriptions-p7.spec.ts`, 3/3): a buyer picks Germany on Business details (saved as
+  Germany/DE); a VIP seller reaches Overseas leads from the menu and sees "Overseas · Germany" and "VIP first look:
+  opens to Gold in 23 h 59 min"; Gold sees it isn't there yet and how many are with VIP, then, after the head start,
+  sees it and quotes; a Silver seller sees the count on Leads and is sent from the page to the plans with the
+  reason; Cosora-Admin shows the switch name and "overseas · Germany" on the detail. With it, 29/29 across
+  `subscriptions-p0` to `-p7`, `plans-and-refunds` and `rfq-leads`. Screens checked at 390 and 1280 wide.
+- **Found and fixed while testing:** the harness's count case assumed no overseas requirements existed (an
+  end-to-end run leaves some), so it now counts from what was there; the read rule through a function was 16 times
+  slower than inline, so the policy and the feed now write it out.
+- **Not checked:** the daily run on its schedule (the local stack has no jobs); real buyers' free-text countries
+  beyond production's one ("India").
+
 ### 2026-10-09 — Subscriptions P6: lead alerts (local stack: harness 26/26; all seven harnesses green; end to end 23/23; browser 26/26; typecheck 0 in both apps; i18n 7,442/7,442; admin build)
 - **Where:** the local stack with P0–P6 applied (the digest job is not scheduled: the local stack has no jobs);
   apps on :8092 and :5186 from the `subscriptions/p6-lead-alerts` worktrees; the dispatcher on the keyed edge
