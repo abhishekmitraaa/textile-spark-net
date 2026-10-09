@@ -492,6 +492,10 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P12; built, not live)
+- Cosora may give a seller a **complimentary plan** (a paid plan at no charge until a date); the seller gets a notice,
+  "You have a complimentary plan". Plan prices can change; a payment already started keeps its price.
+
 ### Changed 2026-10-09 (subscriptions P11; built, not live)
 - **Bulk import** (Silver, Gold and VIP; from Products, "Add many at once from a spreadsheet"): download a template,
   fill it in Excel or Google Sheets, save it as CSV and upload up to 500 products at once. Each goes to review, or is
@@ -784,6 +788,14 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P12; built, not live)
+- **Subscriptions & billing** starts with **At a glance**: paid plans running by plan, recurring revenue a month, plans
+  ending soon and in their grace days, churn, autopay share, payment trouble, complimentary plans, message delivery.
+- **Worklists** on its Subscriptions panel: Ending soon, In grace days, Payment trouble, Complimentary, Downgrades,
+  Lapsed, with a plan filter and a vendor search.
+- **Plan prices**: change a paid plan's price now or from a date; the history keeps every price and why.
+- **Give a complimentary plan** (super admin, finance admin): a paid plan at no charge until a date.
 
 ### Added 2026-10-09 (subscriptions P11; built, not live)
 - **Feature switches** now lists eleven, with "Bulk catalogue import" (it lists sellers).

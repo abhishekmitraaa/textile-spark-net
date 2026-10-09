@@ -99,6 +99,17 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P12: admin tooling reviewed — Severity: Info
+- **Who:** the figures, lists, price history and complimentary plans are read by super_admin, finance_admin and support
+  (as invoices are); prices and complimentary plans are changed by super_admin and finance_admin only. Every function
+  checks the role itself; visitors can't call them; `admin.apply_due_plan_prices` can't be called by any signed-in user.
+- **Giving away revenue is bounded and visible:** a complimentary plan never replaces a paid period or autopay (and
+  can't race a payment: it takes the same per-vendor lock as activation); at most two years; the reason is required
+  and kept in the Admin Log (append-only) and on the grant.
+- **Prices can't surprise a payment in flight:** an order and a mandate carry their own price; a price only takes
+  effect through the history (who, when, why, what it was before).
+- **Search** in the lists is a plain substring match, not a pattern; at most 100 characters.
+
 ### 2026-10-09 — Subscriptions P11: bulk import reviewed — Severity: Info
 - **The product rules can't be skipped:** `import_products` runs with the seller's own rights (the migration refuses a
   definer version), so the insert policy, the listing limit and moderation apply to every row; nothing goes live.

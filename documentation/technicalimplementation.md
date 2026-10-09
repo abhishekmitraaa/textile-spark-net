@@ -3729,3 +3729,36 @@ Migration `20261009150000_subscriptions_p11_catalogue.sql`; harness `scripts/sub
   (template, `readSheet` with spreadsheet row numbers, `importProducts`, `useImportHistory`, the category list);
   `src/pages/BulkImport.tsx` at `/catalogue/bulk-import` behind `TierGate bulk_import`; the link on Products.
 - **Release.** Apply, rename, merge with the switch off, list test sellers, then everyone on Silver and up.
+
+## Subscriptions P12: admin tooling and KPIs (2026-10-09; built, not live)
+
+Migration `20261009160000_subscriptions_p12_admin_tooling.sql`; harness `scripts/subscriptions/p12_admin_tooling.sql` (13 cases);
+spec `tests/local/subscriptions-p12.spec.ts`; Cosora-Admin `src/lib/subscriptionAdmin.ts`, `SubscriptionKpis`,
+`PlanPricesPanel`, `GrantPlanModal`, `pages/Subscriptions.tsx`.
+
+- **Guard.** md5 of `expire_subscriptions` as P4–P11 leave it (`1d5bfaf0…`).
+- **Prices.** `subscription_plan_prices` (plan, monthly, yearly, effective_from, status scheduled/applied/canceled,
+  applied_at, previous_*, reason, created_by, canceled_*); one `scheduled` row per plan (partial unique index); seeded
+  with each plan's price as `applied`. RLS: the subscription readers select; no writes but through functions.
+  `admin_plan_price_set(plan, monthly, yearly, effective date?, reason)`: super/finance; Free has no price; paid ≥ ₹1;
+  yearly ≤ 12 × monthly; up to a year ahead; not today's prices; replaces a waiting change; null/today applies now.
+  `admin_plan_price_cancel(id, reason)`. `admin.apply_due_plan_prices()` locks the plan row, then the change (the
+  setter's order), records the previous price and writes the plan. `expire_subscriptions()` calls it first, inside its
+  own exception block (a failure leaves the change waiting and shows as overdue; the run goes on).
+- **Complimentary plans.** `subscription_grants` (vendor, subscription, plan, starts, ends, reason, granted_by).
+  `admin_subscription_grant(vendor, plan, until date, reason)`: super/finance; paid plan; until tomorrow to two years;
+  active account; takes `subscription_activate`'s per-vendor lock; refused with an autopay mandate that can still charge
+  (authenticated, active, pending, halted) or a paid period running that isn't itself a grant. Upserts the subscription
+  (monthly, active, now → midnight IST after the last day, autopay off, schedule and picks cleared), the cached plan with
+  grace, the grant row; Admin Log reason "Complimentary plan: …"; notice "You have a complimentary plan". The cap trigger
+  brings paused listings back.
+- **Worklist.** `admin_subscription_worklist(view, days, plan, search, after_at, after_vendor, limit ≤ 200)`: from
+  `vendor_profiles` left join `vendor_subscriptions`, one row per vendor; views all (created desc), expiring (end asc),
+  grace, autopay_trouble (mandate pending/halted or a failed order within days, newest trouble first; vendors without a
+  subscription included), granted, downgrade, lapsed (updated desc); keyset on (sort_at, vendor_id). Per page: grace end,
+  latest open mandate, granted, last failed payment in 30 days.
+- **KPIs.** `admin_subscription_kpis()`: running, in grace, by plan, granted, expiring 7/30 (and without autopay),
+  autopay on, MRR by mode (open mandate's own price, else today's list price for the cycle when the latest paid invoice was
+  live or test; grants, demo and unbilled left out), lapsed in 30 days, mandates pending/halted, failed payments in 7 days,
+  open incidents, outbox delivery by channel and status over 7 days.
+- **Release.** Apply, rename, merge; nothing to switch on (admin-only).

@@ -7942,5 +7942,7 @@
  "no category": "કેટેગરી નથી",
  "price \"{0}\" isn't a number": "કિંમત \"{0}\" સંખ્યા નથી",
  "Bulk import comes with Silver, Gold and VIP": "બલ્ક ઇમ્પોર્ટ Silver, Gold અને VIP સાથે મળે છે",
- "Choose one of them to add many products at once from a spreadsheet.": "સ્પ્રેડશીટમાંથી એકસાથે ઘણા પ્રોડક્ટ ઉમેરવા તેમાંથી એક પસંદ કરો."
+ "Choose one of them to add many products at once from a spreadsheet.": "સ્પ્રેડશીટમાંથી એકસાથે ઘણા પ્રોડક્ટ ઉમેરવા તેમાંથી એક પસંદ કરો.",
+ "You have a complimentary plan": "તમને એક મફત પ્લાન મળ્યો છે",
+ "Cosora gave you the {0} plan until {1}, at no charge.": "Cosora એ તમને {1} સુધી {0} પ્લાન મફતમાં આપ્યો છે."
 }

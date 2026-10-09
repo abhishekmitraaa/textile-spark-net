@@ -1,6 +1,6 @@
 {
  "_about": "Text the page shows that is not in this codebase. scripts/i18n-coverage-check.mjs requires every string here in src/i18n/hi.json and gu.json. Each group's _source says where it comes from.",
- "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01.",
+ "notifications_source": "Titles and fixed bodies passed to public.notify() by database functions (this repo's and Cosora-Admin's migrations). A new notify() text goes here too. Checked 2026-09-26 against pg_proc. The ad reason labels in admin.ad_reason_codes are here too: a pause, rejection or suspension notice's body is the label when the admin adds no note. Rechecked 2026-09-28 after admin completion Phase 3. Help & Support's support_notify() texts (migrations 20260930213143 and 20260930213451) were added on 2026-10-01. The complimentary plan notice from admin_subscription_grant() (subscriptions P12, migration 20261009160000) was added on 2026-10-09.",
  "notifications": [
   "Account deletion cancelled",
   "Your account will not be deleted.",
@@ -60,7 +60,9 @@
   "Report recorded",
   "We've recorded your report {0}.",
   "Feedback recorded",
-  "We've recorded your feedback {0}."
+  "We've recorded your feedback {0}.",
+  "You have a complimentary plan",
+  "Cosora gave you the {0} plan until {1}, at no charge."
  ],
  "faqs_source": "public.faqs, active rows (question and answer), as of 2026-09-26. Edited in Cosora-Admin /faqs: an edited FAQ shows in English until its new text is added here and translated. Since Help & Support P5 (2026-10-01) an FAQ can carry its own Hindi and Gujarati (faqs.translations), which the app shows first; this list is then the fallback. The category headings are listed at the end.",
  "faqs": [

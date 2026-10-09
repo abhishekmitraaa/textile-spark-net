@@ -187,6 +187,36 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P12: admin tooling and KPIs (local stack: harness 13/13 and all thirteen harnesses green; a forced-overlap race between a payment and a complimentary plan (and its mutation check); 10,000 more vendors: figures 25–30 ms, each list 2–11 ms; browser 71/71; typecheck 0 in both apps; i18n 7,687/7,687; admin build)
+- **Where:** the local stack with P0–P12 applied; apps on :8092 and :5186 from the `subscriptions/p12-admin-tooling` worktrees.
+- **Harness** `scripts/subscriptions/p12_admin_tooling.sql`, 13/13, and a full replay (7 functions identical). Cases: who
+  may (super and finance set prices; support reads but can't price or give; a vendor nothing; visitors can't call);
+  a price now (plan, history with the previous price, the Admin Log with the reason); scheduled, replaced, cancelled,
+  not twice; the morning run applies the due ones in order and leaves tomorrow's; with the price step broken
+  (mutation) the run still finishes and applies a downgrade; the checks (Free, ₹0, yearly over 12 months, over a year
+  ahead, today's prices, no reason, an unknown plan); an order made before a change fulfils at its own price; a
+  complimentary Gold plan (period to midnight IST, cache with 7 grace days, the grant, the notice, the Admin Log,
+  entitlements); refused over a paid period, open autopay, halted autopay, a suspended account, Free, today, over two
+  years, an unknown vendor, while extending one and winning back a lapsed vendor work; paused listings come back;
+  every worklist view; search, plan filter, pages of 2 without gaps or repeats, soonest first; the KPIs move by
+  exactly what eight fixture vendors add (running, grace, by plan, granted, ending, autopay, lapsed, halted, failed,
+  recurring revenue live and test).
+- **Race:** a payment activating Silver held open while the super admin gives Gold to the same vendor: the grant waited
+  (about 2.6 s), saw the paid period and was refused; Silver stayed. With the grant's lock removed (mutation) it
+  overwrote the paid period with Gold, so the test catches it.
+- **Scale:** 10,000 more vendors with subscriptions in every state, 4,000 invoices, 1,500 mandates, 600 failed payments:
+  the figures in 25–30 ms, each worklist page in 2–11 ms (rolled back).
+- **Browser** (`tests/local/subscriptions-p12.spec.ts`, 3/3): a finance admin schedules a Silver price for next week,
+  cancels it, changes it now and finds it in the history; a vendor's plans page shows the new price; a super admin
+  finds a seller by name and gives Gold until a date, sees it under Complimentary, and is refused for a seller with
+  a paid plan running; the seller has the notice; support sees the figures and the lists (In grace days, Payment
+  trouble with a first payment that failed) but can't give plans or change prices. With it, 71/71 across every
+  local spec. Screens checked at 1440 and 390 wide (the figures' second lines wrap instead of being cut).
+- **Changed while testing:** the Payment trouble list started from subscriptions, so a vendor whose first payment
+  failed (no subscription yet) was missing; it now starts from vendors, and pages by vendor.
+- **The full run** was 70/71 at first: this phase's own spec found two sellers with the same name, one left by its
+  earlier run (accounts stay in the local stack). Each seller it makes now has a name of its own; 6/6 on a double run.
+
 ### 2026-10-09 — Subscriptions P11: bulk catalogue import (local stack: harness 9/9 and all twelve harnesses green; a forced-overlap race on the daily limit (and its mutation check); browser 68/68; typecheck 0 in both apps; i18n 7,685/7,685; admin build)
 - **Where:** the local stack with P0–P11 applied; apps on :8092 and :5186 from the `subscriptions/p11-catalogue` worktrees.
 - **Harness** `scripts/subscriptions/p11_catalogue.sql`, 9/9, and a full replay (3 functions identical). Cases: who may

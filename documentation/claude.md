@@ -300,6 +300,18 @@ undocumented. Deep technical rationale for each lives in
     there; named managers are the deliberate exception, on Gold and VIP only.
   - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
     `admin-invite` and `admin-staff`.
+- **Plan prices change through `admin_plan_price_set`, never by editing `subscription_plans`** (subscriptions P12,
+  2026-10-09; migration `20261009160000_subscriptions_p12_admin_tooling.sql`).
+  - `subscription_plan_prices` keeps every price and the one change waiting per plan. `admin.apply_due_plan_prices()`
+    copies a due change into `subscription_plans.monthly_price / yearly_price`: from the setter when it is "now", and
+    from `expire_subscriptions()` every morning. Every reader keeps reading those two columns; don't price a
+    checkout from the history table.
+  - A price is frozen on each order (`list_rupees`) and each mandate; a new price never changes a payment in flight.
+  - Anything that writes a vendor's subscription takes `subscription_activate`'s lock first
+    (`hashtextextended('cosora.subscription:' || vendor, 0)`); `admin_subscription_grant` does. The cap trigger's lock
+    comes after it.
+  - A subscription is "complimentary" while `subscription_grants` has a row for it with the same plan and end. A
+    later plan change or payment ends that by itself; the grant row is history.
 - **Bulk import runs with the seller's own rights** (subscriptions P11, 2026-10-09; migration
   `20261009150000_subscriptions_p11_catalogue.sql`).
   - `import_products()` is SECURITY INVOKER on purpose: `enforce_product_cap` and `enforce_products_moderation` act only
