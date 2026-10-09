@@ -305,6 +305,11 @@ undocumented. Deep technical rationale for each lives in
     there; named managers are the deliberate exception, on Gold and VIP only.
   - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
     `admin-invite` and `admin-staff`.
+- **Text built into a variable needs listing for the i18n check** (subscriptions complete test run, 2026-10-09).
+  `scripts/i18n-coverage-check.mjs` reads text in display positions only; a label assigned to a variable first
+  (`const action = cond ? `Upgrade to ${name}` : …`) or an exported constant is invisible to it and stays English. Put
+  such text in `src/i18n/external-strings.json` → `computed` with its translations. `scripts/local-stack/surface-sweep.py`
+  finds what slipped through: it reads every page in Hindi and lists English that is left.
 - **A new page needs its rewrite in `vercel.json`** (found in the subscriptions P13 truth pass, 2026-10-09). After
   adding a route to `src/App.tsx`, run `npm run routes:sync`; `npm run build` refuses to run while they differ, and
   without the rewrite a direct load or refresh of the page 404s on Vercel. Run the full build, not only the

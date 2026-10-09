@@ -499,5 +499,20 @@
   "image_urls: up to 6 https links, separated by commas",
   "description is up to 4,000 characters",
   "Product limit reached: your {0} plan allows {1} listed product(s); you already have {2}. Upgrade your plan or remove a listing."
+ ],
+ "computed_source": "Text the code builds into a variable or a constant before rendering it, which the extractor (display positions only) can't see: the plan buttons on /subscription (Subscription.tsx) and the missed-calls note on Advertisements (lib/queries/callAnalytics.ts). Also Profile.tsx's placeholders, CompetitorAds.tsx's \"Category average\", BusinessProfile.tsx's \"Your brand\" and Analytics.tsx's activity notes. Found by the subscriptions sweep in Hindi, 2026-10-09. Add such text here.",
+ "computed": [
+  "Upgrade to {0}",
+  "Switch to {0}",
+  "Switch to yearly",
+  "Switch to monthly",
+  "Choose {0}",
+  "Not tracked — a call row records the dialer opening, not whether the call connected.",
+  "Add phone",
+  "Add your business",
+  "Category average",
+  "Your brand",
+  "No tracked activity in the last {0}. This fills in as buyers browse, search and tap your listings.",
+  "Visit-level tracking is not switched on for this project yet. This panel needs one row per event, with its own timestamp, viewer and source; until the engagement_events table exists a view only bumps a lifetime counter on the product, so there is nothing here to read."
  ]
 }

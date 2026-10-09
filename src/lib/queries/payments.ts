@@ -143,17 +143,14 @@ export interface CheckoutOpts {
 
 // Opens Razorpay Checkout; resolves with the payment fields, rejects with
 // Error("dismissed") if the buyer closes it.
-export function openRazorpayCheckout(opts: CheckoutOpts): Promise<RazorpayHandlerResponse> {
-  return new Promise(async (resolve, reject) => {
-    try {
-      await loadRazorpayScript();
-    } catch (e) {
-      reject(e);
-      return;
-    }
-    if (!window.Razorpay) { reject(new Error("Razorpay unavailable")); return; }
+export async function openRazorpayCheckout(opts: CheckoutOpts): Promise<RazorpayHandlerResponse> {
+  // Loaded first, outside the promise: an async executor swallows a throw instead of rejecting.
+  await loadRazorpayScript();
+  const Razorpay = window.Razorpay;
+  if (!Razorpay) throw new Error("Razorpay unavailable");
+  return new Promise((resolve, reject) => {
     let done = false;
-    const rzp = new window.Razorpay({
+    const rzp = new Razorpay({
       key: opts.keyId,
       order_id: opts.orderId,
       amount: opts.amount,

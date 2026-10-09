@@ -238,22 +238,16 @@ const Index = () => {
             </h3>
             <div className="flex flex-wrap gap-2 sm:gap-3">
               {quickActions.map((action) => (
-                <Link key={action.name} to={action.href}>
-                  <motion.button
-                    whileTap={TAP}
-                    transition={TAP_T}
-                    className="inline-flex items-center gap-2 text-xs sm:text-sm"
-                  >
-                    <Button
-                      variant={action.variant}
-                      size="sm"
-                      className="text-xs sm:text-sm gap-2 pointer-events-none"
-                    >
+                // One link per action: a button inside a button inside a link was invalid HTML
+                // and three tab stops for one action (found by the subscriptions sweep, 2026-10-09).
+                <motion.div key={action.name} whileTap={TAP} transition={TAP_T} className="inline-flex">
+                  <Button asChild variant={action.variant} size="sm" className="text-xs sm:text-sm gap-2">
+                    <Link to={action.href}>
                       <action.icon className="h-4 w-4" />
                       {action.name}
-                    </Button>
-                  </motion.button>
-                </Link>
+                    </Link>
+                  </Button>
+                </motion.div>
               ))}
             </div>
           </motion.div>
@@ -321,13 +315,13 @@ const Index = () => {
                     Your latest product listings
                   </p>
                 </div>
-                <Link to="/products">
-                  <motion.button whileTap={TAP} transition={TAP_T} className="inline-flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
-                    <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm pointer-events-none">
+                <motion.div whileTap={TAP} transition={TAP_T} className="inline-flex">
+                  <Button asChild variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm">
+                    <Link to="/products">
                       View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </motion.button>
-                </Link>
+                    </Link>
+                  </Button>
+                </motion.div>
               </div>
 
               <motion.div variants={section} className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-2 xl:grid-cols-4 lg:gap-4">
@@ -350,13 +344,13 @@ const Index = () => {
                     Top-rated manufacturers for your needs
                   </p>
                 </div>
-                <Link to="/products">
-                  <motion.button whileTap={TAP} transition={TAP_T} className="inline-flex items-center gap-1 text-xs sm:gap-2 sm:text-sm">
-                    <Button variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm pointer-events-none">
+                <motion.div whileTap={TAP} transition={TAP_T} className="inline-flex">
+                  <Button asChild variant="ghost" size="sm" className="gap-1 text-xs sm:gap-2 sm:text-sm">
+                    <Link to="/products">
                       View All <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4" />
-                    </Button>
-                  </motion.button>
-                </Link>
+                    </Link>
+                  </Button>
+                </motion.div>
               </div>
 
               <motion.div variants={listContainer} className="grid gap-3 sm:grid-cols-2 lg:gap-4">

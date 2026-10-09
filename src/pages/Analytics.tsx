@@ -193,12 +193,14 @@ function EventPanel({
 // choropleth needs (`states`, each with a name and a count), so the map is an
 // additive change to this component, not a rewrite.
 function BuyerGeographyCard({ vendorId, days, rangeLabel }: { vendorId: string | undefined; days: number; rangeLabel: string }) {
-  const { data: geo, isPending } = useBuyerGeography(vendorId, days);
+  // isLoading, not isPending: with no vendor (signed out) the query never runs, and a query that
+  // never runs is "pending" for ever, which showed "Loading…" for good (subscriptions sweep, 2026-10-09).
+  const { data: geo, isLoading } = useBuyerGeography(vendorId, days);
   const coverage = coverageSentence(geo);
   const pct = coveragePct(geo);
 
   const body = () => {
-    if (isPending) return <p className="text-sm text-muted-foreground">Loading…</p>;
+    if (isLoading) return <p className="text-sm text-muted-foreground">Loading…</p>;
     // A refusal is not an empty result. Kept distinct on purpose.
     if (!geo || geo.denied) {
       return <p className="text-sm text-muted-foreground">This breakdown is only visible to the vendor it describes.</p>;

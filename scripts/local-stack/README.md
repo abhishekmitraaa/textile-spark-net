@@ -53,10 +53,11 @@ reads the same objects from `pg_catalog`.
 ## What runs against it
 | | Command |
 |---|---|
-| Browser specs (11) | `npx playwright test -c playwright.local.config.ts` (refuses a non-local stack, and checks both dev servers point at it) |
+| Browser specs | `npx playwright test -c playwright.local.config.ts` (refuses a non-local stack, and checks both dev servers point at it) |
 | SQL suites | `docker exec -i supabase_db_localstack psql -U postgres -At < scripts/<suite>.sql` for `support-role-simulation`, `staff-registry-check`, `faqs-p5-check`, `support-sweep-check`. The role simulation expects rollout Off at the start: `update public.support_settings set rollout = 'off', test_profile_ids = '{}'` first |
 | The sweep, end to end | `node scripts/local-stack/sweep-e2e.mjs` (the function, Storage deletes, then the scheduled job firing every 20 s, then removed) |
 | Load | `scripts/load/support.k6.js` through the `grafana/k6` image (see its header) |
+| Every page, every role | `python scripts/local-stack/surface-sweep.py <out>` then `python scripts/local-stack/surface-sweep-analyze.py <out>` (Playwright for Python; `LOCAL_STACK_ENV`, `COSORA_ADMIN_REPO`). Opens every route of both apps as a visitor, a buyer, a seller on each plan and each admin role, on desktop and phone and in Hindi; reports errors, failed requests, broken text, overflow, plan gating and English left in Hindi. Makes and removes its own fixtures (subscriptions complete test run, 2026-10-09) |
 
 ## Checking the copy matches
 Compare counts and digests of functions, policies and grants in both databases: the

@@ -524,17 +524,17 @@ const BusinessProfile = () => {
   // ── ?focus= deep links ────────────────────────────────────────
   // The Business Profile Score checklist links straight at the control that
   // fills each item in. Section targets scroll and flash; modal targets open
-  // the sheet directly.
-  const MODAL_TARGETS: Record<string, () => void> = {
-    "business-category": () => setShowCategoriesModal(true),
-    employees: () => setShowEmployeesModal(true),
-    "year-established": () => setShowYearModal(true),
-    turnover: () => setShowTurnoverModal(true),
-  };
-  const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information"];
-
+  // the sheet directly. The targets live inside the effect (they only call state setters,
+  // which never change), so it still runs once per ?focus=.
   const focusHandledRef = useRef(false);
   useEffect(() => {
+    const MODAL_TARGETS: Record<string, () => void> = {
+      "business-category": () => setShowCategoriesModal(true),
+      employees: () => setShowEmployeesModal(true),
+      "year-established": () => setShowYearModal(true),
+      turnover: () => setShowTurnoverModal(true),
+    };
+    const SECTION_TARGETS = ["about-us", "contact-details", "office-pictures", "detailed-information"];
     const target = searchParams.get("focus");
     if (!target || focusHandledRef.current) return;
     focusHandledRef.current = true;

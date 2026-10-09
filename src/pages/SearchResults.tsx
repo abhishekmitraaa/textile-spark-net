@@ -734,7 +734,7 @@ const SearchResults = () => {
       }
     }
     return list;
-  }, [catalogue, schema, selections, sort, categoryBrowse, tiersOn, viewerState, featuredSlot, featuredRows]);
+  }, [catalogue, schema, selections, sort, categoryBrowse, tiersOn, viewerState, featuredSlot, featuredRows, hasQuery]);
 
   // What was featured to this visitor, once per product per mount.
   const loggedFeatured = useRef<Set<string>>(new Set());
@@ -774,7 +774,6 @@ const SearchResults = () => {
         source: "organic_search",
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typedQuery, products]);
 
   // Suppliers who actually make what was searched for — grouped straight out of

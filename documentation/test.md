@@ -187,6 +187,21 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions: complete test run (local stack: typecheck 0 in both apps; lint clean on every file the build changed; i18n 7,691/7,691; both production builds; database harnesses 269/269 (14 scripts); P11–P13 replays identical; both race tests hold and catch their mutations; end to end over HTTP 180/180 (10 scripts); browser 73/73; the full-surface sweep 831 visits with no crashes, error screens, broken text, stuck pages, overflow or gating mismatches)
+- **Where:** the local stack with P0–P13 applied; both apps from the `subscriptions/p13-truth-pass` worktrees; mock
+  Razorpay, Resend and Meta on :8787; side runtimes on :8099 (P3's), :8098 (ads) and a new :8097 with WhatsApp settings.
+- **Suites:** all 14 database harnesses; the P11–P13 replays; the P11 (daily imports) and P12 (payment against a
+  complimentary plan) race tests with their mutations; the ten HTTP end-to-end scripts P1–P10; every local browser spec;
+  typecheck, lint, i18n and both production builds. Full report: `subscription-session/TEST-REPORT.md`.
+- **The full-surface sweep** (`scripts/local-stack/surface-sweep.py`): 90 app routes and 35 admin routes, as a visitor, a buyer,
+  a seller on each plan and each admin role, 302 visits at phone width and 179 in Hindi, 831 in all. Each visit records
+  where it ended up, console errors, uncaught exceptions, HTTP errors and failed requests, "undefined"/"NaN"/"Invalid Date"
+  on screen, error screens, pages stuck loading, sideways overflow, and English left in Hindi. The first run found the
+  issues fixed here; the last run found none of them.
+- **Not product failures:** P2's end to end first failed 5 checks because the side runtime on :8099 has no WhatsApp
+  settings; on a runtime with them (:8097, phone number id `100200300` as P2 used) it passes 13/13. The Customers page
+  failed locally because the local stack's `admin.customer_summary` had never been populated (refreshed here).
+
 ### 2026-10-09 — Subscriptions P13: the truth pass (local stack: harness 8/8 (and 1/8 on the state before it, which is the point), all fourteen harnesses green (269 cases), browser 73/73, typecheck 0, i18n 7,679/7,679, both production builds)
 - **Where:** the local stack with P0–P13 applied; the app on :8092 from the `subscriptions/p13-truth-pass` worktree.
 - **Harness** `scripts/subscriptions/p13_truth_pass.sql`, 8/8: every plan's products, overseas, ad reach and seal;
