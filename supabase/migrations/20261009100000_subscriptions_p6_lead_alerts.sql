@@ -29,10 +29,14 @@
 --
 -- NOT A WAY TO REACH VENDORS. An alert carries a stranger's words out under Cosora's name,
 -- so what a buyer can do with it is bounded:
---   * the requirement's title goes out without links, email addresses or phone numbers
---     (admin.alert_text), in the bell, the email, WhatsApp, SMS and the digest;
+--   * WhatsApp and SMS carry none of the buyer's words: only the category (Cosora's own)
+--     and the quantity. The email's subject carries none either;
+--   * where the title does go (the bell, the email's body, the digest) it is filtered by
+--     admin.alert_text: nothing a mail or chat app would turn into a link, no address, no
+--     number to call, no invisible characters, whatever script or spacing they are written in;
 --   * a buyer's requirements raise alerts at most buyer_daily_cap times a day (the rest are
---     still on the Leads page, untold);
+--     still on the Leads page, untold). Fan-outs run one at a time, so requirements posted
+--     in the same instant are counted like any others;
 --   * one requirement tells at most max_vendors vendors over both passes together;
 --   * a browser can't write rfqs.embedding (it could before: the column had no guard), so a
 --     buyer can't choose who is "close" or set the second pass off again.
@@ -134,21 +138,40 @@ comment on table admin.lead_alert_runs is
   'That a requirement was matched for alerts, whether its embedding was there, how many vendors it has told (alerted), why it told nobody when the buyer had raised too many alerts that day (skipped), and the last error if matching failed (it never stops the requirement being posted). The daily run matches requirements with no row here, or with an error.';
 
 -- ── 3. Matching and telling ─────────────────────────────────────────────────────────
--- A stranger's words, made safe to send under Cosora's name: one line, no links, email
--- addresses or phone numbers, and no longer than p_max. (The email's HTML escapes values
--- itself; this is about what the words say, not markup.)
+-- A stranger's words, made safe to show under Cosora's name: one line, and nothing in it that
+-- is, or that a mail or chat app would turn into, a link, an address or a number to call. It
+-- reads the text as a person's apps would, not as it was typed: invisible characters are
+-- removed first, and digits and marks from other scripts are read as the plain ones. (The
+-- email's HTML escapes values itself; this is about what the words say, not markup.)
+-- It errs towards removing: a title that runs two words together around a full stop, or
+-- lists eight or more digits, loses those. The requirement itself is never changed.
 create or replace function admin.alert_text(p text, p_max integer default 120)
 returns text
-language sql immutable set search_path = '' as $function$
-  select coalesce(nullif(left(btrim(regexp_replace(
-           regexp_replace(
-             regexp_replace(
-               regexp_replace(
-                 regexp_replace(coalesce(p, ''), '[[:cntrl:]]+', ' ', 'g'),
-                 '(https?://|www\.)[^[:space:]]*', '', 'gi'),
-               '[^[:space:]]+@[^[:space:]]+', '', 'g'),
-             '\+?[0-9][0-9 ().-]{7,}[0-9]', '', 'g'),
-           '[[:space:]]+', ' ', 'g')), greatest(coalesce(p_max, 120), 1)), ''), 'A new requirement')
+language plpgsql immutable set search_path = '' as $function$
+declare
+  t text := coalesce(p, '');
+begin
+  -- Not seen, but they change what is read and what the rules below match: zero-width
+  -- characters, direction marks, the soft hyphen.
+  t := regexp_replace(t, '[\u00AD\u061C\u180E\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]', '', 'g');
+  t := regexp_replace(t, '[[:cntrl:]]+', ' ', 'g');
+  -- Digits and marks from other scripts, as the plain ones the rules look for.
+  t := translate(t,
+    '०१२३४५६७८९૦૧૨૩૪૫૬૭૮૯٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹０１２３４５６７８９．。｡＠：／',
+    '01234567890123456789012345678901234567890123456789...@:/');
+  -- Links: anything with a scheme; www; a name with a dot in it (evil.com/pay needs no
+  -- "http" to be made a link); a dotted number.
+  t := regexp_replace(t, '[a-z][a-z0-9+.-]*:/+[^[:space:]]*', '', 'gi');
+  t := regexp_replace(t, '(^|[[:space:]])www\.[^[:space:]]*', '\1', 'gi');
+  t := regexp_replace(t, '[^[:space:]]*[^[:space:].]\.[^[:space:][:digit:][:punct:]]{2,}[^[:space:]]*', '', 'g');
+  t := regexp_replace(t, '[^[:space:]]*[0-9]{1,3}(\.[0-9]{1,3}){3}[^[:space:]]*', '', 'g');
+  -- Addresses.
+  t := regexp_replace(t, '[^[:space:]]*@[^[:space:]]*', '', 'g');
+  -- A number to call: eight or more digits, however they are spaced or joined.
+  t := regexp_replace(t, '\+?[0-9]([ ()./_+-]*[0-9]){7,}', '', 'g');
+  t := btrim(regexp_replace(t, '[[:space:]]+', ' ', 'g'));
+  return coalesce(nullif(left(t, greatest(coalesce(p_max, 120), 1)), ''), 'A new requirement');
+end
 $function$;
 
 -- rfqs.embedding is the embedding worker's to write. A browser's write is ignored: left to
@@ -189,6 +212,7 @@ declare
   v_qty    text;
   v_clock  time := (now() at time zone 'Asia/Kolkata')::time;
   v_before integer;
+  v_wait   text;
   n        integer := 0;
 begin
   select * into r from public.rfqs where id = p_rfq;
@@ -199,6 +223,17 @@ begin
   if r.created_at < now() - make_interval(hours => cfg.max_age_hours) then
     return 0;
   end if;
+  -- One fan-out at a time. The limits below count what earlier fan-outs wrote, so two
+  -- running together would each find room: a buyer posting several requirements in the
+  -- same instant would pass the daily cap with all of them, and a vendor could be sent
+  -- more than the hourly cap. The wait is bounded: a fan-out that can't start within three
+  -- seconds raises, which its callers record and the daily run retries. It never holds up
+  -- the buyer's own write for longer than that.
+  v_wait := current_setting('lock_timeout');
+  perform set_config('lock_timeout', '3s', true);
+  perform pg_advisory_xact_lock(hashtextextended('cosora.lead_alert_fanout', 0));
+  perform set_config('lock_timeout', v_wait, true);
+
   -- One buyer can't use alerts to reach vendors at will: past buyer_daily_cap requirements
   -- that raised alerts in 24 hours, the next ones tell nobody (they are still on Leads).
   if (select count(*) from admin.lead_alert_runs x join public.rfqs q on q.id = x.rfq_id
@@ -578,22 +613,23 @@ $function$;
 insert into admin.notification_templates (key, channel, locale, subject, body, cta_label, cta_path, transactional, email_switch)
 values
   ('lead_alert', 'email', 'en',
-   'New buyer requirement: {{title}}',
-   E'Hello {{name}},\n\nA buyer has just posted a requirement that matches what you sell.\n\n{{title}}\nCategory: {{category}}\nQuantity: {{quantity}}\n\nThe first quotes a buyer receives get the most attention. Open your leads to send yours.',
+   'New buyer requirement in {{category}}',
+   E'Hello {{name}},\n\nA buyer has just posted a requirement that matches what you sell.\n\nCategory: {{category}}\nQuantity: {{quantity}}\nThe buyer''s words: "{{title}}"\n\nThe first quotes a buyer receives get the most attention. Open your leads on Cosora to read it in full and send yours. Cosora never asks you to pay, sign in or call a number from a buyer''s requirement.',
    'Open my leads', '/leads', false, 'emailNewRfq'),
   ('lead_digest', 'email', 'en',
    '{{count}} on Cosora',
    E'Hello {{name}},\n\n{{count}} matched what you sell since your last summary:\n\n{{lines}}\n\n{{more}}',
    'Open my leads', '/leads', false, 'emailNewRfq');
 -- WhatsApp and SMS wait for their approvals (Meta's template of this name and these
--- parameters: {{1}} name, {{2}} title, {{3}} category, {{4}} quantity; a DLT template id
--- for SMS): inactive until then.
+-- parameters: {{1}} name, {{2}} category, {{3}} quantity; a DLT template id for SMS):
+-- inactive until then. Neither carries the buyer's words: only the vendor's own name,
+-- Cosora's category and a number.
 insert into admin.notification_templates (key, channel, locale, body, wa_template, wa_language, wa_params, transactional, active)
 values ('lead_alert', 'whatsapp', 'en',
-        'Hello {{name}}, a buyer just posted a requirement that matches what you sell: {{title}} ({{category}}, quantity {{quantity}}). Open your leads on Cosora to send a quote.',
-        'new_lead_alert', 'en', array['name', 'title', 'category', 'quantity'], false, false);
+        'Hello {{name}}, a buyer just posted a requirement in {{category}} (quantity {{quantity}}) that matches what you sell. Open your leads on Cosora to send a quote.',
+        'new_lead_alert', 'en', array['name', 'category', 'quantity'], false, false);
 insert into admin.notification_templates (key, channel, locale, body, transactional, active)
-values ('lead_alert', 'sms', 'en', 'Cosora: new buyer requirement, {{title}} ({{category}}). Open your leads to quote.', false, false);
+values ('lead_alert', 'sms', 'en', 'Cosora: a new buyer requirement in {{category}}. Open your leads to quote.', false, false);
 
 -- ── 8. Cosora-Admin: is it working ──────────────────────────────────────────────────
 create or replace function public.admin_lead_alert_stats(p_days integer default 7)
@@ -664,8 +700,22 @@ begin
   if (select enabled from public.feature_flags where key = 'lead_alerts') then
     raise exception 'lead_alerts must start switched off';
   end if;
-  if admin.alert_text(E'Need 500 shirts\nhttp://evil.example/x call +91 98765 43210 or a@b.co now') <> 'Need 500 shirts call or now' then
-    raise exception 'alert_text must strip links, addresses and phone numbers: %', admin.alert_text(E'Need 500 shirts\nhttp://evil.example/x call +91 98765 43210 or a@b.co now');
+  -- The filter, against the ways round it: no scheme, another script's digits, an invisible
+  -- character inside a link, a dotted number, odd separators. And what it must leave alone.
+  if admin.alert_text(E'Need 500 shirts\nhttp://evil.example/x call +91 98765 43210 or a@b.co now') <> 'Need 500 shirts call or now'
+     or admin.alert_text('pay at evil.com/pay or bit.ly/x today') <> 'pay at or today'
+     or admin.alert_text(E'see ht\u200Btps://evil.example now') <> 'see now'
+     or admin.alert_text('call ९८७६५ ४३२१० or 98765/43210 or 9_8_7_6_5_4_3_2_1_0') <> 'call or or'
+     or admin.alert_text('open 10.20.30.40/x') <> 'open'
+     or admin.alert_text('mail me＠evil．example') <> 'mail'
+     or admin.alert_text('500 pcs cotton poplin 40s, GSM 180-200, Rs.250 e.g. white') <> '500 pcs cotton poplin 40s, GSM 180-200, Rs.250 e.g. white'
+     or admin.alert_text('५०० कुर्ती चाहिए, सूती कपड़ा') <> '500 कुर्ती चाहिए, सूती कपड़ा' then
+    raise exception 'alert_text lets something through, or removes too much';
+  end if;
+  if exists (select 1 from admin.notification_templates t
+              where t.key = 'lead_alert' and (t.channel in ('whatsapp', 'sms') and (t.body like '%{{title}}%' or 'title' = any (t.wa_params))
+                                              or t.channel = 'email' and t.subject like '%{{title}}%')) then
+    raise exception 'a lead alert must not carry the buyer''s words on WhatsApp, by SMS or in an email subject';
   end if;
 end
 $check$;

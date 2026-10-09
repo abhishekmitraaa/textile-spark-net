@@ -323,7 +323,12 @@ begin
                || ' | ' || (select o.payload ->> 'title' from admin.notification_outbox o where o.profile_id = gold and o.template_key = 'lead_alert');
         j := public.lead_digest_run();
         got := got || ' | ' || (select o.payload ->> 'lines' from admin.notification_outbox o where o.profile_id = basic and o.template_key = 'lead_digest');
-        want := 'New requirement: P6 urgent call or mail | P6 urgent call or mail | - P6 urgent call or mail (Activewear)';
+        -- Without a scheme, in another script's digits, with odd separators: still removed.
+        insert into public.rfqs (id, buyer_id, title, category_id) values (rfq2, buyer, 'P6 pay at evil.com/pay or ९८७६५ ४३२१० or 98765/43210', c1);
+        got := got || ' | ' || (select nt.title from public.notifications nt where nt.profile_id = silver and nt.kind = 'lead_match' and nt.title like 'New requirement: P6 pay%')
+               || ' | subject=' || (select t.subject from admin.notification_templates t where t.key = 'lead_alert' and t.channel = 'email' and t.active order by t.version desc limit 1)
+               || ' | wa=' || (select array_to_string(t.wa_params, ',') from admin.notification_templates t where t.key = 'lead_alert' and t.channel = 'whatsapp');
+        want := 'New requirement: P6 urgent call or mail | P6 urgent call or mail | - P6 urgent call or mail (Activewear) | New requirement: P6 pay at or or | subject=New buyer requirement in {{category}} | wa=name,category,quantity';
       elsif i = 22 then
         update admin.lead_alert_config set buyer_daily_cap = 2;
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq, buyer, 'P6 first', c1);

@@ -257,10 +257,20 @@ undocumented. Deep technical rationale for each lives in
     `admin.lead_alert_runs`; the daily run retries. Keep any new work in it inside that handler.
   - A vendor's own pacing is `public.lead_alert_settings`, written only through `set_lead_alert_settings()`.
   - Told only where the `lead_alerts` switch lists the vendor.
-- **Words from one user that Cosora sends to another go through `admin.alert_text()`** (subscriptions P6): one
-  line, no links, email addresses or phone numbers. The email renderer escapes markup; this is about what the words
-  say under Cosora's name. Anything that pushes a user's text out (bell, email, WhatsApp, SMS) also needs a limit
-  on how often one sender can set it off (`buyer_daily_cap` for lead alerts).
+- **Words from one user that Cosora sends to another** (subscriptions P6):
+  - **Leave them out where you can.** WhatsApp, SMS and email subjects carry Cosora's own words and data only
+    (a category, a number). A template that takes a user's free text on those channels fails the migration's
+    self-check.
+  - **Where they do go** (the bell, an email's body, quoted and labelled as the buyer's), they pass through
+    `admin.alert_text()`: it removes what a mail or chat app would turn into a link, an address or a number to
+    call, reading the text as those apps would (invisible characters, other scripts' digits). A filter that looks
+    for "http" is not one.
+  - Anything that pushes a user's text out needs a limit on how often one sender can set it off
+    (`buyer_daily_cap`).
+- **A limit that counts rows must be checked under a lock.** Two transactions each count before either writes, and
+  both pass. Lead alert fan-outs take one advisory lock (`cosora.lead_alert_fanout`), with a bounded wait so the
+  buyer's own write is never held up for long. A test of such a limit must force the overlap (two sessions, one
+  holding its transaction open): requests fired "at once" didn't overlap and passed with the lock removed.
 - **`rfqs.embedding` is the embedding worker's column.** A browser's write is ignored
   (`trg_rfqs_embedding_guard`). Don't compare vectors in a function with an empty search path: their operators
   live in `extensions`.

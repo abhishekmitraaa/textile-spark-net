@@ -99,6 +99,21 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P6: the first fix's filter and limit could be sidestepped — Severity: Medium — Fixed before release
+- **Found by** the background security review of the hardening commit (input validation / parser differential;
+  race condition / rate-limit bypass), again by category only.
+- **The filter.** It matched links and numbers as they are usually typed. A mail or chat app links `evil.com/pay`
+  with no scheme; digits can be written in Devanagari; a zero-width character splits "https" for a pattern but not
+  for a reader. **Fixed two ways:** the channels where a wrong guess costs most (WhatsApp, SMS, the email's subject)
+  no longer carry the buyer's words at all; and `admin.alert_text` now normalises first and removes anything with a
+  dot in a name, any scheme, any address and eight or more digits however spaced.
+- **The limit.** `buyer_daily_cap` counted committed runs, so requirements posted in the same instant each found
+  room. **Fixed:** fan-outs take one advisory lock. Proven by forcing the overlap with two sessions, with and
+  without the lock.
+- **What is left:** a filter can only remove what it recognises; words alone ("your account is suspended, reply to
+  this") still reach an email's body and the bell, quoted as the buyer's. Several accounts can each spend their own
+  daily cap. Both are bounded by the per-vendor hourly cap and by moderation of requirements (R3).
+
 ### 2026-10-09 — Subscriptions P6: lead alerts could be used to reach vendors — Severity: Medium — Fixed before release
 - **Found by** the background security review of the P6 commit (authorization; content injection and abuse), which
   gave categories only; the specifics below are from re-reading the migration against them.
