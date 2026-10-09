@@ -187,6 +187,25 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P13: the truth pass (local stack: harness 8/8 (and 1/8 on the state before it, which is the point), all fourteen harnesses green (269 cases), browser 73/73, typecheck 0, i18n 7,679/7,679, both production builds)
+- **Where:** the local stack with P0–P13 applied; the app on :8092 from the `subscriptions/p13-truth-pass` worktree.
+- **Harness** `scripts/subscriptions/p13_truth_pass.sql`, 8/8: every plan's products, overseas, ad reach and seal;
+  placement, account manager and support priority; lead channels, alerts, CRM and catalogue, each against the
+  plan's limits; no over-promising words; the five FAQs rewritten (six rows) and translated, none stale; the
+  usage table without grants but still there; the copy plain enough to translate; an order without its payment
+  mode refused with both shims off.
+- **The harness on the state before P13** (the replay with the migration left out): 1/8. It names the old copy's
+  overclaims: Silver's "Dedicated", Gold's "Full access (SMS)", VIP's "Custom global", "Dedicated success team",
+  "Top 1 in segment" and "100% trusted seal"; the stale FAQs; the usage table's grants; the shims. After it: 8/8.
+- **All fourteen harnesses** with the shims off: 269 cases green, after two harness fixes. P0's fixture inserted
+  orders without a mode; it now names one when the column exists. P1's shim case now checks the refusal while
+  the shims are off and the old fill-in while they are on (re-run with them on, rolled back: pass).
+- **Browser** (`tests/local/subscriptions-p13.spec.ts`, 2/2): the comparison shows Silver's shared account team,
+  VIP's 24-hour first look and seal name, nothing "dedicated" or "100%"; the autopay FAQ opens to the new answer;
+  in Hindi the comparison and the answer read in Hindi. With it, 73/73 across every local spec.
+- **Builds:** the vendor app's production build failed its route check (eight pages from P6–P11 had no rewrite in
+  `vercel.json`); after `npm run routes:sync` it builds. Cosora-Admin builds (unchanged since P12).
+
 ### 2026-10-09 — Subscriptions P12: admin tooling and KPIs (local stack: harness 13/13 and all thirteen harnesses green; a forced-overlap race between a payment and a complimentary plan (and its mutation check); 10,000 more vendors: figures 25–30 ms, each list 2–11 ms; browser 71/71; typecheck 0 in both apps; i18n 7,687/7,687; admin build)
 - **Where:** the local stack with P0–P12 applied; apps on :8092 and :5186 from the `subscriptions/p12-admin-tooling` worktrees.
 - **Harness** `scripts/subscriptions/p12_admin_tooling.sql`, 13/13, and a full replay (7 functions identical). Cases: who

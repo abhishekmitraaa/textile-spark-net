@@ -321,6 +321,22 @@ begin
         select count(*) into n from storage.objects where bucket_id = 'invoices' and name like '%P1-%';
         got := got || ', finance ' || n;
         want := 'vendor ' || vendor || '/P1-HARNESS.v1.pdf, moderator 0, finance 2';
+      elsif i = 26 and exists (select 1 from pg_trigger where tgname = 'trg_subscription_payment_orders_mode' and tgenabled = 'D') then
+        -- P13 switched the shims off: every writer says its mode now, so a missing one is refused.
+        reset role;
+        begin
+          insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status)
+          values ('order_p1_old', vendor, 'gold', 'monthly', 271300, 'created');
+          got := 'order guessed';
+        exception when not_null_violation then got := 'order refused';
+        end;
+        begin
+          insert into public.subscription_invoices (vendor_id, plan_id, amount, gst_amount, status, razorpay_payment_id, razorpay_order_id, invoice_number)
+          values (vendor, 'gold', 2299, 414, 'paid', 'pay_p1_old', 'order_p1_old', 'P1-OLD-1');
+          got := got || ', invoice guessed';
+        exception when not_null_violation then got := got || ', invoice refused';
+        end;
+        want := 'order refused, invoice refused';
       elsif i = 26 then
         -- What the payment functions deployed before P1 write: no mode, no document type.
         insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status)

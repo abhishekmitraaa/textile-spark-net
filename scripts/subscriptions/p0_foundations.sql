@@ -69,9 +69,17 @@ begin
   on conflict (vendor_id) do update set plan_id = 'gold', billing_cycle = 'monthly', status = 'active',
     current_period_start = now() - interval '20 days', current_period_end = now() + interval '40 days',
     scheduled_plan_id = null, scheduled_billing_cycle = null, scheduled_from = null;
-  insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status)
-  values ('order_p0_harness_1', vendor, 'gold', 'monthly', 271282, 'created'),
-         ('order_p0_harness_2', other, 'basic', 'monthly', 82482, 'created');
+  if exists (select 1 from information_schema.columns where table_schema = 'public'
+              and table_name = 'subscription_payment_orders' and column_name = 'payment_mode') then
+    -- Since P1 every order says its mode; P13 switched off the shim that guessed it.
+    execute $o$insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status, payment_mode)
+      values ('order_p0_harness_1', $1, 'gold', 'monthly', 271282, 'created', 'test'),
+             ('order_p0_harness_2', $2, 'basic', 'monthly', 82482, 'created', 'test')$o$ using vendor, other;
+  else
+    insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status)
+    values ('order_p0_harness_1', vendor, 'gold', 'monthly', 271282, 'created'),
+           ('order_p0_harness_2', other, 'basic', 'monthly', 82482, 'created');
+  end if;
 
   for i in 1..array_length(labels, 1) loop
     begin

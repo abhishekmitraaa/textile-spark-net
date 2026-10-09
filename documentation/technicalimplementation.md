@@ -3762,3 +3762,24 @@ spec `tests/local/subscriptions-p12.spec.ts`; Cosora-Admin `src/lib/subscription
   live or test; grants, demo and unbilled left out), lapsed in 30 days, mandates pending/halted, failed payments in 7 days,
   open incidents, outbox delivery by channel and status over 7 days.
 - **Release.** Apply, rename, merge; nothing to switch on (admin-only).
+
+## Subscriptions P13: the truth pass (2026-10-09; built, not live)
+
+Migration `20261009170000_subscriptions_p13_truth_pass.sql`; harness `scripts/subscriptions/p13_truth_pass.sql` (8 cases);
+spec `tests/local/subscriptions-p13.spec.ts`; release order in `subscription-session/RELEASE-RUNBOOK.md`.
+
+- **Plan copy.** `display` rewritten for all five plans (products, international, ad, trust, search,
+  account_manager, lead_channel, alerts, crm; catalog from P11). The self-check ties `products` to
+  `limits.product_cap` and refuses "dedicated", "100%", SMS, "custom global" and "top 1 in segment". The harness maps
+  every other row to its limit (`overseas_tier`, `ad_location_scope`, `has_verified_badge`, `featured`/`search_boost_tier`,
+  `am_level`/`support_priority`, `lead_alert_channels`/`lead_alert_priority`, `has_realtime_alerts`, `crm_level`,
+  `catalogue`).
+- **FAQs.** Five answers (six rows) updated with `translations.hi/gu.answer`, each matched on its question and
+  the md5 of the answer it replaces; an edited row is left alone with a notice. The FAQ snapshot trigger rebuilds
+  the CDN copies on the write.
+- **Retired.** `subscription_usage`: grants revoked, comment says so. `trg_subscription_payment_orders_mode` and
+  `trg_subscription_invoices_mode` (P1's expand-phase shims): disabled. Drops are SQL-editor steps in the runbook.
+- **Client.** `Subscription.tsx`: comparison row labels; accent → `brand-vendor` (the popular plan's button
+  included). `vercel.json`: rewrites for the eight new pages.
+- **Harness adjustments.** P0's fixture names its orders' mode when the column exists; P1's case 26 checks the
+  refusal when the shims are off and the old fill-in when they are on.

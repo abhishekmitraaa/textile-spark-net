@@ -43,16 +43,17 @@ const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 
 // Comparison-table rows are modelled from the plan's `display` jsonb (one entry
 // per spec row) so the whole table is data-driven — no hardcoded matrix.
+// Labels say what each row is as built (subscriptions P13 truth pass, 2026-10-09).
 const FEATURE_ROWS: { key: keyof PlanDisplay; label: string }[] = [
   { key: "products", label: "Products listed" },
-  { key: "international", label: "International buyer access" },
-  { key: "ad", label: "Ad location" },
-  { key: "trust", label: "Verified / Cosora trust seal" },
-  { key: "search", label: "Search result position" },
-  { key: "account_manager", label: "Dedicated account manager" },
-  { key: "lead_channel", label: "Lead access channel" },
-  { key: "alerts", label: "Real-time lead alerts" },
-  { key: "crm", label: "CRM & lead management" },
+  { key: "international", label: "Overseas requirements" },
+  { key: "ad", label: "Ad reach" },
+  { key: "trust", label: "Trust seal" },
+  { key: "search", label: "Placement in search and categories" },
+  { key: "account_manager", label: "Account manager" },
+  { key: "lead_channel", label: "How leads reach you" },
+  { key: "alerts", label: "Instant lead alerts" },
+  { key: "crm", label: "CRM" },
   { key: "catalog", label: "Catalogue" },
 ];
 
@@ -87,7 +88,7 @@ function renderCell(v: string, highlight: boolean) {
       </div>
     );
   }
-  return <span className={`text-xs font-semibold ${highlight ? "text-accent" : "text-foreground"}`}>{v}</span>;
+  return <span className={`text-xs font-semibold ${highlight ? "text-brand-vendor" : "text-foreground"}`}>{v}</span>;
 }
 
 export default function Subscription() {
@@ -330,7 +331,7 @@ export default function Subscription() {
         {/* Header + billing toggle */}
         <motion.div variants={section} className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <Badge variant="outline" className="mb-3 border-accent/30 bg-accent/10 text-accent">
+            <Badge variant="outline" className="mb-3 border-brand-vendor/30 bg-brand-vendor/10 text-brand-vendor">
               <Sparkles className="mr-1 h-3 w-3" /> Upgrade &amp; Save
             </Badge>
             <h1 className="text-3xl font-bold text-foreground lg:text-4xl">Choose Your Growth Plan</h1>
@@ -355,13 +356,13 @@ export default function Subscription() {
           {/* `relative` keeps the decorative gradient inside this card. Without it the layer
               was positioned against the page once the entrance animation ended, and sat over
               whatever followed (it swallowed the Autopay card's clicks). */}
-          <Card className="relative overflow-hidden border-accent/20">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-accent/5 via-transparent to-accent/10" />
+          <Card className="relative overflow-hidden border-brand-vendor/20">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-vendor/5 via-transparent to-brand-vendor/10" />
             <CardHeader className="relative pb-4">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-accent/80 shadow-gold">
-                    <Crown className="h-7 w-7 text-accent-foreground" />
+                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-vendor to-brand-vendor/80 shadow-gold">
+                    <Crown className="h-7 w-7 text-white" />
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
@@ -477,7 +478,7 @@ export default function Subscription() {
 
         {/* Plan cards — all five tiers, live */}
         {plansLoading ? (
-          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-accent" /></div>
+          <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-brand-vendor" /></div>
         ) : (
           <motion.div variants={listContainer} className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
             {plans.map((plan) => {
@@ -504,12 +505,12 @@ export default function Subscription() {
                 <motion.div key={plan.id} variants={listItem} className="relative">
                   {popular && (
                     <div className="absolute -top-3 left-0 right-0 z-10 flex justify-center">
-                      <Badge className="bg-accent px-4 py-1 text-accent-foreground shadow-gold">
+                      <Badge className="bg-brand-vendor px-4 py-1 text-white shadow-gold">
                         <Star className="mr-1 h-3 w-3 fill-current" /> Most Popular
                       </Badge>
                     </div>
                   )}
-                  <Card className={`relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-lg ${popular ? "border-2 border-accent shadow-gold" : `border-2 ${style.ring}`} ${isCurrent ? "ring-2 ring-accent/20" : ""}`}>
+                  <Card className={`relative flex h-full flex-col overflow-hidden transition-all duration-300 hover:shadow-lg ${popular ? "border-2 border-brand-vendor shadow-gold" : `border-2 ${style.ring}`} ${isCurrent ? "ring-2 ring-brand-vendor/20" : ""}`}>
                     <CardHeader className="relative pb-3 pt-7 text-center">
                       <div className="mx-auto mb-2">
                         <Badge className={style.chip}>{plan.name}</Badge>
@@ -546,8 +547,8 @@ export default function Subscription() {
                       </ul>
                       <div className="mt-auto pt-2">
                         <Button
-                          variant={popular ? "gold" : "outline"}
-                          className="w-full"
+                          variant={popular ? "default" : "outline"}
+                          className={popular ? "w-full bg-brand-vendor text-white shadow-md hover:bg-brand-vendor/90" : "w-full"}
                           disabled={busy || plan.id === "free" || renewBlocked || (isCurrent && plan.is_invite_only) || checkoutClosed}
                           onClick={() => buy(plan)}
                         >
@@ -572,7 +573,7 @@ export default function Subscription() {
           <motion.div variants={section}>
             <Card className="overflow-hidden">
               <CardHeader className="border-b border-border bg-gradient-to-r from-secondary/50 to-transparent">
-                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-accent" /> Detailed Feature Comparison</CardTitle>
+                <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-brand-vendor" /> Detailed Feature Comparison</CardTitle>
                 <CardDescription>Every plan feature, side by side</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
@@ -581,8 +582,8 @@ export default function Subscription() {
                     <div className="grid border-b border-border bg-muted/30" style={{ gridTemplateColumns: `1.4fr repeat(${plans.length}, 1fr)` }}>
                       <div className="p-4 text-sm font-semibold text-muted-foreground">FEATURES</div>
                       {plans.map((p) => (
-                        <div key={p.id} className={`p-4 text-center ${p.id === currentPlanId ? "bg-accent/10" : ""}`}>
-                          <p className={`text-sm font-bold ${p.id === "gold" ? "text-accent" : "text-foreground"}`}>{p.name}</p>
+                        <div key={p.id} className={`p-4 text-center ${p.id === currentPlanId ? "bg-brand-vendor/10" : ""}`}>
+                          <p className={`text-sm font-bold ${p.id === "gold" ? "text-brand-vendor" : "text-foreground"}`}>{p.name}</p>
                           <p className="text-[11px] text-muted-foreground">{formatINR(p.monthly_price)}/mo</p>
                         </div>
                       ))}
@@ -598,7 +599,7 @@ export default function Subscription() {
                         >
                           <div className="flex items-center p-4 text-sm text-foreground">{row.label}</div>
                           {plans.map((p) => (
-                            <div key={p.id} className={`flex items-center justify-center p-4 text-center ${p.id === currentPlanId ? "bg-accent/5" : ""}`}>
+                            <div key={p.id} className={`flex items-center justify-center p-4 text-center ${p.id === currentPlanId ? "bg-brand-vendor/5" : ""}`}>
                               {renderCell(p.display[row.key] ?? "", p.id === "gold" || p.id === "vip")}
                             </div>
                           ))}
@@ -621,7 +622,7 @@ export default function Subscription() {
         <motion.div variants={section}>
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-accent" /> Tax details</CardTitle>
+              <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-brand-vendor" /> Tax details</CardTitle>
               <CardDescription>Saved to your profile and printed on every invoice for input tax credit.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -734,7 +735,7 @@ export default function Subscription() {
 function UsageTile({ icon: Icon, label, used, cap }: { icon: typeof Package; label: string; used: number; cap: number }) {
   const unlimited = isUnlimited(cap);
   const pct = usagePct(used, cap);
-  const color = pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-amber-500" : "bg-accent";
+  const color = pct >= 90 ? "bg-destructive" : pct >= 70 ? "bg-amber-500" : "bg-brand-vendor";
   return (
     <div className="rounded-xl border border-border bg-card/80 p-4 backdrop-blur-sm">
       <div className="flex items-center justify-between">
@@ -744,7 +745,7 @@ function UsageTile({ icon: Icon, label, used, cap }: { icon: typeof Package; lab
         </span>
       </div>
       <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
-        <motion.div initial={{ width: 0 }} animate={{ width: unlimited ? "8%" : `${pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }} className={`h-full rounded-full ${unlimited ? "bg-accent/40" : color}`} />
+        <motion.div initial={{ width: 0 }} animate={{ width: unlimited ? "8%" : `${pct}%` }} transition={{ duration: 0.8, ease: "easeOut" }} className={`h-full rounded-full ${unlimited ? "bg-brand-vendor/40" : color}`} />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">{unlimited ? "Unlimited" : `${pct}% used`}</p>
     </div>

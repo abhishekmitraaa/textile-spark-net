@@ -52,9 +52,14 @@ Rules decided before or outside of Claude Code sessions.
   typing. Audio messages in chat and voice-to-text in the RFQ form are critical for the
   real user base, not nice-to-haves.
 - **Five plans: Free, Basic, Silver, Gold and Cosora VIP** (VIP open to every vendor at its list
-  price since 2026-10-08, Mitra; it was invite-only). They determine product listing caps and
-  geographic ad reach. **Leads are the same on every plan** (Mitra, 2026-10-02): the same
-  ranked feed and no cap on how many a vendor quotes on (RFQ/leads R2).
+  price since 2026-10-08, Mitra; it was invite-only). They determine product listing caps, ad
+  reach by state, the seal tier, featured places, how leads reach the seller, the CRM, an
+  account manager, overseas requirements and bulk import: `subscription_plans.limits`, read
+  through `vendor_entitlements()` (subscriptions P0-P12). The plans page's copy
+  (`subscription_plans.display`) must say what the limits give; `scripts/subscriptions/p13_truth_pass.sql`
+  checks it. **Leads are the same on every plan** (Mitra, 2026-10-02): the same ranked feed and
+  no cap on how many a vendor quotes on (RFQ/leads R2), except requirements from overseas buyers,
+  which only Gold and VIP see, VIP 24 hours first (Mitra, 2026-10-08; subscriptions P7).
 - **Seller registration documents** (Seller Registration FAQ, Andy 2026-10-02): PAN card;
   GST certificate when registered for GST (registering without GST is allowed); a business
   registration (Udyam/MSME, incorporation certificate, shop licence, partnership deed or
@@ -300,6 +305,14 @@ undocumented. Deep technical rationale for each lives in
     there; named managers are the deliberate exception, on Gold and VIP only.
   - `admin.is_team_role()` now includes `account_manager`; change it with `TEAM_ROLES` in Cosora-Admin's `roles.ts`,
     `admin-invite` and `admin-staff`.
+- **A new page needs its rewrite in `vercel.json`** (found in the subscriptions P13 truth pass, 2026-10-09). After
+  adding a route to `src/App.tsx`, run `npm run routes:sync`; `npm run build` refuses to run while they differ, and
+  without the rewrite a direct load or refresh of the page 404s on Vercel. Run the full build, not only the
+  typecheck, before calling a phase done.
+- **The plans page says what the limits give** (subscriptions P13, 2026-10-09). `subscription_plans.display` is the
+  copy; `subscription_plans.limits` (through `vendor_entitlements()`) is what a seller gets.
+  `scripts/subscriptions/p13_truth_pass.sql` checks every row of every plan against the limits and fails on words
+  that promise what isn't built ("dedicated", "100%", SMS). Change both together, and re-run it.
 - **Plan prices change through `admin_plan_price_set`, never by editing `subscription_plans`** (subscriptions P12,
   2026-10-09; migration `20261009160000_subscriptions_p12_admin_tooling.sql`).
   - `subscription_plan_prices` keeps every price and the one change waiting per plan. `admin.apply_due_plan_prices()`

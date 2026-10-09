@@ -53,6 +53,10 @@
       "destination": "/api/sitemap"
     },
     {
+      "source": "/account-manager",
+      "destination": "/index.html"
+    },
+    {
       "source": "/add-social-links",
       "destination": "/index.html"
     },
@@ -117,6 +121,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/catalogue/bulk-import",
+      "destination": "/index.html"
+    },
+    {
       "source": "/categories",
       "destination": "/index.html"
     },
@@ -142,6 +150,18 @@
     },
     {
       "source": "/cosora-studio/:id",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/crm",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/crm/analytics",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/crm/follow-ups",
       "destination": "/index.html"
     },
     {
@@ -229,6 +249,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/lead-alerts",
+      "destination": "/index.html"
+    },
+    {
       "source": "/leads",
       "destination": "/index.html"
     },
@@ -266,6 +290,10 @@
     },
     {
       "source": "/onboarding",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/overseas-leads",
       "destination": "/index.html"
     },
     {
@@ -454,6 +482,10 @@
     },
     {
       "source": "/video-closeups",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/visibility",
       "destination": "/index.html"
     }
   ]

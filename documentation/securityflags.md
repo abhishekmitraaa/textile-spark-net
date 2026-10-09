@@ -99,6 +99,13 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P13: truth pass reviewed — Severity: Info
+- **Stricter writes:** with P1's shims off, an order or invoice without its payment mode is refused instead of being
+  guessed as "test"; nothing can be recorded in the wrong money mode by omission.
+- **Less surface:** `subscription_usage` had insert, update and delete grants for visitors and signed-in users (its
+  RLS let nobody through, but the grants were there); they are revoked. Dropping it is in the release runbook.
+- **Claims:** the plans page and FAQs no longer promise a dedicated manager to Silver, SMS alerts or a "100%" seal.
+
 ### 2026-10-09 — Subscriptions P12: admin tooling reviewed — Severity: Info
 - **Who:** the figures, lists, price history and complimentary plans are read by super_admin, finance_admin and support
   (as invoices are); prices and complimentary plans are changed by super_admin and finance_admin only. Every function

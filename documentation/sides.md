@@ -427,8 +427,10 @@ rather than a supplier directory.
   India), placement pricing, benchmarks, and TradeSEAL verification purchase.
 - **Competitor ads** — see what competitors in your category and city are advertising and at
   what budget. A deliberate retention and upsell mechanic.
-- **Subscriptions** — Basic / Silver / Gold, determining lead volume, product listing caps
-  and ad geography. Enforced by `enforce_plan_limits`. Invoices are first-class.
+- **Subscriptions** — Free / Basic / Silver / Gold / Cosora VIP, determining product listing
+  caps, ad reach by state, the seal tier, featured places, how leads reach the seller, the CRM,
+  an account manager, overseas requirements and bulk import (`vendor_entitlements()`). Every
+  plan quotes on unlimited leads. Enforced by `enforce_plan_limits`. Invoices are first-class.
   A plan is paid for one period at a time, or renewed automatically by **autopay** (Razorpay
   Subscriptions; subscriptions P3, built 2026-10-08, not live), which the seller can turn off at any time.
   The Subscription page's FAQ is admin-editable (2026-09-23) and ends in a **Contact us**
@@ -491,6 +493,13 @@ rather than a supplier directory.
 5. Receive leads and quote requests; respond with quotes.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
+
+### Changed 2026-10-09 (subscriptions P13; built, not live)
+- **The plans page** says what each plan gives as built (Silver's shared account team, Gold's named manager,
+  overseas requirements on Gold and VIP with VIP's 24-hour first look, featured places that rotate, no SMS
+  promise), with clearer row names, in vendor blue.
+- **FAQs** on autopay, renewal, lead limits, the lowest plan and how leads work are true again, in English,
+  Hindi and Gujarati.
 
 ### Changed 2026-10-09 (subscriptions P12; built, not live)
 - Cosora may give a seller a **complimentary plan** (a paid plan at no charge until a date); the seller gets a notice,
