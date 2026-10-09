@@ -274,7 +274,9 @@ undocumented. Deep technical rationale for each lives in
     reads through each.
   - **A new definer function that hands requirements to vendors must apply it too:** definer functions skip the policy.
   - `rfqs.overseas`, `buyer_country_code` and `overseas_vip_until` are stamped by `rfqs_overseas_stamp()`; a
-    browser's write to them is undone (`admin.trusted_caller()`).
+    browser's write to them is undone (`admin.trusted_caller()`). The buyer's update policy covers every column, so
+    the stamp also runs when `vendor_id` or `category_id` changes: anything posting decided must follow the
+    buyer's later edits, or the edit is a way round it.
   - A buyer's country is `buyer_profiles.country_code` (references `public.countries`). `src/data/countries.ts`
     and the table come from one generated list: change both together. No country counts as India.
 - **Keep functions with a `set` clause out of per-row policy tests.** Postgres never inlines them, so each row

@@ -3562,11 +3562,15 @@ spec `tests/local/subscriptions-p7.spec.ts`.
   `admin.vendor_overseas_tier(vendor)` reads it from `vendor_effective_plan` (the grace days count; service role
   only); `my_overseas_tier()` answers for the caller (it is in the policy, so every role may call it).
   `admin.lead_alert_config.overseas_head_start_hours` (24; 0 to 168).
-- **Stamp.** `rfqs_overseas_stamp()`, definer, before insert or update of the three columns. Insert:
-  `buyer_country_code` from the buyer's profile; `overseas` when that isn't IN and
-  `feature_on_for('overseas_leads', buyer)`; `overseas_vip_until = now() + head start` when the requirement is
-  open (no `vendor_id`), has a category, and an active VIP subscription (inside its grace days) has a live listing
-  in it. Update: the old values are restored unless `admin.trusted_caller()`. Index `rfqs_overseas_idx` on
+- **Stamp.** `rfqs_overseas_stamp()`, definer, before insert or update of the three columns, `vendor_id` and
+  `category_id`. Insert: `buyer_country_code` from the buyer's profile; `overseas` when that isn't IN and
+  `feature_on_for('overseas_leads', buyer)`; `overseas_vip_until = now() + admin.overseas_head_start(category)`
+  when the requirement is open (no `vendor_id`). `admin.overseas_head_start(category)` is the configured hours
+  when an active VIP subscription (inside its grace days, account in good standing) has a live listing in the
+  category, else null. Update: the three are restored unless `admin.trusted_caller()`; then, for an overseas open
+  requirement, opening it (`vendor_id` was set) sets `greatest(vip_until, now() + head start)`, and a new
+  category with no head start yet sets `created_at + head start` if that is still ahead. A running head start is
+  never shortened. Index `rfqs_overseas_idx` on
   `created_at desc where overseas`.
 - **Read rule.** In `rfqs_select`, for an active open requirement: `not overseas or (select my_overseas_tier()) = 'vip'
   or ((select my_overseas_tier()) = 'gold' and (overseas_vip_until is null or now() >= overseas_vip_until)) or

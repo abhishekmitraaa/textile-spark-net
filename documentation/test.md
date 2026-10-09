@@ -187,7 +187,7 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-09 — Subscriptions P7: overseas requirements (local stack: harness 18/18; all eight harnesses green; end to end 25/25; browser 29/29; typecheck 0 in both apps; i18n 7,460/7,460; admin build)
+### 2026-10-09 — Subscriptions P7: overseas requirements (local stack: harness 19/19; all eight harnesses green; end to end 27/27; browser 29/29; typecheck 0 in both apps; i18n 7,460/7,460; admin build)
 - **Where:** the local stack with P0–P7 applied; apps on :8092 and :5186 from the `subscriptions/p7-overseas`
   worktrees. Production was read once (read-only) to confirm the guarded md5s and the buyers' countries.
 - **Harness** `scripts/subscriptions/p7_overseas.sql`, 18/18, and a full replay in one rolled-back transaction: the six
@@ -217,6 +217,7 @@ file was created; they record real runs, but only those the changelog captured.
 - **Found and fixed while testing:** the harness's count case assumed no overseas requirements existed (an
   end-to-end run leaves some), so it now counts from what was there; the read rule through a function was 16 times
   slower than inline, so the policy and the feed now write it out.
+- **After the security review:** harness case 19 (a requirement sent to one seller and then opened gets the head start from then; a category chosen after posting, or moved from Gold's category to the VIP's, gets what posting in it would have; one posted 30 hours ago gets none; a running head start isn't shortened by a move; Gold reads only the late one). Replay 15 functions identical. **Mutation-checked:** with the new block removed, case 19 fails. End to end 27/27 with the same two checks through PostgREST (POST sent to Silver then PATCH ${T}vendor_id: null${T}; POST with no category then PATCH it).
 - **Not checked:** the daily run on its schedule (the local stack has no jobs); real buyers' free-text countries
   beyond production's one ("India").
 

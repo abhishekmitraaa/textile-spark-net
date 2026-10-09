@@ -12,7 +12,9 @@
 -- VIP vendor has a published listing in its category). The three columns are the database's:
 -- a browser's write to them is ignored, including the buyer's own (their update policy covers
 -- every column, so without this they could un-mark their requirement, or a vendor's page
--- would trust a field anyone could set).
+-- would trust a field anyone could set). The buyer can still change who a requirement is for
+-- and its category; the head start follows those changes so it can't be skipped by opening a
+-- requirement sent to one vendor, or by choosing the category after posting.
 --
 -- WHO CAN READ IT (the rfqs_select policy, match_vendor_rfqs, the quote guard and lead
 -- alerts all apply the same rule; the guard and the alerts call public.overseas_rfq_visible,
@@ -430,12 +432,42 @@ comment on column public.rfqs.overseas_vip_until is
   'Until when only VIP vendors see an overseas requirement. Null: Gold sees it too (no VIP vendor listed in its category when it was posted, or it isn''t overseas, or it was sent to one vendor).';
 create index rfqs_overseas_idx on public.rfqs (created_at desc) where overseas;
 
+-- VIP's head start for an open requirement in this category: the configured hours when an
+-- active VIP vendor in good standing (inside its grace days) has a live listing in it; null
+-- otherwise (no VIP serves it, no category, or a head start of 0).
+create or replace function admin.overseas_head_start(p_category uuid)
+returns interval
+language plpgsql stable security definer set search_path = '' as $function$
+declare
+  v_hours integer;
+begin
+  if p_category is null then
+    return null;
+  end if;
+  select c.overseas_head_start_hours into v_hours from admin.lead_alert_config c;
+  v_hours := coalesce(v_hours, 24);
+  if v_hours > 0 and exists (
+       select 1
+         from public.vendor_subscriptions s
+         join public.subscription_plans p on p.id = s.plan_id
+        where p.limits ->> 'overseas_tier' = 'vip'
+          and s.status = 'active'
+          and s.current_period_end + admin.grace_interval(s.vendor_id) > now()
+          and public.vendor_account_in_good_standing(s.vendor_id)
+          and exists (select 1 from public.products pr
+                       where pr.vendor_id = s.vendor_id and pr.status::text = 'live' and pr.category_id = p_category)) then
+    return make_interval(hours => v_hours);
+  end if;
+  return null;
+end
+$function$;
+
 create or replace function public.rfqs_overseas_stamp()
 returns trigger
 language plpgsql security definer set search_path = '' as $function$
 declare
-  v_code  text;
-  v_hours integer;
+  v_code text;
+  v_head interval;
 begin
   if tg_op = 'UPDATE' then
     -- The three columns are the database's. A write through the API is undone unless it is
@@ -446,6 +478,25 @@ begin
       new.overseas := old.overseas;
       new.overseas_vip_until := old.overseas_vip_until;
     end if;
+    -- The buyer can also change who a requirement is for and its category, which posting
+    -- decided the head start from. So VIP keeps it when an overseas requirement:
+    --   * opens to everyone after being sent to one vendor: the head start runs from now;
+    --   * gets a category, or a new one, with no head start granted yet: what posting in that
+    --     category would have given, counted from when it was posted.
+    -- A head start already running is never shortened.
+    if new.overseas and new.vendor_id is null and new.category_id is not null then
+      if old.vendor_id is not null then
+        v_head := admin.overseas_head_start(new.category_id);
+        if v_head is not null then
+          new.overseas_vip_until := greatest(coalesce(new.overseas_vip_until, '-infinity'::timestamptz), now() + v_head);
+        end if;
+      elsif new.category_id is distinct from old.category_id and new.overseas_vip_until is null then
+        v_head := admin.overseas_head_start(new.category_id);
+        if v_head is not null and old.created_at + v_head > now() then
+          new.overseas_vip_until := old.created_at + v_head;
+        end if;
+      end if;
+    end if;
     return new;
   end if;
 
@@ -453,24 +504,14 @@ begin
   new.buyer_country_code := v_code;
   new.overseas := v_code is not null and v_code <> 'IN' and admin.feature_on_for('overseas_leads', new.buyer_id);
   new.overseas_vip_until := null;
-  if new.overseas and new.vendor_id is null and new.category_id is not null then
-    select c.overseas_head_start_hours into v_hours from admin.lead_alert_config c;
-    if coalesce(v_hours, 24) > 0 and exists (
-         select 1
-           from public.vendor_subscriptions s
-           join public.subscription_plans p on p.id = s.plan_id
-          where p.limits ->> 'overseas_tier' = 'vip'
-            and s.status = 'active'
-            and s.current_period_end + admin.grace_interval(s.vendor_id) > now()
-            and exists (select 1 from public.products pr
-                         where pr.vendor_id = s.vendor_id and pr.status::text = 'live' and pr.category_id = new.category_id)) then
-      new.overseas_vip_until := now() + make_interval(hours => coalesce(v_hours, 24));
-    end if;
+  if new.overseas and new.vendor_id is null then
+    new.overseas_vip_until := now() + admin.overseas_head_start(new.category_id);
   end if;
   return new;
 end
 $function$;
-create trigger trg_rfqs_overseas_stamp before insert or update of buyer_country_code, overseas, overseas_vip_until on public.rfqs
+create trigger trg_rfqs_overseas_stamp
+  before insert or update of buyer_country_code, overseas, overseas_vip_until, vendor_id, category_id on public.rfqs
   for each row execute function public.rfqs_overseas_stamp();
 
 -- ── 5. Who can read a requirement ───────────────────────────────────────────────────
@@ -689,7 +730,7 @@ declare
   f text;
 begin
   foreach f in array array['admin.vendor_overseas_tier(uuid)', 'public.rfqs_overseas_stamp()', 'public.sync_country_code()',
-                           'public.overseas_rfq_visible(boolean,timestamptz,text)'] loop
+                           'public.overseas_rfq_visible(boolean,timestamptz,text)', 'admin.overseas_head_start(uuid)'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
   end loop;
   grant execute on function public.rfqs_overseas_stamp() to service_role;

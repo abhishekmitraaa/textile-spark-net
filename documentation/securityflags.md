@@ -99,6 +99,21 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P7: VIP's head start could be skipped — Severity: Low — Fixed before release
+- **Found by** the background review of the first P7 commit ("logic-bypass", no detail given). Re-reading the rule's
+  inputs: posting decided the head start, but the buyer's update policy lets them change `vendor_id` and
+  `category_id` afterwards.
+- **The way round:** send an overseas requirement to one seller (no head start, since it isn't open), then open it to
+  everyone, and Gold saw it at once. Likewise post with no category, or in a category no VIP lists in, then choose
+  the VIP's category. Only the buyer could do it, and only to bring their own requirement to Gold sooner.
+- **Fixed:** the stamp also runs when `vendor_id` or `category_id` changes, and gives VIP the head start those
+  edits would otherwise skip (from the moment it opens; or from posting, when a category is chosen later). A running
+  head start is never shortened. Harness case 19, mutation-checked; two end-to-end checks over PostgREST.
+- **Also tightened:** a VIP account that isn't in good standing no longer earns a head start.
+- **Checked and fine:** the ranked feed can't be called without a session (no anon grant), so its "caller is the
+  vendor" test can't be skipped; the catch-up's run log has one row per requirement; a quote moved onto an
+  overseas requirement is checked like a new one.
+
 ### 2026-10-09 — Subscriptions P7: overseas requirements reviewed — Severity: Info
 - **The rule is the database's.** Every path that hands a requirement to a vendor applies it: the read policy, the
   ranked feed (definer), the quote guard (definer) and lead alerts (definer). The page and the badge only label

@@ -30,6 +30,7 @@ declare
   rfq     uuid := 'a7000000-0000-4000-8000-000000000001';
   rfq2    uuid := 'a7000000-0000-4000-8000-000000000002';
   rfq3    uuid := 'a7000000-0000-4000-8000-000000000003';
+  rfq4    uuid := 'a7000000-0000-4000-8000-000000000004';
   labels text[] := array[
     'a typed country becomes a code; the buyer''s code follows',           -- 1
     'an overseas buyer''s requirement is stamped, with VIP''s head start', -- 2
@@ -48,7 +49,8 @@ declare
     'head start of 0 hours: Gold at once',                                 -- 15
     'switch off: nothing is marked and everyone reads everything',         -- 16
     'a tier, the stamp and the list are not a browser''s to call or write', -- 17
-    'staff see the marking on the requirement''s detail'];                -- 18
+    'staff see the marking on the requirement''s detail',                 -- 18
+    'the head start can''t be skipped by the buyer''s later edits'];       -- 19
   got text; want text; i int; n int; n0 int; n1 int; j jsonb;
   out text := '';
 
@@ -318,6 +320,33 @@ begin
                || ' indian=' || coalesce(public.admin_lead_detail(rfq3) ->> 'overseas', 'null');
         reset role;
         want := 'US/United States/true indian=null';
+      elsif i = 19 then
+        -- posted 30 hours ago with no category: too late for a head start when one is chosen
+        insert into public.rfqs (id, buyer_id, title, created_at) values (rfq4, abroad, 'P7 too late', now() - interval '30 hours');
+        perform set_config('request.jwt.claims', json_build_object('sub', abroad, 'role', 'authenticated')::text, true);
+        set local role authenticated;
+        -- sent to one vendor, then opened to everyone
+        insert into public.rfqs (id, buyer_id, title, category_id, vendor_id) values (rfq, abroad, 'P7 sent then opened', c1, basic);
+        got := (select (overseas_vip_until is null)::text from public.rfqs where id = rfq);
+        update public.rfqs set vendor_id = null where id = rfq;
+        -- no category, then one a VIP lists in; Gold's category, then the VIP's
+        insert into public.rfqs (id, buyer_id, title) values (rfq2, abroad, 'P7 category later');
+        update public.rfqs set category_id = c1 where id = rfq2;
+        insert into public.rfqs (id, buyer_id, title, category_id) values (rfq3, abroad, 'P7 category moved', c2);
+        update public.rfqs set category_id = c1 where id = rfq3;
+        update public.rfqs set category_id = c1 where id = rfq4;
+        -- a head start already running isn't shortened by moving to Gold's category
+        update public.rfqs set category_id = c2 where id = rfq;
+        reset role;
+        got := got || ' opened=' || (select (overseas_vip_until > now() + interval '23 hours')::text from public.rfqs where id = rfq)
+               || ' later=' || (select (overseas_vip_until = created_at + interval '24 hours')::text from public.rfqs where id = rfq2)
+               || ' moved=' || (select (overseas_vip_until = created_at + interval '24 hours')::text from public.rfqs where id = rfq3)
+               || ' late=' || (select (overseas_vip_until is null)::text from public.rfqs where id = rfq4);
+        perform set_config('request.jwt.claims', json_build_object('sub', gold, 'role', 'authenticated')::text, true);
+        set local role authenticated;
+        got := got || ' gold reads=' || (select count(*) from public.rfqs where id in (rfq, rfq2, rfq3, rfq4));
+        reset role;
+        want := 'true opened=true later=true moved=true late=true gold reads=1';
       end if;
       reset role;
       raise exception using errcode = 'P0099',
