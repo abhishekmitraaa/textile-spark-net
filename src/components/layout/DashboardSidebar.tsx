@@ -30,6 +30,7 @@ import {
   BookOpen,
   BellRing,
   Globe2,
+  KanbanSquare,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,6 +93,7 @@ const sellerNavigation: NavItem[] = [
 // vendor the database says the feature is theirs.
 const LEAD_ALERTS: NavItem = { name: "Lead alerts", href: "/lead-alerts", icon: BellRing };
 const OVERSEAS_LEADS: NavItem = { name: "Overseas leads", href: "/overseas-leads", icon: Globe2 };
+const CRM: NavItem = { name: "CRM", href: "/crm", icon: KanbanSquare };
 
 interface DashboardSidebarProps {
   isOpen: boolean;
@@ -144,7 +146,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   const navigation = role === "buyer"
     ? buyerNavigation
     : sellerNavigation.flatMap((item) => (item.href === "/leads"
-        ? [item, ...(entitlements?.features.lead_alerts ? [LEAD_ALERTS] : []), ...(entitlements?.features.overseas_leads ? [OVERSEAS_LEADS] : [])]
+        ? [item, ...(entitlements?.features.lead_alerts ? [LEAD_ALERTS] : []), ...(entitlements?.features.overseas_leads ? [OVERSEAS_LEADS] : []),
+           ...(entitlements?.features.crm_pipeline ? [CRM] : [])]
         : [item]));
 
   // On desktop, sidebar is always visible

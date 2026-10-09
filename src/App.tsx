@@ -24,6 +24,9 @@ import Upload from "./pages/Upload";
 import Leads from "./pages/Leads";
 import LeadAlerts from "./pages/LeadAlerts";
 import OverseasLeads from "./pages/OverseasLeads";
+import Crm from "./pages/Crm";
+import CrmFollowUps from "./pages/CrmFollowUps";
+import CrmAnalytics from "./pages/CrmAnalytics";
 import { TierGate } from "./components/TierGate";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
@@ -273,6 +276,9 @@ const App = () => (
             {/* Belongs to a plan (subscriptions P6): shown only when lead alerts are this vendor's. */}
             <Route path="/lead-alerts" element={<ClarityMask><TierGate feature="lead_alerts"><LeadAlerts /></TierGate></ClarityMask>} />
             <Route path="/overseas-leads" element={<ClarityMask><TierGate feature="overseas_leads"><OverseasLeads /></TierGate></ClarityMask>} />
+            <Route path="/crm" element={<ClarityMask><TierGate feature="crm_pipeline"><Crm /></TierGate></ClarityMask>} />
+            <Route path="/crm/follow-ups" element={<ClarityMask><TierGate feature="crm_pipeline"><CrmFollowUps /></TierGate></ClarityMask>} />
+            <Route path="/crm/analytics" element={<ClarityMask><TierGate feature="crm_analytics"><CrmAnalytics /></TierGate></ClarityMask>} />
             <Route path="/notifications" element={<ClarityMask><Notifications /></ClarityMask>} />
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />

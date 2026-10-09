@@ -99,6 +99,19 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P8: the CRM reviewed — Severity: Info
+- **A seller's CRM is theirs alone.** RLS lets a vendor read only their own leads, notes and follow-ups; anon nothing;
+  staff nothing (P9 will give account managers a summary through a checked function).
+- **No way round the functions:** the tables have no insert, update or delete grants for browsers. Each `crm_*`
+  function checks the plan (with the switch), the owner and the limits; a requirement can be tracked only when the
+  vendor could see it (the overseas rule included), never the vendor's own or a removed one.
+- **Volume:** 5,000 leads, 500 notes a lead and 1,000 open follow-ups per vendor, counted under the vendor's own lock
+  (forced-overlap test, mutation-checked); the reminder run takes at most 5,000 follow-ups and never runs twice at once.
+- **Nothing a buyer wrote leaves the app:** the WhatsApp reminder carries the vendor's own name and a count. The bell
+  shows the lead's title (the vendor's copy, tidied) in the app only.
+- **Accepted:** a tracked lead keeps a copy of the requirement's title after the requirement closes, as the vendor saw
+  it; it is replaced if Cosora removes the requirement. A buyer's later edits don't reach the copy.
+
 ### 2026-10-09 — Subscriptions P7: VIP's head start could be skipped — Severity: Low — Fixed before release
 - **Found by** the background review of the first P7 commit ("logic-bypass", no detail given). Re-reading the rule's
   inputs: posting decided the head start, but the buyer's update policy lets them change `vendor_id` and

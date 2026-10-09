@@ -307,6 +307,8 @@ const KIND_META: Record<string, {
   listings_resumed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
   // A buyer's requirement that suits this vendor (subscriptions P6).
   lead_match:            { type: "system", tone: "positive", group: "updates", actionLabel: "Open my leads", href: "/leads" },
+  // A CRM follow-up that is due (subscriptions P8).
+  crm_follow_up:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Open follow-ups", href: "/crm/follow-ups" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {

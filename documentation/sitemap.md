@@ -118,6 +118,9 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | `/leads` | `Leads` | Buyer inquiries |
 | `/lead-alerts` | `LeadAlerts` | How the seller is told about matching requirements (paid plans; built, not live) |
 | `/overseas-leads` | `OverseasLeads` | Requirements from buyers outside India (Gold and VIP; VIP first; built, not live) |
+| `/crm` | `Crm` | The CRM: leads by stage, board or list (Silver and above; built, not live) |
+| `/crm/follow-ups` | `CrmFollowUps` | Follow-ups overdue, today and coming up (Silver and above; built, not live) |
+| `/crm/analytics` | `CrmAnalytics` | Funnel, win rate, follow-ups kept (Gold and VIP; built, not live) |
 | `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
 | `/chat` | `Chat` | Vendor messages |
 

@@ -3599,3 +3599,45 @@ spec `tests/local/subscriptions-p7.spec.ts`.
   language, options `data-no-translate`); `data/countries.ts` is skipped by the i18n check like `indiaStates.ts`.
 - **Release.** Apply the migration (it refuses if a guarded function or the policy changed), rename it to its live
   version, merge with the switch off, then list test buyers and sellers on `overseas_leads`.
+
+## Subscriptions P8: the CRM (2026-10-09; built, not live)
+
+Migrations `20261009120000_subscriptions_p8_crm.sql` and `20261009120100_subscriptions_p8_crm_followups_job.sql` (the
+job; needs Mitra's say-so); harness `scripts/subscriptions/p8_crm.sql` (19 cases); spec `tests/local/subscriptions-p8.spec.ts`.
+
+- **Guard.** md5 of `vendor_entitlements` as P7 leaves it (`16f8cc7d…`); none of the three triggers may exist.
+- **Levels.** `subscription_plans.limits.crm_level`: none (Free, Basic), pipeline (Silver), analytics (Gold), success
+  (VIP). `admin.vendor_crm_level(vendor)` reads it from `vendor_effective_plan` (active or grace, not Free) where
+  `feature_on_for('crm', vendor)`. `vendor_entitlements` gains `crm_level`, `crm_pipeline`, `crm_analytics`
+  (the P0 `crm` flag, the plan's `has_crm`, is unchanged).
+- **Tables.** `vendor_lead_pipeline` (vendor, rfq, buyer, title, buyer_name, stage, value_inr, tags, source, lost_reason,
+  next_follow_up_at, stage_changed_at, closed_at; unique vendor+rfq), `vendor_lead_notes` (kind note/stage/follow_up,
+  body, meta {from, to, by, reason, source, on_time}; `created_at default clock_timestamp()`), `vendor_lead_followups`
+  (due_at, note, done_at, notified_at). Each: RLS select `vendor_id = (select auth.uid())`; select granted to
+  authenticated, nothing else. `admin.crm_config`: max_leads 5000, max_notes_per_lead 500, max_open_follow_ups 1000.
+- **Writes** (definer, authenticated only): `crm_track(rfq)`, `crm_add_lead(title, buyer_name, value, tags)`,
+  `crm_update_lead(id, patch jsonb)` (keys title, buyer_name, value_inr, tags, stage, lost_reason; anything else 22023),
+  `crm_delete_lead`, `crm_add_note`, `crm_add_follow_up(id, due, note)` (due within a day past to a year ahead),
+  `crm_update_follow_up(id, done, due)` (moving resets notified_at; done writes a follow_up history entry with
+  on_time = done within a day of due), `crm_delete_follow_up`. Limits raise P0001 (HTTP 400) "Your CRM is full…".
+- **Helpers** (service role only): `crm_caller(min)` (42501 with the plan's line), `crm_lock` (per-vendor advisory
+  lock, lock_timeout 3 s), `crm_rfq_for` (sent to them, quoted by them, or open and visible by the overseas rule; not the
+  buyer's own, not removed), `crm_insert_lead` (existing id when already tracked; null when full), `crm_move`,
+  `crm_refresh_next`.
+- **Triggers** (after, definer, all errors caught and warned): `trg_quotes_crm` (insert: track as quoted with
+  value = coalesce(price_inr, price_per_unit) × quantity, or move new/contacted to quoted and fill an empty value; status:
+  shortlisted → negotiating, accepted → won, rejected → lost; never out of won), `trg_conversations_crm` (new → contacted
+  for the pair's leads), `trg_rfqs_crm` (insert with vendor_id: a new direct lead; removed_at set: title replaced, open
+  lead lost "Removed by Cosora"). Only for vendors with a level.
+- **Reminders.** `crm_followup_run()` (`admin.trusted_caller()`; a try-lock so runs don't overlap): due follow-ups from
+  the last 7 days not yet notified, 5,000 a run, grouped by vendor; bell `crm_follow_up` "Follow-up due: <title through
+  admin.alert_text>" or "N follow-ups due"; Gold and VIP also `notify_deliver(vendor, 'crm_followup', {name, count},
+  'crm_followup:<vendor>:<IST hour>', ['whatsapp'])`. Every picked follow-up gets notified_at, even off the plan.
+- **Analytics.** `crm_analytics(days 7–365)` (analytics or success): open by stage, open value, created, funnel (furthest
+  stage reached from the stage history and the current stage), won, won value, lost, win rate, average days to win,
+  top 5 lost reasons, by source, follow-ups (due, done, on time, overdue now).
+- **Client.** `src/lib/queries/crm.ts`; `Crm.tsx` (board/list), `CrmFollowUps.tsx`, `CrmAnalytics.tsx`
+  (responsiveness and order value from `vendorAnalytics.ts`), `components/vendor/CrmLeadSheet.tsx`; routes behind
+  `TierGate` `crm_pipeline` / `crm_analytics`; "Track in CRM" on `OpenRfqLeads`; bell kind `crm_follow_up`.
+- **Release.** Apply the migration, rename it, merge with the switch off, list test sellers on `crm`; the job only with
+  Mitra's say-so; activate the WhatsApp template once Meta approves `crm_followup_reminder` (name, count).

@@ -3,12 +3,15 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Send, Check, Loader2, Sparkles, Globe2, Clock } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Send, Check, Loader2, Sparkles, Globe2, Clock, KanbanSquare } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
 import { useNow, timeUntil } from "@/lib/queries/overseas";
 import { countryByCode } from "@/data/countries";
 import { useLang } from "@/lib/i18n";
+import { useVendorEntitlements } from "@/lib/queries/entitlements";
+import { trackRequirement, useTrackedRfqIds } from "@/lib/queries/crm";
 
 // ─────────────────────────────────────────────────────────────
 // Live buyer RFQs (the real lead pool) with inline quoting, for the vendor
@@ -80,6 +83,23 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
   const qc = useQueryClient();
   const { data: all = [], isLoading } = useOpenRfqs(user?.id);
   const rfqs = overseasOnly ? all.filter((r) => r.overseas) : all;
+  // The CRM (subscriptions P8): a vendor whose plan includes it can track a lead from here.
+  const { data: entitlements } = useVendorEntitlements(user?.id);
+  const crm = Boolean(entitlements?.features.crm_pipeline);
+  const { data: tracked } = useTrackedRfqIds(user?.id, crm);
+  const [tracking, setTracking] = useState<string | null>(null);
+  const track = async (rfqId: string) => {
+    setTracking(rfqId);
+    try {
+      await trackRequirement(rfqId);
+      await qc.invalidateQueries({ queryKey: ["crm"] });
+      toast.success("Added to your CRM");
+    } catch (e) {
+      toast.error("Couldn't add it to your CRM", { description: errorMessage(e) });
+    } finally {
+      setTracking(null);
+    }
+  };
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState({ price: "", moq: "", leadTime: "", comment: "" });
@@ -99,6 +119,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
         comment: form.comment || null,
       });
       qc.invalidateQueries({ queryKey: ["rfqs"] });
+      qc.invalidateQueries({ queryKey: ["crm"] });   // a quote tracks the lead (P8)
       toast.success("Quote submitted", { description: "The buyer will see it in My Quotes." });
       setOpenId(null);
       setForm({ price: "", moq: "", leadTime: "", comment: "" });
@@ -182,6 +203,18 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
               <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="w-3.5 h-3.5" /> Submit Quote
               </button>
+            )}
+            {crm && openId !== r.id && (
+              tracked?.has(r.id) ? (
+                <Link to="/crm" className="ml-3 mt-2 inline-flex items-center gap-1 text-xs font-semibold text-gray-500 hover:text-brand-vendor" data-testid="crm-tracked">
+                  <KanbanSquare className="h-3.5 w-3.5" /> In your CRM
+                </Link>
+              ) : (
+                <button type="button" onClick={() => track(r.id)} disabled={tracking === r.id} data-testid="crm-track"
+                  className="ml-2 mt-2 inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-bold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50">
+                  {tracking === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KanbanSquare className="h-3.5 w-3.5" />} Track in CRM
+                </button>
+              )
             )}
           </div>
         ))}

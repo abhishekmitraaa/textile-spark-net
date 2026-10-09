@@ -270,8 +270,8 @@ undocumented. Deep technical rationale for each lives in
   - **One rule, four places.** Readable when it isn't overseas, or the vendor is VIP, or Gold once
     `overseas_vip_until` has passed, or the vendor already quoted. The `rfqs_select` policy and
     `match_vendor_rfqs` write it out inline (they test every row); `enforce_quote_rfq_open` and
-    `admin.lead_alert_fanout` call `public.overseas_rfq_visible()`. Change all four together; the P7 harness
-    reads through each.
+    `admin.lead_alert_fanout` call `public.overseas_rfq_visible()` (and so does the CRM's
+    `admin.crm_rfq_for`, P8). Change them together; the P7 harness reads through each.
   - **A new definer function that hands requirements to vendors must apply it too:** definer functions skip the policy.
   - `rfqs.overseas`, `buyer_country_code` and `overseas_vip_until` are stamped by `rfqs_overseas_stamp()`; a
     browser's write to them is undone (`admin.trusted_caller()`). The buyer's update policy covers every column, so
@@ -279,6 +279,16 @@ undocumented. Deep technical rationale for each lives in
     buyer's later edits, or the edit is a way round it.
   - A buyer's country is `buyer_profiles.country_code` (references `public.countries`). `src/data/countries.ts`
     and the table come from one generated list: change both together. No country counts as India.
+- **The CRM is written only through the `crm_*` functions** (subscriptions P8, 2026-10-09; migration
+  `20261009120000_subscriptions_p8_crm.sql`).
+  - A vendor reads their own `vendor_lead_pipeline`, `vendor_lead_notes` and `vendor_lead_followups` rows. There are
+    no write policies or grants: each function checks `admin.crm_caller()` (the plan's `crm_level` where the `crm`
+    switch lists the vendor), the owner, and the limits in `admin.crm_config` under `admin.crm_lock(vendor)`.
+  - Which requirements a vendor may track is `admin.crm_rfq_for()`; stage moves go through `admin.crm_move()`, which
+    writes the history. Automatic moves (`trg_quotes_crm`, `trg_conversations_crm`, `trg_rfqs_crm`) only go
+    forward and catch every error: they must never fail the write that fires them.
+  - Rows written together that must keep their order (a lead's history) default `created_at` to `clock_timestamp()`;
+    `now()` is the same for the whole transaction.
 - **Keep functions with a `set` clause out of per-row policy tests.** Postgres never inlines them, so each row
   pays a call: 48 ms against 3 ms over 20,000 requirements for the overseas rule. Read a per-user value once with
   `(select fn())`, and write per-row logic inline.

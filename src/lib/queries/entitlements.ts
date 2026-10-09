@@ -12,7 +12,9 @@ import { supabase } from "@/lib/supabase";
 // ─────────────────────────────────────────────────────────────
 
 /** A feature a page can belong to. A key here is one the database returns as a yes or no. */
-export type EntitlementFeature = "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads";
+export type EntitlementFeature =
+  | "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads"
+  | "crm_pipeline" | "crm_analytics";
 
 export interface VendorEntitlements {
   planId: string;
@@ -24,6 +26,8 @@ export interface VendorEntitlements {
     lead_alert_channels?: string[];
     /** Overseas requirements (P7): vip sees them first, gold after VIP's head start, none not at all. */
     overseas_tier?: "vip" | "gold" | "none";
+    /** The CRM (P8), where the switch lists the vendor: pipeline (Silver), analytics (Gold), success (VIP). */
+    crm_level?: "none" | "pipeline" | "analytics" | "success";
   };
 }
 

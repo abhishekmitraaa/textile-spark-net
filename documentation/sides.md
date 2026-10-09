@@ -487,6 +487,18 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P8; built, not live)
+- **The CRM** (Silver, Gold and VIP; "CRM" in the menu under Leads): the buyers a seller is working with, by stage,
+  as a board on desktop and a list on a phone. "Track in CRM" on Leads adds a requirement; sending a quote, or a buyer
+  sending a request, adds one by itself; anyone can be added by hand.
+- Quotes and the buyer's answers move leads along by themselves (quoted, negotiating, won, lost), and a chat the buyer
+  opens marks a new lead contacted. Each lead has a value, tags, notes, follow-ups and its history.
+- **Follow-ups:** what is overdue, due today and coming up; the bell rings when one is due (Gold and VIP also on
+  WhatsApp, once Meta approves the template).
+- **CRM analytics** (Gold and VIP): pipeline value, won, win rate, days to win, the funnel, follow-ups kept, reply time,
+  order value, why leads were lost and where they came from.
+- For accounts on the CRM switch.
+
 ### Changed 2026-10-09 (subscriptions P7; built, not live)
 - **Overseas requirements.** A requirement from a buyer outside India reaches Gold and VIP sellers only. VIP sees
   it first, for 24 hours, when a VIP seller lists in its category; then Gold. A seller who already quoted keeps it.
@@ -746,6 +758,10 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P8; built, not live)
+- **Feature switches** now lists eight, with "CRM". Staff can't read a seller's CRM (P9's account managers will see a
+  summary through their workspace).
 
 ### Added 2026-10-09 (subscriptions P7; built, not live)
 - **Leads:** a requirement's detail shows "overseas · <country>" and, during VIP's head start, until when only VIP

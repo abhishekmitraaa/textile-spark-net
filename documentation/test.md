@@ -187,6 +187,35 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P8: the CRM (local stack: harness 19/19; all nine harnesses green; end to end 17/17; browser 33/33; typecheck 0 in both apps; i18n 7,557/7,557; admin build)
+- **Where:** the local stack with P0–P8 applied (the reminder job isn't scheduled locally); apps on :8092 and :5186
+  from the `subscriptions/p8-crm` worktrees.
+- **Harness** `scripts/subscriptions/p8_crm.sql`, 19/19, and a full replay (vendor_entitlements back to its pre-P8 text so
+  the guard runs; 23 functions identical), three times. Cases: each plan's level, the switch and the grace days;
+  tracking once; an overseas requirement in VIP's head start refused to Silver and Gold, tracked by VIP; added by hand
+  and its refusals; changes, tags, a recorded move; lost with a reason and reopened; another vendor's lead unreadable
+  and unchangeable, anon refused; no direct writes; a quote tracks and values the lead, a Basic vendor's doesn't; the
+  buyer's shortlist, accept and decline, a won lead staying won; a chat making new leads contacted; a request sent to
+  one vendor; a removed requirement scrubbed; notes in order and limited; follow-ups (next, done, moved, removed, too
+  early or late); the lead and follow-up limits, and a quote still accepted when the CRM is full; the reminder run
+  (bell for Silver, bell and WhatsApp payload {name, count} for Gold, nothing for a vendor off the plan, once);
+  analytics figures; a broken CRM table never failing a quote or a post.
+- **Found and fixed while testing:** a history written in one transaction came back in random order (`now()` is fixed
+  per transaction), so notes now take `clock_timestamp()`; "CRM is full" was an HTTP 500 (code 54000), now a 400.
+- **End to end over HTTP**, 17/17: entitlements by plan; tracking (Silver yes, Free told why); reading only one's own;
+  direct writes and the run refused; changes and history; the quote, accept and decline moving leads; a chat the buyer
+  opens; a follow-up and the run (service role) ringing the bell once; analytics Gold's not Silver's. **Forced overlap:**
+  one session adds a lead and holds its transaction for two seconds while another adds one with room for one: the
+  second waits about 1.4 s and is refused (400). **Mutation-checked:** with `admin.crm_lock` made a no-op, both get in
+  (2 → 4 leads) and the check fails. Another vendor's write while one vendor's lock is held: 200 in 11 ms.
+- **Browser** (`tests/local/subscriptions-p8.spec.ts`, 4/4): a Silver seller tracks from Leads, finds the lead on the
+  board from the menu, moves it, values it, plans a follow-up and adds a note (history shows each), a quote moves it to
+  Quoted, and the follow-up is done on Follow-ups; on a phone the CRM is a list and a lead added by hand opens; Gold's
+  analytics (₹20K open, ₹50K won, 100%); Silver and a seller with no plan sent to the plans, no "Track in CRM" for the
+  latter; Cosora-Admin's switch name. With it, 33/33 across `subscriptions-p0` to `-p8`, `plans-and-refunds` and
+  `rfq-leads`. Screens checked at 390, 1280 and 1440 wide (follow-up buttons moved under the title on phones).
+- **Not checked:** the reminder job on its schedule; the WhatsApp send (template not approved).
+
 ### 2026-10-09 — Subscriptions P7: overseas requirements (local stack: harness 19/19; all eight harnesses green; end to end 27/27; browser 29/29; typecheck 0 in both apps; i18n 7,460/7,460; admin build)
 - **Where:** the local stack with P0–P7 applied; apps on :8092 and :5186 from the `subscriptions/p7-overseas`
   worktrees. Production was read once (read-only) to confirm the guarded md5s and the buyers' countries.
