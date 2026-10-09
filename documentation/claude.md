@@ -246,6 +246,23 @@ undocumented. Deep technical rationale for each lives in
     `vendor_subscriptions` (`trg_vendor_subscriptions_cap`), so new code that changes a plan needs no call of its own.
   - Kept first: the vendor's picks (`vendor_keep_products`), then published before in-review, then the most viewed.
   - A listing saved while paused returns to review, not straight to live.
+- **Vendors are told about a requirement by their plan's channels** (subscriptions P6, 2026-10-09; migration
+  `20261009100000_subscriptions_p6_lead_alerts.sql`).
+  - The channels are data: `subscription_plans.limits.lead_alert_channels` (`app`, `email`, `whatsapp`, `sms`,
+    `digest`) and `lead_alert_priority`. Leads themselves are the same on every plan; only being told differs.
+  - **`admin.lead_alert_fanout(rfq)` is the one place that matches and tells**, from the trigger on `rfqs` (posted,
+    and again when the embedding arrives) and from the daily `lead_digest_run()`. `admin.lead_alerts` has one row
+    per requirement and vendor; its `channels` are what actually went out.
+  - **The trigger must never fail the buyer's write.** It catches everything and records the error in
+    `admin.lead_alert_runs`; the daily run retries. Keep any new work in it inside that handler.
+  - A vendor's own pacing is `public.lead_alert_settings`, written only through `set_lead_alert_settings()`.
+  - Told only where the `lead_alerts` switch lists the vendor.
+- **A page that belongs to a plan is wrapped in `<TierGate feature="…">`** (`src/components/TierGate.tsx`) and
+  listed in the sidebar only when `useVendorEntitlements()` says the feature is the vendor's. The database's
+  `vendor_entitlements()` decides (plan in force and the feature's switch). The gate is navigation; the page's data
+  must be refused by the database on its own.
+- **A page never promises a channel that isn't running.** `my_lead_alerts().live_channels` is what is being sent
+  today (an active template; for the digest, its scheduled job). Show the rest as "Starting soon".
 - **An ad reaches states, and the plan decides how many** (subscriptions P5, 2026-10-09; migration
   `20261008160000_subscriptions_p5_ad_reach.sql`).
   - `advertisements.target_states` (india_states codes) and `target_countries` (VIP). `target_cities` is the older

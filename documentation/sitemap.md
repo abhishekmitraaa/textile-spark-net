@@ -116,6 +116,7 @@ Vendor pages wrap in `DashboardLayout` (256 px sidebar + `lg:p-6`).
 | Route | Component | Notes |
 |---|---|---|
 | `/leads` | `Leads` | Buyer inquiries |
+| `/lead-alerts` | `LeadAlerts` | How the seller is told about matching requirements (paid plans; built, not live) |
 | `/quotes` | `Quotes` | Quote requests; shows Total Order Value |
 | `/chat` | `Chat` | Vendor messages |
 

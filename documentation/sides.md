@@ -482,6 +482,16 @@ rather than a supplier directory.
 6. Run ad campaigns and buy TradeSEAL to raise visibility; watch competitor ads.
 7. Negotiate in chat, win orders, watch Total Order Value grow.
 
+### Changed 2026-10-09 (subscriptions P6; built, not live)
+- **Lead alerts.** A seller on a paid plan is told when a buyer posts a requirement that suits what they sell:
+  Basic by a daily email summary; Silver in the app as it happens, plus the summary; Gold and VIP in the app, by
+  email and on WhatsApp as it happens, VIP first. Free sellers see the same leads on the Leads page, untold.
+- **A new page, Lead alerts** (in the menu under Leads, for paid plans): what the plan includes and what is
+  being sent today, a switch for alerts as they happen, a switch for the daily summary, categories, quiet hours,
+  and the latest requirements the seller was told about.
+- A new bell notice, "New requirement: …", opens Leads.
+- For accounts on the lead alerts switch.
+
 ### Changed 2026-10-09 (subscriptions P5; built, not live)
 - **Ads reach states.** On the ad page a seller chooses the states an ad should reach: one on Basic, up to four on
   Silver, any on Gold and VIP (none chosen means all of India). On Basic and Silver it starts on the seller's own
@@ -722,6 +732,12 @@ published, intervene when a conversation goes wrong, and run the commercial laye
   - A revenue window: all time, 30 days, 90 days or 12 months.
 - **Admin Log:** shows the reason an admin gave, where one was required.
 - **Geography:** "Delhi NCR", "NCR" and "Greater Noida" are placed on the map.
+
+### Added 2026-10-09 (subscriptions P6; built, not live)
+- **Leads:** a **Lead alerts** panel with the last 7 days' figures: requirements matched, alerts and vendors
+  told, how many went out as they happened, why the rest were held, what waits for the daily summary, and the
+  last matching error.
+- **Feature switches** now lists six, with "Lead alerts".
 
 ### Added 2026-10-09 (subscriptions P5; built, not live)
 - **Ads → review queue:** each campaign shows the states it reaches (or "All of India") and any countries outside

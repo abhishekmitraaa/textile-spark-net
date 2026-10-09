@@ -3456,3 +3456,63 @@ Built on `subscriptions/p5-ad-reach`; not applied. Migration `20261008160000_sub
 2. Deploy `razorpay-create-order`, `razorpay-verify-payment`, `razorpay-webhook` (they call `ad_reach_resolve`,
    so the migration comes first).
 3. Merge with the switch off; list test accounts on `ad_state_targeting`; then turn it on for everyone.
+
+## Subscriptions P6: lead alerts and lead channels (2026-10-09)
+
+Built on `subscriptions/p6-lead-alerts`; not applied. Migrations `20261009100000_subscriptions_p6_lead_alerts.sql`
+and `20261009100100_subscriptions_p6_lead_digest_job.sql` (a new scheduled job: Mitra's say-so). No edge function
+changes: messages go out through P2's outbox and dispatcher.
+
+### Data
+- `subscription_plans.limits.lead_alert_channels`: free `[]`, basic `["digest"]`, silver `["app","digest"]`,
+  gold and vip `["app","email","whatsapp","sms"]`; vip also `lead_alert_priority: true`.
+- `admin.lead_alert_config` (one row): `min_similarity` 0.35, `max_vendors` 50, `hourly_cap` 10, `max_age_hours` 48.
+- `public.lead_alert_settings` (vendor's choices; RLS own-read; no direct writes): `instant`, `digest`,
+  `category_ids`, `quiet_start`, `quiet_end` (IST).
+- `admin.lead_alerts`: one row per requirement and vendor (`unique (rfq_id, vendor_id)`): `plan_id`, `channels`
+  (what went out: `app`, and each channel a message was queued on), `held` (`off`, `digest_only`, `rate_limit`,
+  `quiet_hours`), `digest_at`.
+- `admin.lead_alert_runs`: that a requirement was matched, whether its embedding was there, the last error.
+
+### Matching and telling: `admin.lead_alert_fanout(rfq)`
+1. Skips a requirement that isn't active, is sent to one vendor, is removed, or is older than `max_age_hours`.
+2. Candidates from `match_rfq_vendors(rfq, max_vendors * 4)`: kept when they list in the category or
+   `similarity >= min_similarity`; not the buyer; plan has a channel; `lead_alerts` switch lists them; account in
+   good standing. Ordered by VIP first, then score, then the bigger plan; at most `max_vendors` are told.
+3. Per vendor: the category choice; then instant channels = the plan's without `digest`, unless instant is off
+   (`held: off`), the plan has none (`digest_only`), `hourly_cap` alerts already went out in the hour
+   (`rate_limit`), or it is the vendor's quiet hours (only `app`; `quiet_hours`).
+4. Inserts the row (`on conflict do nothing`: a vendor told on the first pass isn't told again), rings the bell
+   (`notify`, kind `lead_match`) and queues `lead_alert` on the other channels through `notify_deliver`
+   (dedupe `lead_alert:<rfq>:<vendor>`; the email honours `emailNewRfq`). `channels` records what was queued.
+- `admin.rfq_lead_alert()` (`trg_rfqs_lead_alert`, after insert or update of `embedding` on `rfqs`): runs the fanout
+  on insert and when the embedding first arrives; any error is caught and written to `admin.lead_alert_runs`.
+
+### The daily run: `public.lead_digest_run()`
+- Matches requirements from the last `max_age_hours` (older than 10 minutes) with no run row or an error.
+- Per vendor with undigested alerts, when their digest is on and the switch lists them: counts alerts from the
+  last 3 days on requirements still open, all of them on a plan with `digest`, only held ones otherwise; queues
+  `lead_digest` (email; dedupe per vendor and IST day; up to 5 titles). Then marks the vendor's alerts digested.
+- Scheduled by `lead-alert-digest` (`30 3 * * *` UTC), which is the separate, unapplied migration.
+
+### The vendor's side
+- `my_lead_alerts(limit)`: `available`, plan, `channels`, `live_channels` (an active template; for `digest` also
+  the scheduled job), `settings`, `whatsapp_consent`, `categories` (where the vendor lists), `alerts`.
+- `set_lead_alert_settings(instant, digest, category_ids, quiet_start, quiet_end)`.
+- `vendor_entitlements().features`: `lead_alerts` (paid, a channel, and the switch) and `lead_alert_channels`.
+- `admin_lead_alert_stats(days)` for super admins, managers and support.
+
+### Client
+- `src/lib/queries/entitlements.ts` (`useVendorEntitlements`), `src/components/TierGate.tsx`.
+- `src/pages/LeadAlerts.tsx` at `/lead-alerts` (`data-testid`: `lead-alert-channels`, `lead-channel-<c>` with
+  `data-live`, `lead-alert-settings`, `lead-alert-history`); `src/lib/queries/leadAlerts.ts`.
+- Sidebar item and the Leads page's link, both only when the feature is the vendor's.
+- Notification kind `lead_match` → /leads.
+
+### Checks
+- `scripts/subscriptions/p6_lead_alerts.sql` (20 cases, rolls back); `tests/local/subscriptions-p6.spec.ts`.
+
+### Release order (when Mitra says)
+1. Apply `20261009100000` (P0 to P5 first: the guard). No functions to deploy.
+2. With Mitra's say-so, apply `20261009100100` (the digest job). It needs P2's dispatcher job to send anything.
+3. Merge with the switch off; list test accounts on `lead_alerts` (and `notification_delivery` for email); then on.

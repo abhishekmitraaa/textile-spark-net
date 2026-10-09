@@ -7,6 +7,7 @@ import { useOpenRfqs, useDirectQuoteRequests } from "@/lib/queries/rfqs";
 import OpenRfqLeads from "@/components/vendor/OpenRfqLeads";
 import DirectQuoteRequests from "@/components/vendor/DirectQuoteRequests";
 import SignInForLeads from "@/components/vendor/SignInForLeads";
+import { useVendorEntitlements } from "@/lib/queries/entitlements";
 
 // Vendor Leads = the live buyer-RFQ pool. All lead browsing + quoting is the
 // real OpenRfqLeads panel (RFQ→quote loop). Previously this page also carried a
@@ -28,6 +29,8 @@ const Leads = () => {
   // Direct requests count as leads: without this the page would claim there is
   // nothing to quote on while the Direct panel above it is showing requests.
   const hasLeads = rfqs.length > 0 || direct.length > 0;
+  // Lead alerts are a plan's (subscriptions P6): the link shows only where the page would.
+  const { data: entitlements } = useVendorEntitlements(user?.id);
 
   return (
     <DashboardLayout>
@@ -37,6 +40,11 @@ const Leads = () => {
           <p className="text-sm text-muted-foreground mt-0.5">
             Live buyer requirements you can quote on. Your quote reaches the buyer's My Quotes instantly.
           </p>
+          {entitlements?.features.lead_alerts && (
+            <Link to="/lead-alerts" className="mt-1 inline-flex items-center gap-1 text-sm font-medium text-brand-vendor hover:underline" data-testid="lead-alerts-link">
+              How you're told about new requirements <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          )}
         </motion.div>
 
         <motion.div variants={section}>

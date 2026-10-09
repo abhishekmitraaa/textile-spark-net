@@ -22,6 +22,8 @@ import ProductDetail from "./pages/ProductDetail";
 import ForYou from "./pages/ForYou";
 import Upload from "./pages/Upload";
 import Leads from "./pages/Leads";
+import LeadAlerts from "./pages/LeadAlerts";
+import { TierGate } from "./components/TierGate";
 import Advertisements from "./pages/Advertisements";
 import Subscription from "./pages/Subscription";
 import InvoiceDetail from "./pages/InvoiceDetail";
@@ -267,6 +269,8 @@ const App = () => (
             <Route path="/for-you" element={<ForYou />} />
             <Route path="/upload" element={<Upload />} />
             <Route path="/leads" element={<ClarityMask><Leads /></ClarityMask>} />
+            {/* Belongs to a plan (subscriptions P6): shown only when lead alerts are this vendor's. */}
+            <Route path="/lead-alerts" element={<ClarityMask><TierGate feature="lead_alerts"><LeadAlerts /></TierGate></ClarityMask>} />
             <Route path="/notifications" element={<ClarityMask><Notifications /></ClarityMask>} />
             <Route path="/advertisements" element={<Advertisements />} />
             <Route path="/settings" element={<ClarityMask><VendorSettings /></ClarityMask>} />

@@ -25,6 +25,11 @@ export interface PlanLimits {
   has_crm: boolean;
   has_auto_catalog: boolean;
   has_international: boolean;
+  /** How the plan tells a vendor about a matching requirement (subscriptions P6): app, email,
+   *  whatsapp, sms as it happens; digest for the daily email. Absent before that migration. */
+  lead_alert_channels?: string[];
+  /** VIP: told before other plans. */
+  lead_alert_priority?: boolean;
 }
 
 // Human display strings for the comparison table (subscription_plans.display).

@@ -187,6 +187,33 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-09 — Subscriptions P6: lead alerts (local stack: harness 20/20; all seven harnesses green; end to end 17/17; browser 26/26; typecheck 0 in both apps; i18n 7,442/7,442; admin build)
+- **Where:** the local stack with P0–P6 applied (the digest job is not scheduled: the local stack has no jobs);
+  apps on :8092 and :5186 from the `subscriptions/p6-lead-alerts` worktrees; the dispatcher on the keyed edge
+  runtime (:8099) with a mock Resend.
+- **Harness** `scripts/subscriptions/p6_lead_alerts.sql`, 20/20, and a full replay of the migration in one rolled-back
+  transaction (undo, run, compare all 7 functions with what is applied, harness). It covers: each plan's channels;
+  VIP first under a cap of 2 and of 1; the buyer's own account and a vendor off the switch; direct, closed, removed
+  and old requirements; the category choice; instant off; quiet hours; the hourly cap; the second pass when the
+  embedding arrives; a matching failure that leaves the requirement posted and is caught up by the daily run; the
+  digest (all on a digest plan, only held on a plan told as it happens, off, once a day); the email switch;
+  settings; the page's data; entitlements; refusals from a browser; the admin's figures; the grace days.
+- **Earlier harnesses, again:** P0 29/29, P1 26/26, P2 21/21, P3 18/18, P4 29/29, P5 19/19.
+- **End to end over HTTP**, 17/17: a buyer posts through PostgREST (201 in 42 ms, matching included); Gold, Silver and
+  Basic told by their channels and Free not; the bell; the dispatcher sends Gold's alert to the mock Resend with
+  the right subject, category, quantity and link; the page's data for Gold and Free; entitlements; quiet hours;
+  instant off; half-set quiet hours refused; direct writes, another vendor's settings, the digest run and the
+  admin's figures refused; the digest (Basic and Silver all three, Gold the two that were held); a closed
+  requirement marked on the page.
+- **Earlier end-to-end runs, again:** P1 16/16, P4 23/23, P5 17/17.
+- **Browser** (`tests/local/subscriptions-p6.spec.ts`, 3/3): the page from Leads and the sidebar, what the plan
+  includes and what is live, a requirement appearing in the history, a choice saved; a seller with no plan sent to
+  the plans with the reason and no link; Cosora-Admin's switch name and figures. With it, 26/26 across
+  `subscriptions-p0` to `-p6`, `plans-and-refunds` and `rfq-leads` (the existing leads flows with the new trigger).
+- **Found and fixed while testing:** alerts held because a vendor turned instant alerts off weren't in the digest
+  of a plan told as it happens, though the page says they wait for it.
+- **Not checked:** closeness matching with real embeddings; WhatsApp and SMS sends; the digest on its schedule.
+
 ### 2026-10-09 — Subscriptions P5: ad reach by state (local stack: harness 19/19; all six harnesses green; flow check 109/109; end to end 17/17; browser 17/17; typecheck 0 in both apps; i18n 7,391/7,391; admin build)
 - **Where:** the local stack with P0–P5 applied; apps on :8092 and :5186 from the `subscriptions/p5-ad-reach`
   worktrees. The ad payment functions on a second edge runtime with no Razorpay keys (:8098), so checkouts take the

@@ -99,6 +99,20 @@ in the next one.
 
 ## Log
 
+### 2026-10-09 — Subscriptions P6: lead alerts reviewed — Severity: Info
+- **What a vendor learns from an alert** is what the Leads page already shows them for an open requirement: its
+  title, category and quantity. Never the buyer's name or contact.
+- **Who is told** is decided in the database (`admin.lead_alert_fanout`), which a browser can't call; the daily run
+  is the service role's. A vendor reads only their own alerts (through `my_lead_alerts`) and settings (RLS), and
+  writes settings only through `set_lead_alert_settings`.
+- **A buyer can't be blocked or slowed into failure by it:** the trigger catches every error, and the matching is
+  bounded (`max_vendors`). A buyer can't make it alert twice (one row per requirement and vendor).
+- **Consent and switches are P2's:** WhatsApp and SMS need the vendor's recorded consent; the email honours the
+  vendor's "New requirements (RFQs)" switch; nothing is queued unless `notification_delivery` lists the vendor.
+- **Volume:** at most `hourly_cap` alerts an hour reach a vendor as they happen, and one digest a day.
+- **Existing, noted:** `match_rfq_vendors` is callable by any signed-in account (RFQ/leads R2) and returns vendor
+  ids and scores for a requirement the caller may not own. Not changed here; worth restricting.
+
 ### 2026-10-09 — Subscriptions P5: ad reach reviewed — Severity: Info
 - **The plan's reach is decided in the database**, from the plan in force, for every path that creates or edits an
   ad: a browser's write (trigger), the order before payment, and both publish functions. The publish functions run

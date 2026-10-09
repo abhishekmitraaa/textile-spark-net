@@ -28,6 +28,7 @@ import {
   Camera,
   Receipt,
   BookOpen,
+  BellRing,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
+import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { tierStyle, isUnlimited } from "@/lib/plan";
 import { useT } from "@/lib/i18n";
 import { RoleSwitcher } from "./RoleSwitcher";
@@ -85,6 +87,10 @@ const sellerNavigation: NavItem[] = [
   { name: "Blogs", href: "/blogs", icon: BookOpen, external: true },
 ];
 
+// Pages that belong to a plan (subscriptions P6): added after the item named, only for a
+// vendor the database says the feature is theirs.
+const LEAD_ALERTS: NavItem = { name: "Lead alerts", href: "/lead-alerts", icon: BellRing };
+
 interface DashboardSidebarProps {
   isOpen: boolean;
   onClose: () => void;
@@ -132,7 +138,10 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
   };
 
   // Select navigation based on role
-  const navigation = role === "buyer" ? buyerNavigation : sellerNavigation;
+  const { data: entitlements } = useVendorEntitlements(role === "seller" ? user?.id : undefined);
+  const navigation = role === "buyer"
+    ? buyerNavigation
+    : sellerNavigation.flatMap((item) => (item.href === "/leads" && entitlements?.features.lead_alerts ? [item, LEAD_ALERTS] : [item]));
 
   // On desktop, sidebar is always visible
   const shouldShow = !isMobile || isOpen;

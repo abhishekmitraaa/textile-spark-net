@@ -305,6 +305,8 @@ const KIND_META: Record<string, {
   plan_lapsed:           { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose a plan", href: "/subscription" },
   listings_paused:       { type: "system", tone: "warning",  group: "updates", actionLabel: "Choose listings", href: "/products?status=paused" },
   listings_resumed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
+  // A buyer's requirement that suits this vendor (subscriptions P6).
+  lead_match:            { type: "system", tone: "positive", group: "updates", actionLabel: "Open my leads", href: "/leads" },
 };
 
 const FALLBACK_META: (typeof KIND_META)[string] = {
