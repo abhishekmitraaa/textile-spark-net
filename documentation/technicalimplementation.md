@@ -3969,7 +3969,7 @@ browser `tests/local/catalogue-review.spec.ts`.
   `payment_mode` is NOT NULL on both tables, so a writer that forgets it fails loudly instead of being guessed for.
   Writers that set it: `subscription_fulfil()`, `autopay_charge()`, `subscription-create-order`,
   `subscription-verify-payment`, `subscription-webhook`, `subscription-autopay`.
-- `20261010180100_drop_usage_and_mode_shims.sql` (declined by the Supabase tool; for the SQL editor, optional): drops
-  the table, the two triggers and `admin.subscription_order_mode_default()` / `admin.subscription_invoice_mode_default()`.
-  Applied on the local stack, so local and production differ here until it is run.
-- `database.types.ts` in both apps still lists `subscription_usage` (it exists in production); remove it once the drop runs.
+- `20261010180100_drop_usage_and_mode_shims.sql` (declined by the Supabase tool; run by Mitra in the SQL editor on
+  2026-10-10, so no ledger row and the written version stays): dropped the table, the two triggers and
+  `admin.subscription_order_mode_default()` / `admin.subscription_invoice_mode_default()`. Local and production match.
+- `subscription_usage` is gone from both apps' `database.types.ts`.

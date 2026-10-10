@@ -6,6 +6,124 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10
+- Task: when every subscription feature switch is on for everyone, apply
+  `supabase/migrations/20261009170000_subscriptions_p13_truth_pass.sql` to production. It rewrites what the Subscription
+  page's plan comparison and five Subscription FAQs tell sellers, so they describe exactly what was built in P0–P12.
+  Nothing else is left in it: its other two parts (retiring `subscription_usage` and P1's payment-mode shims) were done
+  on 2026-10-10 (see Context).
+- **Why it waits.** The new wording describes features that are still switched off in production (all 11 switches were
+  off for everyone on 2026-10-10; `subscription_checkout` lists one test seller). Applied early, the plans page would
+  promise sellers things they can't use. Applied late, the page keeps under-selling and the FAQs keep saying things
+  that stop being true the day a switch turns on (e.g. "No auto-debit" once autopay is on).
+- **Before applying, all of these must be true:**
+  1. Razorpay's live keys are in place (it runs on test keys today) and Cosora's GST details are entered in
+     Cosora-Admin → Billing details (its own ToDo entry above). Until then plan checkout must not open to everyone.
+  2. Resend (API key, verified sending domain cosora.in) and WhatsApp (Meta Business account, phone number id,
+     token) are configured as edge-function secrets, and Meta has approved the templates `plan_renewal_reminder`,
+     `new_lead_alert` (3 parameters: name, category, quantity) and `crm_followup_reminder` (name, count). The
+     `notification-dispatch`, `lead-alert-digest` and `crm-followups` jobs are already scheduled (2026-10-10).
+  3. Account managers are appointed: a manager or super admin gives staff the `account_manager` role (Cosora-Admin →
+     Admins) and assigns them to sellers (Mitra, 2026-10-10: "the manager and superadmin will allot the account
+     manager staff"). Production had none on 2026-10-10.
+  4. Every switch in Cosora-Admin → Feature switches is on for everyone: `subscription_checkout`,
+     `subscription_autopay`, `subscription_lifecycle`, `notification_delivery`, `lead_alerts`, `overseas_leads`,
+     `crm`, `account_managers`, `featured_listings`, `ad_state_targeting`, `bulk_import`. Which line of the new copy
+     depends on which switch:
+
+     | What the new copy says | Needs |
+     |---|---|
+     | Autopay is optional; renewal reminders; 7 grace days (FAQs) | `subscription_autopay`, `subscription_lifecycle`, Resend/WhatsApp |
+     | "Website + daily email summary", "Instant, in the app", "WhatsApp + email", "All channels, first in line" | `lead_alerts`, `notification_delivery`, Resend, WhatsApp templates |
+     | Overseas requirements for Gold and VIP, VIP's "24-hour first look" (plans + 2 FAQs) | `overseas_leads` |
+     | "Shared account team", "Named manager", "Named VIP manager + priority support" | `account_managers` + appointed staff |
+     | "Featured in the top 10 / top 5 (rotating)", "Spotlight + place 1", seal names | `featured_listings` |
+     | "1 state", "4 states", "Pan-India + overseas buyers" | `ad_state_targeting` |
+     | "Pipeline + follow-ups", "+ analytics", "monthly success review" | `crm` |
+     | "the Subscription page shows today's price" (lowest-plan FAQ) | `subscription_checkout` |
+
+- **What changes on the plans page** (`subscription_plans.display`; production values read on 2026-10-10 → the file's).
+  Rows not listed stay as they are (`products`, `catalog`, `leads`, and every row equal before and after):
+
+  | Plan | Row | Today | After |
+  |---|---|---|---|
+  | Free | Search | Lowest | Standard |
+  | Free | Lead channel | Website only | Website |
+  | Basic | Search | Priority by category | Priority in your categories |
+  | Basic | Lead channel | Web + email | Website + daily email summary |
+  | Silver | Search | Top 10 in category | Featured in the top 10 (rotating) |
+  | Silver | Account manager | Dedicated | Shared account team |
+  | Silver | Lead channel | App + email | Website + app + daily email |
+  | Silver | Alerts | App notification | Instant, in the app |
+  | Silver | CRM | Web + mobile | Pipeline + follow-ups |
+  | Gold | Trust | Gold verified | Gold verified seller |
+  | Gold | Search | Top 5 + location-based | Featured in the top 5 (rotating) + nearby buyers |
+  | Gold | Account manager | Priority support | Named manager + priority support |
+  | Gold | Lead channel | Full access (SMS) | Website + app + WhatsApp + email |
+  | Gold | Alerts | WhatsApp + email | Instant, WhatsApp + email |
+  | Gold | CRM | Analytics + follow-ups | Pipeline, follow-ups + analytics |
+  | VIP | International | First priority | Yes, 24-hour first look |
+  | VIP | Ad reach | Custom global | Pan-India + overseas buyers |
+  | VIP | Trust | 100% trusted seal | VIP trusted seller |
+  | VIP | Search | Top 1 in segment + spotlight | Spotlight + place 1 (rotating) |
+  | VIP | Account manager | VIP account manager | Named VIP manager + priority support |
+  | VIP | Lead channel | Full access + priority | All channels, first in line |
+  | VIP | Alerts | Sales concierge | Instant + sales concierge |
+  | VIP | CRM | Dedicated success team | Gold's CRM + monthly success review |
+
+  Why: today's copy promises things nobody built (SMS, "Dedicated" manager on Silver, "100% trusted", "Custom global",
+  "Top 1 in segment"). The file's self-check refuses any of those words, refuses a products line that doesn't equal
+  the plan's `product_cap`, and requires every plan to have all 11 rows. The new values are already in the Hindi and
+  Gujarati catalogues (`src/i18n/hi.json`, `gu.json`; checked 2026-10-10), so the page translates them.
+- **What changes in the FAQs** (`public.faqs`, English answer plus its Hindi and Gujarati `translations`; six rows,
+  because "Is there a limit…" exists twice):
+  - "How does billing work — is there autopay?": today "No auto-debit. Every billing period is a discrete payment…"
+    → "Autopay is optional. At checkout, 'Renew automatically (autopay)' is ticked…"
+  - "Does my plan renew by itself?": today "No. Each month or year is a one-time payment…" → "Only with autopay…",
+    and without autopay the reminders and the 7 grace days.
+  - "Is there a limit on how many leads I can quote on?": still "No", now adding that overseas requirements are for
+    Gold and VIP (VIP sees them a day earlier).
+  - "Lowest billing plan?": today names a fixed price ("₹699/month (or ₹6,990/year)") → "Basic is the lowest paid
+    plan… the Subscription page shows today's price", because prices can now change (P12's price editor).
+  - "How are leads managed on Cosora?": today "Every plan sees the same requirements…" → India requirements for
+    every plan, overseas ones for Gold and VIP, ranked to fit the catalogue.
+  - Each update matches the question AND the md5 of the answer it replaces. On 2026-10-10 all five production answers
+    still had the md5s the file expects. If an admin edits one before P13 runs, that FAQ is left alone and the
+    migration prints a notice naming it: then fix that answer by hand in Cosora-Admin → FAQs (all three languages).
+- **How to apply** (the release method of 2026-10-09/10, `documentation/technicalimplementation.md`, "Subscriptions:
+  releasing the database"):
+  1. Re-read production: every switch on; `subscription_plans.limits ->> 'product_cap'` unchanged (2, 10, 19, 200, -1);
+     the five FAQ answers' md5s as above.
+  2. Run the harness on the local stack (P13 is already applied there): `docker exec -i supabase_db_localstack psql
+     -U postgres -At < scripts/subscriptions/p13_truth_pass.sql` → 8/8.
+  3. Send the file through `apply_migration` inside the self-checking wrapper (executes only if the text's md5 is the
+     file's). If the tool declines, paste the self-checking SQL-editor form instead (it strips the editor's carriage
+     returns and checks the md5 first), and the file keeps its written version.
+  4. If applied through the tool, rename the file to the version the ledger stamped (md5 checked), as MIGRATIONS.md
+     says.
+  5. Look at the Subscription page (plan comparison) and its FAQs in English, Hindi and Gujarati, signed in as a
+     seller; nothing ships in the apps for this, it is data only.
+  6. Close the older ToDo entries this settles: "Remove or relabel the three plan-comparison rows that promise lead
+     features nothing delivers" (2026-10-06), "Tell sellers about new leads by dashboard, email or WhatsApp, as 'How
+     are leads managed?' says" (2026-10-02), "Warn sellers as they near their lead limit, as the Subscription FAQ says"
+     (2026-10-02: there is no lead limit) and "Send the renewal reminder the billing answer promises" (2026-10-02:
+     built in P4, live once `subscription_lifecycle` is on).
+- Context:
+  - P13 was the 14th and last phase of the vendor-subscription build (plan approved 2026-10-08). P0–P12 went to
+    production on 2026-10-09/10 with every switch off; P13 was held back on purpose.
+  - Already done on 2026-10-10 (Mitra: "just clean up the unused table and the temp shims"): P13's sections 3 and 4
+    were taken out of it. `20261010142813_retire_usage_and_mode_shims.sql` (applied) closed `subscription_usage` to
+    browsers and switched off P1's payment-mode shims; `20261010180100_drop_usage_and_mode_shims.sql` (run by Mitra in
+    the SQL editor, so it keeps its written version) dropped the table, both triggers and both functions. Every
+    payment writer sets `payment_mode` itself; a missing one is refused (verified on production).
+  - The file is the written version `20261009170000`, never applied to production; on the local stack it has been
+    applied since 2026-10-09 (the local Subscription page already shows the new copy).
+  - Related decisions (Mitra, 2026-10-10): buyers may review without dealings; the Following page keeps its other-seller
+    sections; managers and super admins assign account managers.
+- Reference: 2026-10-10, vendor subscriptions session, prompt 31 ("the sql ran and add the final clean up to todo.md.
+  put a lot of context in this one"). Working notes: `cosora testing/subscription-session/SESSION-CONTEXT.md`.
+- Status: Open
+
 ### Give Cosora's GST details for the tax invoice — added 2026-10-08
 - Task: Mitra sends Cosora's registered legal name, trade name (if any), registered address with PIN code, state,
   GSTIN, PAN, the SAC code the CA confirms for the subscription service, and the invoice number prefix (2–4 capital
