@@ -234,7 +234,7 @@ file was created; they record real runs, but only those the changelog captured.
   until 2099 from an unpaid campaign a reviewer approved; a certificate order from a draft; a listing created with
   5,000 views, enquiries and sales and a 5.0 rating from 900 reviews; search vectors and a follower count set by the
   seller; a catalogue created live; a requirement and a review dated 2099.
-- **After the fix** (`20261010120000_server_owned_columns.sql`): 16/16 and 6/6 hold; the sweeps show none of those columns; the attack
+- **After the fix** (`20261010060959_server_owned_columns.sql`): 16/16 and 6/6 hold; the sweeps show none of those columns; the attack
   pass 44/44; the journey 123/123.
 - **Harness** `scripts/security/server_owned_columns.sql`, 18/18 (run as the browser would: role `authenticated`
   with the account's token; as the service role; as a moderator). Ads: a draft whatever is asked for; no certificate
@@ -248,6 +248,12 @@ file was created; they record real runs, but only those the changelog captured.
   called.
 - **Regression:** the fourteen subscription harnesses 269/269 (P5's case 16 edits an ad sent back for changes now: a
   running one can't be edited); both races; end to end 180/180.
+- **On production, after the apply** (as the roles, in a block that rolled back, so nothing was kept): a running ad's
+  owner had four direct changes refused (end date, slots, status, date) and could still pause and resume; a listing
+  edit saved while its counts and date stayed; a signed-out view and enquiry still counted. The new functions and
+  triggers equal the tested copy's (body md5, definer flag, settings, who may execute). No seller there has a paid
+  plan, so a paid seller's insert was not tried on production. The three redeployed functions refuse a caller with
+  no credentials (401).
 - **Two things the run taught:** P6's harness counts `admin.lead_alerts` and `lead_match` notifications whole, so a
   run that leaves any behind fails its cases 1 and 4 (the full-test scripts now remove what their requirements sent).
   And the older matrix harnesses in `scripts/admin-completion` and `scripts/admin-separation` name production's

@@ -3834,8 +3834,8 @@ on the way is in `claude.md` ("Postgres facts that are not guessable"); the list
 
 ## Server-owned values and the advertising path (2026-10-10)
 
-Migration `20261010120000_server_owned_columns.sql` (written version; **not applied**: it waits for Mitra, and goes
-in before its branch is pushed). Harness `scripts/security/server_owned_columns.sql` (18 cases); end to end
+Migration `20261010060959_server_owned_columns.sql` (applied 2026-10-10 with Mitra's yes, md5 `edaadc0f…` = live; written as
+`20261010120000`). Harness `scripts/security/server_owned_columns.sql` (18 cases); end to end
 `scripts/security/full-test/`. Found by the full test after the subscriptions release (`documentation/test.md`,
 2026-10-10; `documentation/securityflags.md`, same date).
 
@@ -3885,5 +3885,7 @@ catalogue live as before.
 the local stack's mock never saw an order or a refund being created. They read `RAZORPAY_API_URL` now, as the other
 Razorpay calls did; unset (production), the address is Razorpay's.
 
-**To release:** ask Mitra; apply the migration (the self-checking wrapper, md5 of the file's LF text); rename it to its
-live version; then push the branch and deploy the three functions. The migration first: the repositories are public.
+**Released 2026-10-10** in this order: the migration (the self-checking wrapper, md5 of the file's LF text), a check on
+production as the roles that rolled back, the file renamed to its live version, `main` pushed in both repos, and the
+three functions deployed (`subscription-create-order` 10, `razorpay-create-order` 10, `admin-refund-payment` 9). The
+migration went first because the repositories are public.

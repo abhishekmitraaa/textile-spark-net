@@ -162,11 +162,10 @@ runs **every way**.
 | `20261010040629_subscriptions_p2_dispatch_job.sql` | Subscriptions P2's schedule (applied 2026-10-10 with Mitra's say-so, md5 `b8e38d44…` = live; written as `20261008130100`). The `notification-dispatch` job, every minute. |
 | `20261010040633_subscriptions_p6_lead_digest_job.sql` | Subscriptions P6's schedule (applied 2026-10-10, md5 `22a46205…` = live; written as `20261009100100`). The `lead-alert-digest` job, 09:00 IST. |
 | `20261010040639_subscriptions_p8_crm_followups_job.sql` | Subscriptions P8's schedule (applied 2026-10-10, md5 `5b6bf1de…` = live; written as `20261009120100`). The `crm-followups` job, every 15 minutes. |
+| `20261010060959_server_owned_columns.sql` | The full test's fix (applied 2026-10-10 with Mitra's yes, md5 `edaadc0f…` = live; written as `20261010120000`). A browser makes a draft ad and nothing else; an owner's ad status moves only through the pause, resume and resubmit functions; counts, ratings, dates and search vectors on listings, videos, seller profiles, requirements and reviews are the server's; catalogues go through review. Applied before its branch was pushed. |
 
-Written, not applied (2026-10-10): `20261010120000_server_owned_columns.sql` (the full test's fix: advertising
-without paying, and the counts, ratings, dates and vectors a browser could set; waits for Mitra, and goes in **before**
-its branch is pushed, since the repository is public) and `20261009170000_subscriptions_p13_truth_pass.sql` (when every
-switch is on for everyone). Inside the applied files, comments and messages still name each other by their written
+Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
+everyone). Inside the applied files, comments and messages still name each other by their written
 versions.
 
 ---

@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SECURITY HARNESS: server-owned values and the advertising path (2026-10-10).
--- Migration 20261010120000_server_owned_columns.sql (its written version; the live one once applied).
+-- Migration 20261010060959_server_owned_columns.sql (applied 2026-10-10; written as 20261010120000).
 --   ads        a browser makes a draft and nothing else; an owner's status moves only through
 --              pause / resume / resubmit; what was paid for and reviewed stays as it was;
 --              a draft orders no certificate; review and the payment functions are untouched
