@@ -3124,9 +3124,9 @@ Plan: build every vendor subscription feature, phase by phase behind switches (M
 ## Subscriptions P1: billing core (2026-10-08)
 
 Migrations `20261009171650_subscriptions_p1_billing_core.sql` (guard: `admin.subscription_quote` md5
-`c61474b3…`) and `20261008120100_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, approved by Mitra on
+`c61474b3…`) and `20261010033959_subscriptions_p1_reconcile_job.sql` (the schedule: a new job, approved by Mitra on
 2026-10-08, applied with P1's release after `billing-reconcile` is deployed). Built on branch
-`subscriptions/p1-billing-core`; the first applied 2026-10-09, the job not yet.
+`subscriptions/p1-billing-core`; the first applied 2026-10-09, the job on 2026-10-10, after `billing-reconcile` was deployed.
 
 - **`public.subscription_fulfil(p_order_ref, p_payment_ref, p_source)`** (definer; service role only; source verify,
   webhook, free, demo or reconcile). One transaction:
@@ -3815,6 +3815,17 @@ on the way is in `claude.md` ("Postgres facts that are not guessable"); the list
   and `has_function_privilege` for anon, authenticated and service_role; for tables, columns with types and
   defaults, policies with their expressions and roles, triggers with `tgenabled`, constraints, index definitions and
   table privileges. The only differences were ones with a known cause.
-- **Still to do (2026-10-10):** deploy the fourteen functions (from the committed files, with the Supabase CLI:
-  each function's upload includes every `_shared` file it imports, 9,138 lines in all, too much to type through
-  the tool with no check), apply the reconcile job, push `main` in both repos.
+- **Functions (2026-10-10).** The fourteen went out with the Supabase CLI
+  (`supabase functions deploy <name> --project-ref <ref> --use-api`) from the committed files: each upload includes
+  every `_shared` file the function imports, 9,138 lines in all, too much to type through the Supabase tool with
+  nothing to check it against. New ones first (`invoice-render`, `notification-dispatch`, `billing-reconcile`,
+  `subscription-autopay`), the payment entry points last, so a run that stops half way leaves the live paths on old
+  code. `verify_jwt` comes from `supabase/config.toml` (both webhooks false; Cosora-Admin's three use the default,
+  true). Checked after: each answers, and each refuses a caller with no credentials (401 at the gateway, or 400
+  `invalid signature` from a webhook).
+- **The CLI and an agent.** Supabase CLI 2.119 looks for an AI agent in the environment (`AI_AGENT`, `CLAUDECODE`;
+  the flag is `--agent yes|no|auto`). Found, it answers in JSON and never prompts, so `supabase login` in a window
+  opened from an agent's shell exits at once. A person signs in from a window with those variables cleared and
+  `--agent no` (`subscription-session/SIGN-IN-SUPABASE.cmd`); the agent then deploys with that sign-in.
+- **Then** the reconcile job (`20261010033959`), and `main` in both repos, straight after the functions: the old app
+  against the new functions was never tested, so the two were kept minutes apart.

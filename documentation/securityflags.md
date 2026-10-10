@@ -108,6 +108,10 @@ in the next one.
   and `auth.getUser()` are in the payment functions), **S-6** (the GSTIN and PAN checks are in the app), and **S-8**
   (`subscription_fulfil` exists, but the deployed functions still make the old separate calls). The old functions
   keep working on the new database: the two payment-mode triggers fill in what they don't send.
+- **Later on 2026-10-10:** the fourteen functions are deployed and `main` carries the app, so S-2, S-5, S-6 and S-8
+  are closed with this release. One scheduled job was added, `billing-reconcile` (approved 2026-10-08): it sends the
+  service-role key from Vault to this project's own `billing-reconcile` function and nowhere else. Checked after the
+  deploy: no function serves a caller without credentials; the two webhooks, which take none, refuse a bad signature.
 - New execute grants were compared with the tested copy for anon, authenticated and service_role, function by
   function: no difference. No new scheduled job was created.
 

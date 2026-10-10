@@ -205,7 +205,11 @@ file was created; they record real runs, but only those the changelog captured.
 - **Tables** (the 44 this build creates or alters; columns, policies and RLS, triggers, constraints and indexes,
   privileges): 40 equal; `products` differs by that other work, `subscription_usage` and the two payment-mode
   triggers by P13, which is held back.
-- **Not run:** the browser specs against production (the new app isn't deployed); the edge functions (not deployed).
+- **Functions, after the deploy:** all fourteen answer. A POST with no credentials gets 401 from the gateway (twelve)
+  or 400 `invalid signature` from the function (the two webhooks, `verify_jwt` false as before). The four new ones
+  are at version 1; the ten replaced ones each moved up one.
+- **The reconcile job:** scheduled every 15 minutes and active; its index exists; no unpaid order for it to act on.
+- **Not run:** the browser specs against production.
 
 ### 2026-10-09 — Subscriptions: complete test run (local stack: typecheck 0 in both apps; lint clean on every file the build changed; i18n 7,691/7,691; both production builds; database harnesses 269/269 (14 scripts); P11–P13 replays identical; both race tests hold and catch their mutations; end to end over HTTP 180/180 (10 scripts); browser 73/73; the full-surface sweep 831 visits with no crashes, error screens, broken text, stuck pages, overflow or gating mismatches)
 - **Where:** the local stack with P0–P13 applied; both apps from the `subscriptions/p13-truth-pass` worktrees; mock
