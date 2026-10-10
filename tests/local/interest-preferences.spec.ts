@@ -1,6 +1,6 @@
 /**
  * Interest Preference v2 (2026-10-11): the redesigned picker, its "Others" words, and the
- * old ids carried over. Migration 20261011050000_interest_preferences_v2. Local stack only.
+ * old ids carried over. Migration 20261010232412_interest_preferences_v2. Local stack only.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { BUYER_URL, contextWithSession, freshAccount, sql, watchErrors } from "./stack";

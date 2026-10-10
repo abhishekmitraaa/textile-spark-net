@@ -149,7 +149,7 @@ undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
 - **A buyer interest id means what `pref_category_map` says, and its words live in one file** (Interest Preference
-  v2, 2026-10-11; migration `20261011050000_interest_preferences_v2.sql`).
+  v2, 2026-10-11; migration `20261010232412_interest_preferences_v2.sql`).
   - The ids, labels and photos are `src/lib/buyerCategories.ts`; `CategoryPickerGrid` is the one picker
     (registration, profile Edit, For You). A new interest needs its map rows in a migration, or it narrows nothing.
   - Renaming or retiring an id means a translation in `LEGACY_INTEREST_IDS` and the same translation of saved rows

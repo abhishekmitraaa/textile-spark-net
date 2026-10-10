@@ -7,7 +7,7 @@
 //
 // These ids are what get persisted to `buyer_profiles.preferred_categories`,
 // so keep them stable. Each one maps onto real categories in the database
-// table `pref_category_map` (migration 20261011050000_interest_preferences_v2).
+// table `pref_category_map` (migration 20261010232412_interest_preferences_v2).
 //
 // 2026-10-11: the list moved from nine clothing types to the seventeen
 // interests of the redesigned Interest Preference screen, plus "Others" with
