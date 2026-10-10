@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef } from "react";
 import { Check, Plus } from "lucide-react";
-import { BUYER_CATEGORIES, OTHER_INTEREST_ID, OTHER_INTEREST_MAX } from "@/lib/buyerCategories";
+import { BUYER_CATEGORIES, OTHER_INTEREST_ID, OTHER_INTEREST_MAX, clipOtherInterest } from "@/lib/buyerCategories";
+import { BUYER_CATEGORY_IMAGES } from "@/lib/buyerCategoryImages";
 import { cn } from "@/lib/utils";
 
 // ─────────────────────────────────────────────────────────────
@@ -22,7 +23,7 @@ interface Props {
   onToggle: (id: string) => void;
   otherText: string;
   onOtherTextChange: (v: string) => void;
-  /** Called when the "Others" box loses focus (For You saves then). */
+  /** Called when the "Others" box loses focus. */
   onOtherTextCommit?: () => void;
 }
 
@@ -71,7 +72,7 @@ export default function CategoryPickerGrid({
             >
               <span className={cn(tileCircle, active ? "ring-2 ring-brand-buyer" : "ring-1 ring-gray-200 group-hover:ring-brand-buyer/40")}>
                 <img
-                  src={cat.image}
+                  src={BUYER_CATEGORY_IMAGES[cat.id]}
                   alt=""
                   width={72}
                   height={72}
@@ -126,15 +127,14 @@ export default function CategoryPickerGrid({
             ref={otherInput}
             id={otherId}
             value={otherText}
-            onChange={(e) => onOtherTextChange(e.target.value.slice(0, OTHER_INTEREST_MAX))}
+            onChange={(e) => onOtherTextChange(clipOtherInterest(e.target.value))}
             onBlur={onOtherTextCommit}
-            maxLength={OTHER_INTEREST_MAX}
             autoComplete="off"
             placeholder="e.g. Leather goods, Home décor"
             className="w-full rounded-xl border border-gray-200 bg-white px-3.5 py-3 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-buyer focus:outline-none focus:ring-2 focus:ring-brand-buyer/20"
           />
           <p className="mt-1 text-right text-[11px] text-gray-400">
-            {otherText.length}/{OTHER_INTEREST_MAX}
+            {Array.from(otherText).length}/{OTHER_INTEREST_MAX}
           </p>
         </div>
       )}

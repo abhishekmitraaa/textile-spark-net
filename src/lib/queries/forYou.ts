@@ -183,18 +183,7 @@ export function usePreferredVideoCategoryNames(prefIds: string[]): string[] {
   return Array.from(names);
 }
 
-/**
- * Invert the map: categories.id → the preference id that covers it.
- *
- * Built once per render rather than scanned per product. No category is covered
- * by two preferences in the current seed, but the tie-break is alphabetical
- * rather than "whichever row came back first" so the result stays deterministic
- * if that ever changes.
- */
-export function categoryToPrefId(map: PrefCategoryMap): Map<string, string> {
-  const out = new Map<string, string>();
-  for (const prefId of Object.keys(map).sort()) {
-    for (const catId of map[prefId]) if (!out.has(catId)) out.set(catId, prefId);
-  }
-  return out;
-}
+// REMOVED 2026-10-11: categoryToPrefId(), which gave each category the one
+// preference covering it. Since Interest Preference v2 interests overlap (Woven
+// Fabrics is Fabrics and Raw Materials), so match categories.id against every
+// category the buyer's interests cover instead (ForYou.tsx).

@@ -17,57 +17,48 @@
 // translated every saved row once.
 // ─────────────────────────────────────────────────────────────
 
-import fabrics from "@/assets/interests/fabrics.webp";
-import womensClothing from "@/assets/interests/womens-clothing.webp";
-import mensClothing from "@/assets/interests/mens-clothing.webp";
-import cosmetics from "@/assets/interests/cosmetics.webp";
-import unisexClothing from "@/assets/interests/unisex-clothing.webp";
-import kidswear from "@/assets/interests/kidswear.webp";
-import accessories from "@/assets/interests/accessories.webp";
-import labelsTags from "@/assets/interests/labels-tags.webp";
-import itSoftware from "@/assets/interests/it-software.webp";
-import rawMaterials from "@/assets/interests/raw-materials.webp";
-import packaging from "@/assets/interests/packaging.webp";
-import trimsAccessories from "@/assets/interests/trims-accessories.webp";
-import fashionDesigner from "@/assets/interests/fashion-designer.webp";
-import marketingPr from "@/assets/interests/marketing-pr.webp";
-import freelancers from "@/assets/interests/freelancers.webp";
-import exporter from "@/assets/interests/exporter.webp";
-import photography from "@/assets/interests/photography.webp";
-
+// The tile photos are in buyerCategoryImages.ts, kept out of this file
+// because the preferences store (on every page) imports it.
 export interface BuyerCategory {
   id: string;
   label: string;
-  image: string;
 }
 
 // Order is the design's (Interest Preference, 2026-10-11).
 export const BUYER_CATEGORIES: BuyerCategory[] = [
-  { id: "fabrics", label: "Fabrics", image: fabrics },
-  { id: "womens-clothing", label: "Women's Clothing", image: womensClothing },
-  { id: "mens-clothing", label: "Men's Clothing", image: mensClothing },
-  { id: "cosmetics", label: "Cosmetics", image: cosmetics },
-  { id: "unisex-clothing", label: "Unisex Clothing", image: unisexClothing },
-  { id: "kidswear", label: "Kidswear", image: kidswear },
-  { id: "accessories", label: "Accessories", image: accessories },
-  { id: "labels-tags", label: "Labels & Tags", image: labelsTags },
-  { id: "it-software", label: "IT & Software", image: itSoftware },
-  { id: "raw-materials", label: "Raw Materials", image: rawMaterials },
-  { id: "packaging", label: "Packaging", image: packaging },
-  { id: "trims-accessories", label: "Trims & Accessories", image: trimsAccessories },
-  { id: "fashion-designer", label: "Fashion Designer", image: fashionDesigner },
-  { id: "marketing-pr", label: "Marketing & PR", image: marketingPr },
-  { id: "freelancers", label: "Freelance", image: freelancers },
-  { id: "exporter", label: "Exporter", image: exporter },
-  { id: "photography", label: "Photography", image: photography },
+  { id: "fabrics", label: "Fabrics" },
+  { id: "womens-clothing", label: "Women's Clothing" },
+  { id: "mens-clothing", label: "Men's Clothing" },
+  { id: "cosmetics", label: "Cosmetics" },
+  { id: "unisex-clothing", label: "Unisex Clothing" },
+  { id: "kidswear", label: "Kidswear" },
+  { id: "accessories", label: "Accessories" },
+  { id: "labels-tags", label: "Labels & Tags" },
+  { id: "it-software", label: "IT & Software" },
+  { id: "raw-materials", label: "Raw Materials" },
+  { id: "packaging", label: "Packaging" },
+  { id: "trims-accessories", label: "Trims & Accessories" },
+  { id: "fashion-designer", label: "Fashion Designer" },
+  { id: "marketing-pr", label: "Marketing & PR" },
+  { id: "freelancers", label: "Freelance" },
+  { id: "exporter", label: "Exporter" },
+  { id: "photography", label: "Photography" },
 ];
 
 /** "Others": no categories behind it; the buyer types what they source instead.
  *  Stored like any other id so the profile can show it, with the words in
  *  buyer_profiles.preferred_interest_other. */
 export const OTHER_INTEREST_ID = "others";
-/** Same limit as the column's check constraint. */
+/** Same limit as the column's check constraint, which counts characters (code
+ *  points), not UTF-16 units. */
 export const OTHER_INTEREST_MAX = 60;
+
+/** The "Others" words cut to the limit by whole characters, so an emoji at the
+ *  end is never split into half a surrogate pair. */
+export function clipOtherInterest(text: string): string {
+  const chars = Array.from(text);
+  return chars.length > OTHER_INTEREST_MAX ? chars.slice(0, OTHER_INTEREST_MAX).join("") : text;
+}
 
 export const BUYER_CATEGORY_LABEL: Record<string, string> = {
   ...Object.fromEntries(BUYER_CATEGORIES.map((c) => [c.id, c.label])),

@@ -83,7 +83,16 @@ short list of things someone has to *decide*.
   for `tshirts, shirts, coords, dresses, bottomwear, activewear` so a browser on the pre-2026-10-11 app keeps
   personalising. Once `select count(*) from buyer_profiles where preferred_categories && array['tshirts','shirts',
   'coords','dresses','bottomwear','activewear']` stays 0 for a few weeks, delete those rows in a migration and drop
-  `LEGACY_INTEREST_IDS` from `src/lib/buyerCategories.ts`.
+  `LEGACY_INTEREST_IDS` from `src/lib/buyerCategories.ts`. The app translates old ids only when it reads them
+  and writes the new ones back on the buyer's next change, so a buyer who never edits again keeps them: translate
+  them in `buyer_profiles_interest_other_tidy()` too (code review, 2026-10-11), and the count can reach 0.
+
+- **For You's starting feed counts overlapping categories twice** (code review, 2026-10-11).
+  `buyer_cold_start_embedding()` averages over `preferred_categories` → `pref_category_map` → products with no
+  dedupe, and since Interest Preference v2 a category can sit under two interests (Woven Fabrics under Fabrics and
+  Raw Materials; Fashion Designing, PR & Media and Photography & Videography under Freelance too). A buyer who picks
+  both gets those products weighted twice. No live product is in an overlapping category today. Fix: average over
+  `distinct` product ids.
 
 - **Confirm the rights to the interest photos.** The 13 in `src/assets/Buyer/Preference/` came from Mitra with no
   source recorded; one shows a real brand's label (hobbytime.etsy.com) and one a child. claude.md says an image the

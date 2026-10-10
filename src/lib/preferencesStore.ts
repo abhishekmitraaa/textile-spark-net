@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
-import { normaliseInterestIds, OTHER_INTEREST_ID, OTHER_INTEREST_MAX, tidyOtherInterest } from "@/lib/buyerCategories";
+import { clipOtherInterest, normaliseInterestIds, OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer "For You" preferences.
@@ -32,7 +32,7 @@ const EMPTY: BuyerPreferences = { categories: [], otherInterest: "", locations: 
 /** Keeps the words only while "others" is picked, cut to the column's limit. */
 function cleanOther(categories: string[], text: unknown): string {
   if (!categories.includes(OTHER_INTEREST_ID) || typeof text !== "string") return "";
-  return text.slice(0, OTHER_INTEREST_MAX);
+  return clipOtherInterest(text);
 }
 
 function load(): BuyerPreferences {
@@ -84,19 +84,27 @@ function set(next: BuyerPreferences) {
   listeners.forEach((l) => l());
 }
 
-// Fire-and-forget: mirror the category preferences to the buyer's account.
-// RLS restricts the upsert to the buyer's own row.
+// Mirror the category preferences to the buyer's account. RLS restricts the
+// upsert to the buyer's own row.
+//
+// One save at a time, each sending the state as it is when its turn comes: two
+// saves fired together (For You saving the "Others" words, then a tile tap)
+// could otherwise reach the database in either order and leave the older one.
+let saveChain: Promise<void> = Promise.resolve();
 function dbSaveCategories() {
-  if (!userId) return;
-  const cats = state.categories;
-  const other = tidyOtherInterest(state.otherInterest);
-  void supabase
-    .from("buyer_profiles")
-    .upsert(
-      { id: userId, preferred_categories: cats, preferred_interest_other: other || null },
-      { onConflict: "id" },
-    )
-    .then(() => {});
+  const uid = userId;
+  if (!uid) return;
+  saveChain = saveChain.then(async () => {
+    if (userId !== uid) return; // signed out or switched account meanwhile
+    const other = tidyOtherInterest(state.otherInterest);
+    const { error } = await supabase
+      .from("buyer_profiles")
+      .upsert(
+        { id: uid, preferred_categories: state.categories, preferred_interest_other: other || null },
+        { onConflict: "id" },
+      );
+    if (error) console.warn("Saving interests failed:", error.message);
+  }).catch(() => {});
 }
 
 /** Called by StoreSync on auth change: hydrate categories from the account (DB)
@@ -146,10 +154,10 @@ export function setCategories(ids: string[], otherInterest = "") {
   dbSaveCategories();
 }
 
-/** The "Others" words on their own (For You saves them when the field loses
- *  focus). Dropped unless "others" is picked. */
+/** The "Others" words on their own (For You saves them as the buyer types).
+ *  Dropped unless "others" is picked. */
 export function setOtherInterest(text: string) {
-  if (text === state.otherInterest) return;
+  if (cleanOther(state.categories, text) === state.otherInterest) return;
   set({ ...state, otherInterest: text });
   dbSaveCategories();
 }

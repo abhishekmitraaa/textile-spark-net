@@ -249,18 +249,43 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
 
 // Markup now lives in CategoryPickerGrid so the registration interest step can
 // render the identical control. This wrapper just binds it to the store: a tap
-// saves at once, and the "Others" words save when their box loses focus.
+// saves at once, and the "Others" words save a moment after the buyer stops
+// typing, on blur, and when the picker closes (Escape or the X close the popup
+// without a blur).
+const OTHER_SAVE_DELAY_MS = 700;
 function CategoryPicker({ selected }: { selected: string[] }) {
   const { otherInterest } = usePreferences();
   const [draft, setDraft] = useState(otherInterest);
-  useEffect(() => { setDraft(otherInterest); }, [otherInterest]);
+  const draftRef = useRef(draft);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const commit = () => {
+    clearTimeout(timer.current);
+    setOtherInterest(tidyOtherInterest(draftRef.current));
+  };
+  const change = (v: string) => {
+    draftRef.current = v;
+    setDraft(v);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(commit, OTHER_SAVE_DELAY_MS);
+  };
+  // Take the store's value only when it says something else: a save comes back
+  // tidied ("Leather " -> "Leather"), and replacing the draft then would eat the
+  // space the buyer is in the middle of typing.
+  useEffect(() => {
+    if (tidyOtherInterest(draftRef.current) !== otherInterest) {
+      draftRef.current = otherInterest;
+      setDraft(otherInterest);
+    }
+  }, [otherInterest]);
+  // The picker closing (Escape, the X, Next) saves what was typed.
+  useEffect(() => commit, []);
   return (
     <CategoryPickerGrid
       selected={selected}
       onToggle={toggleCategory}
       otherText={draft}
-      onOtherTextChange={setDraft}
-      onOtherTextCommit={() => setOtherInterest(tidyOtherInterest(draft))}
+      onOtherTextChange={change}
+      onOtherTextCommit={commit}
     />
   );
 }
@@ -413,7 +438,7 @@ const ForYou = () => {
     if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || p.manufacturer.toLowerCase().includes(q));
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, prefs.categories, prefCategoryIds, prefs.locations, search]);
+  }, [pool, prefCategoryIds, prefs.locations, search]);
 
   const visible = filtered.slice(0, batches * 8);
 
@@ -623,8 +648,9 @@ const ForYou = () => {
             <div className="flex flex-wrap gap-2">
               {prefs.categories.map((id) => (
                 <span key={id} className="inline-flex items-center gap-1 bg-brand-buyer/10 text-brand-buyer rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
-                  {/* "Others" shows the buyer's own words, which are never translated. */}
-                  <span data-no-translate={id === OTHER_INTEREST_ID || undefined}>{interestLabel(id, prefs.otherInterest)}</span>
+                  {/* "Others" shows the buyer's own words, which are never translated;
+                      the bare label "Others" is ours and is. */}
+                  <span data-no-translate={(id === OTHER_INTEREST_ID && prefs.otherInterest.trim() !== "") || undefined}>{interestLabel(id, prefs.otherInterest)}</span>
                   <button onClick={() => removeCategory(id)} aria-label={`Remove ${interestLabel(id, prefs.otherInterest)}`}>
                     <X className="w-3 h-3" />
                   </button>

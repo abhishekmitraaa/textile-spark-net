@@ -76,7 +76,7 @@ test.describe("Interest Preference", () => {
     }
   });
 
-  test("For You: the same picker, and the Others words save when the box loses focus", async ({ browser }) => {
+  test("For You: the same picker, and the Others words save even when the popup is closed with Escape", async ({ browser }) => {
     test.setTimeout(120_000);
     const who = await freshAccount("interest-foryou");
     sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '{kidswear}')
@@ -90,12 +90,25 @@ test.describe("Interest Preference", () => {
       await expect(dialog.getByRole("button", { name: "Kidswear", exact: true })).toHaveAttribute("aria-pressed", "true");
       await dialog.getByRole("button", { name: "Others", exact: true }).click();
       await dialog.getByLabel("What else do you source?").fill("Home decor");
-      await dialog.getByRole("heading", { name: "Edit your preferences" }).click(); // blur
+      // Escape closes the popup without a blur (code review, 2026-10-11).
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
       await expect.poll(() => saved(who.id)).toBe("kidswear,others|Home decor");
+      await expect(page.getByText("Home decor", { exact: true })).toBeVisible();
 
-      // Unpicking Others drops the words, in the app and in the database.
+      // Words, then unpick straight away: two saves in a row; the last one wins.
+      await page.getByRole("button", { name: "Edit Preferences" }).click();
+      await dialog.getByLabel("What else do you source?").fill("Home decor and rugs");
       await dialog.getByRole("button", { name: "Others", exact: true }).click();
       await expect.poll(() => saved(who.id)).toBe("kidswear|-");
+      await page.waitForTimeout(1500); // past the typing delay: nothing late overwrites it
+      expect(saved(who.id)).toBe("kidswear|-");
+
+      // An emoji at the limit is never cut in half.
+      await dialog.getByRole("button", { name: "Others", exact: true }).click();
+      await dialog.getByLabel("What else do you source?").fill("a".repeat(59) + "🧵🧵");
+      await page.keyboard.press("Escape");
+      await expect.poll(() => saved(who.id)).toBe(`kidswear,others|${"a".repeat(59)}🧵`);
     } finally {
       await ctx.close();
     }

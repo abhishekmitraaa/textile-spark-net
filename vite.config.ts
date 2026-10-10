@@ -30,5 +30,13 @@ export default defineConfig(({ command, mode }) => {
       },
     },
     // keep default build options for now; manual chunking caused runtime issues
+    build: {
+      // The interest picker's photos are served as files: the app is one main
+      // bundle, so Vite's default (inline anything under 4 KB) put eight of
+      // them into every page as base64 (Interest Preference v2, 2026-10-11).
+      // Everything else keeps the default.
+      assetsInlineLimit: (filePath: string) =>
+        filePath.replace(/\\/g, "/").includes("/src/assets/interests/") ? false : undefined,
+    },
   };
 });
