@@ -1053,6 +1053,11 @@ undocumented. Deep technical rationale for each lives in
   - Counters and derived columns are left out (views, impressions, clicks, likes, ratings,
     embeddings, search text, `updated_at`). A new counter column goes on that list in
     `admin.audit_row_change()`, or an admin browsing the site shows up as changing rows.
+  - **Staff are told what is recorded, and the wording must stay true** (2026-10-11). Cosora-Admin's sign-in page
+    and "Choose your password" show `ACTIVITY_NOTICE` (`src/lib/activityNotice.ts` in that repo). It claims sign-ins,
+    changes, invites, refunds and revealed phone numbers, and nothing else. Anything that changes what the Admin Log
+    records (Mitra's per-admin tracking of pages visited and records opened, a retention prune) updates that text in
+    the same release.
 
 - **An admin's writes follow the admin's role in the database** (admin completion Phase 1,
   2026-09-27). `roles.ts` in Cosora-Admin only hides buttons; the policies and triggers decide.
