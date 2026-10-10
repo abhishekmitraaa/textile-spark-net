@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SECURITY HARNESS: catalogue review (2026-10-10).
--- Migration 20261010160000_catalogue_review.sql (its written version).
+-- Migration 20261010133347_catalogue_review.sql (applied 2026-10-10; written as 20261010160000).
 --   moderator   approves (the reason clears), rejects only with a reason, changes nothing else
 --   seller      can't approve, can't write a reason, resubmits a rejected catalogue (recorded as an edit)
 --   others      support and vendor_ops read the queue but can't decide; a buyer sees live catalogues only

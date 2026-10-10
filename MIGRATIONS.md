@@ -165,10 +165,10 @@ runs **every way**.
 | `20261010060959_server_owned_columns.sql` | The full test's fix (applied 2026-10-10 with Mitra's yes, md5 `edaadc0f…` = live; written as `20261010120000`). A browser makes a draft ad and nothing else; an owner's ad status moves only through the pause, resume and resubmit functions; counts, ratings, dates and search vectors on listings, videos, seller profiles, requirements and reviews are the server's; catalogues go through review. Applied before its branch was pushed. |
 | `20261010124955_listing_edit_rereview.sql` | Edits to approved content back to review (applied 2026-10-10 with Mitra's yes, md5 `46cb7bb2…` = live; written as `20261010150000`). `admin.listing_edits` and its four functions, triggers on `products`, `product_videos`, `catalogues` and `product_images`, `admin_listing_edits()` for staff. |
 | `20261010125031_follower_count.sql` | Follower counts (applied 2026-10-10, md5 `9b66780c…` = live; written as `20261010150100`). `follows_not_self` (NOT VALID), `follows_count_sync()` and its trigger, one recount (six sellers' shown numbers became the real ones). |
+| `20261010133347_catalogue_review.sql` | Catalogue review (applied 2026-10-10 with Mitra's yes, md5 `8790c4c4…` = live; written as `20261010160000`). `catalogues.rejection_reason`, the moderator rules in `catalogues_moderation_guard()`, `catalogues_web_urls` (http(s) addresses only). |
 
 Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
-everyone) and `20261010160000_catalogue_review.sql` (catalogue review: `catalogues.rejection_reason` and the moderator rules;
-waits for Mitra, and goes in before its branch is pushed, since the seller page reads the new column). Inside the applied files, comments and messages still name each other by their written
+everyone). Inside the applied files, comments and messages still name each other by their written
 versions.
 
 ---

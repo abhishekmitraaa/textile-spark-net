@@ -1304,7 +1304,7 @@ undocumented. Deep technical rationale for each lives in
   `admin.listing_edit_rereview()`, or every update of it by the owner sends the item back to review.
 - Follower counts are the database's (`follows_count_sync`); a seller can't follow their own business.
 - Catalogues are reviewed in Cosora-Admin › Catalogues like listings and videos: a rejection needs a reason, the seller
-  sees it, approving clears it (`20261010160000_catalogue_review.sql`).
+  sees it, approving clears it (`20261010133347_catalogue_review.sql`).
 
 ### A row policy is not a column policy (2026-10-10)
 - RLS decides which ROWS an account writes. Every column of a table is granted to `authenticated`, so on its own

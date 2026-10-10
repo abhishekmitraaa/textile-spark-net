@@ -3942,7 +3942,7 @@ traffic. The Following page still loads every seller and live listing into the b
 
 ## Catalogue review (2026-10-10)
 
-Migration `20261010160000_catalogue_review.sql` (written version; production waits for Mitra). Harness `scripts/security/catalogue_review.sql` (8);
+Migration `20261010133347_catalogue_review.sql` (applied 2026-10-10; written as `20261010133347`). Harness `scripts/security/catalogue_review.sql` (8);
 browser `tests/local/catalogue-review.spec.ts`.
 
 - **Screen:** Cosora-Admin `src/pages/Catalogues.tsx`, section `catalogues` in `src/lib/roles.ts` (read: super_admin,
@@ -3956,4 +3956,6 @@ browser `tests/local/catalogue-review.spec.ts`.
   (42501), and a browser's new catalogue carries none. The guard pins the earlier body's md5 (`b2e5a4a6…`).
 - **Seller:** `src/lib/queries/catalogues.ts` reads `rejection_reason` for the seller's own catalogues;
   `UploadCatalogue.tsx` shows it on a rejected catalogue. The buyer-facing query doesn't read it.
-- **To release:** ask Mitra; apply the migration (wrapper); rename it to its ledger version; push both repos.
+- **Addresses:** `catalogues_web_urls` allows only http(s) file and cover addresses; Cosora-Admin and the seller's
+  Business Profile render a link or picture only through `webUrl()`. Found by the security review before release.
+- **Released 2026-10-10:** checked on production as the roles in a block that rolled back: a seller's upload with a `javascript:` address was refused, a normal upload went to review without the reason it tried to pre-write, rejecting without a reason was refused and with one kept, the seller couldn't overwrite it, and a buyer saw only the approved catalogue; file renamed; both repos pushed.

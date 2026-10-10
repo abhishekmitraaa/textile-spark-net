@@ -2,7 +2,7 @@
  * Catalogue review in Cosora-Admin (2026-10-10), on the local stack.
  *   * A seller on Basic has two catalogues waiting. Cosora-Admin › Catalogues (in the Moderation menu) lists both
  *     with the seller and a link to the PDF. The moderator approves one (live) and rejects the other; Reject stays
- *     disabled until a reason is typed (20261010160000_catalogue_review).
+ *     disabled until a reason is typed (20261010133347_catalogue_review).
  *   * The seller's catalogue page shows the rejected one with the moderator's reason.
  *   * The seller then renames the live one through the API: it goes back to review and the Catalogues queue shows
  *     it as Edited with the change (20261010124955_listing_edit_rereview).

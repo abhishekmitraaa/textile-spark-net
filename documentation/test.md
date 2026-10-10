@@ -194,7 +194,7 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 | `full-test/attacks.mjs` | 44 attempts on plans, payments, switches, tier limits, other sellers' data, staff roles. HOLDS = refused or nothing changed; GAP = it worked |
 | `full-test/ad-attacks.mjs` | 16 attempts at advertising unpaid, unreviewed, or beyond what was bought |
 | `full-test/server-value-attacks.mjs` | Search vectors, the certificate order, follower counts |
-| `catalogue_review.sql` | Catalogue review: the moderator rules and the reason (8 cases). Rolls back |
+| `catalogue_review.sql` | Catalogue review: the moderator rules, the reason, web addresses only (9 cases). Rolls back |
 | `listing_edits.sql`, `follower_count.sql` | Edits to approved listings, videos and catalogues back to review, the record staff read (16 cases); follower counts (10 cases). Roll back |
 | `full-test/paid-seller-ad.mjs` | A seller on each paid plan creating an ad through the table, the functions and the real purchase; a Free seller. Needs `AD_PAY_URL` (the ad functions with mock Razorpay keys) |
 | `full-test/own-row-columns.mjs`, `own-row-columns-2.mjs` | Which columns of its own rows a browser can change, on twelve tables. Read the list: a count, rating, status, date or verification should not be in it |
@@ -204,13 +204,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-10 — Catalogue review (local stack: harness 8/8; browser 1/1 new; all database harnesses 321/321; whole local browser suite 78/78)
+### 2026-10-10 — Catalogue review (released the same day; local stack: harness 9/9; browser 1/1 new; all database harnesses 321/321; whole local browser suite 78/78)
 
 - **catalogue_review.sql (8/8):** a moderator approves (no reason left); rejects only with a reason; can't change the
   title; the seller can't approve or write a reason and a new catalogue carries none; a resubmitted rejected
   catalogue is in review with its reason kept and an edit record "after rejection"; approving it clears the reason and
   closes the record; support and vendor ops see the queue but their update changes nothing; a buyer sees live
-  catalogues only.
+  catalogues only; a `javascript:` file address and a `data:` cover are refused (case 9, added after the security
+  review).
+- **On production** (as the roles, rolled back): a seller's upload with a `javascript:` address was refused, a normal upload went to review without the reason it tried to pre-write, rejecting without a reason was refused and with one kept, the seller couldn't overwrite it, and a buyer saw only the approved catalogue.
 - **catalogue-review.spec.ts (1/1):** Cosora-Admin › Moderation › Catalogues lists the seller's two catalogues with the
   seller and the PDF link; Approve puts one live; Reject is disabled until a reason is typed, then rejects; the Live and
   Rejected tabs show them; the seller's catalogue page shows "Why it wasn't approved:" and the reason; a rename through
