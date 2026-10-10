@@ -3959,3 +3959,17 @@ browser `tests/local/catalogue-review.spec.ts`.
 - **Addresses:** `catalogues_web_urls` allows only http(s) file and cover addresses; Cosora-Admin and the seller's
   Business Profile render a link or picture only through `webUrl()`. Found by the security review before release.
 - **Released 2026-10-10:** checked on production as the roles in a block that rolled back: a seller's upload with a `javascript:` address was refused, a normal upload went to review without the reason it tried to pre-write, rejecting without a reason was refused and with one kept, the seller couldn't overwrite it, and a buyer saw only the approved catalogue; file renamed; both repos pushed.
+
+---
+
+## Cleanup ahead of P13: subscription_usage and the payment-mode shims (2026-10-10)
+
+- `20261010142813_retire_usage_and_mode_shims.sql` (live): `revoke all on public.subscription_usage from anon,
+  authenticated` and `disable trigger` on `trg_subscription_payment_orders_mode` and `trg_subscription_invoices_mode`.
+  `payment_mode` is NOT NULL on both tables, so a writer that forgets it fails loudly instead of being guessed for.
+  Writers that set it: `subscription_fulfil()`, `autopay_charge()`, `subscription-create-order`,
+  `subscription-verify-payment`, `subscription-webhook`, `subscription-autopay`.
+- `20261010180100_drop_usage_and_mode_shims.sql` (declined by the Supabase tool; for the SQL editor, optional): drops
+  the table, the two triggers and `admin.subscription_order_mode_default()` / `admin.subscription_invoice_mode_default()`.
+  Applied on the local stack, so local and production differ here until it is run.
+- `database.types.ts` in both apps still lists `subscription_usage` (it exists in production); remove it once the drop runs.

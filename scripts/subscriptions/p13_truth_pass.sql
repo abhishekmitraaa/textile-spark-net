@@ -17,7 +17,7 @@ declare
     'lead channels, alerts, CRM and catalogue match the limits',            -- 3
     'nothing promised that isn''t built',                                     -- 4
     'the FAQs are true and translated',                                       -- 5
-    'subscription_usage is retired, not gone',                                -- 6
+    'subscription_usage is retired (closed to browsers, or gone)',            -- 6
     'the copy is translated',                                                 -- 7
     'an order without its payment mode is refused (the shims are off)'];      -- 8
   got text; want text; i int;
@@ -105,15 +105,19 @@ begin
         want := '6 rewritten, 6 translated stale=0';
 
       elsif i = 6 then
-        got := 'exists=' || (to_regclass('public.subscription_usage') is not null)::text
-            || ' anon=' || (has_table_privilege('anon', 'public.subscription_usage', 'select') or has_table_privilege('anon', 'public.subscription_usage', 'insert'))::text
+        -- 20261010142813 closed it to browsers; 20261010180100 drops it.
+        if to_regclass('public.subscription_usage') is null then
+          got := 'gone';
+        else
+          execute $u$select 'anon=' || (has_table_privilege('anon', 'public.subscription_usage', 'select') or has_table_privilege('anon', 'public.subscription_usage', 'insert'))::text
             || ' signed-in=' || (has_table_privilege('authenticated', 'public.subscription_usage', 'select')
                                  or has_table_privilege('authenticated', 'public.subscription_usage', 'insert')
                                  or has_table_privilege('authenticated', 'public.subscription_usage', 'update')
                                  or has_table_privilege('authenticated', 'public.subscription_usage', 'delete'))::text
-            || ' service=' || has_table_privilege('service_role', 'public.subscription_usage', 'select')::text
-            || ' rows=' || (select count(*) from public.subscription_usage);
-        want := 'exists=true anon=false signed-in=false service=true rows=0';
+            || ' rows=' || (select count(*) from public.subscription_usage)$u$ into got;
+          got := case when got = 'anon=false signed-in=false rows=0' then 'gone' else got end;
+        end if;
+        want := 'gone';
 
       elsif i = 7 then
         -- The plans page translates these through the catalogue (src/i18n); the harness can only
@@ -129,9 +133,9 @@ begin
           got := 'order without a mode went in as ' || (select payment_mode from public.subscription_payment_orders where order_id = 'p13_no_mode');
         exception when not_null_violation then got := 'refused';
         end;
-        got := got || ' shims=' || (select string_agg(tgenabled::text, '' order by tgname) from pg_trigger
-                                      where tgname in ('trg_subscription_payment_orders_mode', 'trg_subscription_invoices_mode'));
-        want := 'refused shims=DD';
+        got := got || ' shims on=' || (select count(*) from pg_trigger
+                                         where tgname in ('trg_subscription_payment_orders_mode', 'trg_subscription_invoices_mode') and tgenabled <> 'D');
+        want := 'refused shims on=0';
       end if;
       raise exception using errcode = 'P0099',
         message = (case when got = want then 'PASS ' else 'FAIL ' end) || coalesce(got, 'null') || ' (want ' || want || ')';

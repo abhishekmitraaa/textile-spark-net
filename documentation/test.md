@@ -204,6 +204,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-10 — Cleanup: subscription_usage closed, payment-mode shims off (local: 322/322 harness cases; production rolled-back check)
+
+- **Rehearsed on the local stack:** from production's state (shims on, the table open to browsers), `20261010142813`
+  switched both shims off and closed the table; `20261010180100` then dropped the table, both triggers and both
+  functions; `20261010180100` alone refused to run while the shims were on. Both are applied locally.
+- **Regression:** every database harness, 322/322. P1 case 26 and P13 cases 6 and 8 now accept "off or gone".
+- **Production** (rolled back): an order without a payment mode is refused (not_null), one with `test` saves. The
+  shims show disabled; `anon` and `authenticated` have no select on `subscription_usage`.
+
 ### 2026-10-10 — Catalogue review (released the same day; local stack: harness 9/9; browser 1/1 new; all database harnesses 321/321; whole local browser suite 78/78)
 
 - **catalogue_review.sql (8/8):** a moderator approves (no reason left); rejects only with a reason; can't change the

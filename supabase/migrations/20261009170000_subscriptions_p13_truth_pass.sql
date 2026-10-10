@@ -12,11 +12,10 @@
 --    same requirements; a fixed price) are rewritten with their Hindi and Gujarati. Each is
 --    matched on its question AND the md5 of the answer it replaces, so a copy an admin has edited
 --    since is left alone and named in a notice.
--- 3. subscription_usage (no writer, no reader, empty) is retired: its grants are revoked. Dropping
---    the table is left to the SQL editor (the release path refuses DROP).
--- 4. P1's payment-mode shims are switched off: by now every function that writes an order or an
---    invoice says its mode (P1's were deployed with P1), so a missing mode is an error again
---    (payment_mode is not null). Disabled, not dropped (the release path refuses DROP).
+-- 3. and 4. (retiring subscription_usage and switching off P1's payment-mode shims) were taken out of
+--    this file and applied on 2026-10-10 by 20261010142813_retire_usage_and_mode_shims and
+--    20261010180100_drop_usage_and_mode_shims (Mitra: "just clean up the unused table and the temp
+--    shims"). What is left here waits until every switch is on for everyone.
 -- Harness: scripts/subscriptions/p13_truth_pass.sql.
 
 -- ── 1. Plan copy ───────────────────────────────────────────────────────────────────
@@ -91,16 +90,7 @@ begin
 end
 $faqs$;
 
--- ── 3. subscription_usage retired ──────────────────────────────────────────────────
-revoke all on public.subscription_usage from anon, authenticated;
-comment on table public.subscription_usage is
-  'RETIRED (subscriptions P13, 2026-10-09): never written or read; limits come from subscription_plans.limits through vendor_entitlements(). Grants revoked; drop it in the SQL editor when convenient.';
-
--- ── 4. The payment-mode shims off ────────────────────────────────────────────────────
-alter table public.subscription_payment_orders disable trigger trg_subscription_payment_orders_mode;
-alter table public.subscription_invoices disable trigger trg_subscription_invoices_mode;
-
--- ── 5. Self-check ──────────────────────────────────────────────────────────────────
+-- ── 3. Self-check ──────────────────────────────────────────────────────────────────
 do $check$
 begin
   -- The products line says the plan's cap.
@@ -119,14 +109,6 @@ begin
   if exists (select 1 from public.subscription_plans p, jsonb_each_text(p.display) e(k, v)
               where v ~* 'dedicated|100%|sms|custom global|top 1 in segment') then
     raise exception 'the plan copy still promises something that isn''t built';
-  end if;
-  if exists (select 1 from pg_trigger where tgname in ('trg_subscription_payment_orders_mode', 'trg_subscription_invoices_mode')
-              and tgenabled <> 'D') then
-    raise exception 'the payment-mode shims must be off';
-  end if;
-  if has_table_privilege('authenticated', 'public.subscription_usage', 'select')
-     or has_table_privilege('anon', 'public.subscription_usage', 'select') then
-    raise exception 'subscription_usage is still readable';
   end if;
 end
 $check$;

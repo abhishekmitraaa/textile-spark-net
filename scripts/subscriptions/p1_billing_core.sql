@@ -321,8 +321,8 @@ begin
         select count(*) into n from storage.objects where bucket_id = 'invoices' and name like '%P1-%';
         got := got || ', finance ' || n;
         want := 'vendor ' || vendor || '/P1-HARNESS.v1.pdf, moderator 0, finance 2';
-      elsif i = 26 and exists (select 1 from pg_trigger where tgname = 'trg_subscription_payment_orders_mode' and tgenabled = 'D') then
-        -- P13 switched the shims off: every writer says its mode now, so a missing one is refused.
+      elsif i = 26 and not exists (select 1 from pg_trigger where tgname = 'trg_subscription_payment_orders_mode' and tgenabled <> 'D') then
+        -- The shims are off or gone (20261010142813 / 180100): every writer says its mode now, so a missing one is refused.
         reset role;
         begin
           insert into public.subscription_payment_orders (order_id, vendor_id, plan_id, billing_cycle, amount, status)
