@@ -1313,8 +1313,9 @@ undocumented. Deep technical rationale for each lives in
   show followed sellers only.
 - **Account managers:** managers and super admins give staff the account-manager role and assign them to sellers
   (`admin_set_role`, `admin_am_assign`; built that way in subscriptions P9).
-- **Plan checkout:** opened for a listed test seller only while Razorpay runs on test keys; opening it to everyone
-  waits for the live keys and Cosora's GST details (`documentation/ToDo.md`).
+- **Feature switches (2026-10-11):** all 11 subscription switches are on for everyone (Mitra), plan checkout included,
+  although Razorpay still runs on test keys and no GST details are entered: an accepted risk logged in
+  `documentation/securityflags.md`. Switching Razorpay to live keys and entering the GST details closes it.
 
 ### A row policy is not a column policy (2026-10-10)
 - RLS decides which ROWS an account writes. Every column of a table is granted to `authenticated`, so on its own

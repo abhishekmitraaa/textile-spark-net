@@ -26,7 +26,8 @@ with no need to dictate format, context, or reference each time.
   3. Account managers are appointed: a manager or super admin gives staff the `account_manager` role (Cosora-Admin →
      Admins) and assigns them to sellers (Mitra, 2026-10-10: "the manager and superadmin will allot the account
      manager staff"). Production had none on 2026-10-10.
-  4. Every switch in Cosora-Admin → Feature switches is on for everyone: `subscription_checkout`,
+  4. **Done 2026-10-11** (Mitra turned all 11 on for everyone; 1–3 were not done yet, so the new copy's promises of
+     email and WhatsApp alerts and named managers aren't true yet). Every switch in Cosora-Admin → Feature switches is on for everyone: `subscription_checkout`,
      `subscription_autopay`, `subscription_lifecycle`, `notification_delivery`, `lead_alerts`, `overseas_leads`,
      `crm`, `account_managers`, `featured_listings`, `ad_state_targeting`, `bulk_import`. Which line of the new copy
      depends on which switch:
@@ -135,8 +136,10 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-10-08, vendor subscriptions session, prompt 6 ("i'll give you the gst details later, for now add
   that to todo.md").
 - 2026-10-10: Mitra asked again to keep this here. Production still has no billing details (Cosora-Admin → Billing
-  details is empty). Plan checkout is open only to a test seller while Razorpay runs on test keys, so nothing is
-  blocked yet; this has to be done before the live keys go in or checkout opens to everyone.
+  details is empty).
+- **2026-10-11: now urgent.** Plan checkout is on for every seller (Mitra's choice, with Razorpay still on test keys),
+  so every purchase until this is done gets a receipt and an `invoice_incomplete` billing incident instead of a GST tax
+  invoice. Enter the details, then switch Razorpay to its live keys.
 - Status: Open
 
 ### Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08
