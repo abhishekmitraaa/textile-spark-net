@@ -79,6 +79,17 @@ short list of things someone has to *decide*.
 
 ## Medium priority
 
+- **Retire the old buyer interest ids** (Interest Preference v2, 2026-10-11). `pref_category_map` still holds rows
+  for `tshirts, shirts, coords, dresses, bottomwear, activewear` so a browser on the pre-2026-10-11 app keeps
+  personalising. Once `select count(*) from buyer_profiles where preferred_categories && array['tshirts','shirts',
+  'coords','dresses','bottomwear','activewear']` stays 0 for a few weeks, delete those rows in a migration and drop
+  `LEGACY_INTEREST_IDS` from `src/lib/buyerCategories.ts`.
+
+- **Confirm the rights to the interest photos.** The 13 in `src/assets/Buyer/Preference/` came from Mitra with no
+  source recorded; one shows a real brand's label (hobbytime.etsy.com) and one a child. claude.md says an image the
+  project doesn't own is replaced, not kept. The 4 from Unsplash are recorded in `src/assets/interests/README.md`.
+
+
 - **`delivery_team` admin role.** Certificate dispatch is day-to-day operational
   work but is gated to `super_admin` / `finance_admin`, both roles carrying far
   broader authority. The enum value does not exist, so naming it anywhere would

@@ -621,6 +621,7 @@ export type Database = {
           pan: string | null
           postal_code: string | null
           preferred_categories: string[]
+          preferred_interest_other: string | null
           regional: Json | null
           social: Json | null
           state: string | null
@@ -646,6 +647,7 @@ export type Database = {
           pan?: string | null
           postal_code?: string | null
           preferred_categories?: string[]
+          preferred_interest_other?: string | null
           regional?: Json | null
           social?: Json | null
           state?: string | null
@@ -671,6 +673,7 @@ export type Database = {
           pan?: string | null
           postal_code?: string | null
           preferred_categories?: string[]
+          preferred_interest_other?: string | null
           regional?: Json | null
           social?: Json | null
           state?: string | null

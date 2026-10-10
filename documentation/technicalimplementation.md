@@ -831,6 +831,22 @@ by `distance`.
 
 ---
 
+### Buyer interests — `pref_category_map` (Interest Preference v2, 2026-10-11)
+
+- **Vocabulary:** 17 ids plus `others` in `src/lib/buyerCategories.ts`, saved in
+  `buyer_profiles.preferred_categories`. `pref_category_map(pref_id, category_id)` says what each covers; it is
+  read by `buyer_cold_start_embedding()`, the For You filter and ad targeting (`forYou.ts`), New Arrivals and the
+  reels. Families are mapped as "every child of", so a category added there is covered without a migration.
+- **Overlaps are allowed** (fabrics ⊂ raw-materials; the old ids' rows overlap the new ones). That is why
+  `ForYou.tsx` filters on the set of covered category ids and `categoryToPrefId()` has no caller left.
+- **Old ids:** `tshirts, shirts, coords, dresses, bottomwear, activewear`. Translated in the migration and by
+  `normaliseInterestIds()` on every load (DB and localStorage); their map rows stay for stale bundles.
+- **"Others":** `preferred_interest_other` text, check 1–60 characters, column grants to `authenticated` (select,
+  insert, update). `trg_buyer_profiles_interest_other` (BEFORE INSERT OR UPDATE) folds control characters and
+  whitespace, maps '' to NULL, and nulls the text when `others` isn't in `preferred_categories`. The client
+  mirrors the tidy (`tidyOtherInterest()`). The registration and profile screens won't save "Others" without words;
+  For You saves them when the box loses focus.
+
 ## Key Modules
 
 ### Data access — `src/lib/queries/`

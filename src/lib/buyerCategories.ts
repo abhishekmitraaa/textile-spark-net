@@ -6,32 +6,111 @@
 // pages and the registration screen used a different, disconnected set.
 //
 // These ids are what get persisted to `buyer_profiles.preferred_categories`,
-// so keep them stable.
+// so keep them stable. Each one maps onto real categories in the database
+// table `pref_category_map` (migration 20261011050000_interest_preferences_v2).
+//
+// 2026-10-11: the list moved from nine clothing types to the seventeen
+// interests of the redesigned Interest Preference screen, plus "Others" with
+// the buyer's own words (buyer_profiles.preferred_interest_other). The old ids
+// still turn up from accounts saved before the change and from browsers that
+// cached the old app, so LEGACY_INTEREST_IDS translates them; the migration
+// translated every saved row once.
 // ─────────────────────────────────────────────────────────────
+
+import fabrics from "@/assets/interests/fabrics.webp";
+import womensClothing from "@/assets/interests/womens-clothing.webp";
+import mensClothing from "@/assets/interests/mens-clothing.webp";
+import cosmetics from "@/assets/interests/cosmetics.webp";
+import unisexClothing from "@/assets/interests/unisex-clothing.webp";
+import kidswear from "@/assets/interests/kidswear.webp";
+import accessories from "@/assets/interests/accessories.webp";
+import labelsTags from "@/assets/interests/labels-tags.webp";
+import itSoftware from "@/assets/interests/it-software.webp";
+import rawMaterials from "@/assets/interests/raw-materials.webp";
+import packaging from "@/assets/interests/packaging.webp";
+import trimsAccessories from "@/assets/interests/trims-accessories.webp";
+import fashionDesigner from "@/assets/interests/fashion-designer.webp";
+import marketingPr from "@/assets/interests/marketing-pr.webp";
+import freelancers from "@/assets/interests/freelancers.webp";
+import exporter from "@/assets/interests/exporter.webp";
+import photography from "@/assets/interests/photography.webp";
 
 export interface BuyerCategory {
   id: string;
   label: string;
-  icon: string; // emoji
+  image: string;
 }
 
+// Order is the design's (Interest Preference, 2026-10-11).
 export const BUYER_CATEGORIES: BuyerCategory[] = [
-  { id: "tshirts", label: "T-Shirts", icon: "👕" },
-  { id: "shirts", label: "Shirts", icon: "👔" },
-  { id: "coords", label: "Co-ords", icon: "🧥" },
-  { id: "dresses", label: "Dresses", icon: "👗" },
-  { id: "bottomwear", label: "Bottomwear", icon: "👖" },
-  { id: "fabrics", label: "Fabrics", icon: "🧵" },
-  { id: "accessories", label: "Fashion Accessories", icon: "👜" },
-  { id: "kidswear", label: "Kidswear", icon: "🧒" },
-  { id: "activewear", label: "Activewear", icon: "🏃" },
+  { id: "fabrics", label: "Fabrics", image: fabrics },
+  { id: "womens-clothing", label: "Women's Clothing", image: womensClothing },
+  { id: "mens-clothing", label: "Men's Clothing", image: mensClothing },
+  { id: "cosmetics", label: "Cosmetics", image: cosmetics },
+  { id: "unisex-clothing", label: "Unisex Clothing", image: unisexClothing },
+  { id: "kidswear", label: "Kidswear", image: kidswear },
+  { id: "accessories", label: "Accessories", image: accessories },
+  { id: "labels-tags", label: "Labels & Tags", image: labelsTags },
+  { id: "it-software", label: "IT & Software", image: itSoftware },
+  { id: "raw-materials", label: "Raw Materials", image: rawMaterials },
+  { id: "packaging", label: "Packaging", image: packaging },
+  { id: "trims-accessories", label: "Trims & Accessories", image: trimsAccessories },
+  { id: "fashion-designer", label: "Fashion Designer", image: fashionDesigner },
+  { id: "marketing-pr", label: "Marketing & PR", image: marketingPr },
+  { id: "freelancers", label: "Freelance", image: freelancers },
+  { id: "exporter", label: "Exporter", image: exporter },
+  { id: "photography", label: "Photography", image: photography },
 ];
 
-export const BUYER_CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
-  BUYER_CATEGORIES.map((c) => [c.id, c.label]),
-);
+/** "Others": no categories behind it; the buyer types what they source instead.
+ *  Stored like any other id so the profile can show it, with the words in
+ *  buyer_profiles.preferred_interest_other. */
+export const OTHER_INTEREST_ID = "others";
+/** Same limit as the column's check constraint. */
+export const OTHER_INTEREST_MAX = 60;
+
+export const BUYER_CATEGORY_LABEL: Record<string, string> = {
+  ...Object.fromEntries(BUYER_CATEGORIES.map((c) => [c.id, c.label])),
+  [OTHER_INTEREST_ID]: "Others",
+};
 
 export const isBuyerCategoryId = (id: string): boolean => id in BUYER_CATEGORY_LABEL;
+
+/** The pre-2026-10-11 ids, by what they covered in pref_category_map. Must
+ *  match the translation in the migration. fabrics, accessories and kidswear
+ *  kept their ids. */
+export const LEGACY_INTEREST_IDS: Record<string, string[]> = {
+  tshirts: ["mens-clothing", "womens-clothing", "unisex-clothing"],
+  shirts: ["mens-clothing"],
+  coords: ["womens-clothing"],
+  dresses: ["womens-clothing"],
+  bottomwear: ["mens-clothing", "womens-clothing"],
+  activewear: ["unisex-clothing"],
+};
+
+/** Saved ids in today's vocabulary: legacy ids translated, unknown ones
+ *  dropped, duplicates removed, order kept. */
+export function normaliseInterestIds(ids: readonly string[]): string[] {
+  const out = new Set<string>();
+  for (const id of ids) {
+    for (const next of LEGACY_INTEREST_IDS[id] ?? [id]) if (isBuyerCategoryId(next)) out.add(next);
+  }
+  return Array.from(out);
+}
+
+/** The "Others" words as the database keeps them: control characters and
+ *  runs of space folded to one space, ends trimmed (same as the
+ *  buyer_profiles_interest_other_tidy trigger). */
+export function tidyOtherInterest(text: string): string {
+  // eslint-disable-next-line no-control-regex
+  return text.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+/** How a saved interest reads on the profile and the For You chips. */
+export function interestLabel(id: string, otherText?: string | null): string {
+  if (id === OTHER_INTEREST_ID && otherText?.trim()) return otherText.trim();
+  return BUYER_CATEGORY_LABEL[id] ?? id;
+}
 
 // DEAD as of 2026-09-07 — no runtime caller left. It drove the For You feed's
 // category filter until that moved to pref_category_map (matching on

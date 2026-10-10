@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import type { ProfileData } from "@/lib/profileStore";
 import { usePreferences } from "@/lib/preferencesStore";
+import { interestLabel, OTHER_INTEREST_ID } from "@/lib/buyerCategories";
 import { useSaved } from "@/lib/savedStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
@@ -45,11 +46,6 @@ import {
 import { cn } from "@/lib/utils";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
-const CATEGORY_LABEL: Record<string, string> = {
-  tshirts: "T-Shirts", shirts: "Shirts", coords: "Co-ords", dresses: "Dresses",
-  bottomwear: "Bottomwear", fabrics: "Fabrics", accessories: "Fashion Accessories",
-  kidswear: "Kidswear", activewear: "Activewear",
-};
 const LOCATION_LABEL: Record<string, string> = {
   tiruppur: "Tiruppur", surat: "Surat", ludhiana: "Ludhiana", delhi: "Delhi NCR",
   bangalore: "Bangalore", mumbai: "Mumbai",
@@ -177,9 +173,16 @@ const Profile = () => {
       </BuyerShell>
     );
   }
+  // "Others" shows the buyer's own words, which are never translated.
   const interestChips = [
-    ...prefs.categories.map((id) => CATEGORY_LABEL[id] ?? id),
-    ...prefs.locations.filter((l) => l !== "nopreference").map((id) => LOCATION_LABEL[id] ?? id),
+    ...prefs.categories.map((id) => ({
+      key: id,
+      label: interestLabel(id, prefs.otherInterest),
+      own: id === OTHER_INTEREST_ID && prefs.otherInterest.trim() !== "",
+    })),
+    ...prefs.locations
+      .filter((l) => l !== "nopreference")
+      .map((id) => ({ key: `loc-${id}`, label: LOCATION_LABEL[id] ?? id, own: false })),
   ];
 
   return (
@@ -317,7 +320,7 @@ const Profile = () => {
           {interestChips.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {interestChips.map((c) => (
-                <span key={c} className="bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-medium">{c}</span>
+                <span key={c.key} data-no-translate={c.own || undefined} className="bg-gray-100 text-gray-700 rounded-full px-2.5 py-1 lg:px-3 lg:py-1.5 text-xs lg:text-sm font-medium">{c.label}</span>
               ))}
             </div>
           ) : (

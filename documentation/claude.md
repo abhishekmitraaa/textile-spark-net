@@ -148,6 +148,16 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
+- **A buyer interest id means what `pref_category_map` says, and its words live in one file** (Interest Preference
+  v2, 2026-10-11; migration `20261011050000_interest_preferences_v2.sql`).
+  - The ids, labels and photos are `src/lib/buyerCategories.ts`; `CategoryPickerGrid` is the one picker
+    (registration, profile Edit, For You). A new interest needs its map rows in a migration, or it narrows nothing.
+  - Renaming or retiring an id means a translation in `LEGACY_INTEREST_IDS` and the same translation of saved rows
+    in the migration. Keep the old id's map rows until no saved row or live bundle uses it.
+  - Match products on `categories.id` against every category the buyer's interests cover, never on one preference
+    per product: interests overlap.
+  - "Others" words (`buyer_profiles.preferred_interest_other`) exist only while "others" is picked (a trigger
+    enforces it) and are never translated.
 - **A new feature ships behind a feature switch** (subscriptions P0, 2026-10-08; migration `20261009171435_subscriptions_p0_foundations.sql`).
   - `public.feature_flags`: on for everyone (`enabled`) or only for `allow_profile_ids`. The migration that ships
     the code reading a switch creates it, switched off. Super admins change it on Cosora-Admin's Feature switches

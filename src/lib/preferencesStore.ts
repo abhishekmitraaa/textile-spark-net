@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { supabase } from "@/lib/supabase";
+import { normaliseInterestIds, OTHER_INTEREST_ID, OTHER_INTEREST_MAX, tidyOtherInterest } from "@/lib/buyerCategories";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer "For You" preferences.
@@ -12,26 +13,38 @@ import { supabase } from "@/lib/supabase";
 // The CATEGORY piece is account-tied: when a buyer is signed in it is the
 // real `buyer_profiles.preferred_categories` column (so it follows them
 // across devices/pages), mirrored to the DB on every change and hydrated on
-// sign-in. Signed out, it falls back to localStorage. Locations + the
-// onboarding-complete flag stay per-device in localStorage.
+// sign-in. Signed out, it falls back to localStorage. The "Others" words
+// (`buyer_profiles.preferred_interest_other`) travel with the categories and
+// exist only while "others" is one of them (the database enforces that too).
+// Locations + the onboarding-complete flag stay per-device in localStorage.
 // ─────────────────────────────────────────────────────────────
 
 export interface BuyerPreferences {
   categories: string[]; // buyer category ids (see src/lib/buyerCategories.ts)
+  otherInterest: string; // the buyer's words for "Others"; "" unless "others" is picked
   locations: string[]; // location ids ("nopreference" is exclusive)
   hasCompleted: boolean; // onboarding finished (or skipped)
 }
 
 const STORAGE_KEY = "cosora.buyerPrefs.v1";
-const EMPTY: BuyerPreferences = { categories: [], locations: [], hasCompleted: false };
+const EMPTY: BuyerPreferences = { categories: [], otherInterest: "", locations: [], hasCompleted: false };
+
+/** Keeps the words only while "others" is picked, cut to the column's limit. */
+function cleanOther(categories: string[], text: unknown): string {
+  if (!categories.includes(OTHER_INTEREST_ID) || typeof text !== "string") return "";
+  return text.slice(0, OTHER_INTEREST_MAX);
+}
 
 function load(): BuyerPreferences {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as BuyerPreferences;
+      const parsed = JSON.parse(raw) as Partial<BuyerPreferences>;
+      // Normalised: a snapshot saved before 2026-10-11 holds the old ids.
+      const categories = Array.isArray(parsed.categories) ? normaliseInterestIds(parsed.categories) : [];
       return {
-        categories: Array.isArray(parsed.categories) ? parsed.categories : [],
+        categories,
+        otherInterest: cleanOther(categories, parsed.otherInterest),
         locations: Array.isArray(parsed.locations) ? parsed.locations : [],
         hasCompleted: Boolean(parsed.hasCompleted),
       };
@@ -55,6 +68,7 @@ function writeLocal() {
     const stored = load();
     const toSave: BuyerPreferences = {
       categories: userId ? stored.categories : state.categories,
+      otherInterest: userId ? stored.otherInterest : state.otherInterest,
       locations: state.locations,
       hasCompleted: state.hasCompleted,
     };
@@ -65,7 +79,7 @@ function writeLocal() {
 }
 
 function set(next: BuyerPreferences) {
-  state = next;
+  state = { ...next, otherInterest: cleanOther(next.categories, next.otherInterest) };
   writeLocal();
   listeners.forEach((l) => l());
 }
@@ -75,9 +89,13 @@ function set(next: BuyerPreferences) {
 function dbSaveCategories() {
   if (!userId) return;
   const cats = state.categories;
+  const other = tidyOtherInterest(state.otherInterest);
   void supabase
     .from("buyer_profiles")
-    .upsert({ id: userId, preferred_categories: cats }, { onConflict: "id" })
+    .upsert(
+      { id: userId, preferred_categories: cats, preferred_interest_other: other || null },
+      { onConflict: "id" },
+    )
     .then(() => {});
 }
 
@@ -94,14 +112,22 @@ export async function setPreferencesUser(nextUserId: string | null) {
   try {
     const { data } = await supabase
       .from("buyer_profiles")
-      .select("preferred_categories")
+      .select("preferred_categories, preferred_interest_other")
       .eq("id", nextUserId)
       .maybeSingle();
     if (userId !== nextUserId) return; // user changed again mid-fetch
-    const cats = Array.isArray(data?.preferred_categories) ? (data!.preferred_categories as string[]) : [];
+    // Normalised: a browser still running the old app can save the old ids.
+    const cats = Array.isArray(data?.preferred_categories)
+      ? normaliseInterestIds(data!.preferred_categories as string[])
+      : [];
     // DB is the source of truth for categories on sign-in; keep local
     // locations, and treat existing saved categories as "already onboarded".
-    set({ categories: cats, locations: state.locations, hasCompleted: state.hasCompleted || cats.length > 0 });
+    set({
+      categories: cats,
+      otherInterest: data?.preferred_interest_other ?? "",
+      locations: state.locations,
+      hasCompleted: state.hasCompleted || cats.length > 0,
+    });
   } catch {
     /* keep current state on failure */
   }
@@ -113,9 +139,18 @@ export function toggleCategory(id: string) {
   dbSaveCategories();
 }
 
-/** Bulk-set the category preferences (used by the registration screen's Save). */
-export function setCategories(ids: string[]) {
-  set({ ...state, categories: Array.from(new Set(ids)), hasCompleted: true });
+/** Bulk-set the category preferences and the "Others" words (the Interest
+ *  Preference screen's Save). */
+export function setCategories(ids: string[], otherInterest = "") {
+  set({ ...state, categories: Array.from(new Set(ids)), otherInterest, hasCompleted: true });
+  dbSaveCategories();
+}
+
+/** The "Others" words on their own (For You saves them when the field loses
+ *  focus). Dropped unless "others" is picked. */
+export function setOtherInterest(text: string) {
+  if (text === state.otherInterest) return;
+  set({ ...state, otherInterest: text });
   dbSaveCategories();
 }
 
@@ -142,7 +177,7 @@ export function removeLocation(id: string) {
 
 /** Finish onboarding. skip=true completes with no filters (shows everything). */
 export function completeOnboarding(skip = false) {
-  if (skip) set({ categories: [], locations: [], hasCompleted: true });
+  if (skip) set({ categories: [], otherInterest: "", locations: [], hasCompleted: true });
   else set({ ...state, hasCompleted: true });
   dbSaveCategories();
 }
