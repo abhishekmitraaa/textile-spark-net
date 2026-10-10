@@ -16,11 +16,14 @@ export interface MyCatalogueRow {
   fileUrl: string | null;
   coverUrl: string | null;
   createdAt: string;
+  /** Why Cosora didn't approve it (its own catalogues only; null otherwise). */
+  rejectionReason?: string | null;
 }
 
 interface RawCatalogue {
   id: string; title: string; description: string | null; status: string;
   page_count: number | null; file_url: string | null; cover_url: string | null; created_at: string;
+  rejection_reason?: string | null;
 }
 
 function mapCatalogue(c: RawCatalogue): MyCatalogueRow {
@@ -29,13 +32,14 @@ function mapCatalogue(c: RawCatalogue): MyCatalogueRow {
     status: (c.status as MyCatalogueRow["status"]) ?? "under_review",
     pageCount: c.page_count, fileUrl: c.file_url, coverUrl: c.cover_url,
     createdAt: new Date(c.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" }),
+    rejectionReason: c.rejection_reason ?? null,
   };
 }
 
 async function fetchMyCatalogues(vendorId: string): Promise<MyCatalogueRow[]> {
   const { data, error } = await supabase
     .from("catalogues")
-    .select("id, title, description, status, page_count, file_url, cover_url, created_at")
+    .select("id, title, description, status, page_count, file_url, cover_url, created_at, rejection_reason")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;

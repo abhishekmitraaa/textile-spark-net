@@ -167,7 +167,8 @@ runs **every way**.
 | `20261010125031_follower_count.sql` | Follower counts (applied 2026-10-10, md5 `9b66780c…` = live; written as `20261010150100`). `follows_not_self` (NOT VALID), `follows_count_sync()` and its trigger, one recount (six sellers' shown numbers became the real ones). |
 
 Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
-everyone). Inside the applied files, comments and messages still name each other by their written
+everyone) and `20261010160000_catalogue_review.sql` (catalogue review: `catalogues.rejection_reason` and the moderator rules;
+waits for Mitra, and goes in before its branch is pushed, since the seller page reads the new column). Inside the applied files, comments and messages still name each other by their written
 versions.
 
 ---

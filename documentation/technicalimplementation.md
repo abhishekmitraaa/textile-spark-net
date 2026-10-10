@@ -3937,3 +3937,23 @@ traffic. The Following page still loads every seller and live listing into the b
 `useLiveProducts`); a server-side feed is the step when the catalogue passes 1,000 live listings.
 
 **Released 2026-10-10:** both migrations through the self-checking wrapper, a check on production as the roles in a block that rolled back: an owner's API price change sent a live listing to review and was recorded; staff read the record and the seller couldn't; a moderator's approval put it live and closed it; a new picture sent it back with "1 added"; a follow moved a seller from 2 to 3; following yourself was refused; files renamed to their ledger versions; `main` pushed in both repos. No edge functions change.
+
+---
+
+## Catalogue review (2026-10-10)
+
+Migration `20261010160000_catalogue_review.sql` (written version; production waits for Mitra). Harness `scripts/security/catalogue_review.sql` (8);
+browser `tests/local/catalogue-review.spec.ts`.
+
+- **Screen:** Cosora-Admin `src/pages/Catalogues.tsx`, section `catalogues` in `src/lib/roles.ts` (read: super_admin,
+  product_moderator, support; write: super_admin, product_moderator), route `/catalogues`, Moderation menu. Like Products
+  and Videos it writes one `catalogues` UPDATE of `status` and `rejection_reason`; RLS (`catalogues_update`) and the
+  BEFORE trigger refuse everyone else. It reads open edit records with `admin_listing_edits('catalogue', ids)`. No
+  Flag / log: `admin_flag_add()` doesn't take catalogues.
+- **Database:** `catalogues.rejection_reason text`. `catalogues_moderation_guard()` (first written in
+  20261010060959_server_owned_columns) adds: a moderator who isn't the owner changes status and reason only; a
+  rejection needs a non-blank reason (22023); approving (a change to live) clears it; only a moderator writes it
+  (42501), and a browser's new catalogue carries none. The guard pins the earlier body's md5 (`b2e5a4a6…`).
+- **Seller:** `src/lib/queries/catalogues.ts` reads `rejection_reason` for the seller's own catalogues;
+  `UploadCatalogue.tsx` shows it on a rejected catalogue. The buyer-facing query doesn't read it.
+- **To release:** ask Mitra; apply the migration (wrapper); rename it to its ledger version; push both repos.

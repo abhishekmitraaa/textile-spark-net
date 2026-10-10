@@ -7989,5 +7989,8 @@
  "Buyers follow it; you can't follow yourself.": "खरीदार इसे फ़ॉलो करते हैं; आप खुद को फ़ॉलो नहीं कर सकते।",
  "Couldn't follow this brand": "इस ब्रांड को फ़ॉलो नहीं कर सके",
  "Couldn't unfollow this brand": "इस ब्रांड को अनफ़ॉलो नहीं कर सके",
- "This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).": "यह लिस्टिंग लाइव है। बदलाव सहेजने पर यह फिर से समीक्षा में जाएगी: स्वीकृत होने तक खरीदार इसे नहीं देख पाएँगे (24–48 घंटे)।"
+ "This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).": "यह लिस्टिंग लाइव है। बदलाव सहेजने पर यह फिर से समीक्षा में जाएगी: स्वीकृत होने तक खरीदार इसे नहीं देख पाएँगे (24–48 घंटे)।",
+ "Why it wasn't approved:": "यह स्वीकृत क्यों नहीं हुआ:",
+ "No reason was recorded.": "कोई कारण दर्ज नहीं किया गया।",
+ "Upload a corrected catalogue to send it for review again.": "दोबारा समीक्षा के लिए सुधारा हुआ कैटलॉग अपलोड करें।"
 }
