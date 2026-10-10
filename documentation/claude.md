@@ -1306,6 +1306,16 @@ undocumented. Deep technical rationale for each lives in
 - Catalogues are reviewed in Cosora-Admin › Catalogues like listings and videos: a rejection needs a reason, the seller
   sees it, approving clears it (`20261010133347_catalogue_review.sql`).
 
+### Decisions of 2026-10-10 (Mitra)
+- **Reviews:** a buyer may review a seller or a listing without having dealt with them (no quote, chat or order
+  needed). A seller still can't review their own business (`guard_review_write`).
+- **Following page:** keeps "Looking for New Brands?" and "Most Popular" (other sellers, labelled); the followed sections
+  show followed sellers only.
+- **Account managers:** managers and super admins give staff the account-manager role and assign them to sellers
+  (`admin_set_role`, `admin_am_assign`; built that way in subscriptions P9).
+- **Plan checkout:** opened for a listed test seller only while Razorpay runs on test keys; opening it to everyone
+  waits for the live keys and Cosora's GST details (`documentation/ToDo.md`).
+
 ### A row policy is not a column policy (2026-10-10)
 - RLS decides which ROWS an account writes. Every column of a table is granted to `authenticated`, so on its own
   row an account can write any column: a count, a rating, a date, a status, a search vector, an order id.

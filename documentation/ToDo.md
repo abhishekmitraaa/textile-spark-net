@@ -16,6 +16,9 @@ with no need to dictate format, context, or reference each time.
   go in. Invoices are written in English only (Mitra, 2026-10-08).
 - Reference: 2026-10-08, vendor subscriptions session, prompt 6 ("i'll give you the gst details later, for now add
   that to todo.md").
+- 2026-10-10: Mitra asked again to keep this here. Production still has no billing details (Cosora-Admin → Billing
+  details is empty). Plan checkout is open only to a test seller while Razorpay runs on test keys, so nothing is
+  blocked yet; this has to be done before the live keys go in or checkout opens to everyone.
 - Status: Open
 
 ### Build the AI catalogue (VIP) and the "we do it for you" catalogue service (Gold) — added 2026-10-08
