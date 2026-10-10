@@ -7984,5 +7984,10 @@
  "Category average": "कैटेगरी औसत",
  "Your brand": "आपका ब्रांड",
  "No tracked activity in the last {0}. This fills in as buyers browse, search and tap your listings.": "पिछले {0} में कोई ट्रैक की गई गतिविधि नहीं। खरीदार जैसे-जैसे आपकी लिस्टिंग देखते, खोजते और टैप करते हैं, यह भरता जाता है।",
- "Visit-level tracking is not switched on for this project yet. This panel needs one row per event, with its own timestamp, viewer and source; until the engagement_events table exists a view only bumps a lifetime counter on the product, so there is nothing here to read.": "इस प्रोजेक्ट के लिए विज़िट-स्तर की ट्रैकिंग अभी चालू नहीं है। इस पैनल को हर इवेंट के लिए एक पंक्ति चाहिए, उसके अपने समय, देखने वाले और स्रोत के साथ; जब तक engagement_events टेबल नहीं बनती, एक व्यू प्रोडक्ट पर सिर्फ़ जीवनभर का काउंटर बढ़ाता है, इसलिए यहाँ पढ़ने को कुछ नहीं है।"
+ "Visit-level tracking is not switched on for this project yet. This panel needs one row per event, with its own timestamp, viewer and source; until the engagement_events table exists a view only bumps a lifetime counter on the product, so there is nothing here to read.": "इस प्रोजेक्ट के लिए विज़िट-स्तर की ट्रैकिंग अभी चालू नहीं है। इस पैनल को हर इवेंट के लिए एक पंक्ति चाहिए, उसके अपने समय, देखने वाले और स्रोत के साथ; जब तक engagement_events टेबल नहीं बनती, एक व्यू प्रोडक्ट पर सिर्फ़ जीवनभर का काउंटर बढ़ाता है, इसलिए यहाँ पढ़ने को कुछ नहीं है।",
+ "This is your own business": "यह आपका अपना व्यवसाय है",
+ "Buyers follow it; you can't follow yourself.": "खरीदार इसे फ़ॉलो करते हैं; आप खुद को फ़ॉलो नहीं कर सकते।",
+ "Couldn't follow this brand": "इस ब्रांड को फ़ॉलो नहीं कर सके",
+ "Couldn't unfollow this brand": "इस ब्रांड को अनफ़ॉलो नहीं कर सके",
+ "This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).": "यह लिस्टिंग लाइव है। बदलाव सहेजने पर यह फिर से समीक्षा में जाएगी: स्वीकृत होने तक खरीदार इसे नहीं देख पाएँगे (24–48 घंटे)।"
 }

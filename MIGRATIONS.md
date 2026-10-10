@@ -165,7 +165,9 @@ runs **every way**.
 | `20261010060959_server_owned_columns.sql` | The full test's fix (applied 2026-10-10 with Mitra's yes, md5 `edaadc0f…` = live; written as `20261010120000`). A browser makes a draft ad and nothing else; an owner's ad status moves only through the pause, resume and resubmit functions; counts, ratings, dates and search vectors on listings, videos, seller profiles, requirements and reviews are the server's; catalogues go through review. Applied before its branch was pushed. |
 
 Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
-everyone). Inside the applied files, comments and messages still name each other by their written
+everyone); `20261010150000_listing_edit_rereview.sql` (edited listings, videos and catalogues back to review, with a record
+for staff) and `20261010150100_follower_count.sql` (follower counts kept by the database; sets seven production sellers'
+shown numbers to their real ones), both waiting for Mitra. Inside the applied files, comments and messages still name each other by their written
 versions.
 
 ---

@@ -82,3 +82,8 @@ in the transaction that adds it. `scripts/subscriptions/p4_lifecycle.sql` needs 
 started, so they are served by a second edge runtime, started with the stack's own environment and no Razorpay keys
 (checkouts then take the demo path). `copy-functions.mjs` copies them in; `subscriptions-p5.spec.ts` reaches the
 runtime through `LOCAL_AD_FUNCTIONS_URL` (for example `http://localhost:8098`).
+
+To pay for an ad the real way (an order on the mock Razorpay, a signed verify), the same three functions need a
+runtime that also has the mock's Razorpay keys: a copy of the subscription runtime's environment with the ad
+runtime's function list (`SUPABASE_INTERNAL_FUNCTIONS_CONFIG`) and working directory. On 2026-10-10 that was
+`p7_edge_runtime` on :8096; `scripts/security/full-test/paid-seller-ad.mjs` reaches it through `AD_PAY_URL`.

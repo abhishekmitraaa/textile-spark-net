@@ -3889,3 +3889,52 @@ Razorpay calls did; unset (production), the address is Razorpay's.
 production as the roles that rolled back, the file renamed to its live version, `main` pushed in both repos, and the
 three functions deployed (`subscription-create-order` 10, `razorpay-create-order` 10, `admin-refund-payment` 9). The
 migration went first because the repositories are public.
+
+---
+
+## Edits to approved content go back to review; follower counts (2026-10-10)
+
+Migrations `20261010150000_listing_edit_rereview.sql` and `20261010150100_follower_count.sql` (written versions; **not applied**: Mitra said to hold). Harnesses
+`scripts/security/listing_edits.sql` (16) and `scripts/security/follower_count.sql` (10); browser
+`tests/local/listing-edits.spec.ts` and `tests/local/following.spec.ts`.
+
+**Re-review.** `admin.listing_edit_rereview()` is a BEFORE UPDATE trigger on `products`, `product_videos` and
+`catalogues` (`trg_*_rereview`; the names sort after `trg_*_moderation`, so the moderation trigger has already checked
+the owner's own status change). It acts only for the item's owner from a browser (`current_setting('role') =
+'authenticated'` and `auth.uid() = old.vendor_id`: the function is SECURITY DEFINER, so `current_user` can't be used).
+It compares `to_jsonb(old)` and `to_jsonb(new)` minus the columns that aren't content (status, moderation, plan
+pausing, counts, dates, vectors, `category_name`, generated columns):
+
+| Before | Owner changes content | Result |
+|---|---|---|
+| live | status left as live | `under_review`, record opened (`was_status` live) |
+| live | asks for draft or under_review | as asked, record opened |
+| live | nothing changed, status to under_review | record opened empty (a resubmission; the app's pictures land on it) |
+| rejected | any | status as asked, record opened (`was_status` rejected) |
+| paused, `paused_from` live | any | stays paused, `products_pause_guard` marks it for review on resume, record opened |
+| draft or under_review never approved | any | unchanged, nothing recorded (unless a record is already open) |
+
+`admin.product_images_rereview()` (AFTER INSERT/UPDATE/DELETE on `product_images`): the owner's picture change on a live
+listing sets it `under_review` (the products trigger records the resubmission) and counts the pictures; on a paused
+listing it sets `paused_from` to `under_review`. `admin.listing_edit_resolve()` (AFTER UPDATE OF status) closes the open
+record when the item becomes live or rejected, with `auth.uid()` as `resolved_by`. `admin.listing_edit_note()` writes
+through one `insert … on conflict (entity, entity_id) where resolved_at is null`, merging with
+`admin.listing_edit_merge()`, so concurrent picture writes meet at the unique index.
+
+**Reading it.** `public.admin_listing_edits(entity, ids[])` (any active staff member; at most 500 ids) returns the open
+records. Cosora-Admin: `src/lib/listingEdits.ts` (fetch, field labels, "before → after" lines; ids and file
+addresses read as "changed" or "replaced") and `src/components/ListingEditNotice.tsx` (the badge and the list) on
+`Products.tsx` and `Videos.tsx`. No screen lists catalogues.
+
+**Followers.** `public.follows_count_sync()` (SECURITY DEFINER, AFTER INSERT, DELETE, UPDATE OF follower_id, vendor_id on
+`follows`): one `+1`/`-1` per follow on the seller's row, `greatest(…, 0)`, self-rows ignored. `follows_not_self` is
+a NOT VALID check (production has one old self-follow). The migration recounts every seller once; CREATE TRIGGER's
+lock on `follows` keeps follows out until it commits. The buyer app (`src/lib/queries/follows.ts`) leaves the
+viewer's own business out of the brand list, refuses following yourself with a message, and reports a failed follow.
+
+**Scale notes.** One row update per follow serialises follows of one seller on that seller's row: fine for this
+traffic. The Following page still loads every seller and live listing into the browser (`fetchBrands`,
+`useLiveProducts`); a server-side feed is the step when the catalogue passes 1,000 live listings.
+
+**To release:** ask Mitra; apply both migrations (self-checking wrapper); rename them to their ledger versions; push
+both repos. No edge functions change.

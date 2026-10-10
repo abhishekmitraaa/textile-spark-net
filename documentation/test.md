@@ -194,12 +194,46 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 | `full-test/attacks.mjs` | 44 attempts on plans, payments, switches, tier limits, other sellers' data, staff roles. HOLDS = refused or nothing changed; GAP = it worked |
 | `full-test/ad-attacks.mjs` | 16 attempts at advertising unpaid, unreviewed, or beyond what was bought |
 | `full-test/server-value-attacks.mjs` | Search vectors, the certificate order, follower counts |
+| `listing_edits.sql`, `follower_count.sql` | Edits to approved listings, videos and catalogues back to review, the record staff read (16 cases); follower counts (10 cases). Roll back |
+| `full-test/paid-seller-ad.mjs` | A seller on each paid plan creating an ad through the table, the functions and the real purchase; a Free seller. Needs `AD_PAY_URL` (the ad functions with mock Razorpay keys) |
 | `full-test/own-row-columns.mjs`, `own-row-columns-2.mjs` | Which columns of its own rows a browser can change, on twelve tables. Read the list: a count, rating, status, date or verification should not be in it |
 
 ## Test Run History
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-10-10 — Edits back to review, follower counts, a paid-plan seller's ad through the API, the Following page (local stack: harnesses 16/16, 10/10, 18/18 and 269/269; browser 4/4 new and the whole local suite 77/77; paid-seller ad 24 checks and 22 attempts held; production rolled-back check)
+
+- **listing_edits.sql (16/16):** an owner's change to a live listing sends it to review and records it; a second edit
+  adds to the record and a value put back drops out; edit-and-draft; a never-approved draft records nothing; a rejected
+  listing records "after rejection"; the vendor app's save then a new picture make one record; pictures removed,
+  reordered, replaced; a picture on a listing paused after being live; counters, the owner's own view, a buyer's review
+  and the service role are not edits; unpublishing records nothing; a moderator's approval and rejection close the
+  record and the next edit opens a new one; videos and catalogues; only staff read the records; the table and helpers
+  are closed to browsers.
+- **follower_count.sql (10/10):** follow, unfollow, two buyers, a duplicate refused, self-follow refused, a moved follow,
+  never below zero, a non-seller followed, a deleted account's follows, a seller can't set the count, the function
+  can't be called, every seller's count real after the migration.
+- **listing-edits.spec.ts (2/2):** the seller sees the "This listing is live…" note, changes the price, saves; the
+  listing is under review with the change recorded; Cosora-Admin › Products shows Edited and "Price: 450 → 99";
+  Approve puts it live and closes the record. The same through the API with a name change and a new picture.
+- **following.spec.ts (2/2):** a buyer follows two of three sellers (store page and API); the followed sections show
+  only those two sellers' listings; the third's appear only under "Looking for New Brands?" and "Most Popular"; the
+  store page shows the count; unfollowing removes the seller from the feed and the count. A seller can't follow their
+  own business (the app says so; the API is refused 23514) and isn't offered it.
+- **paid-seller-ad.mjs:** for Basic, Silver, Gold and VIP: `POST /rest/v1/advertisements` asking for review, 2099, the
+  banner and counters is a draft and goes nowhere; PATCH of three statuses 403, resume and resubmit refused; the real
+  purchase (order on the mock Razorpay, a forged signature refused, the real one accepted) puts it in review with its
+  order; approved, served; the owner can't extend it or add slots; pause and resume work. Free refused at both doors.
+  Needs the ad functions on a runtime with Razorpay keys (`AD_PAY_URL`, default :8096).
+- **Production, rolled back:** one seller given Gold for the length of the block; their browser insert was a draft
+  dated now with no order and counters zero; three status writes, resume and resubmit refused; not in review, not
+  served, no certificate order.
+- **Regression:** server_owned_columns 18/18 (case 13 approves the renamed video before counting a view: the rename
+  now sends it to review); the fourteen subscription harnesses 269/269; races 2/2 and 2/2; end to end 180/180
+  (`p2-e2e` on :8097); journey 123/123; attacks 44/44, ad attacks 16/16, server values 6/6; typecheck, lint and i18n in
+  the buyer app; typecheck and build in Cosora-Admin; the whole local browser suite 77/77 (6.0 min, buyer :8092, admin :5186).
 
 ### 2026-10-10 — Full test after the release: every paid plan bought and used; 66 attack attempts hold after one fix (local stack: journey 123/123; harness 18/18; all fourteen subscription harnesses 269/269; both races; end to end 180/180)
 

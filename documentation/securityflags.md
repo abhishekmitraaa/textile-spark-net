@@ -12,7 +12,9 @@ not the sensitive value itself. This file may end up in version control history.
 ## Open Flags (unresolved, needs attention)
 | Date found | Title | Severity | Location | Status |
 |---|---|---|---|---|
-| 2026-10-10 | Editing a listing, video or catalogue that is already live does not send it back to review: approved content can be swapped | Medium (moderation; a decision for Mitra) | `products`, `product_videos`, `catalogues`: an owner's edit keeps `status` | Open, not changed: re-review on every edit would unpublish a listing for a price change. Options in the Log entry below |
+| 2026-10-10 | Editing a listing, video or catalogue that is already live does not send it back to review: approved content can be swapped through the API (the app's own edit already re-reviews) | Medium | `products`, `product_videos`, `catalogues`, `product_images`: an owner's edit kept `status` | Fixed on branch `fixes/rereview-and-followers` (`20261010150000_listing_edit_rereview.sql`): back to review, with a record staff see in Cosora-Admin. **Open until applied** (Mitra: hold) |
+| 2026-10-10 | Catalogues have no approval screen in Cosora-Admin: an uploaded catalogue waits in review with nothing that shows it to a moderator | Low (functional; production has no catalogues yet) | Cosora-Admin (no page reads `catalogues`); `approve_vendor_content('catalogues', id)` exists | Open, a decision for Mitra: a Catalogues tab next to Products and Videos |
+| 2026-10-10 | Follower counts are placeholders and never move: seven production sellers show 1,240 to 8,760 followers for one or two real ones; one seller follows themselves | Low (trust: a buyer reads it as demand) | `vendor_profiles.followers_count`; `follows` | Fixed on branch (`20261010150100_follower_count.sql`): counted by the database, self-follows refused. **Open until applied** |
 | 2026-10-10 | Any signed-in buyer can review any seller or listing, with no dealings between them | Medium while the dummy OTP is live (any phone number is an account) | `reviews_insert_own`, `product_reviews_insert_own`; `guard_review_write()` stops only self-reviews | Open, a decision for Mitra: require a quote, a conversation or an order first |
 | 2026-10-10 | `subscription-verify-payment` answers `already`, with the plan and invoice id, to anyone who sends a paid order's id, payment id and signature | Low (hardening: the three values are the payer's own, and the answer changes nothing) | `supabase/functions/subscription-verify-payment/index.ts` (live path) | Open: check the caller owns the order before answering |
 | 2026-10-10 | `created_at` is still the browser's on `profiles`, `buyer_profiles` and `vendor_documents`; `vendor_profiles.profile_score` is written by the browser by design | Low (nothing ranks or vouches by them) | those tables; `src/lib/queries/vendorDashboard.ts` | Open, logged only. `profiles` sits beside sign-in, which is not to be touched |
@@ -105,6 +107,28 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-10-10 — Edits to approved content, follower counts, and two tests Mitra asked for — Severity: Medium / Low (fixed on branch, open until applied)
+- **Edits.** Mitra decided (2026-10-10) that an edit sends approved content back to review and that staff see what
+  changed. Through the API an owner could change a live listing (name, price, description, any detail), a live video
+  (caption, the video itself) or a live catalogue, and add, remove or replace a live listing's pictures, all without
+  review: the moderation triggers checked the owner's own status change, not the content. The vendor app already
+  sends its edits to review, so the gap was the API. `20261010150000_listing_edit_rereview.sql` closes it for all four tables and keeps
+  what changed (`admin.listing_edits`), shown on the Products and Videos queues.
+- **How "the owner, from a browser" is told apart** in SECURITY DEFINER trigger functions (they must write the admin
+  table, so `current_user` is their owner): `current_setting('role') = 'authenticated'` and `auth.uid()` is the
+  item's vendor, as `guard_ad_deletion` does. Moderators' updates, definer functions acting for another account
+  (counters, ratings), the service role and scheduled jobs are left alone; the harness covers each.
+- **Followers.** Nothing maintained `followers_count` and since server_owned_columns a browser can't set it, so the
+  number could only be fixed in the database. `20261010150100_follower_count.sql`.
+- **Paid-seller ad, tested end to end** on the local stack (all four paid plans) and, rolled back, on production: the
+  server_owned_columns fix holds at every door a browser has (table, functions, purchase). Locally this needed a third
+  side runtime serving the ad functions with the mock Razorpay keys (`scripts/local-stack/README.md`).
+- **Following page, tested:** only followed sellers in the followed sections. Not a security issue, logged for scale:
+  it loads every seller and live listing into the browser.
+- **Still open, for Mitra:** catalogues have no approval screen; reviews need no dealings with the seller; the
+  verify-payment "already" answer to a non-owner.
+- Related changelog entry: 2026-10-10 (Edits, followers, and two tests)
 
 ### 2026-10-10 — Full test after the release: advertising without paying, and values the server is meant to own — Severity: High / Medium (fixed and live 2026-10-10)
 - **How it was found:** the full test Mitra asked for on 2026-10-10 (local stack only). After the attack pass on

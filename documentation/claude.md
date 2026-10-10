@@ -1292,6 +1292,18 @@ undocumented. Deep technical rationale for each lives in
   authored timestamps (`MIGRATIONS.md`), and 45 live migrations, the whole base schema
   among them, are in neither repo.
 
+### An edit to approved content goes back to review (Mitra, 2026-10-10)
+- A seller's change to anything buyers see on a live listing, video or catalogue (pictures included) sends it back
+  to `under_review`, hidden from buyers until a moderator approves it. Staff see what changed (the **Edited** badge
+  and its list in Cosora-Admin). Enforced in the database (`20261010150000_listing_edit_rereview`), not only by the
+  vendor app's Save, because the API reaches the tables directly.
+- Not an edit: status changes (unpublishing, the plan pausing or resuming a listing), counts other people move,
+  moderation fields, anything a moderator, the service role or a scheduled job writes.
+- A new column buyers see is an edit automatically (the trigger compares whole rows minus a list of non-content
+  columns). A new column that is NOT content (a counter, a timestamp, a derived value) must be added to that list in
+  `admin.listing_edit_rereview()`, or every update of it by the owner sends the item back to review.
+- Follower counts are the database's (`follows_count_sync`); a seller can't follow their own business.
+
 ### A row policy is not a column policy (2026-10-10)
 - RLS decides which ROWS an account writes. Every column of a table is granted to `authenticated`, so on its own
   row an account can write any column: a count, a rating, a date, a status, a search vector, an order id.

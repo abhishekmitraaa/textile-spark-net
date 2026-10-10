@@ -7984,5 +7984,10 @@
  "Category average": "કેટેગરી સરેરાશ",
  "Your brand": "તમારી બ્રાન્ડ",
  "No tracked activity in the last {0}. This fills in as buyers browse, search and tap your listings.": "છેલ્લા {0} માં કોઈ ટ્રૅક થયેલી પ્રવૃત્તિ નથી. ખરીદદારો તમારી લિસ્ટિંગ જુએ, શોધે અને ટૅપ કરે તેમ આ ભરાતું જાય છે.",
- "Visit-level tracking is not switched on for this project yet. This panel needs one row per event, with its own timestamp, viewer and source; until the engagement_events table exists a view only bumps a lifetime counter on the product, so there is nothing here to read.": "આ પ્રોજેક્ટ માટે મુલાકાત-સ્તરનું ટ્રૅકિંગ હજી ચાલુ નથી. આ પૅનલને દરેક ઇવેન્ટ માટે એક હરોળ જોઈએ, તેના પોતાના સમય, જોનાર અને સ્રોત સાથે; engagement_events ટેબલ ન બને ત્યાં સુધી એક વ્યૂ પ્રોડક્ટ પર ફક્ત આજીવન કાઉન્ટર વધારે છે, તેથી અહીં વાંચવા જેવું કંઈ નથી."
+ "Visit-level tracking is not switched on for this project yet. This panel needs one row per event, with its own timestamp, viewer and source; until the engagement_events table exists a view only bumps a lifetime counter on the product, so there is nothing here to read.": "આ પ્રોજેક્ટ માટે મુલાકાત-સ્તરનું ટ્રૅકિંગ હજી ચાલુ નથી. આ પૅનલને દરેક ઇવેન્ટ માટે એક હરોળ જોઈએ, તેના પોતાના સમય, જોનાર અને સ્રોત સાથે; engagement_events ટેબલ ન બને ત્યાં સુધી એક વ્યૂ પ્રોડક્ટ પર ફક્ત આજીવન કાઉન્ટર વધારે છે, તેથી અહીં વાંચવા જેવું કંઈ નથી.",
+ "This is your own business": "આ તમારો પોતાનો વ્યવસાય છે",
+ "Buyers follow it; you can't follow yourself.": "ખરીદદારો તેને ફોલો કરે છે; તમે પોતાને ફોલો કરી શકતા નથી.",
+ "Couldn't follow this brand": "આ બ્રાન્ડને ફોલો કરી શક્યા નહીં",
+ "Couldn't unfollow this brand": "આ બ્રાન્ડને અનફોલો કરી શક્યા નહીં",
+ "This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).": "આ લિસ્ટિંગ લાઇવ છે. ફેરફારો સાચવવાથી તે ફરી સમીક્ષામાં જશે: મંજૂર થાય ત્યાં સુધી ખરીદદારો તેને જોઈ શકશે નહીં (24–48 કલાક)."
 }

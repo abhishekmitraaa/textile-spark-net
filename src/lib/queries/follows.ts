@@ -59,7 +59,9 @@ async function fetchBrands(userId: string): Promise<Brand[]> {
     byVendor.set(p.vendor_id, arr);
   }
 
-  return (vendors ?? []).map((v: RawVendorRow) => {
+  // A seller account browsing as a buyer doesn't see its own business here: following yourself is refused
+  // (follows_not_self), and it wouldn't count.
+  return (vendors ?? []).filter((v: RawVendorRow) => v.id !== userId).map((v: RawVendorRow) => {
     const vp = byVendor.get(v.id) ?? [];
     const topProducts = vp.slice(0, 2).map((p) => {
       const im = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position)[0]?.url;
@@ -121,7 +123,18 @@ export function useFollowing(): UseFollowingResult {
         });
         return;
       }
-      await supabase.from("follows").insert({ follower_id: user!.id, vendor_id: vendorId });
+      // The store and product pages show Follow to everyone, the seller looking at their own store included.
+      if (vendorId === user!.id) {
+        toast.info("This is your own business", { description: "Buyers follow it; you can't follow yourself." });
+        return;
+      }
+      const { error } = await supabase.from("follows").insert({ follower_id: user!.id, vendor_id: vendorId });
+      // Already following (a second tab, a double tap) is what was asked for; anything else is said.
+      if (error && error.code !== "23505") {
+        toast.error("Couldn't follow this brand", { description: "Please try again." });
+        return;
+      }
+      // The count on the brand comes back from the database, which keeps it (follows_count_sync).
       qc.invalidateQueries({ queryKey: ["follows", user!.id] });
     },
     [signedIn, user, qc],
@@ -130,7 +143,11 @@ export function useFollowing(): UseFollowingResult {
   const unfollow = useCallback(
     async (vendorId: string) => {
       if (!signedIn) return unfollowLocal(vendorId);
-      await supabase.from("follows").delete().eq("follower_id", user!.id).eq("vendor_id", vendorId);
+      const { error } = await supabase.from("follows").delete().eq("follower_id", user!.id).eq("vendor_id", vendorId);
+      if (error) {
+        toast.error("Couldn't unfollow this brand", { description: "Please try again." });
+        return;
+      }
       qc.invalidateQueries({ queryKey: ["follows", user!.id] });
     },
     [signedIn, user, qc],
