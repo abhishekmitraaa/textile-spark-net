@@ -159,11 +159,15 @@ runs **every way**.
 | `20261009194403_subscriptions_p12_admin_tooling.sql` | Subscriptions P12 (applied 2026-10-09, md5 `7d33ff18…` = live; written as `20261009160000`; applied before P11, which it doesn't depend on). `subscription_plan_prices`, `admin_plan_price_set` and `_cancel`, `subscription_grants`, `admin_subscription_grant`, the worklist and the figures; the morning run applies prices whose day has come. |
 | `20261009150000_subscriptions_p11_catalogue.sql` | Subscriptions P11. **Run 2026-10-09 (21:56 UTC) by hand in the Supabase SQL editor**, because the Supabase tool declined it; **not in `supabase_migrations.schema_migrations`**, and the file keeps its written version. Pasted inside a wrapper that removes the editor's carriage returns and checks the md5 (`380b6988…`) before running, so its function bodies equal the file's. `product_import_batches`, `import_products()` (the seller's own rights), `category_for_import()`, the plans page's catalogue wording. Switch `bulk_import` (off). |
 | `20261010033959_subscriptions_p1_reconcile_job.sql` | Subscriptions P1's schedule (applied 2026-10-10, md5 `64bcab39…` = live; written as `20261008120100`, and still called that in `supabase/functions/billing-reconcile/index.ts`, which stays as it was deployed). The `billing-reconcile` job, every 15 minutes, approved by Mitra on 2026-10-08: calls the function only when an unpaid live or test plan order is 15 minutes to 3 days old, and raises when the Vault key is missing. Applied after the function was deployed. |
+| `20261010040629_subscriptions_p2_dispatch_job.sql` | Subscriptions P2's schedule (applied 2026-10-10 with Mitra's say-so, md5 `b8e38d44…` = live; written as `20261008130100`). The `notification-dispatch` job, every minute. |
+| `20261010040633_subscriptions_p6_lead_digest_job.sql` | Subscriptions P6's schedule (applied 2026-10-10, md5 `22a46205…` = live; written as `20261009100100`). The `lead-alert-digest` job, 09:00 IST. |
+| `20261010040639_subscriptions_p8_crm_followups_job.sql` | Subscriptions P8's schedule (applied 2026-10-10, md5 `5b6bf1de…` = live; written as `20261009120100`). The `crm-followups` job, every 15 minutes. |
 
-Written, not applied (2026-10-10): `20261008130100_subscriptions_p2_dispatch_job.sql`,
-`20261009100100_subscriptions_p6_lead_digest_job.sql` and `20261009120100_subscriptions_p8_crm_followups_job.sql`
-(new scheduled jobs: Mitra's say-so), and `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
-everyone). Inside the applied files, comments and messages still name each other by their written versions.
+Written, not applied (2026-10-10): `20261010120000_server_owned_columns.sql` (the full test's fix: advertising
+without paying, and the counts, ratings, dates and vectors a browser could set; waits for Mitra, and goes in **before**
+its branch is pushed, since the repository is public) and `20261009170000_subscriptions_p13_truth_pass.sql` (when every
+switch is on for everyone). Inside the applied files, comments and messages still name each other by their written
+versions.
 
 ---
 

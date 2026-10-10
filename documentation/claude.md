@@ -1292,6 +1292,21 @@ undocumented. Deep technical rationale for each lives in
   authored timestamps (`MIGRATIONS.md`), and 45 live migrations, the whole base schema
   among them, are in neither repo.
 
+### A row policy is not a column policy (2026-10-10)
+- RLS decides which ROWS an account writes. Every column of a table is granted to `authenticated`, so on its own
+  row an account can write any column: a count, a rating, a date, a status, a search vector, an order id.
+- **A value the server owns needs a BEFORE trigger** that acts when `current_user = 'authenticated'`. Either ignore
+  the browser's value (a new row gets the default, an edit keeps what is stored: right for counts, dates and vectors,
+  because a form that sends the whole row back still saves) or raise (right for a status or anything that was paid
+  for or reviewed). The writers that are meant to move it must be definer functions or the service role.
+- **A status that has RPCs moves only through them.** Do not also allow the owner to set it directly "for the app":
+  `paused_by_vendor`, set by hand from a draft, was a free and unreviewed ad one `resume_ad_campaign()` later.
+- **When a table gets a new column, ask who owns it.** When a new table is written by browsers, run
+  `scripts/security/full-test/own-row-columns.mjs` against it and read the list.
+- **Test a write with `Prefer: return=minimal`** and read the database afterwards. Asking for the row back fails on a
+  table with private columns before the write is tried, which reads as "refused".
+- Guards in force: `documentation/technicalimplementation.md`, "Server-owned values and the advertising path".
+
 ### Postgres facts that are not guessable (all cost a failed migration to learn)
 
 - **A generated column cannot reference another generated column.** `fts` therefore inlines

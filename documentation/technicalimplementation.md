@@ -3204,8 +3204,8 @@ Migrations `20261009171650_subscriptions_p1_billing_core.sql` (guard: `admin.sub
 
 ## Subscriptions P2: notification delivery (2026-10-08)
 
-Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `20261008130100_subscriptions_p2_dispatch_job.sql`
-(the schedule: a new job, applied only with Mitra's say-so, after `notification-dispatch` is deployed). Built on branch
+Migrations `20261008130000_subscriptions_p2_notification_delivery.sql` and `20261010040629_subscriptions_p2_dispatch_job.sql`
+(the schedule: applied 2026-10-10 as `20261010040629`, with Mitra's say-so, after `notification-dispatch` was deployed). Built on branch
 `subscriptions/p2-notifications`; the first run by hand in the SQL editor on 2026-10-09 (the tool declined it), followed by
 `20261009173853_subscriptions_p2_function_line_endings.sql`; the job not applied.
 
@@ -3461,7 +3461,7 @@ Built on `subscriptions/p5-ad-reach`; applied 2026-10-09. Migration `20261009175
 ## Subscriptions P6: lead alerts and lead channels (2026-10-09)
 
 Built on `subscriptions/p6-lead-alerts`; the first applied 2026-10-09, the job not. Migrations `20261009175832_subscriptions_p6_lead_alerts.sql`
-and `20261009100100_subscriptions_p6_lead_digest_job.sql` (a new scheduled job: Mitra's say-so). No edge function
+and `20261010040633_subscriptions_p6_lead_digest_job.sql` (the schedule: applied 2026-10-10, written as `20261009100100`). No edge function
 changes: messages go out through P2's outbox and dispatcher.
 
 ### Data
@@ -3540,7 +3540,7 @@ changes: messages go out through P2's outbox and dispatcher.
 
 ### Release order (when Mitra says)
 1. Apply `20261009175832` (P0 to P5 first: the guard). No functions to deploy.
-2. With Mitra's say-so, apply `20261009100100` (the digest job). It needs P2's dispatcher job to send anything.
+2. The digest job (`20261009100100`, applied 2026-10-10 as `20261010040633`). It needs P2's dispatcher job to send anything; that is scheduled too.
 3. Merge with the switch off; list test accounts on `lead_alerts` (and `notification_delivery` for email); then on.
 
 ## Subscriptions P7: overseas requirements (2026-10-09; database applied 2026-10-09, switch off)
@@ -3603,7 +3603,7 @@ spec `tests/local/subscriptions-p7.spec.ts`.
 
 ## Subscriptions P8: the CRM (2026-10-09; database applied 2026-10-09, switch off)
 
-Migrations `20261009193707_subscriptions_p8_crm.sql` and `20261009120100_subscriptions_p8_crm_followups_job.sql` (the
+Migrations `20261009193707_subscriptions_p8_crm.sql` and `20261010040639_subscriptions_p8_crm_followups_job.sql` (applied 2026-10-10, written as `20261009120100`; the
 job; needs Mitra's say-so); harness `scripts/subscriptions/p8_crm.sql` (19 cases); spec `tests/local/subscriptions-p8.spec.ts`.
 
 - **Guard.** md5 of `vendor_entitlements` as P7 leaves it (`16f8cc7d…`); none of the three triggers may exist.
@@ -3829,3 +3829,61 @@ on the way is in `claude.md` ("Postgres facts that are not guessable"); the list
   `--agent no` (`subscription-session/SIGN-IN-SUPABASE.cmd`); the agent then deploys with that sign-in.
 - **Then** the reconcile job (`20261010033959`), and `main` in both repos, straight after the functions: the old app
   against the new functions was never tested, so the two were kept minutes apart.
+
+---
+
+## Server-owned values and the advertising path (2026-10-10)
+
+Migration `20261010120000_server_owned_columns.sql` (written version; **not applied**: it waits for Mitra, and goes
+in before its branch is pushed). Harness `scripts/security/server_owned_columns.sql` (18 cases); end to end
+`scripts/security/full-test/`. Found by the full test after the subscriptions release (`documentation/test.md`,
+2026-10-10; `documentation/securityflags.md`, same date).
+
+**The principle.** A row policy says which rows an account may write. It says nothing about columns, and every column
+of these tables is granted to `authenticated`. A value the server owns therefore needs a BEFORE trigger that acts
+when `current_user = 'authenticated'` (a browser). Definer functions and the service role are not `authenticated`,
+so the code that is meant to write these values passes untouched.
+
+**Advertising** (`enforce_ads_moderation()`, replaced; guarded by md5):
+- A browser's INSERT becomes a draft: `status = 'draft'`, no order id, `created_at = now()`, counters zero. The
+  campaigns a reviewer sees are written by `razorpay-verify-payment` and `razorpay-webhook` with the service role
+  (requested `active`, turned to `pending_review` by `guard_ad_activation()`).
+- An owner cannot set `status`. It moves through `pause_ad_campaign_by_vendor()` (from active or scheduled),
+  `resume_ad_campaign()` (from paused) and `resubmit_ad_campaign()` (from changes requested), each of which writes
+  `admin.ad_review_log`. Before, `paused_by_vendor` could be set from any status, and resume made it active.
+- What an owner may edit directly depends on where the campaign is: a draft, everything but its date and order;
+  `changes_requested`, the wording, picture and targeting; any other status, nothing. The check compares the whole
+  row (`to_jsonb(new) - open columns`), so a column added later is closed until someone opens it.
+- `create_certificate_order()` returns at once for a draft.
+- The vendor app never inserts or updates `advertisements` (`createAd` in `src/lib/queries/ads.ts` has no caller;
+  status goes through the RPCs; delete is unchanged), so no screen changes.
+
+**Counts, ratings, dates, vectors** (new functions; each trigger fires on INSERT and on UPDATE OF its columns):
+
+| Table | Trigger → function | Held |
+|---|---|---|
+| `products` | `trg_products_server_columns` → `products_server_columns_guard()` | `views_count`, `enquiries_count`, `sold_count`, `rating_avg`, `reviews_count`, `created_at`, `embedding`; `category_name` is read from `category_id` |
+| `product_videos` | `trg_product_videos_server_columns` → `product_videos_server_columns_guard()` | `likes_count`, `views_count`, `rating`, `reviews`, `created_at`, `embedding` |
+| `vendor_profiles` | `trg_vendor_profiles_server_columns` → `vendor_profiles_server_columns_guard()` | `followers_count`, `created_at`, `catalog_embedding`, `catalog_embedding_updated_at` |
+| `rfqs`, `reviews`, `product_reviews`, `service_reviews` | `trg_<table>_created_at` → `created_at_guard()` | `created_at` |
+
+A browser's value is **ignored, not refused**: a new row starts at zero (or null) and now, an edit keeps what is
+stored, and the rest of the same statement saves. A form that sends a whole row back therefore still works, and a
+count that moved between its read and its save is not put back. `vendor_profiles.profile_score` is left alone: the
+vendor dashboard computes and writes it (`vendorDashboard.ts`), and nothing ranks by it.
+
+**Catalogues** (`trg_catalogues_moderation` → `catalogues_moderation_guard()`): the rule product videos already had.
+A seller's insert that asks for anything but `draft` becomes `under_review`; an owner sets `draft` or
+`under_review`; other statuses need super_admin or product_moderator. `approve_vendor_content()` (definer) puts a
+catalogue live as before.
+
+**Not changed:** an owner's edit to a live listing, video or catalogue keeps it live (a decision for Mitra, logged in
+`securityflags.md`); `created_at` on `profiles`, `buyer_profiles` and `vendor_documents`.
+
+**Also on this branch:** `razorpayApiBase()` in `supabase/functions/_shared/razorpay.ts`. `subscription-create-order`,
+`razorpay-create-order` and Cosora-Admin's `admin-refund-payment` named `https://api.razorpay.com` in the code, so
+the local stack's mock never saw an order or a refund being created. They read `RAZORPAY_API_URL` now, as the other
+Razorpay calls did; unset (production), the address is Razorpay's.
+
+**To release:** ask Mitra; apply the migration (the self-checking wrapper, md5 of the file's LF text); rename it to its
+live version; then push the branch and deploy the three functions. The migration first: the repositories are public.

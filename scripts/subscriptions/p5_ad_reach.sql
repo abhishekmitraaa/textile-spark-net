@@ -215,9 +215,10 @@ begin
         reset role;
         want := 'two refused, abroad refused, free refused';
       elsif i = 16 then
-        -- An ad that reaches more than the plan now allows (bought on a bigger plan).
+        -- An ad that reaches more than the plan now allows (bought on a bigger plan), sent back
+        -- for changes: the one time its owner edits a submitted ad (server_owned_columns).
         set local session_replication_role = replica;
-        update public.advertisements set target_states = '{GJ,MH,RJ}' where id = ad_gj;
+        update public.advertisements set target_states = '{GJ,MH,RJ}', status = 'changes_requested' where id = ad_gj;
         set local session_replication_role = origin;
         perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
         set local role authenticated;
@@ -230,6 +231,9 @@ begin
         end;
         update public.advertisements set target_states = '{MH}' where id = ad_gj;
         reset role;
+        set local session_replication_role = replica;
+        update public.advertisements set status = 'active' where id = ad_gj;
+        set local session_replication_role = origin;
         got := got || ', ' || (select title || ' ' || target_states::text from public.advertisements where id = ad_gj);
         want := 'renamed, two refused, P5 Gujarat, renamed {MH}';
       elsif i = 17 then

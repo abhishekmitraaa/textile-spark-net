@@ -44,6 +44,7 @@ function json(body: unknown, status = 200): Response {
 import type { AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, checkDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
+import { razorpayApiBase } from "../_shared/razorpay.ts";
 
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
@@ -115,7 +116,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     orderId = `free_${crypto.randomUUID()}`;
   } else {
     try {
-      const resp = await fetch("https://api.razorpay.com/v1/orders", {
+      const resp = await fetch(`${razorpayApiBase()}/v1/orders`, {
         method: "POST",
         headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
         body: JSON.stringify({

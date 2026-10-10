@@ -182,10 +182,76 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ---
 
+### Security: the full test — `scripts/security/`
+- **Local stack only** (`lib.mjs` refuses any address but 127.0.0.1). Needs the stack, the side runtime with every
+  subscription function and the mock providers (`scripts/local-stack`), and
+  `LOCAL_STACK_ENV=<…>/.claude/tmp/local-stack-env.json`. Each script makes its own accounts and closes what they made.
+
+| Script | Covers |
+|---|---|
+| `server_owned_columns.sql` | The 2026-10-10 fix, 18 cases, as a browser, a moderator and the service role. Rolls back. `docker exec -i supabase_db_localstack psql -U postgres -At < scripts/security/server_owned_columns.sql` |
+| `full-test/journey.mjs` | Buying Basic, Silver, Gold and VIP through the real one-off path and using everything each includes; plan changes; the end of a plan. 123 checks |
+| `full-test/attacks.mjs` | 44 attempts on plans, payments, switches, tier limits, other sellers' data, staff roles. HOLDS = refused or nothing changed; GAP = it worked |
+| `full-test/ad-attacks.mjs` | 16 attempts at advertising unpaid, unreviewed, or beyond what was bought |
+| `full-test/server-value-attacks.mjs` | Search vectors, the certificate order, follower counts |
+| `full-test/own-row-columns.mjs`, `own-row-columns-2.mjs` | Which columns of its own rows a browser can change, on twelve tables. Read the list: a count, rating, status, date or verification should not be in it |
+
 ## Test Run History
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-10-10 — Full test after the release: every paid plan bought and used; 66 attack attempts hold after one fix (local stack: journey 123/123; harness 18/18; all fourteen subscription harnesses 269/269; both races; end to end 180/180)
+
+- **Where:** the local stack only (a copy of production's schema, mock Razorpay, Resend and WhatsApp). Nothing was
+  tried on production; production was read from the catalogue to see whether it has the same code (it does).
+- **Baseline before anything changed:** 269/269 harness cases, both races (2/2 and 2/2), the ten end-to-end scripts
+  180/180. `p2-e2e` needs the side runtime that has the WhatsApp mock (:8097); on :8099 four of its checks fail for
+  that reason alone.
+- **The journey** (`scripts/security/full-test/journey.mjs`, 123/123). For Basic, Silver, Gold and VIP, a new
+  seller: creates the order (₹825, ₹1,769, ₹2,713 and ₹25,960 with GST, to the rupee), pays the mock Razorpay order,
+  verifies with Razorpay's signature, and gets the plan, one GST tax invoice with the right split, and its PDF. Then
+  what the plan includes and nothing more: the listing limit (the eleventh on Basic is refused), ad reach (one state,
+  four, all India, overseas on VIP), bulk import (Silver up), the CRM (pipeline on Silver, analytics on Gold), the
+  account manager (shared, named, dedicated), lead alerts by channel, overseas requirements (Gold, and VIP a day
+  earlier), featured places and the spotlight. Then: upgrade with credit, renewal, a downgrade that waits for the
+  period's end, the grace days, the lapse to Free (two listings stay, eight are paused, none deleted), choosing which
+  stay, and buying again.
+- **It found a hole in the tests first:** order creation and refunds had never run, because three functions named
+  Razorpay's address in the code. They read `RAZORPAY_API_URL` now.
+- **The attack pass** (`attacks.mjs`, 44 attempts): a plan without paying (editing the subscription or profile row,
+  a forged, replayed or someone else's signature, the demo path, a ₹0 order of one's own making, service-only
+  functions, a forged webhook), switches, prices and invoices, what a plan doesn't include (CRM, account manager,
+  import, overseas requirements, ad reach, the listing limit, paused listings), another seller's data across 18 tables,
+  storage and the plan functions, staff acting above their role, buyers, signed-out callers. All held before and after.
+- **The column sweep** (`own-row-columns.mjs`, `own-row-columns-2.mjs`): each column of an account's own row on
+  twelve tables, written through the API with `Prefer: return=minimal` and then read from the database. Asking for
+  the row back hides a write on a table with private columns: the first run, which did, showed nothing writable on
+  `vendor_profiles`.
+- **What it found, before the fix** (`ad-attacks.mjs` 14 of 16 worked, `server-value-attacks.mjs` 5 of 6): an
+  unpaid, unreviewed campaign live in the banner slot; a campaign Cosora paused, suspended or rejected, or one that
+  had expired, running again; a paid one-day listing ad given more slots and an end date of 2099; the verified badge
+  until 2099 from an unpaid campaign a reviewer approved; a certificate order from a draft; a listing created with
+  5,000 views, enquiries and sales and a 5.0 rating from 900 reviews; search vectors and a follower count set by the
+  seller; a catalogue created live; a requirement and a review dated 2099.
+- **After the fix** (`20261010120000_server_owned_columns.sql`): 16/16 and 6/6 hold; the sweeps show none of those columns; the attack
+  pass 44/44; the journey 123/123.
+- **Harness** `scripts/security/server_owned_columns.sql`, 18/18 (run as the browser would: role `authenticated`
+  with the account's token; as the service role; as a moderator). Ads: a draft whatever is asked for; no certificate
+  for a draft, one for a paid campaign; no status set directly, no resume from a draft; a draft editable but not its
+  date; ten fields of a running campaign refused and the row unchanged; after "changes requested" the wording,
+  picture and targeting, then resubmit; pause and resume as before; four terminal or held statuses stay; approval and
+  the service role untouched. Counts: a new listing at zero and now with the category's own name; an edit saved with
+  the stored counts kept; views, enquiries and a review's rating still counted; the same for a video with likes;
+  followers, joined date and the catalogue vector; dates on requirements and three kinds of review; a catalogue for
+  review, approved by a moderator, not by its owner or a buyer; the service role writes all of it; the guards can't be
+  called.
+- **Regression:** the fourteen subscription harnesses 269/269 (P5's case 16 edits an ad sent back for changes now: a
+  running one can't be edited); both races; end to end 180/180.
+- **Two things the run taught:** P6's harness counts `admin.lead_alerts` and `lead_match` notifications whole, so a
+  run that leaves any behind fails its cases 1 and 4 (the full-test scripts now remove what their requirements sent).
+  And the older matrix harnesses in `scripts/admin-completion` and `scripts/admin-separation` name production's
+  rows, so on the local stack most of them stop at a missing target.
 
 ### 2026-10-10 — Subscriptions release, the database: production compared with the tested copy (504 functions and 44 tables; only differences with a known cause)
 

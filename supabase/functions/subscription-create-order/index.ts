@@ -60,6 +60,7 @@ import { verifiedUserId } from "../_shared/auth.ts";
 import { checkoutGate } from "../_shared/checkoutGate.ts";
 import { paymentModeForKey } from "../_shared/fulfil.ts";
 import { openMandate } from "../_shared/autopay.ts";
+import { razorpayApiBase } from "../_shared/razorpay.ts";
 
 interface PlanRow { monthly_price: number; yearly_price: number; is_invite_only: boolean }
 
@@ -136,7 +137,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
     orderId = `free_${crypto.randomUUID()}`;
   } else {
     try {
-      const resp = await fetch("https://api.razorpay.com/v1/orders", {
+      const resp = await fetch(`${razorpayApiBase()}/v1/orders`, {
         method: "POST",
         headers: { authorization: `Basic ${btoa(`${keyId}:${keySecret}`)}`, "content-type": "application/json" },
         body: JSON.stringify({

@@ -37,8 +37,13 @@ export interface RazorpayAnswer<T> {
   error?: string;
 }
 
+/** Where Razorpay's API is: https://api.razorpay.com, unless a local or staging mock is named in RAZORPAY_API_URL. */
+export function razorpayApiBase(): string {
+  return Deno.env.get("RAZORPAY_API_URL") || "https://api.razorpay.com";
+}
+
 async function call<T>(keys: RazorpayKeys, method: "GET" | "POST", path: string, body?: unknown): Promise<RazorpayAnswer<T>> {
-  const base = Deno.env.get("RAZORPAY_API_URL") || "https://api.razorpay.com";
+  const base = razorpayApiBase();
   try {
     const r = await fetch(`${base}${path}`, {
       method,
