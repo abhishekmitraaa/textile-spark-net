@@ -2,7 +2,7 @@
  * Edited listings go back to review, and Cosora-Admin sees what changed (2026-10-10), on the local stack.
  *   * A seller opens one of their live listings to edit it and is told saving sends it back to review.
  *     They change the price and save: the listing is under review (hidden from buyers) and the change is
- *     recorded (20261010150000_listing_edit_rereview).
+ *     recorded (20261010124955_listing_edit_rereview).
  *   * In Cosora-Admin › Products the listing is in the queue with an "Edited" badge and the change,
  *     "Price: 450 → 99". Approving puts it live and closes the record.
  *   * The same change made straight through the API, not the app, does the same.

@@ -273,7 +273,7 @@ begin
         got := (select likes_count || '|' || views_count || '|' || rating::int || '|' || coalesce(reviews, '-') || '|' || (created_at <= now()) || '|' || (embedding is null)
                   from public.product_videos where brand_line = 'SOC browser video')
                || ' ' || (select brand_line || '|' || likes_count || '|' || views_count || '|' || rating || '|' || reviews || '|' || (created_at <= now()) from public.product_videos where id = vid);
-        -- The rename sent the video back to review (20261010150000_listing_edit_rereview), and a view counts
+        -- The rename sent the video back to review (20261010124955_listing_edit_rereview), and a view counts
         -- only on a live video: approved again here, as a moderator would.
         set local session_replication_role = replica;
         update public.product_videos set status = 'live' where id = vid;

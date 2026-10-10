@@ -1295,7 +1295,7 @@ undocumented. Deep technical rationale for each lives in
 ### An edit to approved content goes back to review (Mitra, 2026-10-10)
 - A seller's change to anything buyers see on a live listing, video or catalogue (pictures included) sends it back
   to `under_review`, hidden from buyers until a moderator approves it. Staff see what changed (the **Edited** badge
-  and its list in Cosora-Admin). Enforced in the database (`20261010150000_listing_edit_rereview`), not only by the
+  and its list in Cosora-Admin). Enforced in the database (`20261010124955_listing_edit_rereview`), not only by the
   vendor app's Save, because the API reaches the tables directly.
 - Not an edit: status changes (unpublishing, the plan pausing or resuming a listing), counts other people move,
   moderation fields, anything a moderator, the service role or a scheduled job writes.

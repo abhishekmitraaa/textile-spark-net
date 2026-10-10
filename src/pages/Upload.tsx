@@ -534,7 +534,7 @@ const Upload = () => {
           {isEdit ? "Update your listing details, images, and pricing" : category ? `Adding to: ${category.name}` : "Select a category to get started"}
         </p>
         {/* Every change to a live listing goes back to review: the database sends it there whatever
-            the page saves (20261010150000_listing_edit_rereview), so say so before the seller saves. */}
+            the page saves (20261010124955_listing_edit_rereview), so say so before the seller saves. */}
         {isEdit && editing?.status === "live" && (
           <p className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900" data-testid="edit-rereview-note">
             This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).

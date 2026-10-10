@@ -163,11 +163,11 @@ runs **every way**.
 | `20261010040633_subscriptions_p6_lead_digest_job.sql` | Subscriptions P6's schedule (applied 2026-10-10, md5 `22a46205…` = live; written as `20261009100100`). The `lead-alert-digest` job, 09:00 IST. |
 | `20261010040639_subscriptions_p8_crm_followups_job.sql` | Subscriptions P8's schedule (applied 2026-10-10, md5 `5b6bf1de…` = live; written as `20261009120100`). The `crm-followups` job, every 15 minutes. |
 | `20261010060959_server_owned_columns.sql` | The full test's fix (applied 2026-10-10 with Mitra's yes, md5 `edaadc0f…` = live; written as `20261010120000`). A browser makes a draft ad and nothing else; an owner's ad status moves only through the pause, resume and resubmit functions; counts, ratings, dates and search vectors on listings, videos, seller profiles, requirements and reviews are the server's; catalogues go through review. Applied before its branch was pushed. |
+| `20261010124955_listing_edit_rereview.sql` | Edits to approved content back to review (applied 2026-10-10 with Mitra's yes, md5 `46cb7bb2…` = live; written as `20261010150000`). `admin.listing_edits` and its four functions, triggers on `products`, `product_videos`, `catalogues` and `product_images`, `admin_listing_edits()` for staff. |
+| `20261010125031_follower_count.sql` | Follower counts (applied 2026-10-10, md5 `9b66780c…` = live; written as `20261010150100`). `follows_not_self` (NOT VALID), `follows_count_sync()` and its trigger, one recount (six sellers' shown numbers became the real ones). |
 
 Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (when every switch is on for
-everyone); `20261010150000_listing_edit_rereview.sql` (edited listings, videos and catalogues back to review, with a record
-for staff) and `20261010150100_follower_count.sql` (follower counts kept by the database; sets seven production sellers'
-shown numbers to their real ones), both waiting for Mitra. Inside the applied files, comments and messages still name each other by their written
+everyone). Inside the applied files, comments and messages still name each other by their written
 versions.
 
 ---

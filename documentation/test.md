@@ -203,7 +203,7 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-10 — Edits back to review, follower counts, a paid-plan seller's ad through the API, the Following page (local stack: harnesses 16/16, 10/10, 18/18 and 269/269; browser 4/4 new and the whole local suite 77/77; paid-seller ad 24 checks and 22 attempts held; production rolled-back check)
+### 2026-10-10 — Edits back to review, follower counts, a paid-plan seller's ad through the API, the Following page (released the same day; local stack: harnesses 16/16, 10/10, 18/18 and 269/269; browser 4/4 new and the whole local suite 77/77; paid-seller ad 24 checks and 22 attempts held; production rolled-back check)
 
 - **listing_edits.sql (16/16):** an owner's change to a live listing sends it to review and records it; a second edit
   adds to the record and a value put back drops out; edit-and-draft; a never-approved draft records nothing; a rejected
@@ -230,6 +230,10 @@ file was created; they record real runs, but only those the changelog captured.
 - **Production, rolled back:** one seller given Gold for the length of the block; their browser insert was a draft
   dated now with no order and counters zero; three status writes, resume and resubmit refused; not in review, not
   served, no certificate order.
+- **On production after the release** (as the roles, rolled back): an owner's API price change sent a live listing to
+  review and was recorded; staff read it, the seller was refused; a moderator's status update put it live and closed
+  the record; a new picture sent it back with "1 added"; a follow moved a seller from 2 to 3; a self-follow was refused
+  (23514). Every new function's body, definer flag and grants equal the local copy's; no seller's follower count wrong.
 - **Regression:** server_owned_columns 18/18 (case 13 approves the renamed video before counting a view: the rename
   now sends it to review); the fourteen subscription harnesses 269/269; races 2/2 and 2/2; end to end 180/180
   (`p2-e2e` on :8097); journey 123/123; attacks 44/44, ad attacks 16/16, server values 6/6; typecheck, lint and i18n in

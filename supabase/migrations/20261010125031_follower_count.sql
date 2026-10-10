@@ -13,7 +13,7 @@
 -- 3. Every seller's count is set to the real number, once, in this transaction. CREATE TRIGGER holds a lock on
 --    follows until it commits, so no follow can land between the count and the trigger.
 --
--- Harness: scripts/security/follower_count.sql; concurrent follows over HTTP: scripts/security/full-test/followers.mjs.
+-- Harness: scripts/security/follower_count.sql; in the browser: tests/local/following.spec.ts.
 
 -- ── 0. Guard ───────────────────────────────────────────────────────────────────────
 do $guard$

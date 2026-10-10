@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SECURITY HARNESS: a seller's follower count is the number of buyers following them (2026-10-10).
--- Migration 20261010150100_follower_count.sql (its written version).
+-- Migration 20261010125031_follower_count.sql (applied 2026-10-10; written as 20261010150100).
 --   follow, unfollow, move a follow, a deleted account: the count follows; never below zero
 --   a seller can't follow themselves; a browser can't set the count; the function can't be called
 --   after the migration every seller's count is the real one

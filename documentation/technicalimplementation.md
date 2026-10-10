@@ -3894,7 +3894,7 @@ migration went first because the repositories are public.
 
 ## Edits to approved content go back to review; follower counts (2026-10-10)
 
-Migrations `20261010150000_listing_edit_rereview.sql` and `20261010150100_follower_count.sql` (written versions; **not applied**: Mitra said to hold). Harnesses
+Migrations `20261010124955_listing_edit_rereview.sql` and `20261010125031_follower_count.sql` (applied 2026-10-10 with Mitra's yes; written as `20261010124955` and `20261010125031`). Harnesses
 `scripts/security/listing_edits.sql` (16) and `scripts/security/follower_count.sql` (10); browser
 `tests/local/listing-edits.spec.ts` and `tests/local/following.spec.ts`.
 
@@ -3936,5 +3936,4 @@ viewer's own business out of the brand list, refuses following yourself with a m
 traffic. The Following page still loads every seller and live listing into the browser (`fetchBrands`,
 `useLiveProducts`); a server-side feed is the step when the catalogue passes 1,000 live listings.
 
-**To release:** ask Mitra; apply both migrations (self-checking wrapper); rename them to their ledger versions; push
-both repos. No edge functions change.
+**Released 2026-10-10:** both migrations through the self-checking wrapper, a check on production as the roles in a block that rolled back: an owner's API price change sent a live listing to review and was recorded; staff read the record and the seller couldn't; a moderator's approval put it live and closed it; a new picture sent it back with "1 added"; a follow moved a seller from 2 to 3; following yourself was refused; files renamed to their ledger versions; `main` pushed in both repos. No edge functions change.

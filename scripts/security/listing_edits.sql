@@ -1,6 +1,6 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SECURITY HARNESS: edited listings go back to review, and staff see what changed (2026-10-10).
--- Migration 20261010150000_listing_edit_rereview.sql (its written version).
+-- Migration 20261010124955_listing_edit_rereview.sql (applied 2026-10-10; written as 20261010150000).
 --   owner      a change to what buyers see sends a live listing, video or catalogue to review; the change
 --              is recorded (live, rejected, paused-after-live, or already open); pictures count
 --   not edits  counts other people move, the owner's own views, unpublishing, the service role, a moderator

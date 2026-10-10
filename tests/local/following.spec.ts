@@ -4,7 +4,7 @@
  *     page's "Your Followings", "Following Top Performing" and "Following New-In" show those two sellers
  *     and their listings only. The third seller's listings appear nowhere but "Most Popular", the
  *     catalogue-wide section the page labels as such and shows once the followed feed runs out.
- *   * Each follow and unfollow moves the seller's follower count (20261010150100_follower_count), and the
+ *   * Each follow and unfollow moves the seller's follower count (20261010125031_follower_count), and the
  *     store page shows the new number.
  *   * A seller looking at their own store is told they can't follow themselves, and their own business
  *     isn't offered on their Following page.
