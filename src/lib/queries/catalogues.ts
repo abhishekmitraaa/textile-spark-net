@@ -7,6 +7,18 @@ import { supabase } from "@/lib/supabase";
 // Files live in the public `catalogues` bucket under the vendor's own folder.
 // ─────────────────────────────────────────────────────────────
 
+/** A catalogue address when it is a web address (http or https), else null: the seller writes these addresses, and
+ *  a `javascript:` link must never be rendered (the database also refuses one: catalogues_web_urls). */
+export function webUrl(u: string | null | undefined): string | null {
+  if (!u) return null;
+  try {
+    const parsed = new URL(u);
+    return parsed.protocol === "https:" || parsed.protocol === "http:" ? parsed.href : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface MyCatalogueRow {
   id: string;
   title: string;

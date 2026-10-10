@@ -26,7 +26,8 @@ declare
     'the seller resubmits a rejected catalogue: in review, recorded',       -- 5
     'approving the resubmission clears the reason and closes the record',   -- 6
     'support and vendor ops see the queue but can''t decide',               -- 7
-    'a buyer sees live catalogues only'];                                   -- 8
+    'a buyer sees live catalogues only',                                    -- 8
+    'file and cover addresses are web addresses only'];                     -- 9
   got text; want text; i int;
   out text := '';
 begin
@@ -151,6 +152,19 @@ begin
         got := (select string_agg(title, ',' order by title) from public.catalogues where id in (c_new, c_rej, c_live));
         reset role;
         want := 'CR live';
+      elsif i = 9 then
+        reset role;
+        perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+        set local role authenticated;
+        got := '';
+        begin update public.catalogues set file_url = 'javascript:alert(document.cookie)' where id = c_new; got := got || 'script link kept';
+        exception when check_violation then got := got || 'script link refused'; end;
+        begin update public.catalogues set cover_url = 'data:image/svg+xml,<svg/onload=alert(1)>' where id = c_new; got := got || ', data cover kept';
+        exception when check_violation then got := got || ', data cover refused'; end;
+        update public.catalogues set file_url = 'https://example.com/new-2.pdf' where id = c_new;
+        reset role;
+        got := got || ', https ' || (select file_url from public.catalogues where id = c_new);
+        want := 'script link refused, data cover refused, https https://example.com/new-2.pdf';
       end if;
       reset role;
       raise exception using errcode = 'P0099',

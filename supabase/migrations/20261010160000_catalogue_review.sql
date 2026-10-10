@@ -16,6 +16,10 @@
 --      - a moderator who isn't the owner changes the status and the reason, nothing else.
 --    The rest is as it was: a seller sets 'draft' or 'under_review', a new catalogue is dated now, the service role
 --    and definer functions are left alone.
+-- 3. The file and cover addresses are web addresses (http or https). They are the seller's to write, and both apps
+--    render the file address as a link: a `javascript:` address would run in whoever clicks it, Cosora staff
+--    included (found by the security review of the Catalogues screen). Production has no catalogues, so the check
+--    is validated at once.
 --
 -- Harness: scripts/security/catalogue_review.sql. Browser: tests/local/catalogue-review.spec.ts.
 
@@ -98,3 +102,7 @@ begin
   return new;
 end
 $function$;
+
+-- ── 3. Web addresses only ──────────────────────────────────────────────────────────
+alter table public.catalogues add constraint catalogues_web_urls check (
+  (file_url is null or file_url ~* '^https?://') and (cover_url is null or cover_url ~* '^https?://'));

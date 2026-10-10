@@ -20,7 +20,7 @@ import {
 import { memberSinceLabel } from "@/lib/memberSince";
 import { useVendorReviews } from "@/lib/queries/reviews";
 import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
-import { useMyCatalogues } from "@/lib/queries/catalogues";
+import { useMyCatalogues, webUrl } from "@/lib/queries/catalogues";
 import { useMyVideos, onThumbError } from "@/lib/queries/videos";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { trustSealFromParts } from "@/lib/plan";
@@ -1129,9 +1129,9 @@ const BusinessProfile = () => {
                             </p>
                           </div>
                         </div>
-                        {cat.fileUrl ? (
+                        {webUrl(cat.fileUrl) ? (
                           <a
-                            href={cat.fileUrl}
+                            href={webUrl(cat.fileUrl) as string}
                             target="_blank"
                             rel="noreferrer"
                             className="flex shrink-0 items-center gap-1 text-xs font-semibold text-blue-600"
