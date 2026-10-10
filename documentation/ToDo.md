@@ -6,6 +6,22 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Decide how long admin page visits stay in the Admin Log, and schedule the pruning — added 2026-10-11
+- Task: once per-admin activity tracking is live, choose a retention period for the "visited a page" entries in
+  `admin.audit_log` (suggested: 180 days) and add a daily pg_cron job that deletes older page-visit rows. Keep every
+  other entry (changes, sign-ins, invites, refunds, phone reveals, records opened) for good, unless counsel or a
+  policy says otherwise.
+- Context: Mitra asked (2026-10-11) for the Admin Log to track each admin individually: a per-admin activity page,
+  and logging of what each admin views (records opened, pages visited). Page visits are the high-volume part;
+  with 3 active admins today the size is trivial, so nothing is pruned at launch. The log is append-only: a
+  trigger (`admin.audit_log_append_only()`) refuses UPDATE and DELETE for everyone, so the job needs a narrow,
+  deliberate exception for page-visit rows past the retention date only, written and tested in the same
+  migration. A new scheduled job is Mitra's call (`claude.md`: "Don't add or re-create a job without Mitra's
+  say-so"); `cron-history-prune` (03:11 UTC) is the pattern to copy, and `admin_cron_status()` shows it on
+  System Health once added.
+- Reference: 2026-10-11, the per-admin activity tracking design; Mitra: "keep the scheduler part in todo.md".
+- Status: Open
+
 ### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10
 - Task: when every subscription feature switch is on for everyone, apply
   `supabase/migrations/20261009170000_subscriptions_p13_truth_pass.sql` to production. It rewrites what the Subscription
