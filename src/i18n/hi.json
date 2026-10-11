@@ -7992,5 +7992,20 @@
  "This listing is live. Saving changes sends it back to review: buyers won't see it until it's approved (24–48h).": "यह लिस्टिंग लाइव है। बदलाव सहेजने पर यह फिर से समीक्षा में जाएगी: स्वीकृत होने तक खरीदार इसे नहीं देख पाएँगे (24–48 घंटे)।",
  "Why it wasn't approved:": "यह स्वीकृत क्यों नहीं हुआ:",
  "No reason was recorded.": "कोई कारण दर्ज नहीं किया गया।",
- "Upload a corrected catalogue to send it for review again.": "दोबारा समीक्षा के लिए सुधारा हुआ कैटलॉग अपलोड करें।"
+ "Upload a corrected catalogue to send it for review again.": "दोबारा समीक्षा के लिए सुधारा हुआ कैटलॉग अपलोड करें।",
+ "Women's Clothing": "महिलाओं के कपड़े",
+ "Men's Clothing": "पुरुषों के कपड़े",
+ "Unisex Clothing": "यूनिसेक्स कपड़े",
+ "IT & Software": "आईटी और सॉफ़्टवेयर",
+ "Marketing & PR": "मार्केटिंग और पीआर",
+ "Freelance": "फ़्रीलांस",
+ "Others": "अन्य",
+ "What else do you source?": "आप और क्या सोर्स करते हैं?",
+ "e.g. Leather goods, Home décor": "जैसे चमड़े का सामान, होम डेकोर",
+ "Interest Preference": "रुचि की पसंद",
+ "Select your preferred brands or product information.": "अपने पसंदीदा ब्रांड या उत्पाद जानकारी चुनें।",
+ "We will recommend brands and products based on your selections.": "आपके चुनाव के आधार पर हम ब्रांड और उत्पाद सुझाएँगे।",
+ "Your Interest": "आपकी रुचि",
+ "{0} selected": "{0} चुने गए",
+ "Tell us what “Others” is, or unselect it.": "बताएँ कि “अन्य” क्या है, या इसे हटा दें।"
 }

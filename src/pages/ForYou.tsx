@@ -12,13 +12,14 @@ import SponsoredNote from "@/components/buyer/SponsoredNote";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
 import { useAuth } from "@/contexts/AuthContext";
-import { useForYouRanking, usePrefCategoryMap, categoryToPrefId } from "@/lib/queries/forYou";
+import { useForYouRanking, usePrefCategoryMap } from "@/lib/queries/forYou";
 import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
-import { BUYER_CATEGORIES as CATEGORIES } from "@/lib/buyerCategories";
+import { interestLabel, OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 import {
   usePreferences,
   toggleCategory,
+  setOtherInterest,
   toggleLocation,
   removeCategory,
   removeLocation,
@@ -63,7 +64,6 @@ const HOME_TABS = [
   { label: "FOLLOWINGS", href: "/home/followings" },
 ];
 
-const CATEGORY_LABEL = Object.fromEntries(CATEGORIES.map((c) => [c.id, c.label]));
 const LOCATION_LABEL = Object.fromEntries(LOCATIONS.map((l) => [l.id, l.label]));
 
 const FILTERABLE_LOCATIONS = LOCATIONS.filter((l) => l.id !== "nopreference");
@@ -107,7 +107,7 @@ function prefLocationOf(p: ProductCardData): string | undefined {
   for (const [id, kw] of Object.entries(PREF_LOC_KEYWORDS)) if (loc.includes(kw)) return id;
   return undefined;
 }
-function toListing(p: ProductCardData, catToPref: Map<string, string>): ListingProduct {
+function toListing(p: ProductCardData): ListingProduct {
   return makeListingProduct(p.id, {
     name: p.name,
     manufacturer: p.manufacturer,
@@ -125,7 +125,11 @@ function toListing(p: ProductCardData, catToPref: Map<string, string>): ListingP
     image: p.image,
     secondaryImage: p.secondaryImage,
     gender: (p.gender.toLowerCase() as Gender),
-    category: p.categoryId ? catToPref.get(p.categoryId) : undefined,
+    // The real categories.id. The preference filter matches it against every
+    // category the buyer's interests cover: one category can sit under two
+    // interests (Woven Fabrics is Fabrics and Raw Materials), so it can't be
+    // reduced to a single preference id.
+    category: p.categoryId ?? undefined,
     locationId: prefLocationOf(p),
   });
 }
@@ -244,12 +248,45 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
 // ─────────────────────────────────────────────────────────────
 
 // Markup now lives in CategoryPickerGrid so the registration interest step can
-// render the identical control. This wrapper just binds it to the store.
-function CategoryPicker({
-  selected, query, setQuery,
-}: { selected: string[]; query: string; setQuery: (v: string) => void }) {
+// render the identical control. This wrapper just binds it to the store: a tap
+// saves at once, and the "Others" words save a moment after the buyer stops
+// typing, on blur, and when the picker closes (Escape or the X close the popup
+// without a blur).
+const OTHER_SAVE_DELAY_MS = 700;
+function CategoryPicker({ selected }: { selected: string[] }) {
+  const { otherInterest } = usePreferences();
+  const [draft, setDraft] = useState(otherInterest);
+  const draftRef = useRef(draft);
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  const commit = () => {
+    clearTimeout(timer.current);
+    setOtherInterest(tidyOtherInterest(draftRef.current));
+  };
+  const change = (v: string) => {
+    draftRef.current = v;
+    setDraft(v);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(commit, OTHER_SAVE_DELAY_MS);
+  };
+  // Take the store's value only when it says something else: a save comes back
+  // tidied ("Leather " -> "Leather"), and replacing the draft then would eat the
+  // space the buyer is in the middle of typing.
+  useEffect(() => {
+    if (tidyOtherInterest(draftRef.current) !== otherInterest) {
+      draftRef.current = otherInterest;
+      setDraft(otherInterest);
+    }
+  }, [otherInterest]);
+  // The picker closing (Escape, the X, Next) saves what was typed.
+  useEffect(() => commit, []);
   return (
-    <CategoryPickerGrid selected={selected} onToggle={toggleCategory} query={query} setQuery={setQuery} />
+    <CategoryPickerGrid
+      selected={selected}
+      onToggle={toggleCategory}
+      otherText={draft}
+      onOtherTextChange={change}
+      onOtherTextCommit={commit}
+    />
   );
 }
 
@@ -318,13 +355,11 @@ const ForYou = () => {
 
   // Onboarding local step state
   const [step, setStep] = useState<0 | 1 | 2>(0);
-  const [catQuery, setCatQuery] = useState("");
   const [locQuery, setLocQuery] = useState("");
 
   // Feed state
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [filterCatQuery, setFilterCatQuery] = useState("");
   const [filterLocQuery, setFilterLocQuery] = useState("");
   const [batches, setBatches] = useState(1);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -347,7 +382,6 @@ const ForYou = () => {
   const { user } = useAuth();
   const { data: ranking } = useForYouRanking(user?.id);
   const { data: prefMap } = usePrefCategoryMap();
-  const catToPref = useMemo(() => categoryToPrefId(prefMap ?? {}), [prefMap]);
 
   // Real ad inventory for the in-feed sponsored slot. Fetched here rather than
   // inside the block so the feed can skip emitting the slot entirely when there
@@ -380,7 +414,7 @@ const ForYou = () => {
 
   const pool = useMemo<ListingProduct[]>(() => {
     if (!live || !live.length) return [];
-    const listings = live.map((p) => toListing(p, catToPref));
+    const listings = live.map((p) => toListing(p));
     const rankOf = ranking?.rankOf;
     if (!rankOf?.size) return listings;
     // Anything the RPC didn't rank (it returns at most match_count) sorts after
@@ -388,18 +422,23 @@ const ForYou = () => {
     return listings.sort(
       (a, b) => (rankOf.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rankOf.get(b.id) ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [live, catToPref, ranking]);
+  }, [live, ranking]);
 
   // Filtered product list (preferences + search).
   const filtered = useMemo(() => {
     let list = pool;
-    if (prefs.categories.length > 0) list = list.filter((p) => p.category && prefs.categories.includes(p.category));
+    // Interests that cover no category (only "Others") narrow nothing: we
+    // know nothing to filter on, so the feed stays whole.
+    if (prefCategoryIds.length > 0) {
+      const wanted = new Set(prefCategoryIds);
+      list = list.filter((p) => p.category && wanted.has(p.category));
+    }
     if (activeLocations.length > 0) list = list.filter((p) => p.locationId && activeLocations.includes(p.locationId));
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || p.manufacturer.toLowerCase().includes(q));
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, prefs.categories, prefs.locations, search]);
+  }, [pool, prefCategoryIds, prefs.locations, search]);
 
   const visible = filtered.slice(0, batches * 8);
 
@@ -513,7 +552,7 @@ const ForYou = () => {
                   <h1 className="text-xl font-bold text-gray-900">What are you looking to source?</h1>
                   <p className="mt-1.5 text-sm text-gray-500">Select all that apply</p>
                 </div>
-                <CategoryPicker selected={prefs.categories} query={catQuery} setQuery={setCatQuery} />
+                <CategoryPicker selected={prefs.categories} />
                 <div className="my-6"><StepDots step={1} /></div>
                 <button
                   onClick={() => setStep(2)}
@@ -609,8 +648,10 @@ const ForYou = () => {
             <div className="flex flex-wrap gap-2">
               {prefs.categories.map((id) => (
                 <span key={id} className="inline-flex items-center gap-1 bg-brand-buyer/10 text-brand-buyer rounded-full pl-2.5 pr-1.5 py-1 text-xs font-semibold">
-                  {CATEGORY_LABEL[id] ?? id}
-                  <button onClick={() => removeCategory(id)} aria-label={`Remove ${CATEGORY_LABEL[id] ?? id}`}>
+                  {/* "Others" shows the buyer's own words, which are never translated;
+                      the bare label "Others" is ours and is. */}
+                  <span data-no-translate={(id === OTHER_INTEREST_ID && prefs.otherInterest.trim() !== "") || undefined}>{interestLabel(id, prefs.otherInterest)}</span>
+                  <button onClick={() => removeCategory(id)} aria-label={`Remove ${interestLabel(id, prefs.otherInterest)}`}>
                     <X className="w-3 h-3" />
                   </button>
                 </span>
@@ -718,7 +759,7 @@ const ForYou = () => {
           <div className="space-y-5">
             <div>
               <p className="text-sm font-bold text-gray-900 mb-2">What are you looking to source?</p>
-              <CategoryPicker selected={prefs.categories} query={filterCatQuery} setQuery={setFilterCatQuery} />
+              <CategoryPicker selected={prefs.categories} />
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900 mb-2">Where do you prefer to source from?</p>
