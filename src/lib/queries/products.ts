@@ -140,9 +140,14 @@ function vendorBoost(boosts: Map<string, number>, planId?: string | null, planEx
 // no direct products→vendor_profiles relationship for PostgREST to embed. Fetch
 // the two sets and join in memory (fine at this scale).
 async function fetchLiveProducts(): Promise<ProductCardData[]> {
+  // PRODUCT_CARD_SELECT, so category_id comes too. This query used to list its
+  // own columns without it, so every product here had categoryId null and For
+  // You's interest filter matched nothing: since the filter moved to category
+  // ids (2026-09-07), any buyer with saved interests saw "No matches found".
+  // Found testing Interest Preference v2 on production, 2026-10-11.
   const { data: products, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, sold_count, location, categories ( name ), product_images ( url, position )")
+    .select(PRODUCT_CARD_SELECT)
     .eq("status", "live")
     .order("created_at", { ascending: false });
   if (error) throw error;

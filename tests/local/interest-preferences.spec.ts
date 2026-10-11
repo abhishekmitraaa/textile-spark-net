@@ -76,6 +76,31 @@ test.describe("Interest Preference", () => {
     }
   });
 
+  test("For You: an interest shows the products in its categories", async ({ browser }) => {
+    test.setTimeout(120_000);
+    // Production showed "No matches found" here: the live product list had no
+    // category ids, so the interest filter matched nothing (2026-10-11).
+    const seller = await freshAccount("interest-seller", { seller: true });
+    const name = `IP Dress ${Date.now().toString(36)}`;
+    sql(`insert into public.products (vendor_id, name, status, price_value, category_id)
+         select '${seller.id}', '${name}', 'live', 300, c.id from public.categories c
+         join public.categories par on par.id = c.parent_id
+         where c.name = 'Women''s Dresses' and par.name = 'Apparel & Home Categories'`);
+    const who = await freshAccount("interest-filter");
+    sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '{womens-clothing}')
+         on conflict (id) do update set preferred_categories = excluded.preferred_categories`);
+    const ctx = await contextWithSession(browser, who.session, { width: 1280, height: 1000 });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await expect(page.getByText(name)).toBeVisible();
+      await expect(page.getByText("No matches found")).toHaveCount(0);
+    } finally {
+      await ctx.close();
+      sql(`update public.products set status = 'paused' where vendor_id = '${seller.id}'`);
+    }
+  });
+
   test("For You: the same picker, and the Others words save even when the popup is closed with Escape", async ({ browser }) => {
     test.setTimeout(120_000);
     const who = await freshAccount("interest-foryou");
