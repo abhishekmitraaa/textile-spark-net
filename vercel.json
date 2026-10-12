@@ -37,6 +37,16 @@
       "source": "/about",
       "destination": "/blogs/about",
       "permanent": true
+    },
+    {
+      "source": "/about-the-team",
+      "destination": "/blogs/about",
+      "permanent": true
+    },
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "rewrites": [

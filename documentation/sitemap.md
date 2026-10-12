@@ -237,6 +237,8 @@ send from Help: `/support` (inbox), `/support/callbacks`, `/support/fraud`,
 | `/grievance` | `Grievance` | **Hidden** (P6c, D-15): the not-found page until the Grievance Officer is named in `src/lib/grievance.ts`. Not linked, not in the sitemap |
 | `/terms` | `TermsConditions` | |
 | `/about` | redirect | Permanent redirect to `/blogs/about` (`vercel.json`): the About page lives in the Journal (cosora-blogs) since 2026-09-29 |
+| `/about-the-team` | redirect | Permanent redirect to `/blogs/about` (`vercel.json`, 2026-10-12). A page of the website that was on this domain before this app; search engines still list it. The app has no team page |
+| `/home` | redirect | Permanent redirect to `/` (`vercel.json`, 2026-10-12). The old website's home page, still listed by search engines. `/home/...` routes are unaffected |
 | `/report-fraud` | `ReportFraud` | Fills an email to Cosora (P1, 2026-10-01). Seller frame for sellers, the back header for everyone else, signed out included. P3 makes it a stored report |
 | `*` | `NotFound` | Fallback |
 
