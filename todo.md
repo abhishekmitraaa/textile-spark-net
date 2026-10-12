@@ -79,20 +79,13 @@ short list of things someone has to *decide*.
 
 ## Medium priority
 
-- **Retire the old buyer interest ids** (Interest Preference v2, 2026-10-11). `pref_category_map` still holds rows
-  for `tshirts, shirts, coords, dresses, bottomwear, activewear` so a browser on the pre-2026-10-11 app keeps
-  personalising. Once `select count(*) from buyer_profiles where preferred_categories && array['tshirts','shirts',
-  'coords','dresses','bottomwear','activewear']` stays 0 for a few weeks, delete those rows in a migration and drop
-  `LEGACY_INTEREST_IDS` from `src/lib/buyerCategories.ts`. The app translates old ids only when it reads them
-  and writes the new ones back on the buyer's next change, so a buyer who never edits again keeps them: translate
-  them in `buyer_profiles_interest_other_tidy()` too (code review, 2026-10-11), and the count can reach 0.
-
-- **For You's starting feed counts overlapping categories twice** (code review, 2026-10-11).
-  `buyer_cold_start_embedding()` averages over `preferred_categories` → `pref_category_map` → products with no
-  dedupe, and since Interest Preference v2 a category can sit under two interests (Woven Fabrics under Fabrics and
-  Raw Materials; Fashion Designing, PR & Media and Photography & Videography under Freelance too). A buyer who picks
-  both gets those products weighted twice. No live product is in an overlapping category today. Fix: average over
-  `distinct` product ids.
+- **Retire the old buyer interest ids, on or after 2026-11-12** (Interest Preference v2). `pref_category_map` still
+  holds rows for `tshirts, shirts, coords, dresses, bottomwear, activewear`, for a browser tab still running the
+  pre-2026-10-11 app (it filters its own feed with them). Saved rows can't tell you when that's over: since
+  `20261012040000_interest_preferences_v2_followups` the database translates old ids on every write
+  (`interest_ids_translate()`), so no row ever holds one. The app is replaced on the next page load, so wait a month
+  from the release (2026-10-11), then delete those map rows in a migration. Keep `interest_ids_translate()` and
+  `LEGACY_INTEREST_IDS` (the second covers signed-out picks saved in a browser); both cost nothing.
 
 - **Confirm the rights to the interest photos.** The 13 in `src/assets/Buyer/Preference/` came from Mitra with no
   source recorded; one shows a real brand's label (hobbytime.etsy.com) and one a child. claude.md says an image the

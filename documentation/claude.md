@@ -152,8 +152,12 @@ undocumented. Deep technical rationale for each lives in
   v2, 2026-10-11; migration `20261010232412_interest_preferences_v2.sql`).
   - The ids, labels and photos are `src/lib/buyerCategories.ts`; `CategoryPickerGrid` is the one picker
     (registration, profile Edit, For You). A new interest needs its map rows in a migration, or it narrows nothing.
-  - Renaming or retiring an id means a translation in `LEGACY_INTEREST_IDS` and the same translation of saved rows
-    in the migration. Keep the old id's map rows until no saved row or live bundle uses it.
+  - Renaming or retiring an id means a translation in `LEGACY_INTEREST_IDS` (the app, for signed-out picks in a
+    browser) and in `interest_ids_translate()` (the database, run on every write by `trg_buyer_profiles_interest_ids`),
+    plus the same translation of saved rows in its migration. Keep the old id's map rows for a month after the
+    release: a tab still running the old app filters with them, and saved rows never show old ids to tell you.
+  - "Others" is kept only with words: `trg_buyer_profiles_interest_other` drops a bare 'others' and the words when
+    'others' goes.
   - Match products on `categories.id` against every category the buyer's interests cover, never on one preference
     per product: interests overlap.
   - "Others" words (`buyer_profiles.preferred_interest_other`) exist only while "others" is picked (a trigger
