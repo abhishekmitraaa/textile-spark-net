@@ -282,11 +282,16 @@ function CategoryPicker({ selected }: { selected: string[] }) {
     }
   }, [otherInterest]);
   // The picker closing (Escape, the X, Next) saves what was typed, or unpicks
-  // an "Others" that says nothing.
+  // an "Others" that says nothing (one save either way; removing "others"
+  // clears the words too). The database keeps a bare "Others" out regardless
+  // (trg_buyer_profiles_interest_other), so a reload mid-edit can't save one;
+  // this keeps the screen in step with it.
   useEffect(() => () => {
-    commit();
+    clearTimeout(timer.current);
     if (selectedRef.current.includes(OTHER_INTEREST_ID) && tidyOtherInterest(draftRef.current) === "") {
       removeCategory(OTHER_INTEREST_ID);
+    } else {
+      commit();
     }
   }, []);
   return (

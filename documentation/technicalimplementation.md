@@ -842,12 +842,15 @@ by `distance`.
 - **Old ids:** `tshirts, shirts, coords, dresses, bottomwear, activewear`. Translated once by the v2 migration,
   on every write by `trg_buyer_profiles_interest_ids` (`buyer_profiles_interest_ids_tidy()`, BEFORE INSERT OR
   UPDATE OF preferred_categories; it sorts before the words trigger, which reads the translated list), and by
-  `normaliseInterestIds()` on every load in the app (DB and localStorage). Their map rows stay for stale bundles.
+  `normaliseInterestIds()` on every load in the app (DB and localStorage). The SQL table is in one place,
+  `interest_ids_translate(text[])` (immutable, executable by everyone because the trigger runs as the buyer).
+  Their map rows stay for a month after the release, for tabs still running the old app.
 - **Starting feed:** `buyer_cold_start_embedding()` averages each live product once
   (`category_id in (…covered categories…)`), however many of the buyer's interests cover it (2026-10-12).
 - **"Others":** `preferred_interest_other` text, check 1–60 characters, column grants to `authenticated` (select,
   insert, update). `trg_buyer_profiles_interest_other` (BEFORE INSERT OR UPDATE) folds control characters and
-  whitespace, maps '' to NULL, and nulls the text when `others` isn't in `preferred_categories`. The client
+  whitespace, maps '' to NULL, nulls the text when `others` isn't in `preferred_categories`, and drops a bare
+  `others` (no words) from `preferred_categories`, so a tap on Others followed by a reload saves nothing. The client
   mirrors the tidy (`tidyOtherInterest()`). The registration and profile screens won't save "Others" without words;
   For You saves them 700 ms after typing stops, on blur and when the picker closes, and unpicks an "Others"
   left empty when it closes. Saves to

@@ -79,14 +79,13 @@ short list of things someone has to *decide*.
 
 ## Medium priority
 
-- **Retire the old buyer interest ids** (Interest Preference v2, 2026-10-11). `pref_category_map` still holds rows
-  for `tshirts, shirts, coords, dresses, bottomwear, activewear` so a browser on the pre-2026-10-11 app keeps
-  personalising. Once `select count(*) from buyer_profiles where preferred_categories && array['tshirts','shirts',
-  'coords','dresses','bottomwear','activewear']` stays 0 for a few weeks, delete those rows in a migration and drop
-  `LEGACY_INTEREST_IDS` from `src/lib/buyerCategories.ts` (keep the trigger's table: it costs nothing). Since
-  `20261012040000_interest_preferences_v2_followups` the trigger `trg_buyer_profiles_interest_ids` translates old
-  ids on every write, so the count stays 0; what's left is a browser still running the pre-v2 app, which reads the
-  old rows to filter its own feed.
+- **Retire the old buyer interest ids, on or after 2026-11-12** (Interest Preference v2). `pref_category_map` still
+  holds rows for `tshirts, shirts, coords, dresses, bottomwear, activewear`, for a browser tab still running the
+  pre-2026-10-11 app (it filters its own feed with them). Saved rows can't tell you when that's over: since
+  `20261012040000_interest_preferences_v2_followups` the database translates old ids on every write
+  (`interest_ids_translate()`), so no row ever holds one. The app is replaced on the next page load, so wait a month
+  from the release (2026-10-11), then delete those map rows in a migration. Keep `interest_ids_translate()` and
+  `LEGACY_INTEREST_IDS` (the second covers signed-out picks saved in a browser); both cost nothing.
 
 - **Confirm the rights to the interest photos.** The 13 in `src/assets/Buyer/Preference/` came from Mitra with no
   source recorded; one shows a real brand's label (hobbytime.etsy.com) and one a child. claude.md says an image the

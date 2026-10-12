@@ -5,6 +5,8 @@
 import { expect, test, type Page } from "@playwright/test";
 import { BUYER_URL, contextWithSession, freshAccount, sql, watchErrors } from "./stack";
 
+const PREFS_KEY = "cosora.buyerPrefs.v1";
+
 const tile = (page: Page, name: string) => page.getByRole("button", { name, exact: true });
 const saved = (id: string) =>
   sql(`select array_to_string(preferred_categories, ',') || '|' || coalesce(preferred_interest_other, '-')
@@ -43,12 +45,35 @@ test.describe("Interest Preference", () => {
     }
   });
 
-  test("profile: old ids read in the new words, and an edit saves only what's picked", async ({ browser }) => {
+  test("signed out: old ids saved in the browser read in the new words", async ({ browser }) => {
+    test.setTimeout(60_000);
+    // A browser that picked interests on the pre-v2 app, signed out. Only the
+    // app's normaliseInterestIds() sees this (the database trigger never does).
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), [
+      PREFS_KEY,
+      JSON.stringify({ categories: ["tshirts", "coords", "kidswear"], locations: [], hasCompleted: true }),
+    ]);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/interest-preference`);
+      for (const name of ["Men's Clothing", "Women's Clothing", "Unisex Clothing", "Kidswear"]) {
+        await expect(tile(page, name)).toHaveAttribute("aria-pressed", "true");
+      }
+      await expect(page.getByText("4 selected")).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("profile: old ids an old app saves are stored in the new words, and an edit saves only what's picked", async ({ browser }) => {
     test.setTimeout(120_000);
     const who = await freshAccount("interest-legacy");
-    // What a browser still on the old app would save after the migration ran.
+    // What a browser still on the old app would save after v2. The database
+    // translates it on write (trg_buyer_profiles_interest_ids).
     sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '{tshirts,coords}')
          on conflict (id) do update set preferred_categories = excluded.preferred_categories`);
+    expect(saved(who.id)).toBe("mens-clothing,womens-clothing,unisex-clothing|-");
     const ctx = await contextWithSession(browser, who.session, { width: 1280, height: 1000 });
     const page = await ctx.newPage();
     try {
@@ -82,10 +107,14 @@ test.describe("Interest Preference", () => {
     // category ids, so the interest filter matched nothing (2026-10-11).
     const seller = await freshAccount("interest-seller", { seller: true });
     const name = `IP Dress ${Date.now().toString(36)}`;
-    sql(`insert into public.products (vendor_id, name, status, price_value, category_id)
+    const inserted = sql(`insert into public.products (vendor_id, name, status, price_value, category_id)
          select '${seller.id}', '${name}', 'live', 300, c.id from public.categories c
          join public.categories par on par.id = c.parent_id
-         where c.name = 'Women''s Dresses' and par.name = 'Apparel & Home Categories'`);
+         where c.name = 'Women''s Dresses' and par.name = 'Apparel & Home Categories'
+         returning id`).split("\n")[0];
+    expect(inserted, "Women's Dresses under Apparel & Home must exist").toMatch(/^[0-9a-f-]{36}$/);
+    const covered = sql(`select count(*) from public.products p
+         where p.status = 'live' and p.category_id in (select category_id from public.pref_category_map where pref_id = 'womens-clothing')`);
     const who = await freshAccount("interest-filter");
     sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '{womens-clothing}')
          on conflict (id) do update set preferred_categories = excluded.preferred_categories`);
@@ -93,7 +122,7 @@ test.describe("Interest Preference", () => {
     const page = await ctx.newPage();
     try {
       await page.goto(`${BUYER_URL}/home/for-you`);
-      await expect(page.getByText(name)).toBeVisible();
+      await expect(page.getByText(`${covered} products for you`)).toBeVisible();
       await expect(page.getByText("No matches found")).toHaveCount(0);
     } finally {
       await ctx.close();
@@ -140,10 +169,28 @@ test.describe("Interest Preference", () => {
       await dialog.getByRole("button", { name: "Others", exact: true }).click(); // unpick
       await expect.poll(() => saved(who.id)).toBe("kidswear|-");
       await dialog.getByRole("button", { name: "Others", exact: true }).click(); // pick, type nothing
+      await expect(dialog.getByLabel("What else do you source?")).toBeVisible();
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
-      await expect.poll(() => saved(who.id)).toBe("kidswear|-");
+      // The screen dropped it (no bare chip), and after every save has landed
+      // the database holds no bare "Others" either.
       await expect(page.getByText("Others", { exact: true })).toHaveCount(0);
+      await page.waitForTimeout(1500);
+      expect(saved(who.id)).toBe("kidswear|-");
+      await page.reload();
+      await expect(page.getByText("Kidswear", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Others", { exact: true })).toHaveCount(0);
+
+      // Tap Others and reload without closing: the picker never unmounts
+      // cleanly, so only the database rule stands between this and a saved
+      // bare "Others" (code review, 2026-10-12).
+      await page.getByRole("button", { name: "Edit Preferences" }).click();
+      await dialog.getByRole("button", { name: "Others", exact: true }).click();
+      await page.waitForTimeout(1000); // the tap's save lands
+      await page.reload();
+      await expect(page.getByText("Kidswear", { exact: true }).first()).toBeVisible();
+      await expect(page.getByText("Others", { exact: true })).toHaveCount(0);
+      expect(saved(who.id)).toBe("kidswear|-");
     } finally {
       await ctx.close();
     }
