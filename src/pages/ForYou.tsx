@@ -251,12 +251,16 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
 // render the identical control. This wrapper just binds it to the store: a tap
 // saves at once, and the "Others" words save a moment after the buyer stops
 // typing, on blur, and when the picker closes (Escape or the X close the popup
-// without a blur).
+// without a blur). An "Others" left empty when it closes is unpicked: the
+// Interest Preference screen won't save one either, and a bare "Others" says
+// nothing (code review, 2026-10-12).
 const OTHER_SAVE_DELAY_MS = 700;
 function CategoryPicker({ selected }: { selected: string[] }) {
   const { otherInterest } = usePreferences();
   const [draft, setDraft] = useState(otherInterest);
   const draftRef = useRef(draft);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const commit = () => {
     clearTimeout(timer.current);
@@ -277,8 +281,14 @@ function CategoryPicker({ selected }: { selected: string[] }) {
       setDraft(otherInterest);
     }
   }, [otherInterest]);
-  // The picker closing (Escape, the X, Next) saves what was typed.
-  useEffect(() => commit, []);
+  // The picker closing (Escape, the X, Next) saves what was typed, or unpicks
+  // an "Others" that says nothing.
+  useEffect(() => () => {
+    commit();
+    if (selectedRef.current.includes(OTHER_INTEREST_ID) && tidyOtherInterest(draftRef.current) === "") {
+      removeCategory(OTHER_INTEREST_ID);
+    }
+  }, []);
   return (
     <CategoryPickerGrid
       selected={selected}

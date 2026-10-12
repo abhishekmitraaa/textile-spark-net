@@ -134,6 +134,16 @@ test.describe("Interest Preference", () => {
       await dialog.getByLabel("What else do you source?").fill("a".repeat(59) + "🧵🧵");
       await page.keyboard.press("Escape");
       await expect.poll(() => saved(who.id)).toBe(`kidswear,others|${"a".repeat(59)}🧵`);
+
+      // An "Others" left empty is unpicked when the popup closes, not saved bare.
+      await page.getByRole("button", { name: "Edit Preferences" }).click();
+      await dialog.getByRole("button", { name: "Others", exact: true }).click(); // unpick
+      await expect.poll(() => saved(who.id)).toBe("kidswear|-");
+      await dialog.getByRole("button", { name: "Others", exact: true }).click(); // pick, type nothing
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await expect.poll(() => saved(who.id)).toBe("kidswear|-");
+      await expect(page.getByText("Others", { exact: true })).toHaveCount(0);
     } finally {
       await ctx.close();
     }
