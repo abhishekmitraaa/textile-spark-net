@@ -1993,9 +1993,9 @@ Depth — schema, invariants, integrations, tech debt — lives in
         needed to act on it later without re-reading the original conversation.
       - Reference: the date and a short pointer to what this session was working
         on, so Andy can place it in time even without a clickable chat link.
-    Keep it under "## Open". When a todo item is later completed, move its entry to
-    "## Completed", add the completion date, and add a one-line note of how/where it
-    was done if that's known — never just delete a finished item.
+    Keep it under "## Open". When a todo item is completed, remove it from the file
+    (Mitra, 2026-10-13: the todo lists hold only what is left). The changelog entry for
+    the work records what was done and when; nothing else keeps a Completed list.
 
 ### How the automation actually works (`.claude/settings.json`)
 
