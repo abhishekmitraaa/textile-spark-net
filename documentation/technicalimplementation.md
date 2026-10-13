@@ -4015,7 +4015,9 @@ Migrations `20261013100000` to `20261013100400` (authored names; rename to the l
   the stored one compared in normalised form: a lower-case value saved earlier and sent back unchanged is not a change.
   `pan_is_valid()` mirrors `isValidPan()`; `gstin_is_valid()` is P0's.
 - **Admin activity.** `admin.activity_views` (kind `page` or `record`, path, target table and id, label; RLS on, no
-  policies, no grants). `admin_activity_record()` dedupes on actor, kind, path and target within one minute.
+  policies, no grants). `admin.activity_path_ok()` says what a path inside the panel is (one leading slash, no second slash, no backslash,
+  no control character); the table's CHECK and the writer both call it, because the Activity tab renders the path as a
+  link. `admin_activity_record()` dedupes on actor, kind, path and target within one minute.
   `admin_activity_list()` pages by `at`; `admin_activity_summary(days)` joins the views with `admin.audit_log` counts per
   active admin. The prune deletes `kind = 'page'` rows older than 180 days and is scheduled only where pg_cron exists.
   Cosora-Admin: `src/lib/activity.ts` (`useRecordPageViews` in the Shell, `useRecordView` on VendorDetail, SupportTicket

@@ -23,6 +23,22 @@
 -- The staff notice (Cosora-Admin src/lib/activityNotice.ts) says pages and records are
 -- recorded, from the release that ships this.
 
+-- Is this a path inside the panel? One rule for the table's CHECK and the writer.
+create or replace function admin.activity_path_ok(p_path text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $function$
+  select p_path is not null
+     and left(p_path, 1) = '/'
+     and left(p_path, 2) <> '//'
+     and position(chr(92) in p_path) = 0
+     and p_path !~ '[[:cntrl:]]'
+$function$;
+
+revoke all on function admin.activity_path_ok(text) from public, anon, authenticated;
+
 create table if not exists admin.activity_views (
   id           bigint generated always as identity primary key,
   at           timestamptz not null default now(),
@@ -30,7 +46,10 @@ create table if not exists admin.activity_views (
   actor_role   text,
   actor_name   text,
   kind         text not null check (kind in ('page', 'record')),
-  path         text not null check (char_length(path) between 1 and 200),
+  -- A path inside the panel: one leading slash, then no second slash, no backslash and no
+  -- control character. The Activity tab shows it as a link, and two slashes (or a slash and
+  -- a backslash) at the start would make that a link to another site.
+  path         text not null check (char_length(path) between 1 and 200 and admin.activity_path_ok(path)),
   target_table text check (target_table is null or char_length(target_table) <= 60),
   target_id    text check (target_id is null or char_length(target_id) <= 80),
   label        text check (label is null or char_length(label) <= 120),
@@ -74,7 +93,7 @@ begin
   if p_kind is null or p_kind not in ('page', 'record') then
     raise exception 'unknown activity kind %', p_kind using errcode = '22023';
   end if;
-  if v_path = '' or left(v_path, 1) <> '/' then
+  if not admin.activity_path_ok(v_path) then
     raise exception 'a path inside the panel is required' using errcode = '22023';
   end if;
   if p_kind = 'record' and (v_table is null or v_id is null) then

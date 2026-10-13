@@ -204,11 +204,11 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-13 — Tax-id guard, admin activity, review reports, delivery team (local stack: harness 48/48; browser 2/2)
+### 2026-10-13 — Tax-id guard, admin activity, review reports, delivery team (local stack: harness 49/49; browser 2/2)
 
-- **Harness** `scripts/todo-batch/harness.sql` (never commits), 48/48: tax ids 8 (valid pair normalised; bad checksum,
+- **Harness** `scripts/todo-batch/harness.sql` (never commits), 49/49: tax ids 8 (valid pair normalised; bad checksum,
   bad PAN and a GSTIN without the PAN refused with 23514; an old invalid value sent back unchanged still saves; a seed
-  is normalised, not refused); activity 13 (non-admin and signed-out refused; once a minute; record needs a target;
+  is normalised, not refused); activity 14 (non-admin and signed-out refused; a path a browser would read as another site, two slashes or a slash and a backslash, refused; once a minute; record needs a target;
   support can't read, a manager can; the table is closed to browsers; the prune removes only page visits past 180 days
   and leaves the Admin Log's row count unchanged); reviews 22 (signed out, own review, unknown reason, unknown review;
   reported then already_reported; the seller can report; queue closed to users and to a product moderator; removing

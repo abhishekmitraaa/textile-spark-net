@@ -151,6 +151,14 @@ begin
   insert into _r (label, want, got) values ('activity: only a path inside the panel', '22023', got);
 
   perform pg_temp.act(support);
+  begin perform public.admin_activity_record('page', '//evil.example/x'); got := 'recorded';
+  exception when others then got := sqlstate; end;
+  begin perform public.admin_activity_record('page', '/' || chr(92) || 'evil.example'); got := got || '|recorded';
+  exception when others then got := got || '|' || sqlstate; end;
+  reset role;
+  insert into _r (label, want, got) values ('activity: a path that a browser would read as another site is refused', '22023|22023', got);
+
+  perform pg_temp.act(support);
   begin select count(*)::text into got from public.admin_activity_list();
   exception when others then got := sqlstate; end;
   reset role;
