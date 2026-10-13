@@ -6009,6 +6009,14 @@ export type Database = {
         Args: { reply: string; review_id: string }
         Returns: undefined
       }
+      report_review: {
+        Args: { p_kind: string; p_note?: string | null; p_reason: string; p_review_id: string }
+        Returns: string
+      }
+      review_report_reasons: {
+        Args: never
+        Returns: { code: string; label: string }[]
+      }
       reply_to_review: {
         Args: { reply: string; review_id: string }
         Returns: undefined

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
+import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 
 // === Animation constants ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -55,7 +56,7 @@ const COLOR_HEX: Record<string, string> = {
 // === Types ===
 interface MediaItem { type: "image" | "video"; url: string; videoUrl?: string }
 interface Spec { label: string; value: string }
-interface Review { id: number; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; replyBody: string | null }
+interface Review { id: number; reviewId: string; authorId: string | null; name: string; rating: number; date: string; comment: string; sizeBought: string; photos: string[]; replyBody: string | null }
 /**
  * The product page's view model — built ONLY from the database row.
  *
@@ -250,6 +251,7 @@ function ReviewCard({ review }: { review: Review }) {
     <div className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
       <div className="flex items-start justify-between">
         <span className="text-sm font-medium text-gray-900">{review.name}</span>
+        <ReportReviewButton kind="product" reviewId={review.reviewId} authorId={review.authorId} />
       </div>
       <div className="mt-1.5 flex items-center gap-2">
         <span className="inline-flex h-5 items-center gap-0.5 rounded bg-gray-900 px-1.5 text-[10px] font-semibold text-white">{review.rating}<Star className="h-2.5 w-2.5 fill-white text-white" /></span>
@@ -397,6 +399,8 @@ const ProductDetail = () => {
   const breakdownPct = (star: number) => productReviews?.breakdown.find((b) => b.stars === star)?.percent ?? 0;
   const reviewCards: Review[] = (productReviews?.reviews ?? []).map((r, i) => ({
     id: i,
+    reviewId: r.id,
+    authorId: r.buyerId,
     name: r.reviewerName,
     rating: r.rating,
     date: new Date(r.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),

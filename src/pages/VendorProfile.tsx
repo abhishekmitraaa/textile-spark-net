@@ -49,6 +49,7 @@ import cataMenswear from "@/assets/categories/banners/menswear.jpg";
 import cataWomenswear from "@/assets/categories/banners/womenswear.jpg";
 import cataRawMaterials from "@/assets/categories/banners/raw-materials.jpg";
 import type { MyCatalogueRow } from "@/lib/queries/catalogues";
+import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -663,6 +664,9 @@ const VendorProfile = () => {
                     </div>
                   </div>
                   {r.body && <p data-no-translate className="mt-2 text-sm leading-relaxed text-gray-600">{r.body}</p>}
+                  <div className="mt-1.5 flex justify-end empty:hidden">
+                    <ReportReviewButton kind="store" reviewId={r.id} authorId={r.buyerId} />
+                  </div>
                   {r.replyBody && (
                     <div className="mt-2.5 rounded-lg border-l-2 border-brand-buyer bg-white p-2.5">
                       <p className="mb-0.5 text-[11px] font-bold text-brand-buyer">Reply from {brandName}</p>

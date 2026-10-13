@@ -292,6 +292,8 @@ const KIND_META: Record<string, {
   // an approval is positive and goes to the same place to show the new status.
   kyc_approved:        { type: "system",  tone: "positive", group: "updates", actionLabel: "View KYC",   href: "/kyc" },
   kyc_rejected:        { type: "system",  tone: "warning",  group: "updates", actionLabel: "Re-check KYC", href: "/kyc" },
+  // A review of the reader's that Cosora removed (admin_review_report_decide, 2026-10-13).
+  review_removed:      { type: "system",  tone: "warning",  group: "updates", actionLabel: "My reviews", href: "/profile/reviews" },
   // Plans (2026-10-02): a paid downgrade starting, and the 7-day money-back guarantee.
   subscription_changed:  { type: "system", tone: "neutral",  group: "updates", actionLabel: "See your plan", href: "/subscription" },
   subscription_canceled: { type: "system", tone: "warning",  group: "updates", actionLabel: "See your plan", href: "/subscription" },

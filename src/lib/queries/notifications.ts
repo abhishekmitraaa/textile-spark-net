@@ -36,7 +36,9 @@ export type NotificationKind =
   // vendor_documents.verified. Both are real and observed in production data —
   // this is not UI groundwork for something unwired.
   | "kyc_approved"
-  | "kyc_rejected";
+  | "kyc_rejected"
+  // Written by admin_review_report_decide() when Cosora removes a review (2026-10-13).
+  | "review_removed";
 
 export interface NotificationRow {
   id: string;

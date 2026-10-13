@@ -11,6 +11,7 @@ import { useVendorReviews, useVendorProductReviews, useReviewMutations } from "@
 import { ReviewLinkShare } from "@/components/vendor/ReviewLinkShare";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { errorMessage } from "@/lib/errorMessage";
+import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const TAP = { scale: 0.97 };
@@ -95,7 +96,7 @@ function SkeletonCard() {
  * once it's posted the form goes away, as it always has for store reviews.
  */
 function ReplyableReviewCard({
-  avatar, title, subtitle, rating, createdAt, body, photos = [], replyBody, onReply,
+  avatar, title, subtitle, rating, createdAt, body, photos = [], replyBody, onReply, report,
 }: {
   avatar: ReactNode;
   title: string;
@@ -106,6 +107,8 @@ function ReplyableReviewCard({
   photos?: string[];
   replyBody: string | null;
   onReply: (text: string) => Promise<void>;
+  /** The Report control for this review (the seller can report a review of their own store). */
+  report?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -140,6 +143,7 @@ function ReplyableReviewCard({
           <div className="flex flex-col items-end gap-1 shrink-0">
             <Stars value={rating} />
             <span className="text-xs text-gray-400">{timeAgo(createdAt)}</span>
+            {report}
           </div>
         </div>
 
@@ -295,6 +299,7 @@ const Reviews = () => {
                   body={review.body}
                   replyBody={review.replyBody}
                   onReply={(text) => reply(review.id, text, user?.id)}
+                  report={<ReportReviewButton kind="store" reviewId={review.id} authorId={review.buyerId} accent="vendor" />}
                 />
               </motion.div>
             ))
@@ -318,6 +323,7 @@ const Reviews = () => {
                   photos={review.photos}
                   replyBody={review.replyBody}
                   onReply={(text) => replyToProduct(review.id, text)}
+                  report={<ReportReviewButton kind="product" reviewId={review.id} authorId={review.buyerId} accent="vendor" />}
                 />
               </motion.div>
             ))}
