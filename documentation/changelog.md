@@ -1,3 +1,8 @@
+- 2026-10-13 (Favicon; branch `chore/new-favicon` in all three repos): **The white "C" on Cosora red is the favicon everywhere.** Mitra sent the mark as a 1200 × 1200 PNG: "the new favicon for all the 3 repos".
+  - **This app:** `public/favicon.ico` replaced (16, 32 and 48px; the old file was a 256 × 114 wordmark, not square), plus `public/icon-192.png` and `public/apple-touch-icon.png` (180px), each linked from `index.html`, which had no icon links before. `dist/404.html` is a copy of `index.html`, so not-found pages carry them too.
+  - **Cosora-Admin:** the inlined SVG monogram in `index.html` is replaced by the same mark as a 64px PNG data URI (that repo has no `public/` folder).
+  - **cosora-blogs:** `src/app/icon.png` (512px) and `src/app/apple-icon.png` (180px) replaced; Next serves them under `/blogs`.
+  - **Not changed:** the logos inside the pages, `og-image.png` and the Journal's share cards.
 - 2026-10-12 (Old-site links; branch `fix/old-site-redirects`): **Two search results left over from the earlier website now lead somewhere.** Mitra found an "About the Team" result that opened the not-found page and asked to fix it.
   - **Cause:** `/about-the-team` ("COSORA.IN - About the Team") and `/home` belonged to the website that was on www.cosora.in before this app. Neither was ever a route here (nothing in the git history of this repo or cosora-blogs), so both returned 404 while search engines still listed them.
   - **Fix:** two permanent redirects in `vercel.json`: `/about-the-team` → `/blogs/about`, `/home` → `/`. The `/home/...` routes are exact-match rewrites and are unaffected. `sitemap.md` lists both.
