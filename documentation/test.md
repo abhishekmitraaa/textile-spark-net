@@ -204,6 +204,60 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-13 — Production checks after the release of both batches (read-only, through `supabase db query --linked`)
+
+- Before: none of the new objects existed; `certificate_fulfiller()` and `admin.is_team_role()` held exactly the bodies the
+  migrations replace; every function they call existed (`is_ad_eligible` 5-argument, `ad_viewer_location`, `ad_is_bumped`,
+  `normalise_search_query`, `gstin_is_valid`, `notify`, `admin.audit_row_change`).
+- After each apply: the objects and grants listed in the changelog's release entry; `search_ads('jeans', 12, searchListing +
+  featuredProduct)` 4 rows = `active_ads` 4 rows; `scripts/rls-policy-check.sql` 139 / 0 / 0.
+- Not run on production: the browser specs (they need the local stack's accounts); a real report, removal or activity row
+  (none was created on production by these checks).
+
+### 2026-10-13 — Ads in semantic search, RLS checks, CI, Bunny slow-encode (local stack: 12/12 and 49/49; Bunny blocked)
+
+- **`scripts/todo-batch/search_ads.sql`** (never commits), 12/12. Fixtures: four live products of the local vendor
+  with hand-made 1536-dimension embeddings at cosine distance 0, 0.3, 0.7 and 1 from one cached query, and seven
+  campaigns on them (one targeted at Gujarat, one paused). Cases: semantic first and nearest first, then the category
+  context; `active_ads()` alone serves only the category match; a far product outside the context isn't served; 0.7 is
+  out at the default cutoff and in at 0.80; a never-searched query equals `active_ads()` in rows and order; no context;
+  a buyer known to be in Maharashtra never gets the Gujarat campaign however near; paused stays out and `max_count`
+  holds; the placement filter applies; the public function returns the ranked rule's campaigns in its order with
+  `active_ads()`'s exact columns and has one signature with no cutoff; anon may call it and no browser role may call
+  `admin.search_ads_ranked()` (a signed-out call with a cutoff of 2.0 is refused, 42501). Match reasons and the
+  0.80 case are read through the ranked function, as postgres.
+- **RLS:** `node scripts/rls-policy-check.mjs`: 46 files, 28 policy statements, 0 findings; `--all` lists the
+  pre-Phase-12 bare calls, so the scan does detect them. `scripts/rls-policy-check.sql` on the local stack: 139
+  policies, 0 and 0. With two bad policies created and rolled back around it: 1 bare call and 4 doubled commands.
+- **Bunny:** `node scripts/bunny-slow-encode-check.mjs` against production: BLOCKED at step 0, nothing uploaded.
+  `bunny-reconcile` → 502 `bunny_list_failed`, Bunny's answer 401 "Authentication has been denied for this request."
+  `bunny-config-check.mjs` passes (the three secrets exist), so the key is present and wrong.
+- `scripts/todo-batch/harness.sql` 49/49 again; typecheck 0; i18n 7,741/7,741; production build.
+- **Not run:** the search results rail in a browser (the local stack has one live product and no embeddings);
+  the new workflow on GitHub (it runs on the first push).
+
+### 2026-10-13 — Tax-id guard, admin activity, review reports, delivery team (local stack: harness 49/49; browser 2/2)
+
+- **Harness** `scripts/todo-batch/harness.sql` (never commits), 49/49: tax ids 8 (valid pair normalised; bad checksum,
+  bad PAN and a GSTIN without the PAN refused with 23514; an old invalid value sent back unchanged still saves; a seed
+  is normalised, not refused); activity 14 (non-admin and signed-out refused; a path a browser would read as another site, two slashes or a slash and a backslash, refused; once a minute; record needs a target;
+  support can't read, a manager can; the table is closed to browsers; the prune removes only page visits past 180 days
+  and leaves the Admin Log's row count unchanged); reviews 22 (signed out, own review, unknown reason, unknown review;
+  reported then already_reported; the seller can report; queue closed to users and to a product moderator; removing
+  needs a reason; remove deletes the review, closes both reports, moves the rating count, tells the author with no word
+  of a report, tells the reporters nothing, reaches the Admin Log with its reason; dismiss keeps the review; a product
+  review through the same path; the eleventh report in a day answers rate_limited); delivery team 5.
+- **Fixtures:** the local stack's fixed accounts (local-buyer, -buyer2, -vendor, -admin, -support, -manager,
+  -moderator); GSTIN `27AAPFU0939F1ZV` with PAN `AAPFU0939F` (a published sample, valid by checksum).
+- **Browser** `tests/local/todo-batch.spec.ts`, 2/2, apps on :8093 and :5187: a fresh buyer reports a fresh seller's
+  review from `/vendor/:id` (the author sees no Report on it); support removes it in Cosora-Admin (Remove disabled until
+  a reason is typed); the author's notification exists and the reporter's and seller's don't; a super admin sees
+  support's visit to `/review-reports` on the Activity tab; a delivery-team account lands on `/certificates` and is
+  offered no other section. afterEach removes the review and its reports and deactivates the staff account.
+- **Not tested in a browser:** the onboarding form's GSTIN and PAN messages (eight steps of documents to reach them);
+  the rule is covered by the harness and `taxIds.ts`, the wiring by the typecheck.
+- typecheck 0 in both apps; i18n 7,741/7,741; eslint clean on the changed files; both production builds.
+
 ### 2026-10-10 — Cleanup: subscription_usage closed, payment-mode shims off (local: 322/322 harness cases; production rolled-back check)
 
 - **Rehearsed on the local stack:** from production's state (shims on, the table open to browsers), `20261010142813`

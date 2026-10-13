@@ -110,7 +110,12 @@ const MP4_PATH = path.join(FIXTURES, "real-source.mp4");
 const FAKE_MP4_PATH = path.join(FIXTURES, "iphone-clip.mp4");
 
 const CAPTION = `zz-bunny-uitest-${Date.now().toString(36)}`;
-const ENCODE_TIMEOUT_MS = 6 * 60_000;
+// BUNNY_ENCODE_TIMEOUT_MS shortens the wait so the "encode outlasts the timeout" path can
+// be run on purpose (scripts/bunny-slow-encode-check.mjs sets it to 1): a real slow encode
+// can't be ordered up, but a deadline that has already passed is the same path through
+// this file: arrangeBunnyRow() throws with the row inserted and the asset at Bunny, and
+// afterAll has to remove both.
+const ENCODE_TIMEOUT_MS = Number(process.env.BUNNY_ENCODE_TIMEOUT_MS) || 6 * 60_000;
 const POLL_MS = 10_000;
 
 /** Anything that would mean bytes left the browser. T1 asserts none of it fired. */
@@ -338,9 +343,22 @@ test.afterAll(async () => {
     // Provider first, then the row — the same order deleteProductVideo() uses,
     // and for the same reason: the row is the only record of where the media
     // lives, so dropping it first strands a paid asset nothing can find again.
-    const { error } = await vendor.db.functions.invoke("bunny-delete-video", { body: { rowId } });
-    if (error) console.error(`cleanup: bunny-delete-video failed — ${error.message}`);
-    await vendor.db.from("product_videos").delete().eq("id", rowId);
+    //
+    // So the row goes ONLY once the provider delete succeeded (2026-10-13). This used
+    // to log a failed delete and remove the row anyway, which is exactly how an asset
+    // gets stranded: a slow encode followed by one failed delete call left a paid video
+    // with nothing pointing at it. A row left behind is findable (it is under_review,
+    // captioned zz-bunny-uitest-…) and the next run of the delete can finish the job.
+    const { data, error } = await vendor.db.functions.invoke("bunny-delete-video", { body: { rowId } });
+    const problem = error?.message ?? (data?.ok ? null : data?.detail || data?.error || "no ok in the answer");
+    if (problem) {
+      console.error(
+        `cleanup: bunny-delete-video failed — ${problem}. The row ${rowId} is KEPT so the asset ` +
+        `${slot?.videoId ?? "(unknown guid)"} can still be found and deleted; remove both by hand.`,
+      );
+    } else {
+      await vendor.db.from("product_videos").delete().eq("id", rowId);
+    }
   }
   await vendor?.db.auth.signOut();
   await adminDb?.auth.signOut();

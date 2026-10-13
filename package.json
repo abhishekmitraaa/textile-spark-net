@@ -14,6 +14,7 @@
     "test:e2e": "npx playwright test",
     "check:fields": "node scripts/check-seller-fields.mjs",
     "i18n:check": "node scripts/i18n-coverage-check.mjs",
+    "rls:check": "node scripts/rls-policy-check.mjs",
     "routes:sync": "node scripts/spa-routes.mjs --write",
     "csp:sync": "node scripts/csp-inline-hashes.mjs --write"
   },

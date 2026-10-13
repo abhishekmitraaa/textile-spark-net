@@ -92,14 +92,6 @@ short list of things someone has to *decide*.
   project doesn't own is replaced, not kept. The 4 from Unsplash are recorded in `src/assets/interests/README.md`.
 
 
-- **`delivery_team` admin role.** Certificate dispatch is day-to-day operational
-  work but is gated to `super_admin` / `finance_admin`, both roles carrying far
-  broader authority. The enum value does not exist, so naming it anywhere would
-  imply a role nobody can hold. Revisit when certificate volume justifies it;
-  when adding, update `admin_role_type`, `certificate_fulfiller()`, and
-  `SECTION_READ`/`SECTION_WRITE` in `Cosora-Admin/src/lib/roles.ts` **in the
-  same change** — the roles file is UX only and the database is the authority.
-
 - **City targeting reaches almost nobody.** Only 1 of the buyer profiles has a
   city set, and `ad_targeting_matches()` fails closed by design (a viewer whose
   city is unknown is not shown a city-targeted ad). A soft, dismissible nudge
@@ -117,14 +109,6 @@ short list of things someone has to *decide*.
   building a separate messaging service; implement `MessagingProvider` against
   it and return it from `messaging()`, and no call site needs to change.
 
-- **Semantic ad matching (v3 Phase 11).** Deliberately unbuilt. The
-  vector/embedding pipeline (products, RFQs, videos → `halfvec(1536)`, fused
-  with keyword search by RRF in `match_products`) is real and running, but
-  `advertisements` has **no embedding column** and ad targeting is plain
-  category/city set-membership. So an ad tagged "Jeans" cannot match a search
-  for "denim trousers" unless both resolve to the same taxonomy row by name.
-  More relevant now that `searchListing` is actually placed.
-
 - **Design spec file missing.** The v4 brief referenced
   `claude/buyer-ad-placement-design-spec.md` for the "Bumped ↑" tag convention.
   That file does not exist in either repo, so the bump indicator was implemented
@@ -134,6 +118,12 @@ short list of things someone has to *decide*.
 ---
 
 ## Done — moved out of this list
+
+- ~~Semantic ad matching (v3 Phase 11)~~ — built 2026-10-13 (branch `build/todo-batch-2-2026-10-13`): `search_ads()` matches a
+  search to each campaign's promoted product by embedding; no ad embedding was needed. Released 2026-10-13.
+
+- ~~`delivery_team` admin role~~ — built 2026-10-13 (branch `build/todo-batch-2026-10-13`): the enum value,
+  `certificate_fulfiller()`, the read policy and `roles.ts` changed together. Released 2026-10-13.
 
 - ~~Vendor-level billing for Trusted Seal / Verified Certificate~~ — done
   2026-09-14. Charged once per order, materialised as one campaign row with

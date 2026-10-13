@@ -6009,6 +6009,14 @@ export type Database = {
         Args: { reply: string; review_id: string }
         Returns: undefined
       }
+      report_review: {
+        Args: { p_kind: string; p_note?: string | null; p_reason: string; p_review_id: string }
+        Returns: string
+      }
+      review_report_reasons: {
+        Args: never
+        Returns: { code: string; label: string }[]
+      }
       reply_to_review: {
         Args: { reply: string; review_id: string }
         Returns: undefined
@@ -6031,6 +6039,28 @@ export type Database = {
       rfq_targets_vendor: {
         Args: { p_rfq: string; p_vendor: string }
         Returns: boolean
+      }
+      search_ads: {
+        Args: {
+          filter_categories?: string[]
+          filter_placements?: string[]
+          max_count?: number
+          query: string
+        }
+        Returns: {
+          ad_id: string
+          category_name: string
+          currency: string
+          image_url: string
+          is_bumped: boolean
+          placement: string
+          price_value: number
+          product_id: string
+          product_name: string
+          title: string
+          vendor_id: string
+          vendor_name: string
+        }[]
       }
       search_products: {
         Args: { match_count?: number; query: string }

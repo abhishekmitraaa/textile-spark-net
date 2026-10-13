@@ -4003,3 +4003,57 @@ browser `tests/local/catalogue-review.spec.ts`.
   2026-10-10, so no ledger row and the written version stays): dropped the table, the two triggers and
   `admin.subscription_order_mode_default()` / `admin.subscription_invoice_mode_default()`. Local and production match.
 - `subscription_usage` is gone from both apps' `database.types.ts`.
+
+## Tax-id guard, admin activity, review reports, delivery team (2026-10-13; built, not live)
+
+Migrations `20261013100000` to `20261013100400` (authored names; rename to the live versions after the apply). Harness
+`scripts/todo-batch/harness.sql` (48 cases, rolls back); browser spec `tests/local/todo-batch.spec.ts`.
+
+- **Tax ids.** `public.vendor_profiles_tax_ids()` is a BEFORE INSERT OR UPDATE OF gstin, pan trigger, SECURITY INVOKER,
+  so `current_user` tells a browser (`anon`, `authenticated`) from a job or the service role. It normalises for
+  everyone and refuses (23514, with a constraint name per case) only for browsers and only when the value differs from
+  the stored one compared in normalised form: a lower-case value saved earlier and sent back unchanged is not a change.
+  `pan_is_valid()` mirrors `isValidPan()`; `gstin_is_valid()` is P0's.
+- **Admin activity.** `admin.activity_views` (kind `page` or `record`, path, target table and id, label; RLS on, no
+  policies, no grants). `admin.activity_path_ok()` says what a path inside the panel is (one leading slash, no second slash, no backslash,
+  no control character); the table's CHECK and the writer both call it, because the Activity tab renders the path as a
+  link. `admin_activity_record()` dedupes on actor, kind, path and target within one minute.
+  `admin_activity_list()` pages by `at`; `admin_activity_summary(days)` joins the views with `admin.audit_log` counts per
+  active admin. The prune deletes `kind = 'page'` rows older than 180 days and is scheduled only where pg_cron exists.
+  Cosora-Admin: `src/lib/activity.ts` (`useRecordPageViews` in the Shell, `useRecordView` on VendorDetail, SupportTicket
+  and ChatThread), `src/components/AdminActivity.tsx` (the Admin Log's Activity tab).
+- **Review reports.** `admin.review_reports` (unique open report per review and reporter; `review_snapshot` jsonb) and
+  `admin.review_report_reasons`. `admin.review_lookup(kind, id)` is the one place that reads a review whichever table it
+  is in (`store` = `reviews`, `product` = `product_reviews`, `service` = `service_reviews`). `report_review()` returns
+  `reported`, `already_reported` or `rate_limited`; it takes `pg_advisory_xact_lock` on the reporter before it counts.
+  `admin_review_report_decide()` sets `cosora.audit_reason`, deletes the review when removing (the existing
+  `sync_vendor_rating` / `sync_product_rating` triggers move the rating), calls `notify(author, 'review_removed', …)`
+  and closes every open report on the review. `trg_admin_audit` is on `admin.review_reports`. App:
+  `src/components/reviews/ReportReviewButton.tsx`; Cosora-Admin: `src/pages/ReviewReports.tsx`, section `review-reports`.
+- **Delivery team.** The enum value is its own migration. `certificate_fulfiller()`, `certificate_orders_read` and
+  `admin.is_team_role()` are replaced in the second. The role reads `certificate_orders` only: an order carries the
+  delivery address as a snapshot, so it needs no reader of vendors' private details.
+
+## Ads in semantic search; RLS and translation checks in CI; the Bunny slow-encode proof (2026-10-13; built, not live)
+
+- **`admin.search_ads_ranked(query, max_count, filter_placements, filter_categories, max_distance)`** is the rule:
+  SECURITY DEFINER, `search_path = public, extensions` (the `<=>` operator lives in `extensions`), no grant to any
+  browser role; it returns `matched_by`, `distance` and `pos`. **`public.search_ads(query, max_count,
+  filter_placements, filter_categories)`** is the wrapper the app calls (anon too, like `active_ads()`): it passes
+  `admin.search_ads_cutoff()` (0.60) and returns `active_ads()`'s columns in `pos` order.
+  The cached query vector is a MATERIALIZED one-row CTE read as a scalar subquery; candidates are the eligible
+  campaigns for the placements, each with `p.embedding <=> query` (null without either vector) and the category rule's
+  answer (`ad_targeting_matches` with the page's categories). Order: semantic first by distance, then bump, recency,
+  id. The ads table is small and filtered first, so no vector index is involved. Client: `fetchActiveAds(…, searchQuery)` in `src/lib/queries/ads.ts` picks the RPC; the query key
+  carries the search.
+- **`scripts/rls-policy-check.mjs`** strips `--` comments, takes each `create policy` / `alter policy` statement,
+  replaces `(select helper(` with a marker and fails on any helper call left, or on `for all`. BASELINE is Phase 12's
+  version; `--all` reports the older files without failing. **`scripts/rls-policy-check.sql`** does the same on
+  `pg_policies` text (Postgres prints a wrapped call as `( SELECT auth.uid() AS uid)`) and counts permissive policies per
+  table, command and role (`anon`, `authenticated`; FOR ALL counts for each command).
+- **`.github/workflows/checks.yml`**: `npm ci` (the translation check parses with the TypeScript package), then the
+  two scripts. Separate from `e2e.yml`, whose specs stop before their first test in CI.
+- **`scripts/bunny-slow-encode-check.mjs`**: lists the Bunny library through `bunny-reconcile` (and stops if that
+  fails), runs `npx playwright test tests/video-closeups-bunny.spec.ts -g T8.2` with `BUNNY_ENCODE_TIMEOUT_MS=1`, expects
+  the spec's "did not finish encoding" error, then lists the library again: no new guid, and no `zz-bunny-uitest-` row.
+  The spec's afterAll deletes its row only when `bunny-delete-video` answered ok.

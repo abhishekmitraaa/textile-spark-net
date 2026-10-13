@@ -227,18 +227,37 @@ interface RawActiveAd {
 // of categories — For You, where the context is the buyer's stored preferences
 // and each preference covers several taxonomy rows. UNIONed with categoryId,
 // not intersected: both describe context the viewer is in.
+//
+// searchQuery (optional) is what the buyer searched for, on the search results
+// page only. The rail then asks search_ads() (2026-10-13), which puts campaigns
+// whose promoted product is semantically near the search first and fills the
+// rest exactly as active_ads() would. The comparison happens in the database:
+// the query's embedding never reaches the browser, and neither does how near a
+// campaign was. A search with no embedding gets active_ads()'s rows unchanged.
 async function fetchActiveAds(
   max: number,
   categoryId?: string | null,
   placements?: readonly string[] | null,
   categoryIds?: readonly string[] | null,
+  searchQuery?: string | null,
 ): Promise<ActiveAd[]> {
-  const { data, error } = await supabase.rpc("active_ads", {
-    max_count: max,
-    filter_category: categoryId ?? undefined,
-    filter_placements: placements && placements.length ? [...placements] : undefined,
-    filter_categories: categoryIds && categoryIds.length ? [...categoryIds] : undefined,
-  });
+  const filter_placements = placements && placements.length ? [...placements] : undefined;
+  const { data, error } = searchQuery
+    ? await supabase.rpc("search_ads", {
+        query: searchQuery,
+        max_count: max,
+        filter_placements,
+        // search_ads() takes one list: the single category and the set are the same context.
+        filter_categories: [...(categoryId ? [categoryId] : []), ...(categoryIds ?? [])].length
+          ? [...(categoryId ? [categoryId] : []), ...(categoryIds ?? [])]
+          : undefined,
+      })
+    : await supabase.rpc("active_ads", {
+        max_count: max,
+        filter_category: categoryId ?? undefined,
+        filter_placements,
+        filter_categories: categoryIds && categoryIds.length ? [...categoryIds] : undefined,
+      });
   if (error) throw error;
   return ((data ?? []) as RawActiveAd[]).map((a) => ({
     adId: a.ad_id,
@@ -260,14 +279,17 @@ export function useActiveAds(
   categoryId?: string | null,
   placements?: readonly string[] | null,
   categoryIds?: readonly string[] | null,
+  searchQuery?: string | null,
 ) {
+  const search = searchQuery?.trim() || null;
   return useQuery({
     queryKey: [
       "advertisements", "active", max, categoryId ?? null,
       placements ? [...placements].sort().join(",") : null,
       categoryIds ? [...categoryIds].sort().join(",") : null,
+      search,
     ],
-    queryFn: () => fetchActiveAds(max, categoryId, placements, categoryIds),
+    queryFn: () => fetchActiveAds(max, categoryId, placements, categoryIds, search),
     staleTime: 60_000,
   });
 }

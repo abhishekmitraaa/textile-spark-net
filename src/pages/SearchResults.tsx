@@ -864,7 +864,7 @@ const SearchResults = () => {
       if (block < adSlot.repeat.blocks) {
         feedNodes.push(
           <div key={`ad-${block}`} className="col-span-full my-1">
-            <SponsoredRail slot="searchResultsSponsored" block={block} category={adCategoryId} />
+            <SponsoredRail slot="searchResultsSponsored" block={block} category={adCategoryId} searchQuery={query} />
           </div>
         );
       }

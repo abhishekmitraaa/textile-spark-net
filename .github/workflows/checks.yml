@@ -1,0 +1,39 @@
+name: Checks
+
+# Fast checks that need no secrets, no browser and no database (2026-10-13):
+#   - every string the app shows has a Hindi and a Gujarati translation;
+#   - every new RLS policy checks the caller once per query, one policy per command.
+# Both read files only, so they also run on pull requests from forks.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Translations and RLS policies
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # The translation check parses the source with the TypeScript package.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Translation coverage (Hindi, Gujarati)
+        run: node scripts/i18n-coverage-check.mjs
+
+      - name: RLS policies check the caller once per query
+        run: node scripts/rls-policy-check.mjs

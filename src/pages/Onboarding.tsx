@@ -33,6 +33,7 @@ import {
 } from "@/lib/queries/vendorOnboarding";
 import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
+import { isValidGstin, isValidPan, normaliseTaxId, panOfGstin } from "@/lib/taxIds";
 
 // 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
 // · 7 documents · 8 product · 9 contract
@@ -287,9 +288,22 @@ export default function Onboarding() {
   // "queued for a human to verify". vendor_documents.verified stays false until
   // an admin flips it; showing a green "Verified" here would be the app
   // vouching for a document nobody has looked at.
-  const PAN_FORMAT = /^[A-Z]{5}[0-9]{4}[A-Z]$/;
+  // The same checks as /subscription and the database (src/lib/taxIds.ts,
+  // trg_vendor_profiles_tax_ids): both values are printed on tax invoices, so a
+  // mistyped one is stopped here and not saved for someone to find later.
+  const panValue = normaliseTaxId(pan);
+  const gstinValue = normaliseTaxId(gstin);
+  const panValid = isValidPan(panValue);
+  const gstinProblem: string | null =
+    !hasGstin || !gstinValue
+      ? null
+      : !isValidGstin(gstinValue)
+        ? "That GSTIN isn't valid. Check it against your GST certificate."
+        : panValid && panOfGstin(gstinValue) !== panValue
+          ? "The GSTIN doesn't match the PAN above. A GSTIN contains the PAN it was issued for."
+          : null;
 
-  const checkPanFormat = () => setPanStatus(PAN_FORMAT.test(pan.toUpperCase()) ? "submitted" : "invalid");
+  const checkPanFormat = () => setPanStatus(panValid ? "submitted" : "invalid");
 
   const checkPanName = () => {
     const name = panFullName.trim();
@@ -548,8 +562,8 @@ export default function Onboarding() {
         ownerName: ownerName || contractName,
         ownerEmail: ownerEmail || undefined,
         country: country === "IN" ? "India" : country || undefined,
-        pan: pan || undefined,
-        gstin: hasGstin ? gstin : undefined,
+        pan: panValue || undefined,
+        gstin: hasGstin ? gstinValue || undefined : undefined,
         // A certificate of incorporation's number is the CIN (vendor_profiles.cin).
         cin: regKind === "incorporation" && regNo ? regNo : undefined,
         category: businessCategories.length ? businessCategories : undefined,
@@ -729,11 +743,11 @@ export default function Onboarding() {
   // with their consent. The catalogue can wait for step 8, where a first product can
   // stand in for it. Files are attached here and uploaded at submit.
   const canSubmitPanDocuments =
-    pan.trim().length > 0 &&
+    panValid &&
     panFullName.trim().length > 0 &&
     panAddress.trim().length > 0 &&
     panDocumentFile !== null &&
-    (!hasGstin || (gstin.trim().length > 0 && gstDocumentFile !== null)) &&
+    (!hasGstin || (gstinValue.length > 0 && gstinProblem === null && gstDocumentFile !== null)) &&
     regKind !== "" && regNumberValid && regDocumentFile !== null &&
     aadhaarFile !== null && aadhaarConsent;
   // Step 8: a catalogue from step 7, or a first product with a name and a photo.
@@ -1939,7 +1953,7 @@ export default function Onboarding() {
                     <Input
                       id="pan-number"
                       value={pan}
-                      onChange={(e) => setPan(e.target.value.toUpperCase())}
+                      onChange={(e) => { setPan(e.target.value.toUpperCase()); setPanStatus("idle"); }}
                       placeholder="ABCDE1234F"
                       maxLength={10}
                       className={cn(
@@ -1962,7 +1976,7 @@ export default function Onboarding() {
                       </Button>
                     )}
                   </div>
-                  {panStatus === "invalid" && (
+                  {(panStatus === "invalid" || (panValue.length >= 10 && !panValid)) && (
                     <p className="text-xs text-brand-buyer">A PAN is 5 letters, 4 digits, then 1 letter — for example ABCDE1234F.</p>
                   )}
                 </div>
@@ -2111,10 +2125,16 @@ export default function Onboarding() {
                     <>
                       <Input
                         value={gstin}
-                        onChange={(e) => setGstin(e.target.value)}
+                        onChange={(e) => setGstin(e.target.value.toUpperCase())}
                         placeholder="GSTIN"
-                        className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                        maxLength={15}
+                        aria-invalid={gstinProblem !== null}
+                        className={cn(
+                          "h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor",
+                          gstinProblem !== null && "border-brand-buyer",
+                        )}
                       />
+                      {gstinProblem !== null && <p className="text-xs text-brand-buyer">{gstinProblem}</p>}
                       <KycDocumentUpload
                         label="GST certificate"
                         attached={gstDocumentFile !== null}
