@@ -162,6 +162,17 @@ undocumented. Deep technical rationale for each lives in
     per product: interests overlap.
   - "Others" words (`buyer_profiles.preferred_interest_other`) exist only while "others" is picked (a trigger
     enforces it) and are never translated.
+- **A review is reported through `report_review()`, and decided only by Cosora** (2026-10-13; migration `20261013100200_review_reports.sql`).
+  - Any signed-in, active account may report a store, product or service review (Mitra), never its own; one open report per account per review; 10 in 24 hours, counted under a lock per reporter. Reasons are one list, `admin.review_report_reasons`: add a reason there, never as a UI constant.
+  - Super admins and support decide in Cosora-Admin › Reported reviews (`admin_review_report_decide()`): dismiss, or remove with a reason. The report keeps a copy of the review as it stood.
+  - **Nobody is told who reported, or that a report was made.** The author's notice is Cosora's own words; the reporter gets no decision back. Same rule as the chat moderation notices.
+  - A new place that shows reviews uses `<ReportReviewButton>`; a new review table needs a branch in `admin.review_lookup()` and in the decide function.
+- **What an admin looks at is recorded, apart from the Admin Log** (2026-10-13; migration `20261013100100_admin_activity_views.sql`; Mitra, 2026-10-11).
+  - `admin.activity_views` holds pages opened and records opened in Cosora-Admin, written only by `admin_activity_record()` (the actor comes from the session) and read only by super admins and managers.
+  - `admin.audit_log` is still append-only for everyone, with no exception: views are a separate table so that page visits can be deleted after 180 days (`admin.activity_views_prune()`, the daily job `admin-activity-prune`). Record views are kept.
+  - A new detail page in Cosora-Admin calls `useRecordView()`; anything that changes what is recorded changes `ACTIVITY_NOTICE` in the same release.
+- **A seller's GSTIN and PAN are checked by the database, not only by the form** (2026-10-13; migration `20261013100000_vendor_tax_ids_guard.sql`). `trg_vendor_profiles_tax_ids` stores both upper-cased with spaces removed and, for a browser's write, refuses a new or changed value that fails `gstin_is_valid()` or `pan_is_valid()`, or a GSTIN that doesn't contain the PAN. A value saved before the guard stays until its owner changes it. `/onboarding` and `/subscription` run the same checks first (`src/lib/taxIds.ts`). Buyers' own GSTIN and PAN (`buyer_profiles`) are not checked.
+- **The delivery team fulfils certificates and nothing else** (2026-10-13; migrations `20261013100300` and `20261013100400`). Three places name who fulfils and change together: `certificate_fulfiller()`, the `certificate_orders_read` policy, and Cosora-Admin's `SECTION_READ` / `SECTION_WRITE` for certificates. It is a team role, so a manager can give it.
 - **A new feature ships behind a feature switch** (subscriptions P0, 2026-10-08; migration `20261009171435_subscriptions_p0_foundations.sql`).
   - `public.feature_flags`: on for everyone (`enabled`) or only for `allow_profile_ids`. The migration that ships
     the code reading a switch creates it, switched off. Super admins change it on Cosora-Admin's Feature switches

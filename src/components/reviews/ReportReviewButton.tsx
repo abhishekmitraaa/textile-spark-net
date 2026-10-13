@@ -141,6 +141,7 @@ export function ReportReviewButton({
                   >
                     <input
                       type="radio"
+                      className="accent-gray-900"
                       name="review-report-reason"
                       value={r.code}
                       checked={reason === r.code}

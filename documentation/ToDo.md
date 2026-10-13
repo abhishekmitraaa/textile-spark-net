@@ -6,22 +6,6 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
-### Decide how long admin page visits stay in the Admin Log, and schedule the pruning — added 2026-10-11
-- Task: once per-admin activity tracking is live, choose a retention period for the "visited a page" entries in
-  `admin.audit_log` (suggested: 180 days) and add a daily pg_cron job that deletes older page-visit rows. Keep every
-  other entry (changes, sign-ins, invites, refunds, phone reveals, records opened) for good, unless counsel or a
-  policy says otherwise.
-- Context: Mitra asked (2026-10-11) for the Admin Log to track each admin individually: a per-admin activity page,
-  and logging of what each admin views (records opened, pages visited). Page visits are the high-volume part;
-  with 3 active admins today the size is trivial, so nothing is pruned at launch. The log is append-only: a
-  trigger (`admin.audit_log_append_only()`) refuses UPDATE and DELETE for everyone, so the job needs a narrow,
-  deliberate exception for page-visit rows past the retention date only, written and tested in the same
-  migration. A new scheduled job is Mitra's call (`claude.md`: "Don't add or re-create a job without Mitra's
-  say-so"); `cron-history-prune` (03:11 UTC) is the pattern to copy, and `admin_cron_status()` shows it on
-  System Health once added.
-- Reference: 2026-10-11, the per-admin activity tracking design; Mitra: "keep the scheduler part in todo.md".
-- Status: Open
-
 ### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10
 - Task: when every subscription feature switch is on for everyone, apply
   `supabase/migrations/20261009170000_subscriptions_p13_truth_pass.sql` to production. It rewrites what the Subscription
@@ -168,14 +152,6 @@ with no need to dictate format, context, or reference each time.
   rate-limited per vendor and still moderated. Until built, the plan comparison shows "Coming soon" for the Gold and
   VIP catalogue rows (subscriptions P11). Basic's PDF catalogue and Silver's bulk import are in the plan.
 - Reference: 2026-10-08, vendor subscriptions session, planning round 4 (the AI catalogue question).
-- Status: Open
-
-### Check GSTIN and PAN at seller registration — added 2026-10-08
-- Task: validate the GSTIN (with its checksum) and PAN in `Onboarding.tsx` before saving, using `src/lib/taxIds.ts`,
-  and upper-case them.
-- Context: subscriptions P0 checks them on /subscription, but onboarding still saves whatever is typed, and both are
-  printed on tax invoices. A database CHECK was left out because onboarding would then fail on lower-case input.
-- Reference: 2026-10-08, subscriptions P0 (securityflags S-6).
 - Status: Open
 
 ### <short task title> — added YYYY-MM-DD
@@ -407,12 +383,6 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-09-29, admin completion Phase 10; `securityflags.md` (2026-09-12, demo mode).
 - Status: Open
 
-### Decide whether reviews can be reported, and build it if so — added 2026-09-29
-- Task: decide whether a vendor (or anyone) can report an abusive or fake review. If so, build it: a report stored somewhere an admin reads it, a Cosora-Admin queue, and an admin action to remove a review (`reviews_delete_own` / `product_reviews_delete_own` already let admins delete).
-- Context: the vendor `/reviews` page had a "Report" button that did nothing. It was removed on 2026-09-29 rather than faked. `submit_report` exists for chat moderation, and could be a model or be extended.
-- Reference: 2026-09-29, the reviews-pipeline audit and fix (My Reviews and vendor replies).
-- Status: Open
-
 ### Let the rest of the palette follow the site theme — added 2026-09-29
 - Task: decide how far the Content page's theme should reach, then do it:
   - shadcn's `primary` (and `accent`, `ring`, `--gradient-pink`), 27 class uses in 11 files: an HSL
@@ -611,7 +581,6 @@ with no need to dictate format, context, or reference each time.
 
 - [ ] Collect a delivery address before selling a physical certificate — Added: 2026-09-13 — Priority: High — Context: `verifiedCertificate` (₹199) is now confirmed as a printed certificate that gets couriered (Mitra, 2026-09-13), and `certificate_orders` snapshots the vendor's address at purchase. But only **2 of 10** `vendor_profiles` rows carry both an `address_line` and a `postal_code`, and the one that does has zero live products — so in practice every vendor who can actually trade has nothing to put on a label. `certificate_dispatch()` refuses to mark such an order dispatched (a parcel marked sent with no address is a parcel nobody can trace), the admin card explains why, and the vendor's My Payments page says an address was missing when they ordered. Demonstrable live: demo order `CERT-2609-003` (Delhi Fashion Hub) is stuck at `printed` for exactly this reason while `CERT-2609-004` (Meridian Weaves) dispatched normally. Two honest fixes: require a delivery address in the ad wizard before the certificate can be added to the order, or let the vendor supply one against an existing order. Do not leave it sellable-but-undeliverable. Same shape as the city-targeting gap above. Reference: 2026-09-13, certificate fulfilment build.
 - [ ] Give advertising purchases GST treatment and an invoice series — Added: 2026-09-13 — Context: subscriptions produce a real tax invoice — `subscription_invoices` carries `invoice_number`, `gst_amount`, `gst_number` and a billing period, and `/subscription/invoice/:id` prints it. Advertising produces none of that: `ad_orders` stores only the Razorpay order id, the spec and one gross amount, with GST never broken out anywhere in the ad purchase path. So `/my-payments/receipt/:orderId` deliberately prints "PAYMENT RECEIPT", shows no GST line, and says in its footer that it is not a tax invoice — a vendor may well need one for input credit. Building it means deciding whether ad prices are GST-inclusive or exclusive, adding the GST split at order creation, and giving ad purchases their own invoice number series. Also note the unit trap documented in `src/lib/queries/vendorPayments.ts`: `ad_orders.amount` and `subscription_payment_orders.amount` are in **paise**, `subscription_invoices.amount` is in **rupees**. Reference: 2026-09-13, My Payments build.
-- [ ] Create the `delivery_team` admin role — Added: 2026-09-13 — Context: certificate fulfilment is day-to-day dispatch work, not moderation. `certificate_fulfiller()` currently admits `super_admin` and `finance_admin`, and `cosora-admin/src/lib/roles.ts` mirrors that exactly. The intended list has always been `["super_admin", "finance_admin", "delivery_team"]`, but `delivery_team` does not exist in the `admin_role_type` enum, so naming it would imply a role nobody can hold. Add the enum value, then update `certificate_fulfiller()`, `SECTION_READ.certificates` and `SECTION_WRITE.certificates` in the SAME change — the roles file is UX only and the database is the authority, so they must not drift. Reference: 2026-09-13, certificate fulfilment build.
 - [ ] Check the duplicate "Meridian Weaves Pvt Ltd" vendor_profiles rows — Added: 2026-09-13 — Priority: Low — Context: two `vendor_profiles` rows share the brand name "Meridian Weaves Pvt Ltd", the same city (Surat) and the same postcode (394221), and both have zero live products. Noticed while looking for a vendor with a postable address for the certificate demo. Probably a duplicate signup rather than two real businesses; worth confirming before either is used in anything customer-facing. Reference: 2026-09-13.
 
 
@@ -1013,6 +982,41 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Decide how long admin page visits stay in the Admin Log, and schedule the pruning — added 2026-10-11
+- Task: once per-admin activity tracking is live, choose a retention period for the "visited a page" entries in
+  `admin.audit_log` (suggested: 180 days) and add a daily pg_cron job that deletes older page-visit rows. Keep every
+  other entry (changes, sign-ins, invites, refunds, phone reveals, records opened) for good, unless counsel or a
+  policy says otherwise.
+- Context: Mitra asked (2026-10-11) for the Admin Log to track each admin individually: a per-admin activity page,
+  and logging of what each admin views (records opened, pages visited). Page visits are the high-volume part;
+  with 3 active admins today the size is trivial, so nothing is pruned at launch. The log is append-only: a
+  trigger (`admin.audit_log_append_only()`) refuses UPDATE and DELETE for everyone, so the job needs a narrow,
+  deliberate exception for page-visit rows past the retention date only, written and tested in the same
+  migration. A new scheduled job is Mitra's call (`claude.md`: "Don't add or re-create a job without Mitra's
+  say-so"); `cron-history-prune` (03:11 UTC) is the pattern to copy, and `admin_cron_status()` shows it on
+  System Health once added.
+- Reference: 2026-10-11, the per-admin activity tracking design; Mitra: "keep the scheduler part in todo.md".
+- Status: Open
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. Page visits are kept 180 days in their own table (`admin.activity_views`, migration `20261013100100`), pruned daily by `admin-activity-prune`; the Admin Log itself keeps everything and has no exception to append-only.
+
+### Check GSTIN and PAN at seller registration — added 2026-10-08
+- Task: validate the GSTIN (with its checksum) and PAN in `Onboarding.tsx` before saving, using `src/lib/taxIds.ts`,
+  and upper-case them.
+- Context: subscriptions P0 checks them on /subscription, but onboarding still saves whatever is typed, and both are
+  printed on tax invoices. A database CHECK was left out because onboarding would then fail on lower-case input.
+- Reference: 2026-10-08, subscriptions P0 (securityflags S-6).
+- Status: Open
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. `/onboarding` uses `src/lib/taxIds.ts`, and `trg_vendor_profiles_tax_ids` (migration `20261013100000`) checks every browser write.
+
+### Decide whether reviews can be reported, and build it if so — added 2026-09-29
+- Task: decide whether a vendor (or anyone) can report an abusive or fake review. If so, build it: a report stored somewhere an admin reads it, a Cosora-Admin queue, and an admin action to remove a review (`reviews_delete_own` / `product_reviews_delete_own` already let admins delete).
+- Context: the vendor `/reviews` page had a "Report" button that did nothing. It was removed on 2026-09-29 rather than faked. `submit_report` exists for chat moderation, and could be a model or be extended.
+- Reference: 2026-09-29, the reviews-pipeline audit and fix (My Reviews and vendor replies).
+- Status: Open
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. Mitra: any signed-in user may report. `report_review()`, the Report control on three pages, and Cosora-Admin › Reported reviews (migration `20261013100200`).
+
+- [x] Create the `delivery_team` admin role — Added: 2026-09-13 — Context: certificate fulfilment is day-to-day dispatch work, not moderation. `certificate_fulfiller()` currently admits `super_admin` and `finance_admin`, and `cosora-admin/src/lib/roles.ts` mirrors that exactly. The intended list has always been `["super_admin", "finance_admin", "delivery_team"]`, but `delivery_team` does not exist in the `admin_role_type` enum, so naming it would imply a role nobody can hold. Add the enum value, then update `certificate_fulfiller()`, `SECTION_READ.certificates` and `SECTION_WRITE.certificates` in the SAME change — the roles file is UX only and the database is the authority, so they must not drift. Reference: 2026-09-13, certificate fulfilment build. **Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (migrations `20261013100300` and `20261013100400`, Cosora-Admin's `roles.ts`, `admin-invite`, `admin-staff`); live once released.**
 
 ### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
 - Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy

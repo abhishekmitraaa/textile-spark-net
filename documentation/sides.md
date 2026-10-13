@@ -639,6 +639,7 @@ rather than a supplier directory.
   before payment.
 
 ### Changed 2026-09-29 (reviews)
+- **Reporting a review (built 2026-10-13, not live):** each review on `/reviews`, on `/product/:id` and on `/vendor/:id` has Report: a reason from a list and an optional note. Any signed-in account can report a review that isn't its own. Cosora's team decides; the reporter isn't told the outcome.
 - **`/reviews` has Store reviews and Product reviews tabs.** Reviews left on any of the vendor's listings (whatever its status) show with the product's name and photo and the buyer's photos. The vendor can reply once to each, as with store reviews. The buyer sees the reply on My Reviews and on the product page.
 - With no reviews, the rating reads "–" and "No reviews yet", not "0/5 POOR". Loading, a failed read and an empty list look different.
 - The Report button is gone: it did nothing (ToDo).
@@ -760,6 +761,9 @@ published, intervene when a conversation goes wrong, and run the commercial laye
 - Site content (banners and theme) is still a dev-seed mock with no table.
 
 ### Added 2026-09-25 (flag-fix pass)
+- **Reported reviews** (`/review-reports`; built 2026-10-13, not live): the queue of reported reviews, one card per review with every report on it. Super admins and support dismiss the reports or remove the review with a reason; the author is told it was removed, never who reported.
+- **Activity tab on the Admin Log** (built 2026-10-13, not live): pages and records each admin opened, with a summary per admin; super admins and managers. Page visits are kept 180 days.
+- **Delivery team role** (built 2026-10-13, not live): sees and works Certificates only; a manager can give it.
 - **Admin Log** (`/admin-log`, MPF-26): every change an admin makes (who, role, what,
   before → after, IST date and time), every sign-in and sign-out, and the invite and refund
   edge functions' actions. Filters by admin, area, action and date. Written by the database,

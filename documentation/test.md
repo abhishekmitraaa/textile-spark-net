@@ -204,6 +204,28 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-13 — Tax-id guard, admin activity, review reports, delivery team (local stack: harness 48/48; browser 2/2)
+
+- **Harness** `scripts/todo-batch/harness.sql` (never commits), 48/48: tax ids 8 (valid pair normalised; bad checksum,
+  bad PAN and a GSTIN without the PAN refused with 23514; an old invalid value sent back unchanged still saves; a seed
+  is normalised, not refused); activity 13 (non-admin and signed-out refused; once a minute; record needs a target;
+  support can't read, a manager can; the table is closed to browsers; the prune removes only page visits past 180 days
+  and leaves the Admin Log's row count unchanged); reviews 22 (signed out, own review, unknown reason, unknown review;
+  reported then already_reported; the seller can report; queue closed to users and to a product moderator; removing
+  needs a reason; remove deletes the review, closes both reports, moves the rating count, tells the author with no word
+  of a report, tells the reporters nothing, reaches the Admin Log with its reason; dismiss keeps the review; a product
+  review through the same path; the eleventh report in a day answers rate_limited); delivery team 5.
+- **Fixtures:** the local stack's fixed accounts (local-buyer, -buyer2, -vendor, -admin, -support, -manager,
+  -moderator); GSTIN `27AAPFU0939F1ZV` with PAN `AAPFU0939F` (a published sample, valid by checksum).
+- **Browser** `tests/local/todo-batch.spec.ts`, 2/2, apps on :8093 and :5187: a fresh buyer reports a fresh seller's
+  review from `/vendor/:id` (the author sees no Report on it); support removes it in Cosora-Admin (Remove disabled until
+  a reason is typed); the author's notification exists and the reporter's and seller's don't; a super admin sees
+  support's visit to `/review-reports` on the Activity tab; a delivery-team account lands on `/certificates` and is
+  offered no other section. afterEach removes the review and its reports and deactivates the staff account.
+- **Not tested in a browser:** the onboarding form's GSTIN and PAN messages (eight steps of documents to reach them);
+  the rule is covered by the harness and `taxIds.ts`, the wiring by the typecheck.
+- typecheck 0 in both apps; i18n 7,741/7,741; eslint clean on the changed files; both production builds.
+
 ### 2026-10-10 — Cleanup: subscription_usage closed, payment-mode shims off (local: 322/322 harness cases; production rolled-back check)
 
 - **Rehearsed on the local stack:** from production's state (shims on, the table open to browsers), `20261010142813`

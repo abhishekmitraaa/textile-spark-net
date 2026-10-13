@@ -1124,3 +1124,4 @@ in the next one.
 - Status: Fixed
 - Related changelog entry: `documentation/changelog.md`, 2026-09-10, "Photo search now refuses
   non-product images and is rate limited".
+- **2026-10-13 (built on `build/todo-batch-2026-10-13`, not applied):** S-6 is closed in the database as well as the forms: `trg_vendor_profiles_tax_ids` refuses an invalid or mismatched GSTIN or PAN on any browser write to `vendor_profiles`, and `/onboarding` checks them like `/subscription`. Two new surfaces were built closed: `admin.activity_views` and `admin.review_reports` have RLS on, no policies and no browser grants, and every function over them is refused to `anon`; the migrations' self-checks fail otherwise. One limit to know: `report_review()` lets any signed-in account file up to 10 reports a day, so a group of accounts could fill the queue; reports have no effect until a person decides them.

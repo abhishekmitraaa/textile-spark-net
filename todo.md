@@ -92,14 +92,6 @@ short list of things someone has to *decide*.
   project doesn't own is replaced, not kept. The 4 from Unsplash are recorded in `src/assets/interests/README.md`.
 
 
-- **`delivery_team` admin role.** Certificate dispatch is day-to-day operational
-  work but is gated to `super_admin` / `finance_admin`, both roles carrying far
-  broader authority. The enum value does not exist, so naming it anywhere would
-  imply a role nobody can hold. Revisit when certificate volume justifies it;
-  when adding, update `admin_role_type`, `certificate_fulfiller()`, and
-  `SECTION_READ`/`SECTION_WRITE` in `Cosora-Admin/src/lib/roles.ts` **in the
-  same change** — the roles file is UX only and the database is the authority.
-
 - **City targeting reaches almost nobody.** Only 1 of the buyer profiles has a
   city set, and `ad_targeting_matches()` fails closed by design (a viewer whose
   city is unknown is not shown a city-targeted ad). A soft, dismissible nudge
@@ -134,6 +126,9 @@ short list of things someone has to *decide*.
 ---
 
 ## Done — moved out of this list
+
+- ~~`delivery_team` admin role~~ — built 2026-10-13 (branch `build/todo-batch-2026-10-13`): the enum value,
+  `certificate_fulfiller()`, the read policy and `roles.ts` changed together. Live once that branch is released.
 
 - ~~Vendor-level billing for Trusted Seal / Verified Certificate~~ — done
   2026-09-14. Charged once per order, materialised as one campaign row with

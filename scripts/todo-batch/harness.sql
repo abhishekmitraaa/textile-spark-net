@@ -106,6 +106,8 @@ begin
   insert into _r (label, want, got) values ('tax: a seed or job is normalised, not refused', 'SEEDVALUE', got);
 
   -- ════ 2. Admin activity ════
+  -- The local stack keeps what the browser specs recorded; start from none (rolled back with the rest).
+  delete from admin.activity_views where actor_id = support;
   perform pg_temp.act(buyer);
   begin perform public.admin_activity_record('page', '/vendors'); got := 'recorded';
   exception when others then got := sqlstate; end;
