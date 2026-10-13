@@ -4036,13 +4036,15 @@ Migrations `20261013100000` to `20261013100400` (authored names; rename to the l
 
 ## Ads in semantic search; RLS and translation checks in CI; the Bunny slow-encode proof (2026-10-13; built, not live)
 
-- **`search_ads(query, max_count, filter_placements, filter_categories, max_distance)`**: SECURITY DEFINER,
-  `search_path = public, extensions` (the `<=>` operator lives in `extensions`), callable by anon like `active_ads()`.
+- **`admin.search_ads_ranked(query, max_count, filter_placements, filter_categories, max_distance)`** is the rule:
+  SECURITY DEFINER, `search_path = public, extensions` (the `<=>` operator lives in `extensions`), no grant to any
+  browser role; it returns `matched_by`, `distance` and `pos`. **`public.search_ads(query, max_count,
+  filter_placements, filter_categories)`** is the wrapper the app calls (anon too, like `active_ads()`): it passes
+  `admin.search_ads_cutoff()` (0.60) and returns `active_ads()`'s columns in `pos` order.
   The cached query vector is a MATERIALIZED one-row CTE read as a scalar subquery; candidates are the eligible
   campaigns for the placements, each with `p.embedding <=> query` (null without either vector) and the category rule's
   answer (`ad_targeting_matches` with the page's categories). Order: semantic first by distance, then bump, recency,
-  id. The ads table is small and filtered first, so no vector index is involved. Returns `active_ads()`'s columns plus
-  `matched_by`. Client: `fetchActiveAds(…, searchQuery)` in `src/lib/queries/ads.ts` picks the RPC; the query key
+  id. The ads table is small and filtered first, so no vector index is involved. Client: `fetchActiveAds(…, searchQuery)` in `src/lib/queries/ads.ts` picks the RPC; the query key
   carries the search.
 - **`scripts/rls-policy-check.mjs`** strips `--` comments, takes each `create policy` / `alter policy` statement,
   replaces `(select helper(` with a marker and fails on any helper call left, or on `for all`. BASELINE is Phase 12's

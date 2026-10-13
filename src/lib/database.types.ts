@@ -6045,7 +6045,6 @@ export type Database = {
           filter_categories?: string[]
           filter_placements?: string[]
           max_count?: number
-          max_distance?: number
           query: string
         }
         Returns: {
@@ -6054,7 +6053,6 @@ export type Database = {
           currency: string
           image_url: string
           is_bumped: boolean
-          matched_by: string
           placement: string
           price_value: number
           product_id: string

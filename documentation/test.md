@@ -204,15 +204,18 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
-### 2026-10-13 — Ads in semantic search, RLS checks, CI, Bunny slow-encode (local stack: 10/10 and 49/49; Bunny blocked)
+### 2026-10-13 — Ads in semantic search, RLS checks, CI, Bunny slow-encode (local stack: 12/12 and 49/49; Bunny blocked)
 
-- **`scripts/todo-batch/search_ads.sql`** (never commits), 10/10. Fixtures: four live products of the local vendor
+- **`scripts/todo-batch/search_ads.sql`** (never commits), 12/12. Fixtures: four live products of the local vendor
   with hand-made 1536-dimension embeddings at cosine distance 0, 0.3, 0.7 and 1 from one cached query, and seven
   campaigns on them (one targeted at Gujarat, one paused). Cases: semantic first and nearest first, then the category
   context; `active_ads()` alone serves only the category match; a far product outside the context isn't served; 0.7 is
   out at the default cutoff and in at 0.80; a never-searched query equals `active_ads()` in rows and order; no context;
   a buyer known to be in Maharashtra never gets the Gujarat campaign however near; paused stays out and `max_count`
-  holds; the placement filter applies; anon may call it and no vector or distance is returned.
+  holds; the placement filter applies; the public function returns the ranked rule's campaigns in its order with
+  `active_ads()`'s exact columns and has one signature with no cutoff; anon may call it and no browser role may call
+  `admin.search_ads_ranked()` (a signed-out call with a cutoff of 2.0 is refused, 42501). Match reasons and the
+  0.80 case are read through the ranked function, as postgres.
 - **RLS:** `node scripts/rls-policy-check.mjs`: 46 files, 28 policy statements, 0 findings; `--all` lists the
   pre-Phase-12 bare calls, so the scan does detect them. `scripts/rls-policy-check.sql` on the local stack: 139
   policies, 0 and 0. With two bad policies created and rolled back around it: 1 bare call and 4 doubled commands.

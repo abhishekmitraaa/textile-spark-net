@@ -74,7 +74,7 @@ begin
   perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
   perform set_config('request.jwt.claim.sub', '', true);
   select string_agg(s.title || '=' || s.matched_by, ' > ' order by s.n) into got
-    from (select t.*, row_number() over () as n from public.search_ads(q, 10, slot, array[shirts]) t) s;
+    from (select t.*, row_number() over () as n from admin.search_ads_ranked(q, 10, slot, array[shirts], admin.search_ads_cutoff()) t) s;
   insert into _r (label, want, got) values ('semantic matches first, nearest first, then the category context',
     'H ad Gujarat only=semantic > H ad exact=semantic > H ad near=semantic > H ad far in context=category', got);
 
@@ -84,24 +84,24 @@ begin
   insert into _r (label, want, got) values ('active_ads() alone serves only the category match', 'H ad far in context', got);
 
   -- 3. A far product in another category is not served.
-  select count(*)::text into got from public.search_ads(q, 10, slot, array[shirts]) t where t.ad_id = a_far_other;
+  select count(*)::text into got from admin.search_ads_ranked(q, 10, slot, array[shirts], admin.search_ads_cutoff()) t where t.ad_id = a_far_other;
   insert into _r (label, want, got) values ('a far product outside the context is not served', '0', got);
 
   -- 4. Distance 0.7 is past the paid cutoff of 0.60, and inside it when the caller widens it.
-  select count(*) filter (where t.ad_id = a_loose) into got from public.search_ads(q, 10, slot, array[shirts]) t;
-  select got || '|' || (select t.matched_by from public.search_ads(q, 10, slot, array[shirts], 0.80) t where t.ad_id = a_loose) into got;
+  select count(*) filter (where t.ad_id = a_loose) into got from admin.search_ads_ranked(q, 10, slot, array[shirts], admin.search_ads_cutoff()) t;
+  select got || '|' || (select t.matched_by from admin.search_ads_ranked(q, 10, slot, array[shirts], 0.80) t where t.ad_id = a_loose) into got;
   insert into _r (label, want, got) values ('the cutoff decides a loose match', '0|semantic', got);
 
   -- 5. A search nobody has embedded: exactly active_ads(), in its order.
-  select (coalesce((select string_agg(s.ad_id::text, ',' order by s.n) from (select t.ad_id, row_number() over () as n from public.search_ads('never searched ' || q, 10, slot, array[shirts]) t) s), '')
+  select (coalesce((select string_agg(s.ad_id::text, ',' order by s.n) from (select t.ad_id, row_number() over () as n from admin.search_ads_ranked('never searched ' || q, 10, slot, array[shirts], admin.search_ads_cutoff()) t) s), '')
         = coalesce((select string_agg(s.ad_id::text, ',' order by s.n) from (select t.ad_id, row_number() over () as n from public.active_ads(10, null, slot, array[shirts]) t) s), ''))::text
-       || '|' || (select string_agg(distinct t.matched_by, ',') from public.search_ads('never searched ' || q, 10, slot, array[shirts]) t)
+       || '|' || (select string_agg(distinct t.matched_by, ',') from admin.search_ads_ranked('never searched ' || q, 10, slot, array[shirts], admin.search_ads_cutoff()) t)
     into got;
   insert into _r (label, want, got) values ('no query embedding: the same rows and order as active_ads()', 'true|category', got);
 
   -- 6. No category context at all: semantic first, then every eligible campaign, as active_ads() does.
   select string_agg(s.matched_by, ',' order by s.n) into got
-    from (select t.*, row_number() over () as n from public.search_ads(q, 10, slot, null) t) s;
+    from (select t.*, row_number() over () as n from admin.search_ads_ranked(q, 10, slot, null, admin.search_ads_cutoff()) t) s;
   insert into _r (label, want, got) values ('no context: semantic first, the rest by the category rule', 'semantic,semantic,semantic,category,category,category', got);
 
   -- 7. A buyer known to be in Maharashtra never sees the Gujarat-only campaign, however near it is.
@@ -111,23 +111,41 @@ begin
   perform set_config('request.jwt.claim.sub', buyer::text, true);
   select (select state_code from public.ad_viewer_location()) || '|' || count(*) filter (where t.ad_id = a_state)
          || '|' || count(*) filter (where t.ad_id = a_exact) into got
-    from public.search_ads(q, 10, slot, array[shirts]) t;
+    from admin.search_ads_ranked(q, 10, slot, array[shirts], admin.search_ads_cutoff()) t;
   insert into _r (label, want, got) values ('semantic matching never widens location targeting', mh || '|0|1', got);
 
   -- 8. A paused campaign is never served, and the limit holds.
-  select count(*) filter (where t.ad_id = a_paused) || '|' || (select count(*) from public.search_ads(q, 2, slot, null)) into got
-    from public.search_ads(q, 10, slot, null) t;
+  select count(*) filter (where t.ad_id = a_paused) || '|' || (select count(*) from admin.search_ads_ranked(q, 2, slot, null, admin.search_ads_cutoff())) into got
+    from admin.search_ads_ranked(q, 10, slot, null, admin.search_ads_cutoff()) t;
   insert into _r (label, want, got) values ('paused campaigns stay out; max_count is honoured', '0|2', got);
 
   -- 9. Another slot's ad types never leak into this one.
-  select count(*)::text into got from public.search_ads(q, 10, array['brandAd'], null) t;
+  select count(*)::text into got from admin.search_ads_ranked(q, 10, array['brandAd'], null, admin.search_ads_cutoff()) t;
   insert into _r (label, want, got) values ('the placement filter still applies', '0', got);
 
-  -- 10. Signed-out visitors can call it; nobody gets the vector, or how near a campaign was, back.
-  select has_function_privilege('anon', 'public.search_ads(text, integer, text[], uuid[], double precision)', 'EXECUTE')::text
-         || '|' || (pg_get_function_result('public.search_ads(text, integer, text[], uuid[], double precision)'::regprocedure) ~* 'halfvec|vector|distance|embedding')::text into got;
-  insert into _r (label, want, got) values ('anon may call it; neither the vector nor a distance comes back', 'true|false', got);
+  -- 10. What the app calls: the same campaigns in the same order, with active_ads()'s columns and
+  --     nothing else. No cutoff to set, no reason, no distance.
+  select ((select string_agg(x.ad_id::text, ',' order by x.n) from (select t.ad_id, row_number() over () as n from public.search_ads(q, 10, slot, array[shirts]) t) x)
+        = (select string_agg(r.ad_id::text, ',' order by r.pos) from admin.search_ads_ranked(q, 10, slot, array[shirts], admin.search_ads_cutoff()) r))::text
+         || '|' || (pg_get_function_result('public.search_ads(text, integer, text[], uuid[])'::regprocedure)
+                    = pg_get_function_result('public.active_ads(integer, uuid, text[], uuid[])'::regprocedure))::text
+         || '|' || (select count(*) from pg_proc p where p.pronamespace = 'public'::regnamespace and p.proname = 'search_ads')
+    into got;
+  insert into _r (label, want, got) values ('the public function: same order, active_ads() columns, one signature with no cutoff', 'true|true|1', got);
 
+  -- 11. Signed-out visitors call the public one; no browser role reaches the ranked one.
+  select has_function_privilege('anon', 'public.search_ads(text, integer, text[], uuid[])', 'EXECUTE')::text
+         || '|' || has_function_privilege('anon', 'admin.search_ads_ranked(text, integer, text[], uuid[], double precision)', 'EXECUTE')::text
+         || '|' || has_function_privilege('authenticated', 'admin.search_ads_ranked(text, integer, text[], uuid[], double precision)', 'EXECUTE')::text
+    into got;
+  insert into _r (label, want, got) values ('anon may call search_ads(); nobody in a browser may call the ranked rule', 'true|false|false', got);
+
+  perform set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+  perform set_config('role', 'anon', true);
+  begin perform count(*) from admin.search_ads_ranked(q, 10, slot, null, 2.0); got := 'ran';
+  exception when others then got := sqlstate; end;
+  reset role;
+  insert into _r (label, want, got) values ('a signed-out caller who tries the ranked rule with a wide cutoff is refused', '42501', got);
   for line in
     select (case when r.want = r.got then 'PASS ' else 'FAIL ' end) || lpad(r.i::text, 2) || ' ' || r.label
            || (case when r.want = r.got then '' else '  want [' || r.want || '] got [' || coalesce(r.got, 'null') || ']' end)
