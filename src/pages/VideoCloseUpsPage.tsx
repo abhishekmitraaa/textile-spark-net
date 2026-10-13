@@ -141,6 +141,7 @@ export default function VideoCloseUpsPage() {
         initialIndex={0}
         isOpen={isOpen}
         onClose={handleClose}
+        backCloses={false}
         onBookmarkChange={setBookmarkedVideoIds}
       />
     </div>

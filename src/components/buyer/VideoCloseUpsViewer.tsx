@@ -1,3 +1,4 @@
+import { useBackCloses } from "@/hooks/useBackCloses";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCallVendor } from "@/lib/queries/calls";
@@ -54,6 +55,11 @@ interface VideoCloseUpsViewerProps {
   isOpen: boolean;
   onClose: () => void;
   /**
+   * Back closes the viewer (default). False on /video-closeups, where the
+   * viewer is the page and back already leaves it.
+   */
+  backCloses?: boolean;
+  /**
    * Fired whenever a video's bookmark state changes, passing the full
    * updated set of bookmarked video IDs. Lets the parent page derive
    * "categories the buyer has shown interest in this session" for
@@ -95,7 +101,8 @@ interface VideoCloseUpsViewerProps {
 // never reveals an unpainted slide.
 const SLIDE_WINDOW = 2;
 
-export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, onBookmarkChange }: VideoCloseUpsViewerProps) {
+export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, backCloses = true, onBookmarkChange }: VideoCloseUpsViewerProps) {
+  useBackCloses(isOpen, onClose, backCloses);
   const callVendor = useCallVendor();
   const { user } = useAuth();
   const [activeIndex, setActiveIndex] = useState(initialIndex);

@@ -3,9 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
+import { useAuth } from "@/contexts/AuthContext";
+import { markSignupDone } from "@/lib/signupDone";
 
 const Terms = () => {
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [agreed, setAgreed] = useState(false);
 
   return (
@@ -77,7 +80,7 @@ const Terms = () => {
         </label>
 
         <button
-          onClick={() => navigate("/auth/welcome")}
+          onClick={() => { markSignupDone(session?.user.id); navigate("/auth/welcome"); }}
           disabled={!agreed}
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",

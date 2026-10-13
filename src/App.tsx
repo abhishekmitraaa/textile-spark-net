@@ -69,6 +69,8 @@ import Terms from "./pages/Terms";
 import Welcome from "./pages/Welcome";
 import VendorLanding from "./pages/VendorLanding";
 import Onboarding from "./pages/Onboarding";
+import SignupStep from "./components/auth/SignupStep";
+import RegisteredVendorGate from "./components/auth/RegisteredVendorGate";
 import NewArrivals from "./pages/NewArrivals";
 // Lazily loaded. These two are the video routes, and neither is on the path a
 // buyer lands on — but their dependencies (the reel viewer, the upload page's
@@ -235,11 +237,11 @@ const App = () => (
             <Route path="/auth/login" element={<ClarityMask><Login /></ClarityMask>} />
             <Route path="/auth/otp-verify" element={<ClarityMask><OtpVerify /></ClarityMask>} />
             <Route path="/auth/callback" element={<AuthCallback />} />
-            <Route path="/auth/role-selection" element={<RoleSelection />} />
-            <Route path="/auth/sub-role" element={<SubRole />} />
-            <Route path="/auth/account-info" element={<ClarityMask><AccountInfo /></ClarityMask>} />
-            <Route path="/auth/interest-preference" element={<InterestPreference />} />
-            <Route path="/auth/terms" element={<Terms />} />
+            <Route path="/auth/role-selection" element={<RegisteredVendorGate><SignupStep><RoleSelection /></SignupStep></RegisteredVendorGate>} />
+            <Route path="/auth/sub-role" element={<SignupStep><SubRole /></SignupStep>} />
+            <Route path="/auth/account-info" element={<SignupStep><ClarityMask><AccountInfo /></ClarityMask></SignupStep>} />
+            <Route path="/auth/interest-preference" element={<SignupStep><InterestPreference /></SignupStep>} />
+            <Route path="/auth/terms" element={<SignupStep><Terms /></SignupStep>} />
             <Route path="/auth/welcome" element={<Welcome />} />
             {/* /browse retired — the old page served hardcoded fake products.
                 Kept as a redirect so external/bookmarked links land on the real
@@ -327,7 +329,7 @@ const App = () => (
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />
             <Route path="/seller" element={<VendorLanding />} />
-            <Route path="/onboarding" element={<ClarityMask><Onboarding /></ClarityMask>} />
+            <Route path="/onboarding" element={<RegisteredVendorGate><ClarityMask><Onboarding /></ClarityMask></RegisteredVendorGate>} />
             
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />
