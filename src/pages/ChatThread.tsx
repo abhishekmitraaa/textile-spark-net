@@ -8,6 +8,7 @@ import { getOrCreateConversation, CHAT_MONITORING_NOTICE } from "@/lib/chatData"
 import { useChatThread, submitReport, type ThreadMessage } from "@/lib/queries/chat";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
+import { useKeyboardInset } from "@/hooks/useKeyboardInset";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import {
   ArrowLeft, Phone, Star, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
@@ -71,6 +72,12 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const docRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+  // The keyboard covers the foot of the screen without resizing it, and the
+  // composer is the foot of the screen: lift the whole thread clear of it, and
+  // keep the newest message in view while the list is shorter.
+  const keyboardInset = useKeyboardInset();
+  useEffect(() => { if (keyboardInset) endRef.current?.scrollIntoView({ block: "end" }); }, [keyboardInset]);
 
   // The lock can land while the composer is open mid-interaction.
   useEffect(() => {
@@ -151,7 +158,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const blockVendor = () => { toast.success(`${conv.name} has been blocked`); navigate(inboxHref); };
 
   return (
-    <div className={cn("flex flex-col bg-gray-50", fills ? "h-full" : "h-[100dvh]")}>
+    <div className={cn("flex flex-col bg-gray-50", fills ? "h-full" : "h-[100dvh]")} style={keyboardInset ? { paddingBottom: keyboardInset } : undefined}>
       {/* Header */}
       <div className="shrink-0 bg-white border-b border-gray-100">
         <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5", THREAD_WIDE, "lg:px-4 lg:py-3")}>
@@ -289,7 +296,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       </AnimatePresence>
 
       {/* Input bar */}
-      <div className="shrink-0 bg-white border-t border-gray-100 pb-[env(safe-area-inset-bottom)]">
+      <div className={cn("shrink-0 bg-white border-t border-gray-100", !keyboardInset && "pb-[env(safe-area-inset-bottom)]")}>
         <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3", THREAD_WIDE)}>
           <button onClick={() => setAttachOpen((o) => !o)} disabled={underReview} aria-label="Attach"
             className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 disabled:cursor-not-allowed">
@@ -299,7 +306,9 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
               disabled={underReview}
               placeholder={underReview ? "Sending is paused while this chat is reviewed" : "Message"}
-              className="flex-1 bg-transparent text-sm placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed" />
+              // 16px on touch screens: iOS zooms the whole page when a focused
+              // field's text is smaller, which threw the thread off-screen.
+              className="min-w-0 flex-1 bg-transparent text-base [@media(pointer:fine)]:text-sm placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed" />
             <button onClick={() => docRef.current?.click()} disabled={underReview} aria-label="Attach file" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Paperclip className="w-4 h-4 text-gray-400" /></button>
             <button onClick={() => cameraRef.current?.click()} disabled={underReview} aria-label="Camera" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Camera className="w-4 h-4 text-gray-400" /></button>
           </div>

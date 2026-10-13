@@ -123,8 +123,9 @@ export function disallowFeature(key: string, id: string): void {
 }
 
 /** A browser context signed in with a session from freshAccount(). */
-export async function contextWithSession(browser: Browser, session: Session, viewport = { width: 390, height: 900 }): Promise<BrowserContext> {
-  const ctx = await browser.newContext({ viewport });
+export async function contextWithSession(browser: Browser, session: Session, viewport = { width: 390, height: 900 }, phone = false): Promise<BrowserContext> {
+  // `phone`: a touch screen, so `pointer: coarse` rules apply as they do on a handset.
+  const ctx = await browser.newContext({ viewport, ...(phone ? { hasTouch: true, isMobile: true } : {}) });
   await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), [storageKey(), JSON.stringify(session)]);
   return ctx;
 }
