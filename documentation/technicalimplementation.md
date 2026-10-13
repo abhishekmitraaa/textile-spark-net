@@ -4033,3 +4033,25 @@ Migrations `20261013100000` to `20261013100400` (authored names; rename to the l
 - **Delivery team.** The enum value is its own migration. `certificate_fulfiller()`, `certificate_orders_read` and
   `admin.is_team_role()` are replaced in the second. The role reads `certificate_orders` only: an order carries the
   delivery address as a snapshot, so it needs no reader of vendors' private details.
+
+## Ads in semantic search; RLS and translation checks in CI; the Bunny slow-encode proof (2026-10-13; built, not live)
+
+- **`search_ads(query, max_count, filter_placements, filter_categories, max_distance)`**: SECURITY DEFINER,
+  `search_path = public, extensions` (the `<=>` operator lives in `extensions`), callable by anon like `active_ads()`.
+  The cached query vector is a MATERIALIZED one-row CTE read as a scalar subquery; candidates are the eligible
+  campaigns for the placements, each with `p.embedding <=> query` (null without either vector) and the category rule's
+  answer (`ad_targeting_matches` with the page's categories). Order: semantic first by distance, then bump, recency,
+  id. The ads table is small and filtered first, so no vector index is involved. Returns `active_ads()`'s columns plus
+  `matched_by`. Client: `fetchActiveAds(…, searchQuery)` in `src/lib/queries/ads.ts` picks the RPC; the query key
+  carries the search.
+- **`scripts/rls-policy-check.mjs`** strips `--` comments, takes each `create policy` / `alter policy` statement,
+  replaces `(select helper(` with a marker and fails on any helper call left, or on `for all`. BASELINE is Phase 12's
+  version; `--all` reports the older files without failing. **`scripts/rls-policy-check.sql`** does the same on
+  `pg_policies` text (Postgres prints a wrapped call as `( SELECT auth.uid() AS uid)`) and counts permissive policies per
+  table, command and role (`anon`, `authenticated`; FOR ALL counts for each command).
+- **`.github/workflows/checks.yml`**: `npm ci` (the translation check parses with the TypeScript package), then the
+  two scripts. Separate from `e2e.yml`, whose specs stop before their first test in CI.
+- **`scripts/bunny-slow-encode-check.mjs`**: lists the Bunny library through `bunny-reconcile` (and stops if that
+  fails), runs `npx playwright test tests/video-closeups-bunny.spec.ts -g T8.2` with `BUNNY_ENCODE_TIMEOUT_MS=1`, expects
+  the spec's "did not finish encoding" error, then lists the library again: no new guid, and no `zz-bunny-uitest-` row.
+  The spec's afterAll deletes its row only when `bunny-delete-video` answered ok.

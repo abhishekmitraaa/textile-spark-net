@@ -45,7 +45,7 @@ const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 // twice, and each ad logs exactly one impression. Blocks past the end of the
 // available inventory render nothing rather than looping back to the start.
 export default function SponsoredRail({
-  max = 10, className, category, slot, label, block = 0,
+  max = 10, className, category, slot, label, block = 0, searchQuery,
 }: {
   max?: number;
   className?: string;
@@ -53,12 +53,14 @@ export default function SponsoredRail({
   slot?: AdSlotId;
   label?: string;
   block?: number;
+  /** The buyer's search, on the search results page: campaigns near it in meaning come first. */
+  searchQuery?: string | null;
 }) {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
   const { showText } = useDisplayCurrency();
   const spec = slot ? AD_SLOTS[slot] : null;
-  const { data: window = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES);
+  const { data: window = [] } = useActiveAds(spec?.max ?? max, category, spec?.types ?? ON_PLATFORM_CARD_TYPES, null, searchQuery);
   // An untyped rail (ProductDetail) has no slot and so no blocks: it is the
   // whole window, exactly as before. Memoised because adSlotBlock returns a new
   // array each call, and the impression effect below keys on this identity.

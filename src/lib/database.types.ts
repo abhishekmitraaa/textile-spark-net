@@ -6040,6 +6040,30 @@ export type Database = {
         Args: { p_rfq: string; p_vendor: string }
         Returns: boolean
       }
+      search_ads: {
+        Args: {
+          filter_categories?: string[]
+          filter_placements?: string[]
+          max_count?: number
+          max_distance?: number
+          query: string
+        }
+        Returns: {
+          ad_id: string
+          category_name: string
+          currency: string
+          image_url: string
+          is_bumped: boolean
+          matched_by: string
+          placement: string
+          price_value: number
+          product_id: string
+          product_name: string
+          title: string
+          vendor_id: string
+          vendor_name: string
+        }[]
+      }
       search_products: {
         Args: { match_count?: number; query: string }
         Returns: {

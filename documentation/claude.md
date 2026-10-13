@@ -162,6 +162,13 @@ undocumented. Deep technical rationale for each lives in
     per product: interests overlap.
   - "Others" words (`buyer_profiles.preferred_interest_other`) exist only while "others" is picked (a trigger
     enforces it) and are never translated.
+- **A sponsored card on search results is matched by meaning, through `search_ads()`** (2026-10-13; migration `20261013110000_search_ads_semantic.sql`).
+  - An ad has no embedding of its own: it promotes a product, and the product's embedding is compared with the search's cached query embedding. Don't add an embedding column or a queue for ads.
+  - Semantic matches (within 0.60, tighter than organic search's 0.80) come first, nearest first; then what `active_ads()` serves for the category context. Never price or bid: Cosora ads are flat-rate.
+  - `is_ad_eligible()` still decides status, dates, standing and location. A new way to choose ads calls it, and never widens state, country or city targeting.
+  - With no cached query embedding `search_ads()` must equal `active_ads()`, row for row. The migration's self-check and `scripts/todo-batch/search_ads.sql` hold that; re-run both after changing either function.
+  - Neither the vector nor a distance is returned to the browser.
+- **The once-per-query policy rule is checked by `npm run rls:check` and in CI** (2026-10-13). After applying a migration with a policy, also run `scripts/rls-policy-check.sql` against the database: it sees policies the file scan can't (made by `execute`, or in the SQL editor). An exception goes in the script's `ALLOW` list with its reason.
 - **A review is reported through `report_review()`, and decided only by Cosora** (2026-10-13; migration `20261013100200_review_reports.sql`).
   - Any signed-in, active account may report a store, product or service review (Mitra), never its own; one open report per account per review; 10 in 24 hours, counted under a lock per reporter. Reasons are one list, `admin.review_report_reasons`: add a reason there, never as a UI constant.
   - Super admins and support decide in Cosora-Admin › Reported reviews (`admin_review_report_decide()`): dismiss, or remove with a reason. The report keeps a copy of the review as it stood.

@@ -204,6 +204,25 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-13 — Ads in semantic search, RLS checks, CI, Bunny slow-encode (local stack: 10/10 and 49/49; Bunny blocked)
+
+- **`scripts/todo-batch/search_ads.sql`** (never commits), 10/10. Fixtures: four live products of the local vendor
+  with hand-made 1536-dimension embeddings at cosine distance 0, 0.3, 0.7 and 1 from one cached query, and seven
+  campaigns on them (one targeted at Gujarat, one paused). Cases: semantic first and nearest first, then the category
+  context; `active_ads()` alone serves only the category match; a far product outside the context isn't served; 0.7 is
+  out at the default cutoff and in at 0.80; a never-searched query equals `active_ads()` in rows and order; no context;
+  a buyer known to be in Maharashtra never gets the Gujarat campaign however near; paused stays out and `max_count`
+  holds; the placement filter applies; anon may call it and no vector or distance is returned.
+- **RLS:** `node scripts/rls-policy-check.mjs`: 46 files, 28 policy statements, 0 findings; `--all` lists the
+  pre-Phase-12 bare calls, so the scan does detect them. `scripts/rls-policy-check.sql` on the local stack: 139
+  policies, 0 and 0. With two bad policies created and rolled back around it: 1 bare call and 4 doubled commands.
+- **Bunny:** `node scripts/bunny-slow-encode-check.mjs` against production: BLOCKED at step 0, nothing uploaded.
+  `bunny-reconcile` → 502 `bunny_list_failed`, Bunny's answer 401 "Authentication has been denied for this request."
+  `bunny-config-check.mjs` passes (the three secrets exist), so the key is present and wrong.
+- `scripts/todo-batch/harness.sql` 49/49 again; typecheck 0; i18n 7,741/7,741; production build.
+- **Not run:** the search results rail in a browser (the local stack has one live product and no embeddings);
+  the new workflow on GitHub (it runs on the first push).
+
 ### 2026-10-13 — Tax-id guard, admin activity, review reports, delivery team (local stack: harness 49/49; browser 2/2)
 
 - **Harness** `scripts/todo-batch/harness.sql` (never commits), 49/49: tax ids 8 (valid pair normalised; bad checksum,
