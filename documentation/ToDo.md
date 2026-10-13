@@ -973,7 +973,7 @@ known, a one-line note on how/where it was done — don't delete history)
   `refund_guarantee_requests_read`, and it already follows the pattern.
 - Reference: 2026-10-02, the wrap-up of admin completion Phase 12; Mitra asked for it to go in ToDo.
 - Status: Open
-- Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13`; live once that branch is released. The rule stays in `claude.md`; the checking is now `npm run rls:check` (migration files, in CI) and `scripts/rls-policy-check.sql` (a database's policies).
+- Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13`; released 2026-10-13. The rule stays in `claude.md`; the checking is now `npm run rls:check` (migration files, in CI) and `scripts/rls-policy-check.sql` (a database's policies).
 
 ### Run `npm run i18n:check` in CI — added 2026-09-26
 - Task: add the check to the GitHub workflow (it needs no secrets and no network), so a new
@@ -982,9 +982,9 @@ known, a one-line note on how/where it was done — don't delete history)
   specs (they read `.env` at load); a separate job for this check would not be affected.
 - Reference: 2026-09-26, the language-translation fix.
 - Status: Open
-- Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13`; live once that branch is released. `.github/workflows/checks.yml`, with the RLS file check.
+- Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13`; released 2026-10-13. `.github/workflows/checks.yml`, with the RLS file check.
 
-- [x] Decide whether ads should join the semantic-search embedding pipeline — Added: 2026-09-12 — Context: `products`, `rfqs` and `product_videos` each have a `halfvec(1536)` embedding fed by the trigger → pgmq → pg_cron → Edge Function → OpenAI pipeline. `advertisements` does not. Adding one would let a search query match an ad semantically even when its category tag is a level off — the same thing `match_products()` already gives organic results. This was Phase 11 of the v3 prompt and was SKIPPED, correctly: it is only relevant once the `searchListing` build-or-retire decision above lands in favour of building a real sponsored-search placement. Do not build the embedding before that decision. Reference: Advertising System v3 (2026-09-12), Phase 11. — **UPDATE 2026-09-13:** that decision landed in favour of building it (`searchSponsored` + `searchResultsSponsored` slots now exist), so this is live again. The results-page slot currently takes its category context from the dominant category of the matched products plus the raw query string, resolved by name against the taxonomy — a semantic embedding would replace that heuristic with a real match. **Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13` (migration `20261013110000_search_ads_semantic.sql`): ads match by their promoted product's embedding through `search_ads()`, with no embedding of their own; live once released.**
+- [x] Decide whether ads should join the semantic-search embedding pipeline — Added: 2026-09-12 — Context: `products`, `rfqs` and `product_videos` each have a `halfvec(1536)` embedding fed by the trigger → pgmq → pg_cron → Edge Function → OpenAI pipeline. `advertisements` does not. Adding one would let a search query match an ad semantically even when its category tag is a level off — the same thing `match_products()` already gives organic results. This was Phase 11 of the v3 prompt and was SKIPPED, correctly: it is only relevant once the `searchListing` build-or-retire decision above lands in favour of building a real sponsored-search placement. Do not build the embedding before that decision. Reference: Advertising System v3 (2026-09-12), Phase 11. — **UPDATE 2026-09-13:** that decision landed in favour of building it (`searchSponsored` + `searchResultsSponsored` slots now exist), so this is live again. The results-page slot currently takes its category context from the dominant category of the matched products plus the raw query string, resolved by name against the taxonomy — a semantic embedding would replace that heuristic with a real match. **Completed: built 2026-10-13 on branch `build/todo-batch-2-2026-10-13` (migration `20261013110000_search_ads_semantic.sql`): ads match by their promoted product's embedding through `search_ads()`, with no embedding of their own; released 2026-10-13.**
 
 ### Decide how long admin page visits stay in the Admin Log, and schedule the pruning — added 2026-10-11
 - Task: once per-admin activity tracking is live, choose a retention period for the "visited a page" entries in
@@ -1001,7 +1001,7 @@ known, a one-line note on how/where it was done — don't delete history)
   System Health once added.
 - Reference: 2026-10-11, the per-admin activity tracking design; Mitra: "keep the scheduler part in todo.md".
 - Status: Open
-- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. Page visits are kept 180 days in their own table (`admin.activity_views`, migration `20261013100100`), pruned daily by `admin-activity-prune`; the Admin Log itself keeps everything and has no exception to append-only.
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); released 2026-10-13. Page visits are kept 180 days in their own table (`admin.activity_views`, migration `20261013100100`), pruned daily by `admin-activity-prune`; the Admin Log itself keeps everything and has no exception to append-only.
 
 ### Check GSTIN and PAN at seller registration — added 2026-10-08
 - Task: validate the GSTIN (with its checksum) and PAN in `Onboarding.tsx` before saving, using `src/lib/taxIds.ts`,
@@ -1010,16 +1010,16 @@ known, a one-line note on how/where it was done — don't delete history)
   printed on tax invoices. A database CHECK was left out because onboarding would then fail on lower-case input.
 - Reference: 2026-10-08, subscriptions P0 (securityflags S-6).
 - Status: Open
-- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. `/onboarding` uses `src/lib/taxIds.ts`, and `trg_vendor_profiles_tax_ids` (migration `20261013100000`) checks every browser write.
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); released 2026-10-13. `/onboarding` uses `src/lib/taxIds.ts`, and `trg_vendor_profiles_tax_ids` (migration `20261013100000`) checks every browser write.
 
 ### Decide whether reviews can be reported, and build it if so — added 2026-09-29
 - Task: decide whether a vendor (or anyone) can report an abusive or fake review. If so, build it: a report stored somewhere an admin reads it, a Cosora-Admin queue, and an admin action to remove a review (`reviews_delete_own` / `product_reviews_delete_own` already let admins delete).
 - Context: the vendor `/reviews` page had a "Report" button that did nothing. It was removed on 2026-09-29 rather than faked. `submit_report` exists for chat moderation, and could be a model or be extended.
 - Reference: 2026-09-29, the reviews-pipeline audit and fix (My Reviews and vendor replies).
 - Status: Open
-- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); live once that branch is released. Mitra: any signed-in user may report. `report_review()`, the Report control on three pages, and Cosora-Admin › Reported reviews (migration `20261013100200`).
+- Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (both repos); released 2026-10-13. Mitra: any signed-in user may report. `report_review()`, the Report control on three pages, and Cosora-Admin › Reported reviews (migration `20261013100200`).
 
-- [x] Create the `delivery_team` admin role — Added: 2026-09-13 — Context: certificate fulfilment is day-to-day dispatch work, not moderation. `certificate_fulfiller()` currently admits `super_admin` and `finance_admin`, and `cosora-admin/src/lib/roles.ts` mirrors that exactly. The intended list has always been `["super_admin", "finance_admin", "delivery_team"]`, but `delivery_team` does not exist in the `admin_role_type` enum, so naming it would imply a role nobody can hold. Add the enum value, then update `certificate_fulfiller()`, `SECTION_READ.certificates` and `SECTION_WRITE.certificates` in the SAME change — the roles file is UX only and the database is the authority, so they must not drift. Reference: 2026-09-13, certificate fulfilment build. **Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (migrations `20261013100300` and `20261013100400`, Cosora-Admin's `roles.ts`, `admin-invite`, `admin-staff`); live once released.**
+- [x] Create the `delivery_team` admin role — Added: 2026-09-13 — Context: certificate fulfilment is day-to-day dispatch work, not moderation. `certificate_fulfiller()` currently admits `super_admin` and `finance_admin`, and `cosora-admin/src/lib/roles.ts` mirrors that exactly. The intended list has always been `["super_admin", "finance_admin", "delivery_team"]`, but `delivery_team` does not exist in the `admin_role_type` enum, so naming it would imply a role nobody can hold. Add the enum value, then update `certificate_fulfiller()`, `SECTION_READ.certificates` and `SECTION_WRITE.certificates` in the SAME change — the roles file is UX only and the database is the authority, so they must not drift. Reference: 2026-09-13, certificate fulfilment build. **Completed: built 2026-10-13 on branch `build/todo-batch-2026-10-13` (migrations `20261013100300` and `20261013100400`, Cosora-Admin's `roles.ts`, `admin-invite`, `admin-staff`); released 2026-10-13.**
 
 ### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
 - Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy

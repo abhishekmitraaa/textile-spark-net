@@ -120,10 +120,10 @@ short list of things someone has to *decide*.
 ## Done — moved out of this list
 
 - ~~Semantic ad matching (v3 Phase 11)~~ — built 2026-10-13 (branch `build/todo-batch-2-2026-10-13`): `search_ads()` matches a
-  search to each campaign's promoted product by embedding; no ad embedding was needed. Live once released.
+  search to each campaign's promoted product by embedding; no ad embedding was needed. Released 2026-10-13.
 
 - ~~`delivery_team` admin role~~ — built 2026-10-13 (branch `build/todo-batch-2026-10-13`): the enum value,
-  `certificate_fulfiller()`, the read policy and `roles.ts` changed together. Live once that branch is released.
+  `certificate_fulfiller()`, the read policy and `roles.ts` changed together. Released 2026-10-13.
 
 - ~~Vendor-level billing for Trusted Seal / Verified Certificate~~ — done
   2026-09-14. Charged once per order, materialised as one campaign row with

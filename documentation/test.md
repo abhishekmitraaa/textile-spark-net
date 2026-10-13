@@ -204,6 +204,16 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-13 — Production checks after the release of both batches (read-only, through `supabase db query --linked`)
+
+- Before: none of the new objects existed; `certificate_fulfiller()` and `admin.is_team_role()` held exactly the bodies the
+  migrations replace; every function they call existed (`is_ad_eligible` 5-argument, `ad_viewer_location`, `ad_is_bumped`,
+  `normalise_search_query`, `gstin_is_valid`, `notify`, `admin.audit_row_change`).
+- After each apply: the objects and grants listed in the changelog's release entry; `search_ads('jeans', 12, searchListing +
+  featuredProduct)` 4 rows = `active_ads` 4 rows; `scripts/rls-policy-check.sql` 139 / 0 / 0.
+- Not run on production: the browser specs (they need the local stack's accounts); a real report, removal or activity row
+  (none was created on production by these checks).
+
 ### 2026-10-13 — Ads in semantic search, RLS checks, CI, Bunny slow-encode (local stack: 12/12 and 49/49; Bunny blocked)
 
 - **`scripts/todo-batch/search_ads.sql`** (never commits), 12/12. Fixtures: four live products of the local vendor
