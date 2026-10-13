@@ -246,18 +246,6 @@ with no need to dictate format, context, or reference each time.
   `faq-truth/registration-plans-refunds`).
 - Status: Open
 
-### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
-- Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy
-  reword the answer.
-- Context: the live Subscription answer to "What happens when I reach my lead limit?" says "You'll receive
-  notifications as you approach your limit." Nothing sends one: the Leads page shows "N/cap leads used", and a quote
-  at the cap is refused with an upgrade prompt. (The Seller Help answer to the same question, P5, describes this
-  truthfully.) An in-app notification needs no outside service.
-- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
-  documents, plan changes and money-back guarantee were built to match their FAQs (branch
-  `faq-truth/registration-plans-refunds`).
-- Status: Open
-
 ### Send the renewal reminder the billing answer promises — added 2026-10-02
 - Task: remind a seller before their paid period ends, in the app first and by email once Resend works; or have
   Andy reword the answer.
@@ -443,19 +431,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Low (only matters once someone changes the theme)
 - Status: Open
 
-### Fix a stale policy name in the pending registration-documents migration — added 2026-10-02
-- Task: before `supabase/migrations/20261002100000_registration_documents.sql` is applied, change its header
-  comment "the rows are still written by the seller under the existing vendor_documents_all policy" to name
-  the policies that exist now: the seller writes through `vendor_documents_insert` / `_update` / `_delete` and
-  reads through `vendor_documents_select`.
-- Context: admin completion Phase 12 (`20261002072403_rls_per_statement`, applied 2026-10-02) replaced the FOR ALL
-  policy `vendor_documents_all` with one policy per command, using the same expressions, so the migration still
-  behaves as written; only the comment is out of date. Fix it before the apply: a migration file must match the
-  statements recorded when it is applied (the md5 rule in `claude.md`), so after that the comment stays in
-  history. The file is on the Help & Support / FAQ-input release branch (`release/2026-10-02`), not on `main`.
-- Reference: 2026-10-02, the wrap-up of admin completion Phase 12; Mitra asked for it to go in ToDo.
-- Status: Open
-
 ### Check every new RLS policy for the once-per-query pattern before it is applied — added 2026-10-02
 - Task: in any migration that creates or changes a policy, write `(select auth.uid())`,
   `(select public.is_admin())`, `(select public.admin_role())` and
@@ -523,30 +498,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Low today; High before a traffic launch
 - Status: Open
 
-### Decide on the five scheduled jobs left off in the 2026-09-27 restore — added 2026-09-27
-- Task: decide whether each of these comes back, and when:
-  - `embedding-worker` and `vendor-catalog-recompute` (every minute);
-  - `embedding-health-alarm` (every 10 minutes);
-  - `prune-query-embedding-cache` (daily 03:17 UTC) and `prune-embed-rate-limit` (daily 03:23 UTC).
-- Context:
-  - Admin completion, Phase 2, restored the essential jobs plus a daily history prune
-    (`20260927153142`). These five stayed off on purpose:
-    - The worker only does work once OpenAI billing is on, and the recompute follows it.
-    - The alarm would raise every 10 minutes while the worker is off. Each raise also adds a
-      failed row to `cron.job_run_details`.
-    - The two prunes keep `search_query_embeddings` and `embed_query_rate_limit` bounded. Both
-      tables grow only on search-cache misses and photo searches.
-  - Restore each from the migrations named in "Restore the scheduled jobs" (Completed). When the
-    worker comes back, bring the alarm back too, and put the two every-minute jobs on
-    `cron-history-prune`'s budget (together they write ~2,900 rows a day).
-- Reference: 2026-09-27, admin completion Phase 2, Mitra's choice of "Restore essentials +
-  prune".
-- Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
-- Status: **Completed 2026-10-06** (Mitra: "fix the embedding issue"). All five restored by `20261006165817_restore_embedding_jobs.sql`,
-  verbatim. Before: health CRITICAL, 2 jobs waiting (the oldest 7 days, a vendor product from
-  2026-09-29, and a buyer's quote request from 2026-10-06). After two ticks: queue 0, recompute
-  queue 0, health OK.
-
 ### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
 - Task: make the vendor's Advertise page show the reason an admin gave in words. Today
   `advertisements.moderation_reason` stores `<code> <note>` (for example
@@ -567,29 +518,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Medium (the first admin rejection will show it)
 - Status: Open
 
-### Add cosora.in to Supabase Auth's redirect URLs, so Google sign-in comes back to the site — added 2026-09-27
-- Task: in the Supabase dashboard (project `vxdhhgdfubqedfpwfyrb`), open Authentication → URL
-  Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**`
-  and `https://cosora.in/**` to Redirect URLs, and keep `https://textile-spark-net.vercel.app/**`
-  and `http://localhost:8080/**`.
-- Context:
-  - **What happens:** Google sign-in on www.cosora.in finishes on textile-spark-net.vercel.app.
-    Only that host (the Site URL) and `localhost:8080` are allowed as return addresses, and
-    Supabase sends any other one to the Site URL.
-  - **Confirmed from the auth logs (2026-09-27):**
-    - `https://www.cosora.in/auth/callback` and `https://cosora.in/auth/callback` resolve to
-      `https://textile-spark-net.vercel.app`.
-    - The vercel.app and localhost callbacks resolve to themselves.
-    - Mitra's Google sign-in on 2026-09-26 went this way.
-  - **What already works:** the Google OAuth client (Google's sign-in page opens). The app
-    already asks to come back to `<current site>/auth/callback`, so no code changes.
-  - **Why it wasn't done in a session:** this machine has no Supabase management token.
-  - **Side effect:** changing the Site URL also changes where Supabase's own emails link to,
-    such as admin invites.
-- Reference: 2026-09-27 session, "the google verification isnt working"; `changelog.md`
-  2026-09-27.
-- Priority: High (Google sign-in doesn't work on the real domain)
-- Status: Open
 ### Have a native speaker review the Hindi and Gujarati translations — added 2026-09-26
 - Task: a Hindi and a Gujarati speaker read `src/i18n/hi.json` and `gu.json` (7,056 entries each)
   in context, starting with the buyer home, sign-in, onboarding, subscription and ads pages, and
@@ -600,15 +528,6 @@ with no need to dictate format, context, or reference each time.
   order. Edit the JSON values only; `npm run i18n:check` must still pass.
 - Reference: 2026-09-26, the language-translation fix ("the translation was selective").
 - Status: Open
-
-### Store FAQ translations with the FAQ, so admin edits stay translated — added 2026-09-26
-- Task: give `public.faqs` per-language question/answer columns (or a translations table),
-  editable on Cosora-Admin `/faqs`, and have `useFaqs()` return the viewer's language.
-- Context: FAQs are translated today through the static catalogues (`src/i18n/external-strings.json`,
-  "faqs"). An FAQ edited in the admin shows in English until its new text is added there and
-  translated in code. The same applies to `subscription_plans.display` values and `notify()` texts.
-- Reference: 2026-09-26, the language-translation fix.
-- Status: Built 2026-10-01 in Help & Support P5 (branch `help-support/p5-content`): `faqs.translations`, Hindi and Gujarati fields in Cosora-Admin Edit, and the app shows a stored translation first. Done once `20261001130000` and `20261001130100` are applied and the branch is merged. `subscription_plans.display` and `notify()` texts still use the catalogues.
 
 ### Decide whether the Supplier Agreement gets a reviewed translation — added 2026-09-26
 - Task: if vendors should read the agreement in Hindi or Gujarati, have the text translated and
@@ -670,7 +589,6 @@ with no need to dictate format, context, or reference each time.
 - [ ] Build a real trends data source for /home/trends — Added: 2026-09-11 — Context: The Trends page's category chips, featured images, curated looks and suggested searches are hand-picked editorial content; there is no trends job, no Google Trends integration and no search-volume log feeding it. Master Prompt 7 (buyer-trust thread, Phase 3) relabelled the page "Curated trend picks" and removed everything that posed as measured data (invented "↑ 800%" search-growth figures, a "Top Brands" list of invented names, USD prices). A real pipeline needs a source — the closest existing one is `engagement_events` rows with `event_type = 'search_impression'` and `query_text`, or an external trends API — plus a scheduled job and a table the page reads; only then should "trending" copy come back. The curated images are also still hotlinked from picsum.photos and need owned replacements. — Reference: 2026-09-11, Master Prompt 7 Phase 3.3, which asked for this to be logged as a future feature rather than built.
 
 - [ ] Create the test-credential secrets in GitHub so the E2E workflow can sign in — Added: 2026-09-11 — Priority: High — Context: Master Prompt 8, Phase 1 moved every test password out of source. `.github/workflows/e2e.yml` now maps seven repository secrets into the Playwright step: `DEMO_BUYER_PASSWORD`, `DEMO_VENDOR_PASSWORD`, `DEMO_ADMIN_PASSWORD`, `MP_VENDOR_PASSWORD`, `MP5_LINK_PASSWORD`, `TEST_VENDOR_PASSWORD`, `FIXTURE_PASSWORD`. None exists yet, so every spec that needs a login skips in CI. The values are in the local gitignored `.env` (never paste them anywhere else). Second half of the same gap: the specs also read `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from `.env` with `readFileSync`, which CI does not have, so they need those as secrets too, and the specs need to read `process.env` first, as `scripts/lib/test-credentials.mjs` already does. Reference: Master Prompt 8 (2026-09-11), Phase 1 step 4.
-- [ ] Stop the public vendor profile inventing a vendor's missing identity and contact details — Added: 2026-09-11 — Priority: High — Context: on `/vendor/:id`, every field a REAL vendor left empty falls back to a hardcoded demo value. Owner / Company MD becomes "Mr. K.S. Tomar"; phone becomes "+91 90110 60851"; email and website become caramel.in addresses; the address becomes a Gwalior street address; GSTIN becomes "07AABCS1077Q1ZV" and PAN becomes "ABNCS1077Q"; the About paragraph and banner are stock too. A buyer can call that number or trust that GSTIN. Code: `src/pages/VendorProfile.tsx` — `detailRows`, `detailRowsResolved`, `contactRows`, `contactAddress`, `aboutText`, `websiteValue`, `bannerSrc`. Fix shape: render "Not provided" or omit the row, as `/product/:id` already does. Logged in `securityflags.md` (Open, Medium). Reference: Master Prompt 8 (2026-09-11), found during Phase 2; Mitra chose "only log it" for this round.
 - [ ] Decide what listing cards show instead of the seeded product ratings, review counts and "sold" numbers — Added: 2026-09-11 — Context: `products.rating_avg` / `reviews_count` / `sold_count` have no real source. `reviews` has no `product_id`, there is no orders table, and nothing writes `sold_count`. Yet New Arrivals, Search, For You and Trends cards read them through `src/lib/queries/products.ts` (`soldCount`, `soldCountNum`, `sold`, `popularity`). Example seeds: Hand-Embroidered Kurta 480 reviews / 2,100 sold, with no real reviews behind them. The product page already stopped using them (Master Prompt 7). Options: remove them from the cards, or build per-product reviews and order tracking as real features. Related: vendors can also write these three columns on their own products (`products_update` has no column guard). Guard them once they are computed from something real. Logged in `securityflags.md` (Open, Low). Reference: Master Prompt 8 (2026-09-11), Phase 2; Mitra chose "keep for now". The vendor-level counts WERE fixed then.
 - [ ] Revisit the landing page's unbacked claims — only when Mitra asks — Added: 2026-09-11 — Context: `src/pages/Landing.tsx` still says "Every supplier is vetted" (KYC review exists, universal vetting does not) and "See who is viewing, enquiring, and ordering, in real time" (analytics are periodic, and there is no ordering feature). It also shows "₹500Cr+ sourced through Cosora" and a stats band reading "50K+ Products listed / 10K+ Verified brands / 5K+ Manufacturers / 28 States covered" against 26 live products and about 10 vendors. Mitra said "keep it as it is, dont change the landing/hearopage", so do NOT edit it on your own; raise it with him. Reference: Master Prompt 8 (2026-09-11), Phase 5, skipped on Mitra's instruction.
 - [ ] Make vendor-onboarding-write-path.spec.ts clean up its product-images uploads — Added: 2026-09-11 — Context: each run of the spec uploads office photos, an onboarding product image and a store logo into the PUBLIC `product-images` bucket under demo-buyer (`11111111-…/office/`, `/onboarding-product/`, `/store/`). Its teardown removes the `business-docs` KYC objects but never these, so each run strands 4–5 objects referenced by nothing. The 14 left by Master Prompt 8's runs were removed by hand as demo-buyer. Fix: record those paths as they upload (the way `uploadedKycPaths` already works) and `remove()` them in `cleanup()`. One run in that session also lost its signed-in session at step 6 and did not reproduce in two reruns; watch for it. Reference: Master Prompt 8 (2026-09-11), Phase 3 regression runs.
@@ -685,24 +603,17 @@ with no need to dictate format, context, or reference each time.
 - [ ] Decide whether to collect buyer city, or stop selling city targeting — Added: 2026-09-12 — Priority: High — Context: `target_cities` is sold, stored and now ENFORCED (`ad_targeting_matches` in migration 20260912120300), and it fails closed — a viewer whose city Cosora does not know will not see a city-targeted campaign, because "target Mumbai" cannot honestly be honoured for someone whose city is unknown. But only 1 of 7 `buyer_profiles` rows has a city (it is "mumbai"), and anonymous viewers have none at all, so a vendor buying city targeting today reaches almost nobody. Before this change the column was decorative — stored, billed for, never read — which was worse. Two honest options: collect city from buyers (it is already a first-party field written at onboarding, so this is a prompt/UX change, not new tracking), or remove city targeting from the ad wizard and stop charging for it. Do not leave it half-enforced. Reference: Advertising System v3 (2026-09-12), Phase 3.5, which said "don't leave it silently decorative either way".
 - [ ] Design the New Arrivals top banner slot, or retire websiteBanner/mobileBanner — Added: 2026-09-12 — Context: the placement plan gives New Arrivals a 1216x130 top banner above the category chips for `websiteBanner` (₹89/day) + `mobileBanner` (₹99/day), and said it "reuses the admin's existing unused banner-management table". No such table exists — nothing in the database matches `%banner%`, confirmed live. The slot is defined in `AD_SLOTS.newArrivalsBanner` and is wired to the same eligibility-gated pipeline as every other rail, but it renders as a standard sponsored card rather than a full-width banner creative, because there is no banner asset model (dimensions, click-through URL, separate creative upload) to render. Needs either a real banner creative model (additive table + vendor upload path + a banner component) or these two ad types moved to the unplaced list. Reference: Advertising System v3 (2026-09-12), Phase 5 drift.
 - [ ] Clarify the "TrustedSEAL (upsell)" slide in the Following discovery carousel — Added: 2026-09-12, updated 2026-09-13 — Context: the paid-slide interleave itself is now BUILT (2026-09-13) to the mockup's spec — one Store Promotion / Brand Ad slide mixed into `NewBrandsCarousel` at 1-in-4, labelled with an "AD" chip and "Sponsored · Paid placement". What remains unbuilt is the third item the mockup lists for that slot, "TrustedSEAL (upsell)": it reads as a VENDOR-facing upsell ("buy a trust seal") and this is a buyer-facing discovery carousel, so it is unclear whether it means a slide advertising the seal to vendors, or simply that a seal-bearing sponsored brand shows its badge. The latter already happens via the existing product-card badge. Needs one sentence of intent before anything is built. Reference: Advertising System v3, Phase 5; artifact 780772d6.
-- [ ] Add an ad_id foreign key to ad_orders so per-campaign revenue is real — Added: 2026-09-12 — Context: `ad_orders` records the payment (`order_id`, `vendor_id`, `spec` jsonb, `amount` in paise) but has no column pointing at the `advertisements` row(s) it paid for — one order can create several campaigns, one per product in the spec. So per-campaign revenue can only be approximated by matching a vendor's orders to their campaigns by time and spec. Any revenue figure shown per campaign must be labelled an approximation until this exists. Also worth knowing: `ad_orders` currently has ZERO rows, because the payment path falls back to demo mode (`if (!keySecret)` in `razorpay-verify-payment`) which publishes from the client-supplied spec with no order record at all. Reference: Advertising System v3 (2026-09-12), Phase 0 and Phase 8.2.
 - [ ] Consider simplifying the vendor ad-creation wizard, and gating new vendors on KYC — Added: 2026-09-12 — Context: raised by the prompt as a product recommendation, explicitly NOT built. Etsy's self-serve flow (Shop Manager → Marketing → Ads → set a budget → listings auto-enroll with an opt-out → per-listing strategy unlocked at higher spend) is materially leaner than Cosora's current "choose ad types → choose products → choose duration → choose targeting → choose goals" wizard in `src/pages/Advertisements.tsx`. Etsy also gates new sellers behind a 15-day shop-age wait before ads can start. The Cosora equivalent would be its own KYC/verification status rather than an age timer — `vendor_profiles.is_verified` and the `vendor_documents` review flow already exist, and a paid campaign from a brand-new unverified vendor is exactly the case the new review queue will spend the most time on. Note a plan gate already exists and is enforced (`enforce_ad_location_scope` refuses ad creation outright on the free plan), so this would be a second, trust-based gate. Reference: Advertising System v3 (2026-09-12), Phase 5a — "note it as an open recommendation rather than building it unasked".
-- [ ] Build Wholesaler Pick's 72-hour bump, or stop selling it as one — Added: 2026-09-13 — Priority: High — Context: `wholesalerPick` (₹59 flat) is sold as "'Wholesaler Pick' section, 72h bump" and now has a real slot (`AD_SLOTS.trendsSponsored`, alongside `featuredProduct`), but the BUMP does not exist. `active_ads()` orders by `created_at desc, a.id desc` for every eligible campaign equally, so a Wholesaler Pick campaign surfaces exactly like any other and decays the same way. The placement mockup (artifact 780772d6) calls this out directly: "The middle card is a Wholesaler Pick campaign mid-'72-hour bump' — the one placement here needing a small re-surface job rather than just a new slot." Shape: a bump is a flat-rate product feature, not an auction, so it does not conflict with the "no bid-based ranking" ground rule — most likely an ORDER BY term that floats a `wholesalerPick` campaign for 72h from `starts_at`, keeping a total-order tiebreaker so the double-counted-impression pagination bug cannot come back. Until built, vendors pay ₹59 for a behaviour the platform does not perform. Reference: Advertising System v3 (2026-09-12) placed it; the gap was found on 2026-09-13 comparing the build against the mockup artifact.
 - [ ] Decide whether a vendor can badge an ad "on sale" on the Sale page — Added: 2026-09-13 — Context: open question raised by the placement mockup (artifact 780772d6) on the Sale "Sponsored deals" slot: "Sale wasn't in the original 4-page plan (New Arrivals / Trends / For You / Following) — added here for consistency, same Sponsored-rail pattern. Worth a call on whether vendors should be able to badge an ad 'on sale' too." The slot is built (`AD_SLOTS.saleSponsored`, Open Listing + Featured Product) and renders identically to every other sponsored rail. A discount badge would need a real discount source on the campaign or its promoted product — `filterSale` in `src/lib/queries/products.ts` already derives sale status from product data, so the honest version reads that rather than letting a vendor assert a discount in their ad copy. Reference: found 2026-09-13 comparing the build against the mockup artifact.
 - [ ] Decide what the New Arrivals hero carousel should actually show — Added: 2026-09-13 — Priority: High — Context: `src/components/buyer/EverydayFashionHero.tsx` renders eight entirely invented products at the top of `/home/new-arrivals` — Unsplash photography, vendor ids `"v1"`..`"v8"` matching no `vendor_profiles` row, and hand-written prices/MOQs. Every slide links to `/product/ef-1`..`/product/ef-8`, routes that have never existed, so **every tap is a dead end** — the identical failure Master Prompt 7 fixed in the For You `RECENT_VIEW_ADS` rail. Slide one additionally carried `sponsored: true`, printing a "sponsored" chip on a fabricated product; that flag and its render block were REMOVED on 2026-09-13 because a fake paid placement is squarely an advertising defect. The remaining seven-plus-one fabricated slides are a product decision about the page hero, not an ads decision, so they were left in place — the same treatment Mitra chose for the Landing page copy. Options: wire it to real live products (`useLiveProducts()` already powers the grid below it), make it a real paid placement served by `active_ads()` (it is prime inventory — a full-bleed hero above the fold), or remove it. Until then the first thing a buyer sees on New Arrivals is eight products that do not exist. Reference: found 2026-09-13 while adding the Sponsored disclosure to every ad placement.
-- [ ] Replace or remove the hardcoded signed-out brand SEED on Following — Added: 2026-09-13 — Priority: Medium — Context: `src/lib/followingStore.ts` holds a `SEED` array of invented brands ("LUNE" in "Busan, KR", "Okra Mills", picsum logos, USD prices like "$8.36") that is served to every SIGNED-OUT visitor on `/home/followings` — `useFollowing()` returns `localBrands` when there is no user, and the real `fetchBrands()` (vendor_profiles + follows + live products) only runs when signed in. So a logged-out buyer browses a brand-discovery carousel of businesses that do not exist, and every "Follow" writes to localStorage. One of those seeds carried `isAd: true`, which made the carousel print an "AD" chip on it — a fabricated PAID placement, removed 2026-09-13. The rest of the SEED is still there. Options: render the real vendor list for signed-out visitors too (vendor_profiles is already readable anonymously — `active_ads()` and the buyer feed both work signed-out), or render the signed-out empty state. Related to the same "no mock data" rule that removed `RECENT_VIEW_ADS`. Reference: found 2026-09-13 while building the Following paid-slide interleave.
 - [ ] Trends chips: four of six resolve to no category at all — Added: 2026-09-13 — Context: `useResolvedCategoryId` maps a Trends chip to a real `categories` row so the sponsored rail can be category-targeted (Phase 3.3). Checked live: only `Denim → "Jeans"` and `Short-sleeved T-shirt → "T-shirts/Tops"` resolve. `Long Dress → "Maxi Dress"`, `Pleats → "Pleated Dress"`, `Cargo → "Cargo Pants"` and `Knitwear → "Knit Sets"` match nothing, so those four chips give the rail NO category context and it falls back to serving untargeted campaigns. That is the correct failure mode (no context ≠ match nothing) but it means category targeting is inert on two thirds of the page. Fix is editorial, not code: point each chip's `featured.sub` at a real taxonomy name, or accept that these chips are untargetable. Note also that targeting does not walk the category tree — a campaign targeting the parent "Jeans" does not match a context of the child "Men's Jeans", and vice versa; worth deciding whether it should. Reference: found 2026-09-13 seeding demo campaigns.
 - [ ] Decide whether ads should join the semantic-search embedding pipeline — Added: 2026-09-12 — Context: `products`, `rfqs` and `product_videos` each have a `halfvec(1536)` embedding fed by the trigger → pgmq → pg_cron → Edge Function → OpenAI pipeline. `advertisements` does not. Adding one would let a search query match an ad semantically even when its category tag is a level off — the same thing `match_products()` already gives organic results. This was Phase 11 of the v3 prompt and was SKIPPED, correctly: it is only relevant once the `searchListing` build-or-retire decision above lands in favour of building a real sponsored-search placement. Do not build the embedding before that decision. Reference: Advertising System v3 (2026-09-12), Phase 11. — **UPDATE 2026-09-13:** that decision landed in favour of building it (`searchSponsored` + `searchResultsSponsored` slots now exist), so this is live again. The results-page slot currently takes its category context from the dominant category of the matched products plus the raw query string, resolved by name against the taxonomy — a semantic embedding would replace that heuristic with a real match.
 
 - [ ] Collect a delivery address before selling a physical certificate — Added: 2026-09-13 — Priority: High — Context: `verifiedCertificate` (₹199) is now confirmed as a printed certificate that gets couriered (Mitra, 2026-09-13), and `certificate_orders` snapshots the vendor's address at purchase. But only **2 of 10** `vendor_profiles` rows carry both an `address_line` and a `postal_code`, and the one that does has zero live products — so in practice every vendor who can actually trade has nothing to put on a label. `certificate_dispatch()` refuses to mark such an order dispatched (a parcel marked sent with no address is a parcel nobody can trace), the admin card explains why, and the vendor's My Payments page says an address was missing when they ordered. Demonstrable live: demo order `CERT-2609-003` (Delhi Fashion Hub) is stuck at `printed` for exactly this reason while `CERT-2609-004` (Meridian Weaves) dispatched normally. Two honest fixes: require a delivery address in the ad wizard before the certificate can be added to the order, or let the vendor supply one against an existing order. Do not leave it sellable-but-undeliverable. Same shape as the city-targeting gap above. Reference: 2026-09-13, certificate fulfilment build.
-- [ ] Decide how vendor-level ad products should be priced — Added: 2026-09-13 — Priority: High — Context: `verifiedCertificate` (₹199) and `trustedSeal` (₹44) are about the VENDOR, not a product, but `computeAmountRupees()` in `razorpay-create-order` multiplies every placement by the number of products in the spec — so buying a certificate alongside three products charges 3 × ₹199 and `adRows()` creates three `advertisements` rows. The certificate trigger then creates three fulfilment orders, i.e. three identical parcels for one vendor. Nothing auto-merges them, deliberately: the fix is a refund decision and belongs to a person. The admin Certificates screen now shows a caution when one vendor has more than one open order so it is visible rather than silently shipped. Fix shape: price vendor-level placements once per order regardless of item count, in all three of `razorpay-create-order`, `razorpay-verify-payment` and `razorpay-webhook` (the price table is duplicated across all three). Reference: 2026-09-13, found while building certificate fulfilment.
 - [ ] Give advertising purchases GST treatment and an invoice series — Added: 2026-09-13 — Context: subscriptions produce a real tax invoice — `subscription_invoices` carries `invoice_number`, `gst_amount`, `gst_number` and a billing period, and `/subscription/invoice/:id` prints it. Advertising produces none of that: `ad_orders` stores only the Razorpay order id, the spec and one gross amount, with GST never broken out anywhere in the ad purchase path. So `/my-payments/receipt/:orderId` deliberately prints "PAYMENT RECEIPT", shows no GST line, and says in its footer that it is not a tax invoice — a vendor may well need one for input credit. Building it means deciding whether ad prices are GST-inclusive or exclusive, adding the GST split at order creation, and giving ad purchases their own invoice number series. Also note the unit trap documented in `src/lib/queries/vendorPayments.ts`: `ad_orders.amount` and `subscription_payment_orders.amount` are in **paise**, `subscription_invoices.amount` is in **rupees**. Reference: 2026-09-13, My Payments build.
 - [ ] Create the `delivery_team` admin role — Added: 2026-09-13 — Context: certificate fulfilment is day-to-day dispatch work, not moderation. `certificate_fulfiller()` currently admits `super_admin` and `finance_admin`, and `cosora-admin/src/lib/roles.ts` mirrors that exactly. The intended list has always been `["super_admin", "finance_admin", "delivery_team"]`, but `delivery_team` does not exist in the `admin_role_type` enum, so naming it would imply a role nobody can hold. Add the enum value, then update `certificate_fulfiller()`, `SECTION_READ.certificates` and `SECTION_WRITE.certificates` in the SAME change — the roles file is UX only and the database is the authority, so they must not drift. Reference: 2026-09-13, certificate fulfilment build.
-- [ ] Decide what the New Arrivals "we recommend" section should show — Added: 2026-09-13 — Context: it renders `products.slice(0, 4)` — the first four rows of the live catalogue, which the organic feed above already shows — and until 2026-09-13 it carried an "AD" chip at the right of its heading. Nobody had paid for those four cards, so the chip was a false paid-placement disclosure in the direction nobody checks for: it told the buyer a ranking was bought when it was not. The chip is removed; the duplication is not, because what the section SHOULD show is a product decision. Options: drop it, make it a real personalised ranking (the For You page already has `match_products`-backed ranking to borrow), or make it a fourth sponsored block. Reference: 2026-09-13, found while adding repeating ad blocks.
 - [ ] Check the duplicate "Meridian Weaves Pvt Ltd" vendor_profiles rows — Added: 2026-09-13 — Priority: Low — Context: two `vendor_profiles` rows share the brand name "Meridian Weaves Pvt Ltd", the same city (Surat) and the same postcode (394221), and both have zero live products. Noticed while looking for a vendor with a postable address for the certificate demo. Probably a duplicate signup rather than two real businesses; worth confirming before either is used in anything customer-facing. Reference: 2026-09-13.
 
-- [ ] Clean up the 2026-09-16 load-test population (owned by the Master Prompt 11 thread) — Added: 2026-09-22 — Priority: High — Context: 370 `loadtest-*@cosora.test` accounts (250 buyers, 120 sellers) are live, with 120 "[LOADTEST] Vendor Co N" vendor profiles (40 `is_verified = true`) and 351 "[LOADTEST] …" live products. That is 351 of the 377 live products buyers see. Master Prompt 11's commit `08a0550` used `loadtest-vendor-3` and says "The other 369 are left for Part 3" and that its quote "is covered by the synthetic-data cleanup script", but no such script is in either repository and the data is still there six days later. Precedent: the 2026-09-10 scale run deleted every synthetic row and `auth.users` entry and verified 0 by count. Master Prompt 9 corrected only their review numbers (all 0 now) and, on Mitra's decision, left the deletion to that thread. Logged in `securityflags.md` (Open). Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22.
-- [ ] Find out where the buyer app is deployed now — Added: 2026-09-22 — Context: `https://textile-spark-net.vercel.app/` returned Vercel's `404 DEPLOYMENT_NOT_FOUND` on 2026-09-22 (it served the app through 2026-09-11). Either the project was renamed or moved, or production is down. Master Prompt 9's browser check ran against a local dev server for that reason. Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22.
 
 ### Fix the Bunny Stream API key — added 2026-09-23
 - Task: get a working `BUNNY_API_KEY` configured so the Bunny video path (upload, delete,
@@ -1102,6 +1013,103 @@ with no need to dictate format, context, or reference each time.
 ## Completed
 (move finished items here, keep the same entry, add "Completed: YYYY-MM-DD" and, if
 known, a one-line note on how/where it was done — don't delete history)
+
+### Warn sellers as they near their lead limit, as the Subscription FAQ says — added 2026-10-02
+- Task: notify a seller as they approach their plan's lead limit (for example at 80% and at 100%); or have Andy
+  reword the answer.
+- Context: the live Subscription answer to "What happens when I reach my lead limit?" says "You'll receive
+  notifications as you approach your limit." Nothing sends one: the Leads page shows "N/cap leads used", and a quote
+  at the cap is refused with an upgrade prompt. (The Seller Help answer to the same question, P5, describes this
+  truthfully.) An in-app notification needs no outside service.
+- Reference: 2026-10-02, the FAQ-input work (Andy: "about the other FAQs, add them to todo.md"), after the
+  documents, plan changes and money-back guarantee were built to match their FAQs (branch
+  `faq-truth/registration-plans-refunds`).
+- Status: Open
+- Completed: 2026-10-03 (closed in the 2026-10-13 review). There is no lead limit on any plan since RFQ/leads R2 (`20261002200900_leads_same_on_every_plan`), and the same migration rewrote the FAQ answer in English, Hindi and Gujarati.
+
+### Fix a stale policy name in the pending registration-documents migration — added 2026-10-02
+- Task: before `supabase/migrations/20261002100000_registration_documents.sql` is applied, change its header
+  comment "the rows are still written by the seller under the existing vendor_documents_all policy" to name
+  the policies that exist now: the seller writes through `vendor_documents_insert` / `_update` / `_delete` and
+  reads through `vendor_documents_select`.
+- Context: admin completion Phase 12 (`20261002072403_rls_per_statement`, applied 2026-10-02) replaced the FOR ALL
+  policy `vendor_documents_all` with one policy per command, using the same expressions, so the migration still
+  behaves as written; only the comment is out of date. Fix it before the apply: a migration file must match the
+  statements recorded when it is applied (the md5 rule in `claude.md`), so after that the comment stays in
+  history. The file is on the Help & Support / FAQ-input release branch (`release/2026-10-02`), not on `main`.
+- Reference: 2026-10-02, the wrap-up of admin completion Phase 12; Mitra asked for it to go in ToDo.
+- Status: Open
+- Completed: 2026-10-02 (closed in the 2026-10-13 review). The migration was applied as `20261002105236_registration_documents.sql`, and the file on `main` no longer names `vendor_documents_all`.
+
+### Decide on the five scheduled jobs left off in the 2026-09-27 restore — added 2026-09-27
+- Task: decide whether each of these comes back, and when:
+  - `embedding-worker` and `vendor-catalog-recompute` (every minute);
+  - `embedding-health-alarm` (every 10 minutes);
+  - `prune-query-embedding-cache` (daily 03:17 UTC) and `prune-embed-rate-limit` (daily 03:23 UTC).
+- Context:
+  - Admin completion, Phase 2, restored the essential jobs plus a daily history prune
+    (`20260927153142`). These five stayed off on purpose:
+    - The worker only does work once OpenAI billing is on, and the recompute follows it.
+    - The alarm would raise every 10 minutes while the worker is off. Each raise also adds a
+      failed row to `cron.job_run_details`.
+    - The two prunes keep `search_query_embeddings` and `embed_query_rate_limit` bounded. Both
+      tables grow only on search-cache misses and photo searches.
+  - Restore each from the migrations named in "Restore the scheduled jobs" (Completed). When the
+    worker comes back, bring the alarm back too, and put the two every-minute jobs on
+    `cron-history-prune`'s budget (together they write ~2,900 rows a day).
+- Reference: 2026-09-27, admin completion Phase 2, Mitra's choice of "Restore essentials +
+  prune".
+- Priority: Medium (semantic search and the vendor catalogue figures depend on the first two)
+- Status: **Completed 2026-10-06** (Mitra: "fix the embedding issue"). All five restored by `20261006165817_restore_embedding_jobs.sql`,
+  verbatim. Before: health CRITICAL, 2 jobs waiting (the oldest 7 days, a vendor product from
+  2026-09-29, and a buyer's quote request from 2026-10-06). After two ticks: queue 0, recompute
+  queue 0, health OK.
+- Completed: 2026-10-06. All five restored by `20261006165817_restore_embedding_jobs.sql` (moved here in the 2026-10-13 review).
+
+### Add cosora.in to Supabase Auth's redirect URLs, so Google sign-in comes back to the site — added 2026-09-27
+- Task: in the Supabase dashboard (project `vxdhhgdfubqedfpwfyrb`), open Authentication → URL
+  Configuration. Set the Site URL to `https://www.cosora.in`. Add `https://www.cosora.in/**`
+  and `https://cosora.in/**` to Redirect URLs, and keep `https://textile-spark-net.vercel.app/**`
+  and `http://localhost:8080/**`.
+- Context:
+  - **What happens:** Google sign-in on www.cosora.in finishes on textile-spark-net.vercel.app.
+    Only that host (the Site URL) and `localhost:8080` are allowed as return addresses, and
+    Supabase sends any other one to the Site URL.
+  - **Confirmed from the auth logs (2026-09-27):**
+    - `https://www.cosora.in/auth/callback` and `https://cosora.in/auth/callback` resolve to
+      `https://textile-spark-net.vercel.app`.
+    - The vercel.app and localhost callbacks resolve to themselves.
+    - Mitra's Google sign-in on 2026-09-26 went this way.
+  - **What already works:** the Google OAuth client (Google's sign-in page opens). The app
+    already asks to come back to `<current site>/auth/callback`, so no code changes.
+  - **Why it wasn't done in a session:** this machine has no Supabase management token.
+  - **Side effect:** changing the Site URL also changes where Supabase's own emails link to,
+    such as admin invites.
+- Reference: 2026-09-27 session, "the google verification isnt working"; `changelog.md`
+  2026-09-27.
+- Priority: High (Google sign-in doesn't work on the real domain)
+- Status: Open
+- Completed: 2026-10-13. Mitra added `https://www.cosora.in/**` and `https://cosora.in/**` to Redirect URLs in the Supabase dashboard; a probe of the auth flow then returned both hosts to themselves. Left as it was: the Site URL is still `https://textile-spark-net.vercel.app`, so Supabase's own emails (admin invites) still link there. Not yet seen: one full Google sign-in on www.cosora.in by Mitra.
+
+### Store FAQ translations with the FAQ, so admin edits stay translated — added 2026-09-26
+- Task: give `public.faqs` per-language question/answer columns (or a translations table),
+  editable on Cosora-Admin `/faqs`, and have `useFaqs()` return the viewer's language.
+- Context: FAQs are translated today through the static catalogues (`src/i18n/external-strings.json`,
+  "faqs"). An FAQ edited in the admin shows in English until its new text is added there and
+  translated in code. The same applies to `subscription_plans.display` values and `notify()` texts.
+- Reference: 2026-09-26, the language-translation fix.
+- Status: Built 2026-10-01 in Help & Support P5 (branch `help-support/p5-content`): `faqs.translations`, Hindi and Gujarati fields in Cosora-Admin Edit, and the app shows a stored translation first. Done once `20261001130000` and `20261001130100` are applied and the branch is merged. `subscription_plans.display` and `notify()` texts still use the catalogues.
+- Completed: 2026-10-02. `faqs.translations` and the Hindi and Gujarati fields in Cosora-Admin went live with the Help & Support release (`20261002104545_faqs_seller_help_and_translations`). `subscription_plans.display` and `notify()` texts still use the catalogues.
+
+### Checklist items closed in the 2026-10-13 review of this list against the changelog
+- [x] Stop the public vendor profile inventing a vendor's missing identity and contact details — Added: 2026-09-11 — Priority: High — Context: on `/vendor/:id`, every field a REAL vendor left empty falls back to a hardcoded demo value. Owner / Company MD becomes "Mr. K.S. Tomar"; phone becomes "+91 90110 60851"; email and website become caramel.in addresses; the address becomes a Gwalior street address; GSTIN becomes "07AABCS1077Q1ZV" and PAN becomes "ABNCS1077Q"; the About paragraph and banner are stock too. A buyer can call that number or trust that GSTIN. Code: `src/pages/VendorProfile.tsx` — `detailRows`, `detailRowsResolved`, `contactRows`, `contactAddress`, `aboutText`, `websiteValue`, `bannerSrc`. Fix shape: render "Not provided" or omit the row, as `/product/:id` already does. Logged in `securityflags.md` (Open, Medium). Reference: Master Prompt 8 (2026-09-11), found during Phase 2; Mitra chose "only log it" for this round. **Completed: 2026-09-28, admin completion Phase 4a: an empty field reads "Not provided" or is left out. The four shared content blocks on `/vendor/:id` are still open, under "Remove invented claims and real brand names still on live pages".**
+- [x] Add an ad_id foreign key to ad_orders so per-campaign revenue is real — Added: 2026-09-12 — Context: `ad_orders` records the payment (`order_id`, `vendor_id`, `spec` jsonb, `amount` in paise) but has no column pointing at the `advertisements` row(s) it paid for — one order can create several campaigns, one per product in the spec. So per-campaign revenue can only be approximated by matching a vendor's orders to their campaigns by time and spec. Any revenue figure shown per campaign must be labelled an approximation until this exists. Also worth knowing: `ad_orders` currently has ZERO rows, because the payment path falls back to demo mode (`if (!keySecret)` in `razorpay-verify-payment`) which publishes from the client-supplied spec with no order record at all. Reference: Advertising System v3 (2026-09-12), Phase 0 and Phase 8.2. **Completed: 2026-09-14, as `advertisements.ad_order_id` (one order pays for many campaigns, so the link points that way).**
+- [x] Build Wholesaler Pick's 72-hour bump, or stop selling it as one — Added: 2026-09-13 — Priority: High — Context: `wholesalerPick` (₹59 flat) is sold as "'Wholesaler Pick' section, 72h bump" and now has a real slot (`AD_SLOTS.trendsSponsored`, alongside `featuredProduct`), but the BUMP does not exist. `active_ads()` orders by `created_at desc, a.id desc` for every eligible campaign equally, so a Wholesaler Pick campaign surfaces exactly like any other and decays the same way. The placement mockup (artifact 780772d6) calls this out directly: "The middle card is a Wholesaler Pick campaign mid-'72-hour bump' — the one placement here needing a small re-surface job rather than just a new slot." Shape: a bump is a flat-rate product feature, not an auction, so it does not conflict with the "no bid-based ranking" ground rule — most likely an ORDER BY term that floats a `wholesalerPick` campaign for 72h from `starts_at`, keeping a total-order tiebreaker so the double-counted-impression pagination bug cannot come back. Until built, vendors pay ₹59 for a behaviour the platform does not perform. Reference: Advertising System v3 (2026-09-12) placed it; the gap was found on 2026-09-13 comparing the build against the mockup artifact. **Completed: 2026-09-14, `20260914100000_wholesaler_pick_72h_bump`; checked at the 72-hour boundary.**
+- [x] Replace or remove the hardcoded signed-out brand SEED on Following — Added: 2026-09-13 — Priority: Medium — Context: `src/lib/followingStore.ts` holds a `SEED` array of invented brands ("LUNE" in "Busan, KR", "Okra Mills", picsum logos, USD prices like "$8.36") that is served to every SIGNED-OUT visitor on `/home/followings` — `useFollowing()` returns `localBrands` when there is no user, and the real `fetchBrands()` (vendor_profiles + follows + live products) only runs when signed in. So a logged-out buyer browses a brand-discovery carousel of businesses that do not exist, and every "Follow" writes to localStorage. One of those seeds carried `isAd: true`, which made the carousel print an "AD" chip on it — a fabricated PAID placement, removed 2026-09-13. The rest of the SEED is still there. Options: render the real vendor list for signed-out visitors too (vendor_profiles is already readable anonymously — `active_ads()` and the buyer feed both work signed-out), or render the signed-out empty state. Related to the same "no mock data" rule that removed `RECENT_VIEW_ADS`. Reference: found 2026-09-13 while building the Following paid-slide interleave. **Completed: 2026-09-16, Master Prompt 9 (commit `ceb565f`): the seed is gone and a signed-out visitor sees the real empty state.**
+- [x] Decide how vendor-level ad products should be priced — Added: 2026-09-13 — Priority: High — Context: `verifiedCertificate` (₹199) and `trustedSeal` (₹44) are about the VENDOR, not a product, but `computeAmountRupees()` in `razorpay-create-order` multiplies every placement by the number of products in the spec — so buying a certificate alongside three products charges 3 × ₹199 and `adRows()` creates three `advertisements` rows. The certificate trigger then creates three fulfilment orders, i.e. three identical parcels for one vendor. Nothing auto-merges them, deliberately: the fix is a refund decision and belongs to a person. The admin Certificates screen now shows a caution when one vendor has more than one open order so it is visible rather than silently shipped. Fix shape: price vendor-level placements once per order regardless of item count, in all three of `razorpay-create-order`, `razorpay-verify-payment` and `razorpay-webhook` (the price table is duplicated across all three). Reference: 2026-09-13, found while building certificate fulfilment. **Completed: 2026-09-14: Trusted Seal and Verified Certificate are charged once per order, from one formula in `_shared/adPricing.ts`.**
+- [x] Decide what the New Arrivals "we recommend" section should show — Added: 2026-09-13 — Context: it renders `products.slice(0, 4)` — the first four rows of the live catalogue, which the organic feed above already shows — and until 2026-09-13 it carried an "AD" chip at the right of its heading. Nobody had paid for those four cards, so the chip was a false paid-placement disclosure in the direction nobody checks for: it told the buyer a ranking was bought when it was not. The chip is removed; the duplication is not, because what the section SHOULD show is a product decision. Options: drop it, make it a real personalised ranking (the For You page already has `match_products`-backed ranking to borrow), or make it a fourth sponsored block. Reference: 2026-09-13, found while adding repeating ad blocks. **Completed: 2026-09-14: it shows products matching the buyer's stored preferences, leaves out what the feed above already shows, and renders nothing when there is no match.**
+- [x] Clean up the 2026-09-16 load-test population (owned by the Master Prompt 11 thread) — Added: 2026-09-22 — Priority: High — Context: 370 `loadtest-*@cosora.test` accounts (250 buyers, 120 sellers) are live, with 120 "[LOADTEST] Vendor Co N" vendor profiles (40 `is_verified = true`) and 351 "[LOADTEST] …" live products. That is 351 of the 377 live products buyers see. Master Prompt 11's commit `08a0550` used `loadtest-vendor-3` and says "The other 369 are left for Part 3" and that its quote "is covered by the synthetic-data cleanup script", but no such script is in either repository and the data is still there six days later. Precedent: the 2026-09-10 scale run deleted every synthetic row and `auth.users` entry and verified 0 by count. Master Prompt 9 corrected only their review numbers (all 0 now) and, on Mitra's decision, left the deletion to that thread. Logged in `securityflags.md` (Open). Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22. **Completed: 2026-09-23, `scripts/loadtest-cleanup.sql`: all 370 accounts and their content deleted.**
+- [x] Find out where the buyer app is deployed now — Added: 2026-09-22 — Context: `https://textile-spark-net.vercel.app/` returned Vercel's `404 DEPLOYMENT_NOT_FOUND` on 2026-09-22 (it served the app through 2026-09-11). Either the project was renamed or moved, or production is down. Master Prompt 9's browser check ran against a local dev server for that reason. Reference: Master Prompt 9 (buyer-trust thread), 2026-09-22. **Completed: production is https://www.cosora.in (the Vercel project textile-spark-net, deployed from `main`).**
 
 ### Give vendors a real support destination, and stop the canned chats posing as live support (MPF-15) — added 2026-09-25
 - Task: two separate pieces of work.
