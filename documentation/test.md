@@ -205,6 +205,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-14 — Video Close-Ups Share (local stack: 1/1 new, 9/9 neighbours)
+
+- `tests/local/video-share.spec.ts`: a fresh seller with 32 live videos (31 popular, one with no views, so outside the
+  feed's first 30); at 390 × 844 touch, Share on the first slide opens the sheet and a tap at its centre reaches the
+  sheet, not the video; WhatsApp's link and the copied link are `/video-closeups?v=<first id>`; Escape closes the sheet
+  and leaves the viewer open; `/video-closeups?v=<32nd id>` opens with it as slide 0; a made-up id opens the feed's
+  usual first slide; no page errors. View counting answered in the browser. afterAll deletes the videos.
+- Neighbours: `signup-back.spec.ts` and `buyer-minor-fixes.spec.ts`' share and folder cases, 9/9.
+
 ### 2026-10-14 — Eight buyer fixes (local stack: harness 16/16; browser 8/8 new and 13/13 neighbours)
 
 - **Harness** `scripts/category-images/harness.sql` (never commits), 16/16: a manager lists all 191 slots; support, a

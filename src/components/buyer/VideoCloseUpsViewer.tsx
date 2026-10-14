@@ -5,6 +5,7 @@ import { useCallVendor } from "@/lib/queries/calls";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Phone, Star, Bookmark, Share2, Volume2, VolumeX, Play, Heart, Eye } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
+import ShareSheet from "@/components/buyer/ShareSheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { onThumbError } from "@/lib/queries/videos";
 import {
@@ -114,6 +115,9 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   // counted twice the moment the feed refetched.
   const [hydratedLikes, setHydratedLikes] = useState<Set<string>>(new Set());
   const [muted, setMuted] = useState(true);
+  // The video whose share sheet is open, or null.
+  const [sharing, setSharing] = useState<VideoCloseUp | null>(null);
+  const { showText } = useDisplayCurrency();
   const trackRef = useRef<HTMLDivElement | null>(null);
   const slideRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -289,12 +293,25 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
                       onToggleSave={() => toggleSave(video.id)}
                       onToggleLike={() => toggleLike(video.id)}
                       onCallNow={() => callVendor(video.vendorId, video.brandName)}
+                      onShare={() => setSharing(video)}
                     />
                   )}
                 </div>
               );
             })}
           </div>
+          {/* Share (2026-10-14; the button did nothing). The link opens this video first:
+              /video-closeups?v=<id>, which VideoCloseUpsPage reads. */}
+          <ShareSheet
+            open={sharing !== null}
+            onOpenChange={(o) => { if (!o) setSharing(null); }}
+            url={sharing ? `${window.location.origin}/video-closeups?v=${encodeURIComponent(sharing.id)}` : ""}
+            title={sharing ? `${sharing.brandName}: ${sharing.brandLine} on Cosora` : ""}
+            subtitle={sharing?.price ? showText(sharing.price) : null}
+            image={sharing?.thumbnail ?? null}
+            heading="Share this video"
+            aboveFullscreen
+          />
         </motion.div>
       )}
     </AnimatePresence>
@@ -316,9 +333,10 @@ interface VideoSlideProps {
   onToggleSave: () => void;
   onToggleLike: () => void;
   onCallNow: () => void;
+  onShare: () => void;
 }
 
-function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow }: VideoSlideProps) {
+function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow, onShare }: VideoSlideProps) {
   const { showText } = useDisplayCurrency();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /**
@@ -549,7 +567,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           </div>
           <span className="text-[10px] text-white">Save</span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button onClick={onShare} aria-label="Share" className="flex flex-col items-center gap-1">
           <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center">
             <Share2 className="w-5 h-5 text-white" />
           </div>

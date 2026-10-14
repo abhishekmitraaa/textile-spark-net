@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Clapperboard, Loader2 } from "lucide-react";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import { devOnlyVideoCloseUps, rankVideoCloseUps } from "@/data/videoCloseUps";
-import { useVideoCloseUps } from "@/lib/queries/videos";
+import { useVideoCloseUp, useVideoCloseUps } from "@/lib/queries/videos";
 import { usePreferences } from "@/lib/preferencesStore";
 import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 
@@ -20,6 +20,10 @@ import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 // The viewer renders null on an empty list, so with no live videos this route
 // used to be a blank white screen with no way back. Loading and empty states
 // are handled here instead.
+//
+// A SHARED LINK, /video-closeups?v=<id> (2026-10-14: the viewer's Share), opens on
+// that video, then the rest of the feed. One outside the feed's first page is
+// fetched on its own; an id that isn't a live video just opens the feed.
 // ─────────────────────────────────────────────────────────────
 
 export default function VideoCloseUpsPage() {
@@ -30,6 +34,14 @@ export default function VideoCloseUpsPage() {
   const { data: dbVideos, isPending } = useVideoCloseUps();
   const usingDevFallback = !dbVideos?.length;
   const catalogue = usingDevFallback ? devOnlyVideoCloseUps() : dbVideos;
+
+  const [searchParams] = useSearchParams();
+  const sharedId = searchParams.get("v");
+  const sharedInFeed = sharedId ? catalogue.find((v) => v.id === sharedId) ?? null : null;
+  const sharedQuery = useVideoCloseUp(!isPending && sharedId && !sharedInFeed ? sharedId : null);
+  const shared = sharedInFeed ?? sharedQuery.data ?? null;
+  // Wait for a linked video before freezing the order below, or the reel opens without it.
+  const waitingForShared = Boolean(sharedId && !sharedInFeed && sharedQuery.fetchStatus === "fetching");
 
   // The buyer's REAL stored preferences (buyer_profiles.preferred_categories,
   // hydrated on sign-in by preferencesStore), which is what already drives
@@ -53,10 +65,10 @@ export default function VideoCloseUpsPage() {
     return cats;
   }, [bookmarkedVideoIds, catalogue, preferredNames]);
 
-  const rankedVideoCloseUps = useMemo(
-    () => rankVideoCloseUps(catalogue, interestedCategories),
-    [catalogue, interestedCategories]
-  );
+  const rankedVideoCloseUps = useMemo(() => {
+    const ranked = rankVideoCloseUps(catalogue, interestedCategories);
+    return shared ? [shared, ...ranked.filter((v) => v.id !== shared.id)] : ranked;
+  }, [catalogue, interestedCategories, shared]);
 
   // The viewer must receive a list whose ORDER never changes while it's open.
   // Bookmarking a slide feeds interestedCategories, which re-runs the ranking
@@ -76,13 +88,13 @@ export default function VideoCloseUpsPage() {
   const [openList, setOpenList] = useState<typeof rankedVideoCloseUps>([]);
   const [snapshotFromDev, setSnapshotFromDev] = useState(false);
   useEffect(() => {
-    if (!isOpen || rankedVideoCloseUps.length === 0) return;
+    if (!isOpen || rankedVideoCloseUps.length === 0 || waitingForShared) return;
     const supersededByRealData = snapshotFromDev && !usingDevFallback;
     if (openList.length === 0 || supersededByRealData) {
       setOpenList(rankedVideoCloseUps);
       setSnapshotFromDev(usingDevFallback);
     }
-  }, [isOpen, openList.length, rankedVideoCloseUps, snapshotFromDev, usingDevFallback]);
+  }, [isOpen, openList.length, rankedVideoCloseUps, snapshotFromDev, usingDevFallback, waitingForShared]);
 
   const handleClose = () => {
     setIsOpen(false);
@@ -100,7 +112,7 @@ export default function VideoCloseUpsPage() {
   // Nothing to show: either still fetching, or genuinely no live videos. The
   // viewer would render null in both cases, stranding the buyer on a blank
   // page, so this route owns those states itself.
-  if (isPending || rankedVideoCloseUps.length === 0) {
+  if (isPending || waitingForShared || rankedVideoCloseUps.length === 0) {
     return (
       <div className="min-h-screen bg-white flex flex-col">
         <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
@@ -110,7 +122,7 @@ export default function VideoCloseUpsPage() {
           <h1 className="text-base font-bold text-gray-900">Video Close-Ups</h1>
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-8 text-center">
-          {isPending ? (
+          {isPending || waitingForShared ? (
             <Loader2 className="w-6 h-6 text-gray-300 animate-spin" />
           ) : (
             <>

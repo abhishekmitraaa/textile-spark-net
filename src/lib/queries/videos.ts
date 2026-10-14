@@ -61,21 +61,10 @@ interface RawVideo {
   vendor_profiles: { brand_name: string | null } | null;
 }
 
-async function fetchVideoCloseUps(): Promise<VideoCloseUp[]> {
-  // Single round-trip: the brand name is embedded via the
-  // product_videos_vendor_profile_fkey constraint. This used to be two queries
-  // — the rows, then a separate `in("id", vendorIds)` against vendor_profiles
-  // joined in memory — because the only FK pointed at `profiles`.
-  const { data, error } = await supabase
-    .from("product_videos")
-    .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, vendor_profiles ( brand_name )")
-    .eq("status", "live")
-    .order("views_count", { ascending: false })
-    .limit(FEED_LIMIT);
-  if (error) throw error;
-  const rows = (data ?? []) as unknown as RawVideo[];
+const VIDEO_COLUMNS = "id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, vendor_profiles ( brand_name )";
 
-  return rows.map((v) => ({
+function toCloseUp(v: RawVideo): VideoCloseUp {
+  return {
     id: v.id,
     vendorId: v.vendor_id,
     category: v.category,
@@ -89,7 +78,47 @@ async function fetchVideoCloseUps(): Promise<VideoCloseUp[]> {
     views: v.views_count,
     thumbnail: v.thumbnail_url ?? THUMB_PLACEHOLDER,
     videoUrl: v.video_url ?? undefined,
-  }));
+  };
+}
+
+async function fetchVideoCloseUps(): Promise<VideoCloseUp[]> {
+  // Single round-trip: the brand name is embedded via the
+  // product_videos_vendor_profile_fkey constraint. This used to be two queries
+  // — the rows, then a separate `in("id", vendorIds)` against vendor_profiles
+  // joined in memory — because the only FK pointed at `profiles`.
+  const { data, error } = await supabase
+    .from("product_videos")
+    .select(VIDEO_COLUMNS)
+    .eq("status", "live")
+    .order("views_count", { ascending: false })
+    .limit(FEED_LIMIT);
+  if (error) throw error;
+  return ((data ?? []) as unknown as RawVideo[]).map(toCloseUp);
+}
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * One live video close-up by id, for a shared link (`/video-closeups?v=<id>`, 2026-10-14) whose video
+ * isn't in the feed's first page. Null when the id isn't a live video (removed, under review, made up):
+ * the page then opens the feed as usual. RLS shows visitors live videos only.
+ */
+export function useVideoCloseUp(id: string | null) {
+  return useQuery({
+    queryKey: ["product_videos", "one", id],
+    queryFn: async (): Promise<VideoCloseUp | null> => {
+      const { data, error } = await supabase
+        .from("product_videos")
+        .select(VIDEO_COLUMNS)
+        .eq("id", id as string)
+        .eq("status", "live")
+        .maybeSingle();
+      if (error) throw error;
+      return data ? toCloseUp(data as unknown as RawVideo) : null;
+    },
+    enabled: Boolean(id && UUID.test(id)),
+    staleTime: 5 * 60_000,
+  });
 }
 
 export function useVideoCloseUps() {

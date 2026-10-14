@@ -116,9 +116,11 @@ export interface ShareSheetProps {
   image?: string | null;
   /** The sheet's heading. */
   heading?: string;
+  /** Opened from a full-screen layer (the Video Close-Ups viewer, z-[80]): sit above it. */
+  aboveFullscreen?: boolean;
 }
 
-export default function ShareSheet({ open, onOpenChange, url, title, subtitle, image, heading = "Share" }: ShareSheetProps) {
+export default function ShareSheet({ open, onOpenChange, url, title, subtitle, image, heading = "Share", aboveFullscreen = false }: ShareSheetProps) {
   const [copied, setCopied] = useState(false);
   const canNativeShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const targets = shareTargets(url, title);
@@ -151,8 +153,10 @@ export default function ShareSheet({ open, onOpenChange, url, title, subtitle, i
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         data-testid="share-sheet"
+        overlayClassName={aboveFullscreen ? "z-[90]" : undefined}
         className={cn(
           "max-w-md gap-0 p-0",
+          aboveFullscreen && "z-[90]",
           "max-md:top-auto max-md:bottom-0 max-md:translate-y-0 max-md:rounded-t-2xl max-md:border-x-0 max-md:border-b-0",
           "max-md:data-[state=open]:slide-in-from-bottom-full max-md:data-[state=closed]:slide-out-to-bottom-full",
         )}

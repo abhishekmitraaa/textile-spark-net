@@ -183,9 +183,9 @@ the demand side of India's fashion and textile supply chain.
   listings the rating has no reviews behind it, and `sold_count` has no writer (there is no
   orders table). The product page stopped using them on 2026-09-11; the cards have not.
 - No dedicated buyer Settings page — the sidebar "Settings" link points at `/profile`.
-- Video Closeups: the **Share** button in the reel viewer is still inert, and the reel's
-  `rating`/`reviews` fields are stored on `product_videos` rather than derived from the
-  tagged product's real review data.
+- Video Closeups: the reel's `rating`/`reviews` fields are stored on `product_videos` rather
+  than derived from the tagged product's real review data. (Share works since 2026-10-14: the
+  share sheet, with a link to `/video-closeups?v=<id>` that opens on that video.)
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
 - **A buyer cannot delete their own chat message, and neither can an admin.** `messages` has
