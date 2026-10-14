@@ -136,47 +136,9 @@ function vendorBoost(boosts: Map<string, number>, planId?: string | null, planEx
   return boosts.get(planId) ?? 0;
 }
 
-// products.vendor_id and vendor_profiles.id both FK to profiles.id, so there's
-// no direct products→vendor_profiles relationship for PostgREST to embed. Fetch
-// the two sets and join in memory (fine at this scale).
-async function fetchLiveProducts(): Promise<ProductCardData[]> {
-  // PRODUCT_CARD_SELECT, so category_id comes too. This query used to list its
-  // own columns without it, so every product here had categoryId null and For
-  // You's interest filter matched nothing: since the filter moved to category
-  // ids (2026-09-07), any buyer with saved interests saw "No matches found".
-  // Found testing Interest Preference v2 on production, 2026-10-11.
-  const { data: products, error } = await supabase
-    .from("products")
-    .select(PRODUCT_CARD_SELECT)
-    .eq("status", "live")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  const rows = (products ?? []) as unknown as RawProduct[];
-
-  const vendorIds = Array.from(new Set(rows.map((r) => r.vendor_id)));
-  const vendorMap = new Map<string, RawVendor>();
-  if (vendorIds.length) {
-    const boosts = await loadPlanBoosts();
-    const { data: vendors } = await supabase
-      .from("vendor_profiles")
-      .select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id")
-      .in("id", vendorIds);
-    for (const v of vendors ?? []) {
-      const rv = v as RawVendor;
-      rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
-      vendorMap.set((v as { id: string }).id, rv);
-    }
-  }
-
-  // Higher plan tiers rank first (real weight); created_at desc within a tier.
-  return rows
-    .map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)))
-    .sort((a, b) => b.boost - a.boost);
-}
-
-export function useLiveProducts() {
-  return useQuery({ queryKey: ["products", "live"], queryFn: fetchLiveProducts });
-}
+// The buyer feeds' "every live listing" query (fetchLiveProducts / useLiveProducts) is gone
+// (2026-10-14): New Arrivals, For You, Trends, Sale, Following and Search read pages from
+// feed_products through lib/queries/feed.ts.
 
 // Fetch a set of products by id → keyed ProductCardData map. Used by the
 // DB-backed Saved / Recently-Viewed stores to hydrate rich card objects from
@@ -199,38 +161,6 @@ export async function fetchProductCardsByIds(ids: string[]): Promise<Record<stri
     out[c.id] = c;
   }
   return out;
-}
-
-// ─────────────────────────────────────────────────────────────
-// Feed selectors — pure derivations over the single cached live-products
-// query, so Trends / Sale / For You share one fetch (no extra round-trips).
-// ─────────────────────────────────────────────────────────────
-
-/** Trending = higher plan tiers first (real search boost), then most enquired +
- *  best-selling. */
-export function sortTrending(products: ProductCardData[]): ProductCardData[] {
-  const score = (p: ProductCardData) => p.soldCountNum + (parseFloat(p.enquiries) || 0);
-  return [...products].sort((a, b) => (b.boost - a.boost) || (score(b) - score(a)));
-}
-
-/** Sale = anything discounted (compare_at_price above the live price), deepest cut first. */
-export function filterSale(products: ProductCardData[]): ProductCardData[] {
-  return products.filter((p) => p.discountPct > 0).sort((a, b) => b.discountPct - a.discountPct);
-}
-
-/**
- * For You = products in the buyer's preferred categories (case-insensitive
- * substring match, tolerant of taxonomy label differences). Falls back to the
- * full catalogue when the buyer has no preferences yet.
- */
-export function filterForYou(products: ProductCardData[], categoryNames: string[]): ProductCardData[] {
-  if (!categoryNames.length) return products;
-  const wanted = categoryNames.map((c) => c.toLowerCase());
-  const matched = products.filter((p) => {
-    const cat = (p.categoryName ?? "").toLowerCase();
-    return wanted.some((w) => cat.includes(w) || w.includes(cat) || p.name.toLowerCase().includes(w));
-  });
-  return matched.length ? matched : products;
 }
 
 // Richer live-catalogue rows for the Search page, which filters/sorts on many

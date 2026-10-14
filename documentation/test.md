@@ -205,6 +205,21 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-14 — Buyer feeds from the database (local stack: harness 24/24 on 100,000 listings; browser 5/5 new, 22/22 neighbours)
+
+- **Harness** `scripts/feeds/harness.sql` (never commits): 100,000 synthetic live listings from 1,000 sellers (50 on
+  Gold, 10 with an expired plan) and one under review, read as anon. Order per sort (newest, trending, price_asc,
+  discount and its tier), first page is the highest paid tier present, an expired plan no boost, gender / seller / text
+  filters, `%` literal, the under-review listing never shown, pages 1 and 2 disjoint, excluded ids, only given ids (120
+  in one page), 48 cap, unknown sort and 501 sellers refused, category counts, and speed under 150 ms (84, 91, 63, 1 ms).
+- **Browser** `tests/local/feeds.spec.ts` (fresh sellers: 30 listings in one category, and deals at 20/40/60%):
+  New Arrivals shows all 30 once, newest first, after a `p_offset 24` request, and "You've seen everything new";
+  Trends; Sale 60→40→20 and the 25–50% tier only the 40%, no invented deal; Following New-In reaches 30 then Most
+  Popular, Top Performing four; Search's chip count equals the database and narrows; For You "24+" then the exact
+  count. Every page: no request for the whole live catalogue.
+- **Neighbours:** following, interest-preferences, subscriptions-p10, signup-back, video-share, buyer-minor-fixes 22/22.
+- typecheck 0, i18n 7,726/7,726, eslint clean on changed files, rls:check 0, production build.
+
 ### 2026-10-14 — Video Close-Ups Share (local stack: 1/1 new, 9/9 neighbours)
 
 - `tests/local/video-share.spec.ts`: a fresh seller with 32 live videos (31 popular, one with no views, so outside the

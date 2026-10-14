@@ -153,6 +153,7 @@ undocumented. Deep technical rationale for each lives in
   - A new tile or sub-category is a new slot: add its row in a migration and run `node scripts/category-image-slots-check.mjs`, or the admin can't set it. Renaming a sub-category changes its slot.
   - Visitors read the pictures from `site-config/site.json`, never the table per page view. Changing who may set them means `admin.require_category_image_admin()`, the four `site_content_category_*` storage policies and `SECTION_READ` / `SECTION_WRITE["category-images"]` in Cosora-Admin together.
 - **A list the browser filters is never "every row"** (2026-10-14). PostgREST returns at most 1,000 rows, silently: "Looking for New Brands?" loaded every seller and lost the ones past 1,000, followed sellers included. Ask the database for what the page shows (`new_brand_suggestions()`, the followed sellers by id in groups of 100), never the whole table to filter in the browser.
+- **The buyer feeds are pages from `feed_products()`** (2026-10-14; migration `20261014120000_feed_products.sql`). New Arrivals, For You, Trends, Sale, Following and Search read `useFeed()` / `useFeedSlice()` (`src/lib/queries/feed.ts`); the database filters and orders, the browser only shows pages. A new feed or filter is a parameter of `feed_products`, never a filter over downloaded rows. Paid tiers first is the order of `newest` and `trending` (the browse feeds' boost); search keeps its own ranking in `match_products`. `feed_products` is SECURITY DEFINER and must keep `status = 'live'` and public columns only: its self-check refuses a listing that isn't live. Search Results' browse mode (`useCatalogue()`) still downloads the catalogue (open).
 - **Taps on a phone don't select text** (Mitra, 2026-10-14; `src/index.css`). Touch screens only. Fields stay selectable; text people may want to copy (messages) carries `data-selectable`. A new surface that shows such text adds it.
 - **A product card opens the product from its text too** (Mitra, 2026-10-14). A new card puts `<CardLinkOverlay>` in its text block (`relative`), and gives anything in that block with its own job `relative z-10`. The picture's link stays the card's one accessible link.
 - **A sheet with a text field on a phone stays above the keyboard** (2026-10-14). The keyboard covers the page without resizing it: pin the sheet with `useVisibleViewport()` (or the composer's `useKeyboardInset()`), and give the field 16 px text so iOS doesn't zoom.
@@ -897,8 +898,8 @@ undocumented. Deep technical rationale for each lives in
   1 + 4×0.05 = 1.20, so it can reorder near-neighbours but cannot lift an irrelevant listing
   over a relevant one. Never reintroduce a client-side sort over search results: the browser
   cannot see relevance, so any re-sort silently discards the ranking it was given. (The
-  browse feed still sorts by boost — that is a different surface with nothing to rank
-  against.)
+  browse feeds order by boost in `feed_products()` — a different surface with nothing to
+  rank against.)
 - **No fabricated data on the search surfaces, ever again.** Search.tsx and SearchResults.tsx
   previously shipped invented search volumes, **real trademarked brands (H&M, Zara, Levi's)
   that are not vendors here**, invented follower counts, a "Popular keywords" list stamped

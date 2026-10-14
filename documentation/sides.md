@@ -199,6 +199,11 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-14 (feeds; built, not live)
+- **New Arrivals, For You, Trends, Sale, Following and Search load as the buyer scrolls**, a page at a time, in the order
+  the database decides; nothing disappears when the catalogue passes 1,000 listings. Sale's tiers, Following's controls
+  and Search's category chips filter in the database. No invented products or deals when there are none.
+
 ### Changed 2026-10-14 (eight fixes; built, not live)
 - **Product cards open from their text**, not only the picture; the store page's product grid opens products at all.
 - **Save to folder** on a phone is a sheet above the keyboard; a new folder's name is visible while it's typed.

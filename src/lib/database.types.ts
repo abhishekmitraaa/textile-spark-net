@@ -5760,6 +5760,50 @@ export type Database = {
         Returns: Json
       }
       featured_listings_on: { Args: never; Returns: boolean }
+      feed_products: {
+        Args: {
+          p_category_ids?: string[]
+          p_discount_above?: number
+          p_discount_upto?: number
+          p_exclude_ids?: string[]
+          p_gender?: string
+          p_ids?: string[]
+          p_limit?: number
+          p_offset?: number
+          p_on_sale?: boolean
+          p_query?: string
+          p_sort?: string
+          p_vendor_ids?: string[]
+        }
+        Returns: {
+          ad_verified_until: string | null
+          boost: number
+          brand_name: string | null
+          category_id: string | null
+          category_name: string | null
+          compare_at_price: number | null
+          created_at: string
+          currency: string
+          enquiries_count: number
+          fabric: string | null
+          fit_type: string | null
+          gender: string | null
+          gsm: string | null
+          id: string
+          images: string[]
+          is_verified: boolean
+          location: string | null
+          moq: string | null
+          name: string
+          plan_expires_at: string | null
+          plan_id: string | null
+          price_value: number | null
+          rating_avg: number
+          sold_count: number
+          vendor_city: string | null
+          vendor_id: string
+        }[]
+      }
       for_you_products: {
         Args: { match_count?: number; p_buyer_id: string }
         Returns: {
@@ -5817,6 +5861,10 @@ export type Database = {
         Returns: number
       }
       lead_digest_run: { Args: never; Returns: Json }
+      live_category_counts: {
+        Args: { p_limit?: number }
+        Returns: { category_id: string; category_name: string; live_count: number }[]
+      }
       log_call: {
         Args: { p_product_context?: string; p_vendor_id: string }
         Returns: Json

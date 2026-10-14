@@ -169,6 +169,9 @@ runs **every way**.
 | `20261010142813_retire_usage_and_mode_shims.sql` | Sections 3 and 4 of P13, taken out of it and applied early (2026-10-10, Mitra: "just clean up the unused table and the temp shims"; md5 `2e89a104…` = live; written as `20261010180000`): `subscription_usage` closed to browsers, P1's two payment-mode shims switched off. |
 | `20261010180100_drop_usage_and_mode_shims.sql` | **Run 2026-10-10 by Mitra in the Supabase SQL editor** (the tool declined it): drops `subscription_usage`, `trg_subscription_payment_orders_mode`, `trg_subscription_invoices_mode`, `admin.subscription_order_mode_default()` and `admin.subscription_invoice_mode_default()`. Not in the ledger, so the file keeps its written version. Verified afterwards: all five gone, nothing references them, `payment_mode` still NOT NULL. |
 
+Written, not applied (2026-10-14): `20261014120000_feed_products.sql` (`feed_products()`, `live_category_counts()`,
+`products_live_created_id_idx`). Apply before merging the app that reads it.
+
 Applied 2026-10-14 with the Supabase CLI (`db query --linked -f`, so NOT in the ledger; files keep their written
 versions): `20261014090000_category_images.sql` (`category_images`, two admin RPCs, four storage policies, the snapshot
 trigger) then `20261014090100_new_brand_suggestions.sql` (two partial indexes, `new_brand_suggestions()`). Function

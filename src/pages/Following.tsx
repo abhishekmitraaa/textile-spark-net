@@ -20,7 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { type Brand } from "@/lib/followingStore";
 import { useFollowing, useNewBrandSuggestions } from "@/lib/queries/follows";
-import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
+import { type ProductCardData } from "@/lib/queries/products";
+import { useFeed, useFeedSlice, type FeedSort } from "@/lib/queries/feed";
 
 // Map a live product row into the compact listing-card shape.
 function toListing(p: ProductCardData): ListingProduct {
@@ -194,17 +195,10 @@ function FeedControls({
 // Product list helpers
 // ─────────────────────────────────────────────────────────────
 
-function applyControls(products: ListingProduct[], gender: GenderFilter, sort: SortKey): ListingProduct[] {
-  let out = products;
-  if (gender !== "all") out = out.filter((p) => p.gender === gender);
-  const sorted = [...out];
-  switch (sort) {
-    case "price-asc": sorted.sort((a, b) => a.priceValue - b.priceValue); break;
-    case "price-desc": sorted.sort((a, b) => b.priceValue - a.priceValue); break;
-    case "rating": sorted.sort((a, b) => b.rating - a.rating); break;
-    default: break; // newest = seed order
-  }
-  return sorted;
+// The controls, as feed_products takes them (2026-10-14: they filtered and sorted in the browser).
+// "Newest" is each feed's own order: newest for the followed sellers, trending for Most Popular.
+function feedSort(sort: SortKey, base: FeedSort): FeedSort {
+  return sort === "price-asc" ? "price_asc" : sort === "price-desc" ? "price_desc" : sort === "rating" ? "rating" : base;
 }
 
 // Render a product grid's children with a "Submit Requirement" card interleaved
@@ -264,8 +258,7 @@ function feedWithRequirements(
 // ─────────────────────────────────────────────────────────────
 
 const Following = () => {
-  const { brands, follow, unfollow, hide } = useFollowing();
-  const { data: live } = useLiveProducts();
+  const { brands, follow, unfollow, hide, isLoading: followsLoading } = useFollowing();
   const t = useT();
 
   const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
@@ -292,42 +285,66 @@ const Following = () => {
   const [showMostPopular, setShowMostPopular] = useState(false);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  // Real products from the followed brands, plus a trending global pool.
-  const followedIds = useMemo(() => {
-    const set = new Set((verifiedOnly ? followed.filter((b) => b.verified) : followed).map((b) => b.id));
-    return set;
-  }, [followed, verifiedOnly]);
-
-  const followedProducts = useMemo(
-    () => (live ?? []).filter((p) => followedIds.has(p.vendorId)).map(toListing),
-    [live, followedIds],
+  // The followed sellers' listings and Cosora-wide Most Popular, a page at a time from feed_products
+  // (2026-10-14). They were the whole catalogue filtered in the browser, so past 1,000 live
+  // listings a followed seller's older listings disappeared. Sellers in groups of at most 500.
+  const followedIds = useMemo(
+    () => (verifiedOnly ? followed.filter((b) => b.verified) : followed).map((b) => b.id).sort().slice(0, 500),
+    [followed, verifiedOnly],
   );
+  const hasFollowed = followedIds.length > 0;
+  const genderParam = gender === "all" ? null : gender;
 
-  // Top performing — a couple of standout products from followed brands.
-  const topPerforming = useMemo(() => followedProducts.slice(0, 4), [followedProducts]);
+  // Top performing: the followed sellers' four most sold and enquired-about listings.
+  const { data: topRows = [] } = useFeedSlice({ sort: "trending", vendorIds: followedIds }, 4, { enabled: hasFollowed });
+  const topPerforming = useMemo(() => topRows.map(toListing), [topRows]);
 
-  const newIn = useMemo(() => applyControls(followedProducts, gender, sort), [followedProducts, gender, sort]);
+  const newInFeed = useFeed(
+    { sort: feedSort(sort, "newest"), vendorIds: followedIds, gender: genderParam },
+    { enabled: hasFollowed },
+  );
+  const newIn = useMemo(() => newInFeed.items.map(toListing), [newInFeed.items]);
 
-  // Most Popular — trending across the whole catalogue (not limited to followed brands).
-  const mostPopularBase = useMemo(() => sortTrending(live ?? []).map(toListing), [live]);
-  const mostPopular = useMemo(() => applyControls(mostPopularBase, gender, sort), [mostPopularBase, gender, sort]);
+  // Most Popular: trending across Cosora, beyond the buyer's follows (labelled as such below).
+  const popularFeed = useFeed({ sort: feedSort(sort, "trending"), gender: genderParam }, { enabled: showMostPopular });
+  const mostPopular = useMemo(() => popularFeed.items.map(toListing), [popularFeed.items]);
+  const popularRef = useRef<HTMLDivElement | null>(null);
 
-  // Reveal Most Popular once the user reaches the end of the followed-brand feed.
+  // At the end of the followed feed: its next page, and once it has run out, Most Popular.
+  const { fetchNextPage: nextNewIn } = newInFeed;
+  const newInDone = !hasFollowed || (!newInFeed.isPending && !newInFeed.hasNextPage);
   useEffect(() => {
     const target = sentinelRef.current;
     if (!target) return;
     const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting) setShowMostPopular(true); },
-      { rootMargin: "150px" }
+      (entries) => {
+        if (!entries[0].isIntersecting) return;
+        if (newInDone) setShowMostPopular(true);
+        else nextNewIn();
+      },
+      { rootMargin: "300px" }
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, []);
+  }, [newInDone, nextNewIn, newIn.length]);
+
+  // Most Popular's own next page.
+  const { fetchNextPage: nextPopular } = popularFeed;
+  useEffect(() => {
+    const target = popularRef.current;
+    if (!target || !showMostPopular) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting) nextPopular(); },
+      { rootMargin: "400px" }
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [showMostPopular, nextPopular, mostPopular.length]);
 
   // If the user follows nobody, surface Most Popular immediately.
   useEffect(() => {
-    if (followed.length === 0) setShowMostPopular(true);
-  }, [followed.length]);
+    if (!followsLoading && followed.length === 0) setShowMostPopular(true);
+  }, [followsLoading, followed.length]);
 
   return (
     <BuyerShell>
@@ -420,7 +437,9 @@ const Following = () => {
             sort={sort} setSort={setSort}
             verifiedOnly={verifiedOnly} setVerifiedOnly={setVerifiedOnly}
           />
-          {newIn.length > 0 ? (
+          {hasFollowed && newInFeed.isPending ? (
+            <p className="py-6 text-center text-sm text-gray-400">Loading…</p>
+          ) : newIn.length > 0 ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5 mt-4">
               {feedWithRequirements(newIn, () => setQuickRfqOpen(true))}
             </div>
@@ -456,6 +475,9 @@ const Following = () => {
                   above repeated. */}
               {feedWithRequirements(mostPopular, () => setQuickRfqOpen(true),
                 { slot: "followingPopular", fromBlock: 1 })}
+            </div>
+            <div ref={popularRef} className="py-6 text-center text-xs text-gray-400">
+              {popularFeed.isFetchingNextPage ? "Loading more…" : popularFeed.hasNextPage ? "" : mostPopular.length > 0 ? "That's everything listed right now." : ""}
             </div>
           </section>
         )}

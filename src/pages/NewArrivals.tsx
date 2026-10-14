@@ -13,7 +13,6 @@ import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import { BadgeCheck, Bookmark, BookmarkCheck, ChevronRight, Grid2X2, Grid3X3, MapPin, Phone, Play, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useLiveProducts } from "@/lib/queries/products";
 import { useVideoCloseUps } from "@/lib/queries/videos";
 import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
@@ -21,6 +20,7 @@ import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { NEW_ARRIVALS_TILES, newArrivalsSlot, type NewArrivalsTileKey } from "@/lib/categoryImageSlots";
 import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
 import { useAuth } from "@/contexts/AuthContext";
@@ -79,12 +79,6 @@ interface Product {
   verified?: boolean;
 }
 
-const BASE_PRODUCTS: Product[] = [
-  { id: "p1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=500&h=650&fit=crop", verified: true },
-  { id: "p2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.8k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=650&fit=crop" },
-  { id: "p3", vendorId: "v3", name: "Ribbed Tank Top - Orange", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.1, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-3a96ab6b2c5f?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-1c9c4f0c6c5e?w=500&h=650&fit=crop", verified: true },
-  { id: "p4", vendorId: "v4", name: "Graphic Print Tee", manufacturer: "Manufacturer", location: "Bangalore", price: "₹499", moq: "2", soldCount: "800+ sold", enquiries: "1.6k", rating: 3.8, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&h=650&fit=crop" },
-];
 
 // NOTE: videoUrl values are freely-licensed public sample clips
 // (Google's GCS sample-videos bucket), used here only as stand-ins so
@@ -353,8 +347,6 @@ const NewArrivals = () => {
   const { data: dbVideos } = useVideoCloseUps();
   const videoCatalogue = dbVideos?.length ? dbVideos : devOnlyVideoCloseUps();
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
-  const [batchCount, setBatchCount] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
@@ -409,31 +401,24 @@ const NewArrivals = () => {
   const railVideoCloseUps = useMemo(() => rankedVideoCloseUps.slice(0, VIDEO_RAIL_MAX), [rankedVideoCloseUps]);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
+  // "Today's New In": live listings a page at a time from feed_products (2026-10-14), paid
+  // tiers first, then newest, as before. It used to download the whole catalogue and show it
+  // all; and when the catalogue was empty it showed invented sample products. An empty
+  // catalogue now says so (claude.md: no mock data in production).
+  const feed = useFeed({ sort: "newest" });
+  const products = feed.items;
+  const { fetchNextPage } = feed;
+
+  // Next page as the buyer nears the end of what's loaded.
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target) return;
     const observer = new IntersectionObserver(entries => {
-      if (entries[0].isIntersecting && !isLoadingMore) {
-        setIsLoadingMore(true);
-        setTimeout(() => { setBatchCount(c => c + 1); setIsLoadingMore(false); }, 300);
-      }
-    }, { rootMargin: "200px" });
+      if (entries[0].isIntersecting) fetchNextPage();
+    }, { rootMargin: "400px" });
     observer.observe(target);
     return () => observer.disconnect();
-  }, [isLoadingMore]);
-
-  // "Today's New In" is now the real, shared catalogue: live products a vendor
-  // actually uploaded (status='live'), read from Supabase. While loading — or if
-  // the catalogue is empty — fall back to the local samples so the page never
-  // looks broken. `batchCount` still drives the infinite-scroll sentinel.
-  const { data: liveProducts, isLoading: productsLoading } = useLiveProducts();
-  const products = useMemo(() => {
-    if (liveProducts && liveProducts.length > 0) return liveProducts;
-    if (productsLoading) return [];
-    return Array.from({ length: batchCount }, (_, b) =>
-      BASE_PRODUCTS.map(p => ({ ...p, id: `${p.id}-${b}`, vendorId: `${p.vendorId}-${b}` }))
-    ).flat();
-  }, [liveProducts, productsLoading, batchCount]);
+  }, [fetchNextPage, products.length]);
 
   // Grid columns per breakpoint, derived from the active toggle. Desktop shows
   // twice the mobile column count (see the grid className below).
@@ -445,7 +430,7 @@ const NewArrivals = () => {
   // multiple of desktopCols by cycling the existing products (unique ids/keys).
   // desktopCols is a multiple of the mobile column count, so mobile stays full too.
   const displayProducts = useMemo(() => {
-    if (products.length === 0) return products;
+    if (products.length === 0 || feed.hasNextPage) return products;
     const remainder = products.length % desktopCols;
     if (remainder === 0) return products;
     const fillers = Array.from({ length: desktopCols - remainder }, (_, i) => {
@@ -453,7 +438,7 @@ const NewArrivals = () => {
       return { ...src, id: `${src.id}-fill${i}` };
     });
     return [...products, ...fillers];
-  }, [products, desktopCols]);
+  }, [products, desktopCols, feed.hasNextPage]);
 
   // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
   // mobile but `desktopCols` on desktop, so the insert positions differ per
@@ -481,18 +466,15 @@ const NewArrivals = () => {
   ];
 
   // Products matching the buyer's stored preferences that the feed above has
-  // NOT already rendered. Capped at one row of four.
-  // Drawn from `liveProducts`, not from `products`: `products` falls back to the
-  // dev-only BASE_PRODUCTS samples when the catalogue is empty or still loading,
-  // and those carry no category at all. Personalising off a sample would be
-  // exactly the fabricated-recommendation problem this section already had once.
-  const recommended = useMemo(() => {
-    if (prefCategoryIds.size === 0) return [];
-    const shown = new Set(displayProducts.map((p) => p.id));
-    return (liveProducts ?? [])
-      .filter((p) => p.categoryId && prefCategoryIds.has(p.categoryId) && !shown.has(p.id))
-      .slice(0, 4);
-  }, [liveProducts, displayProducts, prefCategoryIds]);
+  // NOT already rendered. Capped at one row of four. The row sits under the feed,
+  // so it is asked for once the feed has run out, leaving out what's on screen.
+  // (When the whole catalogue was one list it never had anything to show.)
+  const { data: recommendedRows = [] } = useFeedSlice(
+    { sort: "newest", categoryIds: [...prefCategoryIds], excludeIds: products.slice(0, 200).map((p) => p.id) },
+    4,
+    { enabled: prefCategoryIds.size > 0 && !feed.isPending && !feed.hasNextPage },
+  );
+  const recommended = recommendedRows;
 
   const feedNodes: JSX.Element[] = [];
   displayProducts.forEach((product, i) => {
@@ -744,7 +726,12 @@ const NewArrivals = () => {
           </div>
 
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
-            {isLoadingMore ? "Loading more products..." : "Scroll for more"}
+            {feed.isPending ? "Loading products..."
+              : feed.isError ? <button onClick={() => void feed.refetch()} className="font-semibold text-brand-buyer">Couldn't load products. Try again</button>
+              : products.length === 0 ? "No products yet. Suppliers' new listings appear here."
+              : feed.isFetchingNextPage ? "Loading more products..."
+              : feed.hasNextPage ? "Scroll for more"
+              : "You've seen everything new"}
           </div>
         </div>
 

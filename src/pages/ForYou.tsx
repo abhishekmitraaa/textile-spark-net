@@ -10,7 +10,8 @@ import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
 import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
-import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import { type ProductCardData } from "@/lib/queries/products";
+import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { useAuth } from "@/contexts/AuthContext";
 import { useForYouRanking, usePrefCategoryMap } from "@/lib/queries/forYou";
 import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
@@ -376,26 +377,21 @@ const ForYou = () => {
   const [search, setSearch] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterLocQuery, setFilterLocQuery] = useState("");
-  const [batches, setBatches] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const activeLocations = prefs.locations.filter((l) => l !== "nopreference");
-
-  // Real catalogue mapped into the listing shape. No fallback pool — an empty
-  // catalogue renders empty (see the note where PRODUCT_POOL used to be).
-  const { data: live, isLoading: catalogueLoading } = useLiveProducts();
 
   // Personalised ORDER for this buyer, straight from the database:
   // taste vector → onboarding-preference centroid → global popularity. The RPC
   // reports which tier it used; `ranking.source` is the honest answer to "is
   // this actually personalised?" and is never inferred client-side.
   //
-  // Ids only — the card data still comes from the single cached useLiveProducts
-  // fetch that Trends / Sale / For You already share.
+  // Ids only (at most 200); the cards come from feed_products (2026-10-14).
   const { user } = useAuth();
-  const { data: ranking } = useForYouRanking(user?.id);
+  const rankingQuery = useForYouRanking(user?.id);
+  const ranking = rankingQuery.data;
+  const rankingSettled = !user || rankingQuery.isFetched;
   const { data: prefMap } = usePrefCategoryMap();
 
   // Real ad inventory for the in-feed sponsored slot. Fetched here rather than
@@ -427,35 +423,48 @@ const ForYou = () => {
   // counted once.
   const recentAdBlocks = useAdSlotBlocks("forYouSponsored", null, prefCategoryIds);
 
+  // THE FEED (2026-10-14; it was the whole catalogue, filtered and paged in the browser, so
+  // past 1,000 live listings older ones were never ranked or shown). Two parts, both filtered
+  // by the database on the buyer's categories and the search box:
+  //   1. the listings for_you_products ranked (at most 200), in its order;
+  //   2. after them, the rest of those categories, a page at a time (paid tiers, then newest).
+  // Interests that cover no category (only "Others") narrow nothing: the feed stays whole.
+  // The location filter stays here: it reads the listing's place the way the picker names it.
+  const prefsReady = prefs.categories.length === 0 || prefMap !== undefined;
+  const categoryFilter = prefCategoryIds.length > 0 ? prefCategoryIds : null;
+  const searchFilter = search.trim() || null;
+  const rankedIds = useMemo(() => (ranking?.order ?? []).slice(0, 200), [ranking]);
+  const rankedQuery = useFeedSlice(
+    { sort: "newest", ids: rankedIds, categoryIds: categoryFilter, query: searchFilter },
+    200,
+    { enabled: prefsReady && rankedIds.length > 0 },
+  );
+  const restFeed = useFeed(
+    { sort: "newest", categoryIds: categoryFilter, query: searchFilter, excludeIds: rankedIds.length ? rankedIds : null },
+    { enabled: prefsReady && rankingSettled },
+  );
+  const catalogueLoading = !prefsReady || !rankingSettled || restFeed.isPending
+    || (rankedIds.length > 0 && rankedQuery.isPending);
+
   const pool = useMemo<ListingProduct[]>(() => {
-    if (!live || !live.length) return [];
-    const listings = live.map((p) => toListing(p));
     const rankOf = ranking?.rankOf;
-    if (!rankOf?.size) return listings;
-    // Anything the RPC didn't rank (it returns at most match_count) sorts after
-    // everything it did, keeping its existing plan-boost order among itself.
-    return listings.sort(
-      (a, b) => (rankOf.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rankOf.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+    const ranked = [...(rankedQuery.data ?? [])].sort(
+      (a, b) => (rankOf?.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rankOf?.get(b.id) ?? Number.MAX_SAFE_INTEGER),
     );
-  }, [live, ranking]);
+    const seen = new Set(ranked.map((p) => p.id));
+    return [...ranked, ...restFeed.items.filter((p) => !seen.has(p.id))].map((p) => toListing(p));
+  }, [ranking, rankedQuery.data, restFeed.items]);
 
-  // Filtered product list (preferences + search).
   const filtered = useMemo(() => {
-    let list = pool;
-    // Interests that cover no category (only "Others") narrow nothing: we
-    // know nothing to filter on, so the feed stays whole.
-    if (prefCategoryIds.length > 0) {
-      const wanted = new Set(prefCategoryIds);
-      list = list.filter((p) => p.category && wanted.has(p.category));
-    }
-    if (activeLocations.length > 0) list = list.filter((p) => p.locationId && activeLocations.includes(p.locationId));
-    const q = search.trim().toLowerCase();
-    if (q) list = list.filter((p) => p.name.toLowerCase().includes(q) || p.manufacturer.toLowerCase().includes(q));
-    return list;
+    if (activeLocations.length === 0) return pool;
+    return pool.filter((p) => p.locationId && activeLocations.includes(p.locationId));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pool, prefCategoryIds, prefs.locations, search]);
+  }, [pool, prefs.locations]);
 
-  const visible = filtered.slice(0, batches * 8);
+  const visible = filtered;
+  // A count is a claim about the catalogue: with more pages to come it is "at least".
+  const countLabel = `${filtered.length}${restFeed.hasNextPage ? "+" : ""}`;
+  const { fetchNextPage: nextRest } = restFeed;
 
   // Build interleaved feed: product cards + requirement box + recent-views ad.
   // Blocks span the full grid width and land on a multiple of 4 products so no
@@ -492,10 +501,7 @@ const ForYou = () => {
     if (!target) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !loadingMore && visible.length < filtered.length) {
-          setLoadingMore(true);
-          window.setTimeout(() => { setBatches((b) => b + 1); setLoadingMore(false); }, 300);
-        }
+        if (entries[0].isIntersecting) nextRest();
       },
       { rootMargin: "200px" }
     );
@@ -516,10 +522,7 @@ const ForYou = () => {
     // Found by instrumenting the callback and getting ZERO invocations while a
     // hand-attached IntersectionObserver on the same node fired normally —
     // which ruled out the observer and pointed at the attach step.
-  }, [loadingMore, visible.length, filtered.length, prefs.hasCompleted]);
-
-  // Reset paging when filters/search change.
-  useEffect(() => { setBatches(1); }, [prefs.categories, prefs.locations, search]);
+  }, [nextRest, visible.length, prefs.hasCompleted]);
 
   // ─── ONBOARDING ───
   if (!prefs.hasCompleted) {
@@ -685,7 +688,7 @@ const ForYou = () => {
               we don't have one, and "0 products for you" would be a wrong
               answer rather than a pending one. */}
           <p className="text-xs text-gray-500 lg:ml-auto lg:shrink-0">
-            {catalogueLoading ? "Loading your feed…" : `${filtered.length} products for you`}
+            {catalogueLoading ? "Loading your feed…" : `${countLabel} products for you`}
           </p>
         </div>
 
@@ -754,7 +757,7 @@ const ForYou = () => {
             </div>
 
             <div ref={loadMoreRef} className="py-6 text-center text-xs text-gray-400">
-              {visible.length < filtered.length ? (loadingMore ? "Loading more products..." : "Scroll for more") : "You're all caught up"}
+              {restFeed.hasNextPage ? (restFeed.isFetchingNextPage ? "Loading more products..." : "Scroll for more") : "You're all caught up"}
             </div>
           </>
         )}
@@ -791,7 +794,7 @@ const ForYou = () => {
                 onClick={() => setFilterOpen(false)}
                 className="flex-1 py-2.5 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors"
               >
-                Show {filtered.length} products
+                Show {countLabel} products
               </button>
             </div>
           </div>

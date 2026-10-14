@@ -18,7 +18,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
+import { type ProductCardData } from "@/lib/queries/products";
+import { useFeed } from "@/lib/queries/feed";
 import { useResolvedCategoryId } from "@/lib/queries/ads";
 import { AD_SLOTS } from "@/lib/adSlots";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
@@ -278,16 +279,16 @@ const Trends = () => {
   const [styledSpin, setStyledSpin] = useState(false);
   const [apparelGroup, setApparelGroup] = useState(APPAREL_GROUPS[0]);
   const [groupOpen, setGroupOpen] = useState(false);
-  const [feedBatches, setFeedBatches] = useState(1);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const categoryChipsDrag = useDragScroll<HTMLDivElement>();
 
-  // Real catalogue, trending-sorted. The product-card grids below render these;
-  // the trend chrome (categories / keywords / styled heroes) stays curated.
-  const { data: live, isPending: livePending, isError: liveError, refetch: refetchLive } = useLiveProducts();
-  const trending = useMemo(() => (live && live.length ? sortTrending(live) : []), [live]);
-  const hasLive = trending.length > 0;
+  // Real listings, trending order (paid tiers, then sold + enquiries), a page at a time from
+  // feed_products (2026-10-14; it was the whole catalogue, sorted in the browser). The trend
+  // chrome (categories / keywords / styled heroes) stays curated.
+  const feed = useFeed({ sort: "trending" });
+  const { isPending: livePending, isError: liveError, refetch: refetchLive, fetchNextPage } = feed;
+  const hasLive = feed.items.length > 0;
 
   const category = useMemo(() => CATEGORIES.find((c) => c.id === categoryId) ?? CATEGORIES[0], [categoryId]);
 
@@ -321,13 +322,10 @@ const Trends = () => {
     window.setTimeout(() => setStyledSpin(false), 500);
   };
 
-  // Bottom feed: the real catalogue, trending-sorted, paginated by batch. An
-  // empty catalogue is EMPTY — this used to generate cards whenever there was
-  // nothing real to show, including during every initial load.
-  const feedProducts = useMemo(
-    () => trending.slice(0, feedBatches * 6).map(toCompact),
-    [trending, feedBatches],
-  );
+  // Bottom feed: real listings, trending order, as many pages as the buyer has scrolled. An
+  // empty catalogue is EMPTY — this used to generate cards whenever there was nothing real to
+  // show, including during every initial load.
+  const feedProducts = useMemo(() => feed.items.map(toCompact), [feed.items]);
 
   // Interleave a Submit Requirement card every 5 rows, different per breakpoint:
   // every 10 products on mobile (2-col) and every 20 on desktop (4-col). Cards at
@@ -375,25 +373,22 @@ const Trends = () => {
     }
   });
 
-  // Infinite scroll observer. The next batch is already in memory
-  // (feedProducts slices `trending`, loaded in full), so it is revealed at
-  // once. This used to wait 300 ms behind a "Loading more products..." label
-  // for data that needed no loading (Master Prompt 8, Phase 7). The observer
-  // is re-created per batch, so a sentinel still in view after a batch lands
-  // triggers the next one, and it stops once everything is shown.
-  const allShown = feedProducts.length >= trending.length;
+  // Infinite scroll: the next page as the sentinel comes near. The observer is re-created per
+  // page, so a sentinel still in view after a page lands asks for the next one, and it stops
+  // once the feed has run out.
+  const allShown = !feed.hasNextPage;
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target || allShown) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) setFeedBatches((c) => c + 1);
+        if (entries[0].isIntersecting) fetchNextPage();
       },
-      { rootMargin: "200px" }
+      { rootMargin: "400px" }
     );
     observer.observe(target);
     return () => observer.disconnect();
-  }, [feedBatches, allShown]);
+  }, [fetchNextPage, feedProducts.length, allShown]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -648,9 +643,9 @@ const Trends = () => {
 
           {/* Always mounted: the infinite-scroll observer attaches to it once. */}
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
-            {hasLive && (feedProducts.length >= trending.length
+            {hasLive && (allShown
               ? "That's everything listed right now."
-              : "Scroll for more")}
+              : feed.isFetchingNextPage ? "Loading more products..." : "Scroll for more")}
           </div>
 
           {/* Submit Requirement — same card + Quick RFQ modal as New Arrivals */}

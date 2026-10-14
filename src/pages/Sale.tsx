@@ -15,7 +15,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useLiveProducts, filterSale, type ProductCardData } from "@/lib/queries/products";
+import { type ProductCardData } from "@/lib/queries/products";
+import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { useCallVendor } from "@/lib/queries/calls";
@@ -68,16 +69,6 @@ interface SaleProduct {
 
 const discountOf = (p: SaleProduct) => Math.round(((p.originalValue - p.saleValue) / p.originalValue) * 100);
 
-const BASE_SALE: SaleProduct[] = [
-  { id: "s1", vendorId: "v1", name: "Ribbed Tank Top", manufacturer: "Tirupur Textiles", location: "Tirupur", originalValue: 499, saleValue: 299, moq: "MOQ: 50", soldCount: "800+ sold", enquiries: "5.6k", rating: 4.3, fabric: "Cotton", gsm: "200", fitType: "Regular", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=500&h=650&fit=crop", verified: true },
-  { id: "s2", vendorId: "v2", name: "Camp Collar Shirt", manufacturer: "Mumbai Linen House", location: "Mumbai", originalValue: 899, saleValue: 629, moq: "MOQ: 30", soldCount: "1.2k sold", enquiries: "1.8k", rating: 4.0, fabric: "Linen", gsm: "180", fitType: "Regular", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=650&fit=crop" },
-  { id: "s3", vendorId: "v3", name: "Denim Jacket 12 Oz", manufacturer: "Ahmedabad Denim Co.", location: "Ahmedabad", originalValue: 1499, saleValue: 599, moq: "MOQ: 40", soldCount: "600+ sold", enquiries: "3.1k", rating: 4.6, fabric: "Denim", gsm: "340", fitType: "Regular", image: "https://images.unsplash.com/photo-1542272604-787c3835535d?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=500&h=650&fit=crop", verified: true },
-  { id: "s4", vendorId: "v4", name: "Graphic Print Tee", manufacturer: "StyleCraft Apparels", location: "Bangalore", originalValue: 399, saleValue: 319, moq: "MOQ: 100", soldCount: "2.4k sold", enquiries: "1.6k", rating: 3.9, fabric: "Cotton", gsm: "180", fitType: "Regular", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500&h=650&fit=crop" },
-  { id: "s5", vendorId: "v5", name: "Oversized Crewneck", manufacturer: "Delhi Fashion Hub", location: "Delhi NCR", originalValue: 1199, saleValue: 479, moq: "MOQ: 25", soldCount: "900+ sold", enquiries: "2.2k", rating: 4.4, fabric: "Fleece", gsm: "320", fitType: "Oversized", image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1620799139507-2a76f79a2f4d?w=500&h=650&fit=crop", verified: true },
-  { id: "s6", vendorId: "v6", name: "Pleated Midi Skirt", manufacturer: "Surat Studio Kintsugi", location: "Surat", originalValue: 799, saleValue: 559, moq: "MOQ: 50", soldCount: "500+ sold", enquiries: "980", rating: 4.1, fabric: "Rayon", gsm: "160", fitType: "Regular", image: "https://images.unsplash.com/photo-1583496661160-fb5886a13d27?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=500&h=650&fit=crop" },
-  { id: "s7", vendorId: "v7", name: "Cargo Joggers", manufacturer: "Ludhiana Active Wear", location: "Ludhiana", originalValue: 899, saleValue: 359, moq: "MOQ: 60", soldCount: "1.5k sold", enquiries: "1.4k", rating: 4.2, fabric: "Cotton", gsm: "240", fitType: "Regular", image: "https://images.unsplash.com/photo-1556906781-9a412961c28c?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=500&h=650&fit=crop", verified: true },
-  { id: "s8", vendorId: "v8", name: "Formal Cotton Shirt", manufacturer: "Bangalore Apparel", location: "Bangalore", originalValue: 699, saleValue: 559, moq: "MOQ: 100", soldCount: "780+ sold", enquiries: "760", rating: 4.5, fabric: "Cotton", gsm: "200", fitType: "Slim", image: "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=500&h=650&fit=crop", secondaryImage: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=500&h=650&fit=crop" },
-];
 
 // Map a live discounted product (compare_at_price above the live price) into
 // the sale-card shape. The live price is the sale price; compare is the original.
@@ -103,12 +94,16 @@ function toSale(p: ProductCardData): SaleProduct {
   };
 }
 
+// Bounds for feed_products (whole percent, rounded as discountOf rounds): above is exclusive, upto inclusive.
 const TIERS = [
-  { key: "all", label: "All Deals", test: () => true },
-  { key: "lt25", label: "Up to 25%", test: (d: number) => d <= 25 },
-  { key: "25-50", label: "25–50% off", test: (d: number) => d > 25 && d <= 50 },
-  { key: "gt50", label: "50% & above", test: (d: number) => d > 50 },
+  { key: "all", label: "All Deals", above: null, upto: null },
+  { key: "lt25", label: "Up to 25%", above: null, upto: 25 },
+  { key: "25-50", label: "25–50% off", above: 25, upto: 50 },
+  { key: "gt50", label: "50% & above", above: 50, upto: null },
 ] as const;
+
+// The page's sort keys, as feed_products names them.
+const FEED_SORT = { discount: "discount", "price-asc": "price_asc", "price-desc": "price_desc" } as const;
 
 const SORTS = [
   { key: "discount", label: "Biggest Discount" },
@@ -248,48 +243,35 @@ const Sale = () => {
   const [viewMode, setViewMode] = useState<"2-col" | "3-col">("2-col");
   const [tier, setTier] = useState<(typeof TIERS)[number]["key"]>("all");
   const [sort, setSort] = useState<(typeof SORTS)[number]["key"]>("discount");
-  const [batchCount, setBatchCount] = useState(1);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [quickRfqOpen, setQuickRfqOpen] = useState(false);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
-  // Infinite scroll
+  const activeTier = TIERS.find((t) => t.key === tier) ?? TIERS[0];
+
+  // Discounted listings from feed_products (2026-10-14): the tier and the sort are the database's,
+  // a page at a time. It used to download the whole catalogue and, when nothing was discounted,
+  // show invented deals under real sellers' names. No deals now means no deals.
+  const feed = useFeed({
+    sort: FEED_SORT[sort], onSale: true, discountAbove: activeTier.above, discountUpto: activeTier.upto,
+  });
+  const products = useMemo(() => feed.items.map(toSale), [feed.items]);
+  const { fetchNextPage } = feed;
+
+  // The six deepest cuts, and the deepest, for the flash rail and the hero.
+  const { data: deepest = [] } = useFeedSlice({ sort: "discount", onSale: true }, 6);
+  const flashDeals = useMemo(() => deepest.map(toSale), [deepest]);
+  const maxDiscount = flashDeals.length ? discountOf(flashDeals[0]) : 0;
+
+  // Infinite scroll: the next page as the sentinel comes near.
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !isLoadingMore) {
-        setIsLoadingMore(true);
-        window.setTimeout(() => { setBatchCount((c) => c + 1); setIsLoadingMore(false); }, 300);
-      }
-    }, { rootMargin: "200px" });
+      if (entries[0].isIntersecting) fetchNextPage();
+    }, { rootMargin: "400px" });
     observer.observe(target);
     return () => observer.disconnect();
-  }, [isLoadingMore]);
-
-  const activeTier = TIERS.find((t) => t.key === tier) ?? TIERS[0];
-
-  // Real discounted catalogue; fall back to the seeded set only until it loads.
-  const { data: live } = useLiveProducts();
-  const saleAll = useMemo(() => {
-    const real = filterSale(live ?? []).map(toSale);
-    return real.length ? real : BASE_SALE;
-  }, [live]);
-
-  const flashDeals = useMemo(
-    () => [...saleAll].sort((a, b) => discountOf(b) - discountOf(a)).slice(0, 6),
-    [saleAll],
-  );
-
-  const products = useMemo(() => {
-    let list = saleAll.filter((p) => activeTier.test(discountOf(p)));
-    if (sort === "discount") list = [...list].sort((a, b) => discountOf(b) - discountOf(a));
-    else if (sort === "price-asc") list = [...list].sort((a, b) => a.saleValue - b.saleValue);
-    else if (sort === "price-desc") list = [...list].sort((a, b) => b.saleValue - a.saleValue);
-    return list.slice(0, batchCount * 8);
-  }, [saleAll, activeTier, sort, batchCount]);
-
-  const maxDiscount = saleAll.length ? Math.max(...saleAll.map(discountOf)) : 0;
+  }, [fetchNextPage, products.length]);
 
   // Interleave a Submit Requirement card every 5 rows. A row is `cols` cards on
   // mobile but `cols*2` on desktop, so the insert positions differ per breakpoint:
@@ -373,9 +355,11 @@ const Sale = () => {
               <Flame className="w-3 h-3" /> Limited time
             </span>
             <h1 className="mt-3 text-3xl lg:text-5xl font-extrabold tracking-tight leading-none">MEGA SALE</h1>
-            <p className="mt-2 text-sm lg:text-base font-medium text-white/90">
-              Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on bulk orders from verified manufacturers
-            </p>
+            {maxDiscount > 0 && (
+              <p className="mt-2 text-sm lg:text-base font-medium text-white/90">
+                Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on bulk orders from verified manufacturers
+              </p>
+            )}
 
             <div className="mt-4 flex flex-wrap items-center gap-4">
               <div>
@@ -439,7 +423,7 @@ const Sale = () => {
               return (
                 <button
                   key={t.key}
-                  onClick={() => { setTier(t.key); setBatchCount(1); }}
+                  onClick={() => setTier(t.key)}
                   className={cn(
                     "shrink-0 rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all active:scale-95",
                     active ? "border-brand-buyer bg-brand-buyer text-white" : "border-gray-200 text-gray-600 hover:border-brand-buyer/40"
@@ -480,7 +464,14 @@ const Sale = () => {
             </div>
           </div>
 
-          {products.length === 0 ? (
+          {feed.isPending ? (
+            <div className="py-16 text-center text-sm text-gray-400">Loading deals...</div>
+          ) : feed.isError ? (
+            <div className="py-16 text-center">
+              <p className="text-sm text-gray-500">Couldn't load deals.</p>
+              <button onClick={() => void feed.refetch()} className="mt-3 text-sm font-semibold text-brand-buyer">Try again</button>
+            </div>
+          ) : products.length === 0 ? (
             <div className="py-16 text-center">
               <Tag className="w-9 h-9 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">No deals in this range right now.</p>
@@ -504,7 +495,7 @@ const Sale = () => {
           </div>
 
           <div ref={loadMoreRef} className="py-6 text-center text-xs lg:text-sm text-gray-400">
-            {isLoadingMore ? "Loading more deals..." : "Scroll for more"}
+            {products.length > 0 && (feed.isFetchingNextPage ? "Loading more deals..." : feed.hasNextPage ? "Scroll for more" : "That's every deal right now.")}
           </div>
         </motion.section>
       </motion.div>

@@ -42,9 +42,8 @@ export interface ForYouRanking {
 /**
  * Ask the database how to order this buyer's feed.
  *
- * Returns ids only. The card data still comes from the single cached
- * useLiveProducts() fetch that Trends / Sale / For You already share, so this
- * adds one lightweight round-trip rather than a second catalogue download.
+ * Returns ids only (at most 200). For You fetches their cards from feed_products(p_ids),
+ * filtered on the buyer's categories, then the rest of those categories page by page.
  */
 export async function fetchForYouRanking(
   buyerId: string,

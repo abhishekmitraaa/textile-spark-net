@@ -8048,5 +8048,13 @@
  "followers ·": "फ़ॉलोअर्स ·",
  "New folder name": "नए फ़ोल्डर का नाम",
  "{0}: {1} on Cosora": "कोसोरा पर {0}: {1}",
- "Share this video": "यह वीडियो साझा करें"
+ "Share this video": "यह वीडियो साझा करें",
+ "Loading deals...": "डील लोड हो रही हैं...",
+ "Couldn't load deals.": "डील लोड नहीं हो सकीं।",
+ "That's every deal right now.": "अभी के लिए बस इतनी ही डील हैं।",
+ "Loading products...": "उत्पाद लोड हो रहे हैं...",
+ "Couldn't load products. Try again": "उत्पाद लोड नहीं हो सके। फिर से कोशिश करें",
+ "No products yet. Suppliers' new listings appear here.": "अभी कोई उत्पाद नहीं है। सप्लायरों की नई लिस्टिंग यहाँ दिखेंगी।",
+ "You've seen everything new": "आपने सब नया देख लिया है",
+ "Loading more…": "और लोड हो रहा है…"
 }

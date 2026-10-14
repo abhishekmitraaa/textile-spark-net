@@ -2059,6 +2059,31 @@ Content page (`src/lib/siteContent.ts`).
 
 ---
 
+## Buyer feeds — pages from `feed_products()` (2026-10-14)
+
+Migration `20261014120000_feed_products.sql`; `src/lib/queries/feed.ts`; harness `scripts/feeds/harness.sql`.
+
+- **`feed_products(p_sort, p_limit, p_offset, p_category_ids, p_gender, p_vendor_ids, p_on_sale, p_query, p_exclude_ids,
+  p_discount_above, p_discount_upto, p_ids)`**, plpgsql, STABLE, SECURITY DEFINER, `search_path = ''`, anon and
+  authenticated. A `keyed` CTE reads only id and the sort keys of every matching live listing (products ⨝ vendor_profiles
+  ⨝ subscription_plans for the boost: `limits.search_boost_tier` while `plan_expires_at > now()`); `page` takes the top
+  `limit` after `offset` with `ORDER BY` CASE keys per sort (a top-N heapsort; a `row_number()` window sorted every row
+  and cost 2×); the outer select joins the card columns, the category name and `array(first two pictures)` for the page.
+  The text filter escapes `\`, `%`, `_`. Unknown sort, more than 500 sellers / 200 excluded / 200 ids / 300 categories:
+  22023. Limit 1–48 (200 with `p_ids`), offset 0–960.
+- **Why definer:** as an invoker the row policies of four tables ran on every live listing (915 ms at 100,000 as anon).
+  It applies `status = 'live'` itself and returns no private column; the self-check refuses a non-live row.
+- **`live_category_counts(p_limit)`**: SQL, SECURITY DEFINER, live listings per category, top `limit` (≤ 50).
+- **Index:** `products_live_created_id_idx (created_at desc, id desc) where status = 'live'`.
+- **Measured (local stack, 100,000 live listings from 1,000 sellers, 50 on Gold, as anon, warm):** newest first page
+  84 ms, page 41 91 ms, trending + gender 63 ms, counts 1 ms. A precomputed ranked table refreshed by a job is the next
+  step if a page needs to stay flat beyond that size (a new job is Mitra's call).
+- **Client:** `useFeed()` = `useInfiniteQuery`, pages of 24, `getNextPageParam` stops on a short page or page 41;
+  `items` deduplicated by id across pages (a listing that moves between requests). `mapFeedRow()` goes through
+  `mapProductRow()`, so a card is built the same way everywhere. For You: `fetchForYouRanking()` ids → `useFeedSlice({ ids })`
+  ordered by rank client-side → `useFeed({ excludeIds: ids })`; its location filter stays client-side (it reads the
+  listing's place as the picker names it).
+
 ## Category pictures and brand suggestions (2026-10-14)
 
 Migrations `20261014090000_category_images.sql` and `20261014090100_new_brand_suggestions.sql`; Cosora-Admin's

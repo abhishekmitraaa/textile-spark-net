@@ -5,7 +5,8 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
-import { useLiveProducts, type ProductCardData } from "@/lib/queries/products";
+import { type ProductCardData } from "@/lib/queries/products";
+import { useFeed, useLiveCategoryCounts } from "@/lib/queries/feed";
 import { useResolvedCategoryId } from "@/lib/queries/ads";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { useSearchSuggestions, useDebounced } from "@/lib/queries/search";
@@ -99,15 +100,12 @@ const Search = () => {
   const reduced = useReducedMotion();
   const { profile } = useProfileState();
   const { profile: authProfile } = useAuth();
-  const { data: live } = useLiveProducts();
   const firstName = (authProfile?.full_name ?? profile.fullName).trim().split(" ")[0] || "there";
   const inputRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
   const [query, setQuery] = useState("");
   const [recentKeywords, setRecentKeywords] = useState<string[]>([]);
-  const [recBatches, setRecBatches] = useState(1);
-  const [loadingMore, setLoadingMore] = useState(false);
   // Category chip filtering the feed below. Null = everything.
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
@@ -121,43 +119,32 @@ const Search = () => {
   const suggestions = (suggestionRows ?? []).filter((s) => s.kind !== "vendor");
   const vendorSuggestions = (suggestionRows ?? []).filter((s) => s.kind === "vendor");
 
-  // Category rail counted off the live catalogue this page already fetched —
-  // no extra request, and every count is a real number of live listings.
-  const categoryRail = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const p of live ?? []) {
-      const name = p.categoryName;
-      if (name) counts.set(name, (counts.get(name) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .slice(0, 8)
-      .map(([label, count]) => ({ label, count }));
-  }, [live]);
+  // Category rail: the categories with the most live listings, counted by the database
+  // (live_category_counts, 2026-10-14; it was counted off the whole catalogue in the browser).
+  // Every count is a real number of live listings.
+  const { data: categoryCounts = [] } = useLiveCategoryCounts(8);
+  const categoryRail = useMemo(
+    () => categoryCounts.map((c) => ({ label: c.categoryName, count: c.liveCount, id: c.categoryId })),
+    [categoryCounts],
+  );
+  const selectedCatId = categoryRail.find((c) => c.label === selectedCat)?.id ?? null;
 
-  const recommended = useMemo(() => {
-    // No fabricated fallback pool. An empty catalogue renders empty — that is
-    // the project's documented rule, and a fake grid hides a real outage.
-    const catalogue = live ?? [];
-    const pool = selectedCat
-      ? catalogue.filter((p) => p.categoryName === selectedCat)
-      : catalogue;
-    return pool.map(toListing).slice(0, recBatches * 8);
-  }, [live, recBatches, selectedCat]);
+  // The feed below: live listings, optionally one category, a page at a time. No fabricated
+  // fallback pool: an empty catalogue renders empty (claude.md).
+  const feed = useFeed({ sort: "newest", categoryIds: selectedCatId ? [selectedCatId] : null });
+  const recommended = useMemo(() => feed.items.map(toListing), [feed.items]);
+  const { fetchNextPage } = feed;
 
   // Infinite scroll for the recommendation feed (paused while searching).
   useEffect(() => {
     const target = loadMoreRef.current;
     if (!target || isSearching) return;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !loadingMore) {
-        setLoadingMore(true);
-        window.setTimeout(() => { setRecBatches((c) => c + 1); setLoadingMore(false); }, 300);
-      }
-    }, { rootMargin: "300px" });
+      if (entries[0].isIntersecting) fetchNextPage();
+    }, { rootMargin: "400px" });
     observer.observe(target);
     return () => observer.disconnect();
-  }, [loadingMore, isSearching]);
+  }, [fetchNextPage, isSearching, recommended.length]);
 
   const runSearch = (term: string) => {
     const trimmed = term.trim();
@@ -274,7 +261,6 @@ const Search = () => {
   };
 
   // Restart the recommendation feed when the trending filter changes.
-  useEffect(() => { setRecBatches(1); }, [selectedCat]);
 
   // ── Sponsored placement (searchListing) ───────────────────────────────────
   //
@@ -485,7 +471,7 @@ const Search = () => {
               {feedNodes}
             </motion.div>
             <div ref={loadMoreRef} className="py-6 text-center text-xs text-gray-400">
-              {loadingMore ? "Loading more..." : "Scroll for more"}
+              {feed.isFetchingNextPage ? "Loading more..." : feed.hasNextPage ? "Scroll for more" : recommended.length > 0 ? "That's everything listed right now." : ""}
             </div>
           </motion.div>
 
