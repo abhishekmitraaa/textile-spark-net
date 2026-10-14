@@ -199,6 +199,10 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-14 (Chats badge; built, not live)
+- **The Chats icon** counts unread messages, live (it showed 3 for everyone); **the chat list** shows each chat's count.
+  Opening a chat clears it. Same for sellers on their bottom bar.
+
 ### Changed 2026-10-14 (second batch of fixes; built, not live)
 - **New Arrivals' top carousel** shows real live listings: the ones Cosora's team picks, in their order, else the most
   popular. It showed eight invented products whose taps led nowhere.

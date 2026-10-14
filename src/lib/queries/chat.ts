@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { markConversationRead } from "@/lib/queries/chatUnread";
 
 // ─────────────────────────────────────────────────────────────
 // Realtime 1:1 chat thread.
@@ -88,6 +89,7 @@ export async function submitReport(
 export function useChatThread(otherId: string | undefined) {
   const { user } = useAuth();
   const me = user?.id;
+  const qc = useQueryClient();
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [otherName, setOtherName] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -161,6 +163,8 @@ export function useChatThread(otherId: string | undefined) {
       if (cancelled) return;
       setMessages(((history ?? []) as RawMessage[]).map(mapMsg));
       setReady(true);
+      // Opened: what's on screen is read (the Chats badge and the list's count drop).
+      if (document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
 
       channel = supabase
         .channel(`thread:${conv.id}`)
@@ -170,6 +174,9 @@ export function useChatThread(otherId: string | undefined) {
           (payload) => {
             const m = payload.new as RawMessage;
             setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, mapMsg(m)]));
+            // Arrived while the chat is open and on screen: it's read. In a background tab it stays
+            // unread until the person comes back (the visibility listener below).
+            if (m.sender_id !== me && document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
             // Backstop, kept deliberately. The conversations UPDATE below is the
             // primary signal, but the message that just arrived may be the very
             // thing that locked the thread — the case a user actually notices —
@@ -192,8 +199,18 @@ export function useChatThread(otherId: string | undefined) {
         .subscribe();
     })();
 
-    return () => { cancelled = true; if (channel) supabase.removeChannel(channel); };
-  }, [me, otherId, mapMsg, applyStatus, refreshStatus]);
+    // Back to a tab with the chat open: what came in meanwhile is now seen.
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && convIdRef.current) void markConversationRead(convIdRef.current, me, qc);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisible);
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [me, otherId, mapMsg, applyStatus, refreshStatus, qc]);
 
   /**
    * Insert a message. Resolves true only when the row was actually written, so

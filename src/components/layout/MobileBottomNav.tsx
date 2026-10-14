@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useT } from "@/lib/i18n";
 import { usePublishedHeight } from "@/hooks/usePublishedHeight";
+import { badgeLabel, useChatUnread } from "@/lib/queries/chatUnread";
 
 interface MobileBottomNavProps {
   /**
@@ -31,7 +32,8 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
   const { role } = useUserRole();
   const t = useT();
 
-  const unreadMessages = 3;
+  // Unread chat messages, live (lib/queries/chatUnread.ts). It was a hardcoded 3 for everyone.
+  const unreadMessages = useChatUnread().total;
 
   const [hidden, setHidden] = useState(false);
   const navRef = useRef<HTMLElement>(null);
@@ -146,9 +148,13 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
                     )}
                   />
                 </div>
-                {item.badge && item.badge > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground">
-                    {item.badge}
+                {badgeLabel(item.badge ?? 0) && (
+                  <span
+                    data-testid={`nav-badge-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
+                    aria-label={`${item.badge} unread`}
+                    className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold text-destructive-foreground"
+                  >
+                    {badgeLabel(item.badge ?? 0)}
                   </span>
                 )}
               </motion.div>

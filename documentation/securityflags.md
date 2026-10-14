@@ -112,6 +112,13 @@ in the next one.
 
 ## Log
 
+### 2026-10-14 — Unread chat messages reviewed — Severity: Info
+- `public.conversation_reads`: RLS on, each person reads only their own lines, no client writes. `mark_conversation_read`
+  and `chat_unread_counts` are SECURITY DEFINER with `search_path = ''`, closed to anon; the first refuses anyone who
+  isn't in the chat (42501), the second filters on `auth.uid()` and returns nothing without one. Neither returns message
+  text. The realtime listeners are filtered to the person's own conversation rows and RLS still applies. Harness
+  `scripts/chat-unread/harness.sql` 11/11.
+
 ### 2026-10-14 — Requirement pictures and the New Arrivals carousel — Severity: Low / Low–Medium
 - **Found:** requirement pictures were never uploaded, so `rfqs.image` held nothing from the app, but the column takes
   any URL the buyer's browser writes, and vendors' lead lists rendered it unchecked. Fixed in the app (only this

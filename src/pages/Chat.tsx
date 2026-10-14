@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import BuyerTopBar from "@/components/buyer/BuyerTopBar";
 import { CONVERSATIONS, callGroupsInOrder, type CallRecord } from "@/lib/chatData";
 import { useConversations, type ChatSummary } from "@/lib/queries/chat";
+import { useChatUnread } from "@/lib/queries/chatUnread";
 import { useCalls, useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
@@ -76,7 +77,12 @@ const Chat = () => {
   const { data: dbConvos } = useConversations();
   const { data: dbCalls } = useCalls();
   const callVendor = useCallVendor();
-  const convos: ChatSummary[] = user ? (dbConvos ?? []) : FALLBACK_CONVOS;
+  // Each chat's unread count, live (it was always 0 for real chats).
+  const unread = useChatUnread();
+  const convos: ChatSummary[] = useMemo(
+    () => (user ? (dbConvos ?? []).map((c) => ({ ...c, unread: unread.byOther[c.id] ?? 0 })) : FALLBACK_CONVOS),
+    [user, dbConvos, unread.byOther],
+  );
 
   const onlineCount = convos.filter((c) => c.online).length;
   const groups = useMemo(() => (user ? (dbCalls ?? []) : callGroupsInOrder()), [user, dbCalls]);

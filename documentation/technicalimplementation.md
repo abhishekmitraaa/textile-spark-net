@@ -2161,6 +2161,27 @@ page (`src/lib/heroSlides.ts`, `src/pages/HeroSlides.tsx`).
   sits at `calc(var(--bottom-nav-h, 5rem) + var(--pinned-bar-h, 0px) + 1rem)` on phones. Step changes scroll to the top
   in `AnimatePresence`'s `onExitComplete` (an effect on `step` ran while the old step was still leaving).
 
+## Unread chat messages (2026-10-14)
+
+Migration `20261014170000_chat_unread.sql`; `src/lib/queries/chatUnread.ts`.
+
+- **`public.conversation_reads`:** PK (`conversation_id` → conversations ON DELETE CASCADE, `user_id` → auth.users
+  ON DELETE CASCADE), `read_at`. RLS `conversation_reads_own_select` (`user_id = auth.uid()`); SELECT granted to
+  authenticated only; no client writes. Backfilled for both participants of every existing chat at `now()`.
+- **`mark_conversation_read(p_conversation_id)`** (SECURITY DEFINER, `search_path = ''`, authenticated): 42501 unless the
+  caller is `user_a` or `user_b`; `read_at` = the newest `created_at` among the other person's messages (not `now()`, so a
+  message still committing stays unread); upsert that only moves forward; nothing when they have sent nothing.
+- **`chat_unread_counts()`** (SECURITY DEFINER, STABLE, authenticated): the caller's conversations whose
+  `last_message_at` is past their line, each counted with `LIMIT 100` on `messages_conversation_idx (conversation_id,
+  created_at)`, rows with a count only. `conversations_user_b_idx` added (the pair key already covers `user_a`).
+- **Client:** query key `["chat-unread", uid]`, staleTime 30 s; one realtime channel per mount (unique topic, as
+  `useNotifications`) with two `postgres_changes` listeners on `conversations` (`user_a=eq.uid`, `user_b=eq.uid`); any
+  event invalidates; the `SUBSCRIBED` callback invalidates once (a message between the first read and the join was
+  otherwise missed: found by the spec). `bump_conversation()` is what turns each message into a conversation UPDATE.
+  `MobileBottomNav` shows `badgeLabel(total)` (`99+`) with `data-testid="nav-badge-chats"`; `Chat.tsx` maps `byOther`
+  onto the list (keyed by the other person's id, the row id). `useChatThread` calls `markConversationRead()` after
+  loading history, on an incoming message while `document.visibilityState === "visible"`, and on `visibilitychange`.
+
 ---
 
 ## Discount codes — priced by the server (admin completion Phase 10, 2026-09-29)

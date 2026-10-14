@@ -977,6 +977,20 @@ export type Database = {
           },
         ]
       }
+      conversation_reads: {
+        Row: { conversation_id: string; read_at: string; user_id: string }
+        Insert: { conversation_id: string; read_at: string; user_id: string }
+        Update: { conversation_id?: string; read_at?: string; user_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_reads_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -5684,6 +5698,10 @@ export type Database = {
         Args: { p_ad_certificate_id: string; p_reason: string }
         Returns: string
       }
+      chat_unread_counts: {
+        Args: never
+        Returns: { conversation_id: string; other_id: string; unread: number }[]
+      }
       complete_account_deletion: {
         Args: { p_request: string }
         Returns: string
@@ -5926,6 +5944,7 @@ export type Database = {
         Args: { p_items: Json; p_session?: string }
         Returns: number
       }
+      mark_conversation_read: { Args: { p_conversation_id: string }; Returns: undefined }
       match_products: {
         Args: {
           boost_weight?: number

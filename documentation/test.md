@@ -205,6 +205,22 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-14 — Chats badge counts unread messages (local stack: harness 11/11; browser 1/1 three runs; neighbours 13/13)
+
+- **Harness** `scripts/chat-unread/harness.sql` (never commits): demo buyer with three unread from the vendor (their
+  own reply not counted) and one from another chat; the vendor sees the buyer's one; opening clears that chat only; a
+  later message counts; the read line never moves back; someone outside the chat can't mark it (42501); a visitor
+  can't ask (42501); nobody reads another's lines or writes one directly; a chat counts up to 100. 11/11. The migration
+  re-ran cleanly in a rolled-back transaction.
+- **Browser** `tests/local/chat-unread.spec.ts` (fresh buyer and seller, phone 390 × 844): no badge at first; two
+  messages from the seller → badge "2" without a reload; the chat list row shows 2; opening the chat and a message
+  arriving while open → the read line passes the newest message; back on New Arrivals no badge; a later message → "1".
+  The first run missed messages sent before the realtime subscription joined; fixed by re-reading on `SUBSCRIBED`.
+  Then 3/3.
+- **Neighbours:** chat-composer-keyboard, support-chat, buyer-minor-fixes-b, rfq-leads, chat-unread 13/13 with
+  Cosora-Admin served from its current main (served from a stale checkout, its two admin-panel tests fail, as expected).
+- typecheck 0, i18n 7,727/7,727, rls:check 0, eslint clean on changed files, production build.
+
 ### 2026-10-14 — Second batch of buyer fixes: carousel picks, requirement step, requirement pictures, Instagram (local stack: harness 27/27; browser 6/6 new, three runs; neighbours 20/21)
 
 - **Harness** `scripts/hero-slides/harness.sql` (never commits; makes three drafts live for itself): who may list and
