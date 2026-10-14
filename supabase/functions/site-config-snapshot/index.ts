@@ -6,8 +6,8 @@
 // back to the tables if it can't be fetched or doesn't parse (src/lib/siteConfig.ts).
 //
 // WHO CALLS IT, through pg_net, with the Vault service_role key:
-//   * trg_site_banners_snapshot, trg_site_theme_snapshot and trg_category_images_snapshot,
-//     after every committed write
+//   * trg_site_banners_snapshot, trg_site_theme_snapshot, trg_category_images_snapshot and
+//     trg_hero_slides_snapshot, after every committed write
 //     (one call per transaction; a rolled-back write queues nothing);
 //   * pg_cron `faq-snapshots-refresh`, hourly, which rebuilds the FAQ files and this one,
 //     so a lost call can't leave it stale for longer than an hour.
@@ -19,12 +19,17 @@
 // columns) apply, and the queries name their columns too:
 //   { version: 1, generated_at, theme: {…} | null, banners: [{ id, title, subtitle,
 //     cta_label, link_path, image_path, position, starts_at, ends_at }],
-//     category_images: { "<slot>": "categories/<uuid>.<ext>" } }, banners in order.
+//     category_images: { "<slot>": "categories/<uuid>.<ext>" },
+//     hero_slides: [{ product_id, position, starts_at, ends_at }] }, banners and slides in order.
 // category_images (2026-10-14, migration 20261014090000_category_images) holds only the slots
 // with a picture set in Cosora-Admin › Category pictures; the app shows its own default for
 // the rest. An app built before it ignores the key, and an app built after it treats a file
 // without it as "no pictures set".
-// A banner that starts later is included with its start time; the app shows it from then.
+// hero_slides (2026-10-14, migration 20261014150000_hero_slides): the listings picked for New
+// Arrivals' top carousel in Cosora-Admin › New Arrivals carousel. Ids only: the app loads the
+// listings themselves through feed_products, which returns live listings only. An app built
+// before it ignores the key; one built after it treats a file without it as "nothing picked".
+// A banner or slide that starts later is included with its start time; the app shows it from then.
 //
 // ALWAYS FROM COMMITTED TRUTH, as faqs-snapshot: it reads the tables when it runs, and
 // after uploading reads them again; if they changed meanwhile it runs another pass (at
@@ -46,6 +51,8 @@ const THEME_COLUMNS = "vendor_accent,buyer_accent,success,border,ink,heading_fon
 const BANNER_COLUMNS = "id,title,subtitle,cta_label,link_path,image_path,position,starts_at,ends_at";
 // RLS returns only the slots with a picture; the filter says so too.
 const CATEGORY_IMAGES = "category_images?select=id,image_path&image_path=not.is.null&order=id.asc";
+// RLS returns only the slides that haven't ended.
+const HERO_SLIDES = "hero_slides?select=product_id,position,starts_at,ends_at&order=position.asc";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -99,16 +106,17 @@ Deno.serve(async (req) => {
   };
 
   const readState = async () => {
-    const [theme, banners, pictures] = await Promise.all([
+    const [theme, banners, pictures, hero_slides] = await Promise.all([
       read(`site_theme?select=${THEME_COLUMNS}&limit=1`),
       read(`site_banners?select=${BANNER_COLUMNS}&order=position.asc,id.asc`),
       read(CATEGORY_IMAGES),
+      read(HERO_SLIDES),
     ]);
     const category_images: Record<string, string> = {};
     for (const p of pictures as { id: string; image_path: string | null }[]) {
       if (p.image_path) category_images[p.id] = p.image_path;
     }
-    return { theme: theme[0] ?? null, banners, category_images };
+    return { theme: theme[0] ?? null, banners, category_images, hero_slides };
   };
 
   const upload = async (body: string) => {
@@ -138,7 +146,7 @@ Deno.serve(async (req) => {
       banners = state.banners.length;
       await upload(JSON.stringify({
         version: 1, generated_at: generatedAt, theme: state.theme, banners: state.banners,
-        category_images: state.category_images,
+        category_images: state.category_images, hero_slides: state.hero_slides,
       }));
       const again = await readState();
       if (JSON.stringify(again) === JSON.stringify(state)) break;

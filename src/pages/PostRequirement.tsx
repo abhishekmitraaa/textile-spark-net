@@ -1,22 +1,25 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
-import { createRfq } from "@/lib/queries/rfqs";
+import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
 import { getCategoryById } from "@/data/sellerCategories";
 import { requirementAttributes } from "@/lib/formAttributes";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import BuyerShell from "@/components/buyer/BuyerShell";
+import { usePublishedHeight } from "@/hooks/usePublishedHeight";
 import QuickRfqModal from "@/components/buyer/QuickRfqModal";
 import CosoraLogo from "@/components/CosoraLogo";
 import {
   Zap, FileText, ArrowLeft, ChevronRight, Sparkles, Clock, CheckCircle2,
-  Check, X, Mic, MicOff, Image as ImageIcon, Video, FileUp, Plus, ChevronDown, Send,
+  Check, X, Mic, MicOff, Image as ImageIcon, Plus, ChevronDown, Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -490,6 +493,57 @@ type FormValues = Record<string, string | string[]>;
 // MAIN
 // ─────────────────────────────────────────────────────────────
 
+/** A picked photo before upload, with its remove button. */
+function PhotoPreview({ file, onRemove, cover }: { file: File; onRemove: () => void; cover: boolean }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  return (
+    <span className="relative h-16 w-16 overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
+      {url && <img src={url} alt={file.name} className="h-full w-full object-cover" />}
+      {cover && <span className="absolute inset-x-0 bottom-0 bg-black/55 text-center text-[9px] font-semibold text-white">Cover</span>}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${file.name}`}
+        className="absolute right-0.5 top-0.5 grid h-5 w-5 place-items-center rounded-full bg-white/90 shadow"
+      >
+        <X className="h-3 w-3 text-gray-600" />
+      </button>
+    </span>
+  );
+}
+
+/**
+ * A bar fixed to the bottom of the screen, just above the phone's bottom bar, holding a step's way on.
+ * Rendered into <body>: the step's slide-in animation transforms its own box, and a fixed element
+ * inside a transformed one moves with it. A spacer of the bar's height keeps the end of the step
+ * scrollable above it, and the height is published as --pinned-bar-h so the To-top button rises above
+ * it instead of covering it.
+ */
+function PinnedBar({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  usePublishedHeight(ref, "--pinned-bar-h");
+  return (
+    <>
+      <div aria-hidden style={{ height: "calc(var(--pinned-bar-h, 0px) + 1rem)" }} />
+      {createPortal(
+        <div
+          ref={ref}
+          className="fixed inset-x-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur"
+          style={{ bottom: "var(--bottom-nav-h, 0px)" }}
+        >
+          <div className="mx-auto max-w-2xl px-4 py-3">{children}</div>
+        </div>,
+        document.body,
+      )}
+    </>
+  );
+}
+
 const PostRequirement = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -497,6 +551,7 @@ const PostRequirement = () => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<SpeechRec | null>(null);
+  const subCategoryRef = useRef<HTMLDivElement>(null);
 
   const [step, setStep] = useState<Step>("main");
   const [quickOpen, setQuickOpen] = useState(false);
@@ -509,6 +564,7 @@ const PostRequirement = () => {
 
   const [values, setValues] = useState<FormValues>({});
   const [files, setFiles] = useState<File[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const category = categoryId ? (getCategoryById(categoryId) ?? null) : null;
   const subCategory = category?.subCategories.find((s) => s.id === subCategoryId) ?? null;
@@ -525,6 +581,16 @@ const PostRequirement = () => {
     setOpenSelect(null);
     setSubCategoryId(null);
   }, [categoryId]);
+
+  // The category list is taller than a phone screen, and the sub-category choice appears under it,
+  // out of sight (Mitra, 2026-10-14: people don't know they have to scroll). Picking a category
+  // brings that choice into view.
+  const pickCategory = (id: string) => {
+    setCategoryId(id);
+    window.setTimeout(() => {
+      subCategoryRef.current?.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "center" });
+    }, 50);
+  };
 
   const sVal = (k: string) => (values[k] as string) ?? "";
   const aVal = (k: string) => (Array.isArray(values[k]) ? (values[k] as string[]) : []);
@@ -564,11 +630,16 @@ const PostRequirement = () => {
   useEffect(() => () => recognitionRef.current?.stop(), []);
 
   const onFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) setFiles((prev) => [...prev, ...Array.from(e.target.files as FileList)].slice(0, 5));
+    const picked = Array.from(e.target.files ?? []);
+    e.target.value = ""; // the same photo can be picked again after removing it
+    const photos = picked.filter((f) => f.type.startsWith("image/"));
+    if (photos.length < picked.length) toast.error("Only photos can be added here.");
+    setFiles((prev) => [...prev, ...photos].slice(0, RFQ_MAX_IMAGES));
   };
   const removeFile = (i: number) => setFiles((prev) => prev.filter((_, idx) => idx !== i));
 
   const submit = async () => {
+    if (submitting) return;
     for (const section of sections) {
       for (const f of section.fields) {
         if (!f.required) continue;
@@ -622,9 +693,12 @@ const PostRequirement = () => {
       // the larger share of the score either way.
     }
 
+    setSubmitting(true);
     try {
+      // Photos first, so the requirement is written once, complete, with its cover.
+      const images = files.length ? await uploadRfqImages(user.id, files) : [];
       await createRfq(user.id, {
-        title, productName, quantity, budgetMin, budgetMax, description,
+        title, productName, quantity, budgetMin, budgetMax, description, images,
         categoryId: categoryDbId,
         // Every category answer, as asked (Ranking F1). The guesses above still fill
         // the title, quantity and budget columns.
@@ -633,8 +707,10 @@ const PostRequirement = () => {
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
     } catch (e) {
       toast.error("Couldn't submit your requirement", { description: errorMessage(e) });
+      setSubmitting(false);
       return;
     }
+    setSubmitting(false);
     setStep("success");
   };
 
@@ -759,26 +835,24 @@ const PostRequirement = () => {
           </div>
         );
 
+      // Photos only (2026-10-14). It offered videos and PDFs too, and uploaded nothing at all: every
+      // requirement reached sellers without its pictures. Photos are uploaded on submit and the first
+      // is the requirement's cover. Videos and PDFs would need their own storage (size limits, who may read them).
       case "files":
         return (
           <div key={f.key}>
-            <input type="file" ref={fileInputRef} onChange={onFiles} accept="image/*,video/*,.pdf" multiple className="hidden" />
-            <button onClick={() => fileInputRef.current?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-300 p-5 text-center hover:border-brand-buyer/50 transition-colors">
-              <div className="flex justify-center gap-3 mb-2">
-                {[ImageIcon, Video, FileUp].map((Ic, i) => (
-                  <span key={i} className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500"><Ic className="w-4 h-4" /></span>
-                ))}
-              </div>
-              <p className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700"><Plus className="w-3.5 h-3.5" /> Add photos, videos or PDF</p>
-              <p className="text-[11px] text-gray-400 mt-1">Upload designs, inspiration images, PDFs, videos</p>
-            </button>
+            <input type="file" ref={fileInputRef} onChange={onFiles} accept={UPLOAD_IMAGE_TYPES.join(",")} multiple className="hidden" />
+            {files.length < RFQ_MAX_IMAGES && (
+              <button onClick={() => fileInputRef.current?.click()} className="w-full rounded-xl border-2 border-dashed border-gray-300 p-5 text-center hover:border-brand-buyer/50 transition-colors">
+                <span className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500"><ImageIcon className="w-4 h-4" /></span>
+                <p className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700"><Plus className="w-3.5 h-3.5" /> Add photos</p>
+                <p className="text-[11px] text-gray-400 mt-1">Designs, inspiration or reference photos. Up to {RFQ_MAX_IMAGES}; the first is the cover sellers see.</p>
+              </button>
+            )}
             {files.length > 0 && (
               <div className="flex flex-wrap gap-2 mt-3">
                 {files.map((file, i) => (
-                  <span key={i} className="inline-flex items-center gap-1.5 bg-gray-100 rounded-lg px-2.5 py-1.5 text-xs text-gray-700">
-                    <FileUp className="w-3 h-3" /> <span className="truncate max-w-[120px]">{file.name}</span>
-                    <button onClick={() => removeFile(i)} aria-label="Remove"><X className="w-3 h-3 text-gray-400 hover:text-brand-buyer" /></button>
-                  </span>
+                  <PhotoPreview key={`${file.name}-${file.lastModified}-${i}`} file={file} onRemove={() => removeFile(i)} cover={i === 0} />
                 ))}
               </div>
             )}
@@ -815,8 +889,11 @@ const PostRequirement = () => {
 
   return (
     <BuyerShell>
-      <div className="max-w-2xl mx-auto px-4 pt-3 pb-28">
-        <AnimatePresence mode="wait">
+      {/* The category step's pinned bar brings its own room (PinnedBar's spacer). */}
+      <div className={cn("max-w-2xl mx-auto px-4 pt-3", step === "category" ? "pb-2" : "pb-28")}>
+        {/* Each step opens at its top, once the last one has gone. Continue sits in a bar pinned to the
+            screen, so without this the next step would open as far down as the category list was scrolled. */}
+        <AnimatePresence mode="wait" onExitComplete={() => window.scrollTo({ top: 0 })}>
           {/* ─── HUB ─── */}
           {step === "main" && (
             <motion.div key="main" initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={reduced ? undefined : { opacity: 0, y: -12 }}>
@@ -882,14 +959,16 @@ const PostRequirement = () => {
               <div className="flex items-center gap-2 mb-4">
                 <button onClick={() => setStep("main")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
                 <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-buyer">Step 1 of 2</p>
                   <h1 className="text-lg font-bold text-gray-900">Request Quote from Sellers</h1>
                   <p className="text-xs text-gray-500">Share your requirement and receive multiple quotes from relevant sellers.</p>
                 </div>
               </div>
 
               <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                <h2 className="text-sm font-bold text-gray-900 mb-3">Select one Category</h2>
-                <CategorySelector selectedCategory={categoryId} onSelectCategory={setCategoryId} />
+                <h2 className="text-sm font-bold text-gray-900">Select one Category</h2>
+                <p className="mb-3 mt-0.5 text-xs text-gray-500">Products, services and freelancers. Scroll to see them all.</p>
+                <CategorySelector selectedCategory={categoryId} onSelectCategory={pickCategory} />
               </div>
 
               {/* Subcategory is OPTIONAL for a buyer, unlike the vendor upload
@@ -898,7 +977,7 @@ const PostRequirement = () => {
                   files the RFQ against the parent row, which still matches every
                   vendor selling anything under that parent. */}
               {category && (
-                <div className="mt-3 rounded-2xl border border-gray-200 bg-white p-4">
+                <div ref={subCategoryRef} className="mt-3 scroll-mt-24 rounded-2xl border border-gray-200 bg-white p-4">
                   <h2 className="text-sm font-bold text-gray-900 mb-1">
                     Narrow it down <span className="font-medium text-gray-400">(optional)</span>
                   </h2>
@@ -913,13 +992,32 @@ const PostRequirement = () => {
                 </div>
               )}
 
-              <button
-                onClick={() => categoryId && setStep("form")}
-                disabled={!categoryId}
-                className={cn("mt-4 w-full py-3 rounded-xl text-sm font-bold transition-colors", categoryId ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}
-              >
-                Save
-              </button>
+              {/* Pinned above the bottom bar, so the way on is always in sight, with what's chosen.
+                  It used to be a "Save" button under the whole list, below the fold on a phone. */}
+              <PinnedBar>
+                <div className="flex items-center gap-3">
+                  <div className="min-w-0 flex-1" aria-live="polite">
+                    {category ? (
+                      <>
+                        <p className="text-[11px] text-gray-400">Selected</p>
+                        <p className="truncate text-sm font-bold text-gray-900">
+                          {category.name}
+                          {subCategory && <span className="font-medium text-gray-500"> · {subCategory.name}</span>}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-xs text-gray-500">Pick a category to continue</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => categoryId && setStep("form")}
+                    disabled={!categoryId}
+                    className={cn("shrink-0 rounded-xl px-6 py-3 text-sm font-bold transition-colors", categoryId ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white" : "bg-gray-200 text-gray-400 cursor-not-allowed")}
+                  >
+                    Continue
+                  </button>
+                </div>
+              </PinnedBar>
             </motion.div>
           )}
 
@@ -929,6 +1027,7 @@ const PostRequirement = () => {
               <div className="flex items-center gap-2">
                 <button onClick={() => setStep("category")} aria-label="Back" className="-ml-1 p-1"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
                 <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-brand-buyer">Step 2 of 2</p>
                   <h1 className="text-lg font-bold text-gray-900">Post Your Requirement</h1>
                   <p className="text-xs text-gray-500">Fill in the details below</p>
                 </div>
@@ -977,8 +1076,13 @@ const PostRequirement = () => {
               </div>
 
               {/* Submit */}
-              <button onClick={submit} className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white py-3.5 text-sm font-bold transition-colors active:scale-[0.99]">
-                <Send className="w-4 h-4" /> Submit Quote Request
+              <button
+                onClick={submit}
+                disabled={submitting}
+                aria-busy={submitting}
+                className="w-full flex items-center justify-center gap-2 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 disabled:opacity-70 text-white py-3.5 text-sm font-bold transition-colors active:scale-[0.99]"
+              >
+                <Send className="w-4 h-4" /> {submitting ? (files.length ? "Uploading photos…" : "Submitting…") : "Submit Quote Request"}
               </button>
               <p className="text-[11px] text-center text-gray-400">
                 Your request will be sent to verified manufacturers. Expect quotes within 24-48 hours.

@@ -1356,6 +1356,44 @@ export type Database = {
         }
         Relationships: []
       }
+      hero_slides: {
+        Row: {
+          ends_at: string | null
+          id: string
+          position: number
+          product_id: string
+          starts_at: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          ends_at?: string | null
+          id?: string
+          position: number
+          product_id: string
+          starts_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          ends_at?: string | null
+          id?: string
+          position?: number
+          product_id?: string
+          starts_at?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hero_slides_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       india_states: {
         Row: {
           aliases: string[]
@@ -5007,6 +5045,8 @@ export type Database = {
         }
         Returns: string
       }
+      admin_hero_slides: { Args: never; Returns: Json }
+      admin_hero_slides_save: { Args: { p_slides: Json }; Returns: number }
       admin_keyword_add: {
         Args: { p_term: string }
         Returns: {

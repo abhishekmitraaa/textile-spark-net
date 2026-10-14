@@ -25,6 +25,7 @@ import VendorChatModal from "@/components/buyer/quotes/VendorChatModal";
 import CompareTable from "@/components/buyer/quotes/CompareTable";
 import DirectRequestThread from "@/components/buyer/quotes/DirectRequestThread";
 import { cn } from "@/lib/utils";
+import RfqThumb from "@/components/RfqThumb";
 
 // "received" is the open-marketplace comparison screen (many competing
 // vendors). "direct" is a product-page request addressed to one vendor, where
@@ -233,7 +234,7 @@ const MyQuotes = () => {
                             </p>
                           )}
                         </div>
-                        <img src={r.image} alt={r.title} className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
+                        <RfqThumb src={r.image} alt={r.title} className="w-14 h-14" />
                       </div>
                       <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
                         {/* A direct request has one vendor, so "N quotes" and a

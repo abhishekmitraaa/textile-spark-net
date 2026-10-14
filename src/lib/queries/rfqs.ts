@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { attributeDetails, type Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
+import { shrinkImage } from "@/lib/shrinkImage";
+import { ownStorageUrl } from "@/lib/storageUrl";
 import { ensureConversation } from "@/lib/queries/chat";
 import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type SizeQty } from "@/lib/quotesData";
 
@@ -89,11 +91,14 @@ function mapQuote(q: RawQuote, v?: RawVendor): VendorQuote {
   };
 }
 
-function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor): Rfq {
+function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor, productCover?: string): Rfq {
   const prices = quotes.map((q) => Number(q.price_inr ?? q.price_per_unit ?? 0)).filter((n) => n > 0);
   const base = {
     id: r.id, title: r.title, productName: r.product_name ?? r.title, units: r.quantity ?? 0,
-    priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0), image: r.image ?? "",
+    priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0),
+    // The buyer's own picture; for a request about a listing, the listing's; then a customization
+    // reference. "" shows RfqThumb's placeholder.
+    image: ownStorageUrl(r.image) || productCover || ownStorageUrl(r.customization_images?.[0]) || "",
     status: r.status, removedReason: r.removed_at ? (r.removed_reason ?? "") : null,
     newCount: quotes.filter((q) => q.status === "pending").length,
     lowest: prices.length ? Math.min(...prices) : 0,
@@ -120,7 +125,7 @@ function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor): Rfq {
       colors: r.colors ?? [],
       customizationRequested: r.customization_requested ?? false,
       customizationNotes: r.customization_notes ?? null,
-      customizationImages: r.customization_images ?? [],
+      customizationImages: (r.customization_images ?? []).filter((u) => ownStorageUrl(u)),
     },
   };
 }
@@ -154,12 +159,24 @@ async function fetchBuyerData(buyerId: string): Promise<BuyerQuotesData> {
     for (const v of (data ?? []) as RawVendor[]) vendorMap.set(v.id, v);
   }
 
+  // The cover of each listing a direct request is about: the request itself has no picture of its own
+  // unless the buyer attached one.
+  const coverOf = new Map<string, string>();
+  const productIds = [...new Set(rfqRows.filter((r) => !ownStorageUrl(r.image) && r.product_id).map((r) => r.product_id as string))];
+  if (productIds.length) {
+    const { data } = await supabase.from("product_images").select("product_id, url, position").in("product_id", productIds);
+    for (const img of [...(data ?? [])].sort((a, b) => a.position - b.position)) {
+      if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
+    }
+  }
+
   const quotesMap: Record<string, VendorQuote> = {};
   for (const q of quoteRows) quotesMap[q.id] = mapQuote(q, vendorMap.get(q.vendor_id));
   const rfqs = rfqRows.map((r) => mapRfq(
     r,
     quoteRows.filter((q) => q.rfq_id === r.id),
     r.vendor_id ? vendorMap.get(r.vendor_id) : undefined,
+    r.product_id ? coverOf.get(r.product_id) : undefined,
   ));
   return { rfqs, quotesMap };
 }
@@ -175,7 +192,9 @@ export function useBuyerQuotes(buyerId: string | undefined) {
 // ── Buyer: create an RFQ ──
 export interface NewRfq {
   title: string; productName?: string; quantity?: number | null;
-  budgetMin?: number | null; budgetMax?: number | null; description?: string | null; image?: string | null;
+  budgetMin?: number | null; budgetMax?: number | null; description?: string | null;
+  /** The requirement's pictures, already uploaded (uploadRfqImages). The first is its cover. */
+  images?: string[];
   /** A categories.id. Feeds the `category_match` half of match_vendor_rfqs, so
    *  it must be a real taxonomy row the caller RESOLVED — never a display name,
    *  a slug, or a guess re-derived from free text. Null is the correct value
@@ -191,7 +210,10 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
     .insert({
       buyer_id: buyerId, title: input.title, product_name: input.productName ?? input.title,
       quantity: input.quantity ?? null, budget_min: input.budgetMin ?? null, budget_max: input.budgetMax ?? null,
-      description: input.description ?? null, image: input.image ?? null,
+      description: input.description ?? null,
+      // `image` is the cover every list shows; `images` holds them all (2026-10-14: the pictures a
+      // buyer added were never uploaded, so every requirement showed a broken image).
+      image: input.images?.[0] ?? null, images: input.images?.length ? input.images : null,
       category_id: input.categoryId ?? null, status: "active",
       attributes: input.attributes ?? {},
     })
@@ -222,24 +244,29 @@ export interface NewTargetedRfq {
 }
 
 /**
- * Reference images for a customization request. Reuses the existing
+ * A requirement's pictures: the full form's and Quick Quote's photos, and a direct request's
+ * customization references (2026-10-14; it was customization only). Reuses the existing
  * `product-images` bucket: its RLS insert policy is uploader-scoped
  * (`(storage.foldername(name))[1] = auth.uid()::text`), not vendor-scoped, so a
  * buyer may write under their own uid folder. The bucket is public, so the
  * target vendor can read the URLs back. Same call shape as Upload.tsx.
  */
-async function uploadCustomizationImages(buyerId: string, batchId: string, files: File[]): Promise<string[]> {
-  const urls: string[] = [];
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+export async function uploadRfqImages(buyerId: string, files: File[]): Promise<string[]> {
+  const batchId = crypto.randomUUID();
+  // Shrunk first (lib/shrinkImage.ts), then uploaded side by side: five phone photos at full size
+  // took long enough on mobile data that buyers gave up.
+  const prepared = await Promise.all(files.slice(0, RFQ_MAX_IMAGES).map((f) => shrinkImage(f)));
+  return Promise.all(prepared.map(async ({ blob, ext }, i) => {
     const path = `${buyerId}/rfq/${batchId}/${i}.${ext}`;
-    const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    const { error } = await supabase.storage.from("product-images")
+      .upload(path, blob, { upsert: true, contentType: blob.type || undefined, cacheControl: "31536000" });
     if (error) throw error;
-    urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
-  }
-  return urls;
+    return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+  }));
 }
+
+/** The most pictures a requirement takes (the forms say "up to 5"). */
+export const RFQ_MAX_IMAGES = 5;
 
 function summarise(input: NewTargetedRfq, total: number): string {
   const parts = [`Quote request for ${input.productName}`, `Quantity: ${total}`];
@@ -271,7 +298,7 @@ export async function createTargetedQuoteRequest(buyerId: string, input: NewTarg
 
   let imageUrls: string[] = [];
   if (input.customizationRequested && input.customizationFiles.length) {
-    imageUrls = await uploadCustomizationImages(buyerId, crypto.randomUUID(), input.customizationFiles);
+    imageUrls = await uploadRfqImages(buyerId, input.customizationFiles);
   }
 
   // A targeted request is "quote me THIS listing", so the listing's own category
@@ -406,7 +433,7 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
     const m = matchOf.get(r.id);
     return {
       id: r.id, title: r.title, productName: r.product_name ?? r.title, units: r.quantity ?? 0,
-      priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0), image: r.image ?? "",
+      priceMin: Number(r.budget_min ?? 0), priceMax: Number(r.budget_max ?? 0), image: ownStorageUrl(r.image) ?? "",
       date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
       alreadyQuoted: quoted.has(r.id),
       categoryId: r.category_id ?? null,
@@ -579,7 +606,7 @@ async function fetchDirectQuoteRequests(vendorId: string): Promise<DirectQuoteRe
     buyerName: nameOf.get(r.buyer_id) ?? "Buyer",
     productId: r.product_id ?? null,
     productName: r.product_name ?? r.title,
-    productImage: (r.product_id && coverOf.get(r.product_id)) || r.image || "",
+    productImage: (r.product_id && coverOf.get(r.product_id)) || ownStorageUrl(r.image) || "",
     quantity: r.quantity ?? 0,
     sizes: (r.sizes_breakdown as SizeQty[] | null) ?? [],
     colors: r.colors ?? [],
@@ -587,7 +614,7 @@ async function fetchDirectQuoteRequests(vendorId: string): Promise<DirectQuoteRe
     budgetMax: Number(r.budget_max ?? 0),
     customizationRequested: r.customization_requested ?? false,
     customizationNotes: r.customization_notes ?? null,
-    customizationImages: r.customization_images ?? [],
+    customizationImages: (r.customization_images ?? []).filter((u) => ownStorageUrl(u)),
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
     alreadyQuoted: quoted.has(r.id),
   }));

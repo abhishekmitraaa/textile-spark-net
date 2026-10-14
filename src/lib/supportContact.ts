@@ -11,7 +11,9 @@ export const SUPPORT_PHONE = "+918815578226";
 export const SUPPORT_PHONE_LABEL = "+91 88155 78226";
 export const SUPPORT_EMAIL = "hello@cosora.in";
 export const SUPPORT_HOURS_LABEL = "Mon–Fri, 10:00–19:00 IST. Closed on weekends and holidays.";
-export const SUPPORT_INSTAGRAM = "https://instagram.com/cosora";
+/** Cosora's Instagram (Mitra, 2026-10-14). The one place the app names it: the Help page and the
+ *  vendor landing page's footer link here, so a new handle is a change to this line only. */
+export const SUPPORT_INSTAGRAM = "https://www.instagram.com/cosora.in/";
 
 /**
  * A link that starts a support chat about something (plan P3e): the topic, and the

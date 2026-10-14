@@ -205,6 +205,42 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-14 — Second batch of buyer fixes: carousel picks, requirement step, requirement pictures, Instagram (local stack: harness 27/27; browser 6/6 new, three runs; neighbours 20/21)
+
+- **Harness** `scripts/hero-slides/harness.sql` (never commits; makes three drafts live for itself): who may list and
+  save (manager and super admin yes; support, product moderator, buyer and visitor 42501); a save in order, signed by
+  the manager; a swap of two places with a schedule in one save; refusals (a listing that isn't live joining, the same
+  listing twice, 13 picks, an end before the start, a malformed id, a non-list) and that a refused save changes
+  nothing; a pick that stopped being live may stay; a visitor reads only picks that haven't ended and not
+  `updated_by`; a direct insert by staff refused; `feed_products(p_ids)` returns only the live pick; an empty save
+  clears; every change in the Admin Log with a target id. 27/27. The migration also re-ran cleanly inside a
+  rolled-back transaction.
+- **Browser** `tests/local/buyer-minor-fixes-b.spec.ts` (fresh sellers with live listings, fresh buyers):
+  1. Manager in Cosora-Admin: searches by listing name, adds two, reorders, an end-before-start schedule blocks Save,
+     saves ("Carousel saved: 2 listings"; rows in order; Admin Log). After a snapshot rebuild the buyer's New Arrivals
+     carousel shows "01 / 02" with the first pick in front, and no `/product/ef-` link. Pausing the first pick: "01 / 01",
+     the second in front; the admin row says "Not live". Clearing: "Carousel cleared"; the carousel shows a real live
+     listing. Support sees neither the nav entry nor the page.
+  2. Phone 390 × 760: "Step 1 of 2"; Continue disabled and tappable on the first screen, above the bottom bar; scrolled
+     to the end it is still tappable, rests on the bottom bar with no gap, and the To-top button is above it; picking
+     "Apparel & Home Categories" brings "Narrow it down" into view and enables Continue; step 2 opens at scroll 0.
+  3a. The form: a photo gives a "Cover" preview, no "videos or PDF" text; after submit `rfqs.images` has 1, `image` is
+      `product-images/<buyer>/rfq/<uuid>/0.<webp|jpg|png>`, the object exists, and My Quotes shows it loaded.
+  3b. Quick Quote signed out: "Sign in to post a requirement", nothing saved. Signed in, with a photo: "Quick Quote
+      posted"; the row has the title, quantity 250 from "250 pieces", description "Quantity: 250 pieces\nNavy and
+      white", status active, the photo as cover; My Quotes shows it.
+  3c. My Quotes: a requirement with no picture and one with a foreign URL show the placeholder; no `img[src=""]`; the
+      foreign host is never requested; a direct request shows its listing's picture.
+  4. `/seller` footer and `/help` link to https://www.instagram.com/cosora.in/.
+  First runs found two layout faults, fixed before the passes above: the To-top button covered Continue, and the
+  sticky bar stopped above its container's padding (it is now fixed and portalled, with a spacer); and step 2 opened
+  13–17 px down (the scroll ran while the old step was leaving; now in `onExitComplete`).
+- **Neighbours:** buyer-minor-fixes, feeds, rfq-leads, video-share: 20/21. The miss is video-share's "sheet is on top"
+  sample, taken while the sheet is still sliding in; it fails only after the other specs and passes alone (the
+  screenshot shows the sheet on top). Nothing in this change touches the share sheet or the viewer.
+- typecheck 0 (buyer and admin), i18n 7,727/7,727, rls:check 0, eslint: no new findings on changed files, both
+  production builds.
+
 ### 2026-10-14 — Buyer feeds from the database (local stack: harness 24/24 on 100,000 listings; browser 5/5 new, 22/22 neighbours)
 
 - **Harness** `scripts/feeds/harness.sql` (never commits): 100,000 synthetic live listings from 1,000 sellers (50 on

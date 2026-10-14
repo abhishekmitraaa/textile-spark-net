@@ -50,6 +50,7 @@ import naning9Logo from "@/assets/brands/naning9.png";
 import holicholicLogo from "@/assets/brands/holicholic.png";
 import uptownHolicLogo from "@/assets/brands/uptown-holic.png";
 import elevenAmLogo from "@/assets/brands/11am.png";
+import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 24 },
@@ -556,7 +557,7 @@ const VendorLanding = () => {
               <Mail className="h-4 w-4 text-brand-vendor" /> hello@cosora.in
             </a>
             <a
-              href="https://instagram.com"
+              href={SUPPORT_INSTAGRAM}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 font-medium text-brand-ink"

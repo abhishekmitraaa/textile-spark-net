@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Check, Loader2, Send, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDirectQuoteRequests, submitQuote, echoQuoteReplyToChat } from "@/lib/queries/rfqs";
+import RfqThumb from "@/components/RfqThumb";
 
 // ─────────────────────────────────────────────────────────────
 // Direct Quote Requests: RFQs a buyer addressed to THIS vendor from a product
@@ -76,9 +77,7 @@ export default function DirectQuoteRequests() {
                   <UserRound className="h-3.5 w-3.5" /> {r.buyerName} · {r.date}
                 </p>
               </div>
-              {r.productImage && (
-                <img src={r.productImage} alt="" className="h-12 w-12 shrink-0 rounded-lg bg-gray-100 object-cover lg:h-14 lg:w-14" />
-              )}
+              <RfqThumb src={r.productImage} alt={r.productName} className="h-12 w-12 lg:h-14 lg:w-14" />
             </div>
 
             {/* Full request detail */}

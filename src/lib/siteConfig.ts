@@ -48,6 +48,16 @@ export interface SiteConfig {
   /** Category pictures set in Cosora-Admin, by slot (lib/categoryImageSlots.ts). A slot that
    *  isn't here shows the app's default. Paths in the site-content bucket. */
   categoryImages: Record<string, string>;
+  /** Listings picked for New Arrivals' top carousel in Cosora-Admin, in order. Empty: nothing picked. */
+  heroSlides: HeroSlideRef[];
+}
+
+/** One pick for New Arrivals' top carousel: a listing id, its place and its optional schedule. */
+export interface HeroSlideRef {
+  product_id: string;
+  position: number;
+  starts_at: string | null;
+  ends_at: string | null;
 }
 
 /**
@@ -94,6 +104,9 @@ const CATEGORY_IMAGE_PATH = /^categories\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/;
 /** SLOT_PATTERN in lib/categoryImageSlots.ts, copied: this file loads at start-up and that one pulls in the whole
  *  category list. The table's CHECK is the same rule. */
 const SLOT_PATTERN = /^(new-arrivals|categories)\/[a-z0-9-]+(\/[a-z0-9-]+)?$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** hero_slides' position check: the carousel holds at most 12. */
+export const HERO_SLIDES_MAX = 12;
 
 /** A path on this site: one leading "/", never "//" or "/\", no spaces, quotes or angle brackets. */
 export function isInternalPath(p: unknown): p is string {
@@ -155,16 +168,36 @@ export function parseCategoryImages(m: unknown): Record<string, string> {
   return out;
 }
 
-/** A version-1 snapshot, or null ("use the tables"). Bad banners and pictures are dropped, not fatal.
- *  A file written before category pictures existed has no map: none are set. */
+/** The carousel picks, in order. A malformed entry or a listing named twice is dropped; at most 12. */
+export function parseHeroSlides(list: unknown): HeroSlideRef[] {
+  if (!Array.isArray(list)) return [];
+  const time = (v: unknown) => (typeof v === "string" && !Number.isNaN(Date.parse(v)) ? v : null);
+  const seen = new Set<string>();
+  const out: HeroSlideRef[] = [];
+  for (const item of list) {
+    if (!item || typeof item !== "object") continue;
+    const r = item as Record<string, unknown>;
+    if (typeof r.product_id !== "string" || !UUID.test(r.product_id) || seen.has(r.product_id)) continue;
+    if (typeof r.position !== "number" || !Number.isFinite(r.position)) continue;
+    seen.add(r.product_id);
+    out.push({ product_id: r.product_id, position: r.position, starts_at: time(r.starts_at), ends_at: time(r.ends_at) });
+  }
+  return out.sort((a, b) => a.position - b.position).slice(0, HERO_SLIDES_MAX);
+}
+
+/** A version-1 snapshot, or null ("use the tables"). Bad banners, pictures and slides are dropped, not
+ *  fatal. A file written before category pictures or carousel picks existed has neither: none are set. */
 export function parseSiteConfig(doc: unknown): SiteConfig | null {
   if (!doc || typeof doc !== "object") return null;
-  const d = doc as { version?: unknown; theme?: unknown; banners?: unknown; category_images?: unknown };
+  const d = doc as {
+    version?: unknown; theme?: unknown; banners?: unknown; category_images?: unknown; hero_slides?: unknown;
+  };
   if (d.version !== 1 || !Array.isArray(d.banners)) return null;
   return {
     theme: d.theme == null ? null : parseTheme(d.theme),
     banners: d.banners.map(parseBanner).filter((b): b is SiteBanner => b !== null),
     categoryImages: parseCategoryImages(d.category_images),
+    heroSlides: parseHeroSlides(d.hero_slides),
   };
 }
 
@@ -184,9 +217,10 @@ async function fromSnapshot(): Promise<SiteConfig | null> {
   }
 }
 
-/** The tables, which RLS limits to the theme, the active banners that haven't ended and the set pictures. */
+/** The tables, which RLS limits to the theme, the active banners and carousel picks that haven't ended
+ *  and the set pictures. */
 async function fromTables(): Promise<SiteConfig> {
-  const [theme, banners, pictures] = await Promise.all([
+  const [theme, banners, pictures, slides] = await Promise.all([
     supabase
       .from("site_theme")
       .select("vendor_accent, buyer_accent, success, border, ink, heading_font, body_font")
@@ -197,6 +231,7 @@ async function fromTables(): Promise<SiteConfig> {
       .order("position", { ascending: true })
       .order("id", { ascending: true }),
     supabase.from("category_images").select("id, image_path").not("image_path", "is", null),
+    supabase.from("hero_slides").select("product_id, position, starts_at, ends_at").order("position", { ascending: true }),
   ]);
   if (theme.error) throw theme.error;
   if (banners.error) throw banners.error;
@@ -207,6 +242,8 @@ async function fromTables(): Promise<SiteConfig> {
     categoryImages: pictures.error
       ? {}
       : parseCategoryImages(Object.fromEntries((pictures.data ?? []).map((r) => [r.id, r.image_path]))),
+    // Likewise: a failed read shows the automatic carousel.
+    heroSlides: slides.error ? [] : parseHeroSlides(slides.data),
   };
 }
 
@@ -221,7 +258,7 @@ export function useSiteConfig() {
 }
 
 /** Shown now: inside its schedule. (Inactive and ended banners never reach the client.) */
-export function isBannerLive(b: SiteBanner, now = Date.now()): boolean {
+export function isBannerLive(b: Pick<SiteBanner, "starts_at" | "ends_at">, now = Date.now()): boolean {
   return (!b.starts_at || Date.parse(b.starts_at) <= now) && (!b.ends_at || Date.parse(b.ends_at) > now);
 }
 
@@ -263,6 +300,25 @@ export function useCategoryImages(): { images: Record<string, string>; ready: bo
   if (fresh) return { images: fresh, ready: true };
   if (cached) return { images: cached, ready: true };
   return { images: {}, ready: !q.isLoading };
+}
+
+// ── New Arrivals' top carousel (2026-10-14) ───────────────────────────────────
+
+/**
+ * The listing ids picked for the carousel that are inside their schedule now, in order. `ready` is false
+ * while the config loads on a first visit, so the carousel doesn't flash the automatic picks first. A
+ * failed load counts as ready with nothing picked. Whether a listing is live is feed_products' call.
+ */
+export function useHeroSlideIds(now = Date.now()): { ids: string[]; ready: boolean } {
+  const q = useSiteConfig();
+  const slides = q.data?.heroSlides;
+  // Minute resolution, so the list (a query key downstream) doesn't change on every render.
+  const minute = Math.floor(now / 60_000);
+  const ids = useMemo(
+    () => (slides ?? []).filter((s) => isBannerLive(s, minute * 60_000)).map((s) => s.product_id),
+    [slides, minute],
+  );
+  return { ids, ready: !q.isLoading };
 }
 
 /** The picture for a slot: the one set in Cosora-Admin, else the app's own. */

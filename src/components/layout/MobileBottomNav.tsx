@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -15,6 +15,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useT } from "@/lib/i18n";
+import { usePublishedHeight } from "@/hooks/usePublishedHeight";
 
 interface MobileBottomNavProps {
   /**
@@ -33,6 +34,11 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
   const unreadMessages = 3;
 
   const [hidden, setHidden] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+
+  // The bar's height as --bottom-nav-h, so a page's own pinned bar (Post Your Requirement's
+  // Continue) can sit just above it.
+  usePublishedHeight(navRef, "--bottom-nav-h");
 
   useEffect(() => {
     if (!autoHide) return;
@@ -77,6 +83,7 @@ export const MobileBottomNav = ({ autoHide = false }: MobileBottomNavProps = {})
 
   return (
     <nav
+      ref={navRef}
       className={cn(
         "fixed bottom-0 left-0 right-0 z-50 lg:hidden transition-transform duration-300 ease-out",
         hidden && "translate-y-full"

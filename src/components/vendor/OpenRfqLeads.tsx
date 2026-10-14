@@ -12,6 +12,7 @@ import { countryByCode } from "@/data/countries";
 import { useLang } from "@/lib/i18n";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { trackRequirement, useTrackedRfqIds } from "@/lib/queries/crm";
+import RfqThumb from "@/components/RfqThumb";
 
 // ─────────────────────────────────────────────────────────────
 // Live buyer RFQs (the real lead pool) with inline quoting, for the vendor
@@ -175,7 +176,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
                 </p>
                 {r.details.length > 0 && <LeadDetails details={r.details} />}
               </div>
-              {r.image && <img src={r.image} alt="" className="w-12 h-12 rounded-lg object-cover bg-gray-100 shrink-0 lg:w-14 lg:h-14" />}
+              <RfqThumb src={r.image} alt={r.productName} className="w-12 h-12 lg:w-14 lg:h-14" />
             </div>
 
             {r.alreadyQuoted ? (

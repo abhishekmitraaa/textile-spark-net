@@ -1,9 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Bookmark, BookmarkCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
+import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { useFeedSlice } from "@/lib/queries/feed";
+import type { ProductCardData } from "@/lib/queries/products";
+import { useHeroSlideIds } from "@/lib/siteConfig";
 
 // ─────────────────────────────────────────────────────────────
 // EVERYDAY FASHION HERO — center-emphasis auto-advancing carousel
@@ -29,40 +33,16 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 //    indirectly through the slide counter.
 // ─────────────────────────────────────────────────────────────
 
-// REMOVED 2026-09-13: `sponsored?: boolean`, and the `sponsored: true` on the
-// first slide below.
-//
-// These eight slides are invented — Unsplash photography, vendor ids "v1".."v8"
-// that match no vendor_profiles row, and prices nobody set. Every slide links
-// to `/product/ef-N`, a route that has never existed, so every tap is a dead
-// end. Slide one additionally carried a "sponsored" chip, which made a
-// fabricated product claim to be PAID INVENTORY: the same failure as the old
-// RECENT_VIEW_ADS rail and the `isAd: true` seed brand in followingStore.
-//
-// The false paid claim is removed here because it is squarely part of the
-// advertising system. The rest of the fabricated hero is a product decision
-// (it is the New Arrivals hero) and is logged in ToDo.md + securityflags.md
-// rather than deleted unasked.
-interface HeroSlide {
-  id: string;
-  vendorId: string;
-  name: string;
-  category: string;
-  price: string;
-  moq: string;
-  image: string;
-}
-
-const SLIDES: HeroSlide[] = [
-  { id: "ef-1", vendorId: "v1", name: "Satin Slip Dress",    category: "Dress",    price: "₹459", moq: "MOQ 12", image: "https://images.unsplash.com/photo-1495385794356-15371f348c31?w=600&h=800&fit=crop" },
-  { id: "ef-2", vendorId: "v2", name: "Camp Collar Shirt",   category: "Shirt",    price: "₹499", moq: "MOQ 10", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&h=800&fit=crop" },
-  { id: "ef-3", vendorId: "v3", name: "Ribbed Tank Top",     category: "Top",      price: "₹299", moq: "MOQ 20", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=600&h=800&fit=crop" },
-  { id: "ef-4", vendorId: "v4", name: "Tailored Trouser",    category: "Trouser",  price: "₹699", moq: "MOQ 10", image: "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3?w=600&h=800&fit=crop" },
-  { id: "ef-5", vendorId: "v5", name: "Oversized Blazer",    category: "Blazer",   price: "₹1,299", moq: "MOQ 8", image: "https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=600&h=800&fit=crop" },
-  { id: "ef-6", vendorId: "v6", name: "Pleated Midi Skirt",  category: "Skirt",    price: "₹399", moq: "MOQ 15", image: "https://images.unsplash.com/photo-1583496661160-fb5886a13d27?w=600&h=800&fit=crop" },
-  { id: "ef-7", vendorId: "v7", name: "Linen Wrap Top",      category: "Top",      price: "₹529", moq: "MOQ 12", image: "https://images.unsplash.com/photo-1520975918318-3ec5b67f3e44?w=600&h=800&fit=crop" },
-  { id: "ef-8", vendorId: "v8", name: "Long Trench Coat",    category: "Coat",     price: "₹1,899", moq: "MOQ 6", image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&h=800&fit=crop" },
-];
+// WHAT IT SHOWS (2026-10-14, Mitra: "the top carousel in the new arrivals should be controllable").
+// It used to show eight invented products (Unsplash photographs, sellers "v1".."v8", links to
+// /product/ef-N that never existed: ToDo 2026-09-13). Now:
+//   1. the listings picked in Cosora-Admin › New Arrivals carousel, in their order and inside
+//      their schedule (site-config/site.json, lib/siteConfig.ts useHeroSlideIds);
+//   2. with nothing picked, or none of the picks live, the most popular live listings;
+//   3. with no live listings at all, nothing: the section is left out.
+// Both lists come from feed_products, which returns live listings only, so a paused or removed
+// pick drops out on its own.
+const AUTOMATIC_SLIDES = 8;
 
 const AUTO_ADVANCE_MS = 4200;
 // Each slide's size is now driven by HEIGHT (h-full of the stage) with
@@ -87,13 +67,14 @@ const SWIPE_VELOCITY = 500;       // px/s velocity threshold for a fast flick
 // ─────────────────────────────────────────────────────────────
 
 interface SlideProps {
-  slide: HeroSlide;
+  slide: ProductCardData;
   offset: number;            // shortest-path distance from active index
   saved: boolean;
   reducedMotion: boolean;
 }
 
 function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
+  const { showText } = useDisplayCurrency();
   const isActive = offset === 0;
   const isVisible = Math.abs(offset) <= 1;
 
@@ -133,13 +114,9 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
           onClick={e => {
             e.preventDefault();
             openSaveModal({
-              id: slide.id,
-              vendorId: slide.vendorId,
-              name: slide.name,
-              category: slide.category,
-              price: slide.price,
-              moq: slide.moq,
-              image: slide.image,
+              id: slide.id, vendorId: slide.vendorId, name: slide.name, manufacturer: slide.manufacturer,
+              location: slide.location, price: slide.price, priceValue: slide.priceValue, moq: slide.moq,
+              image: slide.image, category: slide.categoryName ?? undefined, verified: slide.verified ?? false,
             });
           }}
           className="absolute top-3 right-3 w-8 h-8 lg:w-9 lg:h-9 bg-white/95 backdrop-blur-sm rounded-full flex items-center justify-center shadow-sm hover:bg-white transition-colors"
@@ -155,9 +132,12 @@ function Slide({ slide, offset, saved, reducedMotion }: SlideProps) {
         {/* Bottom gradient + product info */}
         <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/65 via-black/15 to-transparent pointer-events-none" />
         <div className="absolute bottom-3 left-3 right-3 text-white">
-          <p className="text-[11px] lg:text-xs uppercase tracking-wider opacity-80">{slide.category}</p>
-          <p className="text-lg lg:text-xl font-bold leading-tight">{slide.price}</p>
-          <p className="text-[10px] lg:text-xs opacity-90">{slide.moq}</p>
+          {slide.categoryName && (
+            <p className="text-[11px] lg:text-xs uppercase tracking-wider opacity-80 truncate">{slide.categoryName}</p>
+          )}
+          <p data-no-translate className="text-sm lg:text-base font-semibold leading-snug line-clamp-1">{slide.name}</p>
+          <p className="text-lg lg:text-xl font-bold leading-tight">{showText(slide.price)}</p>
+          {slide.moq && <p className="text-[10px] lg:text-xs opacity-90">MOQ: {slide.moq}</p>}
         </div>
       </Link>
     </motion.div>
@@ -172,16 +152,37 @@ export default function EverydayFashionHero() {
   const [paused, setPaused] = useState(false);
   const savedState = useSaved();
 
-  const total = SLIDES.length;
+  const picked = useHeroSlideIds();
+  const pickedQuery = useFeedSlice({ sort: "newest", ids: picked.ids }, Math.max(picked.ids.length, 1), {
+    enabled: picked.ids.length > 0,
+  });
+  // feed_products orders by its sort, not by the list: put the picks back in the team's order.
+  const pickedSlides = useMemo(() => {
+    const at = new Map(picked.ids.map((id, i) => [id, i]));
+    return [...(pickedQuery.data ?? [])].sort((a, b) => (at.get(a.id) ?? 0) - (at.get(b.id) ?? 0));
+  }, [pickedQuery.data, picked.ids]);
+  const showAutomatic = picked.ready && (picked.ids.length === 0 || (pickedQuery.isSuccess && pickedSlides.length === 0)
+    || pickedQuery.isError);
+  const automatic = useFeedSlice({ sort: "trending" }, AUTOMATIC_SLIDES, { enabled: showAutomatic });
+  const slides = pickedSlides.length > 0 ? pickedSlides : showAutomatic ? automatic.data ?? [] : [];
+  const loading = !picked.ready || (picked.ids.length > 0 && pickedQuery.isPending && !pickedQuery.isError)
+    || (showAutomatic && automatic.isPending);
+
+  const total = slides.length;
 
   const goTo = (i: number) => setActiveIndex(((i % total) + total) % total);
-  const goNext = () => setActiveIndex(i => (i + 1) % total);
-  const goPrev = () => setActiveIndex(i => (i - 1 + total) % total);
+  const goNext = () => setActiveIndex(i => (i + 1) % Math.max(total, 1));
+  const goPrev = () => setActiveIndex(i => (i - 1 + total) % Math.max(total, 1));
+
+  // The list can shrink (a pick goes out of schedule): never point past its end.
+  useEffect(() => {
+    if (activeIndex >= total && total > 0) setActiveIndex(0);
+  }, [activeIndex, total]);
 
   // Auto-advance interval. Cleared on unmount, paused on hover/drag,
   // suspended entirely for users who prefer reduced motion.
   useEffect(() => {
-    if (prefersReducedMotion || paused) return;
+    if (prefersReducedMotion || paused || total < 2) return;
     const id = window.setInterval(goNext, AUTO_ADVANCE_MS);
     return () => window.clearInterval(id);
     // goNext is stable (no deps); ignore lint complaint about leaving it out
@@ -195,6 +196,9 @@ export default function EverydayFashionHero() {
     if (raw < -total / 2) raw += total;
     return raw;
   };
+
+  // Nothing live to show: leave the section out rather than show an empty frame.
+  if (!loading && total === 0) return null;
 
   return (
     <section
@@ -232,7 +236,10 @@ export default function EverydayFashionHero() {
           setPaused(false);
         }}
       >
-        {SLIDES.map((slide, i) => (
+        {loading && (
+          <div className="absolute top-1/2 left-1/2 h-full aspect-[3/4] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-gray-200 animate-pulse" aria-hidden />
+        )}
+        {slides.map((slide, i) => (
           <Slide
             key={slide.id}
             slide={slide}
@@ -247,7 +254,7 @@ export default function EverydayFashionHero() {
       <footer className="flex items-center justify-between px-4 lg:px-6 py-3 lg:py-4">
         {/* Dot indicators (clickable) */}
         <div className="flex items-center gap-1.5">
-          {SLIDES.map((s, i) => (
+          {slides.map((s, i) => (
             <button
               key={s.id}
               onClick={() => goTo(i)}
@@ -262,9 +269,11 @@ export default function EverydayFashionHero() {
         </div>
 
         {/* Counter */}
-        <span className="text-[11px] lg:text-xs text-gray-400 font-mono tabular-nums tracking-wider">
-          {String(activeIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
-        </span>
+        {total > 0 && (
+          <span className="text-[11px] lg:text-xs text-gray-400 font-mono tabular-nums tracking-wider">
+            {String(activeIndex + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+          </span>
+        )}
       </footer>
     </section>
   );

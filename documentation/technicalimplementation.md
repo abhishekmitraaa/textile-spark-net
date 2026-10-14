@@ -2120,6 +2120,47 @@ Category pictures page (`src/lib/categoryImages.ts`, `src/pages/CategoryImages.t
 - **`useFollowing()`** reads `follows` for the caller, then `vendor_profiles` and live `products` (vendor id only)
   for those sellers in groups of 100. `topProducts` is empty there; the carousel's come from the suggestions.
 
+## New Arrivals carousel, requirement pictures, the pinned bar (2026-10-14, second batch)
+
+Migration `20261014150000_hero_slides.sql`; edge function `site-config-snapshot`; Cosora-Admin's New Arrivals carousel
+page (`src/lib/heroSlides.ts`, `src/pages/HeroSlides.tsx`).
+
+- **`public.hero_slides`:** `id` uuid (so the Admin Log's `target_id` names the row), `product_id` unique → `products`
+  ON DELETE CASCADE, `position` 1..12 (UNIQUE, DEFERRABLE INITIALLY DEFERRED so a save can swap places), `starts_at`,
+  `ends_at` (CHECK end after start), `updated_by`, `updated_at`. RLS `hero_slides_public_read` (`ends_at` null or in the
+  future); column grants `product_id, position, starts_at, ends_at` to anon and authenticated; no client writes.
+- **RPCs:** `admin_hero_slides()` (the picks joined to name, status, seller and first picture) and
+  `admin_hero_slides_save(p_slides jsonb)` (an array of `{product_id, starts_at, ends_at}`, at most 12; advisory xact
+  lock; 22023 for a malformed id or date, a duplicate, an end before the start, or a listing joining that isn't live;
+  upserts with `IS DISTINCT FROM` so an unchanged row writes nothing, then deletes the rest; returns the count), both
+  SECURITY DEFINER, `search_path = ''`, behind `admin.require_hero_slides_admin()` (super_admin, manager).
+- **Delivery:** `trg_hero_slides_snapshot` → `site_config_queue_snapshot()`; the snapshot reads
+  `hero_slides?select=product_id,position,starts_at,ends_at&order=position.asc` with the anon key and writes
+  `hero_slides: [...]` into `site.json` (version stays 1). **Deploy order: the migration before the function** (the
+  function's read of a missing table fails the whole snapshot). `parseHeroSlides()` drops malformed or repeated
+  entries and keeps 12; `useHeroSlideIds()` filters by schedule at minute resolution.
+- **Buyer carousel** (`EverydayFashionHero`): `useFeedSlice({ sort: "newest", ids })` for the picks, re-ordered by the
+  list (feed_products orders by its sort); `useFeedSlice({ sort: "trending" }, 8)` when nothing is picked, no pick is
+  live, or the pick read fails; a pulsing placeholder while loading; nothing when there is nothing live.
+- **Admin search** uses `feed_products(p_query)` (name or seller, live only, 24 rows).
+- **Requirement pictures:** `uploadRfqImages(buyerId, files)` (`lib/queries/rfqs.ts`) shrinks each photo with
+  `shrinkImage()` (longest side 1,600 px, WebP at 0.82 else JPEG; the original if the browser can't decode it, up to
+  8 MB, or if re-encoding is no smaller) and uploads them in parallel to `product-images/<buyer>/rfq/<uuid>/<i>.<ext>`
+  with a year's cache; `createRfq({ images })` writes `images` and `image = images[0]`. The direct request's
+  customization pictures use the same helper. Buyer-written URLs (`image`, `customization_images`) pass
+  `ownStorageUrl()` (`src/lib/storageUrl.ts`: `<VITE_SUPABASE_URL>/storage/v1/object/public/` prefix) where rows are
+  mapped; listing covers (`product_images`) are not checked. My Quotes looks up the cover of each direct request's
+  listing in one `product_images` read. `<RfqThumb>` renders the picture or an `ImageOff` placeholder, also on a load
+  error.
+- **Quick Quote** (`QuickRfqModal`): keeps `File`s with object-URL previews (revoked on remove and unmount); posts
+  `createRfq({ title: name, productName, quantity: digits of the quantity text, description: "Quantity: <text>\n<notes>",
+  images })` with no category; requires a session.
+- **Pinned bar:** `usePublishedHeight(ref, name)` sets a CSS variable on `<html>` from a `ResizeObserver` and removes it
+  on unmount. `MobileBottomNav` publishes `--bottom-nav-h`; Post Your Requirement's `PinnedBar` (portalled to `<body>`,
+  `fixed`, `bottom: var(--bottom-nav-h)`, with an in-flow spacer of its height) publishes `--pinned-bar-h`; `ToTopButton`
+  sits at `calc(var(--bottom-nav-h, 5rem) + var(--pinned-bar-h, 0px) + 1rem)` on phones. Step changes scroll to the top
+  in `AnimatePresence`'s `onExitComplete` (an effect on `step` ran while the old step was still leaving).
+
 ---
 
 ## Discount codes — priced by the server (admin completion Phase 10, 2026-09-29)

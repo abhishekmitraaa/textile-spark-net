@@ -199,6 +199,18 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-14 (second batch of fixes; built, not live)
+- **New Arrivals' top carousel** shows real live listings: the ones Cosora's team picks, in their order, else the most
+  popular. It showed eight invented products whose taps led nowhere.
+- **Create New Requirement** says "Step 1 of 2"; Continue sits in a bar above the bottom bar on every screen and shows
+  the category chosen; picking a category brings its sub-categories into view; step 2 opens at its top.
+- **Requirement photos** (the form and Quick Quote) are uploaded, shrunk, up to 5; the first is the cover in My Quotes.
+  The form's attachments take photos only (it offered videos and PDFs and uploaded nothing). **Quick Quote now saves
+  the requirement** (it only said it had); signed out it asks the buyer to sign in.
+- **My Quotes** shows a placeholder for a requirement without a picture (it was a broken image), and a request about
+  a listing shows the listing's picture.
+- **Instagram** links go to www.instagram.com/cosora.in (Help, and the seller landing page's footer).
+
 ### Changed 2026-10-14 (feeds; built, not live)
 - **New Arrivals, For You, Trends, Sale, Following and Search load as the buyer scrolls**, a page at a time, in the order
   the database decides; nothing disappears when the catalogue passes 1,000 listings. Sale's tiers, Following's controls
@@ -383,6 +395,10 @@ the demand side of India's fashion and textile supply chain.
 **Primary colour:** vendor blue `#256fef`. Note that `--accent` and `--primary` in
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
+
+### Changed 2026-10-14 (second batch of buyer fixes; built, not live)
+- **Leads and direct quote requests** show the requirement's photo (buyers' photos are now uploaded), else a
+  placeholder; only pictures from Cosora's own storage are loaded.
 
 ### Purpose
 Give a manufacturer a storefront, a demand pipeline, and a visible reason to stay: leads,
@@ -714,6 +730,9 @@ Keep the marketplace trustworthy and monetised: verify who is real, moderate wha
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
 ### Added 2026-10-14 (built, not live)
+- **New Arrivals carousel** (`/new-arrivals-carousel`, super admins and managers): pick up to 12 live listings for the
+  carousel at the top of the buyer's New Arrivals page, order them, give each an optional start and end; saved whole;
+  each change in the Admin Log; live in about a minute. With none picked the site shows popular listings.
 - **Category pictures** (`/category-pictures`, super admins and managers): upload or reset the picture of each New Arrivals
   tile and each Categories-page banner and tile; resized in the browser; each change in the Admin Log; live in about a minute.
 

@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { fmtMoney, type QuoteStatus, type Rfq, type VendorQuote } from "@/lib/quotesData";
 import { cn } from "@/lib/utils";
+import RfqThumb from "@/components/RfqThumb";
 
 // ─────────────────────────────────────────────────────────────
 // A quote request raised from a product page goes to ONE vendor. There is no
@@ -136,9 +137,7 @@ export default function DirectRequestThread({ rfq, quote, onBack, onChat, onCall
             <p className="text-sm font-bold text-gray-900 leading-snug">{rfq.productName}</p>
             <p className="text-[11px] text-gray-400 mt-0.5">Requested {detail?.sentAgo ?? rfq.date}</p>
           </div>
-          {rfq.image && (
-            <img src={rfq.image} alt="" className="w-14 h-14 rounded-lg object-cover bg-gray-100 shrink-0" />
-          )}
+          <RfqThumb src={rfq.image} alt={rfq.productName} className="w-14 h-14" />
         </div>
 
         <dl className="mt-3 space-y-1.5 text-xs">

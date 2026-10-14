@@ -9,6 +9,8 @@ import { ChevronUp } from "lucide-react";
  * directly onto pages that render their own frame instead of BuyerShell —
  * e.g. SearchResults — so the affordance is identical everywhere per the
  * buyer-side pattern ("appears on all pages when the user scrolls down").
+ * It sits 1rem above the phone's bottom bar and a page's pinned bar, measured (--bottom-nav-h and
+ * --pinned-bar-h, see usePublishedHeight), rather than cover either; 5rem when no bottom bar says.
  */
 export default function ToTopButton() {
   const [visible, setVisible] = useState(false);
@@ -30,7 +32,7 @@ export default function ToTopButton() {
           transition={{ duration: 0.18, ease: "easeOut" }}
           onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
           aria-label="Scroll to top"
-          className="fixed bottom-24 lg:bottom-10 right-4 lg:right-8 z-40 w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl hover:border-gray-300 transition-shadow"
+          className="fixed bottom-[calc(var(--bottom-nav-h,5rem)+var(--pinned-bar-h,0px)+1rem)] lg:bottom-[calc(2.5rem+var(--pinned-bar-h,0px))] right-4 lg:right-8 z-40 w-10 h-10 lg:w-12 lg:h-12 rounded-full bg-white shadow-lg border border-gray-200 flex items-center justify-center hover:shadow-xl hover:border-gray-300 transition-shadow"
         >
           <ChevronUp className="w-5 h-5 lg:w-6 lg:h-6 text-gray-700" />
         </motion.button>
