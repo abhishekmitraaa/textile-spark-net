@@ -115,29 +115,3 @@ short list of things someone has to *decide*.
   as a small "Bumped" chip on the ad card. Trivial to restyle once the spec
   exists.
 
----
-
-## Done — moved out of this list
-
-- ~~Semantic ad matching (v3 Phase 11)~~ — built 2026-10-13 (branch `build/todo-batch-2-2026-10-13`): `search_ads()` matches a
-  search to each campaign's promoted product by embedding; no ad embedding was needed. Released 2026-10-13.
-
-- ~~`delivery_team` admin role~~ — built 2026-10-13 (branch `build/todo-batch-2026-10-13`): the enum value,
-  `certificate_fulfiller()`, the read policy and `roles.ts` changed together. Released 2026-10-13.
-
-- ~~Vendor-level billing for Trusted Seal / Verified Certificate~~ — done
-  2026-09-14. Charged once per order, materialised as one campaign row with
-  `product_id = null`, one parcel. The entitlement model
-  (`vendor_ad_verifications`) was already per-vendor and was left alone.
-- ~~Wholesaler Pick 72-hour bump~~ — built 2026-09-14. Verified live: the paid
-  campaign moved from position 3 to position 1 in its slot, stops being bumped
-  at exactly 72 hours, and keeps serving afterwards.
-- ~~`ad_orders` has no link to the campaigns it paid for~~ — done 2026-09-14,
-  as `advertisements.ad_order_id` (the correct direction: one order → many
-  campaigns).
-- ~~Cross-repo migration dependency undocumented~~ — `MIGRATIONS.md` in both
-  repos, 2026-09-14.
-- ~~`razorpay-webhook` granted trust badges on payment~~ — removed 2026-09-14.
-  It had kept its own copy of `grantSeals()` after `razorpay-verify-payment`
-  dropped it, so "payment is never approval" held on one publish path and not
-  the other.
