@@ -20,6 +20,9 @@ import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
+import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import { NEW_ARRIVALS_TILES, newArrivalsSlot, type NewArrivalsTileKey } from "@/lib/categoryImageSlots";
+import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import trustedSeal from "@/assets/Trustedseal.png";
@@ -40,20 +43,22 @@ import catWinterWear from "@/assets/categories/winter-wear.png";
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-const CATEGORIES = [
-  { name: "Women's Apparel",  image: catWomensApparel },
-  { name: "Men's Apparel",    image: catMensApparel },
-  { name: "Men's Jeans",      image: catMensJeans },
-  { name: "Men's Shirt",      image: catMensShirt },
-  { name: "Accessories",      image: catAccessories },
-  { name: "Women's Trousers", image: catWomensTrousers },
-  { name: "Women's T-shirts", image: catWomensTshirts },
-  { name: "Women's Shoes",    image: catWomensShoes },
-  { name: "Kidswear",         image: catKidswear },
-  { name: "Ethnic Wear",      image: catEthnicWear },
-  { name: "Activewear",       image: catActivewear },
-  { name: "Winter Wear",      image: catWinterWear },
-];
+// The tiles and their order are NEW_ARRIVALS_TILES (lib/categoryImageSlots.ts); these are the
+// pictures the app ships. Cosora-Admin › Category pictures can replace any of them (2026-10-14).
+const TILE_DEFAULTS: Record<NewArrivalsTileKey, string> = {
+  "womens-apparel": catWomensApparel,
+  "mens-apparel": catMensApparel,
+  "mens-jeans": catMensJeans,
+  "mens-shirt": catMensShirt,
+  accessories: catAccessories,
+  "womens-trousers": catWomensTrousers,
+  "womens-tshirts": catWomensTshirts,
+  "womens-shoes": catWomensShoes,
+  kidswear: catKidswear,
+  "ethnic-wear": catEthnicWear,
+  activewear: catActivewear,
+  "winter-wear": catWinterWear,
+};
 
 interface Product {
   id: string;
@@ -188,12 +193,13 @@ function ProductCard({ product }: { product: Product }) {
         </div>
       </Link>
 
-      <div className="p-2 lg:p-3.5 flex flex-col flex-1">
+      <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
+        <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | MOQ: {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
-          {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
+          {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
         </p>
         <div className="flex items-center gap-0.5 mt-1 lg:mt-1.5">
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
@@ -207,7 +213,7 @@ function ProductCard({ product }: { product: Product }) {
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>
@@ -337,6 +343,7 @@ const NewArrivals = () => {
   // trackpad already scroll them natively, this is what makes desktop mouse
   // users able to slide them at all.
   const categoriesDrag = useDragScroll<HTMLDivElement>();
+  const categoryPictures = useCategoryImages();
   const videoRailDrag = useDragScroll<HTMLDivElement>();
   // The Brand Picks rail keeps its own drag hook — there are now two of them on
   // the page, and one shared hook would bind both rails to a single ref.
@@ -583,14 +590,26 @@ const NewArrivals = () => {
                 the flex `justify-center` + overflow scrolling bug. Mobile (no lg:
                 override) keeps its original percentage-based edge-to-edge layout. */}
             <div className="grid grid-flow-col grid-rows-2 auto-cols-[22%] lg:auto-cols-[128px] gap-3 lg:gap-5 lg:w-max lg:mx-auto">
-              {CATEGORIES.map(cat => (
+              {NEW_ARRIVALS_TILES.map(cat => (
                 <Link
-                  key={cat.name}
+                  key={cat.key}
                   to={`/search/results?category=${encodeURIComponent(cat.name)}`}
                   className="text-center group snap-start"
                 >
                   <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100 mb-1.5 lg:mb-2 p-2 lg:p-3 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
-                    <img src={cat.image} alt={cat.name} className="w-full h-full object-contain" draggable={false} />
+                    {/* Until a first visit knows which picture is set, a blank tile, not the default and then a swap. */}
+                    {categoryPictures.ready ? (
+                      <img
+                        src={categoryImageUrl(categoryPictures.images, newArrivalsSlot(cat.key), TILE_DEFAULTS[cat.key])}
+                        alt={cat.name}
+                        data-slot={newArrivalsSlot(cat.key)}
+                        className="w-full h-full object-contain"
+                        draggable={false}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-lg bg-gray-100 animate-pulse" aria-hidden="true" />
+                    )}
                   </div>
                   <span className="text-[10px] lg:text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>
                 </Link>

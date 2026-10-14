@@ -36,6 +36,7 @@ import {
   type Facet,
 } from "@/lib/searchFilters";
 import { useCallVendor } from "@/lib/queries/calls";
+import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
 
 // Swatch colours for the Colour facet (names must match the facet options).
@@ -160,24 +161,25 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
   const saved = useSaved();
   const isSaved = Boolean(saved.products[p.id]);
   const [hovered, setHovered] = useState(false);
+  // Two writes, one tap: the click against the term that produced this result,
+  // and the marker ProductDetail consumes to label the view 'organic_search'
+  // instead of 'direct'. The picture and the text under it both open the product.
+  const openFromSearch = () => {
+    markNavSource("organic_search");
+    if (query?.trim()) {
+      void logEngagement({
+        eventType: "search_click", vendorId: p.vendorId, productId: p.id,
+        queryText: query.trim(), source: "organic_search",
+      });
+    }
+  };
 
   return (
     <div className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col"
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <Link
         to={`/product/${p.id}`}
-        onClick={() => {
-          // Two writes, one tap: the click against the term that produced this
-          // result, and the marker ProductDetail consumes to label the view
-          // 'organic_search' instead of 'direct'.
-          markNavSource("organic_search");
-          if (query?.trim()) {
-            void logEngagement({
-              eventType: "search_click", vendorId: p.vendorId, productId: p.id,
-              queryText: query.trim(), source: "organic_search",
-            });
-          }
-        }}
+        onClick={openFromSearch}
         className="relative aspect-[4/5] block bg-gray-100"
       >
         <img src={p.image} alt={p.name} className={cn("absolute inset-0 w-full h-full object-cover transition-opacity duration-300", hovered ? "opacity-0" : "opacity-100")} />
@@ -205,9 +207,10 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
           <span className="text-[9px] text-gray-400">| {p.enquiries}</span>
         </div>
       </Link>
-      <div className={cn("flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
+      <div className={cn("relative flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
+        <CardLinkOverlay to={`/product/${p.id}`} onClick={openFromSearch} />
         <p className={cn("font-bold text-brand-buyer leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq} | {p.sold}</p>
-        <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px] lg:text-xs")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className="font-bold hover:underline">{p.manufacturer}</Link></p>
+        <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px] lg:text-xs")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{p.manufacturer}</Link></p>
         <div className="flex items-center gap-0.5 mt-0.5">
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5 lg:w-3 lg:h-3")} />
           <span className={cn("font-bold text-gray-700 truncate", compact ? "text-[8px]" : "text-[10px] lg:text-xs")}>{p.location}</span>
@@ -219,7 +222,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
           </>
         )}
         <button onClick={() => callVendor(p.vendorId, p.name)}
-          className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", compact ? "text-[9px] py-1.5" : "text-xs lg:text-sm py-2 lg:py-2.5")}>
+          className={cn(ABOVE_CARD_LINK, "mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", compact ? "text-[9px] py-1.5" : "text-xs lg:text-sm py-2 lg:py-2.5")}>
           <Phone className={compact ? "w-2.5 h-2.5" : "w-3 h-3 lg:w-3.5 lg:h-3.5"} /> {t("Call Now")}
         </button>
       </div>

@@ -11,6 +11,8 @@ import {
   Package, Layers, Scissors, Wrench, Briefcase, Grid2X2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { categoryBannerSlot, categoryTileSlot } from "@/lib/categoryImageSlots";
+import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const grid = { hidden: {}, show: { transition: { staggerChildren: 0.035 } } };
@@ -25,6 +27,8 @@ const Categories = () => {
   const reduced = useReducedMotion();
   const [activeId, setActiveId] = useState(CATEGORY_TAXONOMY[0].id);
   const [query, setQuery] = useState("");
+  // Banners and tiles Cosora-Admin › Category pictures has replaced (2026-10-14); the rest show the defaults.
+  const pictures = useCategoryImages();
 
   const active = useMemo(() => CATEGORY_TAXONOMY.find((c) => c.id === activeId)!, [activeId]);
 
@@ -136,7 +140,10 @@ const Categories = () => {
                 transition={{ duration: 0.25, ease: E }}>
                 {/* Banner */}
                 <div className="relative rounded-2xl overflow-hidden aspect-[16/7] lg:aspect-[16/5] bg-gray-100 mb-4">
-                  <img src={active.image} alt={active.label} className="absolute inset-0 w-full h-full object-cover" />
+                  {pictures.ready && (
+                    <img src={categoryImageUrl(pictures.images, categoryBannerSlot(active.id), active.image)} alt={active.label}
+                      data-slot={categoryBannerSlot(active.id)} className="absolute inset-0 w-full h-full object-cover" />
+                  )}
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                   <div className="absolute bottom-3 left-4 right-4">
                     <h2 className="text-lg font-extrabold text-white leading-tight">{active.label}</h2>
@@ -155,8 +162,11 @@ const Categories = () => {
                           onClick={() => go(active, s)}
                           className="group flex flex-col items-center gap-1.5">
                           <span className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-100 group-hover:ring-brand-buyer/40 transition">
-                            <img src={active.images[i % active.images.length]} alt=""
-                              className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                            {pictures.ready && (
+                              <img src={categoryImageUrl(pictures.images, categoryTileSlot(active.id, s.label), active.images[i % active.images.length])} alt=""
+                                data-slot={categoryTileSlot(active.id, s.label)} loading="lazy"
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
+                            )}
                             <span className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
                           </span>
                           <span className="text-[11px] font-medium text-gray-700 text-center leading-tight line-clamp-2">{s.label}</span>

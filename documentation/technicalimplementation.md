@@ -2059,6 +2059,40 @@ Content page (`src/lib/siteContent.ts`).
 
 ---
 
+## Category pictures and brand suggestions (2026-10-14)
+
+Migrations `20261014090000_category_images.sql` and `20261014090100_new_brand_suggestions.sql`; Cosora-Admin's
+Category pictures page (`src/lib/categoryImages.ts`, `src/pages/CategoryImages.tsx`).
+
+- **`public.category_images`:** `id` text (the slot; CHECK `^(new-arrivals|categories)/[a-z0-9-]+(/[a-z0-9-]+)?$`,
+  at most 120), `surface` (`new_arrivals`, `categories_banner`, `categories_tile`), `label`, `group_label`, `position`,
+  `image_path` (null = the app's default; else `^categories/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$`), `updated_by`,
+  `updated_at`. 191 rows seeded from `src/lib/categoryImageSlots.ts` (12 + 11 + 168). The slot is `id` so the Admin
+  Log's `target_id` names it.
+- **Reads:** RLS `category_images_public_read` (`image_path is not null`); column grants `id, image_path, updated_at`.
+- **Writes:** `admin_category_images()` (every slot, `updated_by_name` from `admin.audit_actor_name()`) and
+  `admin_category_image_set(p_slot, p_image_path)` (row lock; P0002 unknown slot; 22023 a path outside `categories/` or
+  an object that isn't in `site-content`; returns the replaced path, null when nothing changed), both behind
+  `admin.require_category_image_admin()` (super_admin, manager). `trg_admin_audit` on the table.
+- **Storage:** `site_content_category_{select,insert,update,delete}` on `storage.objects`: `site-content`,
+  `categories/<uuid>.<ext>`, super_admin and manager. The banner policies are unchanged.
+- **Delivery:** `trg_category_images_snapshot` → `site_config_queue_snapshot()`; `site-config-snapshot` reads
+  `category_images?image_path=not.is.null` with the anon key and writes `category_images: { slot: path }` into
+  `site.json` (version stays 1). `parseCategoryImages()` checks slot and path again. `useCategoryImages()` caches the
+  last map under `cosora_category_images_v1` and reports `ready: false` only on a first visit while loading.
+- **Admin upload:** `preparePicture()` draws the file to a canvas at most 800 × 800 (tiles) or 1600 × 900 (banners)
+  and encodes WebP (JPEG where the browser can't), keeping the original when that is already smaller; uploaded first,
+  removed again if the save is refused; the replaced object is removed after the row.
+- **`new_brand_suggestions(p_limit)`** (SECURITY INVOKER, `search_path = ''`, anon and authenticated): sellers among
+  the newest 5,000 live listings (`products_live_recent_idx`) that have a picture, minus the caller and the sellers
+  they follow, newest first, at most 24; per seller its live count and its two most enquired-about live listings with
+  their first picture (`products_live_vendor_recent_idx`). 21 ms with 20,000 live listings from 1,000 sellers (it was
+  85 ms aggregating every live listing, the first version).
+- **`useFollowing()`** reads `follows` for the caller, then `vendor_profiles` and live `products` (vendor id only)
+  for those sellers in groups of 100. `topProducts` is empty there; the carousel's come from the suggestions.
+
+---
+
 ## Discount codes — priced by the server (admin completion Phase 10, 2026-09-29)
 
 Migrations `20260929080502_discount_codes.sql` and `20260929084703_discount_code_save_defaults.sql`;

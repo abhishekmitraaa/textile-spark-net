@@ -8037,5 +8037,14 @@
  "That GSTIN isn't valid. Check it against your GST certificate.": "यह GSTIN मान्य नहीं है। इसे अपने GST प्रमाणपत्र से मिलाएं।",
  "The GSTIN doesn't match the PAN above. A GSTIN contains the PAN it was issued for.": "GSTIN ऊपर दिए गए PAN से मेल नहीं खाता। GSTIN में वही PAN होता है जिसके लिए वह जारी हुआ।",
  "That PAN isn't valid. A PAN is 5 letters, 4 digits, then 1 letter.": "यह PAN मान्य नहीं है। PAN में 5 अक्षर, 4 अंक और फिर 1 अक्षर होता है।",
- "The GSTIN doesn't match the PAN. A GSTIN contains the PAN it was issued for.": "GSTIN, PAN से मेल नहीं खाता। GSTIN में वही PAN होता है जिसके लिए वह जारी हुआ।"
+ "The GSTIN doesn't match the PAN. A GSTIN contains the PAN it was issued for.": "GSTIN, PAN से मेल नहीं खाता। GSTIN में वही PAN होता है जिसके लिए वह जारी हुआ।",
+ "{0} on Cosora": "कोसोरा पर {0}",
+ "Share this product": "यह उत्पाद साझा करें",
+ "Link copied": "लिंक कॉपी हो गया",
+ "Couldn't copy the link": "लिंक कॉपी नहीं हो सका",
+ "Choose where to share this link.": "चुनें कि यह लिंक कहाँ साझा करना है।",
+ "Copy link": "लिंक कॉपी करें",
+ "Download this brand's product range as PDF catalogues": "इस ब्रांड के उत्पाद PDF कैटलॉग के रूप में डाउनलोड करें",
+ "followers ·": "फ़ॉलोअर्स ·",
+ "New folder name": "नए फ़ोल्डर का नाम"
 }

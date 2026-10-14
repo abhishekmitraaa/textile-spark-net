@@ -19,6 +19,41 @@ export function webUrl(u: string | null | undefined): string | null {
   }
 }
 
+/** The file name a downloaded catalogue is saved under: its title, made safe for every OS. */
+export function catalogueFileName(title: string | null | undefined): string {
+  const base = (title ?? "")
+    .normalize("NFKD")
+    .replace(/[^\w\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 80);
+  return `${base || "catalogue"}.pdf`;
+}
+
+/**
+ * Where "Download PDF" points (Mitra, 2026-10-14: a buyer's tap should download the PDF, not open it).
+ *
+ * A catalogue uploaded through the app lives in the public `catalogues` bucket, and Storage serves it as an
+ * attachment, named, when the address asks (`?download=`), so the browser saves it on a phone and a
+ * computer alike (an <a download> attribute alone is ignored across origins). An older row holding a web
+ * address anywhere else can only be opened, so `download` is false there. Null when there is no web address.
+ */
+export function catalogueDownload(
+  fileUrl: string | null | undefined,
+  title: string | null | undefined,
+): { href: string; download: boolean } | null {
+  const url = webUrl(fileUrl);
+  if (!url) return null;
+  const prefix = supabase.storage.from("catalogues").getPublicUrl("").data.publicUrl;
+  if (!url.startsWith(prefix)) return { href: url, download: false };
+  const path = decodeURIComponent(url.slice(prefix.length).split(/[?#]/)[0]);
+  if (!path) return null;
+  return {
+    href: supabase.storage.from("catalogues").getPublicUrl(path, { download: catalogueFileName(title) }).data.publicUrl,
+    download: true,
+  };
+}
+
 export interface MyCatalogueRow {
   id: string;
   title: string;

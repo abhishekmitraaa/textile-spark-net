@@ -18,6 +18,7 @@ import {
 } from "@/lib/savedStore";
 import type { Gender } from "@/lib/listingProducts";
 import { useCallVendor } from "@/lib/queries/calls";
+import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import {
   ArrowLeft,
   LayoutGrid,
@@ -76,13 +77,14 @@ function GridCard({ p, folderId, selected, onToggleSelect }: {
           <span className="text-[9px] text-gray-400">| {p.enquiries}</span>
         </div>
       </Link>
-      <div className="p-2">
+      <div className="relative p-2">
+        <CardLinkOverlay to={`/product/${p.id}`} />
         <p className="text-xs font-bold text-brand-buyer">{showText(p.price)} | {p.moq}</p>
         <p className="text-[10px] text-gray-600 mt-1 truncate">{p.name} | <span className="font-bold">{p.manufacturer}</span></p>
         <div className="flex items-center gap-0.5 mt-1 text-[10px] text-gray-500">
           <MapPin className="w-2.5 h-2.5 shrink-0" /> <span className="truncate">{p.location}</span>
         </div>
-        <div className="flex gap-1.5 mt-2">
+        <div className={cn(ABOVE_CARD_LINK, "flex gap-1.5 mt-2")}>
           <button onClick={() => navigate(`/chats/${p.vendorId}`)} className="flex-1 flex items-center justify-center gap-1 border border-gray-200 rounded-lg py-1.5 text-[11px] font-semibold text-gray-700">
             <MessageCircle className="w-3 h-3" /> Chat
           </button>
@@ -109,7 +111,8 @@ function ListRow({ p, folderId }: { p: SavedProduct; folderId: string }) {
             <Heart className="w-3.5 h-3.5 fill-brand-buyer text-brand-buyer" />
           </span>
         </Link>
-        <div className="min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          <CardLinkOverlay to={`/product/${p.id}`} />
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <h3 className="text-sm font-bold text-gray-900 leading-snug">{p.name}</h3>

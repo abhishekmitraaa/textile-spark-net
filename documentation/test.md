@@ -95,6 +95,7 @@ is not what red is for; each skip message says how to re-arm it.
 
 | Spec | Covers |
 |---|---|
+| `buyer-minor-fixes.spec.ts` | 2026-10-14. One case for each of eight fixes: category pictures set in Cosora-Admin reach New Arrivals and `/categories`; card text opens the product; the folder sheet above a phone keyboard; the share sheet's links and Copy link; the store page's menu row; no text selection on touch; catalogue downloads and no demo catalogues; new-brand suggestions with pictures. |
 | `support-chat.spec.ts` | A buyer starts a chat in the open hours; Support finds it in the inbox, takes it, saves an internal note and replies; **the reply reaches the buyer's open page live** (no reload) and the note never does, before or after a reload; the buyer answers and staff see it live; the buyer ends the chat (resolved); the reply notified the buyer. A manager reads a request but gets no reply or take controls; a product moderator gets no Support section. Rollout: Staff lets the test list in and keeps an ordinary account out, All lets everyone in, Off shuts the test list out too |
 | `support-followups.spec.ts` | 2026-10-02. "Report this seller" on a store page opens the fraud form about that seller; the report carries `vendor` and its id, and the confirmed finding names the account and its status (not "Not linked to an account"); the header says "Fraud report" once. A pasted Cosora listing link links the listing, "Report this listing" on a product page does the same, a link to another site doesn't. A callback booked in Hindi shows Hindi days, and the thread has no raw "2026-10-02" |
 | `support-channels.spec.ts` | **Callback:** a vendor books one; Support's number is masked until Reveal, the reveal is an Admin Log row, "Completed" is recorded and the vendor sees "We called you". **Fraud report with a photo:** the wizard's four steps; the file passes the server-side check (`clean`) and the reporter can't download it; on the restricted board, "Suspended" can't be saved without the line that stays on the lasting record; the confirmed-fraud record names the party, the outcome and that line; the reporter sees "reviewed" and nothing about the outcome. **Feedback:** an ID, no email claimed (Resend isn't configured locally), "Mark reviewed", and the sender is told |
@@ -203,6 +204,39 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
+
+### 2026-10-14 — Eight buyer fixes (local stack: harness 16/16; browser 8/8 new and 13/13 neighbours)
+
+- **Harness** `scripts/category-images/harness.sql` (never commits), 16/16: a manager lists all 191 slots; support, a
+  product moderator and a buyer can't (42501); a manager sets a picture (nothing replaced) and the row records who; a
+  super admin replaces it and gets the old path back; support can't set; a path outside `categories/`, a picture never
+  uploaded (22023) and an unknown slot (P0002) are refused; a visitor reads only slots with a picture and not who changed
+  them; a direct UPDATE is refused, staff included; "Use default" clears it and returns the path; three Admin Log rows
+  name the slot.
+- **Browser** `tests/local/buyer-minor-fixes.spec.ts`, 8/8, apps on :8090 and :5184 (`SHOTS=<dir>` saves screenshots):
+  (1) the local manager uploads a picture for the Kidswear tile and for Kids' Wear › Frocks / Dresses in Cosora-Admin;
+  the row and the Admin Log have it; after a snapshot rebuild New Arrivals and `/categories` show it and other tiles
+  keep their defaults; "Use default" clears the row and removes the object; support isn't offered the page;
+  (2) tapping a card's text opens the product on the store page grid and on Following › Most Popular; Call Now stays
+  on top; (3) at 390 × 800 with a 330 px keyboard (a fake `visualViewport`) the folder field is 16 px and stays above
+  the keyboard while "Summer samples" is typed and added; (4) Share's WhatsApp, Facebook, X, LinkedIn, Telegram and
+  Email links carry the product's address without the query; Copy link puts it on the clipboard; (5) the 3-dot menu is
+  level with Back without a seal, and centred beside the seal with one; (6) on a touch screen an `h1` isn't selectable,
+  a field and a `data-selectable` element are, and with a mouse the `h1` is; (7) a live catalogue's link has
+  `download=<title>.pdf`, the response is an attachment and the browser downloads it; a seller without one shows no
+  section; (8) a seller with two live listings is suggested with both pictures, most enquiries first; a seller with none
+  isn't; no slide lacks a picture and none comes from picsum.
+- **Neighbours:** `following`, `catalogue-review`, `subscriptions-p10`, `chat-composer-keyboard`, `todo-batch`,
+  `signup-back` 13/13 (`following.spec.ts`, recorded failing on the local stack on 2026-10-12, passes).
+- **Performance:** `new_brand_suggestions(12)` in a rolled-back block with 20,000 synthetic live listings from 1,000
+  sellers (triggers off for the insert): 85 ms when it aggregated every live listing, 21–23 ms after bounding it to the
+  newest 5,000.
+- **Found by the run:** at 1,313 local sellers the old browser-side list dropped the newest (PostgREST's 1,000 rows).
+- typecheck 0 in both apps; i18n 7,741/7,741; eslint clean on the changed files (one existing error in
+  `siteConfig.ts`'s `isInternalPath`, present on main); slot check and `rls:check` clean; both production builds.
+- **Not tested:** a real phone's keyboard (the visual viewport is simulated, as for the chat composer); the share
+  addresses opening the apps; the production snapshot trigger (it posts to production's function; the local run
+  rebuilt the snapshot by calling the local function).
 
 ### 2026-10-13 — Production checks after the release of both batches (read-only, through `supabase db query --linked`)
 

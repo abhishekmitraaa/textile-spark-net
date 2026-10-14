@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import CosoraLogo from "@/components/CosoraLogo";
 import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
+import BrandAvatar from "@/components/buyer/BrandAvatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Brand } from "@/lib/followingStore";
-import { useFollowing } from "@/lib/queries/follows";
+import { useFollowing, useNewBrandSuggestions } from "@/lib/queries/follows";
 import { ArrowLeft, BadgeCheck, Bookmark, Check, Flag, MoreVertical, Search, UserMinus } from "lucide-react";
 
 // ─────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
     <div className="flex items-center gap-3 py-3">
       <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
         <span className="relative block">
-          <img src={brand.logo} alt={brand.name} className="w-12 h-12 rounded-full object-cover" />
+          <BrandAvatar name={brand.name} logo={brand.logo} className="w-12 h-12 text-sm" />
           <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-buyer flex items-center justify-center">
             <Check className="w-2.5 h-2.5 text-white" />
           </span>
@@ -77,9 +78,12 @@ const FollowingViewAll = () => {
   const [query, setQuery] = useState("");
 
   const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
-  // Includes already-followed brands so the carousel can keep a just-followed
-  // brand's slide in place and show "Following" on it (see NewBrandsCarousel).
-  const discoverable = useMemo(() => brands.filter((b) => !b.isHidden), [brands]);
+  // Suggestions from the database, marked with what this buyer follows now (see Following.tsx).
+  const { data: suggestions = [] } = useNewBrandSuggestions();
+  const discoverable = useMemo(() => {
+    const following = new Set(followed.map((b) => b.id));
+    return suggestions.map((b) => ({ ...b, isFollowing: following.has(b.id) }));
+  }, [suggestions, followed]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

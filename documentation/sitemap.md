@@ -190,6 +190,9 @@ the seller landing page `/seller` (`seller_registration`). super_admin and suppo
 (support since 2026-09-24), all through `admin_faq_*` RPCs. Edits show on those pages with
 no deploy. Since 2026-09-30 it also has a Quick Guides tab (`public.help_guides`).
 
+**`/category-pictures`** (added 2026-10-14) sets the pictures of `/home/new-arrivals`' "Shop by category" tiles
+and of `/categories`' banners and tiles (`public.category_images`), for super_admin and the Manager role.
+
 **`/admin-log`** (added 2026-09-25, MPF-26) lists every admin change and panel sign-in, from
 `admin.audit_log` in this project's database, for super_admin and the Manager role only.
 

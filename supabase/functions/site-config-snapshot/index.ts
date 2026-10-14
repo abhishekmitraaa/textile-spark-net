@@ -6,7 +6,8 @@
 // back to the tables if it can't be fetched or doesn't parse (src/lib/siteConfig.ts).
 //
 // WHO CALLS IT, through pg_net, with the Vault service_role key:
-//   * trg_site_banners_snapshot and trg_site_theme_snapshot, after every committed write
+//   * trg_site_banners_snapshot, trg_site_theme_snapshot and trg_category_images_snapshot,
+//     after every committed write
 //     (one call per transaction; a rolled-back write queues nothing);
 //   * pg_cron `faq-snapshots-refresh`, hourly, which rebuilds the FAQ files and this one,
 //     so a lost call can't leave it stale for longer than an hour.
@@ -17,7 +18,12 @@
 // ANON key, so RLS (active banners that haven't ended) and the column grants (no author
 // columns) apply, and the queries name their columns too:
 //   { version: 1, generated_at, theme: {…} | null, banners: [{ id, title, subtitle,
-//     cta_label, link_path, image_path, position, starts_at, ends_at }] }, banners in order.
+//     cta_label, link_path, image_path, position, starts_at, ends_at }],
+//     category_images: { "<slot>": "categories/<uuid>.<ext>" } }, banners in order.
+// category_images (2026-10-14, migration 20261014090000_category_images) holds only the slots
+// with a picture set in Cosora-Admin › Category pictures; the app shows its own default for
+// the rest. An app built before it ignores the key, and an app built after it treats a file
+// without it as "no pictures set".
 // A banner that starts later is included with its start time; the app shows it from then.
 //
 // ALWAYS FROM COMMITTED TRUTH, as faqs-snapshot: it reads the tables when it runs, and
@@ -38,6 +44,8 @@ const MAX_PASSES = 3;
 
 const THEME_COLUMNS = "vendor_accent,buyer_accent,success,border,ink,heading_font,body_font,updated_at";
 const BANNER_COLUMNS = "id,title,subtitle,cta_label,link_path,image_path,position,starts_at,ends_at";
+// RLS returns only the slots with a picture; the filter says so too.
+const CATEGORY_IMAGES = "category_images?select=id,image_path&image_path=not.is.null&order=id.asc";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -91,11 +99,16 @@ Deno.serve(async (req) => {
   };
 
   const readState = async () => {
-    const [theme, banners] = await Promise.all([
+    const [theme, banners, pictures] = await Promise.all([
       read(`site_theme?select=${THEME_COLUMNS}&limit=1`),
       read(`site_banners?select=${BANNER_COLUMNS}&order=position.asc,id.asc`),
+      read(CATEGORY_IMAGES),
     ]);
-    return { theme: theme[0] ?? null, banners };
+    const category_images: Record<string, string> = {};
+    for (const p of pictures as { id: string; image_path: string | null }[]) {
+      if (p.image_path) category_images[p.id] = p.image_path;
+    }
+    return { theme: theme[0] ?? null, banners, category_images };
   };
 
   const upload = async (body: string) => {
@@ -123,7 +136,10 @@ Deno.serve(async (req) => {
       passes++;
       generatedAt = new Date().toISOString();
       banners = state.banners.length;
-      await upload(JSON.stringify({ version: 1, generated_at: generatedAt, theme: state.theme, banners: state.banners }));
+      await upload(JSON.stringify({
+        version: 1, generated_at: generatedAt, theme: state.theme, banners: state.banners,
+        category_images: state.category_images,
+      }));
       const again = await readState();
       if (JSON.stringify(again) === JSON.stringify(state)) break;
       if (passes >= MAX_PASSES) {

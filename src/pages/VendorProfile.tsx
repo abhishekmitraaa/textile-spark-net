@@ -10,7 +10,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useVendorProfile } from "@/lib/queries/vendor";
-import { useVendorCatalogues } from "@/lib/queries/catalogues";
+import { useVendorCatalogues, catalogueDownload } from "@/lib/queries/catalogues";
 import { useVendorReviews, useReviewMutations } from "@/lib/queries/reviews";
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { useFollowing } from "@/lib/queries/follows";
@@ -30,7 +30,7 @@ import {
   ArrowLeft, MoreVertical, MapPin, Phone, MessageCircle, X, Check,
   Bookmark, BookmarkCheck, Star, ChevronDown, Users, Globe,
   Search, ArrowUpDown, Filter, Grid2X2, Grid3X3, Play, Factory, Send,
-  FileText, ExternalLink, LogIn, Flag,
+  FileText, Download, LogIn, Flag,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import catTshirt from "@/assets/categories/brand/tshirt.png";
@@ -45,11 +45,8 @@ import officeFabricRolls from "@/assets/office/fabric-rolls.jpg";
 import officeWarehouse from "@/assets/office/warehouse.jpg";
 import officeThreadRack from "@/assets/office/thread-rack.jpg";
 import officeFactoryFloor from "@/assets/office/factory-floor.jpg";
-import cataMenswear from "@/assets/categories/banners/menswear.jpg";
-import cataWomenswear from "@/assets/categories/banners/womenswear.jpg";
-import cataRawMaterials from "@/assets/categories/banners/raw-materials.jpg";
-import type { MyCatalogueRow } from "@/lib/queries/catalogues";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
+import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 
 // === Animation constants (project convention) ===
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -62,7 +59,7 @@ const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 
 // ─────────────────────────────────────────────────────────────
 // DATA. Placeholder content still shown for every vendor: the category tiles,
-// the office pictures, the catalogues and the "Sells" chips (ToDo.md). The
+// the office pictures and the "Sells" chips (ToDo.md). The
 // vendor's identity, contact and business details come from their own row, or
 // read "Not provided".
 // ─────────────────────────────────────────────────────────────
@@ -85,14 +82,6 @@ const officePhotos = [
   { label: "Warehouse", src: officeWarehouse },
   { label: "Yarn & Threads", src: officeThreadRack },
   { label: "Factory Floor", src: officeFactoryFloor },
-];
-
-// Catalogue/lookbook demo fallback — shown until the vendor uploads real
-// catalogues (which flow through `useVendorCatalogues` → the `catalogues` table).
-const DEMO_CATALOGUES: MyCatalogueRow[] = [
-  { id: "demo-cat-1", title: "Menswear Catalogue 2026", description: "T-shirts, shirts, bottomwear & co-ords", status: "live", pageCount: 24, fileUrl: null, coverUrl: cataMenswear, createdAt: "" },
-  { id: "demo-cat-2", title: "Womenswear Lookbook", description: "Dresses, ethnic & everyday essentials", status: "live", pageCount: 32, fileUrl: null, coverUrl: cataWomenswear, createdAt: "" },
-  { id: "demo-cat-3", title: "Fabric Swatch Book", description: "Cottons, blends & GSM options", status: "live", pageCount: 18, fileUrl: null, coverUrl: cataRawMaterials, createdAt: "" },
 ];
 
 const capacityOptions = [
@@ -306,9 +295,9 @@ const VendorProfile = () => {
   // fired callVendor() with the mock vendorId ("v5"), so the buyer both saw
   // content misattributed to a named business and dialled the wrong supplier.
   const vendorVideos = vendor?.videos ?? [];
-  // NOTE: catalogues still fall back to demo content — same class of issue,
-  // separate feature, left alone deliberately.
-  const catalogueList = catalogues.length ? catalogues : DEMO_CATALOGUES;
+  // The vendor's own live catalogues, or none: the section hides itself. Three demo catalogues
+  // used to stand in for every vendor without one, and their "View catalogue" went nowhere (2026-10-14).
+  const catalogueList = catalogues;
 
   // Scroll-aware sticky header (appears after the hero scrolls away)
   useEffect(() => {
@@ -412,15 +401,18 @@ const VendorProfile = () => {
               <ArrowLeft className="h-4 w-4" />
             </button>
 
-            {/* TrustedSEAL image — top right (verified vendors only) */}
+            {/* Top right, in one row level with Back: the TrustedSEAL (verified vendors only), then the
+                3-dot menu. The menu used to sit at a fixed top-14, the slot under the seal, so on a page
+                without a seal it hung below Back with a gap above it (2026-10-14). */}
+            <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
             {vendor.isVerified && (
-              <img src={trustedSeal} alt="TrustedSEAL" className="absolute top-3 right-3 z-10 h-9 w-auto drop-shadow" />
+              <img src={trustedSeal} alt="TrustedSEAL" className="h-9 w-auto drop-shadow" />
             )}
             {/* 3-dot menu: report this seller (2026-10-02; the button had no action before).
                 The report names this account, so a confirmed finding can say whose it was. */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button aria-label="More" className="absolute right-3 top-14 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 transition-colors">
+                <button aria-label="More" data-testid="vendor-more-menu" className="flex h-8 w-8 items-center justify-center rounded-full bg-black/30 text-white backdrop-blur hover:bg-black/45 transition-colors">
                   <MoreVertical className="h-4 w-4" />
                 </button>
               </DropdownMenuTrigger>
@@ -433,6 +425,7 @@ const VendorProfile = () => {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </div>
 
             {/* Info — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
@@ -893,17 +886,21 @@ const VendorProfile = () => {
               <FileText className="h-4 w-4 text-brand-buyer" />
               <h2 className="text-sm font-bold text-gray-900">Catalogues & Lookbooks</h2>
             </div>
-            <p className="text-xs text-gray-400 mb-3">Browse this brand's full product range as PDF catalogues</p>
+            <p className="text-xs text-gray-400 mb-3">Download this brand's product range as PDF catalogues</p>
             <motion.div variants={listContainer} className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-              {catalogueList.map((cat) => (
+              {catalogueList.map((cat) => {
+                // Tapping a catalogue downloads its PDF (Mitra, 2026-10-14); see catalogueDownload().
+                const file = catalogueDownload(cat.fileUrl, cat.title);
+                if (!file) return null;
+                return (
                 <motion.a
                   variants={listItem}
                   whileTap={TAP}
                   transition={TAP_T}
                   key={cat.id}
-                  href={cat.fileUrl ?? "#"}
-                  target="_blank"
-                  rel="noreferrer"
+                  href={file.href}
+                  {...(file.download ? { download: "" } : { target: "_blank", rel: "noreferrer" })}
+                  data-testid="catalogue-download"
                   className="group flex flex-col rounded-xl border border-gray-200 overflow-hidden bg-white hover:border-brand-buyer/40 transition-colors"
                 >
                   <div className="relative aspect-[3/4] bg-gray-50">
@@ -925,11 +922,12 @@ const VendorProfile = () => {
                     <p className="text-xs font-bold text-gray-900 line-clamp-1">{cat.title}</p>
                     {cat.description && <p className="mt-0.5 text-[10px] text-gray-500 line-clamp-2">{cat.description}</p>}
                     <span className="mt-auto pt-2 inline-flex items-center gap-1 text-[11px] font-bold text-brand-buyer">
-                      View catalogue <ExternalLink className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+                      <Download className="h-3 w-3 transition-transform group-hover:translate-y-0.5" /> Download PDF
                     </span>
                   </div>
                 </motion.a>
-              ))}
+                );
+              })}
             </motion.div>
           </motion.section>
         )}
@@ -991,9 +989,10 @@ const VendorProfile = () => {
               const isSaved = Boolean(saved.products[product.id]);
               return (
                 <div key={product.id} className="rounded-xl border border-gray-200 overflow-hidden bg-white flex flex-col">
-                  <div className="relative aspect-[3/4] bg-gray-100 shrink-0">
+                  {/* The picture and the text under it open the product (2026-10-14: neither did). */}
+                  <Link to={`/product/${product.id}`} className="relative block aspect-[3/4] bg-gray-100 shrink-0">
                     <img src={product.image} alt={product.name} className="h-full w-full object-cover" loading="lazy" />
-                    <button onClick={() => openSaveModal({ ...toSavePayload(product), location: product.location })}
+                    <button onClick={(e) => { e.preventDefault(); openSaveModal({ ...toSavePayload(product), location: product.location }); }}
                       aria-label="Save" className={cn("absolute top-2 right-2 flex items-center justify-center rounded-full bg-white/90 shadow", gridCols === 2 ? "h-7 w-7" : "h-6 w-6")}>
                       {isSaved ? <BookmarkCheck className={cn("text-brand-buyer fill-brand-buyer/15", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} /> : <Bookmark className={cn("text-gray-500", gridCols === 2 ? "h-3.5 w-3.5" : "h-3 w-3")} />}
                     </button>
@@ -1002,8 +1001,9 @@ const VendorProfile = () => {
                       <span className="text-[9px] font-bold text-gray-800">{product.rating}</span>
                       <span className="text-[9px] text-gray-400">| {product.reviews}</span>
                     </div>
-                  </div>
-                  <div className={cn("flex flex-col flex-1", gridCols === 2 ? "p-2" : "p-1.5")}>
+                  </Link>
+                  <div className={cn("relative flex flex-col flex-1", gridCols === 2 ? "p-2" : "p-1.5")}>
+                    <CardLinkOverlay to={`/product/${product.id}`} />
                     {gridCols === 2 && (
                       <div className="h-5 mb-0.5">
                         {product.latest && <span className="inline-block rounded-full bg-brand-buyer/10 px-2 py-0.5 text-[9px] font-semibold text-brand-buyer">Latest Products</span>}
@@ -1022,7 +1022,7 @@ const VendorProfile = () => {
                     <p className={cn("text-gray-500 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fabric: {product.fabric} | GSM: {product.gsm}</p>
                     <p className={cn("text-gray-500", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>Fit Type: {product.fit}</p>
                     <button onClick={() => callVendor(vendorId, product.name)}
-                      className={cn("mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
+                      className={cn(ABOVE_CARD_LINK, "mt-auto pt-2 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white font-bold rounded-lg transition-colors", gridCols === 2 ? "text-xs py-2" : "text-[9px] py-1.5")}>
                       <Phone className={gridCols === 2 ? "h-3 w-3" : "h-2.5 w-2.5"} /> Call Now
                     </button>
                   </div>

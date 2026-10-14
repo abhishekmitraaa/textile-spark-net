@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ListingProduct } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
+import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 
 // ─────────────────────────────────────────────────────────────
 // Shared compact listing card used across buyer feed pages
@@ -62,12 +63,13 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
         </div>
       </Link>
 
-      <div className="p-2 lg:p-3.5 flex flex-col flex-1">
+      <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
+        <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
           {showText(product.price)} | {product.moq} | {product.soldCount}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
-          {product.name} | <Link to={`/vendor/${product.vendorId}`} className="font-bold hover:underline">{product.manufacturer}</Link>
+          {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
         </p>
         <div className="flex items-center gap-0.5 mt-1 lg:mt-1.5">
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
@@ -81,7 +83,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
 
         <button
           onClick={() => callVendor(product.vendorId, product.name)}
-          className="mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors"
+          className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
         </button>

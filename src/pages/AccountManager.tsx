@@ -116,7 +116,7 @@ export default function AccountManager() {
                     {messages.map((m) => (
                       <div key={m.id} className={m.authorKind === "vendor" ? "ml-10 text-right" : "mr-10"}>
                         <div className={`inline-block max-w-full rounded-2xl px-3.5 py-2 text-left text-sm ${m.authorKind === "vendor" ? "bg-brand-vendor text-white" : "bg-gray-100 text-gray-900"}`}>
-                          <p className="whitespace-pre-wrap break-words" data-no-translate>{m.body}</p>
+                          <p className="whitespace-pre-wrap break-words" data-no-translate data-selectable>{m.body}</p>
                         </div>
                         <p className="mt-0.5 text-[11px] text-gray-400">
                           {m.authorKind === "vendor" ? "You" : <span data-no-translate>{m.authorLabel}</span>}{` · ${WHEN.format(new Date(m.createdAt))}`}

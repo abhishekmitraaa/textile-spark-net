@@ -113,7 +113,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
                   <div key={m.id} className={m.sender === "user" ? "flex justify-end" : "flex justify-start"}>
                     <div className="max-w-[80%]">
                       {/* What people type stays as typed (AutoTranslate). */}
-                      <div data-no-translate className={
+                      <div data-no-translate data-selectable className={
                         m.sender === "user"
                           ? "rounded-2xl rounded-br-sm bg-brand-buyer text-white px-3 py-2 text-xs leading-relaxed"
                           : "rounded-2xl rounded-bl-sm bg-white border border-gray-200 text-gray-700 px-3 py-2 text-xs leading-relaxed"

@@ -129,6 +129,32 @@
     font-family: var(--font-heading);
   }
 
+  /* Taps on a phone don't select text (2026-10-14, Mitra: "when I tap any text on my phone it
+     gets selected"). A double tap or a press on a button, card or label used to select a word
+     and put up the copy handles, and every tap flashed a grey box; an app doesn't do either.
+     Touch screens only: a mouse can still select anything. What people type stays selectable
+     (fields), and so does what other people wrote that's worth copying: mark it data-selectable
+     (chat and support messages carry it). */
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  @media (hover: none) and (pointer: coarse) {
+    body {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    input,
+    textarea,
+    [contenteditable="true"],
+    [data-selectable],
+    [data-selectable] * {
+      -webkit-user-select: text;
+      user-select: text;
+      -webkit-touch-callout: default;
+    }
+  }
+
   /* Preserve original fonts for Landing page */
   .landing-page,
   .landing-page body {

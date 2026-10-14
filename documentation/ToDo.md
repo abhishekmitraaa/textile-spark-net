@@ -506,9 +506,9 @@ with no need to dictate format, context, or reference each time.
     reviewed first; invented "success stories" with names.
   - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
   - `/vendor/:id` (`VendorProfile.tsx`), added 2026-09-28: the same content for every vendor in
-    four places: the category tiles, the office pictures (stock photos, though vendors can
-    upload their own `office_photos`), the demo catalogues shown until a vendor uploads one,
-    and the "Sells" chips. Phase 4a removed the invented identity and contact details, not these.
+    three places: the category tiles, the office pictures (stock photos, though vendors can
+    upload their own `office_photos`) and the "Sells" chips. Phase 4a removed the invented identity
+    and contact details; the demo catalogues went on 2026-10-14 (a seller without one shows none).
 - Reference: 2026-09-26, the language-translation fix.
 - Status: Open
 

@@ -148,6 +148,16 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
+- **Category pictures are Cosora's to change, slot by slot** (Mitra, 2026-10-14; migration `20261014090000_category_images.sql`).
+  - Super admins and managers set them in Cosora-Admin › Category pictures, through `admin_category_image_set()` only. A slot is a fixed id from `src/lib/categoryImageSlots.ts` (New Arrivals' tiles, the Categories page's banners and tiles); a slot with no picture shows the app's own.
+  - A new tile or sub-category is a new slot: add its row in a migration and run `node scripts/category-image-slots-check.mjs`, or the admin can't set it. Renaming a sub-category changes its slot.
+  - Visitors read the pictures from `site-config/site.json`, never the table per page view. Changing who may set them means `admin.require_category_image_admin()`, the four `site_content_category_*` storage policies and `SECTION_READ` / `SECTION_WRITE["category-images"]` in Cosora-Admin together.
+- **A list the browser filters is never "every row"** (2026-10-14). PostgREST returns at most 1,000 rows, silently: "Looking for New Brands?" loaded every seller and lost the ones past 1,000, followed sellers included. Ask the database for what the page shows (`new_brand_suggestions()`, the followed sellers by id in groups of 100), never the whole table to filter in the browser.
+- **Taps on a phone don't select text** (Mitra, 2026-10-14; `src/index.css`). Touch screens only. Fields stay selectable; text people may want to copy (messages) carries `data-selectable`. A new surface that shows such text adds it.
+- **A product card opens the product from its text too** (Mitra, 2026-10-14). A new card puts `<CardLinkOverlay>` in its text block (`relative`), and gives anything in that block with its own job `relative z-10`. The picture's link stays the card's one accessible link.
+- **A sheet with a text field on a phone stays above the keyboard** (2026-10-14). The keyboard covers the page without resizing it: pin the sheet with `useVisibleViewport()` (or the composer's `useKeyboardInset()`), and give the field 16 px text so iOS doesn't zoom.
+- **Sharing goes through `<ShareSheet>`** (Mitra, 2026-10-14): the service's own share addresses and the device's menu. Nothing is sent by Cosora and nothing is logged. It shares a public page's address, never a query string the person arrived with.
+- **A catalogue's tap downloads the PDF** (Mitra, 2026-10-14): `catalogueDownload()`. A seller without a live catalogue shows no catalogue section (the demo catalogues are gone).
 - **A buyer interest id means what `pref_category_map` says, and its words live in one file** (Interest Preference
   v2, 2026-10-11; migration `20261010232412_interest_preferences_v2.sql`).
   - The ids, labels and photos are `src/lib/buyerCategories.ts`; `CategoryPickerGrid` is the one picker

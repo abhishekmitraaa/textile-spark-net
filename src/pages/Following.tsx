@@ -5,6 +5,7 @@ import { useT } from "@/lib/i18n";
 import BuyerShell from "@/components/buyer/BuyerShell";
 import ListingProductCard from "@/components/buyer/ListingProductCard";
 import NewBrandsCarousel from "@/components/buyer/NewBrandsCarousel";
+import BrandAvatar from "@/components/buyer/BrandAvatar";
 import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { useAdSlot } from "@/lib/queries/ads";
 import { AD_SLOTS, type AdSlot, type AdSlotId } from "@/lib/adSlots";
@@ -18,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { type Brand } from "@/lib/followingStore";
-import { useFollowing } from "@/lib/queries/follows";
+import { useFollowing, useNewBrandSuggestions } from "@/lib/queries/follows";
 import { useLiveProducts, sortTrending, type ProductCardData } from "@/lib/queries/products";
 
 // Map a live product row into the compact listing-card shape.
@@ -90,7 +91,7 @@ function FollowingRow({ brand, onUnfollow, onHide }: { brand: Brand; onUnfollow:
     <div className="flex items-center gap-3 py-2.5">
       <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
         <span className="relative block">
-          <img src={brand.logo} alt={brand.name} className="w-11 h-11 rounded-full object-cover" />
+          <BrandAvatar name={brand.name} logo={brand.logo} className="block w-11 h-11 text-sm" />
           <span className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-brand-buyer flex items-center justify-center">
             <Check className="w-2.5 h-2.5 text-white" />
           </span>
@@ -268,11 +269,13 @@ const Following = () => {
   const t = useT();
 
   const followed = useMemo(() => brands.filter((b) => b.isFollowing && !b.isHidden), [brands]);
-  // Includes already-followed brands (unlike a plain "not yet followed" filter)
-  // so NewBrandsCarousel can keep a just-followed brand's slide in place and
-  // show "Following" on it, instead of the brand disappearing from the list
-  // the instant it's followed.
-  const discoverable = useMemo(() => brands.filter((b) => !b.isHidden), [brands]);
+  // Suggestions come from the database (new_brand_suggestions), marked with what this buyer follows
+  // now, so a slide followed from the carousel stays put and shows "Following".
+  const { data: suggestions = [] } = useNewBrandSuggestions();
+  const discoverable = useMemo(() => {
+    const following = new Set(followed.map((b) => b.id));
+    return suggestions.map((b) => ({ ...b, isFollowing: following.has(b.id) }));
+  }, [suggestions, followed]);
 
   // Feed controls
   const [gender, setGender] = useState<GenderFilter>("all");

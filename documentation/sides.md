@@ -194,10 +194,21 @@ the demand side of India's fashion and textile supply chain.
   to a thread — including a test message — can only be removed with service_role. Found while
   verifying the quote chat on 2026-09-16; two clearly-labelled test rows are still in the demo
   buyer's thread for that reason.
-- **A vendor's public page still shows placeholder content in four places:** the category
-  tiles, the office pictures (stock photos, though vendors can now upload their own), the
-  catalogues and the "Sells" chips are the same for every vendor (`ToDo.md`). The identity,
+- **A vendor's public page still shows placeholder content in three places:** the category
+  tiles, the office pictures (stock photos, though vendors can now upload their own) and the
+  "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
+
+### Changed 2026-10-14 (eight fixes; built, not live)
+- **Product cards open from their text**, not only the picture; the store page's product grid opens products at all.
+- **Save to folder** on a phone is a sheet above the keyboard; a new folder's name is visible while it's typed.
+- **Share** on a product page offers WhatsApp, Copy link, Facebook, X, LinkedIn, Telegram, Email and the phone's own menu.
+- **The store page's 3-dot menu** sits level with Back, beside the seal when there is one.
+- **Tapping text on a phone doesn't select it**; messages can still be copied.
+- **Catalogues download** as PDFs; a seller without one shows no catalogue section (no demo catalogues).
+- **"Looking for New Brands?"** suggests only sellers with live listings, with their own pictures and logos; signed-out
+  visitors see it too.
+- **Category pictures** on New Arrivals and the Categories page can be changed by Cosora's team.
 
 ### Changed 2026-10-09 (subscriptions P10; built, not live)
 - **Category pages** start with Featured products from Silver, Gold and VIP sellers (rotating), and a **Spotlight**
@@ -694,6 +705,10 @@ before assuming a function is missing.
 ### Purpose
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
+
+### Added 2026-10-14 (built, not live)
+- **Category pictures** (`/category-pictures`, super admins and managers): upload or reset the picture of each New Arrivals
+  tile and each Categories-page banner and tile; resized in the browser; each change in the Admin Log; live in about a minute.
 
 ### Responsibilities & features
 

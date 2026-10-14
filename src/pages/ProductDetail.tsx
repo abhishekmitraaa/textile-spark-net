@@ -23,6 +23,7 @@ import { toast } from "sonner";
 import { logEngagement, consumeNavSource } from "@/lib/queries/engagement";
 import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet";
 import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
+import ShareSheet from "@/components/buyer/ShareSheet";
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
   ChevronDown, BadgeCheck, AlertCircle, ImageOff,
@@ -372,6 +373,7 @@ const ProductDetail = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [chatOptionsOpen, setChatOptionsOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
 
   // Real product reviews — the ONLY source of a product rating on this page.
   // `products.rating_avg` / `reviews_count` are deliberately not used: on 23 of
@@ -540,7 +542,7 @@ const ProductDetail = () => {
               <button onClick={saveProduct} aria-label={isSaved ? "Edit saved folders" : "Save product"} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
                 {isSaved ? <BookmarkCheck className="h-4 w-4 text-brand-buyer fill-brand-buyer/15" /> : <Bookmark className="h-4 w-4 text-gray-500" />}
               </button>
-              <button aria-label="Share" onClick={() => { navigator.clipboard?.writeText(window.location.href); toast.success("Link copied!"); }} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
+              <button aria-label="Share" onClick={() => setShareOpen(true)} className="flex h-8 w-8 items-center justify-center rounded-full hover:bg-gray-100 active:scale-95">
                 <Share2 className="h-4 w-4 text-gray-500" />
               </button>
               {/* Report this listing (2026-10-02): the report names it, and through it the seller. */}
@@ -891,6 +893,18 @@ const ProductDetail = () => {
           }}
         />
       )}
+
+      {/* Share: WhatsApp and the rest, not just a copied link (2026-10-14). The address is the product's
+          own page, without whatever query the buyer arrived with. */}
+      <ShareSheet
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        url={`${window.location.origin}/product/${product.id}`}
+        title={`${product.name} on Cosora`}
+        subtitle={product.price ? `${showText(product.price)}${product.moq ? ` · MOQ ${product.moq}` : ""}` : product.vendor.name}
+        image={product.media[0]?.url ?? null}
+        heading="Share this product"
+      />
     </BuyerShell>
   );
 };

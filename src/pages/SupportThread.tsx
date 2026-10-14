@@ -280,7 +280,7 @@ function MessageBubble({ m, files, accentBg, reduced }: { m: ThreadMessage; file
             "px-3.5 py-2.5 text-sm shadow-sm rounded-2xl",
             mine ? cn(accentBg, "text-white rounded-br-md") : "bg-white border border-gray-200 text-gray-900 rounded-bl-md",
           )}>
-            <p className="leading-relaxed whitespace-pre-wrap break-words" data-no-translate>{m.body}</p>
+            <p className="leading-relaxed whitespace-pre-wrap break-words" data-no-translate data-selectable>{m.body}</p>
           </div>
         )}
         {files.length > 0 && (

@@ -8,6 +8,7 @@ import { type Brand } from "@/lib/followingStore";
 import { logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
+import BrandAvatar from "@/components/buyer/BrandAvatar";
 
 // ─────────────────────────────────────────────────────────────
 // "Looking for New Brands?" — swipeable brand discovery carousel.
@@ -62,8 +63,12 @@ export default function NewBrandsCarousel({
   // own button to "Following".
   const seenRef = useRef<Set<string>>(new Set());
   const [slideIds, setSlideIds] = useState<string[]>([]);
+  //
+  // Only sellers with something to show (2026-10-14, Mitra: "Looking for New Brands isn't showing the
+  // products of the vendors it displays"). Every seller account was a slide, so the many with no live
+  // listing showed a name over an empty grid. A suggestion now has at least one live listing with a picture.
   useEffect(() => {
-    const fresh = brands.filter((b) => !b.isFollowing && !seenRef.current.has(b.id));
+    const fresh = brands.filter((b) => !b.isFollowing && b.topProducts.length > 0 && !seenRef.current.has(b.id));
     if (fresh.length) {
       fresh.forEach((b) => seenRef.current.add(b.id));
       setSlideIds((prev) => [...prev, ...fresh.map((b) => b.id)]);
@@ -150,14 +155,14 @@ export default function NewBrandsCarousel({
                 {/* Brand header */}
                 <div className="flex items-center gap-2.5 p-3">
                   <button onClick={() => navigate(`/vendor/${brand.id}`)} className="shrink-0">
-                    <img src={brand.logo} alt={brand.name} className="w-10 h-10 rounded-full object-cover" />
+                    <BrandAvatar name={brand.name} logo={brand.logo} className="w-10 h-10 text-sm" />
                   </button>
                   <button onClick={() => navigate(`/vendor/${brand.id}`)} className="min-w-0 flex-1 text-left">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold text-gray-900 truncate">{brand.name}</span>
                       {brand.isAd && <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide shrink-0">AD</span>}
                     </div>
-                    <p className="text-[11px] text-gray-500 truncate">{brand.location} · {brand.followers} followers</p>
+                    <p className="text-[11px] text-gray-500 truncate">{brand.location} · {brand.followers} followers · {brand.items} {brand.items === 1 ? "product" : "products"}</p>
                   </button>
                   <button
                     onClick={() => { if (!following) { onFollow(brand); toast.success(`Following ${brand.name}`); } }}
@@ -171,15 +176,16 @@ export default function NewBrandsCarousel({
                   </button>
                 </div>
 
-                {/* Top inquired products */}
-                <div className="grid grid-cols-2 gap-px bg-gray-100">
+                {/* Top inquired products: one fills the slide, two share it */}
+                <div className={cn("grid gap-px bg-gray-100", brand.topProducts.length > 1 ? "grid-cols-2" : "grid-cols-1")}>
                   {brand.topProducts.map((p, i) => (
                     <button
                       key={i}
                       onClick={() => navigate(`/vendor/${brand.id}`)}
-                      className="relative aspect-square bg-gray-100"
+                      className={cn("relative bg-gray-100", brand.topProducts.length > 1 ? "aspect-square" : "aspect-[2/1]")}
+                      data-testid="new-brand-product"
                     >
-                      <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" />
+                      <img src={p.image} alt={p.name} className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
                       <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-left">
                         <p className="text-[10px] font-semibold text-white truncate">{p.name}</p>
                         <p className="text-[10px] font-bold text-white">{showText(p.price)}</p>
@@ -251,13 +257,7 @@ function SponsoredSlide({
       <div className="rounded-xl bg-white overflow-hidden border border-gray-100">
         <div className="flex items-center gap-2.5 p-3">
           <button onClick={() => onOpen(ad)} className="shrink-0">
-            {brand?.logo ? (
-              <img src={brand.logo} alt={name} className="w-10 h-10 rounded-full object-cover" />
-            ) : (
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-500">
-                {name.trim().charAt(0).toUpperCase()}
-              </span>
-            )}
+            <BrandAvatar name={name} logo={brand?.logo} className="h-10 w-10 text-sm" />
           </button>
           <button onClick={() => onOpen(ad)} className="min-w-0 flex-1 text-left">
             <div className="flex items-center gap-1.5">

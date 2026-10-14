@@ -158,6 +158,7 @@ function looksHuman(s, strong = false) {
   if (isClassList(s)) return false;                                  // Tailwind classes
   if (/^(image|video|audio|application|text)\/[\w.+-]+(,\s*(image|video|audio|application|text)\/[\w.+-]+)*$/.test(s)) return false; // MIME types
   if (/^[a-z]+(\.[a-z]+)+$/.test(s)) return false;                   // dotted keys
+  if (/^M[-\d.]/.test(s) && /^[MLHVCSQTAZmlhvcsqtaz\d.,\s-]+$/.test(s)) return false; // SVG path data (brand marks)
   return true;
 }
 function calleeName(e) {

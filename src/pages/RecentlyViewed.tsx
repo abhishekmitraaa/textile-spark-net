@@ -46,6 +46,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
+import CardLinkOverlay from "@/components/buyer/CardLinkOverlay";
 import type { Gender } from "@/lib/listingProducts";
 import { cn } from "@/lib/utils";
 
@@ -90,7 +91,8 @@ function RecentRow({ p }: { p: RecentProduct }) {
           </button>
         </Link>
 
-        <div className="min-w-0 flex-1">
+        <div className="relative min-w-0 flex-1">
+          <CardLinkOverlay to={`/product/${p.id}`} />
           <Link to={`/product/${p.id}`}>
             <h3 className="text-sm font-bold text-gray-900 leading-snug line-clamp-2">{p.name}</h3>
           </Link>

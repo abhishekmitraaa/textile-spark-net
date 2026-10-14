@@ -819,6 +819,39 @@ export type Database = {
           },
         ]
       }
+      category_images: {
+        Row: {
+          group_label: string | null
+          id: string
+          image_path: string | null
+          label: string
+          position: number
+          surface: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          group_label?: string | null
+          id: string
+          image_path?: string | null
+          label: string
+          position: number
+          surface: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          group_label?: string | null
+          id?: string
+          image_path?: string | null
+          label?: string
+          position?: number
+          surface?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       certificate_orders: {
         Row: {
           ad_id: string | null
@@ -4610,6 +4643,11 @@ export type Database = {
         Args: { p_note?: string; p_outcome: string; p_ticket_id: string }
         Returns: Json
       }
+      admin_category_image_set: {
+        Args: { p_image_path?: string | null; p_slot: string }
+        Returns: string | null
+      }
+      admin_category_images: { Args: never; Returns: Json }
       admin_conversation_review_list: {
         Args: { p_conversation_id?: string; p_status?: string }
         Returns: {
@@ -5875,6 +5913,19 @@ export type Database = {
         }[]
       }
       my_visibility: { Args: { p_days?: number }; Returns: Json }
+      new_brand_suggestions: {
+        Args: { p_limit?: number }
+        Returns: {
+          brand_name: string | null
+          city: string | null
+          followers_count: number
+          is_verified: boolean
+          live_count: number
+          logo_url: string | null
+          top_products: Json
+          vendor_id: string
+        }[]
+      }
       next_invoice_number: { Args: never; Returns: string }
       normalise_search_query: { Args: { q: string }; Returns: string }
       notification_claim: {

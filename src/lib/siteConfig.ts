@@ -1,3 +1,4 @@
+import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
@@ -44,6 +45,9 @@ export interface SiteBanner {
 export interface SiteConfig {
   theme: SiteTheme | null;
   banners: SiteBanner[];
+  /** Category pictures set in Cosora-Admin, by slot (lib/categoryImageSlots.ts). A slot that
+   *  isn't here shows the app's default. Paths in the site-content bucket. */
+  categoryImages: Record<string, string>;
 }
 
 /**
@@ -86,6 +90,10 @@ const SNAPSHOT_TIMEOUT_MS = 3_000;
 
 const HEX = /^#[0-9a-f]{6}$/;
 const IMAGE_PATH = /^banners\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/;
+const CATEGORY_IMAGE_PATH = /^categories\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/;
+/** SLOT_PATTERN in lib/categoryImageSlots.ts, copied: this file loads at start-up and that one pulls in the whole
+ *  category list. The table's CHECK is the same rule. */
+const SLOT_PATTERN = /^(new-arrivals|categories)\/[a-z0-9-]+(\/[a-z0-9-]+)?$/;
 
 /** A path on this site: one leading "/", never "//" or "/\", no spaces, quotes or angle brackets. */
 export function isInternalPath(p: unknown): p is string {
@@ -137,14 +145,26 @@ export function parseBanner(b: unknown): SiteBanner | null {
   };
 }
 
-/** A version-1 snapshot, or null ("use the tables"). Bad banners are dropped, not fatal. */
+/** Slot → picture path. Anything that isn't a known slot shape and a category picture is dropped. */
+export function parseCategoryImages(m: unknown): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!m || typeof m !== "object" || Array.isArray(m)) return out;
+  for (const [slot, path] of Object.entries(m as Record<string, unknown>)) {
+    if (SLOT_PATTERN.test(slot) && typeof path === "string" && CATEGORY_IMAGE_PATH.test(path)) out[slot] = path;
+  }
+  return out;
+}
+
+/** A version-1 snapshot, or null ("use the tables"). Bad banners and pictures are dropped, not fatal.
+ *  A file written before category pictures existed has no map: none are set. */
 export function parseSiteConfig(doc: unknown): SiteConfig | null {
   if (!doc || typeof doc !== "object") return null;
-  const d = doc as { version?: unknown; theme?: unknown; banners?: unknown };
+  const d = doc as { version?: unknown; theme?: unknown; banners?: unknown; category_images?: unknown };
   if (d.version !== 1 || !Array.isArray(d.banners)) return null;
   return {
     theme: d.theme == null ? null : parseTheme(d.theme),
     banners: d.banners.map(parseBanner).filter((b): b is SiteBanner => b !== null),
+    categoryImages: parseCategoryImages(d.category_images),
   };
 }
 
@@ -164,9 +184,9 @@ async function fromSnapshot(): Promise<SiteConfig | null> {
   }
 }
 
-/** The tables, which RLS limits to the theme and the active banners that haven't ended. */
+/** The tables, which RLS limits to the theme, the active banners that haven't ended and the set pictures. */
 async function fromTables(): Promise<SiteConfig> {
-  const [theme, banners] = await Promise.all([
+  const [theme, banners, pictures] = await Promise.all([
     supabase
       .from("site_theme")
       .select("vendor_accent, buyer_accent, success, border, ink, heading_font, body_font")
@@ -176,12 +196,17 @@ async function fromTables(): Promise<SiteConfig> {
       .select("id, title, subtitle, cta_label, link_path, image_path, position, starts_at, ends_at")
       .order("position", { ascending: true })
       .order("id", { ascending: true }),
+    supabase.from("category_images").select("id, image_path").not("image_path", "is", null),
   ]);
   if (theme.error) throw theme.error;
   if (banners.error) throw banners.error;
   return {
     theme: theme.data ? parseTheme(theme.data) : null,
     banners: (banners.data ?? []).map(parseBanner).filter((b): b is SiteBanner => b !== null),
+    // A failed picture read keeps the defaults rather than failing the theme and banners.
+    categoryImages: pictures.error
+      ? {}
+      : parseCategoryImages(Object.fromEntries((pictures.data ?? []).map((r) => [r.id, r.image_path]))),
   };
 }
 
@@ -202,6 +227,48 @@ export function isBannerLive(b: SiteBanner, now = Date.now()): boolean {
 
 export function bannerImageUrl(path: string): string {
   return supabase.storage.from("site-content").getPublicUrl(path).data.publicUrl;
+}
+
+// ── Category pictures (2026-10-14) ────────────────────────────────────────────
+
+/** The last map this browser saw, so a returning visitor's tiles open on the right picture. */
+const CATEGORY_IMAGES_CACHE_KEY = "cosora_category_images_v1";
+
+function readCachedCategoryImages(): Record<string, string> | null {
+  try {
+    const raw = localStorage.getItem(CATEGORY_IMAGES_CACHE_KEY);
+    return raw ? parseCategoryImages(JSON.parse(raw)) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Category pictures, and whether the map can be trusted yet. `ready` is false only on a
+ * first visit while the config loads: the tiles then wait instead of showing the default
+ * and swapping it a moment later. A failed load counts as ready with no pictures set.
+ */
+export function useCategoryImages(): { images: Record<string, string>; ready: boolean } {
+  const q = useSiteConfig();
+  const cached = useMemo(readCachedCategoryImages, []);
+  const fresh = q.data?.categoryImages;
+  useEffect(() => {
+    if (!fresh) return;
+    try {
+      localStorage.setItem(CATEGORY_IMAGES_CACHE_KEY, JSON.stringify(fresh));
+    } catch {
+      // private mode or full storage: the next visit just waits for the config
+    }
+  }, [fresh]);
+  if (fresh) return { images: fresh, ready: true };
+  if (cached) return { images: cached, ready: true };
+  return { images: {}, ready: !q.isLoading };
+}
+
+/** The picture for a slot: the one set in Cosora-Admin, else the app's own. */
+export function categoryImageUrl(images: Record<string, string>, slot: string, fallback: string): string {
+  const path = images[slot];
+  return path ? supabase.storage.from("site-content").getPublicUrl(path).data.publicUrl : fallback;
 }
 
 // ── Applying a theme ──────────────────────────────────────────────────────────
