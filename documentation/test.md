@@ -205,6 +205,20 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-14 — Chats badge, live on production, signed in (demo buyer and demo seller): 5/5
+
+- **Setup:** demo-buyer and demo-vendor signed in with their passwords from the gitignored `.env` (never printed);
+  the buyer's session injected into an iPhone 13 browser on www.cosora.in (main `51a73c2`, bundle
+  `index-DhJzTESV.js`). Their chat `445f5b88` (active) marked read by the buyer first: baseline 0 unread.
+- **Steps and results:** (1) Home with nothing unread: no badge. (2) The demo seller sends two messages
+  ("[Cosora test 14:51:58] unread badge check 1/2" and "2/2, please ignore"): the badge shows 2 within seconds, no
+  reload. (3) Chats: "Demo Textiles Co." shows a 2, and so does the bottom bar. (4) The chat opened
+  (`/chats/2222…`): `chat_unread_counts()` for it is 0. (5) Back on Home: no badge. 0 page errors.
+- **Left in production:** the two test messages, in the demo buyer ↔ demo seller chat.
+- **Note:** the network here ran at about 7–20 KB/s; the 3.17 MB bundle (uncompressed) took 83 s on the first load,
+  and a first attempt looked like a blank page while it was still downloading (not a site fault). The run used a
+  persistent browser profile (so the bundle downloads once) and in-app navigation instead of reloads.
+
 ### 2026-10-14 — Chats badge counts unread messages (local stack: harness 11/11; browser 1/1 three runs; neighbours 13/13)
 
 - **Harness** `scripts/chat-unread/harness.sql` (never commits): demo buyer with three unread from the vendor (their
