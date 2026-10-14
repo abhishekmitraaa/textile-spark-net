@@ -2083,6 +2083,10 @@ Migration `20261014120000_feed_products.sql`; `src/lib/queries/feed.ts`; harness
   `mapProductRow()`, so a card is built the same way everywhere. For You: `fetchForYouRanking()` ids → `useFeedSlice({ ids })`
   ordered by rank client-side → `useFeed({ excludeIds: ids })`; its location filter stays client-side (it reads the
   listing's place as the picker names it).
+- **Search Results, nothing typed:** `useBrowseCatalogue()` = `useInfiniteQuery` of 96 ids from `feed_products('newest')`,
+  hydrated by `fetchCatalogueByIds()` (groups of 100, order reapplied), deduplicated; the facets filter the loaded rows
+  and the count shows "N+" while pages remain. With a query nothing changed: `search_products` (200) then hydration.
+- **Load test:** `scripts/load/marketplace.k6.js` issues `rpc/feed_products` pages and grouped hydration, as the app does.
 
 ## Category pictures and brand suggestions (2026-10-14)
 

@@ -10,8 +10,8 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Bookmark, BookmarkCheck, MapPin, Phone, Star, Zap, Clock, Grid2X2, Grid3X3,
-  ChevronDown, Check, Tag, Flame, ArrowUpDown,
+  Bookmark, BookmarkCheck, MapPin, Phone, Star, Zap, Grid2X2, Grid3X3,
+  ChevronDown, Check, Tag, ArrowUpDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
@@ -40,9 +40,10 @@ const HOME_TABS = [
   { label: "FOLLOWINGS", href: "/home/followings" },
 ];
 
-// Sale windows fixed once per session so the countdown ticks consistently.
-const HERO_END = Date.now() + 2 * 24 * 3600_000 + 8 * 3600_000; // ~2 days 8h
-const FLASH_END = Date.now() + 5 * 3600_000 + 42 * 60_000;      // ~5h 42m
+// No countdowns (2026-10-14). "Sale ends in" and the Flash Deals timer counted down to a time
+// set on each page load (now + 2 days 8 h, now + 5 h 42 m), so nothing ever ended: urgency with
+// nothing behind it. A listing's discount has no end date anywhere, so there is no real time to
+// count to. If sales get real windows, a timer can read them.
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -110,49 +111,6 @@ const SORTS = [
   { key: "price-asc", label: "Price: Low to High" },
   { key: "price-desc", label: "Price: High to Low" },
 ] as const;
-
-// ─────────────────────────────────────────────────────────────
-// Live countdown
-// ─────────────────────────────────────────────────────────────
-function useTick() {
-  const [, setN] = useState(0);
-  useEffect(() => {
-    const t = window.setInterval(() => setN((n) => n + 1), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-}
-
-function Countdown({ target, showDays = false, tone = "light" }: { target: number; showDays?: boolean; tone?: "light" | "coral" }) {
-  useTick();
-  const diff = Math.max(0, target - Date.now());
-  const d = Math.floor(diff / 86_400_000);
-  const h = Math.floor((diff % 86_400_000) / 3_600_000);
-  const m = Math.floor((diff % 3_600_000) / 60_000);
-  const s = Math.floor((diff % 60_000) / 1000);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const cells = showDays
-    ? [{ v: pad(d), l: "Days" }, { v: pad(h), l: "Hrs" }, { v: pad(m), l: "Min" }, { v: pad(s), l: "Sec" }]
-    : [{ v: pad(h), l: "Hrs" }, { v: pad(m), l: "Min" }, { v: pad(s), l: "Sec" }];
-
-  return (
-    <div className="flex items-center gap-1.5">
-      {cells.map((c, i) => (
-        <div key={i} className="flex items-center gap-1.5">
-          <div className="flex flex-col items-center">
-            <span className={cn(
-              "min-w-[2.1rem] rounded-md px-1.5 py-1 text-center text-sm font-bold tabular-nums",
-              tone === "light" ? "bg-white/20 text-white" : "bg-brand-buyer text-white"
-            )}>
-              {c.v}
-            </span>
-            <span className={cn("mt-0.5 text-[8px] font-semibold uppercase tracking-wider", tone === "light" ? "text-white/70" : "text-gray-400")}>{c.l}</span>
-          </div>
-          {i < cells.length - 1 && <span className={cn("text-sm font-bold", tone === "light" ? "text-white/60" : "text-gray-300")}>:</span>}
-        </div>
-      ))}
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────────────────────
 // Sale product card
@@ -351,10 +309,7 @@ const Sale = () => {
           <div className="pointer-events-none absolute -bottom-12 -left-6 h-40 w-40 rounded-full bg-black/10 blur-2xl" />
 
           <div className="relative">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-2.5 py-1 text-[10px] lg:text-xs font-bold uppercase tracking-wider backdrop-blur">
-              <Flame className="w-3 h-3" /> Limited time
-            </span>
-            <h1 className="mt-3 text-3xl lg:text-5xl font-extrabold tracking-tight leading-none">MEGA SALE</h1>
+            <h1 className="text-3xl lg:text-5xl font-extrabold tracking-tight leading-none">MEGA SALE</h1>
             {maxDiscount > 0 && (
               <p className="mt-2 text-sm lg:text-base font-medium text-white/90">
                 Up to <span className="font-extrabold">{maxDiscount}% OFF</span> on bulk orders from verified manufacturers
@@ -362,10 +317,6 @@ const Sale = () => {
             )}
 
             <div className="mt-4 flex flex-wrap items-center gap-4">
-              <div>
-                <p className="text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-white/70 mb-1">Sale ends in</p>
-                <Countdown target={HERO_END} showDays tone="light" />
-              </div>
               <button
                 onClick={() => setQuickRfqOpen(true)}
                 className="ml-auto inline-flex items-center gap-1.5 rounded-xl bg-white px-4 py-2.5 text-sm font-bold text-brand-buyer shadow-sm hover:bg-white/90 transition-colors"
@@ -385,7 +336,8 @@ const Sale = () => {
           <SponsoredRail slot="saleSponsored" label="Sponsored deals" />
         </motion.section>
 
-        {/* ── FLASH DEALS ── */}
+        {/* ── TOP DEALS: the six deepest real cuts (was "Flash Deals", with a fake timer) ── */}
+        {flashDeals.length > 0 && (
         <motion.section variants={section}>
           <div className="flex items-center justify-between mb-3 px-1">
             <h2 className="inline-flex items-center gap-2 text-base lg:text-xl font-bold text-gray-900">
@@ -396,12 +348,8 @@ const Sale = () => {
               >
                 <Zap className="w-5 h-5 text-brand-buyer fill-brand-buyer" />
               </motion.span>
-              Flash Deals
+              Top deals
             </h2>
-            <div className="inline-flex items-center gap-2 rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-2.5 py-1">
-              <Clock className="w-3.5 h-3.5 text-brand-buyer" />
-              <Countdown target={FLASH_END} tone="coral" />
-            </div>
           </div>
           <motion.div variants={listContainer} className="flex gap-3 lg:gap-5 overflow-x-auto pb-1 px-1 scrollbar-hide snap-x snap-mandatory">
             {flashDeals.map((p) => (
@@ -411,6 +359,7 @@ const Sale = () => {
             ))}
           </motion.div>
         </motion.section>
+        )}
 
         {/* ── SHOP BY DISCOUNT ── */}
         <motion.section variants={section}>

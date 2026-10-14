@@ -203,6 +203,8 @@ the demand side of India's fashion and textile supply chain.
 - **New Arrivals, For You, Trends, Sale, Following and Search load as the buyer scrolls**, a page at a time, in the order
   the database decides; nothing disappears when the catalogue passes 1,000 listings. Sale's tiers, Following's controls
   and Search's category chips filter in the database. No invented products or deals when there are none.
+- **Search Results with nothing typed** loads 96 listings at a time. **Sale** has no countdown timers (they never ended)
+  and calls its rail "Top deals".
 
 ### Changed 2026-10-14 (eight fixes; built, not live)
 - **Product cards open from their text**, not only the picture; the store page's product grid opens products at all.

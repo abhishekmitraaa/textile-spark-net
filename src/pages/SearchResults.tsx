@@ -8,7 +8,8 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useBrandFollows, toggleBrandFollow } from "@/lib/brandFollowStore";
-import { fetchCatalogueByIds, useCatalogue } from "@/lib/queries/products";
+import { fetchCatalogueByIds } from "@/lib/queries/products";
+import { useBrowseCatalogue } from "@/lib/queries/feed";
 import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "@/lib/queries/search";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
@@ -563,12 +564,24 @@ const SearchResults = () => {
   // matched rows come back. The page no longer downloads the whole live table
   // to run `.includes()` over it in the browser.
   //
-  // Without a query — arriving via ?category= with an empty q — there is nothing
-  // to rank, so the full catalogue is still the right source. Both hooks are
-  // called unconditionally (rules of hooks); `enabled` decides which one runs.
+  // Without a query (no q and no ?category=, which counts as one) there is nothing to rank: the
+  // live listings come in feed order, 96 at a time, and the facets filter what has loaded
+  // (2026-10-14; it was the whole catalogue, cut silently at 1,000 rows). Both hooks are called
+  // unconditionally (rules of hooks); `enabled` decides which one runs.
   const hasQuery = query.trim().length > 0;
   const { data: searchData, isLoading: searchLoading } = useProductSearch(query);
-  const { data: browseData, isLoading: browseLoading } = useCatalogue(!hasQuery);
+  const browse = useBrowseCatalogue(!hasQuery);
+  const browseData = hasQuery ? undefined : browse.rows;
+  const browseLoading = browse.isLoading;
+  const browseMoreRef = useRef<HTMLDivElement | null>(null);
+  const { fetchNextPage: nextBrowse } = browse;
+  useEffect(() => {
+    const target = browseMoreRef.current;
+    if (!target || hasQuery) return;
+    const observer = new IntersectionObserver((entries) => { if (entries[0].isIntersecting) nextBrowse(); }, { rootMargin: "600px" });
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [hasQuery, nextBrowse, browse.rows.length]);
 
   const catalogue = hasQuery ? searchData?.rows : browseData;
 
@@ -1118,9 +1131,10 @@ const SearchResults = () => {
                     className={cn("grid gap-3 lg:gap-4", cols === 2 ? "grid-cols-2 lg:grid-cols-4" : "grid-cols-3 lg:grid-cols-6")}>
                     {feedNodes}
                   </motion.div>
-                  <div className="py-6 text-center text-xs text-gray-400">
-                    {products.length} {products.length === 1 ? "result" : "results"}
+                  <div ref={browseMoreRef} className="py-6 text-center text-xs text-gray-400">
+                    {products.length}{!hasQuery && browse.hasNextPage ? "+" : ""} {products.length === 1 ? "result" : "results"}
                     {hasQuery && !semanticActive && " · keyword match only"}
+                    {!hasQuery && browse.isFetchingNextPage && " · loading more"}
                   </div>
                 </>
               )}

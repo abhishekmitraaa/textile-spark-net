@@ -19,7 +19,7 @@
 --     p_discount_above / p_discount_upto: Sale's tiers, in whole percent rounded as the page shows
 --     them (above is exclusive, upto inclusive); either one means on sale.
 --     p_ids: only these listings (For You's ranked ids), at most 200, and then up to 200 a page.
---     Bounds: at most 48 a page, an offset of at most 960 (40 pages of 24), 500 seller ids,
+--     Bounds: at most 96 a page, an offset of at most 960 (40 pages of 24), 500 seller ids,
 --     200 excluded ids, 60 characters of text.
 --   public.live_category_counts(p_limit)
 --     The categories with the most live listings, and how many (Search's category rail).
@@ -87,7 +87,7 @@ set search_path = ''
 as $function$
 declare
   v_sort   text    := coalesce(nullif(btrim(p_sort), ''), 'newest');
-  v_limit  integer := least(greatest(coalesce(p_limit, 24), 1), case when p_ids is null then 48 else 200 end);
+  v_limit  integer := least(greatest(coalesce(p_limit, 24), 1), case when p_ids is null then 96 else 200 end);
   v_offset integer := least(greatest(coalesce(p_offset, 0), 0), 960);
   v_query  text    := nullif(btrim(coalesce(p_query, '')), '');
   v_like   text;
@@ -208,8 +208,8 @@ begin
       raise exception 'self-check: % grants are wrong', f;
     end if;
   end loop;
-  if (select count(*) from public.feed_products('newest', 1000)) > 48 then
-    raise exception 'self-check: feed_products returns more than 48 rows';
+  if (select count(*) from public.feed_products('newest', 1000)) > 96 then
+    raise exception 'self-check: feed_products returns more than 96 rows';
   end if;
   if (select count(*) from public.feed_products('discount', 48)) <> (select count(*) from public.feed_products('discount', 48, 0, null, null, null, true)) then
     raise exception 'self-check: discount must mean on sale';

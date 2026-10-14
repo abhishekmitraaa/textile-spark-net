@@ -190,20 +190,6 @@ export interface CatalogueRow {
 export const CATALOGUE_SELECT =
   "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )";
 
-async function fetchCatalogue(): Promise<CatalogueRow[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select(CATALOGUE_SELECT)
-    .eq("status", "live")
-    .order("created_at", { ascending: false });
-  if (error) throw error;
-  return (await mapCatalogueRows((data ?? []) as unknown as RawCatalogueRow[]))
-    // Higher plan tiers rank first in the browse feed (real weight). Search
-    // results do NOT re-sort here — match_products has already fused relevance
-    // with the same boost server-side, and re-sorting would discard that.
-    .sort((a, b) => b.boost - a.boost);
-}
-
 type RawCatalogueRow = RawProduct & {
   gender: string | null; colour: string | null; sizes: string[] | null;
   pattern: string[] | null; occasion: string[] | null;
@@ -212,13 +198,20 @@ type RawCatalogueRow = RawProduct & {
   category_id: string | null; categories: { name: string; parent_id: string | null } | null;
 };
 
-/** Hydrate a specific set of product ids into catalogue rows — the search path,
- *  where ranking is decided server-side and only the matched ids come back. */
+/** Hydrate a specific set of product ids into catalogue rows: the search path, where ranking is
+ *  decided server-side and only the matched ids come back, and the browse candidates. */
 export async function fetchCatalogueByIds(ids: string[]): Promise<CatalogueRow[]> {
   if (!ids.length) return [];
-  const { data, error } = await supabase.from("products").select(CATALOGUE_SELECT).in("id", ids);
-  if (error) throw error;
-  return mapCatalogueRows((data ?? []) as unknown as RawCatalogueRow[]);
+  // In groups of 100: one `in(id, …)` over hundreds of ids makes a URL too long for the gateway
+  // (and mapCatalogueRows' seller lookup the same). Rows come back in storage order; callers that
+  // need an order reapply it.
+  const out: CatalogueRow[] = [];
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase.from("products").select(CATALOGUE_SELECT).in("id", ids.slice(i, i + 100));
+    if (error) throw error;
+    out.push(...(await mapCatalogueRows((data ?? []) as unknown as RawCatalogueRow[])));
+  }
+  return out;
 }
 
 export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<CatalogueRow[]> {
@@ -294,12 +287,8 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
   });
 }
 
-/** Full live catalogue. `enabled` exists so the search page can skip this
- *  entirely when it has a query — the whole point of server-side search is not
- *  shipping the catalogue to the browser. */
-export function useCatalogue(enabled = true) {
-  return useQuery({ queryKey: ["products", "catalogue"], queryFn: fetchCatalogue, enabled });
-}
+// The whole-catalogue reader (useCatalogue) is gone (2026-10-14): Search Results' browse mode
+// reads candidates a page at a time through useBrowseCatalogue() in lib/queries/feed.ts.
 
 // ─────────────────────────────────────────────────────────────
 // Single product (buyer product-detail page). Returns the real row + its

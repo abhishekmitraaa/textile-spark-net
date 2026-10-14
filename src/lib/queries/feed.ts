@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { mapProductRow, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
+import { fetchCatalogueByIds, mapProductRow, type CatalogueRow, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer feeds, a page at a time (2026-10-14; migration 20261014120000_feed_products.sql).
@@ -134,6 +134,41 @@ export function useFeedSlice(filters: FeedFilters, limit: number, { enabled = tr
     enabled,
     staleTime: 60_000,
   });
+}
+
+/**
+ * Search Results with nothing typed: the live listings in feed order (paid tiers, then newest),
+ * 96 at a time, as the page's richer rows (its facets read colour, pattern, sizes…). The page
+ * filters what has loaded and asks for the next 96 as the buyer scrolls. It used to download the
+ * whole catalogue (useCatalogue), cut at 1,000 rows.
+ */
+export function useBrowseCatalogue(enabled: boolean) {
+  const PAGE = 96;
+  const q = useInfiniteQuery({
+    queryKey: ["feed", "browse-catalogue"],
+    queryFn: async ({ pageParam }): Promise<{ rows: CatalogueRow[]; count: number }> => {
+      const { data, error } = await supabase.rpc("feed_products", { p_sort: "newest", p_limit: PAGE, p_offset: pageParam as number });
+      if (error) throw error;
+      const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
+      const at = new Map(ids.map((id, i) => [id, i]));
+      const rows = (await fetchCatalogueByIds(ids)).sort((a, b) => (at.get(a.id) ?? 0) - (at.get(b.id) ?? 0));
+      return { rows, count: ids.length };
+    },
+    initialPageParam: 0,
+    getNextPageParam: (last, pages) => (last.count < PAGE || pages.length * PAGE > 960 ? undefined : pages.length * PAGE),
+    enabled,
+    staleTime: 60_000,
+  });
+  const seen = new Set<string>();
+  const rows: CatalogueRow[] = [];
+  for (const page of q.data?.pages ?? []) for (const r of page.rows) if (!seen.has(r.id)) { seen.add(r.id); rows.push(r); }
+  return {
+    rows,
+    isLoading: q.isPending && enabled,
+    hasNextPage: Boolean(q.hasNextPage),
+    isFetchingNextPage: q.isFetchingNextPage,
+    fetchNextPage: () => { if (q.hasNextPage && !q.isFetchingNextPage) void q.fetchNextPage(); },
+  };
 }
 
 export interface CategoryCount { categoryId: string; categoryName: string; liveCount: number }

@@ -71,7 +71,6 @@ const capRefusals = new Counter("cap_refusals");
 const unexpectedRefusals = new Counter("unexpected_refusals");
 
 // ── selects, copied from the app ────────────────────────────────────────────
-const LIVE_SELECT = "id,vendor_id,name,price_value,currency,compare_at_price,moq,fabric,gsm,fit_type,gender,rating_avg,enquiries_count,sold_count,location,categories(name),product_images(url,position)"; // products.ts fetchLiveProducts
 const VP_SELECT = "id,brand_name,is_verified,city,plan_expires_at,ad_verified_until,plan_id";
 const DETAIL_SELECT = "id,vendor_id,name,description,price_value,currency,moq,unit,fabric,gsm,fit_type,gender,colour,sizes,pattern,occasion,neck_type,sleeve_type,collar_type,country_of_origin,waist_sizes,lengths,customization_available,location,category_id,rating_avg,reviews_count,sold_count,enquiries_count,categories(name),product_images(url,position)"; // fetchProductById
 const DETAIL_VENDOR = "brand_name,is_verified,city,rating_avg,reviews_count,plan_expires_at,ad_verified_until";
@@ -120,13 +119,23 @@ function account() {
 
 let plansLoaded = false; // the app caches subscription_plans for the session
 
+// The buyer feeds, as the app asks for them since 2026-10-14 (lib/queries/feed.ts): one page of 24
+// from feed_products, the next as the buyer scrolls. They used to download the whole live catalogue
+// and every seller behind it (the old `products_live` + `vendor_profiles_in` pair).
+function feedPage(name, args, token) {
+  return body(post(name, "rpc/feed_products", Object.assign({ p_limit: 24, p_offset: 0 }, args), token)) || [];
+}
+
 function buyer(b) {
-  // New Arrivals: the whole live catalogue, then its vendors (fetchLiveProducts).
-  const list = body(get("products_live", `products?select=${enc(LIVE_SELECT)}&status=eq.live&order=created_at.desc`, b.token)) || [];
-  if (!plansLoaded) { get("subscription_plans", "subscription_plans?select=id,limits", b.token); plansLoaded = true; }
-  const vids = [...new Set(list.map((p) => p.vendor_id))];
-  if (vids.length) get("vendor_profiles_in", `vendor_profiles?select=${VP_SELECT}&id=in.(${vids.join(",")})`, b.token);
+  // New Arrivals: the first page; a second as the buyer scrolls (half the time).
+  const list = feedPage("feed_new_arrivals", { p_sort: "newest" }, b.token);
+  if (Math.random() < 0.5) feedPage("feed_new_arrivals_p2", { p_sort: "newest", p_offset: 24 }, b.token);
   think();
+
+  // Trends or Sale, sometimes.
+  const r = Math.random();
+  if (r < 0.25) { feedPage("feed_trending", { p_sort: "trending" }, b.token); think(); }
+  else if (r < 0.4) { feedPage("feed_sale", { p_sort: "discount", p_on_sale: true }, b.token); think(); }
 
   const synthetic = list.filter((p) => typeof p.name === "string" && p.name.startsWith("[LOADTEST]"));
   if (synthetic.length && Math.random() < 0.6) {
@@ -140,7 +149,13 @@ function buyer(b) {
   if (Math.random() < 0.5) {
     const ranked = body(post("search_products", "rpc/search_products", { query: pick(QUERIES), match_count: 200 }, b.token)) || [];
     const ids = ranked.map((x) => x.id);
-    if (ids.length) get("catalogue_by_ids", `products?select=${enc(CATALOGUE_SELECT)}&id=in.(${ids.join(",")})`, b.token);
+    if (!plansLoaded && ids.length) { get("subscription_plans", "subscription_plans?select=id,limits", b.token); plansLoaded = true; }
+    // Hydrated in groups of 100, as fetchCatalogueByIds does (a longer id list overruns the URL).
+    for (let i = 0; i < ids.length; i += 100) {
+      const rows = body(get("catalogue_by_ids", `products?select=${enc(CATALOGUE_SELECT)}&id=in.(${ids.slice(i, i + 100).join(",")})`, b.token)) || [];
+      const vids = [...new Set(rows.map((p) => p.vendor_id))];
+      if (vids.length) get("catalogue_vendors", `vendor_profiles?select=${VP_SELECT},state_code,served_states&id=in.(${vids.join(",")})`, b.token);
+    }
     think();
   }
 

@@ -89,7 +89,7 @@ begin
                                                           array(select id from public.products where status = 'live' order by id limit 120));
   insert into _r (label, want, got) values ('only the given ids, up to 200 a page', '120', got);
   select count(*)::text into got from public.feed_products('newest', 500);
-  insert into _r (label, want, got) values ('at most 48 a page', '48', got);
+  insert into _r (label, want, got) values ('at most 96 a page', '96', got);
   begin
     perform public.feed_products('newest; drop table x', 1); got := 'accepted';
   exception when others then got := sqlstate;

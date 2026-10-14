@@ -217,8 +217,12 @@ file was created; they record real runs, but only those the changelog captured.
   Trends; Sale 60→40→20 and the 25–50% tier only the 40%, no invented deal; Following New-In reaches 30 then Most
   Popular, Top Performing four; Search's chip count equals the database and narrows; For You "24+" then the exact
   count. Every page: no request for the whole live catalogue.
+- **Search Results with nothing typed** (added the same day): a seller with 100 listings (live > 96); the page shows
+  "96+ results", then "N results" with all 100 after scrolling; no whole-catalogue request. Sale: no "Sale ends in",
+  "Limited time" or "Flash Deals"; "Top deals" shown. Feeds spec 6/6; with following, interest-preferences,
+  subscriptions-p10 and buyer-minor-fixes 22/22. Harness 24/24 with the 96 cap.
 - **Neighbours:** following, interest-preferences, subscriptions-p10, signup-back, video-share, buyer-minor-fixes 22/22.
-- typecheck 0, i18n 7,726/7,726, eslint clean on changed files, rls:check 0, production build.
+- typecheck 0, i18n 7,723/7,723, eslint clean on changed files, rls:check 0, production build.
 
 ### 2026-10-14 — Video Close-Ups Share (local stack: 1/1 new, 9/9 neighbours)
 

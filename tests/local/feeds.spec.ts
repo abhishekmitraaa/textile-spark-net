@@ -100,6 +100,11 @@ test("Sale: tiers and order come from the database, and there are no invented de
   await expect.poll(async () => (await tierGrid.locator(`img[alt^="FD ${tag} deal"]`).evaluateAll((els) => els.map((e) => e.getAttribute("alt"))))
     .filter((v, i, a) => a.indexOf(v) === i)).toEqual([`FD ${tag} deal40`]);
   await expect(page.getByText("Ribbed Tank Top")).toHaveCount(0); // the invented deals
+  // No invented urgency: no countdowns, no "Limited time"; the rail is "Top deals".
+  await expect(page.getByText("Sale ends in")).toHaveCount(0);
+  await expect(page.getByText("Limited time")).toHaveCount(0);
+  await expect(page.getByText("Flash Deals")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Top deals" })).toBeVisible();
   expect(whole).toEqual([]);
   await ctx.close();
 });
@@ -155,6 +160,30 @@ test("For You (signed out, interest picker done): the feed pages and says 'at le
   if (live > 24) await expect(page.getByText("24+ products for you")).toBeVisible();
   await scrollToEnd(page, async () => (await page.getByText("You're all caught up").count()) > 0);
   await expect(page.getByText(`${live} products for you`)).toBeVisible();
+  expect(whole).toEqual([]);
+  await ctx.close();
+});
+
+test("Search Results with nothing typed: 96 at a time, never the whole catalogue", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const many = await freshAccount(`fdmany${tag}`, { seller: true });
+  made.push(many.id);
+  sql(`with p as (
+         insert into public.products (vendor_id, name, status, price_value, created_at)
+         select '${many.id}', 'FB ${tag} ' || lpad(g::text, 3, '0'), 'live', 50 + g, now() - (g || ' seconds')::interval
+           from generate_series(1, 100) g returning id)
+       insert into public.product_images (product_id, url, position) select id, '${BUYER_URL}/icon-192.png', 0 from p;`);
+  const live = Number(sql(`select count(*) from public.products where status = 'live'`));
+  expect(live).toBeGreaterThan(96);
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  const whole = watchWholeCatalogue(page);
+  await page.goto(`${BUYER_URL}/search/results`);
+  await expect(page.getByText("96+ results")).toBeVisible({ timeout: 30_000 });
+  await scrollToEnd(page, async () => (await page.getByText(`${live} results`).count()) > 0);
+  await expect(page.getByText(`${live} results`)).toBeVisible();
+  const shown = await page.locator(`img[alt^="FB ${tag} "]`).evaluateAll((els) => els.map((e) => e.getAttribute("alt")));
+  expect(new Set(shown).size).toBe(100);
   expect(whole).toEqual([]);
   await ctx.close();
 });
