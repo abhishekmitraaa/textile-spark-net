@@ -6,6 +6,35 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Replace or remove New Arrivals' "Looking for these?" row: six made-up demo products — added 2026-10-14
+- Task: the "Looking for these?" row on `/home/new-arrivals` renders six hardcoded products
+  (`LOOKING_FOR_THESE` in `src/pages/NewArrivals.tsx`, around line 98; rendered around line 666). Either fill it with
+  real live listings (e.g. a `useFeedSlice()` from `src/lib/queries/feed.ts`, such as listings in the buyer's interest
+  categories or the most enquired-about) or remove the row.
+- Context: every item is invented and shown in production to every visitor: names like "Floral Midi Dress", a price
+  of "$499" (dollars, on an INR site), "800+ sold", a hardcoded 3.9 rating, the seller shown as the word
+  "Manufacturer", Unsplash photos, and ids `lft1`–`lft6` that link to `/product/lft1` (no such product, so the page
+  says it isn't found). Its Call Now dials a made-up number (`demoPhone(item.id)`). This breaks claude.md's "No mock
+  data in production" and "no fabricated data" rules. Found while fixing product cards on 2026-10-14 and left alone
+  because it was outside the eight fixes Mitra asked for. The same day the page's other invented content was removed
+  (the `BASE_PRODUCTS` fallback, when the feeds moved to `feed_products()`); this row is what is left.
+- Reference: 2026-10-14 session (eight buyer-side fixes, then the server-side feeds). Mitra: "New Arrivals' 'Looking
+  for these?' row is still six made-up demo products … add these to todo.md".
+- Status: Open
+
+### Decide whether the Sale page keeps its "MEGA SALE" heading — added 2026-10-14
+- Task: Mitra or Andy to confirm the heading on `/home/sale` (`src/pages/Sale.tsx`, the hero's `<h1>`), or give
+  wording to replace it.
+- Context: on 2026-10-14 the Sale page's invented urgency was removed: the "Sale ends in" and Flash Deals countdowns
+  (they counted to a time set on every page load, so nothing ever ended) and the "Limited time" chip; the Flash Deals
+  rail became "Top deals". "MEGA SALE" was kept as a page title, not a claim about time, but it still presents
+  sellers' individual discounts as one Cosora sale event, which no data backs (a listing's discount has no start or
+  end, and there is no sale campaign). Options: keep it; something descriptive like "Deals" or "Discounted listings";
+  or real sale windows (a sale table with dates), after which a heading and a timer could be true.
+- Reference: 2026-10-14 session (removing Sale's fake countdowns as part of the feeds release). Mitra: "The 'MEGA
+  SALE' heading stays; it's a page title, not a time claim … add these to todo.md".
+- Status: Open
+
 ### Apply the final subscriptions cleanup (P13): the plans page and five FAQs, once every feature is on — added 2026-10-10
 - Task: when every subscription feature switch is on for everyone, apply
   `supabase/migrations/20261009170000_subscriptions_p13_truth_pass.sql` to production. It rewrites what the Subscription
