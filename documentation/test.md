@@ -235,8 +235,10 @@ file was created; they record real runs, but only those the changelog captured.
 - typecheck 0 in both apps; i18n 7,741/7,741; eslint clean on the changed files (one existing error in
   `siteConfig.ts`'s `isInternalPath`, present on main); slot check and `rls:check` clean; both production builds.
 - **Not tested:** a real phone's keyboard (the visual viewport is simulated, as for the chat composer); the share
-  addresses opening the apps; the production snapshot trigger (it posts to production's function; the local run
-  rebuilt the snapshot by calling the local function).
+  addresses opening the apps.
+- **Production, after the release (read-only, plus one zero-row UPDATE):** objects, grants and md5s as in the
+  changelog; `new_brand_suggestions(12)` signed out: 7 sellers, all with pictures; the snapshot trigger rebuilt
+  `site-config/site.json` with the new function and it carries `category_images`.
 
 ### 2026-10-13 — Production checks after the release of both batches (read-only, through `supabase db query --linked`)
 

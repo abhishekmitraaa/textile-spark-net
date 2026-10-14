@@ -169,10 +169,10 @@ runs **every way**.
 | `20261010142813_retire_usage_and_mode_shims.sql` | Sections 3 and 4 of P13, taken out of it and applied early (2026-10-10, Mitra: "just clean up the unused table and the temp shims"; md5 `2e89a104…` = live; written as `20261010180000`): `subscription_usage` closed to browsers, P1's two payment-mode shims switched off. |
 | `20261010180100_drop_usage_and_mode_shims.sql` | **Run 2026-10-10 by Mitra in the Supabase SQL editor** (the tool declined it): drops `subscription_usage`, `trg_subscription_payment_orders_mode`, `trg_subscription_invoices_mode`, `admin.subscription_order_mode_default()` and `admin.subscription_invoice_mode_default()`. Not in the ledger, so the file keeps its written version. Verified afterwards: all five gone, nothing references them, `payment_mode` still NOT NULL. |
 
-Written, not applied (2026-10-14): `20261014090000_category_images.sql` (`category_images`, two admin RPCs, four
-storage policies, the snapshot trigger; no DROP of a table or function, no DELETE) and
-`20261014090100_new_brand_suggestions.sql` (two partial indexes, `new_brand_suggestions()`). Apply in that order,
-then deploy `site-config-snapshot`.
+Applied 2026-10-14 with the Supabase CLI (`db query --linked -f`, so NOT in the ledger; files keep their written
+versions): `20261014090000_category_images.sql` (`category_images`, two admin RPCs, four storage policies, the snapshot
+trigger) then `20261014090100_new_brand_suggestions.sql` (two partial indexes, `new_brand_suggestions()`). Function
+bodies' md5 equal the tested local copy. `site-config-snapshot` redeployed the same day.
 
 Written, not applied (2026-10-10): `20261009170000_subscriptions_p13_truth_pass.sql` (plan wording and FAQs; when
 every switch is on for everyone). Inside the applied files, comments and messages still name each other by their written
