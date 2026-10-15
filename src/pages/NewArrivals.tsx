@@ -26,18 +26,18 @@ import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import trustedSeal from "@/assets/Trustedseal.png";
-import catWomensApparel from "@/assets/categories/womens-apparel.png";
-import catMensApparel from "@/assets/categories/mens-apparel.png";
-import catMensJeans from "@/assets/categories/mens-jeans.png";
-import catMensShirt from "@/assets/categories/mens-shirt.png";
-import catAccessories from "@/assets/categories/accessories.png";
-import catWomensTrousers from "@/assets/categories/womens-trousers.png";
-import catWomensTshirts from "@/assets/categories/womens-tshirts.png";
-import catWomensShoes from "@/assets/categories/womens-shoes.png";
-import catKidswear from "@/assets/categories/kidswear.png";
-import catEthnicWear from "@/assets/categories/ethnic-wear.png";
-import catActivewear from "@/assets/categories/activewear.png";
-import catWinterWear from "@/assets/categories/winter-wear.png";
+import catWomensApparel from "@/assets/categories/womens-apparel.jpg";
+import catMensApparel from "@/assets/categories/mens-apparel.jpg";
+import catMensJeans from "@/assets/categories/mens-jeans.jpg";
+import catMensShirt from "@/assets/categories/mens-shirt.jpg";
+import catAccessories from "@/assets/categories/accessories.jpg";
+import catWomensTrousers from "@/assets/categories/womens-trousers.jpg";
+import catWomensTshirts from "@/assets/categories/womens-tshirts.jpg";
+import catWomensShoes from "@/assets/categories/womens-shoes.jpg";
+import catKidswear from "@/assets/categories/kidswear.jpg";
+import catEthnicWear from "@/assets/categories/ethnic-wear.jpg";
+import catActivewear from "@/assets/categories/activewear.jpg";
+import catWinterWear from "@/assets/categories/winter-wear.jpg";
 
 // ─────────────────────────────────────────────────────────────
 // DATA

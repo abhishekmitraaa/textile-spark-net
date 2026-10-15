@@ -12,7 +12,7 @@
 //   node scripts/category-image-slots-check.mjs --sql    print the seed rows for a migration
 // ─────────────────────────────────────────────────────────────────────────────
 import { build } from "esbuild";
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -59,6 +59,16 @@ for (const s of slots) {
   seen.add(s.slot);
   if (!SLOT_PATTERN.test(s.slot) || s.slot.length > 120) fail(`malformed slot ${s.slot}`);
 }
+
+// Every Categories tile has its own default picture, and every picture a tile (src/lib/categoryTileImages.ts, 2026-10-16).
+const tilesDir = path.join(root, "src", "assets", "categories", "tiles");
+const tileSlots = new Set(slots.filter((s) => s.surface === "categories_tile").map((s) => s.slot.slice("categories/".length)));
+for (const t of tileSlots) if (!existsSync(path.join(tilesDir, t + ".jpg"))) fail(`no default picture src/assets/categories/tiles/${t}.jpg`);
+const tileFiles = existsSync(tilesDir)
+  ? readdirSync(tilesDir).flatMap((top) => readdirSync(path.join(tilesDir, top)).map((f) => `${top}/${f}`))
+  : [];
+for (const f of tileFiles) if (!f.endsWith(".jpg") || !tileSlots.has(f.slice(0, -4))) fail(`src/assets/categories/tiles/${f} belongs to no tile`);
+console.log(`${tileFiles.length} tile pictures for ${tileSlots.size} tiles`);
 
 // The seed rows of the migration that creates the table: ('slot', 'surface', 'label', group|null, position).
 const migDir = path.join(root, "supabase", "migrations");

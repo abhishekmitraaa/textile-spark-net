@@ -1,0 +1,721 @@
+{
+ "about": "Sources of the Categories page's default pictures (2026-10-16). Free photos from Unsplash under the Unsplash License (https://unsplash.com/license): commercial use allowed, credit not required but kept here. Unsplash+ photos excluded. Banners 1440x630 JPEG q74, tiles 480x480 JPEG q78, progressive. Key: file under src/assets/categories/.",
+ "files": {
+  "banners/accessories.jpg": {
+   "photo": "https://unsplash.com/photos/person-holding-brown-framed-sunglasses-_hwL-LeytRc",
+   "image": "https://images.unsplash.com/photo-1523754865311-b886113bb8de"
+  },
+  "tiles/accessories/bags.jpg": {
+   "photo": "https://unsplash.com/photos/red-leather-handbag-on-white-table-oCXVxwTFwqE",
+   "image": "https://images.unsplash.com/photo-1584917865442-de89df76afd3"
+  },
+  "tiles/accessories/belts.jpg": {
+   "photo": "https://unsplash.com/photos/a-leather-belt-on-a-black-surface-eNEa7Gsfzzs",
+   "image": "https://images.unsplash.com/photo-1664286074176-5206ee5dc878"
+  },
+  "tiles/accessories/bibs.jpg": {
+   "photo": "https://unsplash.com/photos/a-baby-sitting-on-a-bed-with-a-bib-on-uCqfVL6Ywn0",
+   "image": "https://images.unsplash.com/photo-1716242887540-34407fad1cd1"
+  },
+  "tiles/accessories/caps-hats.jpg": {
+   "photo": "https://unsplash.com/photos/five-assorted-color-baseball-caps-4EWhZW7q1hg",
+   "image": "https://images.unsplash.com/photo-1552060155-4eac706a5515"
+  },
+  "tiles/accessories/gloves.jpg": {
+   "photo": "https://unsplash.com/photos/person-in-white-and-black-knit-gloves-qLhOOuVHDtE",
+   "image": "https://images.unsplash.com/photo-1611690889004-c009a7e03712"
+  },
+  "tiles/accessories/hair-accessories.jpg": {
+   "photo": "https://unsplash.com/photos/pink-and-teal-textile-on-white-surface-uREn9oy7X5o",
+   "image": "https://images.unsplash.com/photo-1606772016409-d4a55e32be6e"
+  },
+  "tiles/accessories/jewellery.jpg": {
+   "photo": "https://unsplash.com/photos/gold-and-purple-beaded-necklace-G3Hrl6WzQYQ",
+   "image": "https://images.unsplash.com/photo-1601121141461-9d6647bca1ed"
+  },
+  "tiles/accessories/office-accessories.jpg": {
+   "photo": "https://unsplash.com/photos/desk-with-calculator-glasses-charts-and-office-supplies-n3xhFnlpdeM",
+   "image": "https://images.unsplash.com/photo-1761914410572-02614b575847"
+  },
+  "tiles/accessories/phone-cases.jpg": {
+   "photo": "https://unsplash.com/photos/four-assorted-color-iphone-x-cases-FQXbLmlmvWY",
+   "image": "https://images.unsplash.com/photo-1535157412991-2ef801c1748b"
+  },
+  "tiles/accessories/scarves-stoles.jpg": {
+   "photo": "https://unsplash.com/photos/colorful-scarves-hanging-on-a-rack-KMWZux5hRt8",
+   "image": "https://images.unsplash.com/photo-1761369332487-777e59fa4bcf"
+  },
+  "tiles/accessories/socks.jpg": {
+   "photo": "https://unsplash.com/photos/blue-and-black-socks-on-white-background-YHmZBuNCLvQ",
+   "image": "https://images.unsplash.com/photo-1615486364462-ef6363adbc18"
+  },
+  "tiles/accessories/sunglasses.jpg": {
+   "photo": "https://unsplash.com/photos/shallow-focus-photo-of-black-ray-ban-wayfarer-sunglasses-K62u25Jk6vo",
+   "image": "https://images.unsplash.com/photo-1572635196237-14b3f281503f"
+  },
+  "tiles/accessories/umbrellas.jpg": {
+   "photo": "https://unsplash.com/photos/colorful-umbrellas-against-blue-sky-dEGu-oCuB1Y",
+   "image": "https://images.unsplash.com/photo-1532135468830-e51699205b70"
+  },
+  "tiles/accessories/watches.jpg": {
+   "photo": "https://unsplash.com/photos/round-silver-colored-fossil-chronograph-watch-at-922-with-brown-leather-band-4R_WEmhx8og",
+   "image": "https://images.unsplash.com/photo-1542496658-e33a6d0d50f6"
+  },
+  "banners/beauty.jpg": {
+   "photo": "https://unsplash.com/photos/a-purse-with-various-items-G8RhW9reUuc",
+   "image": "https://images.unsplash.com/photo-1659517175423-9e94aa553374"
+  },
+  "tiles/beauty/bath-body.jpg": {
+   "photo": "https://unsplash.com/photos/a-group-of-cheeses-3P7i1LOg254",
+   "image": "https://images.unsplash.com/photo-1661450159193-633134194753"
+  },
+  "tiles/beauty/beauty-devices.jpg": {
+   "photo": "https://unsplash.com/photos/a-black-hair-dryer-with-a-red-light-on-it-O4rT7zAi4ro",
+   "image": "https://images.unsplash.com/photo-1727364438136-6edc10ef0a52"
+  },
+  "tiles/beauty/beauty-tools-accessories.jpg": {
+   "photo": "https://unsplash.com/photos/black-and-brown-makeup-brush-set-PEttXYw9hi8",
+   "image": "https://images.unsplash.com/photo-1620464003286-a5b0d79f32c2"
+  },
+  "tiles/beauty/eye-brow-products.jpg": {
+   "photo": "https://unsplash.com/photos/silver-and-black-makeup-brush-2avqIBH252Y",
+   "image": "https://images.unsplash.com/photo-1631214540553-ff044a3ff1d4"
+  },
+  "tiles/beauty/fragrances.jpg": {
+   "photo": "https://unsplash.com/photos/clear-perfume-bottle-So4eFi-d1nc",
+   "image": "https://images.unsplash.com/photo-1458538977777-0549b2370168"
+  },
+  "tiles/beauty/hair-scalp.jpg": {
+   "photo": "https://unsplash.com/photos/shampoo-and-conditioner-bottles-promote-hair-moisturization-SZjzhjOddTc",
+   "image": "https://images.unsplash.com/photo-1747098393451-6b985f62a2c2"
+  },
+  "tiles/beauty/lip-products.jpg": {
+   "photo": "https://unsplash.com/photos/red-lipstick-on-white-surface-NnsqpLjiA94",
+   "image": "https://images.unsplash.com/photo-1625093742435-6fa192b6fb10"
+  },
+  "tiles/beauty/makeup.jpg": {
+   "photo": "https://unsplash.com/photos/a-collection-of-makeup-and-cosmetics-on-a-table-yCBWR6YZyB4",
+   "image": "https://images.unsplash.com/photo-1679623100266-db82be84f5f3"
+  },
+  "tiles/beauty/mens-grooming.jpg": {
+   "photo": "https://unsplash.com/photos/black-hair-brush-beside-brown-powder-in-clear-glass-jar-V3NNg858vkA",
+   "image": "https://images.unsplash.com/photo-1621607505833-616916c46a25"
+  },
+  "tiles/beauty/nail-products.jpg": {
+   "photo": "https://unsplash.com/photos/nail-polish-bottles-on-gold-shelves-OpjlRo-31SI",
+   "image": "https://images.unsplash.com/photo-1619607146034-5a05296c8f9a"
+  },
+  "tiles/beauty/skincare.jpg": {
+   "photo": "https://unsplash.com/photos/amber-glass-bottle-on-wooden-pedestal-Mxy5gokl8mE",
+   "image": "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108"
+  },
+  "banners/footwear.jpg": {
+   "photo": "https://unsplash.com/photos/assorted-color-footwear-display-2POnuPe3BMo",
+   "image": "https://images.unsplash.com/photo-1559766084-38c917374a9a"
+  },
+  "tiles/footwear/kids-footwear.jpg": {
+   "photo": "https://unsplash.com/photos/a-pair-of-blue-shoes-sitting-on-top-of-a-bed-GpQzF1AjVN0",
+   "image": "https://images.unsplash.com/photo-1678192568478-9488ee55def6"
+  },
+  "tiles/footwear/mens-footwear.jpg": {
+   "photo": "https://unsplash.com/photos/brown-leather-shoes-on-brown-floor-tiles-wh2udxkVPWA",
+   "image": "https://images.unsplash.com/photo-1614253429340-98120bd6d753"
+  },
+  "tiles/footwear/womens-footwear.jpg": {
+   "photo": "https://unsplash.com/photos/white-textured-high-heeled-pumps-Zx76sbAndc0",
+   "image": "https://images.unsplash.com/photo-1535043934128-cf0b28d52f95"
+  },
+  "banners/freelancers.jpg": {
+   "photo": "https://unsplash.com/photos/woman-sitting-on-floor-and-leaning-on-couch-using-laptop-Nv-vx3kUR2A",
+   "image": "https://images.unsplash.com/photo-1524508762098-fd966ffb6ef9"
+  },
+  "tiles/freelancers/accounting-bookkeeping.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-sitting-at-a-desk-with-a-calculator-and-a-notebook-LNnmSumlwO4",
+   "image": "https://images.unsplash.com/photo-1707902665498-a202981fb5ac"
+  },
+  "tiles/freelancers/all-item-sourcing.jpg": {
+   "photo": "https://unsplash.com/photos/stack-of-books-on-red-table-M32i7g6FvFg",
+   "image": "https://images.unsplash.com/photo-1612261357585-993398d338b4"
+  },
+  "tiles/freelancers/cataloging.jpg": {
+   "photo": "https://unsplash.com/photos/unpaired-green-leather-shoe-on-top-of-white-box-KStSiM1UvPw",
+   "image": "https://images.unsplash.com/photo-1560343090-f0409e92791a"
+  },
+  "tiles/freelancers/content-creation.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-sitting-at-a-table-GRUhkcD9k8o",
+   "image": "https://images.unsplash.com/photo-1664277497095-424e085175e8"
+  },
+  "tiles/freelancers/crm-customer-support.jpg": {
+   "photo": "https://unsplash.com/photos/a-smiling-woman-wearing-a-headset-at-a-computer-wnpf3Q5pkXA",
+   "image": "https://images.unsplash.com/photo-1766066014237-00645c74e9c6"
+  },
+  "tiles/freelancers/e-commerce.jpg": {
+   "photo": "https://unsplash.com/photos/turned-on-macbook-pro-beside-gray-mug-Px3iBXV-4TU",
+   "image": "https://images.unsplash.com/photo-1487014679447-9f8336841d58"
+  },
+  "tiles/freelancers/fashion-designing.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-drawing-on-a-piece-of-paper-with-a-pencil-CCdD5u6siow",
+   "image": "https://images.unsplash.com/photo-1645055762409-2a0ff034d43f"
+  },
+  "tiles/freelancers/financial-consulting.jpg": {
+   "photo": "https://unsplash.com/photos/person-in-black-suit-jacket-holding-white-tablet-computer-nApaSgkzaxg",
+   "image": "https://images.unsplash.com/photo-1628348068343-c6a848d2b6dd"
+  },
+  "tiles/freelancers/garment-fit-consulting.jpg": {
+   "photo": "https://unsplash.com/photos/a-woman-in-a-white-shirt-and-black-pants-holding-a-piece-of-paper-exFVWu1frv0",
+   "image": "https://images.unsplash.com/photo-1708234114270-16a791390e8d"
+  },
+  "tiles/freelancers/influencer-marketing.jpg": {
+   "photo": "https://unsplash.com/photos/woman-recording-herself-on-a-smartphone-tripod-3FTq0q3QZc8",
+   "image": "https://images.unsplash.com/photo-1759393852314-59dc00faeed3"
+  },
+  "tiles/freelancers/legal-compliance.jpg": {
+   "photo": "https://unsplash.com/photos/rubber-stamp-on-legal-document-7PMGUqYQpYc",
+   "image": "https://images.unsplash.com/photo-1619418602850-35ad20aa1700"
+  },
+  "tiles/freelancers/marketing-sales.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-white-dress-shirt-sitting-beside-woman-in-black-long-sleeve-shirt-376KN_ISplE",
+   "image": "https://images.unsplash.com/photo-1600880292203-757bb62b4baf"
+  },
+  "tiles/freelancers/model-coordination.jpg": {
+   "photo": "https://unsplash.com/photos/posing-woman-in-white-sleeveless-top-tiWcNvpQF4E",
+   "image": "https://images.unsplash.com/photo-1509631179647-0177331693ae"
+  },
+  "tiles/freelancers/performance-marketing.jpg": {
+   "photo": "https://unsplash.com/photos/person-using-stylus-on-tablet-with-charts-ykgLX_CwtDw",
+   "image": "https://images.unsplash.com/photo-1707157281599-d155d1da5b4c"
+  },
+  "tiles/freelancers/photography-videography.jpg": {
+   "photo": "https://unsplash.com/photos/camera-on-tripod-with-zoom-lens-IcwAKUhNGXs",
+   "image": "https://images.unsplash.com/photo-1612548403247-aa2873e9422d"
+  },
+  "tiles/freelancers/pr-media.jpg": {
+   "photo": "https://unsplash.com/photos/vintage-microphone-with-purple-background-OKLqGsCT8qs",
+   "image": "https://images.unsplash.com/photo-1485579149621-3123dd979885"
+  },
+  "tiles/freelancers/product-sampling.jpg": {
+   "photo": "https://unsplash.com/photos/hands-choosing-colorful-fabric-samples-from-a-design-palette-naeWaAYdKUg",
+   "image": "https://images.unsplash.com/photo-1781888699751-15f2b304693c"
+  },
+  "tiles/freelancers/software-support.jpg": {
+   "photo": "https://unsplash.com/photos/black-laptop-computer-turned-on-on-table-vpOeXr5wmR4",
+   "image": "https://images.unsplash.com/photo-1587620962725-abab7fe55159"
+  },
+  "tiles/freelancers/styling-services.jpg": {
+   "photo": "https://unsplash.com/photos/five-jackets-on-clothes-rack-zw_oaDbfzyE",
+   "image": "https://images.unsplash.com/photo-1551232864-3f0890e580d9"
+  },
+  "tiles/freelancers/tech-pack-creation.jpg": {
+   "photo": "https://unsplash.com/photos/white-printer-paper-with-black-pen-cei9HTZuNQE",
+   "image": "https://images.unsplash.com/photo-1615387000571-bdcfe92eb67c"
+  },
+  "tiles/freelancers/warehouse-logistics.jpg": {
+   "photo": "https://unsplash.com/photos/women-walking-through-warehouse-aisle-ZlOlRnWk8zU",
+   "image": "https://images.unsplash.com/photo-1664382953403-fc1ac77073a0"
+  },
+  "banners/kidswear.jpg": {
+   "photo": "https://unsplash.com/photos/childrens-clothing-displayed-on-racks-in-a-store-COgVvJ_CG_I",
+   "image": "https://images.unsplash.com/photo-1760287363879-6012adab292c"
+  },
+  "tiles/kidswear/babywear-onesies.jpg": {
+   "photo": "https://unsplash.com/photos/white-crew-neck-t-shirt-PKdcZz-o6bw",
+   "image": "https://images.unsplash.com/photo-1622290291165-d341f1938b8a"
+  },
+  "tiles/kidswear/bottomwear.jpg": {
+   "photo": "https://unsplash.com/photos/girl-in-white-and-yellow-dress-standing-on-white-bed-uH4jKg_ITjQ",
+   "image": "https://images.unsplash.com/photo-1611003971145-d76bcf41b216"
+  },
+  "tiles/kidswear/co-ords-sets.jpg": {
+   "photo": "https://unsplash.com/photos/a-cute-kid-poses-in-bright-yellow-clothes-2F5wpY6gTE8",
+   "image": "https://images.unsplash.com/photo-1747069335589-0ff43ea6c941"
+  },
+  "tiles/kidswear/ethnic-wear.jpg": {
+   "photo": "https://unsplash.com/photos/girl-in-red-and-yellow-dress-holding-yellow-flower-bouquet-5V564TOTN9w",
+   "image": "https://images.unsplash.com/photo-1597294151491-1d22b38698d6"
+  },
+  "tiles/kidswear/frocks-dresses.jpg": {
+   "photo": "https://unsplash.com/photos/smiling-girl-holding-her-dress-kPXq-jxhMkk",
+   "image": "https://images.unsplash.com/photo-1578897367107-2828e351c8a8"
+  },
+  "tiles/kidswear/t-shirts-vests-tops.jpg": {
+   "photo": "https://unsplash.com/photos/young-child-with-curly-blonde-hair-in-blue-shirt-DDHZMhGu5lU",
+   "image": "https://images.unsplash.com/photo-1754639488181-7eae9f6c06e0"
+  },
+  "tiles/kidswear/winterwear.jpg": {
+   "photo": "https://unsplash.com/photos/a-child-in-a-red-coat-and-hat-in-the-snow-VYn5NIlLMlw",
+   "image": "https://images.unsplash.com/photo-1662787271649-8843cc38454a"
+  },
+  "banners/menswear.jpg": {
+   "photo": "https://unsplash.com/photos/one-cowboy-hat-and-five-jackets-hanged-on-clothes-rack-ohWf6YuzOQk",
+   "image": "https://images.unsplash.com/photo-1551488831-00ddcb6c6bd3"
+  },
+  "tiles/menswear/bottomwear.jpg": {
+   "photo": "https://unsplash.com/photos/man-wearing-brown-fitted-jeans-and-sneakers-standing-on-road-at-daytime-jC7nVH_Sw8k",
+   "image": "https://images.unsplash.com/photo-1473966968600-fa801b869a1a"
+  },
+  "tiles/menswear/co-ord-sets.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-white-crew-neck-t-shirt-and-white-shorts-holding-black-and-brown-leather-bag-uGta5mX6dwI",
+   "image": "https://images.unsplash.com/photo-1617671346916-ff4cc463d214"
+  },
+  "tiles/menswear/ethnic-wear.jpg": {
+   "photo": "https://unsplash.com/photos/a-man-standing-next-to-a-tree-wearing-a-green-shirt-hEuVOYuq1l4",
+   "image": "https://images.unsplash.com/photo-1727835523545-70ee992b5763"
+  },
+  "tiles/menswear/formal-suits.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-black-suit-jacket-holding-brown-leather-bag-ikjvPfC3pbI",
+   "image": "https://images.unsplash.com/photo-1623880840102-7df0a9f3545b"
+  },
+  "tiles/menswear/innerwear.jpg": {
+   "photo": "https://unsplash.com/photos/black-and-white-shorts-hanging-on-clothes-line-J08IBx_jFtc",
+   "image": "https://images.unsplash.com/photo-1601393710008-984348f7447b"
+  },
+  "tiles/menswear/shirts.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-blue-dress-shirt-and-black-dress-pants-standing-OSS7Gd9whn8",
+   "image": "https://images.unsplash.com/photo-1624835567150-0c530a20d8cc"
+  },
+  "tiles/menswear/sportswear-lower-body.jpg": {
+   "photo": "https://unsplash.com/photos/a-man-standing-in-front-of-a-white-backdrop-jkQcj072pwM",
+   "image": "https://images.unsplash.com/photo-1636533104731-1613d7deaaa3"
+  },
+  "tiles/menswear/sportswear-upper-body.jpg": {
+   "photo": "https://unsplash.com/photos/a-man-running-through-the-woods-in-a-blue-shirt-xs6J_nzM8T0",
+   "image": "https://images.unsplash.com/photo-1729280924877-4750c0dba51e"
+  },
+  "tiles/menswear/summer-jackets.jpg": {
+   "photo": "https://unsplash.com/photos/man-wearing-a-two-toned-jacket-and-sunglasses-ALky2-BMErc",
+   "image": "https://images.unsplash.com/photo-1776054597118-eac1f833445a"
+  },
+  "tiles/menswear/t-shirts.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-white-crew-neck-t-shirt-m1MRYp556Ew",
+   "image": "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d"
+  },
+  "tiles/menswear/winterwear.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-brown-coat-standing--au3XMzfhro",
+   "image": "https://images.unsplash.com/photo-1619603364937-8d7af41ef206"
+  },
+  "banners/packaging.jpg": {
+   "photo": "https://unsplash.com/photos/black-leather-flip-case-on-white-surface-GM-kX1FzULw",
+   "image": "https://images.unsplash.com/photo-1588498610686-2714130405b3"
+  },
+  "tiles/packaging/corrugated-boxes.jpg": {
+   "photo": "https://unsplash.com/photos/a-brown-box-with-a-white-background-bYhDEWgqYLM",
+   "image": "https://images.unsplash.com/photo-1656543802898-41c8c46683a7"
+  },
+  "tiles/packaging/envelope-packaging.jpg": {
+   "photo": "https://unsplash.com/photos/three-kraft-envelopes-with-white-inserts-on-purple-qJVfC0hgqMs",
+   "image": "https://images.unsplash.com/photo-1755606464519-7513ca11a815"
+  },
+  "tiles/packaging/garment-boxes.jpg": {
+   "photo": "https://unsplash.com/photos/brown-cardboard-box-on-white-table-7KKy7-TeeVs",
+   "image": "https://images.unsplash.com/photo-1595246135406-803418233494"
+  },
+  "tiles/packaging/packaging-bags-polybags.jpg": {
+   "photo": "https://unsplash.com/photos/assorted-color-handbags-on-gray-surface-OfDmMn7qTA0",
+   "image": "https://images.unsplash.com/photo-1560452265-74a9a3b351cb"
+  },
+  "tiles/packaging/paper-bags.jpg": {
+   "photo": "https://unsplash.com/photos/hand-holding-colorful-shopping-bags-against-a-light-background-uaWMyAIpF2g",
+   "image": "https://images.unsplash.com/photo-1760565030346-4b947220fe3a"
+  },
+  "tiles/packaging/ziplock-bags.jpg": {
+   "photo": "https://unsplash.com/photos/a-group-of-cookies-BAjEq0PfF2k",
+   "image": "https://images.unsplash.com/photo-1655264175444-a2a2834522e3"
+  },
+  "banners/raw-materials.jpg": {
+   "photo": "https://unsplash.com/photos/a-bunch-of-folded-cloths-are-stacked-on-top-of-each-other-memVwP598cA",
+   "image": "https://images.unsplash.com/photo-1705250466297-90035b3a2b26"
+  },
+  "tiles/raw-materials/chemicals.jpg": {
+   "photo": "https://unsplash.com/photos/clear-plastic-bottle-on-table-MOj06jBit0s",
+   "image": "https://images.unsplash.com/photo-1583912267550-d974311a9a6e"
+  },
+  "tiles/raw-materials/dyes.jpg": {
+   "photo": "https://unsplash.com/photos/vibrant-colorful-powders-in-bowls-at-an-outdoor-market-_efiXIn1n-g",
+   "image": "https://images.unsplash.com/photo-1783067727360-33aacf486424"
+  },
+  "tiles/raw-materials/elastics.jpg": {
+   "photo": "https://unsplash.com/photos/a-roll-of-blue-paper-next-to-a-roll-of-blue-tape-6Fo1ev8CmmI",
+   "image": "https://images.unsplash.com/photo-1635091244859-d38208ceab6d"
+  },
+  "tiles/raw-materials/fabrics.jpg": {
+   "photo": "https://unsplash.com/photos/a-bunch-of-different-colored-ties-are-on-display-ewE4y3Q4MQ8",
+   "image": "https://images.unsplash.com/photo-1718049942873-58bd663206dc"
+  },
+  "tiles/raw-materials/finishes.jpg": {
+   "photo": "https://unsplash.com/photos/blue-textile-on-white-textile-n29rGnbTid4",
+   "image": "https://images.unsplash.com/photo-1627052045672-be78a58fcd37"
+  },
+  "tiles/raw-materials/labels-tags.jpg": {
+   "photo": "https://unsplash.com/photos/a-red-sweatshirt-with-a-white-tag-attached-to-it-GzMZ86vsVjk",
+   "image": "https://images.unsplash.com/photo-1698934219783-3c002a192aab"
+  },
+  "tiles/raw-materials/laces-nets.jpg": {
+   "photo": "https://unsplash.com/photos/a-close-up-of-a-white-lace-on-a-black-background-RwN2D8dcvXU",
+   "image": "https://images.unsplash.com/photo-1642761528861-4a1dd8391998"
+  },
+  "tiles/raw-materials/lining-interlining.jpg": {
+   "photo": "https://unsplash.com/photos/white-tape-measure-and-gray-scissors-qQKv7r1BaRw",
+   "image": "https://images.unsplash.com/photo-1536867520774-5b4f2628a69b"
+  },
+  "tiles/raw-materials/tapes-cords.jpg": {
+   "photo": "https://unsplash.com/photos/many-spools-of-thread-are-lined-up-together-cgkmLypPQ84",
+   "image": "https://images.unsplash.com/photo-1715356379050-72138fcd74a5"
+  },
+  "tiles/raw-materials/thread.jpg": {
+   "photo": "https://unsplash.com/photos/spools-of-colorful-thread-arranged-in-a-line-iW3Ej4WdTDs",
+   "image": "https://images.unsplash.com/photo-1776107490710-f5c08a0c6a98"
+  },
+  "tiles/raw-materials/yarn.jpg": {
+   "photo": "https://unsplash.com/photos/pink-blue-and-yellow-yarn-64yO1CCQAY8",
+   "image": "https://images.unsplash.com/photo-1626779723011-be3a3cf85d50"
+  },
+  "banners/services.jpg": {
+   "photo": "https://unsplash.com/photos/workers-sew-textiles-in-a-large-factory-setting-dh1EDCiQ6lg",
+   "image": "https://images.unsplash.com/photo-1741176505800-caaa3a52631a"
+  },
+  "tiles/services/accounting-billing-software.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-typing-on-a-laptop-on-a-desk-IIcjlBm610M",
+   "image": "https://images.unsplash.com/photo-1735825764460-c5dec05d6253"
+  },
+  "tiles/services/accounting-services.jpg": {
+   "photo": "https://unsplash.com/photos/person-using-calculator-at-desk-with-coffee-mug-JhevWHCbVyw",
+   "image": "https://images.unsplash.com/photo-1626266061368-46a8f578ddd6"
+  },
+  "tiles/services/app-development.jpg": {
+   "photo": "https://unsplash.com/photos/smartphone-displaying-environmental-data-dashboard-sScmok4Iq1o",
+   "image": "https://images.unsplash.com/photo-1551650975-87deedd944c3"
+  },
+  "tiles/services/b2b-directory-listings.jpg": {
+   "photo": "https://unsplash.com/photos/hands-holding-a-book-with-a-yellow-cover-Nt1YODKZgEM",
+   "image": "https://images.unsplash.com/photo-1776278726433-1cd96688ca7d"
+  },
+  "tiles/services/brand-consulting.jpg": {
+   "photo": "https://unsplash.com/photos/color-code-book-LPWl2pEVGKc",
+   "image": "https://images.unsplash.com/photo-1561070791-2526d30994b5"
+  },
+  "tiles/services/business-registration.jpg": {
+   "photo": "https://unsplash.com/photos/person-writing-on-white-paper-GJao3ZTX9gU",
+   "image": "https://images.unsplash.com/photo-1521791055366-0d553872125f"
+  },
+  "tiles/services/crm-automation.jpg": {
+   "photo": "https://unsplash.com/photos/person-touching-and-pointing-macbook-pro-ZKBzlifgkgw",
+   "image": "https://images.unsplash.com/photo-1531538606174-0f90ff5dce83"
+  },
+  "tiles/services/cutting.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-cutting-a-piece-of-fabric-with-a-pair-of-scissors-oshVSMH6JZQ",
+   "image": "https://images.unsplash.com/photo-1718184021018-d2158af6b321"
+  },
+  "tiles/services/cutting-machines.jpg": {
+   "photo": "https://unsplash.com/photos/red-and-black-metal-tool-17ShGVXwmA4",
+   "image": "https://images.unsplash.com/photo-1596552571892-2dda2c594670"
+  },
+  "tiles/services/dead-stock-surplus.jpg": {
+   "photo": "https://unsplash.com/photos/people-sorting-textile-scraps-in-warehouse-pouTfHUG430",
+   "image": "https://images.unsplash.com/photo-1606053929013-311c13f97b5f"
+  },
+  "tiles/services/dyeing.jpg": {
+   "photo": "https://unsplash.com/photos/colorful-yarns-drying-on-racks-indoors-x6pynsGOBdc",
+   "image": "https://images.unsplash.com/photo-1770572274716-1bae682c48f7"
+  },
+  "tiles/services/e-commerce.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-typing-on-a-laptop-on-a-table-slLo94wES2M",
+   "image": "https://images.unsplash.com/photo-1688561808434-886a6dd97b8c"
+  },
+  "tiles/services/embroidery.jpg": {
+   "photo": "https://unsplash.com/photos/brown-and-black-round-wooden-table-1lk7gF-pMx0",
+   "image": "https://images.unsplash.com/photo-1623605004748-3af12342204f"
+  },
+  "tiles/services/embroidery-machines.jpg": {
+   "photo": "https://unsplash.com/photos/white-sewing-machine-uyT9b-FT_zk",
+   "image": "https://images.unsplash.com/photo-1557462987-dd1c191266f0"
+  },
+  "tiles/services/erp-saas-software.jpg": {
+   "photo": "https://unsplash.com/photos/person-using-macbook-pro-on-black-table-eveI7MOcSmw",
+   "image": "https://images.unsplash.com/photo-1599658880436-c61792e70672"
+  },
+  "tiles/services/fabric-scrap-recycling.jpg": {
+   "photo": "https://unsplash.com/photos/assorted-coloring-papers-Gf47cZJxrSw",
+   "image": "https://images.unsplash.com/photo-1542666594-15c7b33d17ac"
+  },
+  "tiles/services/fabric-trims-sourcing.jpg": {
+   "photo": "https://unsplash.com/photos/multi-colored-striped-textile-on-brown-wooden-table-wcdHwuFJfn4",
+   "image": "https://images.unsplash.com/photo-1624516268152-1e48624026ed"
+  },
+  "tiles/services/fashion-designing.jpg": {
+   "photo": "https://unsplash.com/photos/two-designers-discuss-a-paper-in-a-workshop-0RoZNk_wj80",
+   "image": "https://images.unsplash.com/photo-1753162656056-c8ab7b8d8bca"
+  },
+  "tiles/services/final-packaging.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-wearing-a-backpack-AMNcrHqusSs",
+   "image": "https://images.unsplash.com/photo-1669532673647-b1185ea1a594"
+  },
+  "tiles/services/fundraising-support.jpg": {
+   "photo": "https://unsplash.com/photos/two-businessmen-looking-at-phone-in-office-alw-CwGFmwQ",
+   "image": "https://images.unsplash.com/photo-1577415124269-fc1140a69e91"
+  },
+  "tiles/services/import-export-handling.jpg": {
+   "photo": "https://unsplash.com/photos/a-large-amount-of-containers-are-stacked-on-top-of-each-other-Annl9CjEaEs",
+   "image": "https://images.unsplash.com/photo-1678182451047-196f22a4143e"
+  },
+  "tiles/services/income-tax-filing.jpg": {
+   "photo": "https://unsplash.com/photos/a-close-up-of-a-typewriter-with-a-tax-return-sign-on-it-Ber3q-zEhd4",
+   "image": "https://images.unsplash.com/photo-1598432439250-0330f9130e14"
+  },
+  "tiles/services/logistics-transportation.jpg": {
+   "photo": "https://unsplash.com/photos/a-white-semi-truck-driving-down-a-rural-road-ZhNYKwjRMh4",
+   "image": "https://images.unsplash.com/photo-1695222833131-54ee679ae8e5"
+  },
+  "tiles/services/marketing.jpg": {
+   "photo": "https://unsplash.com/photos/three-men-sitting-while-using-laptops-and-watching-man-beside-whiteboard-wD1LRb9OeEo",
+   "image": "https://images.unsplash.com/photo-1557804506-669a67965ba0"
+  },
+  "tiles/services/packaging-machinery.jpg": {
+   "photo": "https://unsplash.com/photos/gray-and-black-industrial-machine-P3zEXBwabwA",
+   "image": "https://images.unsplash.com/photo-1612685180040-e120061d47e3"
+  },
+  "tiles/services/pattern-making-cad.jpg": {
+   "photo": "https://unsplash.com/photos/person-cutting-paper-sewing-pattern-oTvBFTB0wow",
+   "image": "https://images.unsplash.com/photo-1786276479250-e5840e89742e"
+  },
+  "tiles/services/performance-marketing.jpg": {
+   "photo": "https://unsplash.com/photos/graphical-user-interface--WXQm_NTK0U",
+   "image": "https://images.unsplash.com/photo-1666875753105-c63a6f3bdc86"
+  },
+  "tiles/services/photography.jpg": {
+   "photo": "https://unsplash.com/photos/shallow-focus-photography-of-man-using-a-dslr-camera-DQPP9rVLYGQ",
+   "image": "https://images.unsplash.com/photo-1493863641943-9b68992a8d07"
+  },
+  "tiles/services/pressing-finishing.jpg": {
+   "photo": "https://unsplash.com/photos/white-and-teal-steam-clothes-iron-plugged-on-ironing-board-gma1zfS3_6E",
+   "image": "https://images.unsplash.com/photo-1489274495757-95c7c837b101"
+  },
+  "tiles/services/printing.jpg": {
+   "photo": "https://unsplash.com/photos/black-flat-screen-tv-turned-on-on-black-table-ZQPekfTkImw",
+   "image": "https://images.unsplash.com/photo-1614494731690-53925976ea29"
+  },
+  "tiles/services/printing-machines.jpg": {
+   "photo": "https://unsplash.com/photos/a-large-machine-that-is-sitting-in-a-room-y5ikqY1_gLo",
+   "image": "https://images.unsplash.com/photo-1676474508989-40ddb421e426"
+  },
+  "tiles/services/processing-finishing.jpg": {
+   "photo": "https://unsplash.com/photos/industrial-looms-with-large-spool-of-white-thread-74OQUbEPKso",
+   "image": "https://images.unsplash.com/photo-1758270804188-8ca0b6d254bc"
+  },
+  "tiles/services/public-relations.jpg": {
+   "photo": "https://unsplash.com/photos/black-and-white-typewriter-on-black-table-aB4BJSZoTTI",
+   "image": "https://images.unsplash.com/photo-1586339949216-35c2747cc36d"
+  },
+  "tiles/services/quality-check-qc.jpg": {
+   "photo": "https://unsplash.com/photos/woman-inspecting-fabric-in-a-factory-setting-rqe1sAw_Rpo",
+   "image": "https://images.unsplash.com/photo-1770196009760-bead9eb10514"
+  },
+  "tiles/services/rental-fashion.jpg": {
+   "photo": "https://unsplash.com/photos/assorted-color-shirt-lot-hang-on-rack-xXJ6utyoSw0",
+   "image": "https://images.unsplash.com/photo-1532453288672-3a27e9be9efd"
+  },
+  "tiles/services/sewing-machines.jpg": {
+   "photo": "https://unsplash.com/photos/person-using-sewing-machine-in-tilt-shift-lens-Dq8XPlyHmoI",
+   "image": "https://images.unsplash.com/photo-1630930678172-63343537a00a"
+  },
+  "tiles/services/social-media-marketing.jpg": {
+   "photo": "https://unsplash.com/photos/black-iphone-4-on-brown-wooden-table-EQSPI11rf68",
+   "image": "https://images.unsplash.com/photo-1579869847557-1f67382cc158"
+  },
+  "tiles/services/stitching-garmenting.jpg": {
+   "photo": "https://unsplash.com/photos/man-sewing-at-a-machine-in-a-busy-workshop-hl8EFKDlbKw",
+   "image": "https://images.unsplash.com/photo-1768746350424-ee28a364dcf5"
+  },
+  "tiles/services/tech-pack-development.jpg": {
+   "photo": "https://unsplash.com/photos/person-holding-purple-balloon-on-white-printer-paper-3iKa-CfI5L4",
+   "image": "https://images.unsplash.com/photo-1615387000482-2f3d4b2c50d4"
+  },
+  "tiles/services/testing-qc-equipment.jpg": {
+   "photo": "https://unsplash.com/photos/white-microscope-on-top-of-black-table-gKUC4TMhOiY",
+   "image": "https://images.unsplash.com/photo-1518152006812-edab29b069ac"
+  },
+  "tiles/services/thrift-resale.jpg": {
+   "photo": "https://unsplash.com/photos/woman-browsing-clothes-at-a-thrift-store-q58p3oxqY0Q",
+   "image": "https://images.unsplash.com/photo-1759630814559-f9fffe187384"
+  },
+  "tiles/services/upcycled-reworked.jpg": {
+   "photo": "https://unsplash.com/photos/a-pair-of-jeans-with-a-flower-CLwiuvrtKF4",
+   "image": "https://images.unsplash.com/photo-1662219708541-3a74d96330eb"
+  },
+  "tiles/services/vintage-retro.jpg": {
+   "photo": "https://unsplash.com/photos/a-pair-of-jeans-r-ZMdzBOw-o",
+   "image": "https://images.unsplash.com/photo-1666861585341-5bd1e7b1ed71"
+  },
+  "tiles/services/warehousing.jpg": {
+   "photo": "https://unsplash.com/photos/a-large-warehouse-filled-with-lots-of-shelves-h3pVxOIpnzk",
+   "image": "https://images.unsplash.com/photo-1644079446600-219068676743"
+  },
+  "tiles/services/washing-finishing.jpg": {
+   "photo": "https://unsplash.com/photos/a-laundry-room-with-a-washing-machine-and-a-laundry-basket-S6jnHcI2Y-M",
+   "image": "https://images.unsplash.com/photo-1696546761269-a8f9d2b80512"
+  },
+  "banners/trims-home.jpg": {
+   "photo": "https://unsplash.com/photos/thread-spool-and-thread-on-white-surface-da_0dNX5aew",
+   "image": "https://images.unsplash.com/photo-1613555793439-c50b6274176a"
+  },
+  "tiles/trims-home/bedding-bed-linen.jpg": {
+   "photo": "https://unsplash.com/photos/white-bed-pillow-on-brown-wooden-bed-frame-gVKmonDbotU",
+   "image": "https://images.unsplash.com/photo-1617325247661-675ab4b64ae2"
+  },
+  "tiles/trims-home/buttons.jpg": {
+   "photo": "https://unsplash.com/photos/multi-colored-plastic-round-toy-NT09ctjeDkQ",
+   "image": "https://images.unsplash.com/photo-1594848328162-90258f635e2e"
+  },
+  "tiles/trims-home/carpets-rugs.jpg": {
+   "photo": "https://unsplash.com/photos/a-pile-of-rugs-stacked-on-top-of-each-other-bwQ3V5pJe3g",
+   "image": "https://images.unsplash.com/photo-1695632953654-78815eee7296"
+  },
+  "tiles/trims-home/cord-locks-stoppers.jpg": {
+   "photo": "https://unsplash.com/photos/a-black-and-white-photo-of-a-rope-on-a-boat-SjTeipBri3g",
+   "image": "https://images.unsplash.com/photo-1722100348130-0c5ba44abd90"
+  },
+  "tiles/trims-home/curtains-drapes.jpg": {
+   "photo": "https://unsplash.com/photos/sunlight-streams-through-sheer-curtains-in-a-hotel-room-NIbUk7ATSuw",
+   "image": "https://images.unsplash.com/photo-1759328257280-28bdb3050be3"
+  },
+  "tiles/trims-home/cushions-covers.jpg": {
+   "photo": "https://unsplash.com/photos/stack-of-four-pillows-k-gZDXYjhNc",
+   "image": "https://images.unsplash.com/photo-1575277340591-849c346c4542"
+  },
+  "tiles/trims-home/drawcords-toggles.jpg": {
+   "photo": "https://unsplash.com/photos/black-and-white-textile-on-white-textile-dqjGsWq2cII",
+   "image": "https://images.unsplash.com/photo-1581655353466-d5ad6765dd37"
+  },
+  "tiles/trims-home/eyelets-grommets.jpg": {
+   "photo": "https://unsplash.com/photos/a-box-filled-with-lots-of-black-metal-rings-wEMZ1zM2C8I",
+   "image": "https://images.unsplash.com/photo-1699466622736-36c7b7893745"
+  },
+  "tiles/trims-home/hook-eye.jpg": {
+   "photo": "https://unsplash.com/photos/a-pair-of-scissors-next-to-a-bunch-of-earrings-EefCim7mXQA",
+   "image": "https://images.unsplash.com/photo-1728544845892-32ab2a35f16c"
+  },
+  "tiles/trims-home/industrial-uniform.jpg": {
+   "photo": "https://unsplash.com/photos/man-in-work-uniform-with-blocks-625CAyQnTd0",
+   "image": "https://images.unsplash.com/photo-1787672357525-bf335686ab46"
+  },
+  "tiles/trims-home/kitchen-textiles.jpg": {
+   "photo": "https://unsplash.com/photos/a-pink-and-white-striped-bag-with-flowers-on-it-7h59Wrc4qsA",
+   "image": "https://images.unsplash.com/photo-1634075073401-ab188bb3d157"
+  },
+  "tiles/trims-home/mannequins-display.jpg": {
+   "photo": "https://unsplash.com/photos/black-and-white-3-light-pendant-lamps-AXqkhXom-K8",
+   "image": "https://images.unsplash.com/photo-1629935226757-6e22f6ef9ac1"
+  },
+  "tiles/trims-home/patches.jpg": {
+   "photo": "https://unsplash.com/photos/a-black-and-white-mask-with-a-sad-face-mOrid-L-ncA",
+   "image": "https://images.unsplash.com/photo-1736166054888-b8cf218027ab"
+  },
+  "tiles/trims-home/rivets-studs.jpg": {
+   "photo": "https://unsplash.com/photos/blue-denim-jeans-with-brown-leather-belt-mf-rdn8KUn0",
+   "image": "https://images.unsplash.com/photo-1616788972987-806cd5b51a0b"
+  },
+  "tiles/trims-home/table-linen.jpg": {
+   "photo": "https://unsplash.com/photos/a-plate-of-pizza-on-a-checkered-table-cloth-aW0vLhuJDgA",
+   "image": "https://images.unsplash.com/photo-1647507146394-ea471abc800d"
+  },
+  "tiles/trims-home/tassels-fringes.jpg": {
+   "photo": "https://unsplash.com/photos/pink-yarn-tassels-hanging-on-a-string-outdoors-cn6I_2kNfuE",
+   "image": "https://images.unsplash.com/photo-1765574780409-f1b8f7f0c3b6"
+  },
+  "tiles/trims-home/towels-bath-linen.jpg": {
+   "photo": "https://unsplash.com/photos/a-stack-of-colorful-folded-towels-with-striped-accents-UEmpsagrV3M",
+   "image": "https://images.unsplash.com/photo-1766727923650-951353d8255f"
+  },
+  "tiles/trims-home/upholstery-fabric.jpg": {
+   "photo": "https://unsplash.com/photos/gray-cushion-armchair-beside-white-wall-CgjBaRKroEY",
+   "image": "https://images.unsplash.com/photo-1623353283172-2518d7e6f5ab"
+  },
+  "tiles/trims-home/velcro-tape.jpg": {
+   "photo": "https://unsplash.com/photos/a-white-sneaker-with-a-black-and-white-star-on-the-side-wHUlMvFHEbA",
+   "image": "https://images.unsplash.com/photo-1725271741216-743c37073437"
+  },
+  "tiles/trims-home/zippers.jpg": {
+   "photo": "https://unsplash.com/photos/white-and-blue-textile-on-white-surface-PUlsGV5KtHk",
+   "image": "https://images.unsplash.com/photo-1623743758497-60936e7dccc5"
+  },
+  "banners/womenswear.jpg": {
+   "photo": "https://unsplash.com/photos/blouses-on-rack-in-clothing-store-7F7kEHj72MQ",
+   "image": "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f"
+  },
+  "tiles/womenswear/bottomwear.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-orange-pants-SdR2wW-v4PE",
+   "image": "https://images.unsplash.com/photo-1551854838-212c50b4c184"
+  },
+  "tiles/womenswear/bra.jpg": {
+   "photo": "https://unsplash.com/photos/blue-lace-brassiere-on-white-textile-Z00Dhp_tk38",
+   "image": "https://images.unsplash.com/photo-1620228681518-5f0e3e29940d"
+  },
+  "tiles/womenswear/dresses.jpg": {
+   "photo": "https://unsplash.com/photos/woman-standing-in-front-of-white-wall-sg_gRhbYXhc",
+   "image": "https://images.unsplash.com/photo-1542295669297-4d352b042bca"
+  },
+  "tiles/womenswear/ethnic-wear.jpg": {
+   "photo": "https://unsplash.com/photos/a-woman-sitting-on-the-ground-in-a-park-IEIP31UEy6A",
+   "image": "https://images.unsplash.com/photo-1708534419572-6e6614a53ca1"
+  },
+  "tiles/womenswear/formal-suits.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-black-blazer-and-black-pants-standing-on-road-during-daytime-dodzmVtjoKs",
+   "image": "https://images.unsplash.com/photo-1584273143981-41c073dfe8f8"
+  },
+  "tiles/womenswear/jackets-shrugs.jpg": {
+   "photo": "https://unsplash.com/photos/a-woman-sitting-on-the-ground-wearing-a-jean-jacket-_j0k13wx7mM",
+   "image": "https://images.unsplash.com/photo-1709542441696-e6f05e31ad12"
+  },
+  "tiles/womenswear/jumpsuits-playsuits.jpg": {
+   "photo": "https://unsplash.com/photos/a-smiling-woman-in-a-floral-jumpsuit-holds-a-purse-oMrn6wrfzw0",
+   "image": "https://images.unsplash.com/photo-1767077280665-c3e251378f9e"
+  },
+  "tiles/womenswear/lingerie-sets.jpg": {
+   "photo": "https://unsplash.com/photos/assorted-colored-bra-panties-and-sport-bra-AdjyrNhFVPI",
+   "image": "https://images.unsplash.com/photo-1568441556126-f36ae0900180"
+  },
+  "tiles/womenswear/maternity-wear.jpg": {
+   "photo": "https://unsplash.com/photos/pregnant-woman-holding-belly-before-wooden-door-son4VHt4Ld0",
+   "image": "https://images.unsplash.com/photo-1568043625493-2b0633c7c491"
+  },
+  "tiles/womenswear/nightwear-loungewear.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-satin-pajamas-posing-in-a-room-nGND8cvV2S4",
+   "image": "https://images.unsplash.com/photo-1770294758967-6ed2b93ce42c"
+  },
+  "tiles/womenswear/panties.jpg": {
+   "photo": "https://unsplash.com/photos/a-pair-of-underwear-sitting-on-top-of-a-wooden-floor-LoFMQagQApU",
+   "image": "https://images.unsplash.com/photo-1643539293760-0061e47e6828"
+  },
+  "tiles/womenswear/saree.jpg": {
+   "photo": "https://unsplash.com/photos/a-woman-in-a-sari-posing-for-a-picture-Rm9DL9DmGi4",
+   "image": "https://images.unsplash.com/photo-1727430228383-aa1fb59db8bf"
+  },
+  "tiles/womenswear/shapewear.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-black-activewear-outfit-QfJFEBGh46c",
+   "image": "https://images.unsplash.com/photo-1789110519393-2f292a378a3a"
+  },
+  "tiles/womenswear/skirts.jpg": {
+   "photo": "https://unsplash.com/photos/person-wearing-floral-skirt-and-sneakers-O41PD6SZHMw",
+   "image": "https://images.unsplash.com/photo-1789110854735-67c4e4737aa2"
+  },
+  "tiles/womenswear/sportswear-lower-body.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-black-leggings-and-white-sports-bra-BAlBUJb-SXQ",
+   "image": "https://images.unsplash.com/photo-1599552683573-9dc48255fe85"
+  },
+  "tiles/womenswear/sportswear-upper-body.jpg": {
+   "photo": "https://unsplash.com/photos/woman-in-pink-sports-bra-and-pink-leggings-Z72YujnOrlY",
+   "image": "https://images.unsplash.com/photo-1606902965551-dce093cda6e7"
+  },
+  "tiles/womenswear/t-shirts.jpg": {
+   "photo": "https://unsplash.com/photos/woman-wearing-gray-crew-neck-t-shirt-with-jacket-wrap-around-her-waist-standing-on-brown-grass-field-during-daytime-D1W3rQGaNhI",
+   "image": "https://images.unsplash.com/photo-1485218126466-34e6392ec754"
+  },
+  "tiles/womenswear/tops-blouses-shirts.jpg": {
+   "photo": "https://unsplash.com/photos/a-person-in-a-white-shirt-Z_BuocteGg4",
+   "image": "https://images.unsplash.com/photo-1665065952009-a5dc00f423d4"
+  },
+  "tiles/womenswear/winterwear.jpg": {
+   "photo": "https://unsplash.com/photos/woman-wearing-brown-single-breasted-coat-standing-in-front-of-gray-brick-wall-zkHv9pvrE9U",
+   "image": "https://images.unsplash.com/photo-1539533113208-f6df8cc8b543"
+  }
+ }
+}

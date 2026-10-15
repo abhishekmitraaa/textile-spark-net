@@ -112,6 +112,20 @@ in the next one.
 
 ## Log
 
+### 2026-10-16 — Fraud reports and feedback open to every signed-in account while the dummy sign-in is on — Severity: Medium — OPEN
+- Mitra asked for every report to reach Cosora-Admin instead of email (migration `20261016100000`). Fraud reports and
+  feedback no longer wait for the support rollout. D-14 says no launch to real users (rollout "Everyone") while the
+  dummy sign-in code accepts any 6 digits: with it on, anyone can sign in as any phone number and file a report or
+  feedback in that person's name, or read that person's My requests (which was already true). Chat and callbacks
+  stay behind the rollout. Close it by turning the dummy code off (real OTP), as D-14 already requires for launch.
+- Reports keep their limits: signed in only, 3 fraud reports and 5 notes a day, fraud evidence write-only for the
+  reporter, nobody posts to another's ticket (harness `scripts/reports-jpeg/harness.sql`).
+
+### 2026-10-16 — Cosora-Admin pictures are JPEG only — Severity: Info
+- `site-content` accepts `image/jpeg` only; insert/update policies want .jpg/.jpeg; Cosora-Admin checks the first bytes
+  as well as the type. Content type is still declared by the uploader, so the bucket check alone can't tell a renamed
+  file; the app's byte check and the policies' names cover Cosora-Admin's own uploads, and only staff can write there.
+
 ### 2026-10-14 — Unread chat messages reviewed — Severity: Info
 - `public.conversation_reads`: RLS on, each person reads only their own lines, no client writes. `mark_conversation_read`
   and `chat_unread_counts` are SECURITY DEFINER with `search_path = ''`, closed to anon; the first refuses anyone who

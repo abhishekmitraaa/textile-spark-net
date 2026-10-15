@@ -13,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { categoryBannerSlot, categoryTileSlot } from "@/lib/categoryImageSlots";
 import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
+import { categoryTileDefault } from "@/lib/categoryTileImages";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const grid = { hidden: {}, show: { transition: { staggerChildren: 0.035 } } };
@@ -157,13 +158,13 @@ const Categories = () => {
                     {group && <p className="px-1 mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-400">{group}</p>}
                     <motion.div variants={grid} initial="hidden" animate="show"
                       className="grid grid-cols-3 lg:grid-cols-5 gap-2.5">
-                      {subs.map((s, i) => (
+                      {subs.map((s) => (
                         <motion.button key={s.label} variants={tile} whileTap={reduced ? undefined : { scale: 0.96 }}
                           onClick={() => go(active, s)}
                           className="group flex flex-col items-center gap-1.5">
                           <span className="relative w-full aspect-square rounded-2xl overflow-hidden bg-gray-100 ring-1 ring-gray-100 group-hover:ring-brand-buyer/40 transition">
                             {pictures.ready && (
-                              <img src={categoryImageUrl(pictures.images, categoryTileSlot(active.id, s.label), active.images[i % active.images.length])} alt=""
+                              <img src={categoryImageUrl(pictures.images, categoryTileSlot(active.id, s.label), categoryTileDefault(active.id, s.label) ?? active.image)} alt=""
                                 data-slot={categoryTileSlot(active.id, s.label)} loading="lazy"
                                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
                             )}

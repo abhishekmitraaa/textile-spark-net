@@ -2161,6 +2161,34 @@ page (`src/lib/heroSlides.ts`, `src/pages/HeroSlides.tsx`).
   sits at `calc(var(--bottom-nav-h, 5rem) + var(--pinned-bar-h, 0px) + 1rem)` on phones. Step changes scroll to the top
   in `AnimatePresence`'s `onExitComplete` (an effect on `step` ran while the old step was still leaving).
 
+## Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (2026-10-16)
+
+Migration `20261016100000_reports_in_app_admin_jpeg.sql`; `src/lib/categoryTileImages.ts`; Cosora-Admin `src/lib/jpeg.ts`.
+
+- **Tile pictures:** `import.meta.glob("../assets/categories/tiles/*/*.jpg", { eager: true, import: "default" })` maps
+  each file to its slot (`categories/<top>/<slug>`); `categoryTileDefault(topId, subLabel)` returns its URL. Each file is
+  above Vite's inline limit, so it is emitted as its own hashed, cached asset and only the URLs are bundled (about
+  12 KB). `Categories.tsx`: `categoryImageUrl(images, categoryTileSlot(...), categoryTileDefault(...) ?? active.image)`,
+  so a picture set in Cosora-Admin still wins. `TopCategory.images` is removed. Files: tiles 480 × 480 JPEG q78
+  progressive (168, 5.8 MB in the repo, ~32 KB each; a category page loads only its own), banners 1440 × 630 q74
+  (11, 1.3 MB), New Arrivals tiles 400 px q82 flattened on white (12, 142 KB; they were 2.3 MB of PNG).
+  `scripts/category-image-slots-check.mjs` checks one file per `categories_tile` slot and no stray files.
+- **Reports:** `support_report_fraud` and `support_submit_feedback` call `admin.support_requester(false)`.
+  `support_prepare_upload` and `support_post_message` call it with `false` and then raise `support_unavailable`
+  (P0001) unless the ticket's channel is `fraud_report` or `feedback` or `admin.support_rollout_allows()`. Rate limits
+  (3 reports, 5 notes a day), validation, `requester_can_view = false` for fraud evidence and ownership checks are
+  unchanged. Bodies were taken from production with `pg_get_functiondef` on 2026-10-16. App: `ReportFraud` renders
+  `FraudWizard` for any session and `SignInForSupport contact={false}` otherwise (the `EmailReportForm` path is
+  removed); `AppFeedback` no longer reads `support_status`; `SupportThread` treats a fraud or feedback thread as
+  available for replies.
+- **JPEG:** `update storage.buckets set allowed_mime_types = '{image/jpeg}' where id = 'site-content'` (the bucket
+  holds only Cosora-Admin's pictures: banners/, categories/, blog/; site.json is in `site-config`). `alter policy`
+  on `site_content_admin_insert/update`, `site_content_category_insert/update`, `blog_media_admin_insert/update`:
+  names `\.(jpg|jpeg)$`; the select/delete policies keep png/webp so older objects stay manageable. Cosora-Admin:
+  `assertJpeg(file)` checks `file.type === "image/jpeg"` and the bytes `FF D8 FF`; `preparePicture()` encodes
+  `image/jpeg` at 0.86; uploads are named `.jpg`. Staff support: `ACCEPTED_FILES` drops png/webp,
+  `admin_support_prepare_upload` raises 22023 `file_type` for `image/*` other than `image/jpeg`.
+
 ## Unread chat messages (2026-10-14)
 
 Migration `20261014170000_chat_unread.sql`; `src/lib/queries/chatUnread.ts`.

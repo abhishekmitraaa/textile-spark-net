@@ -80,9 +80,10 @@ const Help = () => {
   const isSeller = role === "seller";
   const { user } = useAuth();
   const lang = useLang();
-  // support_status() answers signed out too. `available` says whether chat,
-  // callbacks, the in-app fraud report and feedback are open to this person
-  // (rollout). When it's false, or the call fails, Help is the P1 page: phone and email.
+  // support_status() answers signed out too. `available` says whether chat and
+  // callbacks are open to this person (rollout). When it's false, or the call fails,
+  // Help offers phone and email for those. Fraud reports and feedback are always in
+  // the app (2026-10-16).
   const status = useSupportStatus(user?.id);
   const available = Boolean(user) && Boolean(status.data?.available);
   const audience = isSeller ? "vendor" : "buyer";
@@ -225,11 +226,9 @@ const Help = () => {
               <Link to="/report-fraud" className="inline-flex items-center gap-1.5 text-xs font-medium text-destructive hover:underline">
                 <Flag className="w-3.5 h-3.5" /> Report fraud
               </Link>
-              {available && (
-                <Link to="/feedback" state={{ from: "/help" }} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
-                  <Lightbulb className="w-3.5 h-3.5" /> App feedback
-                </Link>
-              )}
+              <Link to="/feedback" state={{ from: "/help" }} className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
+                <Lightbulb className="w-3.5 h-3.5" /> App feedback
+              </Link>
               {user && (
                 <Link to="/help/requests" className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 hover:underline">
                   <ListChecks className="w-3.5 h-3.5" /> My requests

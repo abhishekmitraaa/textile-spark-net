@@ -16,7 +16,8 @@ import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, signedInContext
 
 const tag = Date.now().toString(36);
 const made: string[] = [];
-const PICTURE = path.resolve("public/icon-192.png");
+// Cosora-Admin takes JPEG only since 2026-10-16 (it was this PNG icon).
+const PICTURE = path.resolve("src/assets/categories/tiles/kidswear/frocks-dresses.jpg");
 
 test.afterEach(() => {
   while (made.length) {
@@ -296,7 +297,7 @@ test("1. a manager changes a category picture in Cosora-Admin, and the buyer sit
     await expect(admin.getByText("Picture saved for Kidswear")).toBeVisible();
     await expect(card).toContainText("Custom");
     const saved = sql(`select image_path from public.category_images where id = '${slot}'`);
-    expect(saved).toMatch(/^categories\/[0-9a-f-]{36}\.(webp|png|jpg)$/);
+    expect(saved).toMatch(/^categories\/[0-9a-f-]{36}\.jpg$/);
     expect(sql(`select count(*) from admin.audit_log where target_table = 'public.category_images' and target_id = '${slot}' and at > now() - interval '5 minutes'`)).not.toBe("0");
 
     // A sub-category tile on the Categories page tab.

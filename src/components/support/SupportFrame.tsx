@@ -105,20 +105,24 @@ export function SupportUnavailable({ title, subject }: { title: string; subject?
   );
 }
 
-/** Signed out: sign in, or call, or email. `title` is a whole sentence. */
-export function SignInForSupport({ title }: { title: string }) {
+/**
+ * Signed out: sign in, or call, or email. `title` is a whole sentence. `contact={false}` for
+ * reports and feedback, which reach Cosora-Admin only through the app (2026-10-16), so the card
+ * offers sign-in alone.
+ */
+export function SignInForSupport({ title, contact = true }: { title: string; contact?: boolean }) {
   const { accent } = useSupportSide();
   return (
     <Card>
       <CardContent className="p-5 space-y-3">
         <p className="text-sm font-semibold text-gray-900">{title}</p>
-        <p className="text-sm text-gray-600">Or call or email us. You don't need an account for that.</p>
+        {contact && <p className="text-sm text-gray-600">Or call or email us. You don't need an account for that.</p>}
         <div className="flex flex-wrap gap-2">
           <Button asChild className={cn(accent.bg, accent.hoverBg, "text-white")}>
             <Link to="/login"><LogIn className="w-4 h-4 mr-2" /> Sign in</Link>
           </Button>
         </div>
-        <CallOrEmail />
+        {contact && <CallOrEmail />}
       </CardContent>
     </Card>
   );

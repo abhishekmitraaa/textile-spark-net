@@ -6,8 +6,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { submitFeedback, supportError, useSupportStatus } from "@/lib/queries/support";
-import { ReceiptLine, SignInForSupport, SupportFrame, SupportUnavailable, useSupportSide } from "@/components/support/SupportFrame";
+import { submitFeedback, supportError } from "@/lib/queries/support";
+import { ReceiptLine, SignInForSupport, SupportFrame, useSupportSide } from "@/components/support/SupportFrame";
 
 /**
  * App feedback: a bug or an idea (plan P3d). Each one is stored with an ID the
@@ -17,28 +17,22 @@ import { ReceiptLine, SignInForSupport, SupportFrame, SupportUnavailable, useSup
  */
 export default function AppFeedback() {
   const { user, loading } = useAuth();
-  const status = useSupportStatus(user?.id);
   if (!loading && !user) {
     return (
       <SupportFrame title="App feedback">
-        <SignInForSupport title="Sign in to send feedback." />
+        <SignInForSupport title="Sign in to send feedback." contact={false} />
       </SupportFrame>
     );
   }
-  if (loading || status.isPending) {
+  if (loading) {
     return (
       <SupportFrame title="App feedback">
         <div className="flex items-center gap-2 text-sm text-gray-500"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
       </SupportFrame>
     );
   }
-  if (!status.data?.available) {
-    return (
-      <SupportFrame title="App feedback">
-        <SupportUnavailable title="Sending feedback in the app isn't available yet." subject="App feedback" />
-      </SupportFrame>
-    );
-  }
+  // Open to every signed-in account since 2026-10-16, whatever the support rollout: feedback
+  // reaches Cosora-Admin only through the app (it offered email to everyone outside the rollout).
   return <FeedbackForm />;
 }
 

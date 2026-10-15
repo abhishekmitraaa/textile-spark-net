@@ -205,6 +205,34 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-16 — Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (local stack: harness 20/20; browser 5/5 three runs; neighbours 17/17)
+
+- **Pictures, by eye:** 2,095 candidates for the 179 slots, laid out on contact sheets and picked one by one; the 168
+  tiles and 11 banners checked again together after cropping (four swapped: a visible logo, an unclear lingerie shot,
+  a blurred iron, a kids' tee too like the babywear tile). New Arrivals' converted tiles compared against the PNGs.
+- **Slot check** `node scripts/category-image-slots-check.mjs`: 168 pictures for 168 tiles; 191 slots in the app and
+  the migration.
+- **Harness** `scripts/reports-jpeg/harness.sql` (never commits; rollout Off): a buyer outside the rollout reports
+  fraud (stored, `fraud_report/trust_fraud`, details kept) and sends feedback; adds a PNG screenshot to the report
+  (write-only kept); follows up on both; live chat refused (`support_unavailable`); an older chat ticket takes no
+  message or upload, and does once the rollout is On; someone else's report: P0002; a visitor: 42501; the fourth report
+  in a day: `rate_limited`; staff can't attach PNG/WebP (22023 `file_type`), can attach JPEG and PDF; the bucket is
+  `image/jpeg`; super admin .png banner and .webp blog refused, .jpg/.jpeg allowed; manager .webp category refused,
+  .jpg allowed; select/delete still admit older PNG/WebP. 20/20. The migration re-ran cleanly in a rolled-back
+  transaction.
+- **Browser** `tests/local/cat-pics-reports-jpeg.spec.ts`: (1a) all 11 categories at 1280 px: each banner and all 168
+  tiles load, each tile's file is named after its slot, no two tiles in a category share a picture, no request to
+  unsplash.com; (1b) New Arrivals' 12 tiles are JPEG; (2a) signed out, Report fraud and App feedback show sign-in only,
+  no "Email this report", no `mailto:`; (2b) rollout Off, a fresh buyer sends a report through the wizard and feedback
+  (rows in the database), the report's thread takes replies, and Support sees both on /support/fraud and
+  /support/feedback; (3) Category pictures as manager: accept is `image/jpeg,.jpg,.jpeg`, a PNG and a PNG renamed .jpg
+  are refused with nothing saved, a JPEG saves as `categories/<uuid>.jpg`; through the Storage API, a PNG banner, a
+  .webp name and a .jpg sent as image/png are refused, a JPEG is stored. 5/5, three runs.
+- **Neighbours:** support-followups, support-channels, support-chat, buyer-minor-fixes (now uploads a JPEG: it uploaded
+  the PNG icon, which is refused as intended) 17/17. The first run's support-channels and support-chat misses were the
+  local edge runtime having stopped (a file stayed `pending`); restarted, they pass.
+- typecheck 0 (buyer and admin), i18n 7,715/7,715, production builds.
+
 ### 2026-10-14 — Chats badge, live on production, signed in (demo buyer and demo seller): 5/5
 
 - **Setup:** demo-buyer and demo-vendor signed in with their passwords from the gitignored `.env` (never printed);

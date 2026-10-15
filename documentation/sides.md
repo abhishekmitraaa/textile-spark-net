@@ -199,6 +199,13 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-16 (three fixes; built, not live)
+- **Categories page:** every sub-category tile shows its own photo of what it says (they cycled a few photos per
+  category, so tiles showed the wrong thing); new banners. All JPEG. Cosora's team can still change any of them.
+- **Report fraud** saves the report for Cosora's team in the app, for everyone signed in; signed out it asks you to
+  sign in. It used to open an email for almost everyone. **App feedback** is open to everyone signed in too, linked
+  from Help. You can add to a report or feedback from My requests.
+
 ### Changed 2026-10-14 (Chats badge; built, not live)
 - **The Chats icon** counts unread messages, live (it showed 3 for everyone); **the chat list** shows each chat's count.
   Opening a chat clears it. Same for sellers on their bottom bar.
@@ -399,6 +406,9 @@ the demand side of India's fashion and textile supply chain.
 **Primary colour:** vendor blue `#256fef`. Note that `--accent` and `--primary` in
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
+
+### Changed 2026-10-16 (built, not live)
+- **Report fraud and App feedback** save in the app for every signed-in seller (they opened an email).
 
 ### Changed 2026-10-14 (second batch of buyer fixes; built, not live)
 - **Leads and direct quote requests** show the requirement's photo (buyers' photos are now uploaded), else a
@@ -732,6 +742,12 @@ before assuming a function is missing.
 ### Purpose
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
+
+### Changed 2026-10-16 (built, not live)
+- **Fraud reports and Feedback boards** now receive reports and feedback from every signed-in buyer and seller
+  (before, only accounts in the support rollout could send them, so nothing arrived).
+- **Pictures are JPEG only** everywhere Cosora-Admin takes one: banners, category pictures, blog images, support
+  replies. A PNG, WebP or a renamed file is refused with a clear message.
 
 ### Added 2026-10-14 (built, not live)
 - **New Arrivals carousel** (`/new-arrivals-carousel`, super admins and managers): pick up to 12 live listings for the

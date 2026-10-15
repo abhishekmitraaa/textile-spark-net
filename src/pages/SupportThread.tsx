@@ -151,7 +151,8 @@ function Thread({ ticketNo, userId }: { ticketNo: string | undefined; userId: st
   const filesByMessage = new Map<string, ThreadAttachment[]>();
   for (const a of d.attachments) filesByMessage.set(a.message_id, [...(filesByMessage.get(a.message_id) ?? []), a]);
   const canEnd = t.channel === "chat" && (t.status === "new" || t.status === "open");
-  const available = status.data?.available ?? false;
+  // A fraud report's or feedback's own thread takes replies whatever the rollout (2026-10-16), as the server does.
+  const available = (status.data?.available ?? false) || t.channel === "fraud_report" || t.channel === "feedback";
   let lastDay = "";
 
   return (
