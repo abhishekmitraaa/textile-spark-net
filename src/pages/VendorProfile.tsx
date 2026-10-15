@@ -406,7 +406,8 @@ const VendorProfile = () => {
                 without a seal it hung below Back with a gap above it (2026-10-14). */}
             <div className="absolute right-3 top-3 z-10 flex items-center gap-2">
             {vendor.isVerified && (
-              <img src={trustedSeal} alt="TrustedSEAL" className="h-9 w-auto drop-shadow" />
+              // h-8, the buttons' height, so the menu sits exactly level with Back with or without a seal.
+              <img src={trustedSeal} alt="TrustedSEAL" className="h-8 w-auto drop-shadow" />
             )}
             {/* 3-dot menu: report this seller (2026-10-02; the button had no action before).
                 The report names this account, so a confirmed finding can say whose it was. */}
