@@ -4,6 +4,7 @@
  *      of Unsplash photos), banners are JPEG, New Arrivals' tiles are JPEG, and Cosora-Admin can still replace one.
  *   2. Reports reach Cosora-Admin, not email: a signed-out visitor is asked to sign in (no email form), and an
  *      account outside the support rollout reports fraud and sends feedback in the app; staff see both.
+ *      Staff are warned when the reporter's account came from the test sign-in code (number never verified).
  *   3. Cosora-Admin's picture inputs take JPEG only: a PNG, and a PNG renamed .jpg, are refused; a JPEG saves;
  *      the bucket and its policies refuse anything else even past the app.
  */
@@ -141,6 +142,46 @@ test("2b. an account outside the rollout reports fraud and sends feedback in the
     await expect(staff.getByText(reportNo).first()).toBeVisible({ timeout: 30_000 });
     await staff.goto(`${ADMIN_URL}/support/feedback`);
     await expect(staff.getByText(feedbackNo).first()).toBeVisible({ timeout: 30_000 });
+    await staffCtx.close();
+  } finally {
+    setRollout("staff");
+  }
+});
+
+test("2c. staff are told when a reporter's number was never verified (test sign-in code)", async ({ browser }) => {
+  test.setTimeout(120_000);
+  setRollout("off");
+  try {
+    const viaCode = await freshAccount(`rpcode${tag}`);
+    sql(`update auth.users set raw_app_meta_data = raw_app_meta_data || '{"created_by":"otp-dev-verify"}' where id = '${viaCode.id}'`);
+    const plain = await freshAccount(`rpplain${tag}`);
+    const report = async (session: typeof viaCode.session, text: string) => {
+      const ctx = await contextWithSession(browser, session);
+      const page = await ctx.newPage();
+      await page.goto(`${BUYER_URL}/report-fraud`);
+      await page.getByRole("button", { name: "Next" }).click();
+      await page.locator("#fr-description").fill(text);
+      await page.getByRole("button", { name: "Next" }).click();
+      await page.getByRole("button", { name: "Next" }).click();
+      await page.getByRole("button", { name: "Send the report" }).click();
+      const done = page.getByText(/^We've recorded your report CS-\d{6}\.$/);
+      await expect(done).toBeVisible({ timeout: 30_000 });
+      const no = (await done.innerText()).match(/CS-\d{6}/)![0];
+      await ctx.close();
+      return no;
+    };
+    const fromCode = await report(viaCode.session, `RP ${tag}: via the test code`);
+    const fromPlain = await report(plain.session, `RP ${tag}: an ordinary account`);
+
+    const staffCtx = await signedInContext(browser, "support", { width: 1440, height: 1000 });
+    const staff = await staffCtx.newPage();
+    const errors = watchErrors(staff);
+    await staff.goto(`${ADMIN_URL}/support/${fromCode}`);
+    await expect(staff.getByText("Phone number not verified")).toBeVisible({ timeout: 30_000 });
+    await staff.goto(`${ADMIN_URL}/support/${fromPlain}`);
+    await expect(staff.getByText(`RP ${tag}: an ordinary account`).first()).toBeVisible({ timeout: 30_000 });
+    await expect(staff.getByText("Phone number not verified")).toHaveCount(0);
+    expect(errors).toEqual([]);
     await staffCtx.close();
   } finally {
     setRollout("staff");

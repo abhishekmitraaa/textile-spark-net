@@ -118,6 +118,9 @@ in the next one.
   dummy sign-in code accepts any 6 digits: with it on, anyone can sign in as any phone number and file a report or
   feedback in that person's name, or read that person's My requests (which was already true). Chat and callbacks
   stay behind the rollout. Close it by turning the dummy code off (real OTP), as D-14 already requires for launch.
+- Mitigated 2026-10-16 (migration `20261016120000`): Cosora-Admin's request page warns "Phone number not verified" on any
+  request from an account the test code created, so staff don't act on the reporter's identity as proven. Still OPEN:
+  only SMS delivery closes it (switching the code off without it locks every phone account out).
 - Reports keep their limits: signed in only, 3 fraud reports and 5 notes a day, fraud evidence write-only for the
   reporter, nobody posts to another's ticket (harness `scripts/reports-jpeg/harness.sql`).
 

@@ -205,6 +205,13 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-16 — Staff see an unverified reporter (local stack: browser 6/6 twice; neighbours 6/6)
+
+- `tests/local/cat-pics-reports-jpeg.spec.ts` 2c (rollout Off): a fresh account stamped as created by `otp-dev-verify`
+  and an ordinary one each send a report; Support opens both in Cosora-Admin: the first shows "Phone number not
+  verified", the second doesn't; no page errors. With the rest of the spec 6/6, twice; support-followups and
+  support-channels 6/6. The migration's self-check passed on the local stack. Admin `tsc` 0.
+
 ### 2026-10-16 — Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (local stack: harness 20/20; browser 5/5 three runs; neighbours 17/17)
 
 - **Pictures, by eye:** 2,095 candidates for the 179 slots, laid out on contact sheets and picked one by one; the 168

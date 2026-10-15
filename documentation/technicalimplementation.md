@@ -2188,6 +2188,10 @@ Migration `20261016100000_reports_in_app_admin_jpeg.sql`; `src/lib/categoryTileI
   `assertJpeg(file)` checks `file.type === "image/jpeg"` and the bytes `FF D8 FF`; `preparePicture()` encodes
   `image/jpeg` at 0.86; uploads are named `.jpg`. Staff support: `ACCEPTED_FILES` drops png/webp,
   `admin_support_prepare_upload` raises 22023 `file_type` for `image/*` other than `image/jpeg`.
+- **Unverified reporters** (migration `20261016120000_support_requester_unverified.sql`): `admin_support_get()`'s
+  `requester` gains `phone_unverified` = `auth.users.raw_app_meta_data->>'created_by' = 'otp-dev-verify'` (the stamp
+  the test sign-in function puts on the accounts it creates; users can't write app metadata). Cosora-Admin's
+  `RequesterPanel` shows a caution notice when it's true. Body is production's with that key added.
 
 ## Unread chat messages (2026-10-14)
 
