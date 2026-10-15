@@ -199,7 +199,7 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
-### Changed 2026-10-16 (three fixes; built, not live)
+### Changed 2026-10-16 (three fixes; live 2026-10-16)
 - **Categories page:** every sub-category tile shows its own photo of what it says (they cycled a few photos per
   category, so tiles showed the wrong thing); new banners. All JPEG. Cosora's team can still change any of them.
 - **Report fraud** saves the report for Cosora's team in the app, for everyone signed in; signed out it asks you to
@@ -407,7 +407,7 @@ the demand side of India's fashion and textile supply chain.
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
 
-### Changed 2026-10-16 (built, not live)
+### Changed 2026-10-16 (live 2026-10-16)
 - **Report fraud and App feedback** save in the app for every signed-in seller (they opened an email).
 
 ### Changed 2026-10-14 (second batch of buyer fixes; built, not live)
@@ -743,9 +743,11 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
-### Changed 2026-10-16 (built, not live)
+### Changed 2026-10-16 (live 2026-10-16)
 - **Fraud reports and Feedback boards** now receive reports and feedback from every signed-in buyer and seller
   (before, only accounts in the support rollout could send them, so nothing arrived).
+- **"Phone number not verified"** on a request whose account came from the test sign-in code (any 6 digits), so
+  staff don't treat that reporter's name or number as proven.
 - **Pictures are JPEG only** everywhere Cosora-Admin takes one: banners, category pictures, blog images, support
   replies. A PNG, WebP or a renamed file is refused with a clear message.
 

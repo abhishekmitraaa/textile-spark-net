@@ -205,6 +205,26 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-16 — Production checks of the day's releases (www.cosora.in, cosora-admin.vercel.app)
+
+- **Database, after each migration** (CLI, read-only): `site-content` takes `image/jpeg` only; the four report
+  functions open to signed-in accounts; staff pictures JPEG-only; no insert/update policy admits PNG/WebP; a visitor
+  can't report; the rollout is still Off; `admin_support_get` returns `phone_unverified` and isn't open to visitors.
+  Before each apply, the live function bodies were compared with the ones the migration was built from: unchanged.
+- **Browser, signed out, 390 px** (nothing posted): Womenswear 19 and Trims & Home 20 tiles, every one loaded, a JPEG
+  and its own picture; New Arrivals' 12 tiles JPEG; /categories requests nothing from Unsplash (New Arrivals' 36 Unsplash
+  requests are seeded listings' own product photos); /report-fraud and /feedback show sign-in only, no email button, no
+  `mailto:`; no page errors.
+- **Demo accounts through the API** (logins from `.env`, never printed): as demo-admin, a PNG banner, a `.jpg` sent as
+  `image/png` and a `.webp` name are refused, a JPEG banner is stored (then removed); as demo-buyer, a report labelled
+  "[Cosora test 2026-10-16] Please ignore" was stored as CS-000024, demo-admin reads it as a fraud report
+  (`phone_unverified` false: demo-buyer isn't a test-code account), a staff PNG attachment on it is refused, and it was
+  closed with the note "Cosora test, not a real report." It stays in the closed list.
+- **Deploys:** buyer `91026b0` then `a722a39`, admin `79c0328` then `d959a90`, all Ready; the live admin bundle has the
+  JPEG messages and the "Phone number not verified" notice, and no longer says "JPEG, PNG or WebP".
+- Not checked live: an admin upload through the page itself (the API check covers the same bucket and policies) and the
+  notice on a real test-code account's request (covered locally, spec 2c).
+
 ### 2026-10-16 — Staff see an unverified reporter (local stack: browser 6/6 twice; neighbours 6/6)
 
 - `tests/local/cat-pics-reports-jpeg.spec.ts` 2c (rollout Off): a fresh account stamped as created by `otp-dev-verify`
