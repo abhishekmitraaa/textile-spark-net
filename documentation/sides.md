@@ -198,7 +198,7 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
-### Changed 2026-10-16 (Video Closeups; built, not live)
+### Changed 2026-10-16 (Video Closeups; live 2026-10-17)
 - **Saved videos** show at the top of My Saves and play from there.
 - **The product card** opens the listing the video shows, or the seller's store; the seller's name opens the
   store; back comes back to the same video.
