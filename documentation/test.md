@@ -205,6 +205,26 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-16 — Video Closeups made functional (production probe; local stack: browser 2/2 three runs; neighbours 10/10)
+
+- **Production probe first** (www.cosora.in, iPhone 13, read-only except a like and a save by demo-buyer, both undone):
+  every control is reachable (`elementFromPoint` on each button) on /video-closeups and opened from New Arrivals, no
+  transformed ancestors; taps by touch work; signed in, like and save are stored and survive a reload; Share opens
+  the sheet; Call Now signed out shows "Sign in to call sellers" above the reel. What was missing was where they led
+  (findings in changelog.md).
+- **Browser** `tests/local/video-closeups.spec.ts` (a fresh seller, a live listing with two real reviews 5 and 4, a
+  tagged video storing rating 0 and an untagged one storing 4.9 / "2.1k"): signed out, Like and Save ask to sign in
+  and stay off; signed in, the card shows "4.5 · 2" and "View product" (never " 0 ·"); like and save stored; the card
+  opens the listing and back returns to `?v=<tagged>` still liked; the seller's name opens the store; the untagged
+  card says "Visit store", shows neither 4.9 nor 2.1k, and opens the store; a 500 on the like is undone with "Couldn't
+  save your like"; ArrowDown changes `?v`, Escape leaves; My Saves lists the saved video and it plays there, saved;
+  from New Arrivals the card opens the listing and back returns to New Arrivals with the reel closed. No page errors
+  (the first run caught a React "setState while rendering" warning; fixed). 2/2, three runs.
+- **Neighbours:** video-share (its "sheet on top" sample now waits for the slide-in: it failed 1 in 2 alone; 3/3
+  after), buyer-minor-fixes, following 10/10.
+- Card checked at 390 and 320 px. typecheck 0, i18n 7,726/7,726, eslint clean on changed files, production build.
+  The migration's self-check passed on the local stack.
+
 ### 2026-10-16 — Production checks of the day's releases (www.cosora.in, cosora-admin.vercel.app)
 
 - **Database, after each migration** (CLI, read-only): `site-content` takes `image/jpeg` only; the four report

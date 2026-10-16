@@ -5698,6 +5698,10 @@ export type Database = {
         Args: { p_ad_certificate_id: string; p_reason: string }
         Returns: string
       }
+      product_review_stats: {
+        Args: { p_product_ids: string[] }
+        Returns: { product_id: string; reviews_count: number; rating_avg: number }[]
+      }
       chat_unread_counts: {
         Args: never
         Returns: { conversation_id: string; other_id: string; unread: number }[]

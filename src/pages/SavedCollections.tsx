@@ -18,7 +18,10 @@ import {
   ALL_SAVES_ID,
   type Folder,
 } from "@/lib/savedStore";
-import { FolderPlus, MoreVertical, Pencil, Trash2, Share2, Images } from "lucide-react";
+import { FolderPlus, MoreVertical, Pencil, Trash2, Share2, Images, Play } from "lucide-react";
+import VideoCloseUpsViewer from "@/components/buyer/VideoCloseUpsViewer";
+import { useAuth } from "@/contexts/AuthContext";
+import { onThumbError, useSavedVideoCloseUps } from "@/lib/queries/videos";
 
 function FolderCard({ folder }: { folder: Folder }) {
   const navigate = useNavigate();
@@ -96,6 +99,48 @@ function FolderCard({ folder }: { folder: Folder }) {
   );
 }
 
+/**
+ * The video close-ups the buyer saved (saved_videos), newest first; tapping one opens the reel on it
+ * (2026-10-16: Save in the reel wrote a row no page ever listed). Hidden when there are none.
+ */
+function SavedVideos() {
+  const { user } = useAuth();
+  const { data: videos = [] } = useSavedVideoCloseUps(user?.id);
+  // The list the reel opened with, frozen while it's open: unsaving inside it refetches this query.
+  const [open, setOpen] = useState<{ list: typeof videos; index: number } | null>(null);
+  if (!videos.length && !open) return null;
+  return (
+    <section className="mb-6" aria-labelledby="saved-videos-heading">
+      <p id="saved-videos-heading" className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">
+        Saved videos <span className="text-gray-300">· {videos.length}</span>
+      </p>
+      <div className="flex gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 pb-1">
+        {videos.map((v, i) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setOpen({ list: videos, index: i })}
+            aria-label={`Play ${v.brandLine} by ${v.brandName}`}
+            data-testid="saved-video"
+            className="relative shrink-0 w-28 aspect-[9/16] rounded-2xl overflow-hidden bg-gray-100 text-left"
+          >
+            <img src={v.thumbnail} alt="" loading="lazy" onError={onThumbError} className="absolute inset-0 w-full h-full object-cover" />
+            <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+            <Play className="absolute top-2 right-2 w-4 h-4 text-white fill-white" />
+            <span className="absolute bottom-2 left-2 right-2">
+              <span className="block text-[11px] font-semibold text-white truncate">{v.brandLine}</span>
+              <span className="block text-[10px] text-white/80 truncate">{v.brandName}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {open && (
+        <VideoCloseUpsViewer videos={open.list} initialIndex={open.index} isOpen onClose={() => setOpen(null)} />
+      )}
+    </section>
+  );
+}
+
 const SavedCollections = () => {
   const saved = useSaved();
   const [creating, setCreating] = useState(false);
@@ -113,6 +158,8 @@ const SavedCollections = () => {
     <BuyerShell>
       <div className="max-w-2xl mx-auto px-4 pt-3 pb-24">
         <h1 className="text-lg font-bold text-gray-900 mb-3">My Saves</h1>
+
+        <SavedVideos />
 
         <div className="flex items-center justify-between mb-3">
           <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Your Collections</p>

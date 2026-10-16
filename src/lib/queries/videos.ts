@@ -59,9 +59,19 @@ interface RawVideo {
   thumbnail_url: string | null;
   video_url: string | null;
   vendor_profiles: { brand_name: string | null } | null;
+  product_id: string | null;
+  /** RLS shows a buyer live listings only, so a tagged listing that isn't live comes back null. */
+  products: { id: string; status: string } | null;
 }
 
-const VIDEO_COLUMNS = "id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, vendor_profiles ( brand_name )";
+// `products ( id, status )` through product_videos_product_id_fkey: the listing the video shows, so the reel's
+// card can open it (2026-10-16; the card went nowhere).
+const VIDEO_COLUMNS = "id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, vendor_profiles ( brand_name ), products ( id, status )";
+
+/** The tagged listing's id when a buyer can open it; null otherwise (none, or not live). */
+export function liveProductId(v: { product_id: string | null; products: { id: string; status: string } | null }): string | null {
+  return v.product_id && v.products?.status === "live" ? v.product_id : null;
+}
 
 function toCloseUp(v: RawVideo): VideoCloseUp {
   return {
@@ -78,6 +88,7 @@ function toCloseUp(v: RawVideo): VideoCloseUp {
     views: v.views_count,
     thumbnail: v.thumbnail_url ?? THUMB_PLACEHOLDER,
     videoUrl: v.video_url ?? undefined,
+    productId: liveProductId(v),
   };
 }
 
@@ -118,6 +129,49 @@ export function useVideoCloseUp(id: string | null) {
     },
     enabled: Boolean(id && UUID.test(id)),
     staleTime: 5 * 60_000,
+  });
+}
+
+export interface ReviewStats { count: number; avg: number }
+
+/**
+ * Real review numbers for the listings the reels show (product_review_stats, migration 20261016140000), by
+ * listing id. Listings without reviews are absent: the card then shows no rating at all, never a stored one.
+ */
+export function useProductReviewStats(productIds: string[]) {
+  const ids = [...new Set(productIds)].sort();
+  return useQuery({
+    queryKey: ["product_review_stats", ids.join(",")],
+    queryFn: async (): Promise<Map<string, ReviewStats>> => {
+      const { data, error } = await supabase.rpc("product_review_stats", { p_product_ids: ids });
+      if (error) throw error;
+      return new Map(((data ?? []) as { product_id: string; reviews_count: number; rating_avg: number }[])
+        .map((r) => [r.product_id, { count: r.reviews_count, avg: Number(r.rating_avg) }]));
+    },
+    enabled: ids.length > 0,
+    staleTime: 5 * 60_000,
+  });
+}
+
+/**
+ * The signed-in buyer's saved video close-ups, newest save first, live ones only (2026-10-16: Save wrote
+ * saved_videos but no page listed them, so saving looked like it did nothing). RLS returns the buyer's own rows.
+ */
+export function useSavedVideoCloseUps(buyerId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["saved_videos", buyerId],
+    queryFn: async (): Promise<VideoCloseUp[]> => {
+      const { data, error } = await supabase
+        .from("saved_videos")
+        .select(`created_at, product_videos!inner ( ${VIDEO_COLUMNS}, status )`)
+        .eq("product_videos.status", "live")
+        .order("created_at", { ascending: false })
+        .limit(60);
+      if (error) throw error;
+      return ((data ?? []) as unknown as { product_videos: RawVideo }[]).map((r) => toCloseUp(r.product_videos));
+    },
+    enabled: Boolean(buyerId),
+    staleTime: 60_000,
   });
 }
 

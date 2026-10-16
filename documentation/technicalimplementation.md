@@ -2161,6 +2161,29 @@ page (`src/lib/heroSlides.ts`, `src/pages/HeroSlides.tsx`).
   sits at `calc(var(--bottom-nav-h, 5rem) + var(--pinned-bar-h, 0px) + 1rem)` on phones. Step changes scroll to the top
   in `AnimatePresence`'s `onExitComplete` (an effect on `step` ran while the old step was still leaving).
 
+## Video Closeups: links, real reviews, saved videos (2026-10-16)
+
+Migration `20261016140000_product_review_stats.sql`; `src/components/buyer/VideoCloseUpsViewer.tsx`, `src/lib/queries/videos.ts`.
+
+- **Listing link:** `VIDEO_COLUMNS` (and the store page's query in `vendor.ts`) select `product_id, products ( id, status )`
+  through `product_videos_product_id_fkey`; `liveProductId()` keeps the id only when the embedded listing is `live`
+  (RLS hides others from buyers). `VideoCloseUp.productId`.
+- **Reviews:** `product_review_stats(p_product_ids uuid[])` returns `(product_id, reviews_count, rating_avg)` for the
+  first 100 ids with reviews, SQL, STABLE, SECURITY INVOKER (product_reviews is public-read), on
+  `product_reviews_product_idx`. `useProductReviewStats(ids)` (staleTime 5 min) feeds the card.
+- **Card:** a button (`data-testid="reel-card"`, `data-active` on the slide on screen) to `/product/<id>` or
+  `/vendor/<vendorId>`; the seller's name to the store. `openLink()`: `navigate(path, { replace: true })` when the
+  viewer holds a `useBackCloses` entry (over a page), a push on /video-closeups. `onActiveChange` lets
+  VideoCloseUpsPage `setSearchParams({ v }, { replace: true })`.
+- **Writes:** `likeVideo` / `unlikeVideo` / `dbSaveVideo` / `dbUnsaveVideo` return promises that reject on error; the
+  viewer applies the change first and reverts it on rejection with a toast. Save invalidates `["saved_videos", uid]`.
+  The bookmark set is computed from `savedRef` and handed to `onBookmarkChange` outside the state updater.
+  Signed out (a uuid id), both show a sign-in toast and change nothing.
+- **Saved list:** `useSavedVideoCloseUps(uid)`: `saved_videos` with `product_videos!inner (...)`, `status = live`,
+  newest first, 60. `SavedCollections` renders it with its own viewer over a frozen copy of the list.
+- **Keys:** window `keydown` while open and no share sheet: ArrowDown/PageDown, ArrowUp/PageUp (`scrollIntoView`
+  smooth), Escape to `onClose`, M to mute; ignored in fields and with modifier keys.
+
 ## Category pictures, reports in Cosora-Admin, JPEG-only admin pictures (2026-10-16)
 
 Migration `20261016100000_reports_in_app_admin_jpeg.sql`; `src/lib/categoryTileImages.ts`; Cosora-Admin `src/lib/jpeg.ts`.

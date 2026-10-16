@@ -16,6 +16,7 @@ async function loadPlanIntl(): Promise<Map<string, boolean>> {
   return m;
 }
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
+import { liveProductId } from "@/lib/queries/videos";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer-facing vendor profile (/vendor/:id) — real vendor identity + the
@@ -66,6 +67,7 @@ interface RawVid {
   id: string; vendor_id: string; category: string; brand_line: string; price: string | null;
   moq: string | null; rating: number; reviews: string | null; likes_count: number;
   views_count: number; thumbnail_url: string | null; video_url: string | null;
+  product_id: string | null; products: { id: string; status: string } | null;
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -104,7 +106,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
 
   const { data: vids } = await supabase
     .from("product_videos")
-    .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url")
+    .select("id, vendor_id, category, brand_line, price, moq, rating, reviews, likes_count, views_count, thumbnail_url, video_url, product_id, products ( id, status )")
     .eq("vendor_id", id)
     .eq("status", "live")
     .order("views_count", { ascending: false })
@@ -123,6 +125,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     views: r.views_count,
     thumbnail: r.thumbnail_url ?? products[0]?.image ?? "",
     videoUrl: r.video_url ?? undefined,
+    productId: liveProductId(r),
   }));
 
   return {

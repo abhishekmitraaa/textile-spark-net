@@ -1,13 +1,16 @@
 import { useBackCloses } from "@/hooks/useBackCloses";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useCallVendor } from "@/lib/queries/calls";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Phone, Star, Bookmark, Share2, Volume2, VolumeX, Play, Heart, Eye } from "lucide-react";
+import { X, Phone, Star, Bookmark, Share2, Volume2, VolumeX, Play, Heart, Eye, ChevronRight } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
 import ShareSheet from "@/components/buyer/ShareSheet";
 import { useAuth } from "@/contexts/AuthContext";
-import { onThumbError } from "@/lib/queries/videos";
+import { onThumbError, useProductReviewStats, type ReviewStats } from "@/lib/queries/videos";
 import {
   recordVideoViewOnce,
   fetchLikedVideoIds, likeVideo, unlikeVideo,
@@ -48,6 +51,11 @@ export interface VideoCloseUp {
    * video URLs exist in the real catalogue.
    */
   videoUrl?: string;
+  /**
+   * The listing the video shows, when a buyer can open it (tagged and live). The card opens it; without one
+   * it opens the seller's store (2026-10-16: the card went nowhere).
+   */
+  productId?: string | null;
 }
 
 interface VideoCloseUpsViewerProps {
@@ -68,6 +76,8 @@ interface VideoCloseUpsViewerProps {
    * to know anything about ranking itself.
    */
   onBookmarkChange?: (savedIds: Set<string>) => void;
+  /** Fired with the video on screen, so /video-closeups can keep `?v=<id>` in its address. */
+  onActiveChange?: (video: VideoCloseUp) => void;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -102,12 +112,18 @@ interface VideoCloseUpsViewerProps {
 // never reveals an unpainted slide.
 const SLIDE_WINDOW = 2;
 
-export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, backCloses = true, onBookmarkChange }: VideoCloseUpsViewerProps) {
+export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, backCloses = true, onBookmarkChange, onActiveChange }: VideoCloseUpsViewerProps) {
   useBackCloses(isOpen, onClose, backCloses);
   const callVendor = useCallVendor();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
   const { user } = useAuth();
+  // Real review numbers of the listings shown, by listing id (product_review_stats).
+  const reviewStats = useProductReviewStats(videos.map((v) => v.productId).filter((id): id is string => Boolean(id))).data;
   const [activeIndex, setActiveIndex] = useState(initialIndex);
   const [saved, setSaved] = useState<Set<string>>(new Set());
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
   const [liked, setLiked] = useState<Set<string>>(new Set());
   // What the DB said when the viewer opened. `video.likes` already counts
   // these, so the displayed number is base + (current - hydrated), never
@@ -193,43 +209,106 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
     return () => { document.body.style.overflow = prev; };
   }, [isOpen]);
 
-  // A save is durable now: it writes saved_videos so a refresh keeps it, the
-  // same way a saved product already behaves. The set handed to
-  // onBookmarkChange stays the IN-SESSION signal rankVideoCloseUps reads —
-  // deliberately not seeded from the hydrated saves, because "what this buyer
-  // kept six weeks ago" and "what caught their eye just now" are different
-  // questions and only the second one should reshuffle the next open.
-  const toggleSave = (id: string) => {
-    setSaved(prev => {
-      const next = new Set(prev);
-      const removing = next.has(id);
-      if (removing) next.delete(id);
-      else next.add(id);
-      if (user && isPersistableVideoId(id)) {
-        if (removing) dbUnsaveVideo(user.id, id);
-        else dbSaveVideo(user.id, id);
-      }
-      onBookmarkChange?.(next);
-      return next;
+  // Signed out, a like or a save has nowhere to live: it used to light up and vanish on the next visit. Ask
+  // them to sign in instead (2026-10-16).
+  // A whole sentence each, so it translates as one (word order differs by language).
+  const askToSignIn = (title: string) =>
+    toast.info(title, {
+      description: "Likes and saves are kept on your Cosora account.",
+      action: { label: "Sign in", onClick: () => navigate("/login") },
     });
+
+  // A save writes saved_videos, so a refresh keeps it and My Saves lists it. The set handed to
+  // onBookmarkChange stays the IN-SESSION signal rankVideoCloseUps reads — deliberately not seeded from the
+  // hydrated saves, because "what this buyer kept six weeks ago" and "what caught their eye just now" are
+  // different questions and only the second one should reshuffle the next open.
+  //
+  // Shown at once, undone if the database refuses (it used to stay on screen and vanish on refresh).
+  const toggleSave = (id: string) => {
+    if (!user && isPersistableVideoId(id)) return askToSignIn("Sign in to save videos");
+    const removing = saved.has(id);
+    // Computed from the latest set (savedRef, also right inside the async undo) and handed to the parent
+    // outside React's state update: telling the parent from inside setSaved's updater is a setState during
+    // render, which React warns about.
+    const apply = (remove: boolean) => {
+      const next = new Set(savedRef.current);
+      if (remove) next.delete(id);
+      else next.add(id);
+      savedRef.current = next;
+      setSaved(next);
+      onBookmarkChange?.(next);
+    };
+    apply(removing);
+    if (user && isPersistableVideoId(id)) {
+      (removing ? dbUnsaveVideo(user.id, id) : dbSaveVideo(user.id, id))
+        .then(() => {
+          void qc.invalidateQueries({ queryKey: ["saved_videos", user.id] });
+          if (!removing) toast.success("Saved", { description: "Find it in My Saves.", action: { label: "Open", onClick: () => navigate("/saved") } });
+        })
+        .catch(() => {
+          apply(!removing);
+          toast.error(removing ? "Couldn't remove it from your saves" : "Couldn't save this video", { description: "Check your connection and try again." });
+        });
+    }
   };
 
-  // Likes go through video_likes, not a counter RPC — a like is a toggle, so
-  // it needs a row that can be deleted, not a number that only grows. The
-  // AFTER trigger keeps product_videos.likes_count in step.
+  // Likes go through video_likes, not a counter RPC — a like is a toggle, so it needs a row that can be
+  // deleted, not a number that only grows. The AFTER trigger keeps product_videos.likes_count in step.
   const toggleLike = (id: string) => {
-    setLiked(prev => {
-      const next = new Set(prev);
-      const removing = next.has(id);
-      if (removing) next.delete(id);
-      else next.add(id);
-      if (user && isPersistableVideoId(id)) {
-        if (removing) unlikeVideo(user.id, id);
-        else likeVideo(user.id, id);
-      }
-      return next;
-    });
+    if (!user && isPersistableVideoId(id)) return askToSignIn("Sign in to like videos");
+    const removing = liked.has(id);
+    const apply = (remove: boolean) =>
+      setLiked((prev) => {
+        const next = new Set(prev);
+        if (remove) next.delete(id);
+        else next.add(id);
+        return next;
+      });
+    apply(removing);
+    if (user && isPersistableVideoId(id)) {
+      (removing ? unlikeVideo(user.id, id) : likeVideo(user.id, id)).catch(() => {
+        apply(!removing);
+        toast.error("Couldn't save your like", { description: "Check your connection and try again." });
+      });
+    }
   };
+
+  // The card opens the listing, or the seller's store when the video isn't tied to a live listing. Over a page
+  // (backCloses) the viewer holds a history entry of its own: replace it, so back from the listing returns to
+  // the page with the reel closed. On /video-closeups a normal push, so back returns to this video.
+  const openLink = useCallback((path: string) => {
+    if (backCloses) navigate(path, { replace: true });
+    else navigate(path);
+  }, [backCloses, navigate]);
+
+  const scrollToSlide = useCallback((i: number) => {
+    const target = slideRefs.current[Math.max(0, Math.min(videos.length - 1, i))];
+    target?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [videos.length]);
+
+  // Keyboard, for a desktop without a touch screen: arrows move between videos, Escape closes, M mutes.
+  // Ignored while the share sheet (or any field) has focus.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (sharing || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); scrollToSlide(activeIndex + 1); }
+      else if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); scrollToSlide(activeIndex - 1); }
+      else if (e.key === "Escape") { e.preventDefault(); onClose(); }
+      else if (e.key === "m" || e.key === "M") setMuted((m) => !m);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, sharing, activeIndex, scrollToSlide, onClose]);
+
+  const onActiveChangeRef = useRef(onActiveChange);
+  onActiveChangeRef.current = onActiveChange;
+  const activeVideo = videos[activeIndex];
+  useEffect(() => {
+    if (isOpen && activeVideo) onActiveChangeRef.current?.(activeVideo);
+  }, [isOpen, activeVideo]);
 
   if (videos.length === 0) return null;
 
@@ -294,6 +373,9 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
                       onToggleLike={() => toggleLike(video.id)}
                       onCallNow={() => callVendor(video.vendorId, video.brandName)}
                       onShare={() => setSharing(video)}
+                      reviews={video.productId ? reviewStats?.get(video.productId) ?? null : null}
+                      onOpenCard={() => openLink(video.productId ? `/product/${video.productId}` : `/vendor/${video.vendorId}`)}
+                      onOpenStore={() => openLink(`/vendor/${video.vendorId}`)}
                     />
                   )}
                 </div>
@@ -334,9 +416,14 @@ interface VideoSlideProps {
   onToggleLike: () => void;
   onCallNow: () => void;
   onShare: () => void;
+  /** The tagged listing's real reviews; null when it has none (or there's no live listing). */
+  reviews: ReviewStats | null;
+  /** Opens the listing, or the store when there's no live listing. */
+  onOpenCard: () => void;
+  onOpenStore: () => void;
 }
 
-function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow, onShare }: VideoSlideProps) {
+function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow, onShare, reviews, onOpenCard, onOpenStore }: VideoSlideProps) {
   const { showText } = useDisplayCurrency();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /**
@@ -561,11 +648,11 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           </div>
           <span className="text-[10px] text-white tabular-nums">{formatCount(likeCount)}</span>
         </button>
-        <button onClick={onToggleSave} className="flex flex-col items-center gap-1" aria-pressed={saved}>
+        <button onClick={onToggleSave} className="flex flex-col items-center gap-1" aria-pressed={saved} aria-label={saved ? "Saved" : "Save"}>
           <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center">
             <Bookmark className={`w-5 h-5 ${saved ? "fill-white text-white" : "text-white"}`} />
           </div>
-          <span className="text-[10px] text-white">Save</span>
+          <span className="text-[10px] text-white">{saved ? "Saved" : "Save"}</span>
         </button>
         <button onClick={onShare} aria-label="Share" className="flex flex-col items-center gap-1">
           <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur flex items-center justify-center">
@@ -584,30 +671,48 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
         </div>
       )}
 
-      {/* Bottom product info card */}
+      {/* Bottom product card. Tapping it opens the listing the video shows, or the seller's store when the
+          video isn't tied to a live listing; the seller's name opens the store (2026-10-16: none of it went
+          anywhere). The rating is the listing's real reviews, and absent without any. */}
       <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
         <div className="bg-white/95 backdrop-blur rounded-2xl p-3 flex items-center gap-3">
-          {/* Same URL as the poster, so this is a cache hit — but without the
-              size hints the browser decodes the full 500x650 source to paint
-              48px. */}
-          <img src={video.thumbnail} alt="" loading="lazy" decoding="async" onError={onThumbError} width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-bold text-gray-900 truncate">{video.brandName}</p>
-            <p className="text-[11px] text-gray-500 truncate">{video.brandLine}</p>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-sm font-bold text-brand-buyer">{showText(video.price)}</span>
-              <span className="text-[10px] text-gray-400">MOQ: {video.moq}</span>
-              <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
-                <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" /> {video.rating} · {video.reviews}
-              </span>
-            </div>
-          </div>
           <button
-            onClick={onCallNow}
-            className="shrink-0 flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors"
+            type="button"
+            onClick={onOpenCard}
+            aria-label={video.productId ? `View ${video.brandLine}` : `Visit ${video.brandName}'s store`}
+            data-testid="reel-card"
+            data-active={isActive ? "true" : undefined}
+            className="flex flex-1 min-w-0 items-center gap-3 text-left"
           >
-            <Phone className="w-3.5 h-3.5" /> Call Now
+            {/* Same URL as the poster, so a cache hit; the size hints stop a full-size decode for 48px. */}
+            <img src={video.thumbnail} alt="" loading="lazy" decoding="async" onError={onThumbError} width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[11px] text-gray-900 font-semibold truncate">{video.brandLine}</span>
+              <span className="flex items-center gap-2 mt-0.5">
+                {video.price && <span className="text-sm font-bold text-brand-buyer">{showText(video.price)}</span>}
+                {video.moq && <span className="text-[10px] text-gray-400">MOQ: {video.moq}</span>}
+                {reviews && reviews.count > 0 && (
+                  <span className="flex items-center gap-0.5 text-[10px] text-gray-500">
+                    <Star className="w-2.5 h-2.5 fill-yellow-400 text-yellow-400" /> {reviews.avg.toFixed(1)} · {reviews.count}
+                  </span>
+                )}
+              </span>
+              <span className="mt-0.5 flex items-center text-[10px] font-semibold text-brand-buyer">
+                {video.productId ? "View product" : "Visit store"} <ChevronRight className="w-3 h-3" />
+              </span>
+            </span>
           </button>
+          <div className="shrink-0 flex flex-col items-end gap-1.5">
+            <button type="button" onClick={onOpenStore} className="max-w-[120px] truncate text-[11px] font-bold text-gray-900 hover:underline">
+              {video.brandName}
+            </button>
+            <button
+              onClick={onCallNow}
+              className="flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors"
+            >
+              <Phone className="w-3.5 h-3.5" /> Call Now
+            </button>
+          </div>
         </div>
       </div>
     </>

@@ -40,12 +40,12 @@ test("Share opens above the viewer, and its link opens the reel on that video", 
   await page.getByRole("button", { name: "Share", exact: true }).first().click();
   const sheet = page.getByTestId("share-sheet");
   await expect(sheet).toBeVisible();
-  // Above the viewer: the sheet, not the video, is what a tap at its centre reaches.
-  const onTop = await sheet.evaluate((el) => {
+  // Above the viewer: the sheet, not the video, is what a tap at its centre reaches. Polled: one sample taken
+  // while the sheet is still sliding in can land beside it (this made the check flaky, 2026-10-14/16).
+  await expect.poll(() => sheet.evaluate((el) => {
     const r = el.getBoundingClientRect();
     return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
-  });
-  expect(onTop).toBe(true);
+  }), { timeout: 5_000 }).toBe(true);
   const link = `${BUYER_URL}/video-closeups?v=${top}`;
   await expect(sheet.locator('[data-share="whatsapp"]')).toHaveAttribute("href", new RegExp(encodeURIComponent(link).replace(/[.?*+^$()|[\]\\]/g, "\\$&")));
   await sheet.locator('[data-share="copy"]').click();

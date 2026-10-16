@@ -35,7 +35,7 @@ export default function VideoCloseUpsPage() {
   const usingDevFallback = !dbVideos?.length;
   const catalogue = usingDevFallback ? devOnlyVideoCloseUps() : dbVideos;
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const sharedId = searchParams.get("v");
   const sharedInFeed = sharedId ? catalogue.find((v) => v.id === sharedId) ?? null : null;
   const sharedQuery = useVideoCloseUp(!isPending && sharedId && !sharedInFeed ? sharedId : null);
@@ -155,6 +155,11 @@ export default function VideoCloseUpsPage() {
         onClose={handleClose}
         backCloses={false}
         onBookmarkChange={setBookmarkedVideoIds}
+        // The address follows the video on screen (replace, not push), so back from a listing the card opened,
+        // a refresh, or a copied address returns to this video (2026-10-16).
+        onActiveChange={(v) => {
+          if (searchParams.get("v") !== v.id) setSearchParams({ v: v.id }, { replace: true, preventScrollReset: true });
+        }}
       />
     </div>
   );

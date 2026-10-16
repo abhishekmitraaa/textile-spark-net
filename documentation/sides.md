@@ -183,9 +183,8 @@ the demand side of India's fashion and textile supply chain.
   listings the rating has no reviews behind it, and `sold_count` has no writer (there is no
   orders table). The product page stopped using them on 2026-09-11; the cards have not.
 - No dedicated buyer Settings page — the sidebar "Settings" link points at `/profile`.
-- Video Closeups: the reel's `rating`/`reviews` fields are stored on `product_videos` rather
-  than derived from the tagged product's real review data. (Share works since 2026-10-14: the
-  share sheet, with a link to `/video-closeups?v=<id>` that opens on that video.)
+- Video Closeups: `product_videos.rating` / `reviews` are still stored on the video, but nothing shows
+  them since 2026-10-16: the card shows the tagged listing's real reviews.
 - Service vendors, freelancers and photographers are still client-side seed data with no
   `profiles` row, which is why `service_reviews.service_id` is `text` with no FK.
 - **A buyer cannot delete their own chat message, and neither can an admin.** `messages` has
@@ -198,6 +197,14 @@ the demand side of India's fashion and textile supply chain.
   tiles, the office pictures (stock photos, though vendors can now upload their own) and the
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
+
+### Changed 2026-10-16 (Video Closeups; built, not live)
+- **Saved videos** show at the top of My Saves and play from there.
+- **The product card** opens the listing the video shows, or the seller's store; the seller's name opens the
+  store; back comes back to the same video.
+- **The rating** is the listing's real reviews, and isn't shown without any.
+- **Signed out**, Like and Save ask you to sign in; if a like or save can't be stored, it's undone and you're told.
+- On a computer, the arrow keys move between videos and Escape closes.
 
 ### Changed 2026-10-16 (three fixes; live 2026-10-16)
 - **Categories page:** every sub-category tile shows its own photo of what it says (they cycled a few photos per

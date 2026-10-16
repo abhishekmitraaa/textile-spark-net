@@ -48,6 +48,10 @@ Rules decided before or outside of Claude Code sessions.
   > by other work.
 - **"Video Closeups", never "Reels"** — product videos in the buyer feed are called Video
   Closeups. Deliberate brand/product naming decision.
+- **Every Video Closeups control leads somewhere real** (Mitra, 2026-10-16). Save lands in My Saves; the card
+  opens the tagged live listing, else the seller's store; the rating is the listing's real reviews
+  (`product_review_stats()`) and absent without any, never `product_videos.rating` / `reviews`. Signed out, Like
+  and Save ask to sign in; a refused write is undone on screen with a message. A new reel surface keeps these.
 - **Audio-first matters** — many Indian manufacturers are more comfortable speaking than
   typing. Audio messages in chat and voice-to-text in the RFQ form are critical for the
   real user base, not nice-to-haves.

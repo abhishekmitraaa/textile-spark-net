@@ -49,21 +49,21 @@ export async function fetchLikedVideoIds(videoIds: string[]): Promise<Set<string
   return new Set((data ?? []).map((r) => r.video_id));
 }
 
-/** Fire-and-forget, like savedStore's dbSaveItem. RLS enforces ownership. */
-export function likeVideo(buyerId: string, videoId: string): void {
-  void supabase
+/**
+ * The buyer's own row; RLS enforces ownership. Resolves when it is stored and rejects when it isn't, so the
+ * viewer can undo the heart and say so (2026-10-16: these were fire-and-forget, and a refused write left a
+ * like on screen that a refresh took away).
+ */
+export async function likeVideo(buyerId: string, videoId: string): Promise<void> {
+  const { error } = await supabase
     .from("video_likes")
-    .upsert({ buyer_id: buyerId, video_id: videoId }, { onConflict: "buyer_id,video_id" })
-    .then(() => {});
+    .upsert({ buyer_id: buyerId, video_id: videoId }, { onConflict: "buyer_id,video_id" });
+  if (error) throw error;
 }
 
-export function unlikeVideo(buyerId: string, videoId: string): void {
-  void supabase
-    .from("video_likes")
-    .delete()
-    .eq("buyer_id", buyerId)
-    .eq("video_id", videoId)
-    .then(() => {});
+export async function unlikeVideo(buyerId: string, videoId: string): Promise<void> {
+  const { error } = await supabase.from("video_likes").delete().eq("buyer_id", buyerId).eq("video_id", videoId);
+  if (error) throw error;
 }
 
 // ── Saves ────────────────────────────────────────────────────
@@ -79,20 +79,16 @@ export async function fetchSavedVideoIds(videoIds: string[]): Promise<Set<string
   return new Set((data ?? []).map((r) => r.video_id));
 }
 
-export function dbSaveVideo(buyerId: string, videoId: string): void {
-  void supabase
+export async function dbSaveVideo(buyerId: string, videoId: string): Promise<void> {
+  const { error } = await supabase
     .from("saved_videos")
-    .upsert({ buyer_id: buyerId, video_id: videoId }, { onConflict: "buyer_id,video_id" })
-    .then(() => {});
+    .upsert({ buyer_id: buyerId, video_id: videoId }, { onConflict: "buyer_id,video_id" });
+  if (error) throw error;
 }
 
-export function dbUnsaveVideo(buyerId: string, videoId: string): void {
-  void supabase
-    .from("saved_videos")
-    .delete()
-    .eq("buyer_id", buyerId)
-    .eq("video_id", videoId)
-    .then(() => {});
+export async function dbUnsaveVideo(buyerId: string, videoId: string): Promise<void> {
+  const { error } = await supabase.from("saved_videos").delete().eq("buyer_id", buyerId).eq("video_id", videoId);
+  if (error) throw error;
 }
 
 // The dev-only sample reels in src/data/videoCloseUps.ts carry synthetic ids
