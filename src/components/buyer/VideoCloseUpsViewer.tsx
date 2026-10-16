@@ -78,6 +78,11 @@ interface VideoCloseUpsViewerProps {
   onBookmarkChange?: (savedIds: Set<string>) => void;
   /** Fired with the video on screen, so /video-closeups can keep `?v=<id>` in its address. */
   onActiveChange?: (video: VideoCloseUp) => void;
+  /**
+   * Videos the caller already knows are saved (My Saves opens its own list), shown saved from the first frame
+   * instead of after the saved state loads (2026-10-17: a tap in that moment saved again instead of removing).
+   */
+  knownSaved?: ReadonlySet<string>;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -112,7 +117,7 @@ interface VideoCloseUpsViewerProps {
 // never reveals an unpainted slide.
 const SLIDE_WINDOW = 2;
 
-export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, backCloses = true, onBookmarkChange, onActiveChange }: VideoCloseUpsViewerProps) {
+export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onClose, backCloses = true, onBookmarkChange, onActiveChange, knownSaved }: VideoCloseUpsViewerProps) {
   useBackCloses(isOpen, onClose, backCloses);
   const callVendor = useCallVendor();
   const navigate = useNavigate();
@@ -121,10 +126,14 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   // Real review numbers of the listings shown, by listing id (product_review_stats).
   const reviewStats = useProductReviewStats(videos.map((v) => v.productId).filter((id): id is string => Boolean(id))).data;
   const [activeIndex, setActiveIndex] = useState(initialIndex);
-  const [saved, setSaved] = useState<Set<string>>(new Set());
+  const [saved, setSaved] = useState<Set<string>>(() => new Set(knownSaved ?? []));
   const savedRef = useRef(saved);
   savedRef.current = saved;
   const [liked, setLiked] = useState<Set<string>>(new Set());
+  // Videos whose save / like the buyer changed since this opening. The loaded state is the truth for every other
+  // video; for these the buyer's own tap is newer than anything a load still in flight can say.
+  const touchedSaves = useRef(new Set<string>());
+  const touchedLikes = useRef(new Set<string>());
   // What the DB said when the viewer opened. `video.likes` already counts
   // these, so the displayed number is base + (current - hydrated), never
   // base + current — otherwise a like the buyer made yesterday would be
@@ -151,16 +160,35 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   useEffect(() => {
     if (!isOpen || !user || !persistableIds.length) return;
     let cancelled = false;
+    touchedSaves.current.clear();
+    touchedLikes.current.clear();
+    // A load that fails changes nothing (null), rather than reading as "nothing saved".
     void Promise.all([
-      fetchLikedVideoIds(persistableIds).catch(() => new Set<string>()),
-      fetchSavedVideoIds(persistableIds).catch(() => new Set<string>()),
+      fetchLikedVideoIds(persistableIds).catch(() => null),
+      fetchSavedVideoIds(persistableIds).catch(() => null),
     ]).then(([likedIds, savedIds]) => {
       if (cancelled) return;
-      // Merge rather than replace: a tap that landed while this was in flight
-      // must not be undone by the response.
-      setLiked((prev) => new Set([...likedIds, ...prev]));
-      setSaved((prev) => new Set([...savedIds, ...prev]));
-      setHydratedLikes(likedIds);
+      // The loaded state wins for every video the buyer hasn't touched since opening, both ways (a known-saved
+      // video that isn't saved any more turns off); a video they tapped keeps their tap. It used to be a plain
+      // union, so a save removed while this was in flight came back on screen though the row was gone.
+      const settle = (prev: Set<string>, loaded: Set<string>, touched: Set<string>) => {
+        const next = new Set(prev);
+        for (const id of persistableIds) {
+          if (touched.has(id)) continue;
+          if (loaded.has(id)) next.add(id);
+          else next.delete(id);
+        }
+        return next;
+      };
+      if (likedIds) {
+        setLiked((prev) => settle(prev, likedIds, touchedLikes.current));
+        setHydratedLikes(likedIds);
+      }
+      if (savedIds) {
+        const next = settle(savedRef.current, savedIds, touchedSaves.current);
+        savedRef.current = next;
+        setSaved(next);
+      }
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -226,7 +254,8 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   // Shown at once, undone if the database refuses (it used to stay on screen and vanish on refresh).
   const toggleSave = (id: string) => {
     if (!user && isPersistableVideoId(id)) return askToSignIn("Sign in to save videos");
-    const removing = saved.has(id);
+    const removing = savedRef.current.has(id);
+    touchedSaves.current.add(id);
     // Computed from the latest set (savedRef, also right inside the async undo) and handed to the parent
     // outside React's state update: telling the parent from inside setSaved's updater is a setState during
     // render, which React warns about.
@@ -257,6 +286,7 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   const toggleLike = (id: string) => {
     if (!user && isPersistableVideoId(id)) return askToSignIn("Sign in to like videos");
     const removing = liked.has(id);
+    touchedLikes.current.add(id);
     const apply = (remove: boolean) =>
       setLiked((prev) => {
         const next = new Set(prev);

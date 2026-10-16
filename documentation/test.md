@@ -205,6 +205,15 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — A reel opened from My Saves (local stack: browser 2/2 three runs; video-share 1/1)
+
+- `tests/local/video-closeups.spec.ts`, My Saves part: the reel's own load of saved state is held back 3 s (a route
+  delay on `saved_videos?select=video_id`). Save shows saved within 1 s of opening; tapping it turns it off; after
+  the held-back load answers it is still off, and the row is gone in the database.
+- **The check fails on the old code**: with the viewer and My Saves taken back to main, the run stops at "Save shows
+  saved within 1 s" (`aria-pressed` false). Restored, the spec passes 2/2 on three runs; with video-share 3/3.
+- typecheck 0, i18n 7,726/7,726, production build.
+
 ### 2026-10-17 — Video Closeups, live on production (www.cosora.in, iPhone 13): all checks passed; one finding
 
 - **Before the push:** `product_review_stats` absent; origin/main the branch's base. **After the migration:** visitors can

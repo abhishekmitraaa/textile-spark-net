@@ -135,7 +135,14 @@ function SavedVideos() {
         ))}
       </div>
       {open && (
-        <VideoCloseUpsViewer videos={open.list} initialIndex={open.index} isOpen onClose={() => setOpen(null)} />
+        <VideoCloseUpsViewer
+          videos={open.list}
+          initialIndex={open.index}
+          isOpen
+          onClose={() => setOpen(null)}
+          // Every video here is saved: shown so from the first frame, not after the reel loads it.
+          knownSaved={new Set(open.list.map((v) => v.id))}
+        />
       )}
     </section>
   );

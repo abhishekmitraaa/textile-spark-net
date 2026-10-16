@@ -2179,6 +2179,11 @@ Migration `20261016140000_product_review_stats.sql`; `src/components/buyer/Video
   viewer applies the change first and reverts it on rejection with a toast. Save invalidates `["saved_videos", uid]`.
   The bookmark set is computed from `savedRef` and handed to `onBookmarkChange` outside the state updater.
   Signed out (a uuid id), both show a sign-in toast and change nothing.
+- **Loaded state vs taps** (2026-10-17): `knownSaved` seeds `saved` (My Saves passes its own list). On each opening
+  the viewer loads likes and saves for the shown ids; `touchedSaves` / `touchedLikes` (refs, cleared at that load's
+  start) record ids the buyer tapped since. When the load answers, every untouched id takes the loaded value (added or
+  removed), a touched id keeps the buyer's; a failed load (`null`) changes nothing. It replaced a plain union, which
+  put back a save removed while the load was in flight.
 - **Saved list:** `useSavedVideoCloseUps(uid)`: `saved_videos` with `product_videos!inner (...)`, `status = live`,
   newest first, 60. `SavedCollections` renders it with its own viewer over a frozen copy of the list.
 - **Keys:** window `keydown` while open and no share sheet: ArrowDown/PageDown, ArrowUp/PageUp (`scrollIntoView`

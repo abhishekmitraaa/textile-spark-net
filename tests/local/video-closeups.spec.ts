@@ -3,7 +3,8 @@
  * closeups are working for a buyer, make everything functional"). Local stack only.
  *   - signed out, Like and Save ask to sign in (they lit up and vanished on the next visit)
  *   - signed in, Like and Save are stored; a refused write is undone on screen and said
- *   - a saved video is listed in My Saves and plays from there (no page listed them)
+ *   - a saved video is listed in My Saves and plays from there (no page listed them), shown saved from the first
+ *     frame, and removing it while the reel still loads sticks (2026-10-17)
  *   - the card opens the tagged listing, or the seller's store; the seller's name opens the store; back returns
  *     to the same video (the card went nowhere)
  *   - the rating is the listing's real reviews, and absent without any ("★ 0 ·")
@@ -136,9 +137,21 @@ test("every Video Close-Ups control works for a buyer", async ({ browser }) => {
   // ── My Saves lists the saved video, and it plays from there.
   await page.goto(`${BUYER_URL}/saved`);
   await expect(page.getByText("Saved videos")).toBeVisible({ timeout: 30_000 });
+  // The reel's own load of saved state is held back 3 s: the video still shows saved at once (My Saves knows),
+  // and removing it during the load sticks, on screen and in the database (2026-10-17).
+  await page.route(/rest\/v1\/saved_videos\?select=video_id/, async (r) => {
+    await new Promise((res) => setTimeout(res, 3_000));
+    await r.continue();
+  });
   await page.getByTestId("saved-video").first().tap();
   await expect(page.getByText(`VC ${tag} tagged`).first()).toBeVisible();
-  await expect(saveBtn(page)).toHaveAttribute("aria-pressed", "true");
+  await expect(saveBtn(page)).toHaveAttribute("aria-pressed", "true", { timeout: 1_000 });
+  await saveBtn(page).tap();
+  await expect(saveBtn(page)).toHaveAttribute("aria-pressed", "false");
+  await page.waitForTimeout(4_000); // the held-back load has answered by now
+  await expect(saveBtn(page)).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => sql(`select count(*) from public.saved_videos where buyer_id = '${buyer.id}' and video_id = '${f.tagged}'`)).toBe("0");
+  await page.unroute(/rest\/v1\/saved_videos\?select=video_id/);
   await page.getByRole("button", { name: "Close" }).tap();
   await expect(page.getByTestId("reel-card")).toHaveCount(0);
 
