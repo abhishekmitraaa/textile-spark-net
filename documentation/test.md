@@ -205,6 +205,21 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — Video Closeups, live on production (www.cosora.in, iPhone 13): all checks passed; one finding
+
+- **Before the push:** `product_review_stats` absent; origin/main the branch's base. **After the migration:** visitors can
+  call it, it is SECURITY INVOKER, and it returns numbers for the 3 listings that have reviews.
+- **Deploy:** main `6292e0f..b604f70`, live bundle `index-DFYtENnr.js`.
+- **Signed out:** the one live video's card reads "Yoyoyo · ₹20 · MOQ: 2 · Visit store" (its listing was rejected, so
+  no listing link and no rating; the "★ 0 ·" is gone); the address gains `?v=<id>`; Like and Save show "Sign in to
+  like videos" / "Sign in to save videos" and stay off; no page errors.
+- **demo-buyer** (login from `.env`, never printed): Save shows "Find it in My Saves." and turns on; the card opens the
+  seller's store (`/vendor/6f66d05d…`); back returns to the same video; My Saves lists 1 saved video and plays it,
+  shown as saved once loaded; the test save was removed (0 rows left); no page errors.
+- **Finding, not fixed:** in a reel opened from My Saves, Save reads "Save" for a moment until the saved state loads;
+  a tap in that moment saves again instead of removing. Fix offered: My Saves hands the reel the saved set it already
+  has.
+
 ### 2026-10-16 — Video Closeups made functional (production probe; local stack: browser 2/2 three runs; neighbours 10/10)
 
 - **Production probe first** (www.cosora.in, iPhone 13, read-only except a like and a save by demo-buyer, both undone):
