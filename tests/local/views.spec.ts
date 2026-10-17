@@ -99,3 +99,33 @@ test("a view counts once per viewer per day, and cards show real views", async (
   expect(errors).toEqual([]);
   await a.close();
 });
+
+test("a signed-out 'Chat directly' counts its enquiry once the buyer signs in", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const s = await freshAccount(`vwpend${tag}`, { seller: true });
+  sellers.push(s.id);
+  const id = sql(`with p as (insert into public.products (vendor_id, name, status, price_value, moq)
+                    values ('${s.id}', 'VW ${tag} pending', 'live', 300, '10') returning id)
+                  insert into public.product_images (product_id, url, position) select id, '${BUYER_URL}/icon-192.png', 0 from p
+                  returning product_id`).split("\n")[0];
+  const buyer = await freshAccount(`vwpb${tag}`);
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/product/${id}`);
+  await page.getByRole("button", { name: "Chat", exact: true }).click();
+  await page.getByRole("button", { name: /Chat Directly/ }).click();
+  // Signed out nothing is counted (only an account may count one), but it is remembered.
+  expect(sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("0");
+  expect(await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiry"))).toContain(id);
+  // The buyer signs in in the same tab: the enquiry counts, once, and feeds the recent-demand score.
+  const key = `sb-${new URL(stack().API).hostname.split(".")[0]}-auth-token`;
+  await page.evaluate(([k, v]) => localStorage.setItem(k, v), [key, JSON.stringify(buyer.session)]);
+  await page.reload();
+  await expect.poll(() => sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("1");
+  expect(sql(`select (public.listing_trend_score('${id}') > 0)::text`)).toBe("true");
+  expect(await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiry"))).toBeNull();
+  await page.reload();
+  await page.waitForTimeout(1500);
+  expect(sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("1");
+  await ctx.close();
+});

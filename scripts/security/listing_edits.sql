@@ -143,6 +143,8 @@ begin
         set local role authenticated;
         insert into public.product_reviews (product_id, buyer_id, rating, body) values (p_live, buyer, 5, 'LE');
         perform public.increment_product_enquiry(p_live);
+        -- Since 20261017160000 the owner's own view above counts nothing; a buyer's does (7 -> 8).
+        perform public.increment_product_view(p_live);
         reset role;
         perform set_config('request.jwt.claims', json_build_object('role', 'service_role')::text, true);
         set local role service_role;

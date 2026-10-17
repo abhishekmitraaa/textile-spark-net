@@ -16,6 +16,7 @@ import { useProductReviews, useVendorReviews, useReviewMutations } from "@/lib/q
 import { WriteReviewModal } from "@/components/reviews/WriteReviewModal";
 import { ReviewPhotoStrip } from "@/components/reviews/ReviewPhotoStrip";
 import { useAuth } from "@/contexts/AuthContext";
+import { rememberPendingEnquiry } from "@/hooks/usePendingEnquiry";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useFollowing } from "@/lib/queries/follows";
 import { recordView } from "@/lib/recentlyViewedStore";
@@ -519,7 +520,10 @@ const ProductDetail = () => {
   // records the enquiry, still lands on /chats/:vendorId.
   const openDirectChat = () => {
     setChatOptionsOpen(false);
-    void recordProductEnquiry(row.id).catch(() => {});
+    // Signed in: counted now. Signed out: only an account may count one (the chat asks them to sign in first),
+    // so it's kept and counted once they're in (hooks/usePendingEnquiry.ts). It used to fail silently.
+    if (user) void recordProductEnquiry(row.id).catch(() => {});
+    else rememberPendingEnquiry(row.id);
     // Additive: the button does exactly what it did, and also reports that it
     // was pressed. Until now `calls` was the only CTA in the app with any
     // record of being used.

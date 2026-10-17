@@ -205,6 +205,17 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — The 10 code-review findings (local stack)
+
+- `scripts/security/listing_edits.sql`: failed on case 9 before the fix (views 7, want 8: the seller's own view no
+  longer counts); 16/16 PASS after it counts a buyer's view.
+- `scripts/ranking/rank_real_demand.sql`: enquired (10 today) > viewed (3 today) > old buzz (8 views 21 days ago = 1)
+  > 900 seeded sales (0): PASS. `demand_counters.sql`: counts plus scores 10 / 35 / 35 / 36: PASS.
+  `view_cap_race.sh`: 30 parallel signed-out calls over 90 logged → 100, twice, nothing left behind.
+- Browser: views.spec gains "a signed-out Chat directly counts its enquiry once the buyer signs in" (0 while signed
+  out, remembered; 1 after sign-in, score > 0, not again on reload). views, feeds, subscriptions-p10, ranking-f1,
+  listing-edits, sizes-media 21/21. tsc, i18n 7,950, eslint, build.
+
 ### 2026-10-17 — Mitra's ten bugs, live on production (www.cosora.in, iPhone 13 size; demo accounts, logins from `.env`)
 
 - **Before:** origin/main buyer `8b095ac`, admin `d9aa30e`; the 7 production functions replaced matched the bodies read

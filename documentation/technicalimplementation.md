@@ -2179,9 +2179,12 @@ Migrations `20261017100000_universal_pictures_jpeg_only`, `…110000_product_vie
 - **Views.** `product_view_daily (product_id, viewer_key, day IST)`, no client grants; `increment_product_view(p,
   p_viewer)` keys `u:<uid>` | `b:<uuid from lib/viewerKey.ts>` | `unkeyed`, inserts on conflict do nothing and adds 1
   only for a new row; purges days before yesterday on ~1 call in 500 (no new cron). `feed_products` gained
-  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking: `enquiries_count * 10 +
-  views_count` in feed_products (trending k_score), spotlight_listings and admin.featured_candidates since
-  `20261017150000` (was `sold_count + enquiries_count`).
+  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking (since `20261017180000`):
+  `product_trend.score`, added to by `add_listing_demand(p, w, at)` with `w × 2^((at − 2026-10-17 IST) / 604800 s)`;
+  weights in `listing_demand_weight`; read through `listing_trend_score(id)` by feed_products (trending only),
+  spotlight_listings and admin.featured_candidates. None callable by clients; product_trend has no client grants
+  (a separate table because a products update would trip listing_edit_rereview). Doubles last ~19 years before
+  a rebase. Signed-out "Chat directly" → `cosora.pendingEnquiry` (sessionStorage) → counted on sign-in.
 - **Sizes.** `data/sizeCharts.ts`: sets (`BRA_SIZES`, `ADULT_SHOE_SIZES`, …), `SIZE_CHARTS`, `SIZE_CHART_BY_SUB`
   (`"letters"` → men's / women's by gender). Upload: `FALLBACK_SIZES` only for apparel without a size field; edit mode
   resolves the listing's sub-category (`sellerIdsForCategoryId`). `SizeChartSheet` marks offered sizes (32B marks band

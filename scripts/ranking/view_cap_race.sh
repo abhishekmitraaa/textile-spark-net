@@ -14,4 +14,8 @@ for i in $(seq 1 30); do
 done
 wait
 echo "signed-out views logged today: $(q "select count(*) from public.product_view_daily where product_id = '$P' and viewer_key like 'b:%'") (cap 100)"
-q "delete from public.product_view_daily where product_id = '$P'; delete from public.products where id = '$P';" >/dev/null
+# Leave nothing behind: other harnesses pick "any spare profile".
+q "delete from public.product_view_daily where product_id = '$P'; delete from public.product_trend where product_id = '$P';
+   delete from public.products where id = '$P'; delete from public.vendor_profiles where id = '$V';
+   delete from public.profiles where id = '$V'; delete from auth.users where id = '$V';" >/dev/null
+echo "left behind: $(q "select count(*) from auth.users where id = '$V'") account(s), $(q "select count(*) from public.products where id = '$P'") listing(s)"

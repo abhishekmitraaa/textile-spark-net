@@ -116,6 +116,7 @@ import BuyerRouteShell from "./components/buyer/BuyerRouteShell";
 import GoPostRfq from "./pages/GoPostRfq";
 import SaveToFolderModal from "./components/buyer/SaveToFolderModal";
 import CallNumberModal from "./components/buyer/CallNumberModal";
+import { PendingEnquiry } from "./hooks/usePendingEnquiry";
 import AutoTranslate from "./components/i18n/AutoTranslate";
 import LanguageSync from "./components/i18n/LanguageSync";
 import AdvertisementSlideshow from "./pages/AdvertisementSlideshow";
@@ -369,6 +370,7 @@ const App = () => (
           <SaveToFolderModal />
           {/* Desktop "call this number" dialog (mobile opens the dialer directly) */}
           <CallNumberModal />
+          <PendingEnquiry />
           {/* Syncs Saved + Recently-Viewed stores with the DB on auth changes */}
           <StoreSync />
           {/* Dev-only: sign in as a seeded buyer/vendor/admin (no-op in prod) */}
