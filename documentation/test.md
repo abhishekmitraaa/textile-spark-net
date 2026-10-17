@@ -205,6 +205,14 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — The 10 code-review findings, live
+
+- Before: the 5 production functions matched the bodies read (62934301, 6139c259, 7e7b06a0, 959e625a, 2ca36bdf);
+  `product_trend` absent; main `b925e89`. Applied `20261017180000` (md5 e2c7a30d) with the CLI; after: 0 scores (fresh
+  start), no client read or write, trending returns rows, the spotlight reads the score, visitors can count views.
+- Live (www.cosora.in, phone size, signed out): /home/trends 48 listing links, /home/new-arrivals 62; 0 page errors,
+  0 failed RPC calls.
+
 ### 2026-10-17 — The 10 code-review findings (local stack)
 
 - `scripts/security/listing_edits.sql`: failed on case 9 before the fix (views 7, want 8: the seller's own view no
