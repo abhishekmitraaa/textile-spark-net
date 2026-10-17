@@ -1765,6 +1765,29 @@ export type Database = {
           },
         ]
       }
+      product_trend: {
+        Row: {
+          log2_score: number
+          product_id: string
+        }
+        Insert: {
+          log2_score: number
+          product_id: string
+        }
+        Update: {
+          log2_score?: number
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_trend_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: true
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_videos: {
         Row: {
           brand_line: string

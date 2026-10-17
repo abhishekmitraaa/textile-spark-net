@@ -38,7 +38,8 @@ import { useHeroSlideIds } from "@/lib/siteConfig";
 // /product/ef-N that never existed: ToDo 2026-09-13). Now:
 //   1. the listings picked in Cosora-Admin › New Arrivals carousel, in their order and inside
 //      their schedule (site-config/site.json, lib/siteConfig.ts useHeroSlideIds);
-//   2. with nothing picked, or none of the picks live, the most popular live listings;
+//   2. with nothing picked, or none of the picks live, the live listings most in demand recently (then the
+//      best-rated, then the newest: feed_products('trending'));
 //   3. with no live listings at all, nothing: the section is left out.
 // Both lists come from feed_products, which returns live listings only, so a paused or removed
 // pick drops out on its own.

@@ -205,6 +205,20 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — The second 10 code-review findings (local stack)
+
+- Feeds harness 24/24 with the trending check rewritten for (boost, recent demand); "trending + gender" 55 ms
+  (budget 150) over 100k listings with the join.
+- P10 harness 13/13 with demand seeded; a copy giving the demand to the "other" listing fails both demand checks
+  (3, 8), so it no longer passes on insert order.
+- `rank_real_demand.sql` PASS (with ordinality, no column list), `demand_counters.sql` PASS (10/35/35/36 via
+  `listing_demand_now`); the migration's self-check proves log-sum-exp (3 + 5 = 8).
+- Browser: views.spec "signed-out Chat directly taps count only when the buyer, signed in, reaches that seller's
+  chat" (two taps kept; signing in elsewhere counts 0,0; the chat counts 1,1; not again) and "Brand Picks put the
+  seller's listings most in demand recently first" (asked > viewed > a listing with 999 enquiries / 9,999 views of
+  all-time but no recent demand). With feeds, subscriptions-p10, ranking-f1/f2, following, listing-edits,
+  sizes-media, interest-preferences: 32/32. tsc, eslint, i18n, build.
+
 ### 2026-10-17 — The 10 code-review findings, live
 
 - Before: the 5 production functions matched the bodies read (62934301, 6139c259, 7e7b06a0, 959e625a, 2ca36bdf);

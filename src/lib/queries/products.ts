@@ -56,6 +56,9 @@ function fmtK(n: number): string {
   return String(n);
 }
 
+/** Below every real recent-demand score (log2 values sit far above it): "no demand yet". */
+const DEMAND_NONE = -1e300;
+
 /** A listing's real view count as a card shows it: "1 view", "1.2k views", or null for none (then nothing shows). */
 export function viewsLabel(n: number | null | undefined): string | null {
   const v = Math.max(0, Math.floor(Number(n) || 0));
@@ -199,7 +202,7 @@ export interface CatalogueRow {
 // server-ranked result set is mapped through exactly the same code path as the
 // browse feed — one definition of what a catalogue row is.
 export const CATALOGUE_SELECT =
-  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, views_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )";
+  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, views_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position ), product_trend ( log2_score )";
 
 type RawCatalogueRow = RawProduct & {
   gender: string | null; colour: string | null; sizes: string[] | null;
@@ -207,6 +210,8 @@ type RawCatalogueRow = RawProduct & {
   neck_type: string | null; sleeve_type: string | null; collar_type: string | null;
   country_of_origin: string | null; waist_sizes: string[] | null; lengths: string[] | null;
   category_id: string | null; categories: { name: string; parent_id: string | null } | null;
+  /** Recent demand (log2 of the decayed sum; 20261017190000). Null: none yet. */
+  product_trend: { log2_score: number } | null;
 };
 
 /** Hydrate a specific set of product ids into catalogue rows: the search path, where ranking is
@@ -262,7 +267,9 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       views: viewsLabel(p.views_count),
       enquiries: fmtK(p.enquiries_count),
       rating: Number(p.rating_avg),
-      popularity: p.views_count ?? 0,
+      // Recent demand, not all-time views (2026-10-17): the same measure every server-side ranking uses. Listings
+      // with none yet sort last (a finite floor, so the comparator never meets -Infinity - -Infinity).
+      popularity: p.product_trend?.log2_score ?? DEMAND_NONE,
       discount: 0,
       fabric: p.fabric ?? "—",
       gsm: p.gsm ?? "",
@@ -490,17 +497,22 @@ async function fetchRelatedProducts(currentId: string, limit: number): Promise<P
 }
 
 async function fetchVendorOtherProducts(vendorId: string, excludeId: string, limit: number): Promise<ProductCardData[]> {
+  // The seller's listings most in demand recently (2026-10-17: it ordered on all-time enquiries and views, which
+  // could be pumped before the counters were hardened). The newest 60 are scored here; a seller rarely has more.
   const { data, error } = await supabase
     .from("products")
-    .select(PRODUCT_CARD_SELECT)
+    .select(`${PRODUCT_CARD_SELECT}, product_trend ( log2_score )`)
     .eq("status", "live")
     .eq("vendor_id", vendorId)
     .neq("id", excludeId)
-    .order("enquiries_count", { ascending: false })
-    .order("views_count", { ascending: false })
-    .limit(limit);
+    .order("created_at", { ascending: false })
+    .limit(60);
   if (error) throw error;
-  const rows = (data ?? []) as unknown as RawProduct[];
+  const rows = ((data ?? []) as unknown as (RawProduct & { product_trend: { log2_score: number } | null })[])
+    .map((r, i) => ({ r, d: r.product_trend?.log2_score ?? DEMAND_NONE, i }))
+    .sort((a, b) => b.d - a.d || a.i - b.i)
+    .slice(0, limit)
+    .map((x) => x.r);
   const vendorMap = await vendorMapFor([vendorId]);
   return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
 }

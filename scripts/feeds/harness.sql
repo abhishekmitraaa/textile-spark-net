@@ -39,10 +39,11 @@ begin
   insert into _r (label, want, got) values ('newest: the first page is the highest paid tier there is',
     (select max(boost)::text from public.feed_products('newest', 48)), got);
   select (bool_and(ok))::text into got from (
-    select (boost, sold_count + enquiries_count) >= (coalesce(lead(boost) over w, boost),
-                                                     coalesce(lead(sold_count + enquiries_count) over w, 0)) as ok
-      from public.feed_products('trending', 48) window w as (order by null)) s;
-  insert into _r (label, want, got) values ('trending: paid tier, then sold + enquiries', 'true', got);
+    select (boost, d) >= (coalesce(lead(boost) over w, boost), coalesce(lead(d) over w, 0)) as ok
+      from (select f.boost, public.listing_demand_now(f.id) as d, f.ordinality
+              from public.feed_products('trending', 48) with ordinality as f) t
+     window w as (order by ordinality)) s;
+  insert into _r (label, want, got) values ('trending: paid tier, then recent demand (20261017190000)', 'true', got);
   select (bool_and(ok))::text into got from (
     select price_value <= coalesce(lead(price_value) over w, price_value) as ok
       from public.feed_products('price_asc', 48) window w as (order by null)) s;

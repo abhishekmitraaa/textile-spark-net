@@ -521,9 +521,9 @@ const ProductDetail = () => {
   const openDirectChat = () => {
     setChatOptionsOpen(false);
     // Signed in: counted now. Signed out: only an account may count one (the chat asks them to sign in first),
-    // so it's kept and counted once they're in (hooks/usePendingEnquiry.ts). It used to fail silently.
+    // so it's kept and counted when they reach this seller's chat signed in (hooks/usePendingEnquiry.ts).
     if (user) void recordProductEnquiry(row.id).catch(() => {});
-    else rememberPendingEnquiry(row.id);
+    else rememberPendingEnquiry(row.id, product.vendor.id);
     // Additive: the button does exactly what it did, and also reports that it
     // was pressed. Until now `calls` was the only CTA in the app with any
     // record of being used.

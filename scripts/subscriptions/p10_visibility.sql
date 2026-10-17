@@ -58,6 +58,9 @@ begin
     insert into public.products (vendor_id, name, status, category_id, sold_count, enquiries_count)
     values (v[k], 'P10 best ' || k, 'live', sub, 100 + k, 5), (v[k], 'P10 other ' || k, 'live', cat, 1, 0);
   end loop;
+  -- The better seller is better by recent demand, the only thing the spotlight and featured places rank on since
+  -- 20261017180000 (sold_count and enquiries_count no longer count).
+  perform public.add_listing_demand(p.id, 10) from public.products p where p.vendor_id = any (v) and p.name like 'P10 best %';
   delete from public.featured_impressions where vendor_id = any (v);
 
   for i in 1..array_length(labels, 1) loop

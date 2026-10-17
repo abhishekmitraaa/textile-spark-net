@@ -2179,12 +2179,16 @@ Migrations `20261017100000_universal_pictures_jpeg_only`, `…110000_product_vie
 - **Views.** `product_view_daily (product_id, viewer_key, day IST)`, no client grants; `increment_product_view(p,
   p_viewer)` keys `u:<uid>` | `b:<uuid from lib/viewerKey.ts>` | `unkeyed`, inserts on conflict do nothing and adds 1
   only for a new row; purges days before yesterday on ~1 call in 500 (no new cron). `feed_products` gained
-  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking (since `20261017180000`):
-  `product_trend.score`, added to by `add_listing_demand(p, w, at)` with `w × 2^((at − 2026-10-17 IST) / 604800 s)`;
-  weights in `listing_demand_weight`; read through `listing_trend_score(id)` by feed_products (trending only),
-  spotlight_listings and admin.featured_candidates. None callable by clients; product_trend has no client grants
-  (a separate table because a products update would trip listing_edit_rereview). Doubles last ~19 years before
-  a rebase. Signed-out "Chat directly" → `cosora.pendingEnquiry` (sessionStorage) → counted on sign-in.
+  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking (`20261017180000`, `…190000`):
+  `product_trend.log2_score` = log2 Σ w·2^(demand_age_halflives(at)); `add_listing_demand` adds with
+  `demand_log_add` (log-sum-exp), `demand_log_of(w, at)`; `listing_demand_now(p)` = 2^(log2_score − age(now)).
+  Rankings `left join public.product_trend tr` and order on `coalesce(tr.log2_score, '-infinity')`: feed_products
+  (trending, then rating_avg), spotlight_listings, admin.featured_candidates, new_brand_suggestions,
+  search_suggestions, related_products, for_you_products, match_products. product_trend readable by anon/authenticated
+  for live listings (column grant + RLS), written only by add_listing_demand (revoked from clients). App: catalogue
+  rows embed `product_trend ( log2_score )` (Popularity sort), Brand Picks score the seller's newest 60. Signed-out
+  "Chat directly" → `cosora.pendingEnquiries` (sessionStorage, per listing, ≤ 10, < 24 h) → counted when a
+  signed-in buyer opens `/chats/<that seller>`.
 - **Sizes.** `data/sizeCharts.ts`: sets (`BRA_SIZES`, `ADULT_SHOE_SIZES`, …), `SIZE_CHARTS`, `SIZE_CHART_BY_SUB`
   (`"letters"` → men's / women's by gender). Upload: `FALLBACK_SIZES` only for apparel without a size field; edit mode
   resolves the listing's sub-category (`sellerIdsForCategoryId`). `SizeChartSheet` marks offered sizes (32B marks band

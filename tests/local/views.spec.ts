@@ -100,32 +100,70 @@ test("a view counts once per viewer per day, and cards show real views", async (
   await a.close();
 });
 
-test("a signed-out 'Chat directly' counts its enquiry once the buyer signs in", async ({ browser }) => {
-  test.setTimeout(120_000);
+test("signed-out 'Chat directly' taps count only when the buyer, signed in, reaches that seller's chat", async ({ browser }) => {
+  test.setTimeout(150_000);
   const s = await freshAccount(`vwpend${tag}`, { seller: true });
   sellers.push(s.id);
-  const id = sql(`with p as (insert into public.products (vendor_id, name, status, price_value, moq)
-                    values ('${s.id}', 'VW ${tag} pending', 'live', 300, '10') returning id)
-                  insert into public.product_images (product_id, url, position) select id, '${BUYER_URL}/icon-192.png', 0 from p
-                  returning product_id`).split("\n")[0];
+  const make = (name: string) =>
+    sql(`with p as (insert into public.products (vendor_id, name, status, price_value, moq)
+                    values ('${s.id}', '${name}', 'live', 300, '10') returning id)
+         insert into public.product_images (product_id, url, position) select id, '${BUYER_URL}/icon-192.png', 0 from p
+         returning product_id`).split("\n")[0];
+  const a = make(`VW ${tag} pending A`);
+  const b = make(`VW ${tag} pending B`);
+  const enq = () => sql(`select string_agg(enquiries_count::text, ',' order by name) from public.products where id in ('${a}', '${b}')`);
   const buyer = await freshAccount(`vwpb${tag}`);
   const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
   const page = await ctx.newPage();
-  await page.goto(`${BUYER_URL}/product/${id}`);
-  await page.getByRole("button", { name: "Chat", exact: true }).click();
-  await page.getByRole("button", { name: /Chat Directly/ }).click();
-  // Signed out nothing is counted (only an account may count one), but it is remembered.
-  expect(sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("0");
-  expect(await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiry"))).toContain(id);
-  // The buyer signs in in the same tab: the enquiry counts, once, and feeds the recent-demand score.
+  // Signed out: tap Chat directly on A, then on B. Nothing counts; both are kept.
+  for (const id of [a, b]) {
+    await page.goto(`${BUYER_URL}/product/${id}`);
+    await page.getByRole("button", { name: "Chat", exact: true }).click();
+    await page.getByRole("button", { name: /Chat Directly/ }).click();
+  }
+  expect(enq()).toBe("0,0");
+  const kept = await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiries") ?? "");
+  expect(kept).toContain(a);
+  expect(kept).toContain(b);
+  // Signing in somewhere else counts nothing.
   const key = `sb-${new URL(stack().API).hostname.split(".")[0]}-auth-token`;
   await page.evaluate(([k, v]) => localStorage.setItem(k, v), [key, JSON.stringify(buyer.session)]);
-  await page.reload();
-  await expect.poll(() => sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("1");
-  expect(sql(`select (public.listing_trend_score('${id}') > 0)::text`)).toBe("true");
-  expect(await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiry"))).toBeNull();
+  await page.goto(`${BUYER_URL}/home/new-arrivals`);
+  await page.waitForTimeout(2000);
+  expect(enq()).toBe("0,0");
+  // Reaching that seller's chat counts both, once, and feeds recent demand.
+  await page.goto(`${BUYER_URL}/chats/${s.id}`);
+  await expect.poll(enq).toBe("1,1");
+  expect(sql(`select (public.listing_demand_now('${a}') > 0 and public.listing_demand_now('${b}') > 0)::text`)).toBe("true");
+  expect(await page.evaluate(() => sessionStorage.getItem("cosora.pendingEnquiries"))).toBeNull();
   await page.reload();
   await page.waitForTimeout(1500);
-  expect(sql(`select enquiries_count from public.products where id = '${id}'`)).toBe("1");
+  expect(enq()).toBe("1,1");
+  await ctx.close();
+});
+
+test("Brand Picks put the seller's listings most in demand recently first", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const s = await freshAccount(`vwbp${tag}`, { seller: true });
+  sellers.push(s.id);
+  const make = (name: string) =>
+    sql(`with p as (insert into public.products (vendor_id, name, status, price_value, moq, enquiries_count, views_count)
+                    values ('${s.id}', '${name}', 'live', 300, '10', ${name.endsWith("old") ? 999 : 0}, ${name.endsWith("old") ? 9999 : 0}) returning id)
+         insert into public.product_images (product_id, url, position) select id, '${BUYER_URL}/icon-192.png', 0 from p
+         returning product_id`).split("\n")[0];
+  const anchor = make(`BP ${tag} anchor`);
+  const old = make(`BP ${tag} old`); // huge all-time totals, no recent demand
+  const viewed = make(`BP ${tag} viewed`);
+  const asked = make(`BP ${tag} asked`);
+  sql(`select public.add_listing_demand('${viewed}', 3); select public.add_listing_demand('${asked}', 10);`);
+  void old;
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/product/${anchor}`);
+  await expect(page.getByRole("heading", { name: /Brand Picks/ })).toBeVisible({ timeout: 30_000 });
+  const cards = page.getByRole("link", { name: new RegExp(`BP ${tag} (asked|viewed|old)`) });
+  await expect(cards).toHaveCount(3);
+  const order = await cards.evaluateAll((els) => els.map((e) => [e.getAttribute("aria-label"), e.textContent, ...Array.from(e.querySelectorAll("img"), (i) => i.alt)].join(" ")));
+  expect(order.map((t) => t.match(/(asked|viewed|old)/)![1])).toEqual(["asked", "viewed", "old"]);
   await ctx.close();
 });

@@ -15,7 +15,7 @@ set local role authenticated; set local request.jwt.claims = '{"sub":"99999999-0
 select public.increment_product_enquiry('99999999-0000-0000-0000-0000000000c1') from generate_series(1,5);
 reset role;
 insert into r select 'enquiries', enquiries_count::text from public.products where id = '99999999-0000-0000-0000-0000000000c1';
-insert into r select 't1_trend_enquiry', round((public.listing_trend_score('99999999-0000-0000-0000-0000000000c1') / power(2.0, extract(epoch from (now() - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0))::numeric, 2)::text;
+insert into r select 't1_trend_enquiry', round(public.listing_demand_now('99999999-0000-0000-0000-0000000000c1')::numeric, 2)::text;
 -- signed out: refused outright
 set local role anon; set local request.jwt.claims = '{"role":"anon"}';
 do $$ begin perform public.increment_product_enquiry('99999999-0000-0000-0000-0000000000c1'); insert into r values ('anon_enquiry', 'allowed'); exception when insufficient_privilege then insert into r values ('anon_enquiry', '0'); end $$;
@@ -23,7 +23,7 @@ do $$ begin perform public.increment_product_enquiry('99999999-0000-0000-0000-00
 select public.increment_product_view('99999999-0000-0000-0000-0000000000c1', gen_random_uuid()::text) from generate_series(1,150);
 reset role;
 insert into r select 'anon_views', views_count::text from public.products where id = '99999999-0000-0000-0000-0000000000c1';
-insert into r select 't2_trend_anon', round((public.listing_trend_score('99999999-0000-0000-0000-0000000000c1') / power(2.0, extract(epoch from (now() - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0))::numeric, 2)::text;
+insert into r select 't2_trend_anon', round(public.listing_demand_now('99999999-0000-0000-0000-0000000000c1')::numeric, 2)::text;
 -- the seller's own enquiry and view don't count
 set local role authenticated; set local request.jwt.claims = '{"sub":"99999999-0000-0000-0000-0000000000b1","role":"authenticated"}';
 select public.increment_product_enquiry('99999999-0000-0000-0000-0000000000c1');
@@ -31,13 +31,13 @@ select public.increment_product_view('99999999-0000-0000-0000-0000000000c1', nul
 reset role;
 insert into r select 'own_enquiry', (enquiries_count - 1)::text from public.products where id = '99999999-0000-0000-0000-0000000000c1';
 insert into r select 'own_view', (views_count - 100)::text from public.products where id = '99999999-0000-0000-0000-0000000000c1';
-insert into r select 't3_trend_own', round((public.listing_trend_score('99999999-0000-0000-0000-0000000000c1') / power(2.0, extract(epoch from (now() - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0))::numeric, 2)::text;
+insert into r select 't3_trend_own', round(public.listing_demand_now('99999999-0000-0000-0000-0000000000c1')::numeric, 2)::text;
 -- a signed-in buyer still counts after the anonymous cap
 set local role authenticated; set local request.jwt.claims = '{"sub":"99999999-0000-0000-0000-0000000000b2","role":"authenticated"}';
 select public.increment_product_view('99999999-0000-0000-0000-0000000000c1', null);
 reset role;
 insert into r select 'signed_in_view', '+' || (views_count - 100)::text from public.products where id = '99999999-0000-0000-0000-0000000000c1';
-insert into r select 't4_trend_signed_in', round((public.listing_trend_score('99999999-0000-0000-0000-0000000000c1') / power(2.0, extract(epoch from (now() - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0))::numeric, 2)::text;
+insert into r select 't4_trend_signed_in', round(public.listing_demand_now('99999999-0000-0000-0000-0000000000c1')::numeric, 2)::text;
 select k || ' ' || v from r;
 select case when (select string_agg(v, ',' order by k) from r) = '0,100,1,0,0,+1,10.00,35.00,35.00,36.00' then 'PASS' else 'FAIL' end;
 rollback;

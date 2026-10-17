@@ -168,7 +168,7 @@ undocumented. Deep technical rationale for each lives in
 - **Sharing goes through `<ShareSheet>`** (Mitra, 2026-10-14): the service's own share addresses and the device's menu. Nothing is sent by Cosora and nothing is logged. It shares a public page's address, never a query string the person arrived with. A video close-up's address is `/video-closeups?v=<id>`, which opens the reel on it; from inside a full-screen layer pass `aboveFullscreen`.
 - **A catalogue's tap downloads the PDF** (Mitra, 2026-10-14): `catalogueDownload()`. A seller without a live catalogue shows no catalogue section (the demo catalogues are gone).
 - **New Arrivals' top carousel shows real live listings, picked by Cosora** (Mitra, 2026-10-14; migration `20261014150000_hero_slides.sql`).
-  - Super admins and managers pick up to 12 live listings, in order, each with an optional start and end, in Cosora-Admin › New Arrivals carousel (`admin_hero_slides_save()`, which replaces the whole list). With nothing picked, or none of the picks live, the carousel shows the most popular live listings (`feed_products('trending')`); with no live listings it isn't shown. It never shows invented products.
+  - Super admins and managers pick up to 12 live listings, in order, each with an optional start and end, in Cosora-Admin › New Arrivals carousel (`admin_hero_slides_save()`, which replaces the whole list). With nothing picked, or none of the picks live, the carousel shows the live listings most in demand recently, then the best-rated, then the newest (`feed_products('trending')`); with no live listings it isn't shown. It never shows invented products.
   - Visitors read the picks (ids only) from `site-config/site.json` and the listings through `feed_products(p_ids)`, so a pick that stops being live drops out by itself. Changing who may pick means `admin.require_hero_slides_admin()` and `SECTION_READ` / `SECTION_WRITE["hero-slides"]` in Cosora-Admin together.
 - **A requirement's pictures are photos, uploaded before it's written** (Mitra, 2026-10-14). The full form and Quick Quote take up to 5 photos (`RFQ_MAX_IMAGES`), shrunk in the browser (`shrinkImage()`) and uploaded with `uploadRfqImages()` to `product-images/<buyer>/rfq/<batch>/`; `rfqs.images` holds them all and `rfqs.image` the first (the cover every list shows). Before 2026-10-14 neither form uploaded anything, and Quick Quote saved nothing at all while saying it had. Videos and PDFs are not offered: they have no storage path yet.
   - A picture URL the buyer's browser wrote is shown only when it is this project's Storage (`src/lib/storageUrl.ts`, applied where rows are mapped); a requirement without one shows `<RfqThumb>`'s placeholder, and a request about a listing shows the listing's picture.
@@ -1333,9 +1333,12 @@ undocumented. Deep technical rationale for each lives in
   `scripts/category-image-slots-check.mjs` fails on a missing one.
 - **Cards show real views, never "sold" (Mitra, 2026-10-17).** Sales happen off Cosora. `products.views_count`, one
   per listing, viewer and day (`increment_product_view`). Nothing ranks on `sold_count` or on all-time totals:
-  ranking (feed trending, spotlight, featured candidates) reads **recent demand** (`listing_trend_score`), each counted
-  enquiry (10), signed-in view (1) or signed-out view (0.25) fading with a 7-day half-life (Mitra, 2026-10-17;
-  migration `20261017180000`). Weights live only in `listing_demand_weight`.
+  **every** ranking (feed trending, spotlight, featured, search, autocomplete, "You might also like", For You, new
+  brands, Brand Picks, the Popularity sort) reads **recent demand**, each counted enquiry (10), signed-in view (1) or
+  signed-out view (0.25) fading with a 7-day half-life (Mitra, 2026-10-17; migrations `20261017180000`, `…190000`).
+  `product_trend.log2_score` (log2 of the decayed sum; never overflows) is joined, never called per row; weights live
+  only in `listing_demand_weight`, the epoch and half-life only in `demand_age_halflives`. Ties with no recent demand
+  go to the best-rated, then the newest. A new ranking reads product_trend too, never the all-time counters.
 - **Each garment type has its own sizes (Mitra, 2026-10-17).** `data/sizeCharts.ts` holds the sets the upload form
   offers and the chart buyers read; a new garment sub-category gets a set and a chart, not letter sizes.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** Since 2026-10-17 an RFQ is
