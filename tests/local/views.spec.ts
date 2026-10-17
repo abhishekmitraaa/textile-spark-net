@@ -131,6 +131,15 @@ test("signed-out 'Chat directly' taps count only when the buyer, signed in, reac
   await page.goto(`${BUYER_URL}/home/new-arrivals`);
   await page.waitForTimeout(2000);
   expect(enq()).toBe("0,0");
+  // A malformed chat link reached inside the app doesn't crash it (the path used to be decoded on every page, which
+  // threw "URI malformed" and blanked the screen) and counts nothing.
+  const crashes: string[] = [];
+  page.on("pageerror", (e) => crashes.push(e.message));
+  await page.evaluate(() => { history.pushState({}, "", "/chats/%E0%A4%A"); dispatchEvent(new PopStateEvent("popstate")); });
+  await page.waitForTimeout(2000);
+  expect(crashes).toEqual([]);
+  expect((await page.locator("body").innerText()).trim()).not.toBe("");
+  expect(enq()).toBe("0,0");
   // Reaching that seller's chat counts both, once, and feeds recent demand.
   await page.goto(`${BUYER_URL}/chats/${s.id}`);
   await expect.poll(enq).toBe("1,1");

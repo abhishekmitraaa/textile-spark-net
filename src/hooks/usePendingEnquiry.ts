@@ -15,6 +15,10 @@ import { recordProductEnquiry } from "@/lib/queries/products";
 const KEY = "cosora.pendingEnquiries";
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 const MAX_KEPT = 10;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Seller ids are UUIDs, so the path is matched as one and never decoded: a malformed link (/chats/%E0%A4%A) must
+// not throw here, as this runs on every page (security review 2026-10-17).
+const CHAT_PATH = /^\/chats\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i;
 
 interface Pending {
   productId: string;
@@ -27,7 +31,14 @@ function read(): Pending[] {
     const list = JSON.parse(sessionStorage.getItem(KEY) ?? "[]") as Pending[];
     const now = Date.now();
     return Array.isArray(list)
-      ? list.filter((p) => typeof p?.productId === "string" && typeof p?.vendorId === "string" && now - p.at < MAX_AGE_MS)
+      ? list
+          .filter(
+            (p) =>
+              typeof p?.productId === "string" && UUID.test(p.productId) &&
+              typeof p?.vendorId === "string" && UUID.test(p.vendorId) &&
+              typeof p?.at === "number" && p.at <= now && now - p.at < MAX_AGE_MS,
+          )
+          .slice(-MAX_KEPT)
       : [];
   } catch {
     return [];
@@ -44,6 +55,7 @@ function write(list: Pending[]): void {
 }
 
 export function rememberPendingEnquiry(productId: string, vendorId: string): void {
+  if (!UUID.test(productId) || !UUID.test(vendorId)) return;
   write([...read().filter((p) => p.productId !== productId), { productId, vendorId, at: Date.now() }]);
 }
 
@@ -53,13 +65,13 @@ export function PendingEnquiry(): null {
   const { pathname } = useLocation();
   useEffect(() => {
     if (!user) return;
-    const m = /^\/chats\/([^/?#]+)/.exec(pathname);
+    const m = CHAT_PATH.exec(pathname);
     if (!m) return;
-    const vendorId = decodeURIComponent(m[1]);
+    const vendorId = m[1].toLowerCase();
     const list = read();
-    const mine = list.filter((p) => p.vendorId === vendorId);
+    const mine = list.filter((p) => p.vendorId.toLowerCase() === vendorId);
     if (!mine.length) return;
-    write(list.filter((p) => p.vendorId !== vendorId));
+    write(list.filter((p) => p.vendorId.toLowerCase() !== vendorId));
     for (const p of mine) void recordProductEnquiry(p.productId).catch(() => {});
   }, [user, pathname]);
   return null;
