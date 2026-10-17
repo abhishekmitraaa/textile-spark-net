@@ -2161,6 +2161,41 @@ page (`src/lib/heroSlides.ts`, `src/pages/HeroSlides.tsx`).
   sits at `calc(var(--bottom-nav-h, 5rem) + var(--pinned-bar-h, 0px) + 1rem)` on phones. Step changes scroll to the top
   in `AnimatePresence`'s `onExitComplete` (an effect on `step` ran while the old step was still leaving).
 
+## Mitra's ten bugs (2026-10-17)
+
+Migrations `20261017100000_universal_pictures_jpeg_only`, `…110000_product_views`, `…120000_garment_categories`,
+`…130000_product_documents`, `…140000_rfq_review_others`. Bodies of production functions they replace were read with
+`pg_get_functiondef` on 2026-10-17 and changed only where marked.
+
+- **Viewer.** Root `select-none touch-manipulation [-webkit-touch-callout:none]`, `onContextMenu` prevented; mouse drag
+  ≥ 40 px → `scrollToSlide(±1)` and the ending click swallowed. `CallNumberModal` at z-[90] (an open Radix dialog sets
+  `pointer-events: none` on body, so a dialog under the reel still took taps while the reel looked dead: test by
+  z-index, not hit-testing). `listingUnavailable` = tagged but RLS returned no live listing. `onStorePage` hides store
+  links. `isOverOverlay()` (useBackCloses) makes the chat fallback replace the overlay entry.
+- **Pictures.** `categoryPicture(topId, sub)` = admin slot ?? `categoryTileDefault`; `SELLER_SUB_TILE` (182 entries);
+  `NEW_ARRIVALS_TILES[].tile`. `StoreHeroBackground` + `STORE_HERO_BOX` (`aspect-[16/11] min-h-[13rem] sm:h-60`).
+  `shrinkImage(file, 1600, "jpeg")` for banners. Path checks and `admin_category_image_set` / `admin_site_banner_save`
+  JPEG only; `new-arrivals/*` rows deleted.
+- **Views.** `product_view_daily (product_id, viewer_key, day IST)`, no client grants; `increment_product_view(p,
+  p_viewer)` keys `u:<uid>` | `b:<uuid from lib/viewerKey.ts>` | `unkeyed`, inserts on conflict do nothing and adds 1
+  only for a new row; purges days before yesterday on ~1 call in 500 (no new cron). `feed_products` gained
+  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`; ranking still on `sold_count +
+  enquiries_count`.
+- **Sizes.** `data/sizeCharts.ts`: sets (`BRA_SIZES`, `ADULT_SHOE_SIZES`, …), `SIZE_CHARTS`, `SIZE_CHART_BY_SUB`
+  (`"letters"` → men's / women's by gender). Upload: `FALLBACK_SIZES` only for apparel without a size field; edit mode
+  resolves the listing's sub-category (`sellerIdsForCategoryId`). `SizeChartSheet` marks offered sizes (32B marks band
+  32). Innerwear / footwear filters read `sizes[]`.
+- **Product media.** Videos: `validateVideoFile()` then `createProductVideo({ productId })` (Bunny, else Supabase TUS);
+  `duration_seconds` is an integer (round). PDFs: `checkPdf` (type + `%PDF-`), `product-files/<vendor>/<listing>/<uuid>.pdf`,
+  `product_documents` (RLS like `product_images`, cap 3). Admin `fetchProductDetails()` / `ProductDetailsModal`;
+  vendor-written URLs rendered only if http(s).
+- **Requirement review.** `rfq_submissions` (buyer insert columns only; `rfq_submissions_guard` forces pending, ≤ 10
+  waiting); `admin_rfq_review(id, approve|reject, reason, note)` inserts into `rfqs` as the definer (no rfqs trigger
+  reads `auth.uid()`; the overseas stamp reads the buyer's profile) and `notify()`s the buyer (`kind rfq_review`).
+  `rfqs_insert` requires `vendor_id is not null`. `rfq_category_is_open()` in `match_rfq_vendors`, `match_vendor_rfqs`,
+  `lead_alert_fanout`. App: `createRfq` → `rfq_submissions`; `useMyRfqSubmissions` (30 s poll while pending);
+  `BuyerBell`; Notifications picks BuyerShell for buyers. Admin `/requirement-review`, `/requirement-reasons`.
+
 ## Video Closeups: links, real reviews, saved videos (2026-10-16)
 
 Migration `20261016140000_product_review_stats.sql`; `src/components/buyer/VideoCloseUpsViewer.tsx`, `src/lib/queries/videos.ts`.

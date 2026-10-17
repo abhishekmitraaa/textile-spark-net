@@ -193,10 +193,25 @@ the demand side of India's fashion and textile supply chain.
   to a thread — including a test message — can only be removed with service_role. Found while
   verifying the quote chat on 2026-09-16; two clearly-labelled test rows are still in the demo
   buyer's thread for that reason.
-- **A vendor's public page still shows placeholder content in three places:** the category
-  tiles, the office pictures (stock photos, though vendors can now upload their own) and the
+- **A vendor's public page still shows placeholder content in two places** (the category tiles became the seller's
+  own on 2026-10-17): the office pictures (stock photos, though vendors can now upload their own) and the
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
+
+### Changed 2026-10-17 (ten fixes; built, not live)
+- **Video Closeups** work on every phone: nothing selects, Call Now's number appears above the reel, a video whose
+  listing isn't available says so, and on a seller's own store the card doesn't pretend to open it.
+- **Category pictures** are the same everywhere (Categories, New Arrivals, a store's categories, Trends) and follow
+  what Cosora-Admin sets. A store shows the categories it actually sells in.
+- **Store banners** fit a phone; a store without one gets a clean default.
+- **Ads** are labelled quietly: a small "Sponsored" and "Ad".
+- **Cards show views**, not invented "sold" numbers.
+- **Sizes** match the garment: bras by band and cup, shoes by UK / India size, sarees, lehengas and more; a
+  **Size chart** on each listing.
+- **Sellers' videos and PDFs** in the product form really upload; buyers see them on the listing.
+- **Requirements are checked by Cosora** before sellers see them (usually 3–5 minutes); buyers are notified and can
+  see why one wasn't approved. **Others (Custom)** reaches every seller.
+- **Buyers have notifications** (the bell in the top bar).
 
 ### Changed 2026-10-16 (Video Closeups; live 2026-10-17)
 - **Saved videos** show at the top of My Saves and play from there.

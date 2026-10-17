@@ -26,6 +26,7 @@ not the sensitive value itself. This file may end up in version control history.
 | 2026-10-07 | Upgrade credit counts demo invoices (no gateway payment) as money paid | Medium (latent until live payments) | `admin.subscription_quote` credit query | Fixed on branch (P1): once the first live payment is fulfilled, only live invoices earn credit. Open until applied |
 | 2026-10-07 | A charge that fails to activate after its order is claimed is only logged to the console | Medium (latent until live payments) | `subscription-verify-payment`, `subscription-webhook` | Fixed on branch (P1): one fulfilment transaction (`subscription_fulfil`), billing incidents, webhook events stored once, `billing-reconcile` (its schedule awaits approval). Open until applied and deployed |
 | 2026-10-02 | Seller registration collects the owner's masked Aadhaar (live 2026-10-02) | Medium (compliance, for counsel) | `src/pages/Onboarding.tsx`, `src/pages/Kyc.tsx`, `vendor_documents` (`aadhaar`), bucket `business-docs` | Open: live without counsel's confirmation, at the user's instruction (ToDo.md) |
+| 2026-10-17 | **Product views can still be raised with made-up browser keys**: `increment_product_view` now counts once per listing, viewer and day, but a signed-out caller chooses its own random key | Low (the number is now shown to buyers as "N views") | `increment_product_view(p, p_viewer)` (migration `20261017110000`) | Open, logged. A per-IP limit needs an edge function in front |
 | 2026-10-01 | Signed-out callers can raise any live product's views and enquiries, a video's views and an ad's clicks, with no limit | Low (metrics integrity: these counts order the related-products fallback, and vendors read them as demand) | `increment_product_view`, `increment_product_enquiry`, `increment_video_view`, `ad_click` (SECURITY DEFINER, EXECUTE for anon by design) | Open, follow-up from the 2026-10-01 review. `ad_impression` has a per-session daily cap and a throttle; these four have none, and `ad_click` doesn't take a session into account at all. Fix shape: a per-session limit in the database like `ad_impression`'s, or count from `engagement_events` instead. The session id comes from the browser, so a database limit stops only naive repeats; a per-IP limit needs an edge function in front. Log entry below |
 | 2026-09-29 | A review's display name is client-supplied: `reviewer_name` / `reviewer_company` are written by the browser, so a buyer can post under any name | Low (impersonation in review text; the author's uid is still recorded) | `src/lib/queries/reviews.ts` (`resolveReviewer`); `reviews` / `product_reviews` / `service_reviews` insert policies | Open: fill them in a BEFORE INSERT trigger from `buyer_profiles` / `profiles` |
 | 2026-09-28 | Microsoft Clarity's script, once switched on, can read every buyer-site page | Low (third-party script; dormant until `VITE_CLARITY_PROJECT_ID` is set) | `src/lib/analytics/clarity.ts` (loads `https://www.clarity.ms/tag/<id>`) | Open, accepted with Mitra's decision to install Clarity. Masking controls what Clarity uploads, not what its script can read: like any third-party script it runs with the page's privileges. In place: it loads only when configured, identifies no one, and the sign-in, chat, onboarding, KYC, profile, requirement, quote, lead and billing screens and every overlay are masked. The buyer site sends no Content-Security-Policy, so nothing limits which scripts load; a CSP that allows `www.clarity.ms` and `*.clarity.ms` is the next step. Log entry below |
@@ -111,6 +112,18 @@ at the end of the previous session on 2026-09-10, deliberately left out of that 
 in the next one.
 
 ## Log
+
+### 2026-10-17 — Mitra's ten bugs reviewed — Severity: Medium (fixed before release) / Low
+- **Fixed before release, Medium:** the new Cosora-Admin "Review details" linked vendor-written picture URLs
+  (`product_images.url` is free text): a `javascript:` URL would have run in an admin's session on click. Only http(s)
+  URLs are rendered (`safeHttpUrl`), also for requirement pictures in the review queue. Found by the commit security
+  review.
+- **Closed:** a buyer could skip requirement review by inserting an open RFQ straight into `rfqs`; `rfqs_insert`
+  now requires `vendor_id`. Submissions take only content columns; the state, reviewer and decision are the
+  server's (`rfq_submissions_guard`, column grants); the buyer can't read who reviewed.
+- `product-files` takes PDFs only, 10 MB, writes under the owner's folder; `product_documents` readable like
+  `product_images`, at most 3 per listing. `product_view_daily` has no client grants.
+- **Open, Low:** views with made-up browser keys (table above).
 
 ### 2026-10-16 — Fraud reports and feedback open to every signed-in account while the dummy sign-in is on — Severity: Medium — OPEN
 - Mitra asked for every report to reach Cosora-Admin instead of email (migration `20261016100000`). Fraud reports and

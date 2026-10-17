@@ -1321,8 +1321,22 @@ undocumented. Deep technical rationale for each lives in
   location nudge waits for Fit too, so it never promises nearby suppliers before location counts. Migration
   `20261007052605_vendor_type_location_capacity.sql`
   (applied 2026-10-07); harness `scripts/ranking/f2_vendor_profile.sql`.
-- **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** An RFQ
-  is live the moment it's posted; admins act after the fact. `admin_lead_remove(rfq, reason)`
+- **A requirement waits for an admin before sellers see it (Mitra, 2026-10-17; reverses 2026-10-02).** A posted
+  open requirement (Post Your Requirement, Quick Quote) is an `rfq_submissions` row until a super admin, product
+  moderator or manager approves it (`admin_rfq_review`, which copies it into `rfqs`) or rejects it with one of the
+  reasons managers write (`admin.rfq_review_reasons`); the buyer is notified either way and is told review usually
+  takes 3–5 minutes. Nothing goes live by itself. Only a request to one seller (product page) is written straight to
+  `rfqs`. "Others (Custom)" is every seller's category. Migration `20261017140000_rfq_review_others.sql`.
+- **One picture per category, everywhere (Mitra, 2026-10-17).** A category's picture is its /categories tile (the
+  admin's, else the app's JPEG); New Arrivals, a store's categories and Trends read it through
+  `useCategoryPicture`. Listings use the vendor upload list: `SELLER_SUB_TILE` maps each sub-category to a tile, and
+  `scripts/category-image-slots-check.mjs` fails on a missing one.
+- **Cards show real views, never "sold" (Mitra, 2026-10-17).** Sales happen off Cosora. `products.views_count`, one
+  per listing, viewer and day (`increment_product_view`).
+- **Each garment type has its own sizes (Mitra, 2026-10-17).** `data/sizeCharts.ts` holds the sets the upload form
+  offers and the chart buyers read; a new garment sub-category gets a set and a chart, not letter sizes.
+- **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** Since 2026-10-17 an RFQ is
+  reviewed before it is live (above); after that, admins act after the fact. `admin_lead_remove(rfq, reason)`
   (super_admin, product_moderator; reason required) sets `closed` plus `removed_at`,
   `removed_by`, `removed_reason`, and the buyer sees "Removed by Cosora" and the reason in My
   Quotes. `trg_rfqs_removal_guard` freezes a removed RFQ for every browser client, the buyer

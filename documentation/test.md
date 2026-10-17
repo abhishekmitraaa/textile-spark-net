@@ -205,6 +205,31 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — Mitra's ten bugs (local stack: 61/61 in one run; new specs ×3)
+
+- `tests/local/batch-a.spec.ts` (4): the reel on a touch phone with a non-mobile user agent: nothing selectable, a
+  long press opens no menu, Call Now's dialog drawn above the reel (z-index; **fails on the old dialog: 50 vs 80**),
+  the reel works after it; the store-page card isn't a link; "This listing isn't available right now"; a mouse drag
+  changes video. Store banner at 320 / 390 / 1280 with a long name (no overflow, ≥ 208 px). One picture: an admin
+  picture for Menswear › Shirts shows on /categories, New Arrivals, the store and Trends; the store's categories
+  are its listings' (Shirts ×2 then Dresses) and filter its items. A sponsored rail: plain heading, gray-500 "Ad".
+- `views.spec.ts`: two tabs of one browser = 1 view, another browser = 2, a signed-in account = 3; five calls with
+  one key = +1; keyless calls +1 a day; bad keys and a draft listing don't count; the ledger isn't readable; the
+  store card shows "5 views", no "sold".
+- `sizes-media.spec.ts`: Apparel › Bras offers 32B, not 5XL; SKU, unit, a PDF (a PNG renamed .pdf refused) and a
+  recorded WebM stored (video as an under-review Video Closeup); edit offers the bra sizes; the admin's Review
+  details shows category, price, description, sizes, SKU, all colours, PDF, video, picture, and approves; the
+  buyer's Size chart marks bands 32 and 34 and the PDF is listed.
+- `rfq-review.spec.ts`: sellers listing aren't offered Others; an Others requirement → "Sent for review… 3–5
+  minutes", pending, no rfqs row, "Under review" in My Quotes; an open insert into rfqs and a self-approved
+  submission refused; support can't review, a moderator can't write reasons, a manager can; rejected with a
+  manager's reason + note → notification, My Quotes reason, bell "1 unread", /notifications; a second approved →
+  an rfqs row in Others, an unrelated seller matched and able to read it, "Your requirement is live".
+- Updated: buyer-minor-fixes (one picture per category; paid slides found by Visit), cat-pics-reports-jpeg,
+  buyer-minor-fixes-b and ranking-f1 (submissions; the requirement page's "Save" had become "Continue").
+- tsc both repos, i18n 7,950/7,950, slot check (182 seller sub-categories), seller fields 182, rls check 0, eslint on
+  changed files, both builds.
+
 ### 2026-10-17 — A reel opened from My Saves (local stack: browser 2/2 three runs; video-share 1/1)
 
 - `tests/local/video-closeups.spec.ts`, My Saves part: the reel's own load of saved state is held back 3 s (a route
