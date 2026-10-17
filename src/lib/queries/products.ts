@@ -442,9 +442,9 @@ export async function recordProductEnquiry(id: string): Promise<void> {
 
 // ─────────────────────────────────────────────────────────────
 // Recommendation strips (ProductDetail: "You might also like" / "Brand Picks").
-// Rule-based only — category match + same-vendor, no scoring/personalization —
-// ordered by real engagement: enquiries_count first (a genuine signal now that
-// it's incremented on real buyer contact), views_count as the tiebreak.
+// "You might also like" is by embedding similarity (related_products), ties on
+// recent demand; Brand Picks are the same seller's listings most in demand
+// recently (product_trend). Neither reads the all-time enquiries/views counters.
 // Only ever returns `live` products (RLS + explicit filter), never the current
 // product, and never pads: a sparse category/vendor simply yields fewer rows.
 // ─────────────────────────────────────────────────────────────
@@ -497,22 +497,21 @@ async function fetchRelatedProducts(currentId: string, limit: number): Promise<P
 }
 
 async function fetchVendorOtherProducts(vendorId: string, excludeId: string, limit: number): Promise<ProductCardData[]> {
-  // The seller's listings most in demand recently (2026-10-17: it ordered on all-time enquiries and views, which
-  // could be pumped before the counters were hardened). The newest 60 are scored here; a seller rarely has more.
+  // The seller's listings most in demand recently, then best-rated, then newest (2026-10-17: it ordered on all-time
+  // enquiries and views, which could be pumped before the counters were hardened). Ranked by the server over all
+  // the seller's listings (PostgREST orders by the one-to-one product_trend embed), not just the newest few.
   const { data, error } = await supabase
     .from("products")
     .select(`${PRODUCT_CARD_SELECT}, product_trend ( log2_score )`)
     .eq("status", "live")
     .eq("vendor_id", vendorId)
     .neq("id", excludeId)
+    .order("product_trend(log2_score)", { ascending: false, nullsFirst: false })
+    .order("rating_avg", { ascending: false, nullsFirst: false })
     .order("created_at", { ascending: false })
-    .limit(60);
+    .limit(limit);
   if (error) throw error;
-  const rows = ((data ?? []) as unknown as (RawProduct & { product_trend: { log2_score: number } | null })[])
-    .map((r, i) => ({ r, d: r.product_trend?.log2_score ?? DEMAND_NONE, i }))
-    .sort((a, b) => b.d - a.d || a.i - b.i)
-    .slice(0, limit)
-    .map((x) => x.r);
+  const rows = (data ?? []) as unknown as RawProduct[];
   const vendorMap = await vendorMapFor([vendorId]);
   return rows.map((r) => mapProductRow(r, vendorMap.get(r.vendor_id)));
 }

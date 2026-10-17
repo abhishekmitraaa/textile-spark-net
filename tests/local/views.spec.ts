@@ -165,14 +165,20 @@ test("Brand Picks put the seller's listings most in demand recently first", asyn
   const viewed = make(`BP ${tag} viewed`);
   const asked = make(`BP ${tag} asked`);
   sql(`select public.add_listing_demand('${viewed}', 3); select public.add_listing_demand('${asked}', 10);`);
+  // The asked listing is the seller's oldest, behind 70 newer ones with no demand: ranking over only the newest
+  // few (it once scored the newest 60) would miss it.
+  sql(`update public.products set created_at = now() - interval '1 year' where id = '${asked}';
+       insert into public.products (vendor_id, name, status, price_value, moq)
+       select '${s.id}', 'BP ${tag} filler ' || g, 'live', 300, '10' from generate_series(1, 70) g;`);
   void old;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/product/${anchor}`);
   await expect(page.getByRole("heading", { name: /Brand Picks/ })).toBeVisible({ timeout: 30_000 });
-  const cards = page.getByRole("link", { name: new RegExp(`BP ${tag} (asked|viewed|old)`) });
-  await expect(cards).toHaveCount(3);
+  const cards = page.getByRole("link", { name: new RegExp(`BP ${tag} (asked|viewed|old|filler)`) });
+  await expect(cards.first()).toBeVisible();
   const order = await cards.evaluateAll((els) => els.map((e) => [e.getAttribute("aria-label"), e.textContent, ...Array.from(e.querySelectorAll("img"), (i) => i.alt)].join(" ")));
-  expect(order.map((t) => t.match(/(asked|viewed|old)/)![1])).toEqual(["asked", "viewed", "old"]);
+  // Recent demand first; the listing with 999 enquiries / 9,999 views of all-time but none recently isn't ahead.
+  expect(order.slice(0, 2).map((t) => t.match(/(asked|viewed|old|filler)/)![1])).toEqual(["asked", "viewed"]);
   await ctx.close();
 });

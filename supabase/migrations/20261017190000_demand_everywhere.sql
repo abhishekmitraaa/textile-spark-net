@@ -22,8 +22,18 @@
 --  * All eight rankings join product_trend set-wise (no per-row call); listing_trend_score is dropped.
 --  * Ties on no recent demand go to the best-rated, then the newest (trending, spotlight, featured, For You's
 --    last tier), and the docs say "most in demand recently", not "most popular".
--- Bodies = production's of 2026-10-17 (md5 in the session notes); only the marked ranking parts change.
+-- Bodies = production's of 2026-10-17; only the marked ranking parts change. md5(pg_get_functiondef) before:
+--   feed_products 1dc45202, spotlight_listings 24dd5b92, admin.featured_candidates 3704d70a, new_brand_suggestions
+--   2a83fcef, search_suggestions 9b2704d7, related_products c5a02355, for_you_products 6e94115c, match_products
+--   e2ae54d2, add_listing_demand 25db20b2, listing_trend_score 5dc4d288. Re-check them before applying; keep their
+--   pg_get_functiondef output as the rollback (with `score = power(2, log2_score)`, the 180000 grants and policy).
+-- Order: apply this BEFORE the app that embeds product_trend (catalogue, Brand Picks): before it, clients can't read
+-- the table and those requests fail. The app before it never reads product_trend, so applying first is safe.
 -- ─────────────────────────────────────────────────────────────────────────────
+
+-- product_trend is locked (ACCESS EXCLUSIVE) from its first ALTER to commit; fail fast rather than queue every
+-- view and feed call behind a long reader.
+set local lock_timeout = '5s';
 
 -- ── The arithmetic, in one place ─────────────────────────────────────────────
 create or replace function public.demand_age_halflives(p_at timestamptz)
@@ -54,13 +64,23 @@ as $function$
   select case
            when a is null or a = '-infinity'::double precision then b
            when b is null or b = '-infinity'::double precision then a
+           -- Past 2^-1000 the smaller term adds nothing a double can hold, and power() would raise an underflow
+           -- (a listing idle ~20 years could then never count again): keep the larger.
+           when least(a, b) - greatest(a, b) < -1000 then greatest(a, b)
            else greatest(a, b) + ln(1 + power(2.0, least(a, b) - greatest(a, b))) / ln(2.0)
          end;
 $function$;
 
 -- ── The table: log2 of the decayed sum ───────────────────────────────────────
 alter table public.product_trend add column if not exists log2_score double precision;
-update public.product_trend set log2_score = ln(score) / ln(2.0) where score > 0;
+do $$
+begin
+  -- Only while `score` exists, so the migration can run again.
+  if exists (select 1 from information_schema.columns
+              where table_schema = 'public' and table_name = 'product_trend' and column_name = 'score') then
+    update public.product_trend set log2_score = ln(score) / ln(2.0) where score > 0;
+  end if;
+end $$;
 delete from public.product_trend where log2_score is null;
 alter table public.product_trend alter column log2_score set not null;
 alter table public.product_trend drop column if exists score;
@@ -95,7 +115,8 @@ language sql
 stable
 set search_path = ''
 as $function$
-  select coalesce((select power(2.0, t.log2_score - public.demand_age_halflives(now()))
+  select coalesce((select case when t.log2_score - public.demand_age_halflives(now()) < -1000 then 0
+                                else power(2.0, t.log2_score - public.demand_age_halflives(now())) end
                      from public.product_trend t where t.product_id = p), 0);
 $function$;
 
@@ -406,7 +427,7 @@ AS $function$
       and (select embedding from cur) is null
       and p.category_id is not null
       and p.category_id = (select category_id from cur)
-    order by coalesce(tr.log2_score, '-infinity'::double precision) desc, p.id
+    order by coalesce(tr.log2_score, '-infinity'::double precision) desc, p.rating_avg desc nulls last, p.created_at desc, p.id
     limit match_count
   )
   select * from vec
@@ -449,7 +470,7 @@ begin
 
   -- The `exists` is not redundant with `v_emb is not null`. A taste vector is
   -- built from the buyer's history, which may point at products that are no
-  -- longer live â€” so a non-null vector does not by itself guarantee there is
+  -- longer live — so a non-null vector does not by itself guarantee there is
   -- anything rankable. Checking here, rather than after the fact, is what keeps
   -- the never-empty guarantee true without relying on FOUND/ROW_COUNT
   -- behaviour after RETURN QUERY.
@@ -619,7 +640,8 @@ begin
     'public.spotlight_listings(uuid,text,integer)', 'admin.featured_candidates(uuid[],text,text,text,uuid)',
     'public.new_brand_suggestions(integer)', 'public.search_suggestions(text,integer)', 'public.related_products(uuid,integer)',
     'public.for_you_products(uuid,integer)', 'public.match_products(text,halfvec,integer,double precision,double precision)'] loop
-    if pg_get_functiondef(f::regprocedure) ~ '(enquiries_count|views_count|sold_count)[^,]*\m(desc|asc)\M' then
+    -- Any all-time counter inside an ORDER BY / PARTITION BY (with or without a direction), up to its end.
+    if pg_get_functiondef(f::regprocedure) ~* '\m(order|partition) by\M(?:(?!\mlimit\M|\mselect\M|\mfrom\M|\mwhere\M|;)[^\n]|\n)*?\m(enquiries_count|views_count|sold_count)\M' then
       raise exception 'self-check: % still orders on an all-time counter', f;
     end if;
     if pg_get_functiondef(f::regprocedure) !~ 'product_trend tr on tr.product_id' then
@@ -631,12 +653,20 @@ begin
     raise exception 'self-check: old product_trend columns left';
   end if;
   if not has_column_privilege('anon', 'public.product_trend', 'log2_score', 'select')
-     or has_table_privilege('authenticated', 'public.product_trend', 'insert')
-     or has_table_privilege('authenticated', 'public.product_trend', 'update') then
+     or exists (select 1 from unnest(array['anon', 'authenticated']) r, unnest(array['insert', 'update', 'delete', 'truncate']) pv
+                 where has_table_privilege(r, 'public.product_trend', pv)) then
     raise exception 'self-check: product_trend grants are wrong';
+  end if;
+  -- SQL functions don't depend on what they call, so dropping listing_trend_score can't fail on a caller left behind.
+  if exists (select 1 from pg_proc where prosrc ~ 'listing_trend_score') then
+    raise exception 'self-check: a function still calls listing_trend_score';
   end if;
   if has_function_privilege('authenticated', 'public.add_listing_demand(uuid,double precision,timestamp with time zone)', 'execute') then
     raise exception 'self-check: clients can add demand';
+  end if;
+  -- Adding to a score ~20+ years older keeps the newer one (no underflow error).
+  if public.demand_log_add(0, 2000) <> 2000 or public.demand_log_add(2000, 0) <> 2000 then
+    raise exception 'self-check: demand addition underflows';
   end if;
   -- log-sum-exp keeps the sum: 3 + 5 = 8 in today's units.
   if abs(public.demand_log_add(public.demand_log_of(3, now()), public.demand_log_of(5, now())) - public.demand_log_of(8, now())) > 1e-9 then

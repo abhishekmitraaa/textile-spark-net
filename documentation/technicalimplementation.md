@@ -2181,12 +2181,12 @@ Migrations `20261017100000_universal_pictures_jpeg_only`, `…110000_product_vie
   only for a new row; purges days before yesterday on ~1 call in 500 (no new cron). `feed_products` gained
   `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking (`20261017180000`, `…190000`):
   `product_trend.log2_score` = log2 Σ w·2^(demand_age_halflives(at)); `add_listing_demand` adds with
-  `demand_log_add` (log-sum-exp), `demand_log_of(w, at)`; `listing_demand_now(p)` = 2^(log2_score − age(now)).
+  `demand_log_add` (log-sum-exp), keeping the larger past a 2^-1000 gap (no underflow), `demand_log_of(w, at)`; `listing_demand_now(p)` = 2^(log2_score − age(now)).
   Rankings `left join public.product_trend tr` and order on `coalesce(tr.log2_score, '-infinity')`: feed_products
   (trending, then rating_avg), spotlight_listings, admin.featured_candidates, new_brand_suggestions,
   search_suggestions, related_products, for_you_products, match_products. product_trend readable by anon/authenticated
   for live listings (column grant + RLS), written only by add_listing_demand (revoked from clients). App: catalogue
-  rows embed `product_trend ( log2_score )` (Popularity sort), Brand Picks score the seller's newest 60. Signed-out
+  rows embed `product_trend ( log2_score )` (Popularity sort), Brand Picks order on the embed server-side (`order=product_trend(log2_score)`). Signed-out
   "Chat directly" → `cosora.pendingEnquiries` (sessionStorage, per listing, ≤ 10, < 24 h) → counted when a
   signed-in buyer opens `/chats/<that seller>`.
 - **Sizes.** `data/sizeCharts.ts`: sets (`BRA_SIZES`, `ADULT_SHOE_SIZES`, …), `SIZE_CHARTS`, `SIZE_CHART_BY_SUB`

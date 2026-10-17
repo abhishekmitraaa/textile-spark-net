@@ -207,6 +207,14 @@ file was created; they record real runs, but only those the changelog captured.
 
 ### 2026-10-17 — The second 10 code-review findings (local stack)
 
+- After the branch review: migration re-applied over itself (re-runnable), self-checks pass; the stronger counter
+  check matches `order by p.views_count, p.id`, multi-line and upper-case orderings and not a counter selected after
+  an ORDER BY; `demand_log_add(0, 2000)` = 2000 (was an underflow error). Feeds harness 24/24 with recent demand on
+  80% of 100k listings ("trending + gender" 34 ms). P10, rank_real_demand, demand_counters PASS. views.spec: a
+  malformed `/chats/%E0%A4%A` reached in the app doesn't crash it (fails on the previous hook: "URI malformed"); Brand
+  Picks find the seller's oldest listing behind 70 newer ones (fails on the newest-60 version). 32/32 with the other
+  ranking and listing specs; tsc, eslint, build.
+
 - Feeds harness 24/24 with the trending check rewritten for (boost, recent demand); "trending + gender" 55 ms
   (budget 150) over 100k listings with the join.
 - P10 harness 13/13 with demand seeded; a copy giving the demand to the "other" listing fails both demand checks

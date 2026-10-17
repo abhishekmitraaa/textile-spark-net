@@ -15,6 +15,12 @@ select gen_random_uuid(), v.id, 'feedh ' || g, 'live', 100 + g, case when g % 5 
   from v, generate_series(1, 100) g;
 insert into public.products (vendor_id, name, status, price_value, created_at)
 select (select id from public.vendor_profiles order by id limit 1), 'feedh hidden draft', 'under_review', 1, now();
+-- Recent demand on 80% of them (events up to 30 days old), so the trending check and its timing meet real scores.
+insert into public.product_trend (product_id, log2_score)
+select id, public.demand_log_of(1 + random() * 100, now() - random() * interval '30 days')
+  from public.products where name like 'feedh %' and status = 'live' and random() < 0.8
+on conflict (product_id) do nothing;
+analyze public.product_trend;
 update public.vendor_profiles set plan_id = 'gold', plan_expires_at = now() + interval '30 days'
  where id in (select id from public.vendor_profiles order by id limit 50);
 update public.vendor_profiles set plan_id = 'gold', plan_expires_at = now() - interval '1 day'
