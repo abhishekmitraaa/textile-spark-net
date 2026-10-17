@@ -205,6 +205,20 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-18 — The second 10 code-review findings, live
+
+- Before: the 10 production functions matched the bodies read (1dc45202, 24dd5b92, 3704d70a, 2a83fcef, 9b2704d7,
+  c5a02355, 6e94115c, e2ae54d2, 25db20b2, 5dc4d288); `product_trend` had `score, updated_at` and 0 rows (the 26
+  view-ledger rows are all 2026-10-17, signed out, before demand was counted); main `4c51055`. Their definitions were
+  saved for a rollback. Applied `20261017190000` with the CLI in one transaction, self-checks passed.
+- After: `product_trend` = `product_id, log2_score`; `listing_trend_score` gone; visitors read scores, can't write
+  them or add demand; policy `product_trend_read`; 8 rankings join it; `demand_log_add(0, 2000)` = 2000. A signed-out
+  view in a rolled-back transaction added exactly 0.25; signed-out trending 24 rows, a search 4.
+- Live (www.cosora.in, phone size, signed out, the view counter blocked so no views were added): /home/trends 48
+  listing links, /home/new-arrivals 62, search "cotton" 46, browse 54, a product page with Brand Picks and "You might
+  also like" (its `product_trend` embed answered); 0 page errors, 0 failed Supabase calls; every page settles within
+  10 s (no refetch loop). Two seeded Unsplash demo pictures 404 (data, not this release).
+
 ### 2026-10-17 — The second 10 code-review findings (local stack)
 
 - After the branch review: migration re-applied over itself (re-runnable), self-checks pass; the stronger counter
