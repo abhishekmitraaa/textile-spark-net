@@ -198,7 +198,7 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
-### Changed 2026-10-17 (ten fixes; built, not live)
+### Changed 2026-10-17 (ten fixes; live 2026-10-17)
 - **Video Closeups** work on every phone: nothing selects, Call Now's number appears above the reel, a video whose
   listing isn't available says so, and on a seller's own store the card doesn't pretend to open it.
 - **Category pictures** are the same everywhere (Categories, New Arrivals, a store's categories, Trends) and follow

@@ -205,6 +205,29 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
+### 2026-10-17 — Mitra's ten bugs, live on production (www.cosora.in, iPhone 13 size; demo accounts, logins from `.env`)
+
+- **Before:** origin/main buyer `8b095ac`, admin `d9aa30e`; the 7 production functions replaced matched the bodies read
+  (md5 prefixes in the session notes); no New Arrivals picture set; new tables absent. Auto mode refused the first
+  apply; applied after Mitra turned it off.
+- **Applied** `20261017100000`–`140000` with the CLI, each in one transaction, self-checks passing; checked after: 179
+  category slots and none for New Arrivals, JPEG-only path check, `increment_product_view(uuid, text)`, `feed_products`
+  with `views_count` (anon may call), 28 apparel sub-categories, `product-files` PDF 10 MB, 6 reasons, Others (Custom),
+  `rfqs_insert` needs `vendor_id`, both guards, `admin_rfq_review` closed to anon, fan-out knows Others.
+- **Deploys:** buyer bundle `index-DI1mIja4.js`, admin `index-Bluh8V6q.js`.
+- **Blog pictures:** 9 PNG/WebP (7 in hero/og/blocks, 2 inside two posts' body text) re-encoded to JPEG (wide ones
+  to 1920 px), uploaded beside them, every reference switched (none left), the old 9 removed.
+- **Signed out:** New Arrivals shows 12 /categories JPEG tiles and no "sold"; Trends made 0 picsum requests; the reel
+  is unselectable and the video tagged to a rejected listing says it isn't available; a store's banner 366×252 with
+  no sideways scroll, its categories from its listings, no bundled cut-outs; 0 page errors.
+- **demo-buyer:** an Others (Custom) requirement "[Cosora test …] live check, please ignore" → "Sent for review …
+  usually 3–5 minutes", a pending submission, nothing in rfqs; the bell is there (it showed 23 unread: notifications
+  buyers could not see before). **demo-admin:** it appears in Requirements (nav count 1); Not approved with a reason
+  and the note "Cosora test, not a real requirement."; Products › Review details opens. The buyer is notified and My
+  Quotes shows "Not approved" with the reason (screenshot; the script's two My Quotes checks read the page before it
+  loaded and reported a failure). The rejected test requirement stays as a record; nothing was approved (that alerts
+  real sellers). 0 page errors.
+
 ### 2026-10-17 — Mitra's ten bugs (local stack: 61/61 in one run; new specs ×3)
 
 - `tests/local/batch-a.spec.ts` (4): the reel on a touch phone with a non-mobile user agent: nothing selectable, a
