@@ -13,7 +13,8 @@ export interface ListingProduct {
   price: string;
   priceValue: number; // numeric, for sorting
   moq: string;
-  soldCount: string;
+  /** "1.2k views" or null (2026-10-17: was "N+ sold"). */
+  views: string | null;
   enquiries: string;
   rating: number;
   fabric: string;
@@ -55,7 +56,7 @@ export function makeListingProduct(
     price: price.label,
     priceValue: price.value,
     moq: "MOQ: 2",
-    soldCount: "800+ sold",
+    views: null,
     enquiries: hash % 2 === 0 ? "5.6k" : "1.6k",
     rating: Math.min(rating, 4.9),
     fabric: "Cotton",

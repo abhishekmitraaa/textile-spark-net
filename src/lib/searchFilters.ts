@@ -232,7 +232,8 @@ const DOMAINS: Domain[] = [
     keywords: ["bra", "panty", "panties", "innerwear", "lingerie", "brief", "vest", "shapewear", "camisole"],
     build: () => [gender(["Men", "Women", "Kids", "Unisex"]), fabric(["Cotton", "Modal", "Nylon", "Lace", "Microfiber"]),
       type("Type", ["T-shirt Bra", "Padded", "Non-Padded", "Sports", "Brief", "Boxer", "Vest"]),
-      { id: "size", label: "Size", options: ["S", "M", "L", "XL", "XXL"] },
+      // Real sizes since 2026-10-17 (bras by band and cup, briefs by letter): the listings' own sizes[].
+      sizes(["bras", "briefs-panties", "lingerie-sets", "shapewear", "mens-innerwear"]),
       { id: "pack", label: "Pack Size", options: ["Single", "Pack of 2", "Pack of 3", "Pack of 5"] },
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
@@ -243,7 +244,8 @@ const DOMAINS: Domain[] = [
       type("Type", ["Sneakers", "Sandals", "Loafers", "Formal", "Boots", "Slippers", "Flip-Flops", "Sports"]),
       { id: "material", label: "Material", options: ["Leather", "Synthetic", "Canvas", "Rubber", "Mesh", "Suede"] },
       { id: "sole", label: "Sole", options: ["Rubber", "EVA", "PU", "TPR", "Air"] },
-      { id: "size", label: "Size (UK)", options: ["UK 5", "UK 6", "UK 7", "UK 8", "UK 9", "UK 10", "UK 11"] },
+      // UK / India sizes from the listings (Footwear's free-text sizes became chips, 2026-10-17).
+      sizes(["footwear", "mens-footwear", "womens-footwear", "kids-footwear"]),
       COLOUR, PRICE, MOQ, RATING, VERIFIED],
   },
   {
@@ -425,10 +427,9 @@ export function resolveFilterSchema(query: string): FilterSchema {
 //   material  (bags / trims / packaging / footwear / home textiles) — collected
 //             per subcategory in sellerCategories but never persisted; would
 //             need a products.material column.
-//   size      (innerwear / footwear UK / packaging / trims) — Footwear and
-//             Other Ready-made Garments declare `sizes` as free TEXT, so it
-//             cannot feed the sizes[] column. Fixing needs those two converted
-//             to size-selector.
+//   size      (packaging / trims / bags / home textiles) — sizes that aren't
+//             garment sizes. Innerwear and footwear filter on the real sizes[]
+//             since 2026-10-17 (both became size-selectors).
 //   length    (dress / skirt hem length) — distinct from bottomwear inseam,
 //             which is real (products.lengths). No garment_length column yet.
 //   wash      (jeans) — options now come from the vendor list, but Men's Jeans

@@ -795,3 +795,52 @@ export function probeVideoFile(file: File, timeoutMs = 3000): Promise<VideoProbe
     el.src = url;
   });
 }
+
+/**
+ * The checks a vendor's clip must pass before it uploads, shared by Video Closeups and the product form
+ * (2026-10-17: the product form's "Add Video" uploaded nothing). MP4 or WebM by declared type AND by its bytes,
+ * at most MAX_VIDEO_BYTES, a readable length of at most MAX_VIDEO_SECONDS. Throws an Error whose message is the
+ * headline and whose `detail` is the line under it.
+ */
+export async function validateVideoFile(file: File): Promise<VideoProbe> {
+  const fail = (message: string, detail: string): never => {
+    throw Object.assign(new Error(message), { detail });
+  };
+  if (!(ACCEPTED_VIDEO_MIME as readonly string[]).includes(file.type)) {
+    fail("Please upload an MP4 or WebM file", "On iPhone, share the clip as \"Most Compatible\" to get an MP4.");
+  }
+  if (file.size > MAX_VIDEO_BYTES) {
+    fail(`Video must be under ${Math.round(MAX_VIDEO_BYTES / (1024 * 1024))} MB`, "Shorter clips load far faster for buyers.");
+  }
+  const container = await sniffVideoContainer(file);
+  if (container !== (file.type === "video/webm" ? "webm" : "mp4")) {
+    fail(container === "quicktime" ? "This is a QuickTime (.mov) file renamed to .mp4" : "This file isn't really an MP4 or WebM",
+      "Re-export it as an MP4 (H.264) and try again.");
+  }
+  const probe = await probeVideoFile(file);
+  if (!probe) fail("Couldn't read this video's length", `Re-export it as an MP4 (H.264): a clip must be ${MAX_VIDEO_SECONDS} seconds or shorter.`);
+  if (probe!.durationSeconds > MAX_VIDEO_SECONDS) {
+    fail(`Clip must be ${MAX_VIDEO_SECONDS} seconds or shorter`, `This one is ${Math.round(probe!.durationSeconds)}s.`);
+  }
+  return probe!;
+}
+
+/** A listing's live videos (Video Closeups tagged to it), for its own page's carousel. */
+export function useListingVideos(productId: string | null | undefined) {
+  return useQuery({
+    queryKey: ["product_videos", "listing", productId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("product_videos")
+        .select("id, video_url, thumbnail_url")
+        .eq("product_id", productId as string)
+        .eq("status", "live")
+        .order("created_at", { ascending: true })
+        .limit(3);
+      if (error) throw error;
+      return (data ?? []).filter((v) => v.video_url) as { id: string; video_url: string; thumbnail_url: string | null }[];
+    },
+    enabled: Boolean(productId),
+    staleTime: 5 * 60_000,
+  });
+}

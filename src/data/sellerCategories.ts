@@ -1,3 +1,9 @@
+import {
+  LETTER_SIZES, WAIST_SIZES, LENGTHS, KIDS_SIZES, SHIRT_COLLAR_SIZES, BRA_SIZES, LINGERIE_LETTER_SIZES,
+  MENS_INNERWEAR_SIZES, ADULT_SHOE_SIZES, KIDS_SHOE_SIZES, SAREE_SIZES, LEHENGA_WAIST_SIZES, SKIRT_LENGTHS,
+  PETTICOAT_SIZES, SOCK_SIZES, CAP_SIZES, GLOVE_SIZES, BELT_SIZES,
+} from "@/data/sizeCharts";
+
 // Seller Categories Data Structure for Cosora B2B Marketplace
 
 export type FieldType = "text" | "number" | "select" | "multiselect" | "textarea" | "checkbox" | "size-selector" | "color-picker";
@@ -36,11 +42,12 @@ export interface SellerCategory {
   commonFields?: FormField[];
 }
 
-// Size options for different garment types
-const standardSizes = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL", "Plus Size", "Free Size"];
-const pantWaistSizes = ["28", "30", "32", "34", "36", "38", "40", "42", "44", "46"];
-const pantLengths = ["28", "30", "32", "34", "36", "38", "40"];
-const kidsSizes = ["0-3M", "3-6M", "6-12M", "1-2Y", "2-3Y", "3-4Y", "4-5Y", "5-6Y", "6-7Y", "7-8Y", "8-10Y", "10-12Y", "12-14Y"];
+// Size options for different garment types: data/sizeCharts.ts, which also holds the chart buyers read for each
+// (2026-10-17: bras, panties, shoes, sarees, socks and caps had no sizes of their own).
+const standardSizes = LETTER_SIZES;
+const pantWaistSizes = WAIST_SIZES;
+const pantLengths = LENGTHS;
+const kidsSizes = KIDS_SIZES;
 const originCountries = ["India", "China", "Vietnam", "Bangladesh", "Turkey", "Pakistan", "Indonesia", "Sri Lanka"];
 const fashionGenderOptions = ["Men", "Women", "Unisex", "Boys", "Girls", "Kids", "Baby"];
 const fashionOccasionOptions = ["Casual", "Formal", "Sports", "Party", "Beach", "Festive", "Gym Wear", "Work"];
@@ -127,14 +134,14 @@ export const sellerCategories: SellerCategory[] = [
           { id: "material", label: "Material", type: "select", options: ["Genuine Leather", "Faux Leather", "Canvas", "Fabric", "Braided"], required: true },
           { id: "buckleType", label: "Buckle Type", type: "select", options: ["Pin Buckle", "Auto Lock", "Plate Buckle", "Box Frame", "Slide Buckle"], required: true },
           { id: "width", label: "Width (mm)", type: "select", options: ["25", "30", "35", "40", "45"] },
-          { id: "sizes", label: "Available Sizes", type: "size-selector", options: ["28", "30", "32", "34", "36", "38", "40", "42", "44", "Free Size"] },
+          { id: "sizes", label: "Available Sizes (waist, in)", type: "size-selector", options: BELT_SIZES },
           { id: "colors", label: "Available Colors", type: "multiselect", options: ["Black", "Brown", "Tan", "Cognac", "Navy", "Burgundy"] },
         ]
       },
       { id: "caps-hats", name: "Caps & Hats", fields: [
         { id: "type", label: "Type", type: "select", options: ["Baseball Cap", "Beanie", "Fedora", "Bucket Hat", "Visor", "Snapback", "Trucker", "Sun Hat"] },
         { id: "material", label: "Material", type: "select", options: ["Cotton", "Polyester", "Wool", "Acrylic", "Straw", "Denim"] },
-        { id: "sizes", label: "Sizes", type: "size-selector", options: ["S", "M", "L", "XL", "Free Size"] },
+        { id: "sizes", label: "Sizes (head)", type: "size-selector", options: CAP_SIZES },
         { id: "colors", label: "Colors", type: "multiselect", options: ["Black", "White", "Navy", "Grey", "Beige", "Red", "Blue", "Green"] },
       ]},
       { id: "scarves-stoles", name: "Scarves & Stoles", fields: [
@@ -162,13 +169,13 @@ export const sellerCategories: SellerCategory[] = [
       { id: "socks", name: "Socks", fields: [
         { id: "sockType", label: "Type", type: "select", options: ["Ankle", "No-show", "Crew", "Knee-high", "Compression", "Sports"] },
         { id: "material", label: "Material", type: "select", options: ["Cotton", "Wool", "Bamboo", "Polyester Blend", "Nylon"] },
-        { id: "sizes", label: "Sizes", type: "size-selector", options: ["Free Size", "S", "M", "L", "XL"] },
+        { id: "sizes", label: "Sizes (by shoe size)", type: "size-selector", options: SOCK_SIZES },
         { id: "packOf", label: "Pack Of", type: "select", options: ["1", "3", "5", "6", "12"] },
       ]},
       { id: "gloves", name: "Gloves", fields: [
         { id: "gloveType", label: "Type", type: "select", options: ["Winter", "Driving", "Fashion", "Work", "Sports", "Touch Screen"] },
         { id: "material", label: "Material", type: "select", options: ["Leather", "Wool", "Cotton", "Fleece", "Synthetic"] },
-        { id: "sizes", label: "Sizes", type: "size-selector", options: ["S", "M", "L", "XL", "Free Size"] },
+        { id: "sizes", label: "Sizes", type: "size-selector", options: GLOVE_SIZES },
       ]},
     ],
     commonFields: [],
@@ -494,7 +501,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "sleeveType", label: "Sleeve Type", type: "select", options: ["Full Sleeve", "Half Sleeve", "Rolled Up"], required: true },
         { id: "fit", label: "Fit Type", type: "select", options: ["Regular", "Slim", "Tailored", "Relaxed"], required: true },
         { id: "cuffType", label: "Cuff Type", type: "select", options: ["Button Cuff", "French Cuff", "Convertible"] },
-        { id: "sizes", label: "Available Sizes", type: "size-selector", options: ["38", "39", "40", "41", "42", "43", "44", "46", "48"], required: true, fullWidth: true },
+        { id: "sizes", label: "Available Sizes (collar)", type: "size-selector", options: SHIRT_COLLAR_SIZES, required: true, fullWidth: true },
         { id: "pattern", label: "Pattern", type: "multiselect", options: ["Solid", "Striped", "Checked", "Printed", "Dobby", "Self Textured"] },
         { id: "occasion", label: "Occasion", type: "multiselect", options: ["Formal", "Semi-formal", "Casual", "Party", "Wedding", "Gym Wear"], fullWidth: true },
         { id: "washCare", label: "Wash Care", type: "multiselect", options: ["Machine Wash", "Hand Wash", "Dry Clean", "Iron Medium"], fullWidth: true },
@@ -580,7 +587,7 @@ export const sellerCategories: SellerCategory[] = [
         { id: "gender", label: "Gender", type: "select", options: ["Men", "Women", "Unisex", "Kids"], required: true },
         { id: "upperMaterial", label: "Upper Material", type: "select", options: ["Leather", "Synthetic", "Canvas", "Mesh", "Suede", "PU"], required: true },
         { id: "soleMaterial", label: "Sole Material", type: "select", options: ["Rubber", "PU", "TPR", "EVA", "Leather", "Phylon"] },
-        { id: "sizes", label: "UK Sizes Available", type: "text", placeholder: "e.g., UK 6-11", required: true },
+        { id: "sizes", label: "Sizes (UK / India)", type: "size-selector", options: [...ADULT_SHOE_SIZES, ...KIDS_SHOE_SIZES.filter((k) => k.endsWith("K"))], required: true, fullWidth: true },
         { id: "occasion", label: "Occasion", type: "multiselect", options: ["Casual", "Formal", "Sports", "Party", "Outdoor", "Gym Wear"], fullWidth: true },
         { id: "colors", label: "Colors Available", type: "text", placeholder: "e.g., Black, Brown, White, Navy" },
       ]},
@@ -616,11 +623,94 @@ export const sellerCategories: SellerCategory[] = [
         { id: "closure", label: "Closure", type: "select", options: ["Zip", "Button", "Snap", "Pullover", "Open Front"] },
         { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
       ]},
+      // Garments with sizing of their own (2026-10-17, Mitra: "a bra size chart has S, M… and not the size chart
+      // normally used"). Each has a public.categories row (migration 20261017120000) and a chart in
+      // data/sizeCharts.ts.
+      { id: "bras", name: "Bras", fields: [
+        { id: "braType", label: "Bra Type", type: "select", options: ["T-Shirt Bra", "Push-Up", "Padded", "Non-Padded", "Sports Bra", "Bralette", "Strapless", "Minimiser", "Nursing", "Teen/Beginner"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Cotton-Spandex", "Nylon-Spandex", "Lace", "Microfibre", "Modal", "Satin"], required: true },
+        { id: "wiring", label: "Wiring", type: "select", options: ["Wired", "Non-Wired"] },
+        { id: "coverage", label: "Coverage", type: "select", options: ["Full", "Medium", "Demi", "Plunge"] },
+        { id: "braClosure", label: "Closure", type: "select", options: ["Back Hook", "Front Open", "Slip-On"] },
+        { id: "sizes", label: "Available Sizes (band and cup)", type: "size-selector", options: BRA_SIZES, required: true, fullWidth: true },
+      ]},
+      { id: "briefs-panties", name: "Briefs & Panties", fields: [
+        { id: "style", label: "Style", type: "select", options: ["Hipster", "Bikini", "Brief", "Boyshort", "Thong", "High-Waist", "Period Panty", "Maternity"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Cotton-Spandex", "Modal", "Microfibre", "Lace", "Bamboo"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: LINGERIE_LETTER_SIZES, required: true, fullWidth: true },
+        { id: "packOf", label: "Pack Of", type: "select", options: ["1", "2", "3", "5", "6", "10", "12"] },
+      ]},
+      { id: "lingerie-sets", name: "Lingerie Sets", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["Lace", "Cotton", "Satin", "Mesh", "Microfibre"], required: true },
+        { id: "setContains", label: "Set Contains", type: "multiselect", options: ["Bra", "Panty", "Babydoll", "Robe", "Garter"] },
+        { id: "sizes", label: "Available Sizes (bra band and cup)", type: "size-selector", options: BRA_SIZES, required: true, fullWidth: true },
+      ]},
+      { id: "shapewear", name: "Shapewear", fields: [
+        { id: "shapewearType", label: "Type", type: "select", options: ["Tummy Tucker", "Body Suit", "Thigh Shaper", "Saree Shapewear", "Camisole", "Waist Cincher"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Nylon-Spandex", "Cotton-Spandex", "Microfibre", "Power Mesh"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: LINGERIE_LETTER_SIZES, required: true, fullWidth: true },
+      ]},
+      { id: "nightwear-loungewear", name: "Nightwear & Loungewear", fields: [
+        { id: "garmentType", label: "Garment Type", type: "select", options: ["Pyjama Set", "Night Suit", "Nightdress", "Nighty", "Robe", "Lounge Set", "Shorts Set"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Rayon", "Satin", "Modal", "Hosiery", "Flannel"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+      ]},
+      { id: "sarees", name: "Sarees", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["Silk", "Cotton", "Georgette", "Chiffon", "Crepe", "Organza", "Linen", "Banarasi", "Kanjeevaram", "Chanderi"], required: true },
+        { id: "sareeLength", label: "Saree Length", type: "select", options: ["5.5 m (no blouse piece)", "6.3 m (with blouse piece)"], required: true },
+        { id: "blouse", label: "Blouse", type: "select", options: ["Unstitched blouse piece", "Stitched blouse", "No blouse"] },
+        { id: "work", label: "Work/Embellishment", type: "multiselect", options: ["Zari", "Embroidered", "Printed", "Sequin", "Bandhani", "Woven", "Mirror Work"], fullWidth: true },
+        { id: "sizes", label: "Sizes (a stitched blouse goes by bust, in inches)", type: "size-selector", options: SAREE_SIZES, required: true, fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Festive", "Wedding", "Party", "Office"], fullWidth: true },
+      ]},
+      { id: "lehengas", name: "Lehengas", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["Silk", "Georgette", "Net", "Velvet", "Brocade", "Crepe", "Cotton"], required: true },
+        { id: "stitching", label: "Stitching", type: "select", options: ["Stitched", "Semi-Stitched", "Unstitched"], required: true },
+        { id: "setContains", label: "Set Contains", type: "multiselect", options: ["Lehenga", "Choli", "Dupatta"] },
+        { id: "waistSizes", label: "Waist Sizes (in)", type: "size-selector", options: LEHENGA_WAIST_SIZES, required: true, fullWidth: true },
+        { id: "lengths", label: "Length Options (in)", type: "size-selector", options: SKIRT_LENGTHS, fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Wedding", "Festive", "Party", "Sangeet", "Reception"], fullWidth: true },
+      ]},
+      { id: "petticoats", name: "Petticoats", fields: [
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Satin", "Shimmer", "Lycra"], required: true },
+        { id: "style", label: "Style", type: "select", options: ["Drawstring", "Elastic", "Mermaid / Fish-Cut", "Shapewear Petticoat"] },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: PETTICOAT_SIZES, required: true, fullWidth: true },
+        { id: "lengths", label: "Length Options (in)", type: "size-selector", options: SKIRT_LENGTHS, fullWidth: true },
+      ]},
+      { id: "mens-innerwear", name: "Men's Innerwear", fields: [
+        { id: "garmentType", label: "Garment Type", type: "select", options: ["Brief", "Trunk", "Boxer Brief", "Boxer Shorts", "Vest", "Thermal"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Cotton-Spandex", "Modal", "Micro Modal", "Bamboo"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: MENS_INNERWEAR_SIZES, required: true, fullWidth: true },
+        { id: "packOf", label: "Pack Of", type: "select", options: ["1", "2", "3", "5", "6", "10", "12"] },
+      ]},
+      { id: "mens-ethnic", name: "Men's Ethnic Wear", fields: [
+        { id: "category", label: "Category", type: "select", options: ["Kurta", "Kurta Set", "Sherwani", "Nehru Jacket", "Dhoti", "Pathani Suit", "Indo-Western"], required: true },
+        { id: "fabric", label: "Fabric", type: "select", options: ["Cotton", "Linen", "Silk", "Khadi", "Rayon", "Brocade", "Velvet"], required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
+        { id: "occasion", label: "Occasion", type: "multiselect", options: ["Daily Wear", "Festive", "Wedding", "Party", "Office"], fullWidth: true },
+      ]},
+      { id: "mens-footwear", name: "Men's Footwear", fields: [
+        { id: "footwearType", label: "Type", type: "select", options: ["Sneakers", "Formal Shoes", "Sandals", "Slippers", "Boots", "Loafers", "Sports Shoes", "Mojaris"], required: true },
+        { id: "upperMaterial", label: "Upper Material", type: "select", options: ["Leather", "Synthetic", "Canvas", "Mesh", "Suede", "PU"], required: true },
+        { id: "soleMaterial", label: "Sole Material", type: "select", options: ["Rubber", "PU", "TPR", "EVA", "Leather", "Phylon"] },
+        { id: "sizes", label: "Sizes (UK / India)", type: "size-selector", options: ADULT_SHOE_SIZES.slice(2), required: true, fullWidth: true },
+      ]},
+      { id: "womens-footwear", name: "Women's Footwear", fields: [
+        { id: "footwearType", label: "Type", type: "select", options: ["Flats", "Heels", "Wedges", "Sandals", "Sneakers", "Juttis", "Kolhapuris", "Boots", "Slippers"], required: true },
+        { id: "upperMaterial", label: "Upper Material", type: "select", options: ["Leather", "Synthetic", "Canvas", "Mesh", "Suede", "PU", "Fabric"], required: true },
+        { id: "heelHeight", label: "Heel Height", type: "select", options: ["Flat", "Low (1-2 in)", "Mid (2-3 in)", "High (3+ in)"] },
+        { id: "sizes", label: "Sizes (UK / India)", type: "size-selector", options: ADULT_SHOE_SIZES.slice(0, 8), required: true, fullWidth: true },
+      ]},
+      { id: "kids-footwear", name: "Kids' Footwear", fields: [
+        { id: "footwearType", label: "Type", type: "select", options: ["Sneakers", "School Shoes", "Sandals", "Slippers", "Booties", "Sports Shoes"], required: true },
+        { id: "upperMaterial", label: "Upper Material", type: "select", options: ["Synthetic", "Canvas", "Mesh", "PU", "Leather"], required: true },
+        { id: "sizes", label: "Sizes (UK / India; K = kids)", type: "size-selector", options: KIDS_SHOE_SIZES, required: true, fullWidth: true },
+      ]},
       { id: "ready-made-garments", name: "Other Ready-made Garments", fields: [
         { id: "garmentType", label: "Garment Type", type: "text", placeholder: "e.g., Jackets, Suits, Activewear", required: true },
         { id: "gender", label: "Gender", type: "select", options: ["Men", "Women", "Unisex", "Kids"] },
         { id: "fabric", label: "Fabric", type: "text", placeholder: "e.g., 100% Cotton Jersey", required: true },
-        { id: "sizes", label: "Size Range", type: "text", placeholder: "e.g., XS-5XL", required: true },
+        { id: "sizes", label: "Available Sizes", type: "size-selector", options: standardSizes, required: true, fullWidth: true },
         { id: "colors", label: "Colors Available", type: "text", placeholder: "e.g., 10+ colors" },
         { id: "occasion", label: "Occasion", type: "multiselect", options: fashionOccasionOptions, fullWidth: true },
       ]},

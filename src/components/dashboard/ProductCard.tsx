@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import { viewsLabel } from "@/lib/queries/products";
 import { Bookmark, BookmarkCheck, MapPin, Phone, Star, MoreVertical, Edit, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -21,7 +22,6 @@ interface ProductCardProps {
   delay?: number;
   // optional extras — will show fallbacks if not provided
   moq?: string;
-  sold?: string;
   location?: string;
   fabric?: string;
   gsm?: string;
@@ -40,7 +40,6 @@ export const ProductCard = ({
   inquiries,
   delay = 0,
   moq = "2",
-  sold = "800+",
   location = "Bangalore",
   fabric = "Cotton",
   gsm = "200",
@@ -121,9 +120,9 @@ export const ProductCard = ({
           )}
         </div>
 
-        {/* Price | MOQ | Sold */}
+        {/* Price | MOQ | views (2026-10-17: was a fixed "800+ sold"; sales happen off Cosora, views are real) */}
         <p className="text-xs font-bold text-brand-buyer leading-snug">
-          {price} | MOQ: {moq} | {sold} sold
+          {price} | MOQ: {moq}{views ? <> | {viewsLabel(views)}</> : null}
         </p>
 
         {/* Name | Manufacturer */}

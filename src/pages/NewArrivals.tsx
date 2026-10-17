@@ -39,7 +39,7 @@ interface Product {
   location: string;
   price: string;
   moq: string;
-  soldCount: string;
+  views: string | null;
   enquiries: string;
   rating: number;
   fabric: string;
@@ -67,12 +67,12 @@ import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 // 6-column grid fills a complete row without adding anything to mobile's
 // existing 3-column/3-item view. Reuses existing images already in this file.
 const LOOKING_FOR_THESE = [
-  { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
-  { id: "lft2", name: "Quilted Crossbody",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=520&fit=crop" },
-  { id: "lft3", name: "Polka Dot Sundress",  price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=520&fit=crop" },
-  { id: "lft4", name: "Graphic Print Tee",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=520&fit=crop" },
-  { id: "lft5", name: "Camp Collar Shirt",   price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=520&fit=crop" },
-  { id: "lft6", name: "Ribbed Tank Top",     price: "$499", moq: "2", soldCount: "800+ sold", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&h=520&fit=crop" },
+  { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
+  { id: "lft2", name: "Quilted Crossbody",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=520&fit=crop" },
+  { id: "lft3", name: "Polka Dot Sundress",  price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=520&fit=crop" },
+  { id: "lft4", name: "Graphic Print Tee",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=520&fit=crop" },
+  { id: "lft5", name: "Camp Collar Shirt",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=520&fit=crop" },
+  { id: "lft6", name: "Ribbed Tank Top",     price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&h=520&fit=crop" },
 ];
 
 // Brand Picks and Recommended Premium Brands were static mock arrays whose
@@ -161,7 +161,7 @@ function ProductCard({ product }: { product: Product }) {
       <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
         <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
-          {showText(product.price)} | MOQ: {product.moq} | {product.soldCount}
+          {showText(product.price)} | MOQ: {product.moq}{product.views && <> | {product.views}</>}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
@@ -650,7 +650,6 @@ const NewArrivals = () => {
                 </div>
                 <div className="p-1.5 lg:p-2.5">
                   <p className="text-[9px] lg:text-xs font-bold text-brand-buyer leading-tight">{showText(item.price)} | MOQ: {item.moq}</p>
-                  <p className="text-[8px] lg:text-[11px] text-gray-400">{item.soldCount}</p>
                   <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">{item.name} | <span className="font-bold">Manufacturer</span></p>
                   <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
                     <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now

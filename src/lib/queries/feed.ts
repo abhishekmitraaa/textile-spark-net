@@ -42,7 +42,7 @@ interface FeedRow {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
   fit_type: string | null; gender: string | null; rating_avg: number; enquiries_count: number;
-  sold_count: number; location: string | null; category_id: string | null; category_name: string | null;
+  views_count: number | null; location: string | null; category_id: string | null; category_name: string | null;
   images: string[] | null; created_at: string; brand_name: string | null; vendor_city: string | null;
   is_verified: boolean; plan_id: string | null; plan_expires_at: string | null;
   ad_verified_until: string | null; boost: number;
@@ -53,7 +53,7 @@ export function mapFeedRow(r: FeedRow): ProductCardData {
   const product: RawProduct = {
     id: r.id, vendor_id: r.vendor_id, name: r.name, price_value: r.price_value, currency: r.currency,
     compare_at_price: r.compare_at_price, moq: r.moq, fabric: r.fabric, gsm: r.gsm, fit_type: r.fit_type,
-    gender: r.gender, rating_avg: r.rating_avg, enquiries_count: r.enquiries_count, sold_count: r.sold_count,
+    gender: r.gender, rating_avg: r.rating_avg, enquiries_count: r.enquiries_count, views_count: r.views_count,
     location: r.location, category_id: r.category_id,
     categories: r.category_name ? { name: r.category_name } : null,
     product_images: (r.images ?? []).map((url, position) => ({ url, position })),

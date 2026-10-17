@@ -57,7 +57,7 @@ interface SaleProduct {
   originalValue: number;
   saleValue: number;
   moq: string;
-  soldCount: string;
+  views: string | null;
   enquiries: string;
   rating: number;
   fabric: string;
@@ -83,7 +83,7 @@ function toSale(p: ProductCardData): SaleProduct {
     originalValue: p.compareAtPrice ?? p.priceValue,
     saleValue: p.priceValue,
     moq: `MOQ: ${p.moq}`,
-    soldCount: p.soldCount,
+    views: p.views,
     enquiries: p.enquiries,
     rating: p.rating,
     fabric: p.fabric,
@@ -167,7 +167,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
           <span className="text-sm lg:text-base font-extrabold text-brand-buyer leading-none">{show(product.saleValue, `₹${product.saleValue}`)}</span>
           <span className="text-[10px] lg:text-xs text-gray-400 line-through">{show(product.originalValue, `₹${product.originalValue}`)}</span>
         </div>
-        <p className="text-[10px] lg:text-xs text-gray-500 mt-1">{product.moq} | {product.soldCount}</p>
+        <p className="text-[10px] lg:text-xs text-gray-500 mt-1">{product.moq}{product.views && <> | {product.views}</>}</p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
         </p>

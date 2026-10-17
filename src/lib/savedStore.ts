@@ -180,7 +180,7 @@ async function hydrateSaved(uidValue: string): Promise<PersistedState> {
     const created = savedAtById.get(id);
     products[id] = {
       id: c.id, vendorId: c.vendorId, name: c.name, manufacturer: c.manufacturer, location: c.location,
-      price: c.price, priceValue: c.priceValue, moq: c.moq, soldCount: c.soldCount, enquiries: c.enquiries,
+      price: c.price, priceValue: c.priceValue, moq: c.moq, views: c.views ?? null, enquiries: c.enquiries,
       rating: c.rating, fabric: c.fabric, gsm: c.gsm, fitType: c.fitType, image: c.image, secondaryImage: c.secondaryImage,
       gender: (c.gender.toLowerCase() as Gender), category: c.categoryName ?? undefined,
       reviews: 0, timeAgo: created ? relTimeAgo(created) : "Just now",
@@ -243,7 +243,7 @@ export function openSaveModal(product: Partial<SavedProduct> & { id: string }) {
     price: product.price ?? "",
     priceValue,
     moq: product.moq ?? "",
-    soldCount: product.soldCount ?? "",
+    views: product.views ?? null,
     enquiries: product.enquiries ?? "",
     rating: product.rating ?? 0,
     fabric: product.fabric ?? "Cotton",

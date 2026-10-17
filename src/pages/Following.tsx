@@ -34,7 +34,7 @@ function toListing(p: ProductCardData): ListingProduct {
     priceValue: p.priceValue,
     moq: `MOQ: ${p.moq}`,
     rating: p.rating,
-    soldCount: p.soldCount,
+    views: p.views,
     enquiries: p.enquiries,
     fabric: p.fabric,
     gsm: p.gsm,

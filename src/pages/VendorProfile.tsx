@@ -244,7 +244,7 @@ const VendorProfile = () => {
         name: p.name,
         price: p.price,
         moq: p.moq,
-        sold: `${p.soldCountNum}+`,
+        views: p.views,
         location: p.location,
         // The /categories tile this listing belongs to, for "Brand's Categories" and its filter.
         categorySlot: (() => { const t = tileForSellerSub(p.categoryName); return t ? categoryTileSlot(t.topId, t.subLabel) : null; })(),
@@ -852,7 +852,7 @@ const VendorProfile = () => {
                     </div>
                   </div>
                   <div className="p-1.5">
-                    <p className="text-[10px] font-bold text-brand-buyer">{showText(product.price)} | MOQ: {product.moq} | {product.sold} sold</p>
+                    <p className="text-[10px] font-bold text-brand-buyer">{showText(product.price)} | MOQ: {product.moq}{product.views && <> | {product.views}</>}</p>
                     <p className="text-[9px] text-gray-500 truncate">{product.name} | <span className="font-bold">{brandName}</span></p>
                   </div>
                 </motion.div>
@@ -1041,7 +1041,7 @@ const VendorProfile = () => {
                       </div>
                     )}
                     <p className={cn("font-bold text-brand-buyer leading-tight", gridCols === 2 ? "text-xs" : "text-[9px] truncate")}>
-                      {showText(product.price)} | MOQ: {product.moq} | {product.sold} sold
+                      {showText(product.price)} | MOQ: {product.moq}{product.views && <> | {product.views}</>}
                     </p>
                     <p className={cn("text-gray-600 mt-0.5", gridCols === 2 ? "text-[10px]" : "text-[8px] truncate")}>
                       {product.name} | <span className="font-bold">{brandName}</span>

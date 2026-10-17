@@ -143,7 +143,7 @@ async function hydrateRecent(uidValue: string): Promise<RecentProduct[]> {
     if (!c) continue;
     out.push({
       id: c.id, vendorId: c.vendorId, name: c.name, manufacturer: c.manufacturer, location: c.location,
-      price: c.price, priceValue: c.priceValue, moq: c.moq, soldCount: c.soldCount, enquiries: c.enquiries,
+      price: c.price, priceValue: c.priceValue, moq: c.moq, views: c.views ?? null, enquiries: c.enquiries,
       rating: c.rating, fabric: c.fabric, gsm: c.gsm, fitType: c.fitType, image: c.image, secondaryImage: c.secondaryImage,
       gender: (c.gender.toLowerCase() as Gender), category: c.categoryName ?? undefined,
       reviews: 0, verified: c.verified ?? false, viewedAt: new Date(r.viewed_at).getTime(),

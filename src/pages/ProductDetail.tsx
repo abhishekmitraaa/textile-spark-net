@@ -24,10 +24,15 @@ import { logEngagement, consumeNavSource } from "@/lib/queries/engagement";
 import ProductChatOptionsSheet from "@/components/buyer/ProductChatOptionsSheet";
 import ProductQuoteRequestModal from "@/components/buyer/ProductQuoteRequestModal";
 import ShareSheet from "@/components/buyer/ShareSheet";
+import SizeChartSheet from "@/components/buyer/SizeChartSheet";
+import { useListingVideos } from "@/lib/queries/videos";
+import { useProductDocuments, fileSizeLabel } from "@/lib/queries/productDocuments";
+import { sizeChartFor, type SizeChart } from "@/data/sizeCharts";
 import {
   Bookmark, BookmarkCheck, Share2, Star, MapPin, Phone, MessageCircle,
   ChevronDown, BadgeCheck, AlertCircle, ImageOff,
   CheckCircle2, Play, Package, X, Flag,
+  Ruler, FileText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import trustedSeal from "@/assets/Trustedseal.png";
@@ -43,7 +48,7 @@ const sect = { hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0, transiti
 function cardToListing(p: ProductCardData): ListingProduct {
   return {
     id: p.id, vendorId: p.vendorId, name: p.name, manufacturer: p.manufacturer, location: p.location,
-    price: p.price, priceValue: p.priceValue, moq: `MOQ: ${p.moq}`, soldCount: p.soldCount, enquiries: p.enquiries,
+    price: p.price, priceValue: p.priceValue, moq: `MOQ: ${p.moq}`, views: p.views, enquiries: p.enquiries,
     rating: p.rating, fabric: p.fabric, gsm: p.gsm, fitType: p.fitType, image: p.image, secondaryImage: p.secondaryImage,
     gender: (p.gender.toLowerCase() as Gender),
   };
@@ -84,6 +89,10 @@ interface ProductData {
   vendor: { id: string; initials: string; name: string; location: string | null; verified: boolean };
   availableColors: string[];
   availableSizes: string[];
+  /** The measurement chart for this garment type, or null (data/sizeCharts.ts, 2026-10-17). */
+  sizeChart: SizeChart | null;
+  /** What the chart marks as offered: the sizes, and the waist sizes of a trouser or lehenga. */
+  chartOffered: string[];
   specifications: Spec[];
   customizationAvailable: boolean;
   description: string | null;
@@ -123,6 +132,8 @@ function toViewModel(row: ProductRow): ProductData {
     // These drive the Request Quotation form, so only what the vendor listed.
     availableColors: row.colour ? [row.colour] : [],
     availableSizes: row.sizes ?? [],
+    sizeChart: sizeChartFor(row.categoryName, row.gender),
+    chartOffered: [...(row.sizes ?? []), ...(row.waistSizes ?? [])],
     customizationAvailable: row.customizationAvailable,
     specifications: [
       row.fabric && { label: "Fabric", value: row.fabric },
@@ -352,7 +363,20 @@ const ProductDetail = () => {
   const { data: row, isPending: rowPending, isError, refetch } = useProductById(validId);
   // A disabled query (invalid id) reports "pending" forever; that is not loading.
   const isPending = Boolean(validId) && rowPending;
-  const product = row ? toViewModel(row) : null;
+  const baseProduct = row ? toViewModel(row) : null;
+  // The listing's own approved videos (Video Closeups tagged to it, e.g. added in the product form) play in its
+  // carousel after the photos; its PDFs are listed under the specifications (2026-10-17).
+  const { data: listingVideos = [] } = useListingVideos(baseProduct?.id);
+  const { data: documents = [] } = useProductDocuments(baseProduct?.id);
+  const product = baseProduct && listingVideos.length
+    ? {
+        ...baseProduct,
+        media: [
+          ...baseProduct.media,
+          ...listingVideos.map((v) => ({ type: "video" as const, url: v.thumbnail_url ?? baseProduct.media[0]?.url ?? "", videoUrl: v.video_url })),
+        ],
+      }
+    : baseProduct;
   const isSaved = product ? Boolean(saved.products[product.id]) : false;
 
   const [tab, setTab] = useState<"details" | "reviews">("details");
@@ -363,6 +387,7 @@ const ProductDetail = () => {
   const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
   const activeColor = selectedColor ?? product?.availableColors[0];
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [sizeChartOpen, setSizeChartOpen] = useState(false);
   // Follow is the real follows table (signed out: the local store), exactly as
   // VendorProfile uses it. It was local useState, so it reset on every reload
   // and followed no one (Master Prompt 8, Phase 6).
@@ -651,7 +676,15 @@ const ProductDetail = () => {
 
             {/* Sizes */}
             <div className={card}>
-              <h3 className="mb-3 text-sm font-bold text-gray-900">Available Sizes</h3>
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-gray-900">Available Sizes</h3>
+                {product.sizeChart && (
+                  <button type="button" onClick={() => setSizeChartOpen(true)}
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-brand-buyer hover:underline">
+                    <Ruler className="h-3.5 w-3.5" /> Size chart
+                  </button>
+                )}
+              </div>
               {product.availableSizes.length === 0 && (
                 <p className="text-xs text-gray-500">Not specified by the vendor.</p>
               )}
@@ -663,6 +696,10 @@ const ProductDetail = () => {
                 ))}
               </div>
             </div>
+
+            {product.sizeChart && (
+              <SizeChartSheet chart={product.sizeChart} offered={product.chartOffered} open={sizeChartOpen} onOpenChange={setSizeChartOpen} />
+            )}
 
             {/* Chat + Call Now (inline, per reference) */}
             <div className="flex items-center gap-2">
@@ -684,7 +721,7 @@ const ProductDetail = () => {
                 {specsOpen && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.26, ease: E }} className="overflow-hidden">
                     <div className="px-4 pb-4">
-                      {product.specifications.length === 0 && (
+                      {product.specifications.length === 0 && documents.length === 0 && (
                         <p className="text-xs text-gray-500">Not specified by the vendor.</p>
                       )}
                       <div className="grid grid-cols-2 gap-x-6 gap-y-3.5">
@@ -695,8 +732,24 @@ const ProductDetail = () => {
                           </div>
                         ))}
                       </div>
-                      {/* "Add Fabric" and "Download PDF" buttons sat here with no onClick.
-                          Removed, not stubbed (Master Prompt 8, Phase 6); see ToDo.md. */}
+                      {/* The vendor's PDFs (spec sheets, catalogues), stored since 2026-10-17. */}
+                      {documents.length > 0 && (
+                        <div className="mt-4 border-t border-gray-100 pt-3" data-testid="product-documents">
+                          <p className="mb-2 text-[11px] text-gray-400">Documents</p>
+                          <ul className="space-y-1.5">
+                            {documents.map((d) => (
+                              <li key={d.id}>
+                                <a href={d.url} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex max-w-full items-center gap-1.5 text-sm font-medium text-brand-buyer hover:underline">
+                                  <FileText className="h-4 w-4 shrink-0" />
+                                  <span className="truncate">{d.name}</span>
+                                  {d.sizeBytes ? <span className="shrink-0 text-xs font-normal text-gray-400">{fileSizeLabel(d.sizeBytes)}</span> : null}
+                                </a>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}

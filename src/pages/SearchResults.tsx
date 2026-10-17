@@ -82,7 +82,7 @@ type SortKey = (typeof SORTS)[number]["key"];
 // ── Data ──
 interface RProduct {
   id: string; vendorId: string; name: string; manufacturer: string; location: string;
-  priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
+  priceValue: number; moq: string; views: string | null; enquiries: string; rating: number;
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: Gender; colour: string; image: string; secondaryImage: string; verified: boolean;
   // Real vendor-entered attributes, carried through from CatalogueRow. Optional
@@ -210,7 +210,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
       </Link>
       <div className={cn("relative flex flex-col flex-1", compact ? "p-1.5" : "p-2 lg:p-3")}>
         <CardLinkOverlay to={`/product/${p.id}`} onClick={openFromSearch} />
-        <p className={cn("font-bold text-brand-buyer leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq} | {p.sold}</p>
+        <p className={cn("font-bold text-brand-buyer leading-snug", compact ? "text-[9px] truncate" : "text-xs lg:text-sm")}>{show(p.priceValue || null, `₹${p.priceValue}`)} | {p.moq}{p.views && <> | {p.views}</>}</p>
         <p className={cn("text-gray-600 mt-0.5", compact ? "text-[8px] truncate" : "text-[10px] lg:text-xs")}>{p.name} | <Link to={`/vendor/${p.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{p.manufacturer}</Link></p>
         <div className="flex items-center gap-0.5 mt-0.5">
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5 lg:w-3 lg:h-3")} />

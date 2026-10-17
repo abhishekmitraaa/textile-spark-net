@@ -66,7 +66,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
       <div className="relative p-2 lg:p-3.5 flex flex-col flex-1">
         <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
-          {showText(product.price)} | {product.moq} | {product.soldCount}
+          {showText(product.price)} | {product.moq}{product.views && <> | {product.views}</>}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>

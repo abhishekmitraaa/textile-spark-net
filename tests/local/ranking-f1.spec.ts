@@ -122,7 +122,7 @@ test.describe("F1: the requirement form keeps its answers", () => {
       await page.getByRole("button", { name: /Create New Requirement/ }).click();
       await page.getByRole("button", { name: /Raw Materials/ }).first().click();
       await page.getByRole("button", { name: /Knitted Fabrics/ }).first().click();
-      await page.getByRole("button", { name: "Save" }).click();
+      await page.getByRole("button", { name: "Continue", exact: true }).click();
       const field = (label: RegExp) =>
         page.locator("div", { has: page.locator(":scope > label", { hasText: label }) }).locator(":scope > input").first();
       await field(/^Composition/).fill(composition);

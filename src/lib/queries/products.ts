@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { viewerKey } from "@/lib/viewerKey";
 import type { Attributes } from "@/lib/formAttributes";
 import { supabase } from "@/lib/supabase";
 import { sealTierFromParts, trustSealFromParts, type SealTier } from "@/lib/plan";
@@ -25,8 +26,10 @@ export interface ProductCardData {
   compareAtPrice: number | null;
   discountPct: number;
   moq: string;
-  soldCount: string;
-  soldCountNum: number;
+  /** "1.2k views", or null with none: the listing's real views (2026-10-17; "N+ sold" was invented, since sales
+   *  happen off Cosora and products.sold_count has no writer). */
+  views: string | null;
+  viewsNum: number;
   enquiries: string;
   rating: number;
   fabric: string;
@@ -53,6 +56,13 @@ function fmtK(n: number): string {
   return String(n);
 }
 
+/** A listing's real view count as a card shows it: "1 view", "1.2k views", or null for none (then nothing shows). */
+export function viewsLabel(n: number | null | undefined): string | null {
+  const v = Math.max(0, Math.floor(Number(n) || 0));
+  if (!v) return null;
+  return v === 1 ? "1 view" : `${fmtK(v)} views`;
+}
+
 interface RawImage { url: string; position: number }
 // plan_expires_at feeds the displayed trust seal (admin is_verified OR active
 // paid plan); plan_id + a resolved searchBoost feed search ranking. All optional
@@ -62,7 +72,7 @@ export interface RawProduct {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
   fit_type: string | null; gender: string | null; rating_avg: number; enquiries_count: number;
-  sold_count: number; location: string | null; category_id: string | null;
+  views_count: number | null; location: string | null; category_id: string | null;
   categories: { name: string } | null;
   product_images: RawImage[] | null;
 }
@@ -74,7 +84,7 @@ export interface RawProduct {
 // row and once as the live tree child — so a name is no longer unique enough to
 // resolve a preference against. See pref_category_map.
 export const PRODUCT_CARD_SELECT =
-  "id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, sold_count, location, category_id, categories ( name ), product_images ( url, position )";
+  "id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg, enquiries_count, views_count, location, category_id, categories ( name ), product_images ( url, position )";
 
 export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardData {
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
@@ -96,8 +106,8 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     compareAtPrice,
     discountPct,
     moq: p.moq ?? "2",
-    soldCount: `${p.sold_count}+ sold`,
-    soldCountNum: p.sold_count,
+    views: viewsLabel(p.views_count),
+    viewsNum: p.views_count ?? 0,
     enquiries: fmtK(p.enquiries_count),
     rating: Number(p.rating_avg),
     fabric: p.fabric ?? "—",
@@ -167,7 +177,8 @@ export async function fetchProductCardsByIds(ids: string[]): Promise<Record<stri
 // attributes (price, colour, fabric, fit, gender, gsm, rating, verified).
 export interface CatalogueRow {
   id: string; vendorId: string; name: string; manufacturer: string; location: string;
-  priceValue: number; moq: string; sold: string; enquiries: string; rating: number;
+  priceValue: number; moq: string; views: string | null; enquiries: string; rating: number;
+  /** Real views, what "Popularity" sorts by. */
   popularity: number; discount: number; fabric: string; gsm: string; fit: string;
   gender: string; colour: string; image: string; secondaryImage: string; verified: boolean; boost: number;
   /** Which seal (P10); see ProductCardData.sealTier. */
@@ -188,7 +199,7 @@ export interface CatalogueRow {
 // server-ranked result set is mapped through exactly the same code path as the
 // browse feed — one definition of what a catalogue row is.
 export const CATALOGUE_SELECT =
-  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, sold_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )";
+  "id, vendor_id, name, price_value, currency, moq, fabric, gsm, fit_type, gender, colour, location, rating_avg, views_count, enquiries_count, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, category_id, categories ( name, parent_id ), product_images ( url, position )";
 
 type RawCatalogueRow = RawProduct & {
   gender: string | null; colour: string | null; sizes: string[] | null;
@@ -248,10 +259,10 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       location: p.location ?? v?.city ?? "India",
       priceValue: p.price_value != null ? Number(p.price_value) : 0,
       moq: `MOQ: ${p.moq ?? "2"}`,
-      sold: `${p.sold_count}+ sold`,
+      views: viewsLabel(p.views_count),
       enquiries: fmtK(p.enquiries_count),
       rating: Number(p.rating_avg),
-      popularity: p.sold_count,
+      popularity: p.views_count ?? 0,
       discount: 0,
       fabric: p.fabric ?? "—",
       gsm: p.gsm ?? "",
@@ -329,7 +340,8 @@ export interface ProductDetail {
   categoryId: string | null;
   ratingAvg: number;
   reviewsCount: number;
-  soldCount: number;
+  /** Real views (2026-10-17). */
+  viewsCount: number;
   images: string[];
   vendor: { brandName: string | null; isVerified: boolean; city: string | null; ratingAvg: number; reviewsCount: number } | null;
 }
@@ -347,7 +359,7 @@ interface RawDetail extends RawProduct {
 async function fetchProductById(id: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, sold_count, enquiries_count, categories ( name ), product_images ( url, position )")
+    .select("id, vendor_id, name, description, price_value, currency, moq, unit, fabric, gsm, fit_type, gender, colour, sizes, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, category_id, rating_avg, reviews_count, views_count, enquiries_count, categories ( name ), product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -391,7 +403,7 @@ async function fetchProductById(id: string): Promise<ProductDetail | null> {
     categoryId: row.category_id ?? null,
     ratingAvg: Number(row.rating_avg),
     reviewsCount: row.reviews_count,
-    soldCount: row.sold_count,
+    viewsCount: row.views_count ?? 0,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
     vendor,
   };
@@ -410,8 +422,10 @@ export function useProductById(id: string | undefined) {
 // can't UPDATE a product they don't own, so the DB does it for them. Both RPCs
 // are scoped to status='live' server-side. Callers own the dedup policy (e.g.
 // once-per-session for views).
+// One view per listing, per viewer, per day: the server keys it on the account, else on this browser's random
+// viewerKey (2026-10-17; it used to add one on every call).
 export async function recordProductView(id: string): Promise<void> {
-  const { error } = await supabase.rpc("increment_product_view", { p: id });
+  const { error } = await supabase.rpc("increment_product_view", { p: id, p_viewer: viewerKey() });
   if (error) throw error;
 }
 export async function recordProductEnquiry(id: string): Promise<void> {
@@ -753,6 +767,25 @@ export async function resolveSubcategoryId(
  * Distinct from resolveCategoryId below, which guesses from free text. Do not
  * merge them.
  */
+/**
+ * The vendor upload category and sub-category (data/sellerCategories.ts ids) of a categories row, matched by
+ * name the way resolveSubcategoryId writes them. Null for a row that isn't one of them (a parent, or a legacy
+ * flat row). Edit mode uses it to offer the listing's own sizes (2026-10-17).
+ */
+export async function sellerIdsForCategoryId(
+  categoryId: string | null | undefined,
+): Promise<{ categoryId: string; subCategoryId: string } | null> {
+  if (!categoryId) return null;
+  const cats = await loadCategories();
+  const row = cats.find((c) => c.id === categoryId);
+  const parent = row?.parent_id ? cats.find((c) => c.id === row.parent_id) : undefined;
+  if (!row || !parent) return null;
+  const { sellerCategories } = await import("@/data/sellerCategories");
+  const cat = sellerCategories.find((c) => c.name === parent.name);
+  const sub = cat?.subCategories.find((sc) => sc.name === row.name);
+  return cat && sub ? { categoryId: cat.id, subCategoryId: sub.id } : null;
+}
+
 export async function resolveParentCategoryId(
   categoryName: string | null | undefined,
 ): Promise<string | null> {
@@ -816,13 +849,14 @@ export interface EditableProduct {
   // The listing's other category answers (Ranking F1) and its "Location / Origin",
   // read back for the same reason as the columns above.
   location: string | null;
+  unit: string | null;
   attributes: Attributes;
 }
 
 async function fetchProductForEdit(id: string): Promise<EditableProduct | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, attributes, product_images ( url, position )")
+    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, unit, attributes, product_images ( url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -844,6 +878,7 @@ async function fetchProductForEdit(id: string): Promise<EditableProduct | null> 
     lengths: row.lengths ?? null,
     customization_available: row.customization_available ?? false,
     location: row.location ?? null,
+    unit: row.unit ?? null,
     attributes: (row.attributes ?? {}) as Attributes,
     images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
   };
@@ -880,6 +915,8 @@ export interface ProductPatch {
   lengths?: string[] | null;
   customization_available?: boolean;
   location?: string | null;
+  /** "per metre", "per piece"… (2026-10-17: asked on the Pricing step, never saved). */
+  unit?: string | null;
   attributes?: Attributes;
 }
 // ── Listings and the plan's limit (subscriptions P4) ──

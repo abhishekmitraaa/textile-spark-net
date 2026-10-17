@@ -26,7 +26,7 @@ function toListing(p: ProductCardData): ListingProduct {
   return makeListingProduct(p.id, {
     name: p.name, manufacturer: p.manufacturer, vendorId: p.vendorId, location: p.location,
     price: p.price, priceValue: p.priceValue, moq: `MOQ: ${p.moq}`, rating: p.rating,
-    soldCount: p.soldCount, enquiries: p.enquiries, fabric: p.fabric, gsm: p.gsm, fitType: p.fitType,
+    views: p.views, enquiries: p.enquiries, fabric: p.fabric, gsm: p.gsm, fitType: p.fitType,
     image: p.image, secondaryImage: p.secondaryImage, gender: (p.gender.toLowerCase() as Gender),
   });
 }

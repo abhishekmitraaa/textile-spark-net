@@ -18,7 +18,7 @@ export interface BuyerProductCardData {
   location: string;
   price: string;
   moq: string;
-  soldCount: string;
+  views: string | null;
   enquiries: string;
   rating: number;
   reviews: number;
@@ -93,7 +93,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
             <span>{product.rating.toFixed(1)}</span>
             <span className="text-muted-foreground">| {product.enquiries}</span>
           </div>
-          <span className="text-muted-foreground">{product.soldCount}</span>
+          {product.views && <span className="text-muted-foreground">{product.views}</span>}
         </div>
       </Link>
 

@@ -1606,6 +1606,44 @@ export type Database = {
           },
         ]
       }
+      product_documents: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          path: string
+          position: number
+          product_id: string
+          size_bytes: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          path: string
+          position?: number
+          product_id: string
+          size_bytes?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          path?: string
+          position?: number
+          product_id?: string
+          size_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_documents_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_images: {
         Row: {
           created_at: string
@@ -5862,6 +5900,7 @@ export type Database = {
           price_value: number | null
           rating_avg: number
           sold_count: number
+          views_count: number
           vendor_city: string | null
           vendor_id: string
         }[]
@@ -5902,7 +5941,7 @@ export type Database = {
         Returns: Json
       }
       increment_product_enquiry: { Args: { p: string }; Returns: undefined }
-      increment_product_view: { Args: { p: string }; Returns: undefined }
+      increment_product_view: { Args: { p: string; p_viewer?: string }; Returns: undefined }
       increment_video_view: { Args: { p: string }; Returns: undefined }
       is_ad_eligible: {
         Args: {

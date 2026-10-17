@@ -52,7 +52,7 @@ interface CompactProduct {
   location: string;
   price: string;
   moq: string;
-  soldCount: string;
+  views: string | null;
   enquiries: string;
   rating: number;
   fabric: string;
@@ -254,7 +254,7 @@ function ProductCard({ product }: { product: CompactProduct }) {
       <div className="relative p-2 lg:p-3.5">
         <CardLinkOverlay to={`/product/${product.id}`} />
         <p className="text-xs lg:text-sm font-bold text-brand-buyer leading-snug">
-          {showText(product.price)} | {product.moq} | {product.soldCount}
+          {showText(product.price)} | {product.moq}{product.views && <> | {product.views}</>}
         </p>
         <p className="text-[10px] lg:text-xs text-gray-600 mt-1 lg:mt-1.5 truncate">
           {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>

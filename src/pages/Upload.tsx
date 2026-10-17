@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { resolveCategoryId, resolveSubcategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
+import { resolveCategoryId, resolveSubcategoryId, sellerIdsForCategoryId, useProductForEdit, updateProduct } from "@/lib/queries/products";
 import { useVendorPlan } from "@/lib/queries/subscriptions";
 import { capReached, isUnlimited } from "@/lib/plan";
 import { Button } from "@/components/ui/button";
@@ -48,15 +48,18 @@ import { toast } from "sonner";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
-import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields } from "@/data/sellerCategories";
+import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields, getSubCategoryById } from "@/data/sellerCategories";
 import { productAttributes } from "@/lib/formAttributes";
+import { createProductVideo, validateVideoFile, type VideoProbe } from "@/lib/queries/videos";
+import { checkPdf, fileSizeLabel, uploadProductDocuments, MAX_PDFS } from "@/lib/queries/productDocuments";
 import { Progress } from "@/components/ui/progress";
 
-// Shown on the Pricing step only for categories whose Details fields have no
-// "sizes" size-selector of their own (and in edit mode, where Details is
-// skipped). Mirrors the SIZES list used by the buyer's PostRequirement form,
-// with "Free Size" in place of "Custom" to match the seller taxonomy.
+// Shown on the Pricing step only for a garment whose Details fields have no size field of their own. Since
+// 2026-10-17 every garment sub-category has its own set (data/sizeCharts.ts), so this is a safety net; it is no
+// longer offered for jeans (they have waist sizes), bedsheets, bags, trims or machinery. In edit mode, where the
+// category steps are skipped, the listing's own sub-category decides (sellerIdsForCategoryId).
 const FALLBACK_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "Free Size"];
+const GARMENT_CATEGORY = "apparel-home";
 
 /**
  * The upload taxonomy exposes colour under three different field shapes:
@@ -110,8 +113,11 @@ const Upload = () => {
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
   const [images, setImages] = useState<string[]>([]);
-  const [videoFiles, setVideoFiles] = useState<string[]>([]);
-  const [pdfFiles, setPdfFiles] = useState<string[]>([]);
+  // Real files since 2026-10-17 (only their names were kept, and nothing uploaded). A video becomes a Video
+  // Closeup tagged to this listing (same upload, moderation and player); a PDF goes to product-files.
+  const [videoFiles, setVideoFiles] = useState<{ file: File; probe: VideoProbe }[]>([]);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
+  const [mediaProgress, setMediaProgress] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [formValues, setFormValues] = useState<Record<string, string | string[]>>({});
   const [productName, setProductName] = useState("");
@@ -131,6 +137,8 @@ const Upload = () => {
     setPrice(editing.price_value != null ? String(editing.price_value) : "");
     setImages(editing.images);
     setCustomizationAvailable(editing.customization_available);
+    setUnit(editing.unit ?? "");
+    setSku(typeof editing.attributes?.sku === "string" ? editing.attributes.sku : "");
     // Edit mode skips the category/subcategory steps, so none of the dynamic
     // fields render and the vendor never re-answers them. Seeding formValues
     // here is what makes handleSubmit write the existing values straight back —
@@ -179,8 +187,27 @@ const Upload = () => {
   // dynamic Details fields, writing to formValues.sizes. Only fall back to the
   // generic selector on the Pricing step when the category has no size field of
   // its own (and always in edit mode, where the Details step is skipped).
-  const hasDynamicSizes = [...dynamicFields, ...optionalFields].some((f) => f.id === "sizes");
+  const hasDynamicSizes = [...dynamicFields, ...optionalFields].some((f) => f.id === "sizes" || f.id === "waistSizes");
   const selectedSizes = (formValues["sizes"] as string[] | undefined) ?? [];
+  // Edit mode: the listing's own sub-category, for its own sizes (it used to get the generic list, so a bra
+  // was offered XS–XXXL when edited).
+  const [editSeller, setEditSeller] = useState<{ categoryId: string; subCategoryId: string } | null>(null);
+  useEffect(() => {
+    if (!isEdit || !editing?.category_id) return;
+    let live = true;
+    void sellerIdsForCategoryId(editing.category_id).then((r) => { if (live) setEditSeller(r); });
+    return () => { live = false; };
+  }, [isEdit, editing?.category_id]);
+  const editSub = editSeller ? getSubCategoryById(editSeller.categoryId, editSeller.subCategoryId) : undefined;
+  const editSizeField = editSub?.fields.find((f) => f.id === "sizes" && f.type === "size-selector");
+  // The chips the Pricing step offers, or null for none: the edited listing's own set; else, for a garment
+  // without a size field, the generic letters. What's already chosen always stays visible.
+  const pricingSizeBase: string[] | null = isEdit
+    ? editSizeField?.options ?? (editSeller && editSeller.categoryId !== GARMENT_CATEGORY ? null : FALLBACK_SIZES)
+    : !hasDynamicSizes && category?.id === GARMENT_CATEGORY ? FALLBACK_SIZES : null;
+  const pricingSizes = pricingSizeBase
+    ? [...pricingSizeBase, ...selectedSizes.filter((sz) => !pricingSizeBase.includes(sz))]
+    : selectedSizes.length ? selectedSizes : null;
   const toggleSize = (size: string) =>
     handleFieldChange(
       "sizes",
@@ -223,18 +250,31 @@ const Upload = () => {
     setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handleMediaPick = (
-    e: React.ChangeEvent<HTMLInputElement>,
-    setter: React.Dispatch<React.SetStateAction<string[]>>,
-    current: string[],
-    max: number,
-  ) => {
-    const files = Array.from(e.target.files || []);
-    const fileNames = files.slice(0, max - current.length).map((file) => file.name);
-    if (fileNames.length > 0) {
-      setter((prev) => [...prev, ...fileNames].slice(0, max));
-    }
+  // Each file is checked before it's accepted: a video the reel couldn't play, or a "PDF" that isn't one, is
+  // refused here with the reason rather than after the listing is saved.
+  const pickVideos = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, Math.max(0, 3 - videoFiles.length));
     e.target.value = "";
+    for (const file of files) {
+      try {
+        const probe = await validateVideoFile(file);
+        setVideoFiles((prev) => [...prev, { file, probe }].slice(0, 3));
+      } catch (err) {
+        toast.error((err as Error).message, { description: (err as { detail?: string }).detail });
+      }
+    }
+  };
+  const pickPdfs = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []).slice(0, Math.max(0, MAX_PDFS - pdfFiles.length));
+    e.target.value = "";
+    for (const file of files) {
+      try {
+        await checkPdf(file);
+        setPdfFiles((prev) => [...prev, file].slice(0, MAX_PDFS));
+      } catch (err) {
+        toast.error((err as Error).message, { description: "Add a PDF of at most 10 MB." });
+      }
+    }
   };
 
   const handleFieldChange = (fieldId: string, value: string | string[]) => {
@@ -381,7 +421,16 @@ const Upload = () => {
       const location = str("location");
       // Every other answer the category asked (Ranking F1). Before this, the form
       // collected them and kept only the fields above.
+      // Asked but never kept until 2026-10-17: the SKU, the sub-type picked on the sub-category step, and every
+      // colour picked (the colour column holds the first). The admin's review shows them all.
       const attributes = productAttributes(formValues);
+      if (sku.trim()) attributes.sku = sku.trim();
+      if (selectedSubType) attributes.subType = selectedSubType;
+      const pickedColours = formValues["colors"];
+      if (Array.isArray(pickedColours) && pickedColours.length > 1) attributes.colours = pickedColours;
+      // The Details step's "Customization Available?" and the Pricing step's switch are one fact.
+      const customizable = customizationAvailable || formValues["customizationAvailable"] === "true";
+      const unitValue = unit || null;
 
       if (isEdit && editId) {
         // Edit: update the row + append any newly-picked images (existing ones stay).
@@ -403,7 +452,8 @@ const Upload = () => {
           lengths,
           location,
           attributes,
-          customization_available: customizationAvailable,
+          customization_available: customizable,
+          unit: unitValue,
           // A paused listing (over the plan's limit, subscriptions P4) stays paused: sending
           // it to review would count against the limit that paused it. The database marks
           // the edit, so it goes through review when the plan has room for it again.
@@ -421,6 +471,7 @@ const Upload = () => {
             .insert(urls.map((url, i) => ({ product_id: editId, url, position: start + i })));
           if (imgErr) throw imgErr;
         }
+        await uploadMedia(editId, subNameForMedia());
         queryClient.invalidateQueries({ queryKey: ["products"] });
         toast.success("Product updated", {
           description: pausedEdit
@@ -468,7 +519,8 @@ const Upload = () => {
           lengths,
           location,
           attributes,
-          customization_available: customizationAvailable,
+          customization_available: customizable,
+          unit: unitValue,
           status: nextStatus,
         })
         .select("id")
@@ -482,6 +534,7 @@ const Upload = () => {
           .insert(urls.map((url, position) => ({ product_id: inserted.id, url, position })));
         if (imgErr) throw imgErr;
       }
+      await uploadMedia(inserted.id, subName ?? category?.name ?? null);
 
       // Refresh any cached product lists so the vendor's Products page and the
       // buyer feed reflect the new row immediately.
@@ -497,6 +550,49 @@ const Upload = () => {
       toast.error("Upload failed", { description: errorMessage(err) });
     } finally {
       setSubmitting(false);
+      setMediaProgress(null);
+    }
+  };
+
+  // The sub-category's name in edit mode, where the category steps are skipped.
+  const subNameForMedia = () => (editSub?.name ?? null);
+
+  // Videos and PDFs, after the listing row exists. A failure here doesn't undo the saved listing: it says which
+  // file didn't go, so the vendor can add it again from Edit.
+  const uploadMedia = async (productId: string, categoryName: string | null) => {
+    if (!user) return;
+    const failed: string[] = [];
+    for (const [i, { file, probe }] of videoFiles.entries()) {
+      setMediaProgress(`Uploading video ${i + 1} of ${videoFiles.length}…`);
+      try {
+        await createProductVideo(user.id, {
+          file,
+          thumbnail: probe.poster ?? null,
+          caption: productName.slice(0, 150),
+          productId,
+          category: categoryName ?? undefined,
+          durationSeconds: Math.round(probe.durationSeconds),
+          videoWidth: probe.width,
+          videoHeight: probe.height,
+          onProgress: (f) => setMediaProgress(`Uploading video ${i + 1} of ${videoFiles.length}… ${Math.round(f * 100)}%`),
+        });
+      } catch (err) {
+        failed.push(`${file.name} (${errorMessage(err)})`);
+      }
+    }
+    if (pdfFiles.length) {
+      setMediaProgress("Uploading PDFs…");
+      try {
+        const { count } = await supabase.from("product_documents").select("*", { count: "exact", head: true }).eq("product_id", productId);
+        await uploadProductDocuments(user.id, productId, pdfFiles, count ?? 0);
+      } catch (err) {
+        failed.push(`${pdfFiles.map((f) => f.name).join(", ")} (${errorMessage(err)})`);
+      }
+    }
+    if (videoFiles.length) queryClient.invalidateQueries({ queryKey: ["product_videos"] });
+    if (pdfFiles.length) queryClient.invalidateQueries({ queryKey: ["product_documents", productId] });
+    if (failed.length) {
+      toast.error("Some files didn't upload", { description: `${failed.join(", ")}. Your listing is saved; add them again from Edit.` });
     }
   };
 
@@ -819,10 +915,11 @@ const Upload = () => {
                   <label className="inline-flex cursor-pointer items-center rounded-md border border-border bg-background px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent/5">
                     <input
                       type="file"
-                      accept="video/*"
+                      accept="video/mp4,video/webm"
                       multiple
                       className="hidden"
-                      onChange={(e) => handleMediaPick(e, setVideoFiles, videoFiles, 3)}
+                      data-testid="product-video-input"
+                      onChange={pickVideos}
                     />
                     <Video className="mr-2 h-4 w-4" />
                     Add Video
@@ -833,7 +930,8 @@ const Upload = () => {
                       accept="application/pdf"
                       multiple
                       className="hidden"
-                      onChange={(e) => handleMediaPick(e, setPdfFiles, pdfFiles, 3)}
+                      data-testid="product-pdf-input"
+                      onChange={pickPdfs}
                     />
                     <FileText className="mr-2 h-4 w-4" />
                     Add PDF
@@ -877,11 +975,15 @@ const Upload = () => {
                   {videoFiles.length > 0 && (
                     <div>
                       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Videos</p>
+                      <p className="mb-2 text-xs text-muted-foreground">Each goes to Cosora's review as a Video Closeup of this listing, and shows on the listing once approved.</p>
                       <div className="flex flex-wrap gap-2">
-                        {videoFiles.map((fileName, index) => (
-                          <span key={`${fileName}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
+                        {videoFiles.map(({ file, probe }, index) => (
+                          <span key={`${file.name}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
                             <Video className="mr-1 h-3 w-3 text-accent" />
-                            {fileName}
+                            {file.name} · {Math.round(probe.durationSeconds)}s
+                            <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setVideoFiles((prev) => prev.filter((_, i) => i !== index))} className="ml-1.5 text-muted-foreground hover:text-foreground">
+                              <X className="h-3 w-3" />
+                            </button>
                           </span>
                         ))}
                       </div>
@@ -891,10 +993,13 @@ const Upload = () => {
                     <div>
                       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">PDFs</p>
                       <div className="flex flex-wrap gap-2">
-                        {pdfFiles.map((fileName, index) => (
-                          <span key={`${fileName}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
+                        {pdfFiles.map((file, index) => (
+                          <span key={`${file.name}-${index}`} className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground">
                             <FileText className="mr-1 h-3 w-3 text-accent" />
-                            {fileName}
+                            {file.name} · {fileSizeLabel(file.size)}
+                            <button type="button" aria-label={`Remove ${file.name}`} onClick={() => setPdfFiles((prev) => prev.filter((_, i) => i !== index))} className="ml-1.5 text-muted-foreground hover:text-foreground">
+                              <X className="h-3 w-3" />
+                            </button>
                           </span>
                         ))}
                       </div>
@@ -979,11 +1084,11 @@ const Upload = () => {
                     Request Quotation form: sizes populate its size/quantity rows,
                     and the toggle decides whether it offers customization at all. */}
                 <div className="mt-6 space-y-4 border-t border-border pt-6">
-                  {!hasDynamicSizes && (
+                  {!hasDynamicSizes && pricingSizes && (
                     <div className="space-y-2">
-                      <Label>Available sizes</Label>
+                      <Label>{editSizeField?.label ?? "Available sizes"}</Label>
                       <div className="flex flex-wrap gap-2">
-                        {FALLBACK_SIZES.map((size) => {
+                        {pricingSizes.map((size) => {
                           const isSelected = selectedSizes.includes(size);
                           return (
                             <button
@@ -1103,7 +1208,7 @@ const Upload = () => {
                 </motion.button>
                 <motion.button type="submit" whileTap={TAP} transition={TAP_T} disabled={submitting} className="inline-flex items-center justify-center gap-2 rounded-md bg-yellow-500 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-yellow-600 disabled:opacity-60">
                   <Check className="h-4 w-4" />
-                  {isEdit ? (submitting ? "Saving…" : "Save Changes") : submitting ? "Publishing…" : "Publish"}
+                  {mediaProgress ?? (isEdit ? (submitting ? "Saving…" : "Save Changes") : submitting ? "Publishing…" : "Publish")}
                 </motion.button>
               </>
             ) : (
