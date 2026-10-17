@@ -309,6 +309,8 @@ const KIND_META: Record<string, {
   listings_resumed:      { type: "system", tone: "positive", group: "updates", actionLabel: "See your products", href: "/products" },
   // A buyer's requirement that suits this vendor (subscriptions P6).
   lead_match:            { type: "system", tone: "positive", group: "updates", actionLabel: "Open my leads", href: "/leads" },
+  // A buyer's requirement reviewed by Cosora (2026-10-17): approved and live, or not approved with the reason.
+  rfq_review:            { type: "requirement", tone: "neutral", group: "updates", actionLabel: "Open My Quotes", href: "/requirement/my-quotes" },
   // A CRM follow-up that is due (subscriptions P8).
   crm_follow_up:         { type: "system", tone: "warning",  group: "updates", actionLabel: "Open follow-ups", href: "/crm/follow-ups" },
   // From the vendor's account manager or team (subscriptions P9): a message, a missed call, a VIP note.

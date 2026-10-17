@@ -22,7 +22,7 @@ test.afterEach(() => {
     const id = made.pop() as string;
     sql(`delete from public.hero_slides where product_id in (select id from public.products where vendor_id = '${id}');
          delete from public.quotes where rfq_id in (select id from public.rfqs where buyer_id = '${id}');
-         delete from public.rfqs where buyer_id = '${id}';
+         delete from public.rfqs where buyer_id = '${id}'; delete from public.rfq_submissions where buyer_id = '${id}';
          delete from public.product_images where product_id in (select id from public.products where vendor_id = '${id}');
          delete from public.products where vendor_id = '${id}';`);
   }
@@ -213,7 +213,8 @@ test("3a. the requirement form uploads its photos, and My Quotes shows the cover
   await page.getByRole("button", { name: /Submit Quote Request/ }).click();
   await expect(page).toHaveURL(/\/requirement\/my-quotes$/, { timeout: 20_000 });
 
-  const row = sql(`select image || '|' || cardinality(images) from public.rfqs where buyer_id = '${buyer.id}'`);
+  // Since 2026-10-17 a posted requirement waits for review as an rfq_submissions row.
+  const row = sql(`select image || '|' || cardinality(images) from public.rfq_submissions where buyer_id = '${buyer.id}'`);
   const [image, count] = row.split("|");
   expect(count).toBe("1");
   expect(image).toMatch(new RegExp(`/storage/v1/object/public/product-images/${buyer.id}/rfq/[0-9a-f-]{36}/0\\.(webp|jpg|png)$`));
@@ -238,7 +239,7 @@ test("3b. Quick Quote saves the requirement with its photo; signed out it asks t
   await anon.getByPlaceholder("e.g., 500 pieces, 1000 units").fill("100");
   await anon.getByRole("button", { name: /Submit Quick Quote/ }).click();
   await expect(anon.getByText("Sign in to post a requirement")).toBeVisible();
-  expect(sql(`select count(*) from public.rfqs where title = 'QQ anon ${tag}'`)).toBe("0");
+  expect(sql(`select count(*) from public.rfq_submissions where title = 'QQ anon ${tag}'`)).toBe("0");
   await anonCtx.close();
 
   const buyer = await freshAccount(`hsquick${tag}`);
@@ -254,16 +255,16 @@ test("3b. Quick Quote saves the requirement with its photo; signed out it asks t
   await page.locator('input[type="file"][multiple]').setInputFiles(PICTURE);
   await expect(page.getByText(/1\/5 photos/)).toBeVisible();
   await page.getByRole("button", { name: /Submit Quick Quote/ }).click();
-  await expect(page.getByText("Quick Quote posted")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Sent for review")).toBeVisible({ timeout: 20_000 });
   await expect(page).toHaveURL(/\/requirement\/my-quotes$/);
 
-  const row = sql(`select title || '|' || quantity || '|' || description || '|' || image || '|' || status
-                     from public.rfqs where buyer_id = '${buyer.id}'`);
+  const row = sql(`select title || '|' || quantity || '|' || description || '|' || image || '|' || state
+                     from public.rfq_submissions where buyer_id = '${buyer.id}'`);
   const [title, qty, description, image, status] = row.split("|");
   expect(title).toBe(`QQ linen shirts ${tag}`);
   expect(qty).toBe("250");
   expect(description).toBe("Quantity: 250 pieces\nNavy and white");
-  expect(status).toBe("active");
+  expect(status).toBe("pending"); // waits for review (2026-10-17)
   expect(image).toContain(`/product-images/${buyer.id}/rfq/`);
   await expect(page.locator(`img[src="${image}"]`)).toBeVisible();
   expect(errors).toEqual([]);

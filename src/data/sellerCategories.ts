@@ -40,6 +40,8 @@ export interface SellerCategory {
   type: "product" | "service" | "freelancer";
   subCategories: SubCategory[];
   commonFields?: FormField[];
+  /** A requirement category only: buyers post under it, sellers can't list under it (CategorySelector). */
+  buyerOnly?: boolean;
 }
 
 // Size options for different garment types: data/sizeCharts.ts, which also holds the chart buyers read for each
@@ -1449,6 +1451,17 @@ export const sellerCategories: SellerCategory[] = [
       { id: "batchSize", label: "Minimum Batch Size", type: "text", placeholder: "e.g., 500 units, 1000 units" },
       { id: "sampleAvailable", label: "Sample Available?", type: "select", options: ["Yes (Free)", "Yes (Paid)", "No"] },
     ],
+  },
+  // "Others (custom)" (2026-10-17, Mitra: "add an Others option for totally custom clothes that fall in no
+  // category; shown to all types of manufacturers"). For requirements only: the matching functions treat it as
+  // every seller's category (migration 20261017140000, rfq_category_is_open).
+  {
+    id: "others-custom",
+    name: "Others (Custom)",
+    icon: "Sparkles",
+    type: "product",
+    buyerOnly: true,
+    subCategories: [],
   },
 ];
 

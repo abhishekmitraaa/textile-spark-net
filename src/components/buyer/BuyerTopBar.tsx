@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Bookmark, MoreVertical, X, Globe, ChevronRight } from "lucide-react";
+import { Search, Bookmark, MoreVertical, X, Globe, ChevronRight, Bell } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useUnreadCount } from "@/lib/queries/notifications";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useSwitchRole } from "@/hooks/useSwitchRole";
 import CosoraLogo from "@/components/CosoraLogo";
@@ -139,6 +141,7 @@ function SideDrawer({ isOpen, onClose }: { isOpen: boolean; onClose: () => void 
 
 export default function BuyerTopBar() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const t = useT();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { active: converting } = useDisplayCurrency();
@@ -164,6 +167,9 @@ export default function BuyerTopBar() {
             <span className="text-sm text-gray-400 truncate">{t("Search for items or brands")}</span>
           </button>
 
+          {/* Notifications, for a signed-in buyer (2026-10-17: a requirement's review is told here). */}
+          {user && <BuyerBell onOpen={() => navigate("/notifications")} />}
+
           {/* Bookmark */}
           <button onClick={() => navigate("/saved")} className="p-1.5 shrink-0">
             <Bookmark className="w-5 h-5 text-gray-700" />
@@ -184,5 +190,20 @@ export default function BuyerTopBar() {
 
       <SideDrawer isOpen={drawerOpen} onClose={() => setDrawerOpen(false)} />
     </>
+  );
+}
+
+/** The bell with the unread count; its own component so the notifications query runs only when signed in. */
+function BuyerBell({ onOpen }: { onOpen: () => void }) {
+  const unread = useUnreadCount();
+  return (
+    <button onClick={onOpen} aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} data-testid="buyer-bell" className="relative p-1.5 shrink-0">
+      <Bell className="w-5 h-5 text-gray-700" />
+      {unread > 0 && (
+        <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-buyer px-1 text-[9px] font-bold text-white tabular-nums">
+          {unread > 99 ? "99+" : unread}
+        </span>
+      )}
+    </button>
   );
 }

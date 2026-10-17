@@ -2241,6 +2241,75 @@ export type Database = {
           },
         ]
       }
+      rfq_submissions: {
+        Row: {
+          attributes: Json
+          budget_max: number | null
+          budget_min: number | null
+          buyer_id: string
+          buyer_message: string | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image: string | null
+          images: string[] | null
+          product_name: string | null
+          quantity: number | null
+          reason_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          rfq_id: string | null
+          state: string
+          title: string
+        }
+        Insert: {
+          attributes?: Json
+          budget_max?: number | null
+          budget_min?: number | null
+          buyer_id: string
+          buyer_message?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          images?: string[] | null
+          product_name?: string | null
+          quantity?: number | null
+          reason_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfq_id?: string | null
+          state?: string
+          title: string
+        }
+        Update: {
+          attributes?: Json
+          budget_max?: number | null
+          budget_min?: number | null
+          buyer_id?: string
+          buyer_message?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image?: string | null
+          images?: string[] | null
+          product_name?: string | null
+          quantity?: number | null
+          reason_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          rfq_id?: string | null
+          state?: string
+          title?: string
+        }
+        Relationships: []
+      }
       rfqs: {
         Row: {
           attributes: Json

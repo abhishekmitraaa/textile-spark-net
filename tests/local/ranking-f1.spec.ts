@@ -133,11 +133,12 @@ test.describe("F1: the requirement form keeps its answers", () => {
       await field(/^Quantity/).fill("500 metres");
       await page.getByRole("button", { name: /Submit Quote Request/ }).click();
       await expect(page).toHaveURL(/\/requirement\/my-quotes$/, { timeout: 30_000 });
-      expect(sql(`select count(*) || '|' || max(attributes ->> 'productType') from public.rfqs
+      // A posted requirement waits for review as an rfq_submissions row (2026-10-17); approval copies its attributes.
+      expect(sql(`select count(*) || '|' || max(attributes ->> 'productType') from public.rfq_submissions
                    where buyer_id = '11111111-1111-1111-1111-111111111111' and attributes ->> 'composition' = '${composition}'`)).toBe("1|Linen");
     } finally {
       await ctx.close();
-      sql(`delete from public.rfqs where attributes ->> 'composition' = '${composition}'`);
+      sql(`delete from public.rfq_submissions where attributes ->> 'composition' = '${composition}'`);
     }
   });
 });

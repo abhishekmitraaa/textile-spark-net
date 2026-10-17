@@ -204,9 +204,13 @@ export interface NewRfq {
   /** The form's category answers (Ranking F1), from requirementAttributes(). */
   attributes?: Attributes;
 }
+// An open requirement (Post Your Requirement, Quick Quote) goes to Cosora's review first (2026-10-17, Mitra:
+// "RFQs should go through the admin panel for approval"): it is an rfq_submissions row until an admin approves it,
+// which copies it into rfqs, where sellers see it (migration 20261017140000). Returns the submission's id.
+// The database refuses an open requirement written straight to rfqs.
 export async function createRfq(buyerId: string, input: NewRfq): Promise<string> {
   const { data, error } = await supabase
-    .from("rfqs")
+    .from("rfq_submissions")
     .insert({
       buyer_id: buyerId, title: input.title, product_name: input.productName ?? input.title,
       quantity: input.quantity ?? null, budget_min: input.budgetMin ?? null, budget_max: input.budgetMax ?? null,
@@ -214,12 +218,56 @@ export async function createRfq(buyerId: string, input: NewRfq): Promise<string>
       // `image` is the cover every list shows; `images` holds them all (2026-10-14: the pictures a
       // buyer added were never uploaded, so every requirement showed a broken image).
       image: input.images?.[0] ?? null, images: input.images?.length ? input.images : null,
-      category_id: input.categoryId ?? null, status: "active",
+      category_id: input.categoryId ?? null,
       attributes: input.attributes ?? {},
     })
     .select("id").single();
   if (error) throw error;
   return data.id;
+}
+
+/** A buyer's requirement still with Cosora's review, or not approved (an approved one is an rfqs row). */
+export interface RfqSubmission {
+  id: string;
+  title: string;
+  image: string | null;
+  quantity: number | null;
+  state: "pending" | "rejected";
+  /** Why it wasn't approved: the reason's message, then the reviewer's note. */
+  reason: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+}
+
+async function fetchMySubmissions(buyerId: string): Promise<RfqSubmission[]> {
+  const { data, error } = await supabase
+    .from("rfq_submissions")
+    .select("id, title, image, quantity, state, buyer_message, review_note, created_at, reviewed_at")
+    .eq("buyer_id", buyerId)
+    .in("state", ["pending", "rejected"])
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map((r) => ({
+    id: r.id,
+    title: r.title,
+    image: r.image,
+    quantity: r.quantity,
+    state: r.state as "pending" | "rejected",
+    reason: [r.buyer_message, r.review_note].filter(Boolean).join(" ") || null,
+    createdAt: r.created_at,
+    reviewedAt: r.reviewed_at,
+  }));
+}
+
+/** The buyer's requirements waiting for review or not approved; refreshes every 30 s while one waits. */
+export function useMyRfqSubmissions(buyerId: string | undefined) {
+  return useQuery({
+    queryKey: ["rfq_submissions", buyerId],
+    queryFn: () => fetchMySubmissions(buyerId as string),
+    enabled: Boolean(buyerId),
+    refetchInterval: (q) => (q.state.data?.some((r) => r.state === "pending") ? 30_000 : false),
+  });
 }
 
 // ── Buyer: create a TARGETED quote request from a product page ──

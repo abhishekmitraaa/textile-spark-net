@@ -1,7 +1,7 @@
 import { brand } from "@/lib/brand";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { errorMessage } from "@/lib/errorMessage";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { quotesForRfq, rfqStats, bestPrice, topRated } from "@/lib/quotesStore";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
-import { useBuyerQuotes, setQuoteStatusDb } from "@/lib/queries/rfqs";
+import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb } from "@/lib/queries/rfqs";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import ReceivedQuoteCard from "@/components/buyer/quotes/ReceivedQuoteCard";
@@ -71,6 +71,15 @@ const MyQuotes = () => {
   const queryClient = useQueryClient();
   const { data: buyerData } = useBuyerQuotes(user?.id);
   const rfqs = buyerData?.rfqs ?? [];
+  // Requirements still with Cosora's review, or not approved (2026-10-17). An approved one is in `rfqs`.
+  const { data: submissions = [] } = useMyRfqSubmissions(user?.id);
+  const prevPending = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    // One that was waiting and isn't any more was approved: it's an rfqs row now.
+    const pending = new Set(submissions.filter((x) => x.state === "pending").map((x) => x.id));
+    if ([...prevPending.current].some((id) => !pending.has(id))) void queryClient.invalidateQueries({ queryKey: ["rfqs", "buyer"] });
+    prevPending.current = pending;
+  }, [submissions, queryClient]);
   const quotesMap = buyerData?.quotesMap ?? {};
 
   const [view, setView] = useState<View>("list");
@@ -184,8 +193,35 @@ const MyQuotes = () => {
                 <StatCard icon={TrendingUp} value={listTotals.newQuotes} label="New Quotes" tint="bg-emerald-50 text-emerald-500" badge={listTotals.newQuotes} />
               </div>
 
+              {submissions.length > 0 && (
+                <div className="mb-5 space-y-3" data-testid="rfq-submissions">
+                  {submissions.map((sub) => (
+                    <div key={sub.id} data-testid="rfq-submission" className="rounded-2xl border border-gray-200 bg-white p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <span className={cn("rounded-full px-2 py-0.5 text-[10px] font-bold",
+                            sub.state === "pending" ? "bg-amber-50 text-amber-700" : "bg-red-50 text-red-600")}>
+                            {sub.state === "pending" ? "Under review" : "Not approved"}
+                          </span>
+                          <h3 data-no-translate className="mt-1.5 text-sm font-bold text-gray-900 leading-snug line-clamp-1">{sub.title}</h3>
+                          {sub.state === "pending" ? (
+                            <p className="mt-0.5 text-xs text-gray-500">Cosora is checking it before sellers see it. This usually takes 3–5 minutes.</p>
+                          ) : (
+                            <p className="mt-1 text-xs text-red-600">
+                              <span className="font-semibold">Reason:</span>{" "}
+                              <span data-no-translate>{sub.reason}</span>
+                            </p>
+                          )}
+                        </div>
+                        <RfqThumb src={sub.image} alt={sub.title} className="w-14 h-14" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <h2 className="text-xs font-bold tracking-wide text-gray-400 mb-2.5">YOUR REQUESTS</h2>
-              {rfqs.length === 0 && (
+              {rfqs.length === 0 && submissions.length === 0 && (
                 <p className="rounded-2xl border border-dashed border-gray-200 py-10 text-center text-sm text-gray-400">
                   {user ? "No requirements yet — tap Create New to post one." : "Sign in as a buyer to see your requirements."}
                 </p>

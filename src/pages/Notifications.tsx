@@ -24,6 +24,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import BuyerShell from "@/components/buyer/BuyerShell";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import {
   devOnlySampleNotifications,
@@ -227,6 +229,9 @@ function NotificationCard({
 
 const Notifications = () => {
   const reduced = useReducedMotion();
+  // Buyers get notifications too since 2026-10-17 (their requirements' reviews): the buyer's own shell for them.
+  const { role } = useUserRole();
+  const Layout = role === "seller" ? DashboardLayout : BuyerShell;
   const qc = useQueryClient();
   const { data: rows, isPending, error } = useNotifications();
   const [tab, setTab] = useState<TabKey>("all");
@@ -280,7 +285,7 @@ const Notifications = () => {
   }, [filtered]);
 
   return (
-    <DashboardLayout>
+    <Layout>
       <motion.div
         variants={reduced ? {} : page}
         initial="hidden"
@@ -427,7 +432,7 @@ const Notifications = () => {
           </div>
         )}
       </motion.div>
-    </DashboardLayout>
+    </Layout>
   );
 };
 

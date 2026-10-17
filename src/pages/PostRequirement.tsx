@@ -70,6 +70,7 @@ const SCHEMA_BY_TAXONOMY: Record<string, string> = {
   "freelancers-job-workers": "freelancer",
   "logistics-supply-chain": "exporter",
   "service-providers": "designer",
+  "others-custom": "custom",
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -406,6 +407,35 @@ const SCHEMAS: Record<string, Section[]> = {
     { title: "Attachments (Optional)", fields: [filesField()] },
   ],
 
+  // ── Others (custom), 2026-10-17: clothing that fits no category; sent to every seller ──
+  custom: [
+    { title: "What you need made", fields: [
+      { key: "productName", label: "What is it?", type: "text", placeholder: "e.g., Stage costume with a detachable cape", required: true },
+      { key: "productType", label: "Kind of item", type: "select", options: ["Garment", "Costume", "Uniform", "Accessory", "Home textile", "Other"], placeholder: "Select" },
+    ]},
+    { title: "Colors & Sizes", fields: [
+      { key: "colors", label: "Colors (select multiple)", type: "chips", options: COLORS },
+      adultSizes,
+    ]},
+    { title: "Material", fields: [
+      { key: "fabric", label: "Fabric / material", type: "text", placeholder: "e.g., Satin with net lining", half: true },
+      { key: "gsm", label: "GSM", type: "text", placeholder: "e.g., 180-200", half: true },
+    ]},
+    { title: "Description", fields: [desc("Describe the design, measurements, finish and anything a seller must know. Reference pictures help.")] },
+    { title: "Quantity & Budget", fields: [quantity("e.g., 50 pieces"), budget("Price Range (per piece)")] },
+    { title: "Attachments (Optional)", fields: [filesField("Reference pictures (Optional)")] },
+  ],
+
+  // ── Generic: a category without questions of its own ──
+  generic: [
+    { title: "What you need", fields: [
+      { key: "productName", label: "Product or service", type: "text", placeholder: "e.g., Industrial lockstitch machines", required: true },
+    ]},
+    { title: "Description", fields: [desc()] },
+    { title: "Quantity & Budget", fields: [quantity("e.g., 10 units"), budget("Budget")] },
+    { title: "Attachments (Optional)", fields: [filesField()] },
+  ],
+
   // ── Photography (service) ──
   photography: [
     { title: "Service Details", fields: [
@@ -569,7 +599,8 @@ const PostRequirement = () => {
   const category = categoryId ? (getCategoryById(categoryId) ?? null) : null;
   const subCategory = category?.subCategories.find((s) => s.id === subCategoryId) ?? null;
   const sections = categoryId
-    ? (SCHEMAS[SCHEMA_BY_TAXONOMY[categoryId] ?? ""] ?? SCHEMAS.womens)
+    // A category without questions of its own gets the generic set (it used to get the women's-wear questions).
+    ? (SCHEMAS[SCHEMA_BY_TAXONOMY[categoryId] ?? ""] ?? SCHEMAS.generic)
     : [];
 
   // Reset the form whenever the chosen category changes (fields differ per
@@ -717,7 +748,7 @@ const PostRequirement = () => {
   // Success -> redirect to My Previous Quotes
   useEffect(() => {
     if (step !== "success") return;
-    const t = window.setTimeout(() => navigate("/requirement/my-quotes"), 2200);
+    const t = window.setTimeout(() => navigate("/requirement/my-quotes"), 5000);
     return () => window.clearTimeout(t);
   }, [step, navigate]);
 
@@ -879,9 +910,13 @@ const PostRequirement = () => {
             <Check className="w-9 h-9 text-brand-buyer" strokeWidth={3} />
           </div>
         </motion.div>
-        <p className="text-white text-lg font-semibold max-w-xs">Your requirement has been submitted successfully</p>
+        {/* Every open requirement is checked before sellers see it (2026-10-17). */}
+        <p className="text-white text-lg font-semibold max-w-xs" data-testid="rfq-sent-for-review">Sent for review</p>
+        <p className="mt-2 text-white/90 text-sm max-w-xs">
+          Cosora checks every requirement before sellers see it. This usually takes 3–5 minutes, and we'll notify you.
+        </p>
         <button onClick={() => navigate("/requirement/my-quotes")} className="mt-8 text-white/80 text-sm underline underline-offset-4">
-          View my quotes now
+          See it in My Quotes
         </button>
       </div>
     );
@@ -968,7 +1003,7 @@ const PostRequirement = () => {
               <div className="rounded-2xl border border-gray-200 bg-white p-4">
                 <h2 className="text-sm font-bold text-gray-900">Select one Category</h2>
                 <p className="mb-3 mt-0.5 text-xs text-gray-500">Products, services and freelancers. Scroll to see them all.</p>
-                <CategorySelector selectedCategory={categoryId} onSelectCategory={pickCategory} />
+                <CategorySelector selectedCategory={categoryId} onSelectCategory={pickCategory} includeBuyerOnly />
               </div>
 
               {/* Subcategory is OPTIONAL for a buyer, unlike the vendor upload

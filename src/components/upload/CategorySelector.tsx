@@ -10,6 +10,8 @@ import {
 interface CategorySelectorProps {
   selectedCategory: string | null;
   onSelectCategory: (categoryId: string) => void;
+  /** Show the buyer-only requirement categories ("Others (Custom)"): Post Your Requirement only. */
+  includeBuyerOnly?: boolean;
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -43,9 +45,9 @@ const typeLabels: Record<string, string> = {
   freelancer: "Freelancer",
 };
 
-export const CategorySelector = ({ selectedCategory, onSelectCategory }: CategorySelectorProps) => {
+export const CategorySelector = ({ selectedCategory, onSelectCategory, includeBuyerOnly = false }: CategorySelectorProps) => {
   // Group categories by type
-  const groupedCategories = sellerCategories.reduce((acc, category) => {
+  const groupedCategories = sellerCategories.filter((c) => includeBuyerOnly || !c.buyerOnly).reduce((acc, category) => {
     if (!acc[category.type]) {
       acc[category.type] = [];
     }
@@ -112,7 +114,7 @@ export const CategorySelector = ({ selectedCategory, onSelectCategory }: Categor
                     {category.name}
                   </span>
                   <span className="text-[9px] text-muted-foreground sm:text-[10px] lg:text-xs">
-                    {category.subCategories.length} sub-cat
+                    {category.buyerOnly ? "Reaches every seller" : `${category.subCategories.length} sub-cat`}
                   </span>
                 </motion.button>
               );

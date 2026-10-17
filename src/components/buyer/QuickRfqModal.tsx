@@ -97,7 +97,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
       return;
     }
     setSubmitting(false);
-    toast.success("Quick Quote posted", { description: "Sellers can see it now and send you quotes." });
+    toast.success("Sent for review", { description: "Cosora checks every requirement before sellers see it. This usually takes 3–5 minutes, and we'll notify you." });
     reset();
     onClose();
     navigate("/requirement/my-quotes");
