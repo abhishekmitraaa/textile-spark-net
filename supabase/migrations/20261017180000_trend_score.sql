@@ -22,7 +22,9 @@
 --   browsers without an account are refused by the grant (EXECUTE authenticated only).
 -- feed_products (trending), spotlight_listings, admin.featured_candidates read listing_trend_score. Bodies =
 --   production's of 2026-10-17 after 150000 (md5 62934301, 6139c259, 7e7b06a0), only that expression changed.
--- Seeded from today's ledgers (all of today's activity counted under the hardened counters).
+-- Not seeded: every score starts at 0 (Mitra: start fresh). Today's ledgers hold rows logged before the counters were
+-- hardened (a seller's own views, signed-out views past today's cap), so seeding from them would carry that inflation in
+-- (found by the commit security review).
 -- ─────────────────────────────────────────────────────────────────────────────
 
 create table if not exists public.product_trend (
@@ -168,22 +170,6 @@ end
 $function$;
 revoke all on function public.increment_product_enquiry(uuid) from public, anon;
 grant execute on function public.increment_product_enquiry(uuid) to authenticated;
-
--- ── Seed from today's ledgers ──────────────────────────────────────────────────
-insert into public.product_trend (product_id, score)
-select product_id, sum(w) from (
-  select d.product_id,
-         public.listing_demand_weight(case when d.viewer_key like 'u:%' then 'view_signed_in' else 'view_signed_out' end)
-           * power(2.0, extract(epoch from (d.day::timestamp at time zone 'Asia/Kolkata' - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0) as w
-    from public.product_view_daily d
-  union all
-  select e.product_id, public.listing_demand_weight('enquiry')
-           * power(2.0, extract(epoch from (e.day::timestamp at time zone 'Asia/Kolkata' - timestamptz '2026-10-17 00:00:00+05:30')) / 604800.0)
-    from public.product_enquiry_daily e
-) s
-where exists (select 1 from public.products x where x.id = s.product_id)
-group by product_id
-on conflict (product_id) do nothing;
 
 -- ── Ranking reads the score ─────────────────────────────────────────────────────
 
