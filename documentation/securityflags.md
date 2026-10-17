@@ -119,7 +119,11 @@ in the next one.
   URLs are rendered (`safeHttpUrl`), also for requirement pictures in the review queue. Found by the commit security
   review.
 - **Closed:** a buyer could skip requirement review by inserting an open RFQ straight into `rfqs`; `rfqs_insert`
-  now requires `vendor_id`. Submissions take only content columns; the state, reviewer and decision are the
+  now requires `vendor_id`. **Closed, Medium (found by the commit security review before release):** through the
+  buyer's own update right on `rfqs` (unused by the app) a buyer could still (1) write a request to one seller and
+  then clear `vendor_id`, an open requirement nobody reviewed, or (2) rewrite an approved requirement. A trigger
+  (`trg_rfqs_reviewed_content_guard`) now refuses, for browser buyers, any change of who it's for and any change to
+  an open requirement's content; closing it stays allowed. Submissions take only content columns; the state, reviewer and decision are the
   server's (`rfq_submissions_guard`, column grants); the buyer can't read who reviewed.
 - `product-files` takes PDFs only, 10 MB, writes under the owner's folder; `product_documents` readable like
   `product_images`, at most 3 per listing. `product_view_daily` has no client grants.

@@ -77,6 +77,11 @@ test("a requirement waits for review; not approved with a reason, or approved fo
   })();
   const skip = await api.from("rfqs").insert({ buyer_id: buyer.id, title: `RV ${tag} skip`, status: "active" });
   expect(skip.error, "an open requirement straight to rfqs").not.toBeNull();
+  // …nor by writing a request to one seller and then opening it to everyone.
+  const direct = await api.from("rfqs").insert({ buyer_id: buyer.id, title: `RV ${tag} direct`, status: "active", vendor_id: seller.id }).select("id").single();
+  expect(direct.error).toBeNull();
+  const opened = await api.from("rfqs").update({ vendor_id: null }).eq("id", direct.data!.id).select("id");
+  expect(opened.error?.code, "a direct request turned into an open one").toBe("42501");
   const forged = await api.from("rfq_submissions").insert({ buyer_id: buyer.id, title: `RV ${tag} forged`, state: "approved" } as never);
   expect(forged.error, "a submission that sets its own state").not.toBeNull();
 
@@ -134,10 +139,17 @@ test("a requirement waits for review; not approved with a reason, or approved fo
   const seen = await sellerApi.from("rfqs").select("id").eq("id", rfqId);
   expect(seen.data?.length).toBe(1);
   expect(sql(`select count(*) from public.notifications where profile_id = '${buyer.id}' and title = 'Your requirement is live'`)).toBe("1");
+  // Approved means approved as it was: the buyer can't rewrite it afterwards, only close it.
+  const rewrite = await api.from("rfqs").update({ title: `RV ${tag} rewritten spam` }).eq("id", rfqId).select("id");
+  expect(rewrite.error?.code, "an approved requirement rewritten").toBe("42501");
+  expect(sql(`select title like '%embroidered jacket%' from public.rfqs where id = '${rfqId}'`)).toBe("t");
   await page.goto(`${BUYER_URL}/requirement/my-quotes`);
   await expect(page.getByText(second).first()).toBeVisible({ timeout: 30_000 });
   await expect(page.getByTestId("rfq-submission").filter({ hasText: second })).toHaveCount(0);
 
+  const closed = await api.from("rfqs").update({ status: "closed" }).eq("id", rfqId).select("id");
+  expect(closed.error).toBeNull();
+  expect(closed.data?.length).toBe(1);
   expect(errors).toEqual([]);
   expect(aerrors).toEqual([]);
   await actx.close();

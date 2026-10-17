@@ -146,6 +146,42 @@ create policy rfqs_insert on public.rfqs for insert
   with check ((buyer_id = (select auth.uid())) and (select public.account_is_active((select auth.uid())))
               and vendor_id is not null);
 
+-- ── …nor be changed into one, or rewritten, after review ──────────────────────
+-- rfqs_update lets a buyer update their own row (the app never does; it exists for the API). Without this, a
+-- buyer could (1) write a request to one seller, then clear vendor_id: an open requirement nobody reviewed; or
+-- (2) have a requirement approved, then rewrite what sellers read. From a browser, a buyer may still close their
+-- own (status); who it's for and what it says are fixed, except a request to one seller's own wording. Admins
+-- and the server's own jobs are not browser buyers and pass.
+create or replace function public.rfqs_reviewed_content_guard()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if current_user <> 'authenticated' or coalesce(public.is_admin(), false) then
+    return new;
+  end if;
+  if new.vendor_id is distinct from old.vendor_id or new.product_id is distinct from old.product_id then
+    raise exception 'A request can''t be moved to other sellers. Post a new requirement instead.' using errcode = '42501';
+  end if;
+  if old.vendor_id is null and (
+       new.title, new.product_name, new.description, new.image, new.images, new.category_id, new.attributes,
+       new.quantity, new.budget_min, new.budget_max, new.colors, new.sizes_breakdown, new.customization_notes,
+       new.customization_images, new.customization_requested
+     ) is distinct from (
+       old.title, old.product_name, old.description, old.image, old.images, old.category_id, old.attributes,
+       old.quantity, old.budget_min, old.budget_max, old.colors, old.sizes_breakdown, old.customization_notes,
+       old.customization_images, old.customization_requested
+     ) then
+    raise exception 'A reviewed requirement can''t be changed. Post a new one instead.' using errcode = '42501';
+  end if;
+  return new;
+end
+$function$;
+drop trigger if exists trg_rfqs_reviewed_content_guard on public.rfqs;
+create trigger trg_rfqs_reviewed_content_guard before update on public.rfqs
+  for each row execute function public.rfqs_reviewed_content_guard();
+
 -- ── Review ─────────────────────────────────────────────────────────────────────
 create or replace function admin.require_rfq_reviewer()
 returns void
@@ -595,6 +631,9 @@ begin
   end if;
   if (select with_check from pg_policies where tablename = 'rfqs' and policyname = 'rfqs_insert') !~ 'vendor_id IS NOT NULL' then
     raise exception 'self-check: an open requirement can still skip review';
+  end if;
+  if not exists (select 1 from pg_trigger where tgrelid = 'public.rfqs'::regclass and tgname = 'trg_rfqs_reviewed_content_guard') then
+    raise exception 'self-check: a reviewed requirement can still be rewritten or reopened to everyone';
   end if;
   if has_table_privilege('anon', 'public.rfq_submissions', 'select') or has_table_privilege('authenticated', 'public.rfq_submissions', 'update')
      or has_column_privilege('authenticated', 'public.rfq_submissions', 'reviewed_by', 'select')

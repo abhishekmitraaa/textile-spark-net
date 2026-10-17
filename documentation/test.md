@@ -224,7 +224,9 @@ file was created; they record real runs, but only those the changelog captured.
   minutes", pending, no rfqs row, "Under review" in My Quotes; an open insert into rfqs and a self-approved
   submission refused; support can't review, a moderator can't write reasons, a manager can; rejected with a
   manager's reason + note → notification, My Quotes reason, bell "1 unread", /notifications; a second approved →
-  an rfqs row in Others, an unrelated seller matched and able to read it, "Your requirement is live".
+  an rfqs row in Others, an unrelated seller matched and able to read it, "Your requirement is live". After the
+  security review: a direct request can't be opened to everyone, an approved one can't be rewritten, closing works
+  (with rfq-leads, buyer-minor-fixes-b, subscriptions p6–p8: 23/23).
 - Updated: buyer-minor-fixes (one picture per category; paid slides found by Visit), cat-pics-reports-jpeg,
   buyer-minor-fixes-b and ranking-f1 (submissions; the requirement page's "Save" had become "Continue").
 - tsc both repos, i18n 7,950/7,950, slot check (182 seller sub-categories), seller fields 182, rls check 0, eslint on
