@@ -1332,7 +1332,8 @@ undocumented. Deep technical rationale for each lives in
   `useCategoryPicture`. Listings use the vendor upload list: `SELLER_SUB_TILE` maps each sub-category to a tile, and
   `scripts/category-image-slots-check.mjs` fails on a missing one.
 - **Cards show real views, never "sold" (Mitra, 2026-10-17).** Sales happen off Cosora. `products.views_count`, one
-  per listing, viewer and day (`increment_product_view`).
+  per listing, viewer and day (`increment_product_view`). Nothing ranks on `sold_count` either: demand is
+  `enquiries_count * 10 + views_count` (feed trending, spotlight, featured candidates; migration `20261017150000`).
 - **Each garment type has its own sizes (Mitra, 2026-10-17).** `data/sizeCharts.ts` holds the sets the upload form
   offers and the chart buyers read; a new garment sub-category gets a set and a chart, not letter sizes.
 - **An admin removes a lead; nobody deletes one (Mitra, 2026-10-02, RFQ/leads R3).** Since 2026-10-17 an RFQ is

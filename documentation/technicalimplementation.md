@@ -2179,8 +2179,9 @@ Migrations `20261017100000_universal_pictures_jpeg_only`, `…110000_product_vie
 - **Views.** `product_view_daily (product_id, viewer_key, day IST)`, no client grants; `increment_product_view(p,
   p_viewer)` keys `u:<uid>` | `b:<uuid from lib/viewerKey.ts>` | `unkeyed`, inserts on conflict do nothing and adds 1
   only for a new row; purges days before yesterday on ~1 call in 500 (no new cron). `feed_products` gained
-  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`; ranking still on `sold_count +
-  enquiries_count`.
+  `views_count` (drop + create in one transaction). Cards: `viewsLabel()`. Ranking: `enquiries_count * 10 +
+  views_count` in feed_products (trending k_score), spotlight_listings and admin.featured_candidates since
+  `20261017150000` (was `sold_count + enquiries_count`).
 - **Sizes.** `data/sizeCharts.ts`: sets (`BRA_SIZES`, `ADULT_SHOE_SIZES`, …), `SIZE_CHARTS`, `SIZE_CHART_BY_SUB`
   (`"letters"` → men's / women's by gender). Upload: `FALLBACK_SIZES` only for apparel without a size field; edit mode
   resolves the listing's sub-category (`sellerIdsForCategoryId`). `SizeChartSheet` marks offered sizes (32B marks band
