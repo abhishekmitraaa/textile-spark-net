@@ -73,6 +73,11 @@ export function liveProductId(v: { product_id: string | null; products: { id: st
   return v.product_id && v.products?.status === "live" ? v.product_id : null;
 }
 
+/** Tagged to a listing a buyer can't open: RLS returns no row for it, or a row that isn't live. */
+export function taggedListingUnavailable(v: { product_id: string | null; products: { id: string; status: string } | null }): boolean {
+  return Boolean(v.product_id) && liveProductId(v) === null;
+}
+
 function toCloseUp(v: RawVideo): VideoCloseUp {
   return {
     id: v.id,
@@ -89,6 +94,7 @@ function toCloseUp(v: RawVideo): VideoCloseUp {
     thumbnail: v.thumbnail_url ?? THUMB_PLACEHOLDER,
     videoUrl: v.video_url ?? undefined,
     productId: liveProductId(v),
+    listingUnavailable: taggedListingUnavailable(v),
   };
 }
 

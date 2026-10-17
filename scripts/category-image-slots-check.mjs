@@ -8,11 +8,16 @@
 // set, and a row the app doesn't show is a picture nobody sees. This loads the app's list
 // and the migration's rows and compares them: every slot unique, well formed, and in both.
 //
+// Since 2026-10-17 a category's /categories tile is its picture on every page (src/lib/categoryPicture.ts):
+// this also checks that every vendor-upload sub-category (src/data/sellerCategories.ts) and every New Arrivals
+// tile points at a tile that exists. New Arrivals' own slots (new-arrivals/*) were removed by the migration
+// *_universal_pictures_jpeg_only.sql; their seed rows in the first migration count as gone once it exists.
+//
 //   node scripts/category-image-slots-check.mjs          compare (exit 1 on a difference)
 //   node scripts/category-image-slots-check.mjs --sql    print the seed rows for a migration
 // ─────────────────────────────────────────────────────────────────────────────
 import { build } from "esbuild";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -20,8 +25,15 @@ import { pathToFileURL } from "node:url";
 const root = process.cwd();
 const dir = mkdtempSync(path.join(tmpdir(), "cosora-slots-"));
 const outfile = path.join(dir, "slots.mjs");
+const entry = path.join(dir, "entry.ts");
+const posix = (f) => path.join(root, f).split(path.sep).join("/");
+writeFileSync(entry, [
+  `export * from ${JSON.stringify(posix("src/lib/categoryImageSlots.ts"))};`,
+  `export { SELLER_SUB_TILE } from ${JSON.stringify(posix("src/lib/categoryPicture.ts"))};`,
+  `export { sellerCategories } from ${JSON.stringify(posix("src/data/sellerCategories.ts"))};`,
+].join(String.fromCharCode(10)));
 await build({
-  entryPoints: ["src/lib/categoryImageSlots.ts"],
+  entryPoints: [entry],
   outfile,
   format: "esm",
   platform: "node",
@@ -39,7 +51,7 @@ await build({
     },
   }],
 });
-const { allCategoryImageSlots, SLOT_PATTERN } = await import(pathToFileURL(outfile).href);
+const { allCategoryImageSlots, SLOT_PATTERN, categoryTileSlot, NEW_ARRIVALS_TILES, SELLER_SUB_TILE, sellerCategories } = await import(pathToFileURL(outfile).href);
 rmSync(dir, { recursive: true, force: true });
 
 const slots = allCategoryImageSlots();
@@ -70,6 +82,19 @@ const tileFiles = existsSync(tilesDir)
 for (const f of tileFiles) if (!f.endsWith(".jpg") || !tileSlots.has(f.slice(0, -4))) fail(`src/assets/categories/tiles/${f} belongs to no tile`);
 console.log(`${tileFiles.length} tile pictures for ${tileSlots.size} tiles`);
 
+// Every listing category and every New Arrivals tile shows an existing tile's picture (2026-10-17).
+const tileExists = (top, label) => seen.has(categoryTileSlot(top, label));
+let sellerSubs = 0;
+for (const c of sellerCategories) for (const sc of c.subCategories) {
+  sellerSubs++;
+  const t = SELLER_SUB_TILE[sc.name];
+  if (!t) fail(`seller sub-category "${sc.name}" (${c.id}) has no picture: add it to SELLER_SUB_TILE in src/lib/categoryPicture.ts`);
+  else if (!tileExists(t[0], t[1])) fail(`SELLER_SUB_TILE["${sc.name}"] names ${t[0]} / ${t[1]}, which is no /categories tile`);
+}
+for (const [name, t] of Object.entries(SELLER_SUB_TILE)) if (!tileExists(t[0], t[1])) fail(`SELLER_SUB_TILE["${name}"] names ${t[0]} / ${t[1]}, which is no /categories tile`);
+for (const t of NEW_ARRIVALS_TILES) if (!tileExists(t.tile[0], t.tile[1])) fail(`New Arrivals tile ${t.key} names ${t.tile.join(" / ")}, which is no /categories tile`);
+console.log(`${sellerSubs} seller sub-categories and ${NEW_ARRIVALS_TILES.length} New Arrivals tiles point at tiles`);
+
 // The seed rows of the migration that creates the table: ('slot', 'surface', 'label', group|null, position).
 const migDir = path.join(root, "supabase", "migrations");
 const file = readdirSync(migDir).find((f) => /_category_images\.sql$/.test(f));
@@ -79,6 +104,10 @@ if (!file) {
   const sql = readFileSync(path.join(migDir, file), "utf8");
   const rows = [...sql.matchAll(/^\s*\('((?:new-arrivals|categories)\/[^']*)', '([a-z_]+)', '((?:[^']|'')*)', (null|'(?:[^']|'')*'), (\d+)\)/gm)]
     .map((m) => ({ slot: m[1], surface: m[2], label: m[3].replace(/''/g, "'"), group: m[4] === "null" ? null : m[4].slice(1, -1).replace(/''/g, "'"), position: Number(m[5]) }));
+  // New Arrivals' own slots were deleted by a later migration (2026-10-17).
+  if (readdirSync(migDir).some((f) => /_universal_pictures_jpeg_only\.sql$/.test(f))) {
+    for (let i = rows.length - 1; i >= 0; i--) if (rows[i].slot.startsWith("new-arrivals/")) rows.splice(i, 1);
+  }
   const bySlot = new Map(rows.map((r) => [r.slot, r]));
   for (const s of slots) {
     const r = bySlot.get(s.slot);

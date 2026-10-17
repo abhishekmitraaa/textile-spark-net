@@ -1,4 +1,5 @@
 import { ConvertedPriceNote } from "@/components/buyer/ConvertedPriceNote";
+import StoreHeroBackground, { STORE_HERO_BOX } from "@/components/StoreHeroBackground";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -33,12 +34,9 @@ import {
   FileText, Download, LogIn, Flag,
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
-import catTshirt from "@/assets/categories/brand/tshirt.png";
-import catDenim from "@/assets/categories/brand/denim.png";
-import catPrinting from "@/assets/categories/brand/printing.png";
-import catManufacturing from "@/assets/categories/brand/manufacturing.png";
-import catEmbroidery from "@/assets/categories/brand/embroidery.png";
-import catFinishing from "@/assets/categories/brand/finishing.png";
+import { useCategoryPicture } from "@/hooks/useCategoryPicture";
+import { tileForSellerSub } from "@/lib/categoryPicture";
+import { categoryTileSlot } from "@/lib/categoryImageSlots";
 import officeSewingLine from "@/assets/office/sewing-line.jpg";
 import officeStitching from "@/assets/office/stitching.jpg";
 import officeFabricRolls from "@/assets/office/fabric-rolls.jpg";
@@ -58,19 +56,11 @@ const listContainer = { show: { transition: { staggerChildren: 0.05 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
 // ─────────────────────────────────────────────────────────────
-// DATA. Placeholder content still shown for every vendor: the category tiles,
-// the office pictures and the "Sells" chips (ToDo.md). The
+// DATA. Placeholder content still shown for every vendor: the office pictures and the "Sells" chips
+// (ToDo.md). The category tiles are the seller's own since 2026-10-17. The
 // vendor's identity, contact and business details come from their own row, or
 // read "Not provided".
 // ─────────────────────────────────────────────────────────────
-const brandCategories = [
-  { label: "T-Shirt", src: catTshirt },
-  { label: "Denim", src: catDenim },
-  { label: "Printing", src: catPrinting },
-  { label: "Manufacturing", src: catManufacturing },
-  { label: "Embroidery", src: catEmbroidery },
-  { label: "Finishing", src: catFinishing },
-];
 
 // Office / facility photos shown to buyers. There is no office-photo upload
 // pipeline yet (the vendor-side BusinessProfile uses static placeholders too),
@@ -120,6 +110,8 @@ const VendorProfile = () => {
   const [videoViewerOpen, setVideoViewerOpen] = useState(false);
   const [videoStartIndex, setVideoStartIndex] = useState(0);
   const [productSearch, setProductSearch] = useState("");
+  // A "Brand's Categories" tile, picked: the store's items narrowed to it (its slot).
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null);
   const [genderFilter, setGenderFilter] = useState<"" | GenderFilter>("");
   const [sortKey, setSortKey] = useState<"" | "sold" | "rating">("");
   const [stuck, setStuck] = useState(false);
@@ -254,6 +246,8 @@ const VendorProfile = () => {
         moq: p.moq,
         sold: `${p.soldCountNum}+`,
         location: p.location,
+        // The /categories tile this listing belongs to, for "Brand's Categories" and its filter.
+        categorySlot: (() => { const t = tileForSellerSub(p.categoryName); return t ? categoryTileSlot(t.topId, t.subLabel) : null; })(),
         fabric: p.fabric,
         gsm: p.gsm,
         fit: p.fitType,
@@ -310,10 +304,28 @@ const VendorProfile = () => {
   const filteredProducts = useMemo(() => {
     let list = vpProducts.filter((p) => !productSearch || p.name.toLowerCase().includes(productSearch.toLowerCase()));
     if (genderFilter) list = list.filter((p) => p.gender === genderFilter);
+    if (categoryFilter) list = list.filter((p) => p.categorySlot === categoryFilter);
     if (sortKey === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     else if (sortKey === "sold") list = [...list].sort((a, b) => parseInt(b.reviews) - parseInt(a.reviews));
     return list;
-  }, [vpProducts, productSearch, genderFilter, sortKey]);
+  }, [vpProducts, productSearch, genderFilter, sortKey, categoryFilter]);
+
+  // "Brand's Categories" (2026-10-17, Mitra: a category's picture is the same everywhere and follows the admin).
+  // It used to be six bundled cut-outs (T-Shirt, Denim, Printing…) on every store, whatever it sold. Now the
+  // categories of this seller's live listings, most listings first, each with its /categories picture.
+  const categoryPics = useCategoryPicture();
+  const storeCategories = useMemo(() => {
+    const by = new Map<string, { slot: string; topId: string; label: string; count: number }>();
+    for (const p of vendor?.products ?? []) {
+      const t = tileForSellerSub(p.categoryName);
+      if (!t) continue;
+      const slot = categoryTileSlot(t.topId, t.subLabel);
+      const hit = by.get(slot);
+      if (hit) hit.count += 1;
+      else by.set(slot, { slot, topId: t.topId, label: t.subLabel, count: 1 });
+    }
+    return [...by.values()].sort((a, b) => b.count - a.count);
+  }, [vendor?.products]);
 
   // Loading, failed and not found are states of their own. All three used to
   // render a complete invented seller ("CARAMEL", 7,333 followers, a trust seal,
@@ -383,17 +395,9 @@ const VendorProfile = () => {
       >
         {/* ══ HERO ══ */}
         <motion.section variants={section} className="rounded-2xl overflow-hidden relative">
-          <div className="relative h-52 sm:h-60">
-            {vendor.bannerUrl ? (
-              <img src={vendor.bannerUrl} alt={`${brandName} banner`} className="absolute inset-0 h-full w-full object-cover" />
-            ) : (
-              // A plain brand wash until the vendor uploads a banner, not a stock photo.
-              <div className="absolute inset-0 bg-gradient-to-br from-brand-buyer via-[#c93a55] to-[#3b1d2a]" />
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-              <span className="text-5xl sm:text-6xl font-extrabold tracking-[0.3em] text-white/20 uppercase">{brandName}</span>
-            </div>
+          <div className={STORE_HERO_BOX} data-testid="store-hero">
+            {/* The seller's banner, or the drawn default (2026-10-17: the old default overflowed on phones). */}
+            <StoreHeroBackground bannerUrl={vendor.bannerUrl} brandName={brandName} tone="buyer" />
 
             {/* Back button — top left */}
             <button onClick={() => navigate(-1)} aria-label="Back"
@@ -430,7 +434,7 @@ const VendorProfile = () => {
 
             {/* Info — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight">{brandName}</h1>
+              <h1 className="line-clamp-2 break-words pr-2 text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight">{brandName}</h1>
               <div className="flex min-h-[1rem] items-center gap-1 mt-0.5 mb-2">
                 {vendorLocation && (
                   <>
@@ -791,20 +795,40 @@ const VendorProfile = () => {
           </motion.div>
         </motion.section>
 
-        {/* ══ BRAND'S CATEGORIES (horizontal scroll) ══ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+        {/* ══ BRAND'S CATEGORIES (horizontal scroll) ══ Hidden for a store with no live listings yet. A tap narrows
+            the store's items below to that category. */}
+        {storeCategories.length > 0 && (
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4" data-testid="brand-categories">
           <h2 className="text-sm font-bold text-gray-900 mb-3">Brand's Categories</h2>
           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-            {brandCategories.map((cat) => (
-              <div key={cat.label} className="flex-shrink-0 text-center">
-                <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-white p-2">
-                  <img src={cat.src} alt={cat.label} className="h-full w-full object-contain" loading="lazy" />
-                </div>
-                <p className="mt-1.5 text-xs font-medium text-gray-700 truncate w-20">{cat.label}</p>
-              </div>
-            ))}
+            {storeCategories.map((cat) => {
+              const src = categoryPics.pictureFor(cat.topId, cat.label);
+              const active = categoryFilter === cat.slot;
+              return (
+                <button
+                  key={cat.slot}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => {
+                    setCategoryFilter(active ? null : cat.slot);
+                    document.getElementById("store-items")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="flex-shrink-0 text-center"
+                >
+                  <div className={cn("h-20 w-20 overflow-hidden rounded-xl border bg-gray-100", active ? "border-brand-buyer ring-2 ring-brand-buyer/30" : "border-gray-100")}>
+                    {categoryPics.ready && src ? (
+                      <img src={src} alt={cat.label} data-slot={cat.slot} className="h-full w-full object-cover" loading="lazy" draggable={false} />
+                    ) : (
+                      <div className="h-full w-full animate-pulse bg-gray-100" aria-hidden="true" />
+                    )}
+                  </div>
+                  <p className="mt-1.5 text-xs font-medium text-gray-700 truncate w-20">{cat.label}</p>
+                </button>
+              );
+            })}
           </div>
         </motion.section>
+        )}
 
         {/* ══ BRAND'S RECOMMENDATIONS (top enquired items) ══ */}
         <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
@@ -934,7 +958,7 @@ const VendorProfile = () => {
         )}
 
         {/* ══ ALL PRODUCTS ══ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+        <motion.section variants={section} id="store-items" className="scroll-mt-16 rounded-2xl border border-gray-200 bg-white p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-gray-900">{brandName}</h2>
             <button onClick={() => setPageSaved((p) => !p)} className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200">
@@ -951,6 +975,12 @@ const VendorProfile = () => {
 
           {/* Filter row */}
           <div className="flex items-center gap-2 mb-3 flex-wrap">
+            {categoryFilter && (
+              <button type="button" onClick={() => setCategoryFilter(null)}
+                className="inline-flex items-center gap-1 rounded-full bg-brand-buyer/10 px-3 py-1.5 text-xs font-semibold text-brand-buyer">
+                {storeCategories.find((c) => c.slot === categoryFilter)?.label} <X className="h-3 w-3" />
+              </button>
+            )}
             <div className="relative">
               <select value={genderFilter} onChange={(e) => setGenderFilter(e.target.value as "" | GenderFilter)}
                 className="appearance-none rounded-full border border-gray-200 px-3 py-1.5 text-xs text-gray-700 font-semibold focus:outline-none pr-6">

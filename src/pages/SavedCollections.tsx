@@ -108,9 +108,13 @@ function SavedVideos() {
   const { data: videos = [] } = useSavedVideoCloseUps(user?.id);
   // The list the reel opened with, frozen while it's open: unsaving inside it refetches this query.
   const [open, setOpen] = useState<{ list: typeof videos; index: number } | null>(null);
+  // Kept mounted after closing, shut through isOpen: unmounting it as the way to close never let it drop its
+  // history entry, so the next back press did nothing (2026-10-17).
+  const [showing, setShowing] = useState(false);
   if (!videos.length && !open) return null;
   return (
-    <section className="mb-6" aria-labelledby="saved-videos-heading">
+    <section className={videos.length ? "mb-6" : undefined} aria-labelledby={videos.length ? "saved-videos-heading" : undefined}>
+      {videos.length > 0 && (<>
       <p id="saved-videos-heading" className="text-[11px] font-bold uppercase tracking-wider text-gray-400 mb-3">
         Saved videos <span className="text-gray-300">· {videos.length}</span>
       </p>
@@ -119,7 +123,7 @@ function SavedVideos() {
           <button
             key={v.id}
             type="button"
-            onClick={() => setOpen({ list: videos, index: i })}
+            onClick={() => { setOpen({ list: videos, index: i }); setShowing(true); }}
             aria-label={`Play ${v.brandLine} by ${v.brandName}`}
             data-testid="saved-video"
             className="relative shrink-0 w-28 aspect-[9/16] rounded-2xl overflow-hidden bg-gray-100 text-left"
@@ -134,12 +138,13 @@ function SavedVideos() {
           </button>
         ))}
       </div>
+      </>)}
       {open && (
         <VideoCloseUpsViewer
           videos={open.list}
           initialIndex={open.index}
-          isOpen
-          onClose={() => setOpen(null)}
+          isOpen={showing}
+          onClose={() => setShowing(false)}
           // Every video here is saved: shown so from the first frame, not after the reel loads it.
           knownSaved={new Set(open.list.map((v) => v.id))}
         />

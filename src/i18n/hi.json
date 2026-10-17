@@ -8094,5 +8094,13 @@
  "View product": "उत्पाद देखें",
  "Visit store": "स्टोर देखें",
  "Saved videos": "सेव किए गए वीडियो",
- "Play {0} by {1}": "{1} का {0} चलाएँ"
+ "Play {0} by {1}": "{1} का {0} चलाएँ",
+ "Featured products": "चुनिंदा उत्पाद",
+ "Ad · Boosted": "विज्ञापन · बूस्ट किया गया",
+ "Featured deals": "चुनिंदा डील",
+ "Best at 1600 × 600 px. Phones show the middle of it, so keep your logo and text there.": "1600 × 600 px सबसे अच्छा है। फ़ोन पर इसका बीच का हिस्सा दिखता है, इसलिए अपना लोगो और टेक्स्ट वहीं रखें।",
+ "This listing isn't available right now": "यह लिस्टिंग अभी उपलब्ध नहीं है",
+ "Trending in #{0}": "#{0} में ट्रेंडिंग",
+ "No live or in-review products yet. Upload a product first, then tag it here.": "अभी कोई लाइव या समीक्षाधीन उत्पाद नहीं है। पहले एक उत्पाद अपलोड करें, फिर उसे यहाँ टैग करें।",
+ "· In review": "· समीक्षा में"
 }

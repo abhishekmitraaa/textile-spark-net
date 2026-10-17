@@ -99,11 +99,12 @@ export const SITE_CONFIG_STALE_TIME_MS = 10 * 60_000;
 const SNAPSHOT_TIMEOUT_MS = 3_000;
 
 const HEX = /^#[0-9a-f]{6}$/;
-const IMAGE_PATH = /^banners\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/;
-const CATEGORY_IMAGE_PATH = /^categories\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/;
+// JPEG only, like the tables' checks since 20261017100000.
+const IMAGE_PATH = /^banners\/[0-9a-f-]{36}\.(jpg|jpeg)$/;
+const CATEGORY_IMAGE_PATH = /^categories\/[0-9a-f-]{36}\.(jpg|jpeg)$/;
 /** SLOT_PATTERN in lib/categoryImageSlots.ts, copied: this file loads at start-up and that one pulls in the whole
  *  category list. The table's CHECK is the same rule. */
-const SLOT_PATTERN = /^(new-arrivals|categories)\/[a-z0-9-]+(\/[a-z0-9-]+)?$/;
+const SLOT_PATTERN = /^categories\/[a-z0-9-]+(\/[a-z0-9-]+)?$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** hero_slides' position check: the carousel holds at most 12. */
 export const HERO_SLIDES_MAX = 12;

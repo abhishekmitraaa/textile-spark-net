@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import homeBanner1 from "@/assets/vendorhome/homebanner1.jpg";
-import homeBanner from "@/assets/vendorhome/homebanner2.png";
+import homeBanner from "@/assets/vendorhome/homebanner2.jpg";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {

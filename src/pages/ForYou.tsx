@@ -210,11 +210,9 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
     <div className="rounded-2xl border border-gray-200 bg-white p-3 lg:p-4">
       <div className="flex items-center justify-between mb-2.5 lg:mb-3">
         <h3 className="text-sm lg:text-lg font-bold text-gray-900">Related To Recent Views</h3>
-        {/* gray-500, not gray-300. This chip is the paid-placement disclosure
-            for the block; at gray-300 on white it sits around 2.3:1, well under
-            the 4.5:1 WCAG AA needs for text this size. A disclosure that cannot
-            be read is not a disclosure — same reason SponsoredNote is gray-500. */}
-        <span className="text-[9px] lg:text-[10px] font-semibold text-gray-500 border border-gray-200 rounded px-1.5 py-0.5">AD</span>
+        {/* The block's paid-placement disclosure: plain small grey text, not a bordered chip (2026-10-17), and
+            gray-500 so it stays readable (4.8:1), same as everywhere. */}
+        <SponsoredNote className="mt-0" />
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 lg:gap-5">
         {ads.map((a) => (
@@ -239,7 +237,6 @@ function RecentViewsAd({ ads }: { ads: ActiveAd[] }) {
           </button>
         ))}
       </div>
-      <SponsoredNote />
     </div>
   );
 }

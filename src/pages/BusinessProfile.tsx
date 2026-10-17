@@ -1,4 +1,5 @@
 import { brand as brandColour } from "@/lib/brand";
+import StoreHeroBackground, { STORE_HERO_BOX } from "@/components/StoreHeroBackground";
 import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -721,27 +722,10 @@ const BusinessProfile = () => {
             HERO BANNER — full background image, all info on top
         ══════════════════════════════════════════════════════ */}
         <motion.section variants={section} className="rounded-2xl overflow-hidden relative">
-          {/* Background: the vendor's real banner, or a #256fef gradient with the
-              brand watermarked over it. Never a stock photo. */}
-          <div className="relative h-52 sm:h-60 lg:h-64">
-            {store?.bannerUrl ? (
-              <img
-                src={store.bannerUrl}
-                alt={brand ? `${brand} banner` : "Brand banner"}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 bg-gradient-to-br from-brand-vendor via-[#2f7bf5] to-[#1d5ed6]" />
-            )}
-            {/* Dark gradient overlay — stronger at bottom left where text sits */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/40 to-black/20" />
-
-            {/* Large watermark brand name — centered, semi-transparent */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-              <span className="text-5xl sm:text-6xl lg:text-7xl font-extrabold tracking-[0.3em] text-white/20 uppercase truncate max-w-full px-4">
-                {brandDisplay}
-              </span>
-            </div>
+          {/* Background: the vendor's real banner, or the drawn default, the same box buyers see on the store
+              page (2026-10-17). Never a stock photo. */}
+          <div className={STORE_HERO_BOX}>
+            <StoreHeroBackground bannerUrl={store?.bannerUrl} brandName={brandDisplay || "Brand"} tone="vendor" />
 
             {/* Trust seal — gated on the SAME rule the buyer side uses
                 (trustSealFromParts: admin verification, an active paid plan, or
@@ -768,6 +752,7 @@ const BusinessProfile = () => {
               onClick={() => bannerInputRef.current?.click()}
               disabled={uploadingBanner}
               aria-label={store?.bannerUrl ? "Change banner" : "Add banner"}
+              title="Best at 1600 × 600 px. Phones show the middle of it, so keep your logo and text there."
               className="absolute right-3 top-12 z-10 flex h-7 items-center gap-1 rounded-full bg-white/20 px-2.5 text-white backdrop-blur hover:bg-white/30 transition-colors disabled:opacity-60"
             >
               <Pencil className="h-3 w-3" />
@@ -777,7 +762,7 @@ const BusinessProfile = () => {
             {/* All text content — bottom left */}
             <div className="absolute bottom-0 left-0 right-0 px-4 pb-4 z-10">
               {/* Brand name */}
-              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight uppercase">
+              <h1 className="line-clamp-2 break-words pr-2 text-xl sm:text-2xl font-extrabold text-white tracking-wide leading-tight uppercase">
                 {brandDisplay}
               </h1>
 

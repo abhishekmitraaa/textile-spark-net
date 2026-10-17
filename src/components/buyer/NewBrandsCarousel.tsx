@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { type Brand } from "@/lib/followingStore";
 import { logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
-import SponsoredNote from "@/components/buyer/SponsoredNote";
+import { AdMark } from "@/components/buyer/SponsoredNote";
 import BrandAvatar from "@/components/buyer/BrandAvatar";
 
 // ─────────────────────────────────────────────────────────────
@@ -160,7 +160,7 @@ export default function NewBrandsCarousel({
                   <button onClick={() => navigate(`/vendor/${brand.id}`)} className="min-w-0 flex-1 text-left">
                     <div className="flex items-center gap-1.5">
                       <span className="text-sm font-bold text-gray-900 truncate">{brand.name}</span>
-                      {brand.isAd && <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide shrink-0">AD</span>}
+                      {brand.isAd && <AdMark />}
                     </div>
                     <p className="text-[11px] text-gray-500 truncate">{brand.location} · {brand.followers} followers · {brand.items} {brand.items === 1 ? "product" : "products"}</p>
                   </button>
@@ -262,9 +262,9 @@ function SponsoredSlide({
           <button onClick={() => onOpen(ad)} className="min-w-0 flex-1 text-left">
             <div className="flex items-center gap-1.5">
               <span className="text-sm font-bold text-gray-900 truncate">{name}</span>
-              <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wide shrink-0">AD</span>
+              <AdMark />
             </div>
-            <p className="text-[11px] text-gray-500 truncate">Paid placement</p>
+            {brand?.location && <p className="text-[11px] text-gray-500 truncate">{brand.location}</p>}
           </button>
           <button
             onClick={() => onOpen(ad)}
@@ -287,10 +287,6 @@ function SponsoredSlide({
             ))}
           </div>
         )}
-        {/* On the SLIDE, never on the carousel. This section mixes paid and
-            organic brands, so a section-level "Sponsored" would label real
-            suggestions as ads — the opposite of a disclosure. */}
-        <SponsoredNote className="mt-0 px-3 pb-2" />
       </div>
     </div>
   );

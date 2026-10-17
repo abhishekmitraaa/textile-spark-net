@@ -90,7 +90,7 @@ export const AD_SLOTS = {
   },
   newArrivalsSponsored: {
     id: "newArrivalsSponsored", page: "newArrivals",
-    label: "Sponsored", types: ["openListing"], max: 12,
+    label: "Featured products", types: ["openListing"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
   newArrivalsBrandPicks: {
@@ -104,17 +104,17 @@ export const AD_SLOTS = {
   // in ToDo.md — do not describe this placement as delivering the bump.
   trendsSponsored: {
     id: "trendsSponsored", page: "trends",
-    label: "Sponsored", types: ["featuredProduct", "wholesalerPick"], max: 12,
+    label: "Featured products", types: ["featuredProduct", "wholesalerPick"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
   saleSponsored: {
     id: "saleSponsored", page: "sale",
-    label: "Sponsored deals", types: ["openListing", "featuredProduct"], max: 12,
+    label: "Featured deals", types: ["openListing", "featuredProduct"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
   forYouSponsored: {
     id: "forYouSponsored", page: "forYou",
-    label: "Sponsored", types: ["openListing", "featuredProduct"], max: 12,
+    label: "Featured products", types: ["openListing", "featuredProduct"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
   // Not a rail. These campaigns are INTERLEAVED into the organic brand
@@ -124,7 +124,7 @@ export const AD_SLOTS = {
   // are actually shown, which is always fewer.
   followingBrands: {
     id: "followingBrands", page: "following",
-    label: "Looking for New Brands? (Sponsored slides)", types: ["storePromotion", "brandAd"], max: 8,
+    label: "Looking for New Brands?", types: ["storePromotion", "brandAd"], max: 8,
     interleaved: true,
   },
   followingPopular: {
@@ -146,12 +146,12 @@ export const AD_SLOTS = {
   // buyer has selected, or nothing.
   searchSponsored: {
     id: "searchSponsored", page: "search",
-    label: "Sponsored", types: ["searchListing", "openListing"], max: 12,
+    label: "Featured products", types: ["searchListing", "openListing"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
   searchResultsSponsored: {
     id: "searchResultsSponsored", page: "searchResults",
-    label: "Sponsored", types: ["searchListing", "featuredProduct"], max: 12,
+    label: "Featured products", types: ["searchListing", "featuredProduct"], max: 12,
     repeat: { block: 4, blocks: 3 },
   },
 } as const satisfies Record<string, AdSlot>;

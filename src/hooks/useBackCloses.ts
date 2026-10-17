@@ -4,6 +4,15 @@ import { useLocation, useNavigate } from "react-router-dom";
 const KEY = "cosoraOverlay";
 
 /**
+ * True while an overlay holds the current history entry (useBackCloses below). A link out of the overlay then
+ * replaces that entry, so back from where it leads returns to the page with the overlay closed.
+ */
+export function isOverOverlay(): boolean {
+  const st = typeof window !== "undefined" ? (window.history.state as { usr?: Record<string, unknown> } | null) : null;
+  return Boolean(st?.usr?.[KEY]);
+}
+
+/**
  * Makes the browser's (or the phone's) back button close an overlay instead of
  * leaving the page under it.
  *

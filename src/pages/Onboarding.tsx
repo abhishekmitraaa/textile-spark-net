@@ -1284,7 +1284,7 @@ export default function Onboarding() {
               <div className="space-y-6">
                 <div className="w-full rounded-2xl overflow-hidden">
                   <img
-                    src="/vendorhelp.png"
+                    src="/vendorhelp.jpg"
                     alt="Vendor help"
                     className="w-full h-auto object-contain"
                   />

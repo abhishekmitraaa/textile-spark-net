@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import { openCallNumber } from "@/lib/callStore";
+import { isOverOverlay } from "@/hooks/useBackCloses";
 import { errorMessage } from "@/lib/errorMessage";
 import type { CallRecord } from "@/lib/chatData";
 
@@ -341,7 +342,8 @@ export function useCallVendor() {
       if (!phone) {
         // Keep Call Now useful: open the chat thread instead.
         toast("No phone number on file", { description: "Opening chat instead." });
-        navigate(`/chats/${vendorId}`);
+        // From an overlay (Video Closeups), replace its history entry so back returns to the page.
+        navigate(`/chats/${vendorId}`, { replace: isOverOverlay() });
         return;
       }
 

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { shrinkImage } from "@/lib/shrinkImage";
 import type { CapacityUnit } from "@/data/vendorTypes";
 import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
@@ -350,9 +351,19 @@ export async function saveVendorCapacity(vendorId: string, rows: CapacityRow[]):
 // Upload a store asset (logo/banner) to the public product-images bucket under
 // the vendor's own folder; returns the public URL.
 export async function uploadVendorImage(id: string, file: File, kind: "logo" | "banner"): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  // A banner is shown full width on every visit to the store: at most 1600 px, as a JPEG (2026-10-17; it was
+  // uploaded as picked, a phone photo of several MB or a PNG). A logo keeps its own type: it may be transparent.
+  let body: Blob = file;
+  let ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  let contentType: string | undefined;
+  if (kind === "banner") {
+    const shrunk = await shrinkImage(file, 1600, "jpeg");
+    body = shrunk.blob;
+    ext = shrunk.ext;
+    contentType = shrunk.blob.type || undefined;
+  }
   const path = `${id}/store/${kind}-${Date.now()}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from("product-images").upload(path, body, { upsert: true, contentType });
   if (error) throw error;
   return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
 }

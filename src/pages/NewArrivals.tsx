@@ -21,44 +21,15 @@ import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useFeed, useFeedSlice } from "@/lib/queries/feed";
-import { NEW_ARRIVALS_TILES, newArrivalsSlot, type NewArrivalsTileKey } from "@/lib/categoryImageSlots";
-import { useCategoryImages, categoryImageUrl } from "@/lib/siteConfig";
+import { NEW_ARRIVALS_TILES, categoryTileSlot } from "@/lib/categoryImageSlots";
+import { useCategoryPicture } from "@/hooks/useCategoryPicture";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDragScroll } from "@/hooks/useDragScroll";
 import trustedSeal from "@/assets/Trustedseal.png";
-import catWomensApparel from "@/assets/categories/womens-apparel.jpg";
-import catMensApparel from "@/assets/categories/mens-apparel.jpg";
-import catMensJeans from "@/assets/categories/mens-jeans.jpg";
-import catMensShirt from "@/assets/categories/mens-shirt.jpg";
-import catAccessories from "@/assets/categories/accessories.jpg";
-import catWomensTrousers from "@/assets/categories/womens-trousers.jpg";
-import catWomensTshirts from "@/assets/categories/womens-tshirts.jpg";
-import catWomensShoes from "@/assets/categories/womens-shoes.jpg";
-import catKidswear from "@/assets/categories/kidswear.jpg";
-import catEthnicWear from "@/assets/categories/ethnic-wear.jpg";
-import catActivewear from "@/assets/categories/activewear.jpg";
-import catWinterWear from "@/assets/categories/winter-wear.jpg";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
 // ─────────────────────────────────────────────────────────────
-
-// The tiles and their order are NEW_ARRIVALS_TILES (lib/categoryImageSlots.ts); these are the
-// pictures the app ships. Cosora-Admin › Category pictures can replace any of them (2026-10-14).
-const TILE_DEFAULTS: Record<NewArrivalsTileKey, string> = {
-  "womens-apparel": catWomensApparel,
-  "mens-apparel": catMensApparel,
-  "mens-jeans": catMensJeans,
-  "mens-shirt": catMensShirt,
-  accessories: catAccessories,
-  "womens-trousers": catWomensTrousers,
-  "womens-tshirts": catWomensTshirts,
-  "womens-shoes": catWomensShoes,
-  kidswear: catKidswear,
-  "ethnic-wear": catEthnicWear,
-  activewear: catActivewear,
-  "winter-wear": catWinterWear,
-};
 
 interface Product {
   id: string;
@@ -337,7 +308,8 @@ const NewArrivals = () => {
   // trackpad already scroll them natively, this is what makes desktop mouse
   // users able to slide them at all.
   const categoriesDrag = useDragScroll<HTMLDivElement>();
-  const categoryPictures = useCategoryImages();
+  // Each tile shows its category's one picture (lib/categoryPicture.ts), the same as on /categories (2026-10-17).
+  const categoryPictures = useCategoryPicture();
   const videoRailDrag = useDragScroll<HTMLDivElement>();
   // The Brand Picks rail keeps its own drag hook — there are now two of them on
   // the page, and one shared hook would bind both rails to a single ref.
@@ -578,19 +550,19 @@ const NewArrivals = () => {
                   to={`/search/results?category=${encodeURIComponent(cat.name)}`}
                   className="text-center group snap-start"
                 >
-                  <div className="aspect-square rounded-xl overflow-hidden bg-white border border-gray-100 mb-1.5 lg:mb-2 p-2 lg:p-3 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
+                  <div className="aspect-square rounded-xl overflow-hidden bg-gray-100 border border-gray-100 mb-1.5 lg:mb-2 group-hover:border-gray-200 group-hover:shadow-sm transition-all">
                     {/* Until a first visit knows which picture is set, a blank tile, not the default and then a swap. */}
                     {categoryPictures.ready ? (
                       <img
-                        src={categoryImageUrl(categoryPictures.images, newArrivalsSlot(cat.key), TILE_DEFAULTS[cat.key])}
+                        src={categoryPictures.pictureFor(cat.tile[0], cat.tile[1])}
                         alt={cat.name}
-                        data-slot={newArrivalsSlot(cat.key)}
-                        className="w-full h-full object-contain"
+                        data-slot={categoryTileSlot(cat.tile[0], cat.tile[1])}
+                        className="w-full h-full object-cover"
                         draggable={false}
                         loading="lazy"
                       />
                     ) : (
-                      <div className="w-full h-full rounded-lg bg-gray-100 animate-pulse" aria-hidden="true" />
+                      <div className="w-full h-full bg-gray-100 animate-pulse" aria-hidden="true" />
                     )}
                   </div>
                   <span className="text-[10px] lg:text-xs text-gray-700 font-medium leading-tight">{cat.name}</span>

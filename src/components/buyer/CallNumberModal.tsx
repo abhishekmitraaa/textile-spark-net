@@ -22,7 +22,10 @@ export default function CallNumberModal() {
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) closeCallNumber(); }}>
-      <DialogContent className="max-w-xs">
+      {/* Above full-screen layers (z-[90], like the share sheet). Call Now in Video Closeups opens this over the
+          reel (z-[80]); at the default z-50 it opened underneath, and the dialog's pointer lock left every control
+          in the reel dead with nothing visible to close (2026-10-17). */}
+      <DialogContent className="max-w-xs z-[90]" overlayClassName="z-[90]">
         <DialogTitle className="text-base font-bold text-gray-900">Call {info?.name ?? "vendor"}</DialogTitle>
         <DialogDescription className="text-xs text-gray-500">Dial this number from your phone</DialogDescription>
 

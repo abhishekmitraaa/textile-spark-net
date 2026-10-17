@@ -12,11 +12,11 @@ const section = {
   show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.38 } },
 };
 
-import ad1 from "@/assets/advertisments/advertisment1.png";
-import ad2 from "@/assets/advertisments/advertisment2.png";
-import ad3 from "@/assets/advertisments/advertisment3.png";
-import ad4 from "@/assets/advertisments/advertisment4.png";
-import ad5 from "@/assets/advertisments/advertisment5.png";
+import ad1 from "@/assets/advertisments/advertisment1.jpg";
+import ad2 from "@/assets/advertisments/advertisment2.jpg";
+import ad3 from "@/assets/advertisments/advertisment3.jpg";
+import ad4 from "@/assets/advertisments/advertisment4.jpg";
+import ad5 from "@/assets/advertisments/advertisment5.jpg";
 
 const slides = [ad1, ad2, ad3, ad4, ad5];
 const SLIDE_DURATION = 2000;

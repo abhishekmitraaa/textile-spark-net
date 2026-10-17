@@ -271,7 +271,7 @@ const Sale = () => {
       if (block < AD_SLOTS.saleSponsored.repeat.blocks) {
         dealFeedNodes.push(
           <div key={`ad-${block}`} className="col-span-full my-1">
-            <SponsoredRail slot="saleSponsored" block={block} label="Sponsored deals" />
+            <SponsoredRail slot="saleSponsored" block={block} label="Featured deals" />
           </div>
         );
       }
@@ -333,7 +333,7 @@ const Sale = () => {
             narrow inventory on a page that has no single category to narrow to.
             Renders nothing when no eligible campaign exists. */}
         <motion.section variants={section}>
-          <SponsoredRail slot="saleSponsored" label="Sponsored deals" />
+          <SponsoredRail slot="saleSponsored" label="Featured deals" />
         </motion.section>
 
         {/* ── TOP DEALS: the six deepest real cuts (was "Flash Deals", with a fake timer) ── */}

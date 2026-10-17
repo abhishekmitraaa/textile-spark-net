@@ -279,7 +279,10 @@ const UploadVideo = () => {
   const reduced = useReducedMotion();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const { data: myProducts = [] } = useMyProducts(user?.id);
+  const { data: allMyProducts = [] } = useMyProducts(user?.id);
+  // Only listings a buyer can open, or will once approved: a video tagged to a draft, paused or rejected listing
+  // left buyers a card that couldn't open it (2026-10-17: production's one video showed a rejected listing).
+  const myProducts = allMyProducts.filter((p) => p.status === "active" || p.status === "pending");
   const { data: myVideos = [] } = useMyVideos(user?.id);
 
   const [dragActive, setDragActive]           = useState(false);
@@ -693,7 +696,7 @@ const UploadVideo = () => {
                         className="absolute left-0 right-0 top-12 z-20 bg-white border border-gray-100 rounded-2xl shadow-xl overflow-hidden"
                       >
                         {myProducts.length === 0 && (
-                          <p className="px-4 py-3 text-xs text-gray-400">No products yet — upload a product first, then tag it here.</p>
+                          <p className="px-4 py-3 text-xs text-gray-400">No live or in-review products yet. Upload a product first, then tag it here.</p>
                         )}
                         {myProducts.map((p) => (
                           <button
@@ -709,7 +712,7 @@ const UploadVideo = () => {
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-gray-900 leading-snug">{p.name}</p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">{p.productCode}</p>
+                              <p className="text-[10px] text-gray-400 mt-0.5">{p.productCode}{p.status === "pending" ? " · In review" : ""}</p>
                             </div>
                             {selectedProduct === p.id && (
                               <CheckCircle2 className="w-4 h-4 text-brand-vendor ml-auto shrink-0 mt-0.5" />

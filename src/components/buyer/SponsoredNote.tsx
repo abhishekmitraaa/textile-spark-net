@@ -16,15 +16,24 @@ import { cn } from "@/lib/utils";
 // read is not a disclosure, so this is the one micro-label that does not get
 // to be the faintest thing on the page.
 //
-// It does NOT replace the per-card "Ad" chip. The chip says "this card is
+// QUIETER SINCE 2026-10-17 (Mitra: "sponsored has to be more subtle and the ad writing too"): regular weight,
+// no pills, no icons, no "Sponsored" in headings. Still always there and still gray-500: an ad has to stay
+// recognisable as one (ASCI), it just doesn't have to shout.
+//
+// It does NOT replace the per-card "Ad" mark (AdMark below). The chip says "this card is
 // paid"; this says "this whole section is paid". Sections that mix paid and
 // organic content (the Following brand carousel) must NOT use this — see the
 // note in NewBrandsCarousel.
 // ─────────────────────────────────────────────────────────────
 export default function SponsoredNote({ className }: { className?: string }) {
   return (
-    <p className={cn("mt-1.5 text-right text-[10px] font-medium text-gray-500", className)}>
+    <p className={cn("mt-1.5 text-right text-[10px] text-gray-500", className)}>
       Sponsored
     </p>
   );
+}
+
+/** The per-card mark: the word "Ad" in the card's own small grey text, not a badge. */
+export function AdMark({ className }: { className?: string }) {
+  return <span className={cn("shrink-0 text-[10px] font-normal text-gray-500", className)}>Ad</span>;
 }

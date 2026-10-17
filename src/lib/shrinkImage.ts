@@ -13,7 +13,12 @@ export const UPLOAD_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "ima
 /** The most an undecodable picture may weigh when it's uploaded as it is. */
 const RAW_MAX_BYTES = 8 * 1024 * 1024;
 
-export async function shrinkImage(file: File, maxSide = 1600): Promise<{ blob: Blob; ext: string }> {
+export async function shrinkImage(
+  file: File,
+  maxSide = 1600,
+  /** "jpeg": always a JPEG, on white (2026-10-17: a store banner is a photo, and JPEG renders fastest). */
+  format: "auto" | "jpeg" = "auto",
+): Promise<{ blob: Blob; ext: string }> {
   if (!file.type.startsWith("image/")) throw new Error("Only pictures can be added (JPEG, PNG or WebP).");
   const raw = () => {
     if (file.size > RAW_MAX_BYTES) throw new Error(`${file.name} is too large. Use a picture under 8 MB.`);
@@ -37,12 +42,16 @@ export async function shrinkImage(file: File, maxSide = 1600): Promise<{ blob: B
     bitmap.close();
     return raw();
   }
+  if (format === "jpeg") {
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, width, height);
+  }
   ctx.drawImage(bitmap, 0, 0, width, height);
   bitmap.close();
 
   const encode = (type: string) =>
     new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, type, 0.82));
-  let blob = await encode("image/webp");
+  let blob = format === "jpeg" ? null : await encode("image/webp");
   let ext = "webp";
   if (!blob || blob.type !== "image/webp") {
     blob = await encode("image/jpeg");
@@ -50,6 +59,6 @@ export async function shrinkImage(file: File, maxSide = 1600): Promise<{ blob: B
   }
   if (!blob) return raw();
   // Re-encoding a small, already-compressed photo can make it bigger: keep the original then.
-  if (scale === 1 && blob.size >= file.size && file.size <= RAW_MAX_BYTES) return raw();
+  if (scale === 1 && blob.size >= file.size && file.size <= RAW_MAX_BYTES && (format !== "jpeg" || file.type === "image/jpeg")) return raw();
   return { blob, ext };
 }

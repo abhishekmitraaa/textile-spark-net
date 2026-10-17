@@ -267,7 +267,7 @@ test("8. Looking for New Brands suggests only sellers with live listings, each w
   const n = await slides.count();
   for (let i = 0; i < n; i++) {
     const slide = slides.nth(i);
-    if (await slide.getByText("Paid placement").count()) continue;
+    if (await slide.getByRole("button", { name: "Visit" }).count()) continue; // a paid slide (its "Paid placement" line went 2026-10-17)
     expect(await slide.getByTestId("new-brand-product").count()).toBeGreaterThan(0);
   }
   expect(await carousel.locator('img[src*="picsum"]').count()).toBe(0);
@@ -281,9 +281,10 @@ test("8. Looking for New Brands suggests only sellers with live listings, each w
 
 test("1. a manager changes a category picture in Cosora-Admin, and the buyer site shows it", async ({ browser }) => {
   test.setTimeout(150_000);
-  const slot = "new-arrivals/kidswear";
+  // Since 2026-10-17 one slot per category: New Arrivals' Kidswear tile shows the Kids' Wear › Frocks / Dresses tile.
   const tile = "categories/kidswear/frocks-dresses";
-  const reset = () => sql(`update public.category_images set image_path = null, updated_by = null where id in ('${slot}', '${tile}');`);
+  const slot = tile;
+  const reset = () => sql(`update public.category_images set image_path = null, updated_by = null where id = '${tile}';`);
   reset();
   try {
     const adminCtx = await signedInContext(browser, "manager", { width: 1440, height: 1000 });
@@ -291,20 +292,17 @@ test("1. a manager changes a category picture in Cosora-Admin, and the buyer sit
     const adminErrors = watchErrors(admin);
     await admin.goto(`${ADMIN_URL}/category-pictures`);
     await expect(admin.getByRole("heading", { name: "Category pictures" })).toBeVisible();
-    const card = admin.locator(`[data-slot="${slot}"]`);
-    await expect(card).toContainText("Default");
-    await card.getByLabel("Picture for Kidswear").setInputFiles(PICTURE);
-    await expect(admin.getByText("Picture saved for Kidswear")).toBeVisible();
-    await expect(card).toContainText("Custom");
-    const saved = sql(`select image_path from public.category_images where id = '${slot}'`);
-    expect(saved).toMatch(/^categories\/[0-9a-f-]{36}\.jpg$/);
-    expect(sql(`select count(*) from admin.audit_log where target_table = 'public.category_images' and target_id = '${slot}' and at > now() - interval '5 minutes'`)).not.toBe("0");
-
-    // A sub-category tile on the Categories page tab.
-    await admin.getByRole("button", { name: /Categories page/ }).click();
+    // New Arrivals has no pictures of its own any more.
+    await expect(admin.getByRole("button", { name: "New Arrivals" })).toHaveCount(0);
     await admin.getByLabel("Category").selectOption({ label: "Kids' Wear" });
-    await admin.locator(`[data-slot="${tile}"]`).getByLabel("Picture for Frocks / Dresses").setInputFiles(PICTURE);
+    const card = admin.locator(`[data-slot="${tile}"]`);
+    await expect(card).toContainText("Default");
+    await card.getByLabel("Picture for Frocks / Dresses").setInputFiles(PICTURE);
     await expect(admin.getByText("Picture saved for Frocks / Dresses")).toBeVisible();
+    await expect(card).toContainText("Custom");
+    const saved = sql(`select image_path from public.category_images where id = '${tile}'`);
+    expect(saved).toMatch(/^categories\/[0-9a-f-]{36}\.jpg$/);
+    expect(sql(`select count(*) from admin.audit_log where target_table = 'public.category_images' and target_id = '${tile}' and at > now() - interval '5 minutes'`)).not.toBe("0");
     if (process.env.SHOTS) await admin.screenshot({ path: process.env.SHOTS + "/1-admin-category-pictures.png" });
     expect(adminErrors).toEqual([]);
 
@@ -313,21 +311,23 @@ test("1. a manager changes a category picture in Cosora-Admin, and the buyer sit
     const snap = await fetch(`${API}/functions/v1/site-config-snapshot`, { method: "POST", headers: { authorization: `Bearer ${SERVICE}`, "content-type": "application/json" }, body: "{}" });
     expect(snap.ok).toBe(true);
 
+    // The same picture on /categories and on New Arrivals.
     const buyerCtx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const buyer = await buyerCtx.newPage();
     await buyer.goto(`${BUYER_URL}/home/new-arrivals`);
-    await expect(buyer.locator(`img[data-slot="${slot}"]`)).toHaveAttribute("src", new RegExp(`site-content/${saved}$`));
-    if (process.env.SHOTS) { await buyer.locator(`img[data-slot="${slot}"]`).scrollIntoViewIfNeeded(); await buyer.screenshot({ path: process.env.SHOTS + "/1-new-arrivals-tile.png" }); }
-    await expect(buyer.locator('img[data-slot="new-arrivals/winter-wear"]')).not.toHaveAttribute("src", /site-content/);
+    const naTile = buyer.getByRole("link", { name: "Kidswear" }).locator("img");
+    await expect(naTile).toHaveAttribute("data-slot", tile);
+    await expect(naTile).toHaveAttribute("src", new RegExp(`site-content/${saved}$`));
+    if (process.env.SHOTS) { await naTile.scrollIntoViewIfNeeded(); await buyer.screenshot({ path: process.env.SHOTS + "/1-new-arrivals-tile.png" }); }
+    await expect(buyer.getByRole("link", { name: "Winter Wear" }).locator("img")).not.toHaveAttribute("src", /site-content/);
     await buyer.goto(`${BUYER_URL}/categories`);
     await buyer.getByRole("button", { name: "Kids' Wear" }).click();
-    await expect(buyer.locator(`img[data-slot="${tile}"]`)).toHaveAttribute("src", /site-content\/categories\//);
+    await expect(buyer.locator(`img[data-slot="${tile}"]`)).toHaveAttribute("src", new RegExp(`site-content/${saved}$`));
 
     // Back to the default: the row clears and the old object is removed.
-    await admin.getByRole("button", { name: "New Arrivals" }).click();
     await card.getByRole("button", { name: "Use default" }).click();
-    await expect(admin.getByText("Kidswear shows the default again")).toBeVisible();
-    expect(sql(`select coalesce(image_path, 'null') from public.category_images where id = '${slot}'`)).toBe("null");
+    await expect(admin.getByText("Frocks / Dresses shows the default again")).toBeVisible();
+    expect(sql(`select coalesce(image_path, 'null') from public.category_images where id = '${tile}'`)).toBe("null");
     expect(sql(`select count(*) from storage.objects where bucket_id = 'site-content' and name = '${saved}'`)).toBe("0");
     await adminCtx.close();
     await buyerCtx.close();
@@ -341,7 +341,7 @@ test("1. a manager changes a category picture in Cosora-Admin, and the buyer sit
     await supportCtx.close();
   } finally {
     const { API, SERVICE } = stack();
-    const left = sql(`select coalesce(string_agg(image_path, ','), '') from public.category_images where id in ('${slot}', '${tile}') and image_path is not null`);
+    const left = sql(`select coalesce(string_agg(image_path, ','), '') from public.category_images where id = '${tile}' and image_path is not null`);
     for (const name of left.split(",").filter(Boolean)) {
       await fetch(`${API}/storage/v1/object/site-content/${name}`, { method: "DELETE", headers: { apikey: SERVICE, authorization: `Bearer ${SERVICE}` } });
     }

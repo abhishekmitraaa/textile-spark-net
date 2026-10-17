@@ -70,13 +70,17 @@ test("1a. every Categories tile shows its own JPEG, and no picture comes from Un
   await ctx.close();
 });
 
-test("1b. New Arrivals' category tiles are JPEG", async ({ browser }) => {
+test("1b. New Arrivals' category tiles show their category's JPEG tile", async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/home/new-arrivals`);
-  const shown = await allLoaded(page, 'img[data-slot^="new-arrivals/"]');
-  expect(shown.length).toBe(12);
-  for (const s of shown) expect(s.src, s.slot).toMatch(new RegExp(`/${s.slot.split("/")[1]}(-[A-Za-z0-9_-]+)?\\.jpg$`));
+  // Since 2026-10-17 each shows a /categories tile (one picture per category), not a slot of its own.
+  const shown = await allLoaded(page, 'img[data-slot^="categories/"]');
+  expect(shown.length).toBeGreaterThanOrEqual(12);
+  for (const s of shown) {
+    const [, top, leaf] = s.slot.split("/");
+    expect(s.src, s.slot).toMatch(new RegExp(`(/tiles/${top}/${leaf}\\.jpg|/assets/${leaf}-[A-Za-z0-9_-]+\\.jpg)$`));
+  }
   await ctx.close();
 });
 
@@ -190,12 +194,13 @@ test("2c. staff are told when a reporter's number was never verified (test sign-
 
 test("3. Cosora-Admin's pictures are JPEG only, in the app and in storage", async ({ browser }) => {
   test.setTimeout(180_000);
-  const slot = "new-arrivals/womens-apparel";
+  const slot = "categories/womenswear/dresses";
   const before = sql(`select coalesce(image_path, '') from public.category_images where id = '${slot}'`);
   const ctx = await signedInContext(browser, "manager", { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_URL}/category-pictures`);
-  const input = page.getByLabel("Picture for Women's Apparel");
+  await page.getByLabel("Category").selectOption({ label: "Womenswear" });
+  const input = page.getByLabel("Picture for Dresses");
   await expect(input).toHaveAttribute("accept", "image/jpeg,.jpg,.jpeg");
 
   await input.setInputFiles({ name: "tile.png", mimeType: "image/png", buffer: PNG });
@@ -205,7 +210,7 @@ test("3. Cosora-Admin's pictures are JPEG only, in the app and in storage", asyn
   expect(sql(`select coalesce(image_path, '') from public.category_images where id = '${slot}'`)).toBe(before);
 
   await input.setInputFiles({ name: "tile.jpg", mimeType: "image/jpeg", buffer: readFileSync(TILE_JPEG) });
-  await expect(page.getByText("Picture saved for Women's Apparel")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Picture saved for Dresses")).toBeVisible({ timeout: 30_000 });
   const saved = sql(`select image_path from public.category_images where id = '${slot}'`);
   expect(saved).toMatch(/^categories\/[0-9a-f-]{36}\.jpg$/);
   // Put the default back for the next run.

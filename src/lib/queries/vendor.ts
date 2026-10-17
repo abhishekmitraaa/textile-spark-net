@@ -16,7 +16,7 @@ async function loadPlanIntl(): Promise<Map<string, boolean>> {
   return m;
 }
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
-import { liveProductId } from "@/lib/queries/videos";
+import { liveProductId, taggedListingUnavailable } from "@/lib/queries/videos";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer-facing vendor profile (/vendor/:id) — real vendor identity + the
@@ -126,6 +126,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     thumbnail: r.thumbnail_url ?? products[0]?.image ?? "",
     videoUrl: r.video_url ?? undefined,
     productId: liveProductId(r),
+    listingUnavailable: taggedListingUnavailable(r),
   }));
 
   return {

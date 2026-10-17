@@ -1,4 +1,5 @@
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
+import { useCategoryPicture } from "@/hooks/useCategoryPicture";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useT } from "@/lib/i18n";
@@ -39,7 +40,9 @@ function toCompact(p: ProductCardData): CompactProduct {
 // HELPERS / TYPES
 // ─────────────────────────────────────────────────────────────
 
-const img = (seed: string, w = 500, h = 650) => `https://picsum.photos/seed/${seed}/${w}/${h}`;
+// A picture is a /categories tile, [top id, tile label], drawn through useCategoryPicture: the category's one
+// picture, as set in Cosora-Admin (2026-10-17). These were hotlinked picsum.photos stock images.
+type Pic = readonly [string, string];
 
 interface CompactProduct {
   id: string;
@@ -78,8 +81,10 @@ interface TrendCategory {
   id: string;
   label: string;
   hashtag: string;
-  thumb: string;
-  featured: { image: string; sub: string };
+  thumb: Pic;
+  featured: { image: Pic; sub: string };
+  /** The two extra pictures beside the featured one on a wide screen. */
+  more: readonly [Pic, Pic];
 }
 
 // EDITORIAL (no trends job exists — see ToDo.md): trending categories — keywords fetched from Google Trends.
@@ -88,49 +93,55 @@ const CATEGORIES: TrendCategory[] = [
     id: "denim",
     label: "Denim",
     hashtag: "Denim",
-    thumb: img("trend-cat-denim", 80, 80),
-    featured: { image: img("trend-feat-denim", 700, 900), sub: "Jeans" },
+    thumb: ["menswear", "Bottomwear"],
+    featured: { image: ["menswear", "Bottomwear"], sub: "Jeans" },
+    more: [["womenswear", "Bottomwear"], ["menswear", "Co-ord Sets"]],
   },
   {
     id: "long-dress",
     label: "Long Dress",
     hashtag: "LongDress",
-    thumb: img("trend-cat-long", 80, 80),
-    featured: { image: img("trend-feat-long", 700, 900), sub: "Maxi Dress" },
+    thumb: ["womenswear", "Dresses"],
+    featured: { image: ["womenswear", "Dresses"], sub: "Maxi Dress" },
+    more: [["womenswear", "Ethnic Wear"], ["womenswear", "Jumpsuits & Playsuits"]],
   },
   {
     id: "short-tee",
     label: "Short-sleeved T-shirt",
     hashtag: "Tshirt",
-    thumb: img("trend-cat-tee", 80, 80),
-    featured: { image: img("trend-feat-tee", 700, 900), sub: "T-shirts/Tops" },
+    thumb: ["womenswear", "T-Shirts"],
+    featured: { image: ["womenswear", "T-Shirts"], sub: "T-shirts/Tops" },
+    more: [["menswear", "T-Shirts"], ["womenswear", "Tops / Blouses / Shirts"]],
   },
   {
     id: "pleats",
     label: "Pleats",
     hashtag: "pleats",
-    thumb: img("trend-cat-pleats", 80, 80),
-    featured: { image: img("trend-feat-pleats", 700, 900), sub: "Pleated Dress" },
+    thumb: ["womenswear", "Skirts"],
+    featured: { image: ["womenswear", "Skirts"], sub: "Pleated Dress" },
+    more: [["womenswear", "Dresses"], ["womenswear", "Formal Suits"]],
   },
   {
     id: "cargo",
     label: "Cargo",
     hashtag: "Cargo",
-    thumb: img("trend-cat-cargo", 80, 80),
-    featured: { image: img("trend-feat-cargo", 700, 900), sub: "Cargo Pants" },
+    thumb: ["womenswear", "Bottomwear"],
+    featured: { image: ["womenswear", "Bottomwear"], sub: "Cargo Pants" },
+    more: [["menswear", "Bottomwear"], ["menswear", "Sportswear — Lower Body"]],
   },
   {
     id: "knitwear",
     label: "Knitwear",
     hashtag: "Knitwear",
-    thumb: img("trend-cat-knit", 80, 80),
-    featured: { image: img("trend-feat-knit", 700, 900), sub: "Knit Sets" },
+    thumb: ["womenswear", "Winterwear"],
+    featured: { image: ["womenswear", "Winterwear"], sub: "Knit Sets" },
+    more: [["menswear", "Winterwear"], ["womenswear", "Jackets & Shrugs"]],
   },
 ];
 
 interface StyledTrend {
   id: string;
-  image: string;
+  image: Pic;
   title: string;
   tags: string[];
 }
@@ -139,19 +150,19 @@ interface StyledTrend {
 const STYLED_TRENDS: StyledTrend[] = [
   {
     id: "st1",
-    image: img("styled-tee-gray", 800, 1000),
+    image: ["menswear", "T-Shirts"],
     title: "T-shirts/Tops",
     tags: ["#Screen printing", "#Gray"],
   },
   {
     id: "st2",
-    image: img("styled-dress-floral", 800, 1000),
+    image: ["womenswear", "Dresses"],
     title: "Floral Midi Dress",
     tags: ["#Summer", "#Linen"],
   },
   {
     id: "st3",
-    image: img("styled-denim-wide", 800, 1000),
+    image: ["womenswear", "Bottomwear"],
     title: "Wide-Leg Denim",
     tags: ["#Vintage wash", "#Relaxed"],
   },
@@ -162,28 +173,28 @@ const APPAREL_GROUPS = ["Women's Apparel/Simple", "Men's Apparel/Casual", "Kids/
 
 interface HotKeyword {
   label: string;
-  thumb: string;
+  thumb: Pic;
 }
 
 const HOT_KEYWORDS: Record<string, HotKeyword[]> = {
   "Women's Apparel/Simple": [
-    { label: "rugby tee", thumb: img("hk-rugby", 80, 80) },
-    { label: "V-neck T-shirt", thumb: img("hk-vneck", 80, 80) },
-    { label: "pinafore", thumb: img("hk-pinafore", 80, 80) },
-    { label: "boat neck", thumb: img("hk-boatneck", 80, 80) },
+    { label: "rugby tee", thumb: ["womenswear", "T-Shirts"] },
+    { label: "V-neck T-shirt", thumb: ["womenswear", "Tops / Blouses / Shirts"] },
+    { label: "pinafore", thumb: ["womenswear", "Dresses"] },
+    { label: "boat neck", thumb: ["womenswear", "Tops / Blouses / Shirts"] },
   ],
   "Men's Apparel/Casual": [
-    { label: "camp collar", thumb: img("hk-camp", 80, 80) },
-    { label: "linen shirt", thumb: img("hk-linen", 80, 80) },
-    { label: "oversized tee", thumb: img("hk-oversized", 80, 80) },
+    { label: "camp collar", thumb: ["menswear", "Shirts"] },
+    { label: "linen shirt", thumb: ["menswear", "Shirts"] },
+    { label: "oversized tee", thumb: ["menswear", "T-Shirts"] },
   ],
   "Kids/Everyday": [
-    { label: "co-ord set", thumb: img("hk-coord", 80, 80) },
-    { label: "dungarees", thumb: img("hk-dungaree", 80, 80) },
+    { label: "co-ord set", thumb: ["kidswear", "Co-ords / Sets"] },
+    { label: "dungarees", thumb: ["kidswear", "Bottomwear"] },
   ],
   "Accessories": [
-    { label: "bucket hat", thumb: img("hk-bucket", 80, 80) },
-    { label: "canvas tote", thumb: img("hk-tote", 80, 80) },
+    { label: "bucket hat", thumb: ["accessories", "Caps & Hats"] },
+    { label: "canvas tote", thumb: ["accessories", "Bags"] },
   ],
 };
 
@@ -271,6 +282,8 @@ function ProductCard({ product }: { product: CompactProduct }) {
 // ─────────────────────────────────────────────────────────────
 
 const Trends = () => {
+  const { pictureFor } = useCategoryPicture();
+  const pic = (p: Pic) => pictureFor(p[0], p[1]);
   const navigate = useNavigate();
   const t = useT();
 
@@ -365,7 +378,7 @@ const Trends = () => {
               slot="trendsSponsored"
               block={block}
               category={trendCategoryId}
-              label={`Sponsored — trending in #${category.hashtag}`}
+              label={`Trending in #${category.hashtag}`}
             />
           </div>
         );
@@ -449,7 +462,7 @@ const Trends = () => {
                     active ? "bg-gray-900 border-gray-900 text-white" : "bg-white border-gray-200 text-gray-700 hover:border-gray-300"
                   )}
                 >
-                  <img src={cat.thumb} alt="" className="w-6 h-6 lg:w-8 lg:h-8 rounded-full object-cover" />
+                  <img src={pic(cat.thumb)} alt="" className="w-6 h-6 lg:w-8 lg:h-8 rounded-full object-cover" />
                   <span className="text-xs lg:text-sm font-semibold whitespace-nowrap">{cat.label}</span>
                 </button>
               );
@@ -469,7 +482,7 @@ const Trends = () => {
               to={`/search/results?q=${encodeURIComponent(category.label)}`}
               className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100"
             >
-              <img src={category.featured.image} alt={category.label} className="w-full h-full object-cover" />
+              <img src={pic(category.featured.image)} alt={category.label} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
               {/* No Save button and no price or MOQ: this is a curated image, not
                   a product. It used to save itself into the buyer's collections as
@@ -486,7 +499,7 @@ const Trends = () => {
                 to={`/search/results?q=${encodeURIComponent(category.label)}`}
                 className="hidden lg:block relative aspect-[3/4] rounded-2xl overflow-hidden bg-gray-100"
               >
-                <img src={img(`trend-feat-${category.id}-${n + 2}`, 700, 900)} alt={category.label} className="w-full h-full object-cover" />
+                <img src={pic(category.more[n])} alt={category.label} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
                 <div className="absolute bottom-3 left-3 text-white drop-shadow">
                   <p className="text-sm font-bold">{label}</p>
@@ -512,7 +525,7 @@ const Trends = () => {
         <SponsoredRail
           slot="trendsSponsored"
           category={trendCategoryId}
-          label={`Sponsored — trending in #${category.hashtag}`}
+          label={`Trending in #${category.hashtag}`}
         />
 
         {/* "Top Brands for #hashtag" was here: six invented brand names per
@@ -532,7 +545,7 @@ const Trends = () => {
               stored the look in the buyer's collections with an invented MOQ.
               It opens a real search for the look instead. */}
           <Link to={`/search/results?q=${encodeURIComponent(styled.title)}`} className="relative block aspect-[4/5] sm:aspect-[3/4] lg:aspect-[16/10] rounded-2xl overflow-hidden bg-gray-100">
-            <img src={styled.image} alt={styled.title} className="w-full h-full object-cover" />
+            <img src={pic(styled.image)} alt={styled.title} className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
             <div className="absolute bottom-3 left-3 right-3 text-white drop-shadow">
               <p className="text-base font-bold">{styled.title}</p>
@@ -605,7 +618,7 @@ const Trends = () => {
                   onClick={() => navigate(`/search/results?q=${encodeURIComponent(kw.label)}`)}
                   className="flex items-center gap-2 shrink-0 rounded-full pl-1 pr-3 py-1 border bg-white border-gray-200 text-gray-700 hover:border-gray-300 transition-colors"
                 >
-                  <img src={kw.thumb} alt="" className="w-6 h-6 rounded-full object-cover" />
+                  <img src={pic(kw.thumb)} alt="" className="w-6 h-6 rounded-full object-cover" />
                   <span className="text-xs font-semibold whitespace-nowrap">{kw.label}</span>
                 </button>
               ))}

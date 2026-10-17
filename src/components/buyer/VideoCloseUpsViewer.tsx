@@ -1,7 +1,7 @@
 import { useBackCloses } from "@/hooks/useBackCloses";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useCallVendor } from "@/lib/queries/calls";
@@ -56,6 +56,12 @@ export interface VideoCloseUp {
    * it opens the seller's store (2026-10-16: the card went nowhere).
    */
   productId?: string | null;
+  /**
+   * The video is tagged to a listing a buyer can't open (rejected, paused, draft or under review), so the card
+   * says so instead of pretending there is nothing to open (2026-10-17: production's one video showed a rejected
+   * listing and read "Visit store").
+   */
+  listingUnavailable?: boolean;
 }
 
 interface VideoCloseUpsViewerProps {
@@ -121,6 +127,7 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
   useBackCloses(isOpen, onClose, backCloses);
   const callVendor = useCallVendor();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   const qc = useQueryClient();
   const { user } = useAuth();
   // Real review numbers of the listings shown, by listing id (product_review_stats).
@@ -316,6 +323,32 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
     target?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [videos.length]);
 
+  // A mouse can't swipe: dragging over the reel used to select text and move nothing (2026-10-17). A drag of
+  // 40 px or more moves one video up or down, and the click that ends it is swallowed so it doesn't also pause
+  // the video or open the card. Touch and pen keep the browser's own scrolling.
+  const drag = useRef<{ y: number; moved: boolean } | null>(null);
+  const swallowClick = useRef(false);
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button === 0) drag.current = { y: e.clientY, moved: false };
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (drag.current && Math.abs(e.clientY - drag.current.y) > 8) drag.current.moved = true;
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    const d = drag.current;
+    drag.current = null;
+    if (!d || !d.moved) return;
+    swallowClick.current = true;
+    const dy = e.clientY - d.y;
+    if (Math.abs(dy) >= 40) scrollToSlide(activeIndex + (dy < 0 ? 1 : -1));
+  };
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (!swallowClick.current) return;
+    swallowClick.current = false;
+    e.stopPropagation();
+    e.preventDefault();
+  };
+
   // Keyboard, for a desktop without a touch screen: arrows move between videos, Escape closes, M mutes.
   // Ignored while the share sheet (or any field) has focus.
   useEffect(() => {
@@ -347,7 +380,13 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
       {isOpen && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[80] bg-black"
+          // Nothing in a reel is text to select or an image to save: a long press or a drag selected the caption
+          // and card, and on Android opened the image menu, instead of doing what was pressed (2026-10-17). The
+          // global rule in index.css covers touch screens only; this holds everywhere. `touch-manipulation` also
+          // drops the double-tap-to-zoom wait, so a tap acts at once.
+          className="fixed inset-0 z-[80] bg-black select-none touch-manipulation [-webkit-touch-callout:none] [-webkit-tap-highlight-color:transparent]"
+          onContextMenu={(e) => e.preventDefault()}
+          data-testid="video-closeups-viewer"
         >
           {/* Close — fixed overlay, stays put while the track scrolls beneath it */}
           <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/50 to-transparent">
@@ -373,6 +412,11 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
             ref={trackRef}
             className="w-full h-full max-w-md mx-auto overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
             style={{ scrollSnapType: "y mandatory" }}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            onPointerCancel={() => { drag.current = null; }}
+            onClickCapture={onClickCapture}
           >
             {videos.map((video, i) => {
               const distance = Math.abs(i - activeIndex);
@@ -404,6 +448,9 @@ export default function VideoCloseUpsViewer({ videos, initialIndex, isOpen, onCl
                       onCallNow={() => callVendor(video.vendorId, video.brandName)}
                       onShare={() => setSharing(video)}
                       reviews={video.productId ? reviewStats?.get(video.productId) ?? null : null}
+                      // Over the seller's own store, "Visit store" would open the page already underneath; the
+                      // reel just closed and it looked like nothing worked (2026-10-17). There the store links go.
+                      onStorePage={pathname === `/vendor/${video.vendorId}`}
                       onOpenCard={() => openLink(video.productId ? `/product/${video.productId}` : `/vendor/${video.vendorId}`)}
                       onOpenStore={() => openLink(`/vendor/${video.vendorId}`)}
                     />
@@ -448,12 +495,14 @@ interface VideoSlideProps {
   onShare: () => void;
   /** The tagged listing's real reviews; null when it has none (or there's no live listing). */
   reviews: ReviewStats | null;
+  /** The page under the viewer is this seller's store, so nothing links to it. */
+  onStorePage: boolean;
   /** Opens the listing, or the store when there's no live listing. */
   onOpenCard: () => void;
   onOpenStore: () => void;
 }
 
-function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow, onShare, reviews, onOpenCard, onOpenStore }: VideoSlideProps) {
+function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta, onToggleSave, onToggleLike, onCallNow, onShare, reviews, onStorePage, onOpenCard, onOpenStore }: VideoSlideProps) {
   const { showText } = useDisplayCurrency();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   /**
@@ -554,6 +603,8 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
   };
 
   const hasVideo = Boolean(video.videoUrl) && !videoErrored;
+  // The card opens the listing; without one, the store, unless the store is the page underneath.
+  const cardLinked = Boolean(video.productId) || !onStorePage;
 
   // Displayed like count = the stored count plus this session's CHANGE to it,
   // so the number ticks up the moment they tap, exactly like a reel — and
@@ -585,6 +636,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
         // encoding finishes, so a just-approved reel can 404 here. Falling back
         // to the bundled placeholder beats a broken-image glyph under the video.
         onError={onThumbError}
+        draggable={false}
         className="absolute inset-0 w-full h-full object-cover"
       />
 
@@ -706,8 +758,8 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
           anywhere). The rating is the listing's real reviews, and absent without any. */}
       <div className="absolute bottom-0 left-0 right-0 p-3 z-10">
         <div className="bg-white/95 backdrop-blur rounded-2xl p-3 flex items-center gap-3">
-          <button
-            type="button"
+          <CardLink
+            linked={cardLinked}
             onClick={onOpenCard}
             aria-label={video.productId ? `View ${video.brandLine}` : `Visit ${video.brandName}'s store`}
             data-testid="reel-card"
@@ -715,7 +767,7 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
             className="flex flex-1 min-w-0 items-center gap-3 text-left"
           >
             {/* Same URL as the poster, so a cache hit; the size hints stop a full-size decode for 48px. */}
-            <img src={video.thumbnail} alt="" loading="lazy" decoding="async" onError={onThumbError} width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
+            <img src={video.thumbnail} alt="" loading="lazy" decoding="async" onError={onThumbError} draggable={false} width={48} height={48} className="w-12 h-12 rounded-xl object-cover shrink-0" />
             <span className="flex-1 min-w-0">
               <span className="block text-[11px] text-gray-900 font-semibold truncate">{video.brandLine}</span>
               <span className="flex items-center gap-2 mt-0.5">
@@ -727,15 +779,24 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
                   </span>
                 )}
               </span>
-              <span className="mt-0.5 flex items-center text-[10px] font-semibold text-brand-buyer">
-                {video.productId ? "View product" : "Visit store"} <ChevronRight className="w-3 h-3" />
-              </span>
+              {video.listingUnavailable && !video.productId && (
+                <span className="mt-0.5 block text-[10px] text-gray-500" data-testid="reel-listing-unavailable">This listing isn't available right now</span>
+              )}
+              {cardLinked && (
+                <span className="mt-0.5 flex items-center text-[10px] font-semibold text-brand-buyer">
+                  {video.productId ? "View product" : "Visit store"} <ChevronRight className="w-3 h-3" />
+                </span>
+              )}
             </span>
-          </button>
+          </CardLink>
           <div className="shrink-0 flex flex-col items-end gap-1.5">
-            <button type="button" onClick={onOpenStore} className="max-w-[120px] truncate text-[11px] font-bold text-gray-900 hover:underline">
-              {video.brandName}
-            </button>
+            {onStorePage ? (
+              <span className="max-w-[120px] truncate text-[11px] font-bold text-gray-900">{video.brandName}</span>
+            ) : (
+              <button type="button" onClick={onOpenStore} className="max-w-[120px] truncate text-[11px] font-bold text-gray-900 hover:underline">
+                {video.brandName}
+              </button>
+            )}
             <button
               onClick={onCallNow}
               className="flex items-center gap-1.5 px-3.5 py-2.5 bg-brand-buyer text-white text-xs font-bold rounded-xl hover:bg-brand-buyer/90 transition-colors"
@@ -747,4 +808,12 @@ function VideoSlide({ video, distance, isActive, muted, saved, liked, likeDelta,
       </div>
     </>
   );
+}
+
+/** The card's body: a button when it leads somewhere, plain content when it doesn't (a button that does nothing
+ *  reads as broken). */
+function CardLink({ linked, onClick, children, ...rest }: { linked: boolean; onClick: () => void; children: React.ReactNode; className: string; "aria-label": string; "data-testid": string; "data-active"?: string }) {
+  if (linked) return <button type="button" onClick={onClick} {...rest}>{children}</button>;
+  const { "aria-label": _label, ...plain } = rest;
+  return <div {...plain}>{children}</div>;
 }

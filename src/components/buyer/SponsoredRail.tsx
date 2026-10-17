@@ -2,11 +2,10 @@ import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowUp, Megaphone, Star } from "lucide-react";
 import { useActiveAds, logAdImpression, logAdClick, adDestination, type ActiveAd } from "@/lib/queries/ads";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { AD_SLOTS, ON_PLATFORM_CARD_TYPES, adSlotBlock, type AdSlotId } from "@/lib/adSlots";
-import SponsoredNote from "@/components/buyer/SponsoredNote";
+import SponsoredNote, { AdMark } from "@/components/buyer/SponsoredNote";
 
 // Buyer-facing "Sponsored" rail. Surfaces vendor ad campaigns (eligible,
 // promoting a live product) as tappable cards. Impressions are logged once per
@@ -68,7 +67,7 @@ export default function SponsoredRail({
     () => (slot ? adSlotBlock(slot, window, block) : window),
     [slot, window, block],
   );
-  const heading = label ?? spec?.label ?? "Sponsored";
+  const heading = label ?? spec?.label ?? "Featured products";
   const logged = useRef<Set<string>>(new Set());
 
   useEffect(() => {
@@ -103,9 +102,11 @@ export default function SponsoredRail({
 
   return (
     <section className={className}>
-      <div className="flex items-center gap-1.5 mb-3">
-        <Megaphone className="h-4 w-4 text-brand-buyer" />
+      {/* A plain section heading with the disclosure beside it (2026-10-17: the megaphone, "Sponsored" in the
+          heading, a black AD pill on every picture and a note under the rail said it four times). */}
+      <div className="flex items-baseline justify-between gap-3 mb-3">
         <h2 className="text-sm font-bold text-gray-900">{heading}</h2>
+        <SponsoredNote className="mt-0" />
       </div>
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-1 px-1">
         {ads.map((a) => (
@@ -118,33 +119,20 @@ export default function SponsoredRail({
           >
             <div className="relative aspect-[3/4] bg-gray-100">
               {a.imageUrl && <img src={a.imageUrl} alt={a.productName ?? "Sponsored product"} className="h-full w-full object-cover" loading="lazy" />}
-              <span className="absolute left-1.5 top-1.5 rounded-full bg-black/55 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white backdrop-blur">
-                Ad
-              </span>
-              {/* A bumped Wholesaler Pick is ordered ahead of every other
-                  campaign in this rail for 72 hours. A placement that outranks
-                  everything else should be visible as such rather than
-                  silently privileged — the buyer can see why it is first. */}
-              {a.isBumped && (
-                <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-brand-buyer px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow-sm">
-                  <ArrowUp className="h-2.5 w-2.5" /> Bumped
-                </span>
-              )}
             </div>
             <div className="p-2">
               <p className="truncate text-[11px] font-bold text-gray-900">{a.productName ?? a.title}</p>
               {a.vendorName && <p className="truncate text-[10px] text-gray-500">{a.vendorName}</p>}
               <div className="mt-0.5 flex items-center justify-between">
                 {a.price && <span className="text-[11px] font-bold text-brand-buyer">{showText(a.price)}</span>}
-                <span className="inline-flex items-center gap-0.5 text-[9px] text-gray-400">
-                  <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" /> Featured
-                </span>
+                {/* A bumped Wholesaler Pick is ordered ahead of every other campaign in this rail for 72 hours, and
+                    says so, quietly, so the buyer can see why it is first. */}
+                {a.isBumped ? <span className="shrink-0 text-[10px] text-gray-500">Ad · Boosted</span> : <AdMark />}
               </div>
             </div>
           </motion.button>
         ))}
       </div>
-      <SponsoredNote />
     </section>
   );
 }
