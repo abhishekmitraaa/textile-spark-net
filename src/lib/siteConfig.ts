@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { parseSearchTrends, type SearchTrends } from "@/lib/searchTrends";
 
 // ─────────────────────────────────────────────────────────────
 // SITE CONFIG (admin completion Phase 9, 2026-09-29): the site theme and the vendor
@@ -50,6 +51,8 @@ export interface SiteConfig {
   categoryImages: Record<string, string>;
   /** Listings picked for New Arrivals' top carousel in Cosora-Admin, in order. Empty: nothing picked. */
   heroSlides: HeroSlideRef[];
+  /** /search's trending list as a signed-out visitor gets it (lib/searchTrends.ts). Null: none in the file. */
+  searchTrends: SearchTrends | null;
 }
 
 /** One pick for New Arrivals' top carousel: a listing id, its place and its optional schedule. */
@@ -192,6 +195,7 @@ export function parseSiteConfig(doc: unknown): SiteConfig | null {
   if (!doc || typeof doc !== "object") return null;
   const d = doc as {
     version?: unknown; theme?: unknown; banners?: unknown; category_images?: unknown; hero_slides?: unknown;
+    search_trends?: unknown;
   };
   if (d.version !== 1 || !Array.isArray(d.banners)) return null;
   return {
@@ -199,6 +203,7 @@ export function parseSiteConfig(doc: unknown): SiteConfig | null {
     banners: d.banners.map(parseBanner).filter((b): b is SiteBanner => b !== null),
     categoryImages: parseCategoryImages(d.category_images),
     heroSlides: parseHeroSlides(d.hero_slides),
+    searchTrends: parseSearchTrends(d.search_trends),
   };
 }
 
@@ -221,7 +226,7 @@ async function fromSnapshot(): Promise<SiteConfig | null> {
 /** The tables, which RLS limits to the theme, the active banners and carousel picks that haven't ended
  *  and the set pictures. */
 async function fromTables(): Promise<SiteConfig> {
-  const [theme, banners, pictures, slides] = await Promise.all([
+  const [theme, banners, pictures, slides, trends] = await Promise.all([
     supabase
       .from("site_theme")
       .select("vendor_accent, buyer_accent, success, border, ink, heading_font, body_font")
@@ -233,6 +238,7 @@ async function fromTables(): Promise<SiteConfig> {
       .order("id", { ascending: true }),
     supabase.from("category_images").select("id, image_path").not("image_path", "is", null),
     supabase.from("hero_slides").select("product_id, position, starts_at, ends_at").order("position", { ascending: true }),
+    supabase.rpc("trending_searches"),
   ]);
   if (theme.error) throw theme.error;
   if (banners.error) throw banners.error;
@@ -245,6 +251,8 @@ async function fromTables(): Promise<SiteConfig> {
       : parseCategoryImages(Object.fromEntries((pictures.data ?? []).map((r) => [r.id, r.image_path]))),
     // Likewise: a failed read shows the automatic carousel.
     heroSlides: slides.error ? [] : parseHeroSlides(slides.data),
+    // And no trending list.
+    searchTrends: trends.error ? null : parseSearchTrends(trends.data),
   };
 }
 

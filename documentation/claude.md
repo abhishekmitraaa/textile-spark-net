@@ -152,6 +152,18 @@ Rules that emerged while building. Append here the moment one is settled — nev
 undocumented. Deep technical rationale for each lives in
 `documentation/technicalimplementation.md`.
 
+- **"Trending" on /search is measured from Cosora's own searches, and says which window it covers** (2026-10-18;
+  migration `20261018120000_search_trends.sql`; built, not live).
+  - One computation, `admin.search_trends_refresh()`: nightly at 00:10 India time (`search-trends-refresh`, migration
+    `20261018120100`) and after every hide or unhide. It lists yesterday's terms; with fewer than 5 it widens to the
+    7 days, then the 30, and the page's heading names the window ("Trending yesterday / this week / this month").
+  - **A typed term is published only once 3 different visitors searched it** (the Live Activity floor; a privacy
+    rule, so changing it is a policy decision). Staff don't count; 5+ digits in a row, an "@" or a link never appear.
+    Categories are Cosora's names and need no floor. Staff hide a term with a reason (`admin_search_trend_hide`).
+  - The public gets words only (`trending_searches()`), never counts. They ride in `site-config/site.json` when the
+    `search_trending` switch is on for everyone; listed accounts read the function. A list not for yesterday isn't
+    shown (`isShowable`). Google Trends or another source can feed the same tables later.
+
 - **Category pictures are Cosora's to change, slot by slot** (Mitra, 2026-10-14; migration `20261014090000_category_images.sql`).
   - Super admins and managers set them in Cosora-Admin › Category pictures, through `admin_category_image_set()` only. A slot is a fixed id from `src/lib/categoryImageSlots.ts` (New Arrivals' tiles, the Categories page's banners and tiles); a slot with no picture shows the app's own.
   - A new tile or sub-category is a new slot: add its row in a migration and run `node scripts/category-image-slots-check.mjs`, or the admin can't set it. Renaming a sub-category changes its slot.

@@ -20,7 +20,9 @@
 //   { version: 1, generated_at, theme: {…} | null, banners: [{ id, title, subtitle,
 //     cta_label, link_path, image_path, position, starts_at, ends_at }],
 //     category_images: { "<slot>": "categories/<uuid>.<ext>" },
-//     hero_slides: [{ product_id, position, starts_at, ends_at }] }, banners and slides in order.
+//     hero_slides: [{ product_id, position, starts_at, ends_at }],
+//     search_trends: { version, public, shown, window, ist_day, window_start, computed_at,
+//                      terms: [{ label }], categories: [{ label }] } | null }, banners and slides in order.
 // category_images (2026-10-14, migration 20261014090000_category_images) holds only the slots
 // with a picture set in Cosora-Admin › Category pictures; the app shows its own default for
 // the rest. An app built before it ignores the key, and an app built after it treats a file
@@ -30,6 +32,12 @@
 // listings themselves through feed_products, which returns live listings only. An app built
 // before it ignores the key; one built after it treats a file without it as "nothing picked".
 // A banner or slide that starts later is included with its start time; the app shows it from then.
+// search_trends (2026-10-18, migration 20261018120000_search_trends): /search's trending list, exactly what
+// public.trending_searches() returns to a signed-out caller. It holds terms only while the
+// `search_trending` switch is on for everyone (`public: true`); otherwise the lists are empty and accounts
+// on the switch's list read the function themselves. Words only, never counts. An app built before it
+// ignores the key; one built after it treats a file without it as "no list". A failed read of it leaves
+// it null rather than failing the theme and banners.
 //
 // ALWAYS FROM COMMITTED TRUTH, as faqs-snapshot: it reads the tables when it runs, and
 // after uploading reads them again; if they changed meanwhile it runs another pass (at
@@ -53,6 +61,8 @@ const BANNER_COLUMNS = "id,title,subtitle,cta_label,link_path,image_path,positio
 const CATEGORY_IMAGES = "category_images?select=id,image_path&image_path=not.is.null&order=id.asc";
 // RLS returns only the slides that haven't ended.
 const HERO_SLIDES = "hero_slides?select=product_id,position,starts_at,ends_at&order=position.asc";
+// Called with the anon key, so the switch is judged as for a visitor who isn't signed in.
+const SEARCH_TRENDS_RPC = "rpc/trending_searches";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -105,18 +115,35 @@ Deno.serve(async (req) => {
     return await res.json();
   };
 
+  // The trending list is extra: if it can't be read, the file goes out without it.
+  const readTrends = async (): Promise<unknown> => {
+    try {
+      const res = await fetch(`${url}/rest/v1/${SEARCH_TRENDS_RPC}`, {
+        method: "POST",
+        headers: { apikey: readKey, authorization: `Bearer ${readKey}`, "content-type": "application/json" },
+        body: "{}",
+      });
+      if (!res.ok) return null;
+      const body = await res.json();
+      return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+    } catch {
+      return null;
+    }
+  };
+
   const readState = async () => {
-    const [theme, banners, pictures, hero_slides] = await Promise.all([
+    const [theme, banners, pictures, hero_slides, search_trends] = await Promise.all([
       read(`site_theme?select=${THEME_COLUMNS}&limit=1`),
       read(`site_banners?select=${BANNER_COLUMNS}&order=position.asc,id.asc`),
       read(CATEGORY_IMAGES),
       read(HERO_SLIDES),
+      readTrends(),
     ]);
     const category_images: Record<string, string> = {};
     for (const p of pictures as { id: string; image_path: string | null }[]) {
       if (p.image_path) category_images[p.id] = p.image_path;
     }
-    return { theme: theme[0] ?? null, banners, category_images, hero_slides };
+    return { theme: theme[0] ?? null, banners, category_images, hero_slides, search_trends };
   };
 
   const upload = async (body: string) => {
@@ -147,6 +174,7 @@ Deno.serve(async (req) => {
       await upload(JSON.stringify({
         version: 1, generated_at: generatedAt, theme: state.theme, banners: state.banners,
         category_images: state.category_images, hero_slides: state.hero_slides,
+        search_trends: state.search_trends,
       }));
       const again = await readState();
       if (JSON.stringify(again) === JSON.stringify(state)) break;

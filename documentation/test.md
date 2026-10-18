@@ -202,6 +202,33 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-10-18 — Trending searches (local stack; nothing released)
+
+- **SQL harness** `scripts/search-trends/trends.sql` (rolled back; dates in 2030): 33/33. A term from 3 visitors is
+  listed and from 2 isn't; staff don't count; phone numbers, emails, links and 41-character terms never appear; 00:01
+  India time belongs to that day and today's searches wait; ranking; the window ladder (2 terms yesterday → week; 5 →
+  day; nothing for a week → month); categories from a click and a plural search; a second run is identical;
+  `trending_searches()` empty while off, words only for a listed account, public when on; anon can't read the counts;
+  a buyer can't read the admin list, a manager can't hide, a hide needs a reason; hide → gone (case and spaces
+  folded) and in the Admin Log; unhide → back, the row kept; the snapshot trigger.
+- **Mutations** (each a weakened `search_trend_terms` in the same harness): floor ≥ 2 → A3 fails; hidden list
+  removed → G4; staff exclusion removed → A4; digit filter removed → A5.
+- **PostgREST** `scripts/search-trends/rest-check.mjs` (local tokens): 12/12, incl. hide and unhide through the API
+  (safeupdate) and the error codes (42501, 22023, P0002). It cleans up after itself.
+- **Snapshot** `scripts/search-trends/snapshot-check.mjs` (the real `site-config-snapshot` under Node): 11/11. Off:
+  `search_trends.public = false`, no terms; on for everyone: yesterday's terms and categories in order, no counts in
+  the file; the app's parser accepts both and rejects broken or stale ones.
+- **Browser** `tests/local/search-trending.spec.ts` (buyer :8093, admin :5187 on the local stack): 4/4, twice. Off:
+  nobody sees it; a listed buyer sees "Trending yesterday" with the 5 terms and "Shirt", a visitor doesn't; on: a
+  visitor gets it from `site.json` with no RPC call, and a term opens its results; a manager reads counts with no
+  Hide; support hides a term with a reason, it is in the Admin Log and leaves the buyer's page.
+- **Volume**: 1M synthetic search events: 30-day terms 5.8 s (21.6 s before the rewrite), categories 1.5 s, one day
+  0.19 s, full refresh 0.49 s. Rolled back.
+- **Builds**: buyer tsc (`-p tsconfig.app.json`; an injected error is caught), eslint on the changed files (one error,
+  `no-control-regex` in `siteConfig.ts`'s `isInternalPath`, also on main), i18n 7,954/7,954, `npm run build`; admin
+  typecheck (probe caught) and build.
+- Production was only read (30-day search counts, aggregates): at most 3 terms a day; 2 days with a term from 3+.
+
 Entries before 2026-09-05 were reconstructed from `documentation/changelog.md` when this
 file was created; they record real runs, but only those the changelog captured.
 
