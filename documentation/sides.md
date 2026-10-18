@@ -202,8 +202,9 @@ the demand side of India's fashion and textile supply chain.
 - **Search shows what buyers are searching for.** Under the photo search, "Trending yesterday" (or "this week" /
   "this month" when yesterday was quiet) lists the terms at least 3 different people searched, and "Most searched
   categories" the categories they looked for. Tapping one runs that search. Measured nightly from searches on
-  Cosora, words only. Behind the `search_trending` switch (off). Staff can take a term down in Cosora-Admin ›
-  Trending searches.
+  Cosora, words only. Behind the `search_trending` switch. **Typed terms are held back for now** (switch
+  `search_trending_terms`, off): buyers see the heading and the most searched categories. Staff watch the terms, and
+  take one down, in Cosora-Admin › Trending searches.
 
 ### Changed 2026-10-17 (ten fixes; live 2026-10-17)
 - **Video Closeups** work on every phone: nothing selects, Call Now's number appears above the reel, a video whose

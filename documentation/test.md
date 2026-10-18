@@ -202,6 +202,17 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-10-18 — Trending searches: categories only (local stack, then production)
+
+- `trends.sql` 38/38: F3a (listed on `search_trending` only: categories, no term), F6 (on for everyone, terms off: no
+  term), F7 (both on: terms). Removing `s.terms_on` from `trending_searches()` fails F3a. I-cases add "ＨＴＴＰ shop".
+- `snapshot-check.mjs` 13/13: S8 (terms switch off: the file has the categories, no term), S9 (the app shows it).
+- Browser `search-trending.spec.ts` 5/5: test 5, categories only (no term chips, no sub-label) and the admin notice
+  ("Typed terms are not shown on the site"); tests 2–4 set both switches.
+- Builds: buyer `npm run build`, i18n 7,954/7,954, tsc; admin typecheck and build.
+- Production after the apply: `search_trend_terms` `67492308…`, `trending_searches` `10d1e048…`,
+  `admin_search_trends` `384691ee…`, all equal local; `search_trending_terms` off.
+
 ### 2026-10-18 — Trending searches: filters, second pass (local stack, then production)
 
 - `trends.sql` I1–I2 now try 10 dodges. Before `20261018140000`, I1 failed listing "call ٩٨٧٦ ৯৮৭৬", "shop .com",

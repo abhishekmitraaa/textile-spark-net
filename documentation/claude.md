@@ -161,6 +161,10 @@ undocumented. Deep technical rationale for each lives in
     rule, so changing it is a policy decision). Staff don't count; after NFKC, more than 4 digits of any script, a dot, an "@", "http" or "www" never appear.
     These filters only keep the obvious out (free text is always written round a filter): staff take-down is the control.
     Categories are Cosora's names and need no floor. Staff hide a term with a reason (`admin_search_trend_hide`).
+  - **Typed terms are off for now; only categories are public** (Mitra, 2026-10-18, "Categories only for now",
+    migration `20261018150000`). A guest is counted by the session id its browser sends and `log_engagement_event` is
+    open by design, so a script can pose as 3 visitors: switch `search_trending_terms` stays off until terms need staff
+    approval or only signed-in searches count.
   - The public gets words only (`trending_searches()`), never counts. They ride in `site-config/site.json` when the
     `search_trending` switch is on for everyone; listed accounts read the function. A list not for yesterday isn't
     shown (`isShowable`). Google Trends or another source can feed the same tables later.

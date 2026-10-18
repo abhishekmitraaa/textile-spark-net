@@ -9,6 +9,8 @@
  *      database), with "Trending yesterday", and tapping a term runs that search.
  *   4. Cosora-Admin: a manager reads the counts but can't hide; support hides a term with a reason, and it
  *      leaves the buyer's page.
+ *   5. Categories only (20261018150000, the terms switch off): a visitor sees the heading and the categories,
+ *      no typed term; Cosora-Admin says the terms aren't public.
  *
  * Seeds 5 terms searched by 3 guest visitors each yesterday (India time) and one click into "Shirt"; removes
  * them, the runs made during the spec and the hidden term afterwards, and puts the switch back.
@@ -27,6 +29,7 @@ const SHIRT_PRODUCT = "0ea791f9-644d-4c72-aa94-edf803d1abda";
 const VENDOR = "22222222-2222-2222-2222-222222222222";
 
 let switchBefore = "";
+let termsBefore = "";
 let firstRun = 0;
 
 function rebuildSnapshot() {
@@ -35,10 +38,15 @@ function rebuildSnapshot() {
     encoding: "utf8",
   });
 }
-const setSwitch = (enabled: boolean, ids: string[] = []) => {
-  sql(`update public.feature_flags set enabled = ${enabled}, allow_profile_ids = '{${ids.join(",")}}'::uuid[] where key = 'search_trending';`);
+/** search_trending, and search_trending_terms (typed terms; by default the same as the list). */
+const setSwitch = (enabled: boolean, ids: string[] = [], terms: { enabled: boolean; ids: string[] } = { enabled, ids }) => {
+  sql(`update public.feature_flags set enabled = ${enabled}, allow_profile_ids = '{${ids.join(",")}}'::uuid[] where key = 'search_trending';
+       update public.feature_flags set enabled = ${terms.enabled}, allow_profile_ids = '{${terms.ids.join(",")}}'::uuid[] where key = 'search_trending_terms';`);
   rebuildSnapshot();
 };
+const flagState = (key: string) =>
+  sql(`select enabled::text || '|' || array_to_string(allow_profile_ids, ',') from public.feature_flags where key = '${key}';`);
+const parseState = (s: string) => { const [e, ids] = s.split("|"); return { enabled: e === "true", ids: ids ? ids.split(",") : [] }; };
 const refresh = () => sql("select admin.search_trends_refresh('manual');");
 
 /** /search once the site config has loaded (the section's only source besides the RPC). */
@@ -50,7 +58,8 @@ async function openSearch(page: Page) {
 }
 
 test.beforeAll(() => {
-  switchBefore = sql("select enabled::text || '|' || array_to_string(allow_profile_ids, ',') from public.feature_flags where key = 'search_trending';");
+  switchBefore = flagState("search_trending");
+  termsBefore = flagState("search_trending_terms");
   firstRun = Number(sql("select coalesce(max(id), 0) + 1 from admin.search_trend_runs;"));
   const yesterdayNoon = "((now() at time zone 'Asia/Kolkata')::date - 1 + time '12:00') at time zone 'Asia/Kolkata'";
   const rows = TERMS.flatMap((t, i) => [1, 2, 3].map((v) =>
@@ -65,8 +74,8 @@ test.afterAll(() => {
   sql(`delete from public.engagement_events where session_id like 's:pw-${tag}-%';`);
   sql(`delete from admin.search_trend_hidden where term_norm like '% ${tag}';`);
   sql(`delete from admin.search_trend_runs where id >= ${firstRun};`);
-  const [enabled, ids] = switchBefore.split("|");
-  setSwitch(enabled === "true", ids ? ids.split(",") : []);
+  const list = parseState(switchBefore);
+  setSwitch(list.enabled, list.ids, parseState(termsBefore));
 });
 
 test("1. switched off: no trending section for a visitor or a signed-in buyer", async ({ browser }) => {
@@ -165,4 +174,27 @@ test("4. Cosora-Admin: a manager reads; support hides a term and it leaves the b
   expect(shown).not.toContain(TERMS[2]);
   expect(shown.filter((t) => t.endsWith(tag))).toEqual(TERMS.filter((_, i) => i !== 2));
   await ctx.close();
+});
+
+test("5. categories only: a visitor sees the categories and no typed term; the admin page says so", async ({ browser }) => {
+  setSwitch(true, [], { enabled: false, ids: [] });
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+  const page = await ctx.newPage();
+  const errors = watchErrors(page);
+  await openSearch(page);
+  const section = page.getByTestId("trending-searches");
+  // Test 4 hid one of the five terms, so the window may have widened: any honest heading.
+  await expect(section).toContainText(/Trending (yesterday|this week|this month)/);
+  await expect(section.getByTestId("trending-category").filter({ hasText: "Shirt" })).toBeVisible();
+  await expect(section.getByTestId("trending-term")).toHaveCount(0);
+  await expect(section.getByText("Most searched categories")).toHaveCount(0);
+  expect(errors).toEqual([]);
+  await ctx.close();
+
+  const mctx = await signedInContext(browser, "manager", { width: 1440, height: 1000 });
+  const manager = await mctx.newPage();
+  await manager.goto(`${ADMIN_URL}/trending-searches`);
+  await expect(manager.locator('[data-marker="terms-not-public"]')).toContainText("Typed terms are not shown on the site");
+  await expect(manager.locator(`[data-trend-row="${TERMS[0]}"]`)).toBeVisible();
+  await mctx.close();
 });

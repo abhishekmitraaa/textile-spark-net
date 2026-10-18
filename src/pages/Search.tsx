@@ -445,7 +445,11 @@ const Search = () => {
               )}
               {trends.categories.length > 0 && (
                 <>
-                  <p className="text-xs font-semibold text-gray-500 mt-3 mb-2">Most searched categories</p>
+                  {/* Typed terms are off for now (switch search_trending_terms, 2026-10-18): then the heading
+                      leads straight into the categories, with no sub-label. */}
+                  {trends.terms.length > 0 && (
+                    <p className="text-xs font-semibold text-gray-500 mt-3 mb-2">Most searched categories</p>
+                  )}
                   <div className="flex flex-wrap gap-2">
                     {trends.categories.map((name) => (
                       <motion.button

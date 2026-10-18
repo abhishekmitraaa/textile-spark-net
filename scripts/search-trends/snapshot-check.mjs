@@ -51,10 +51,12 @@ const check = (id, cond, msg, detail) => {
   else { failed++; console.log(`FAIL ${id}  ${msg}  ${JSON.stringify(detail).slice(0, 400)}`); }
 };
 
-const before = sql("select enabled::text || '|' || array_to_string(allow_profile_ids, ',') from public.feature_flags where key = 'search_trending'");
+const flagState = (key) => sql(`select enabled::text || '|' || array_to_string(allow_profile_ids, ',') from public.feature_flags where key = '${key}'`);
+const before = flagState("search_trending");
+const beforeTerms = flagState("search_trending_terms");
 let addedRun = null;
 try {
-  sql("update public.feature_flags set enabled = false, allow_profile_ids = '{}' where key = 'search_trending'");
+  sql("update public.feature_flags set enabled = false, allow_profile_ids = '{}' where key in ('search_trending', 'search_trending_terms')");
   let doc = await rebuild();
   check("S1", doc.version === 1 && doc.search_trends && doc.search_trends.public === false && doc.search_trends.terms.length === 0,
         "switch off: site.json has search_trends, not public, no terms", doc.search_trends);
@@ -70,7 +72,15 @@ try {
                   select r.id, k, n, l, 9, 9 from r,
                     (values ('term', 1, 'linen shirt'), ('term', 2, 'cotton kurta'), ('term', 3, 'denim jacket'), ('category', 1, 'Shirt')) v(k, n, l)
                   returning run_id`).split("\n")[0];
+  // Categories only (20261018150000): the list on for everyone, typed terms off.
   sql("update public.feature_flags set enabled = true where key = 'search_trending'");
+  doc = await rebuild();
+  const co = doc.search_trends;
+  check("S8", co?.public === true && co.terms.length === 0 && JSON.stringify(co.categories) === JSON.stringify([{ label: "Shirt" }]),
+        "terms switch off: the file has the categories and no typed term", co);
+  check("S9", isShowable(parseSearchTrends(co)), "the app shows a categories-only list", co);
+
+  sql("update public.feature_flags set enabled = true where key = 'search_trending_terms'");
   doc = await rebuild();
   const st = doc.search_trends;
   check("S4", st?.public === true && st.shown === true && st.window === "day" && st.ist_day === y,
@@ -90,8 +100,10 @@ try {
     ...Array.from({ length: 12 }, (_, i) => ({ label: `term ${i}` }))] });
   check("P4", messy.terms[0] === "Linen Shirt" && messy.terms.length === 10, "bad labels and repeats dropped, at most 10", messy.terms);
 } finally {
-  const [enabled, ids] = before.split("|");
-  sql(`update public.feature_flags set enabled = ${enabled === "true"}, allow_profile_ids = '{${ids}}' where key = 'search_trending'`);
+  for (const [key, state] of [["search_trending", before], ["search_trending_terms", beforeTerms]]) {
+    const [enabled, ids] = state.split("|");
+    sql(`update public.feature_flags set enabled = ${enabled === "true"}, allow_profile_ids = '{${ids}}' where key = '${key}'`);
+  }
   if (addedRun) sql(`delete from admin.search_trend_runs where id = ${Number(addedRun)}`);
   await rebuild().catch(() => {});
 }

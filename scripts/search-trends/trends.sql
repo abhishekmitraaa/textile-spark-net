@@ -122,7 +122,7 @@ create function pg_temp.as_anon() returns void language sql as $f$
   select set_config('request.jwt.claims', '{"role":"anon"}', true), set_config('request.jwt.claim.sub', '', true);
 $f$;
 
-update public.feature_flags set enabled = false, allow_profile_ids = '{}' where key = 'search_trending';
+update public.feature_flags set enabled = false, allow_profile_ids = '{}' where key in ('search_trending', 'search_trending_terms');
 select pg_temp.as_anon();
 set local role anon;
 select pg_temp.ok('F1', (select (r ->> 'shown')::boolean = false and jsonb_array_length(r -> 'terms') = 0
@@ -136,6 +136,13 @@ reset role;
 
 update public.feature_flags set allow_profile_ids = array['11111111-1111-1111-1111-111111111111']::uuid[] where key = 'search_trending';
 select pg_temp.as_user('11111111-1111-1111-1111-111111111111');
+set local role authenticated;
+-- Categories only (20261018150000): listed on search_trending alone, the account gets categories, no typed term.
+select pg_temp.ok('F3a', (select (r ->> 'shown')::boolean and jsonb_array_length(r -> 'terms') = 0
+                            and jsonb_array_length(r -> 'categories') >= 1 from public.trending_searches() r),
+                  'without the terms switch: categories, no typed term');
+reset role;
+update public.feature_flags set allow_profile_ids = array['11111111-1111-1111-1111-111111111111']::uuid[] where key = 'search_trending_terms';
 set local role authenticated;
 select pg_temp.ok('F3', (select (r ->> 'shown')::boolean and not (r ->> 'public')::boolean and jsonb_array_length(r -> 'terms') = 5
                            and r ->> 'window' = 'day' and not (r -> 'terms' -> 0 ? 'visitors')
@@ -154,8 +161,15 @@ reset role;
 update public.feature_flags set enabled = true where key = 'search_trending';
 select pg_temp.as_anon();
 set local role anon;
-select pg_temp.ok('F6', (select (r ->> 'public')::boolean and jsonb_array_length(r -> 'terms') = 5 from public.trending_searches() r),
-                  'switch on for everyone: visitors see the list and it is public');
+select pg_temp.ok('F6', (select (r ->> 'public')::boolean and jsonb_array_length(r -> 'terms') = 0
+                           and jsonb_array_length(r -> 'categories') >= 1 from public.trending_searches() r),
+                  'on for everyone, terms switch off: visitors see the categories and no typed term');
+reset role;
+update public.feature_flags set enabled = true where key = 'search_trending_terms';
+select pg_temp.as_anon();
+set local role anon;
+select pg_temp.ok('F7', (select (r ->> 'public')::boolean and jsonb_array_length(r -> 'terms') = 5 from public.trending_searches() r),
+                  'both switches on for everyone: visitors see the terms too');
 reset role;
 
 -- ── G. Hide and unhide ───────────────────────────────────────────────────────
@@ -200,7 +214,7 @@ select pg_temp.ok('G8', (select not hidden from admin.search_trend_hidden where 
 -- year in it (4 digits) still passes. Searched on 14 Jan 2032, listed with "now" on 15 Jan 2032.
 select pg_temp.search(q, v, '2032-01-14 10:00')
   from unnest(array['call 9876 5432 10', 'phone ९८७६५४३२१०', 'call ૯૮૭૬ ૫૪૩૨', 'call ٩٨٧٦ ৯৮৭৬', 'shop.example', 'see x.co now',
-                     'shop .com', 'ｓｈｏｐ．ｃｏｍ', 'shop。com', 'saree 2024']) q,
+                     'shop .com', 'ｓｈｏｐ．ｃｏｍ', 'shop。com', 'ＨＴＴＰ shop', 'saree 2024']) q,
        unnest(array['s:k1', 's:k2', 's:k3']) v;
 create function pg_temp.refresh_2032() returns bigint language sql as $f$
   select admin.search_trends_refresh('manual', timestamp '2032-01-15 09:00' at time zone 'Asia/Kolkata')
