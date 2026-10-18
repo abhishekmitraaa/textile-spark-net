@@ -219,7 +219,7 @@ the demand side of India's fashion and textile supply chain.
   `search_trending_terms`, off): buyers see the heading and the most searched categories. Staff watch the terms, and
   take one down, in Cosora-Admin › Trending searches.
 
-### Changed 2026-10-18 (the audit's "fix first" list; built, not live)
+### Changed 2026-10-18 (the audit's "fix first" list; live 2026-10-18)
 - Chats: photos, PDFs and voice notes are sent for real and open on the other side; contact cards (tap "Show number"); Block / Unblock (a block also stops calls, numbers, quotes, direct requests, review replies and the seller seeing the buyer's requirements); Delete chat (for you); Star and Archive with All / Starred / Archived in Messages; Mark as Read. The same thread on the seller side, with "Block buyer".
 - My Quotes' chat shows the monitoring notice.
 - Requirements: the budget's Max is saved as typed, and quantities and prices keep their decimals ("12.50", "1.5 tons").
@@ -794,7 +794,7 @@ before assuming a function is missing.
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
 
-### Changed 2026-10-18 (built, not live)
+### Changed 2026-10-18 (live 2026-10-18)
 - Chats (`/chats/:id`): the whole conversation (it stopped at 500 messages), photos, PDFs and voice notes inline, contact cards with "Show number" (an Admin Log row), who blocked whom, each person's star / archive, and a divider where someone deleted the chat for themselves (staff still see everything).
 
 ### Changed 2026-10-16 (live 2026-10-16)
