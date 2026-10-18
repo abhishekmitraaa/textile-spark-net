@@ -18,8 +18,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
-import { useProfileState } from "@/lib/profileStore";
-import { useAuth } from "@/contexts/AuthContext";
 import { useSpeechSearch } from "@/hooks/useSpeechSearch";
 import { supabase } from "@/lib/supabase";
 
@@ -105,9 +103,6 @@ function HighlightMatch({ text, query }: { text: string; query: string }) {
 const Search = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
-  const { profile } = useProfileState();
-  const { profile: authProfile } = useAuth();
-  const firstName = (authProfile?.full_name ?? profile.fullName).trim().split(" ")[0] || "there";
   const inputRef = useRef<HTMLInputElement>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
 
@@ -527,14 +522,10 @@ const Search = () => {
 
           {/* Live catalogue feed, optionally scoped by the category chip above.
               Previously headed "Sponsored" — nothing here is paid placement, so
-              the label was a false claim on the buyer's read of the ranking. */}
+              the label was a false claim on the buyer's read of the ranking.
+              No greeting above it (2026-10-18): "<first name>, here's what's live"
+              greeted a signed-out visitor as "Rajesh", profileStore's demo default. */}
           <motion.div variants={section} className="pt-6">
-            <p className="text-sm mb-3">
-              <span className="text-blue-600 font-semibold">{firstName}</span>
-              <span className="text-gray-900 font-bold">
-                , {selectedCat ? `browsing ${selectedCat}` : "here's what's live"}
-              </span>
-            </p>
             <motion.div key={selectedCat ?? "all"} variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
               {feedNodes}
             </motion.div>

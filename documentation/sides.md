@@ -198,6 +198,10 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-18 (search greeting removed; live 2026-10-18)
+- **No greeting above Search's live feed.** It said "Rajesh, here's what's live" to signed-out visitors (a demo
+  default name). The feed now starts right after the category chips.
+
 ### Changed 2026-10-18 (trending searches; built, not live)
 - **Search shows what buyers are searching for.** Under the photo search, "Trending yesterday" (or "this week" /
   "this month" when yesterday was quiet) lists the terms at least 3 different people searched, and "Most searched
