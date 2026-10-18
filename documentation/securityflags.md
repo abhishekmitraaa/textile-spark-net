@@ -118,6 +118,9 @@ in the next one.
 
 ## Log
 
+### 2026-10-18 — A chat file's name skipped moderation — Severity: Medium (fixed and live the same day)
+- Found by an automated security review of `20261018160000` after it was applied: `messages.attachment_name` is shown in the thread but the blocklist and flag patterns read only `body`; a direct API insert could carry a phone number or a blocked term in the name. Fixed by `20261018160300` (the guard writes the body from the name and checks the name against the blocklist). Live 2026-10-18.
+
 ### 2026-10-18 — Full buyer-side audit; the "fix first" list fixed on a branch — Severity: Medium / Low
 - **Scope:** origin/main 089c97a (production on 2026-10-18), read-only, nine reviewers by area, each headline finding re-read in code. Report in the session notes; findings already in this file were left out.
 - **Fixed on `fix/first-fixes-2026-10-18`** (not applied or released): account-deletion codes per account (row above); chat Block real (row above); chat files real and private (`chat-attachments`, type and size from Storage, uploads only into your own folder of an active, unblocked chat); contact cards reveal a number only to the other participant, never in message text; the My Quotes chat now shows the monitoring notice (legal requirement); fake "Looking for these?" cards whose Call Now dialled a number made up from an id (could ring a stranger) replaced with real listings. Service Vendors and Freelancers still dial `demoPhone()` numbers: kept as they are by Mitra's decision, 2026-10-18 (the same stranger-dialling risk remains there).
