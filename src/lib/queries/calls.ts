@@ -72,7 +72,9 @@ export function demoPhone(seed: string): string {
 // Why the gate said no. The gate reports the REASON and each surface writes its
 // own sentence: "calling is paused" is the right thing to tell someone who
 // tapped Call, and the wrong thing to tell someone reading a contact card.
-export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_review";
+// "blocked": either of the two blocked the other (chat_blocks, 2026-10-18); a block stops every way of
+// reaching the other person, numbers included (20261018160200).
+export type CallBlockReason = "caller_suspended" | "target_suspended" | "under_review" | "blocked";
 
 // Null means "go ahead". A nullable value rather than an { ok } discriminated
 // union on purpose: this project compiles with `strict: false`, so
@@ -101,6 +103,7 @@ const CALL_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   caller_suspended: { title: "Calling is unavailable", description: "Your account is suspended. Contact support to resolve this.", support: true },
   target_suspended: { title: "Calling is unavailable", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review — calling is paused", description: "Our team will follow up." },
+  blocked: { title: "Calling is unavailable", description: "One of you has blocked the other." },
 };
 
 // Someone is looking at a contact card. Same three reasons, phrased as "why
@@ -109,6 +112,7 @@ const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
   caller_suspended: { title: "Contact details aren't available", description: "Your account is suspended. Contact support to resolve this.", support: true },
   target_suspended: { title: "Contact details aren't available", description: "This account is currently suspended." },
   under_review: { title: "This chat is under review", description: "Contact details aren't available right now. Our team will follow up." },
+  blocked: { title: "Contact details aren't available", description: "One of you has blocked the other." },
 };
 
 export async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
@@ -139,6 +143,12 @@ export async function callGate(meId: string | undefined, otherId: string): Promi
       .maybeSingle();
     if (conv?.status === "under_review") {
       return "under_review";
+    }
+    // A block either way: no number, no WhatsApp, no call (the server refuses them too).
+    const { data: blockState } = await supabase.rpc("chat_block_state", { p_other: otherId });
+    const block = (blockState ?? {}) as { blocked_by_me?: boolean; blocked_me?: boolean };
+    if (block.blocked_by_me || block.blocked_me) {
+      return "blocked";
     }
   }
 
@@ -209,7 +219,7 @@ export interface VendorContactResult {
 }
 
 const REFUSALS: ReadonlySet<string> = new Set<VendorContactRefusal>([
-  "caller_suspended", "target_suspended", "under_review", "rate_limited", "not_signed_in", "not_a_vendor",
+  "caller_suspended", "target_suspended", "under_review", "blocked", "rate_limited", "not_signed_in", "not_a_vendor",
 ]);
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

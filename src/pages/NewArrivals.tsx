@@ -18,7 +18,7 @@ import { useAdSlotBlocks, logAdImpression, logAdClick, adDestination, type Activ
 import { AD_SLOTS, type AdSlotId } from "@/lib/adSlots";
 import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
-import { useCallVendor, placeCall, demoPhone } from "@/lib/queries/calls";
+import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { NEW_ARRIVALS_TILES, categoryTileSlot } from "@/lib/categoryImageSlots";
@@ -66,14 +66,12 @@ import { usePreferredVideoCategoryNames } from "@/lib/queries/forYou";
 // the lg breakpoint (see `hidden lg:block` on the card below) so desktop's
 // 6-column grid fills a complete row without adding anything to mobile's
 // existing 3-column/3-item view. Reuses existing images already in this file.
-const LOOKING_FOR_THESE = [
-  { id: "lft1", name: "Floral Midi Dress",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=400&h=520&fit=crop" },
-  { id: "lft2", name: "Quilted Crossbody",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1591561954557-26941169b49e?w=400&h=520&fit=crop" },
-  { id: "lft3", name: "Polka Dot Sundress",  price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=400&h=520&fit=crop" },
-  { id: "lft4", name: "Graphic Print Tee",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1622445275576-721325763afe?w=400&h=520&fit=crop" },
-  { id: "lft5", name: "Camp Collar Shirt",   price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=400&h=520&fit=crop" },
-  { id: "lft6", name: "Ribbed Tank Top",     price: "$499", moq: "2", image: "https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?w=400&h=520&fit=crop" },
-];
+// "Looking for these?" was six made-up products ("$499", a fixed 3.9 rating, Unsplash photos) whose
+// links opened "Product not found" and whose Call Now dialled a number made up from the card's id
+// (2026-10-18 buyer audit; Mitra: fill it with real listings). It now shows six live listings in
+// trending order (recent demand), and Call Now goes through the same gated seller-contact path as
+// every other card.
+const LOOKING_FOR_COUNT = 6;
 
 // Brand Picks and Recommended Premium Brands were static mock arrays whose
 // cards all routed to the same placeholder (`/search/results` and
@@ -181,6 +179,43 @@ function ProductCard({ product }: { product: Product }) {
           className={cn(ABOVE_CARD_LINK, "mt-2 lg:mt-3 w-full flex items-center justify-center gap-1.5 bg-brand-buyer hover:bg-brand-buyer/90 text-white text-xs lg:text-sm font-bold py-2 lg:py-2.5 rounded-lg transition-colors")}
         >
           <Phone className="w-3 lg:w-3.5 h-3 lg:h-3.5" /> Call Now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOOKING FOR THESE? — a compact card for a real live listing (2026-10-18)
+// ─────────────────────────────────────────────────────────────
+
+function LookingForCard({ product, className }: { product: Product; className?: string }) {
+  const { showText } = useDisplayCurrency();
+  const callVendor = useCallVendor();
+  return (
+    <div className={cn("relative rounded-lg overflow-hidden border border-gray-100 bg-white flex flex-col", className)}>
+      <CardLinkOverlay to={`/product/${product.id}`} />
+      <div className="relative aspect-square bg-gray-100">
+        <img src={product.image} alt={product.name} loading="lazy" className="w-full h-full object-cover" />
+        {/* A star only for a listing with reviews: rating_avg is 0 until the first one. */}
+        {product.rating > 0 && (
+          <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
+            <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
+            <span className="text-[7px] lg:text-[10px] font-bold">{product.rating.toFixed(1)}</span>
+          </div>
+        )}
+      </div>
+      <div className="p-1.5 lg:p-2.5 flex flex-col flex-1">
+        <p className="text-[9px] lg:text-xs font-bold text-brand-buyer leading-tight">{showText(product.price)} | MOQ: {product.moq}</p>
+        <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">
+          {product.name} | <Link to={`/vendor/${product.vendorId}`} className={cn(ABOVE_CARD_LINK, "font-bold hover:underline")}>{product.manufacturer}</Link>
+        </p>
+        <div className="flex-1" />
+        <button
+          onClick={() => callVendor(product.vendorId, product.name)}
+          className={cn(ABOVE_CARD_LINK, "mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded")}
+        >
+          <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
         </button>
       </div>
     </div>
@@ -380,6 +415,11 @@ const NewArrivals = () => {
   const feed = useFeed({ sort: "newest" });
   const products = feed.items;
   const { fetchNextPage } = feed;
+
+  // "Looking for these?": the six live listings with the most recent demand. Not de-duplicated
+  // against Today's New In below: on a small catalogue its first page holds every listing, and
+  // leaving those out would leave this row empty.
+  const { data: lookingFor = [] } = useFeedSlice({ sort: "trending" }, LOOKING_FOR_COUNT);
 
   // Next page as the buyer nears the end of what's loaded.
   useEffect(() => {
@@ -632,32 +672,17 @@ const NewArrivals = () => {
           </>
           )}
 
-          {/* Looking for these? */}
-          <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
-          <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
-            {LOOKING_FOR_THESE.map((item, i) => (
-              <Link
-                key={item.id}
-                to={`/product/${item.id}`}
-                className={cn("rounded-lg overflow-hidden border border-gray-100", i >= 3 && "hidden lg:block")}
-              >
-                <div className="relative aspect-square bg-gray-100">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                  <div className="absolute bottom-1 left-1 flex items-center gap-0.5 bg-white/90 rounded-full px-1 py-0.5">
-                    <Star className="w-2 h-2 text-yellow-400 fill-yellow-400" />
-                    <span className="text-[7px] lg:text-[10px] font-bold">3.9</span>
-                  </div>
-                </div>
-                <div className="p-1.5 lg:p-2.5">
-                  <p className="text-[9px] lg:text-xs font-bold text-brand-buyer leading-tight">{showText(item.price)} | MOQ: {item.moq}</p>
-                  <p className="text-[8px] lg:text-[11px] text-gray-500 truncate">{item.name} | <span className="font-bold">Manufacturer</span></p>
-                  <button onClick={(e) => { e.preventDefault(); placeCall(item.name, demoPhone(item.id)); }} className="mt-1 lg:mt-1.5 w-full flex items-center justify-center gap-1 bg-brand-buyer text-white text-[9px] lg:text-xs font-bold py-1.5 lg:py-2 rounded">
-                    <Phone className="w-2.5 lg:w-3 h-2.5 lg:h-3" /> Call Now
-                  </button>
-                </div>
-              </Link>
-            ))}
-          </div>
+          {/* Looking for these? Real live listings; absent when there are none to show. */}
+          {lookingFor.length > 0 && (
+            <>
+              <h3 className="text-sm lg:text-lg font-bold text-gray-900 mt-4 lg:mt-6 mb-2 lg:mb-4 px-1">Looking for these?</h3>
+              <div className="grid grid-cols-3 lg:grid-cols-6 gap-2 lg:gap-4">
+                {lookingFor.map((item, i) => (
+                  <LookingForCard key={item.id} product={item} className={i >= 3 ? "hidden lg:flex" : undefined} />
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
         {/* ── Brand Picks — real paid ad campaigns (block 0) ──

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { quantityFrom, amountFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
 import { getCategoryById } from "@/data/sellerCategories";
@@ -687,10 +688,13 @@ const PostRequirement = () => {
 
     // Best-effort extraction of a title / quantity / budget from the
     // category-specific values (field keys differ per category schema).
-    const num = (v: unknown) => { const n = parseInt(String(v ?? "").replace(/[^\d]/g, ""), 10); return Number.isFinite(n) ? n : null; };
-    const findVal = (subs: string[]): string | undefined => {
+    // `skip`: keys containing any of these are passed over (the max budget must
+    // never read the Min box: "budgetMin" contains "budget", 2026-10-18).
+    const findVal = (subs: string[], skip: string[] = []): string | undefined => {
       for (const k of Object.keys(values)) {
-        if (subs.some((s) => k.toLowerCase().includes(s))) {
+        const key = k.toLowerCase();
+        if (skip.some((s) => key.includes(s))) continue;
+        if (subs.some((s) => key.includes(s))) {
           const val = values[k];
           if (val && !Array.isArray(val)) return String(val);
         }
@@ -703,9 +707,15 @@ const PostRequirement = () => {
     // vague title makes a vaguer embedding, not just an uglier lead card.
     const categoryLabel = subCategory?.name ?? category?.name;
     const productName = findVal(["producttype", "apparel", "type", "item", "name"]) || categoryLabel || "Requirement";
-    const quantity = num(findVal(["quantity", "qty", "units", "moq", "order"]));
-    const budgetMin = num(findVal(["budgetmin", "minprice", "pricemin", "targetmin"]));
-    const budgetMax = num(findVal(["budgetmax", "maxprice", "pricemax", "budget", "targetprice", "price"]));
+    const quantity = quantityFrom(findVal(["quantity", "qty", "units", "moq", "order"]));
+    // The price-range field stores its two boxes as budgetMin / budgetMax: read those
+    // first. The guesses are for schemas that name their price fields differently.
+    const budgetMin = amountFrom(values.budgetMin ?? findVal(["budgetmin", "minprice", "pricemin", "targetmin"]));
+    const budgetMax = amountFrom(values.budgetMax ?? findVal(["budgetmax", "maxprice", "pricemax", "budget", "targetprice", "price"], ["min"]));
+    if (budgetMin != null && budgetMax != null && budgetMin > budgetMax) {
+      toast.error("Check your budget", { description: "The minimum is more than the maximum." });
+      return;
+    }
     const description = (values.description as string) || "";
     const title = `${categoryLabel ?? "General"} — ${productName}`.slice(0, 120);
 

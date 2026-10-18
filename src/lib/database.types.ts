@@ -991,6 +991,26 @@ export type Database = {
           },
         ]
       }
+      chat_blocks: {
+        Row: { blocked_id: string; blocker_id: string; created_at: string; unblocked_at: string | null }
+        Insert: { blocked_id: string; blocker_id: string; created_at?: string; unblocked_at?: string | null }
+        Update: { blocked_id?: string; blocker_id?: string; created_at?: string; unblocked_at?: string | null }
+        Relationships: []
+      }
+      conversation_member_state: {
+        Row: { archived_at: string | null; cleared_at: string | null; conversation_id: string; starred_at: string | null; updated_at: string; user_id: string }
+        Insert: { archived_at?: string | null; cleared_at?: string | null; conversation_id: string; starred_at?: string | null; updated_at?: string; user_id: string }
+        Update: { archived_at?: string | null; cleared_at?: string | null; conversation_id?: string; starred_at?: string | null; updated_at?: string; user_id?: string }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_member_state_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           created_at: string
@@ -1475,6 +1495,11 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_bytes: number | null
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_path: string | null
+          attachment_seconds: number | null
           body: string | null
           conversation_id: string
           created_at: string
@@ -1485,6 +1510,11 @@ export type Database = {
           sender_id: string
         }
         Insert: {
+          attachment_bytes?: number | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_seconds?: number | null
           body?: string | null
           conversation_id: string
           created_at?: string
@@ -1495,6 +1525,11 @@ export type Database = {
           sender_id: string
         }
         Update: {
+          attachment_bytes?: number | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
+          attachment_path?: string | null
+          attachment_seconds?: number | null
           body?: string | null
           conversation_id?: string
           created_at?: string
@@ -6088,6 +6123,14 @@ export type Database = {
         Args: { p_items: Json; p_session?: string }
         Returns: number
       }
+      chat_block_state: { Args: { p_other: string }; Returns: Json }
+      chat_contact_number: { Args: { p_message_id: string }; Returns: string | null }
+      chat_set_block: { Args: { p_block: boolean; p_other: string }; Returns: Json }
+      chat_set_state: {
+        Args: { p_archived?: boolean | null; p_clear?: boolean; p_conversation_id: string; p_starred?: boolean | null }
+        Returns: Json
+      }
+      share_chat_contact: { Args: { p_conversation_id: string }; Returns: string }
       mark_conversation_read: { Args: { p_conversation_id: string }; Returns: undefined }
       match_products: {
         Args: {

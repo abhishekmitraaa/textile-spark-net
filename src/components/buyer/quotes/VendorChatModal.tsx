@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Send, Loader2, ShieldAlert, MessageSquare } from "lucide-react";
+import { X, Send, Loader2, ShieldAlert, ShieldCheck, MessageSquare, Ban } from "lucide-react";
 import { useChatThread } from "@/lib/queries/chat";
+import { CHAT_MONITORING_NOTICE } from "@/lib/chatData";
 import { useAuth } from "@/contexts/AuthContext";
 import type { VendorQuote } from "@/lib/quotesData";
 
@@ -32,7 +33,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
   const { user } = useAuth();
   // Hooks run unconditionally; the hook itself no-ops on an undefined id, which
   // is the case while the modal is closed.
-  const { messages, ready, sendText, canChat, underReview } = useChatThread(quote?.vendorId);
+  const { messages, ready, sendText, canChat, underReview, blocked } = useChatThread(quote?.vendorId);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -45,7 +46,7 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  const canSend = canChat && !underReview && !sending && Boolean(draft.trim());
+  const canSend = canChat && !underReview && !blocked && !sending && Boolean(draft.trim());
 
   const send = async () => {
     const text = draft.trim();
@@ -85,6 +86,13 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
               <button onClick={onClose} aria-label="Close chat" className="p-1 text-gray-400 hover:text-gray-600">
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* Monitoring disclosure (legally required in every chat; claude.md). Outside the scrolling
+                list so it can't be scrolled away. */}
+            <div className="flex items-center gap-2 border-b border-amber-100 bg-amber-50 px-4 py-2">
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-amber-500" />
+              <p className="text-[11px] leading-snug text-amber-700">{CHAT_MONITORING_NOTICE}</p>
             </div>
 
             {/* Messages — loading, empty and populated are three distinct
@@ -136,6 +144,12 @@ export default function VendorChatModal({ quote, onClose }: { quote: VendorQuote
                 <p className="flex items-center gap-1.5 rounded-xl bg-amber-50 px-3 py-2.5 text-[11px] font-medium text-amber-700">
                   <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
                   This chat is under review. You can't send messages until it is resumed.
+                </p>
+              ) : blocked ? (
+                // A block either way (guard_message_insert, 2026-10-18); unblocking is in the chat's menu.
+                <p className="flex items-center gap-1.5 rounded-xl bg-gray-100 px-3 py-2.5 text-[11px] font-medium text-gray-700">
+                  <Ban className="h-3.5 w-3.5 shrink-0" />
+                  Messages are blocked in this chat. Open it in Messages to unblock.
                 </p>
               ) : (
                 <textarea

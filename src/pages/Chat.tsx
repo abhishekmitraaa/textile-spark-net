@@ -14,6 +14,7 @@ import { useIsDesktop } from "@/hooks/use-mobile";
 import { ChatThreadView } from "./ChatThread";
 import {
   ArrowLeft, Search, MessageCircle, MessagesSquare, Phone, FileText, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+  Star, Archive,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,16 @@ import { cn } from "@/lib/utils";
 const FALLBACK_CONVOS: ChatSummary[] = CONVERSATIONS.map((c) => ({
   id: c.id, name: c.name, avatar: c.avatar, online: c.online,
   lastMessage: c.lastMessage, timestamp: c.timestamp, unread: c.unread, rfqProduct: c.rfqProduct,
+  starred: false, archived: false,
 }));
+
+// Which chats the list shows (2026-10-18): archived ones only under Archived.
+type ChatView = "all" | "starred" | "archived";
+const CHAT_VIEWS: { id: ChatView; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "starred", label: "Starred" },
+  { id: "archived", label: "Archived" },
+];
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
@@ -35,6 +45,7 @@ const Chat = () => {
   const [params, setParams] = useSearchParams();
   const tab: Tab = params.get("tab") === "calls" ? "calls" : "chats";
   const [query, setQuery] = useState("");
+  const [view, setView] = useState<ChatView>("all");
 
   // Sellers reach this hub from the vendor sidebar/bottom nav, so it renders
   // inside DashboardLayout — without it the sidebar disappears with no way back.
@@ -87,11 +98,18 @@ const Chat = () => {
   const onlineCount = convos.filter((c) => c.online).length;
   const groups = useMemo(() => (user ? (dbCalls ?? []) : callGroupsInOrder()), [user, dbCalls]);
 
+  const viewCounts = useMemo(() => ({
+    all: convos.filter((c) => !c.archived).length,
+    starred: convos.filter((c) => c.starred).length,
+    archived: convos.filter((c) => c.archived).length,
+  }), [convos]);
+
   const chats = useMemo(() => {
+    const inView = convos.filter((c) => (view === "archived" ? c.archived : view === "starred" ? c.starred : !c.archived));
     const q = query.trim().toLowerCase();
-    if (!q) return convos;
-    return convos.filter((c) => c.name.toLowerCase().includes(q) || c.rfqProduct.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
-  }, [convos, query]);
+    if (!q) return inView;
+    return inView.filter((c) => c.name.toLowerCase().includes(q) || c.rfqProduct.toLowerCase().includes(q) || c.lastMessage.toLowerCase().includes(q));
+  }, [convos, query, view]);
 
   const filteredGroups = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -195,6 +213,22 @@ const Chat = () => {
                 className="w-full rounded-xl border border-gray-200 bg-gray-50 pl-9 pr-3 py-2.5 text-sm placeholder:text-gray-400 focus:outline-none focus:border-brand-buyer focus:bg-white"
               />
             </div>
+
+            {/* All / Starred / Archived (signed-in chats only) */}
+            {tab === "chats" && user && (
+              <div className="flex gap-2 pb-3" role="tablist" aria-label="Show chats">
+                {CHAT_VIEWS.map((v) => (
+                  <button key={v.id} role="tab" aria-selected={view === v.id} onClick={() => setView(v.id)}
+                    className={cn("inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold transition-colors",
+                      view === v.id ? "border-brand-buyer bg-brand-buyer/10 text-brand-buyer" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>
+                    {v.id === "starred" && <Star className="w-3 h-3" />}
+                    {v.id === "archived" && <Archive className="w-3 h-3" />}
+                    {v.label}
+                    <span className="text-[10px] font-bold opacity-70">{viewCounts[v.id]}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -210,7 +244,11 @@ const Chat = () => {
             {tab === "chats" ? (
               <motion.div key="chats" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} variants={listContainer}>
                 {chats.length === 0 ? (
-                  <Empty icon={MessageCircle} label="No conversations found" />
+                  <Empty icon={MessageCircle} label={
+                    view === "starred" && !query.trim() ? "No starred chats. Star one from its menu."
+                      : view === "archived" && !query.trim() ? "No archived chats"
+                      : "No conversations found"
+                  } />
                 ) : (
                   <motion.div variants={listContainer} initial="hidden" animate="show" className={cn("divide-y divide-gray-100", isSeller && "lg:divide-y-0 lg:space-y-0.5", buyerSplit && "divide-y-0 space-y-0.5")}>
                     {chats.map((c) => (
@@ -321,7 +359,10 @@ function ChatRow({ conv, active, onOpen, onQuote }: { conv: ChatSummary; active?
       <Avatar src={conv.avatar} name={conv.name} online={conv.online} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <p className="text-sm font-bold text-gray-900 truncate">{conv.name}</p>
+          <p className="flex min-w-0 items-center gap-1 text-sm font-bold text-gray-900">
+            <span className="truncate">{conv.name}</span>
+            {conv.starred && <Star aria-label="Starred" className="w-3 h-3 shrink-0 text-yellow-400 fill-yellow-400" />}
+          </p>
           <span className="text-[11px] text-gray-400 shrink-0">{conv.timestamp}</span>
         </div>
         <p className={cn("mt-0.5 text-xs truncate", conv.unread ? "text-gray-800 font-medium" : "text-gray-500")}>{conv.lastMessage}</p>

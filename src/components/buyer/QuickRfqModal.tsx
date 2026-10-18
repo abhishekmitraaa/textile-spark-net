@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import { createRfq, uploadRfqImages, RFQ_MAX_IMAGES } from "@/lib/queries/rfqs";
+import { quantityFrom } from "@/lib/requirementNumbers";
 import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { errorMessage } from "@/lib/errorMessage";
 
@@ -76,7 +77,8 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
     }
     const name = productName.trim();
     const qtyText = quantity.trim();
-    const qty = parseInt(qtyText.replace(/[^\d]/g, ""), 10);
+    // The first number typed ("1.5 tons" → 2, "500 kg / 2 tons" → 500), not every digit run together.
+    const qty = quantityFrom(qtyText);
     // The quantity box is free text ("500 pieces"): the number goes in its column, and the words
     // stay with the notes so nothing the buyer typed is lost.
     const description = [`Quantity: ${qtyText}`, notes.trim()].filter(Boolean).join("\n");
@@ -86,7 +88,7 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
       await createRfq(user.id, {
         title: name.slice(0, 120),
         productName: name,
-        quantity: Number.isFinite(qty) && qty > 0 ? qty : null,
+        quantity: qty,
         description,
         images,
       });

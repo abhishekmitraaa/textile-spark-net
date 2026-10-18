@@ -5,15 +5,24 @@ import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { getOrCreateConversation, CHAT_MONITORING_NOTICE } from "@/lib/chatData";
-import { useChatThread, submitReport, type ThreadMessage } from "@/lib/queries/chat";
+import {
+  useChatThread, submitReport, useAttachmentUrls, fetchContactNumber, formatBytes, formatSeconds,
+  type ThreadMessage,
+} from "@/lib/queries/chat";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useKeyboardInset } from "@/hooks/useKeyboardInset";
+import { useVoiceRecorder, MAX_SECONDS } from "@/hooks/useVoiceRecorder";
 import { useUserRole } from "@/contexts/UserRoleContext";
+import { errorMessage } from "@/lib/errorMessage";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   ArrowLeft, Phone, Star, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
   Plus, X, ShieldCheck, ShieldAlert, Image as ImageIcon, File as FileIcon, User, Headphones,
-  Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen, Loader2,
+  Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen, Loader2, Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -54,18 +63,29 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const fills = embedded || isSeller;
 
   // Real, realtime message thread from Supabase (find-or-create the
-  // conversation, load history, live-subscribe). Text is persisted; the
-  // attachment buttons send a short text placeholder for now.
+  // conversation, load history, live-subscribe). Text, photos, PDFs, voice
+  // notes and contact cards are all real messages (2026-10-18).
   //
-  // `underReview` is the moderation lock (migration 20260801095820). The DB is
-  // what actually refuses the insert; everything below is the honest UI for it.
-  const { messages, otherName, sendText, conversationId, underReview, refreshStatus } = useChatThread(vendorId);
+  // `underReview` is the moderation lock (migration 20260801095820), `blocked`
+  // a block either way (20261018160000). The DB is what actually refuses the
+  // insert; everything below is the honest UI for it.
+  const {
+    messages, otherName, sendText, sendAttachment, shareContact, conversationId, underReview, refreshStatus,
+    memberState, updateState, block, blocked, setBlocked, markRead,
+  } = useChatThread(vendorId);
+  const locked = underReview || blocked;
   const [draft, setDraft] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
-  const [recording, setRecording] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [sendingFile, setSendingFile] = useState(false);
+  const recorder = useVoiceRecorder();
+  const recording = recorder.state === "recording";
   const endRef = useRef<HTMLDivElement>(null);
+  const attachmentUrls = useAttachmentUrls(
+    useMemo(() => messages.flatMap((m) => (m.attachmentPath ? [m.attachmentPath] : [])), [messages]),
+  );
 
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -81,8 +101,9 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
 
   // The lock can land while the composer is open mid-interaction.
   useEffect(() => {
-    if (underReview) { setAttachOpen(false); setRecording(false); }
-  }, [underReview]);
+    if (locked) { setAttachOpen(false); recorder.cancel(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- recorder.cancel is stable
+  }, [locked]);
 
   const initials = useMemo(() => (conv?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [conv?.name]);
 
@@ -102,39 +123,60 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       <div className={cn("bg-white grid place-items-center px-6 text-center", fills ? "h-full" : "min-h-screen")}>
         <div>
           <p className="text-sm text-gray-500">Sign in to start chatting.</p>
-          <p className="mt-1 text-xs text-gray-400">Use the dev switcher (bottom-left) to sign in.</p>
+          <button onClick={() => navigate("/login")} className="mt-3 text-sm font-semibold text-brand-buyer">Sign in</button>
         </div>
       </div>
     );
   }
 
+  const displayName = otherName ?? conv.name;
+  const otherLabel = isSeller ? "buyer" : "seller";
+
   // The draft survives a rejected send (blocklisted term, locked thread,
   // suspended account) — clearing it would lose what the user typed on the one
   // path where they most need to edit it.
   const send = async () => {
-    if (!draft.trim() || underReview) return;
+    if (!draft.trim() || locked) return;
     if (await sendText(draft.trim())) setDraft("");
+  };
+
+  const sendFile = async (file: File, kind: "image" | "file" | "audio", seconds?: number) => {
+    setSendingFile(true);
+    try {
+      await sendAttachment(file, kind, seconds);
+    } finally {
+      setSendingFile(false);
+    }
   };
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>, kind: "image" | "file") => {
     const file = e.target.files?.[0];
-    if (!file || underReview) return;
-    // Chat media storage is a later pass; send a text placeholder so the
-    // message still persists and reaches the other side in realtime.
-    void sendText(kind === "image" ? "📷 Photo" : `📎 ${file.name}`, kind);
-    setAttachOpen(false);
     e.target.value = "";
+    setAttachOpen(false);
+    if (!file || locked) return;
+    void sendFile(file, kind);
   };
 
-  const toggleRecord = () => {
-    if (underReview) return;
-    if (recording) {
-      setRecording(false);
-      void sendText("🎤 Voice message", "audio");
-    } else {
-      setRecording(true);
-      toast.info("Recording… tap again to send");
+  // Voice notes: tap the mic to record (up to two minutes), then send or throw it away.
+  const startRecording = async () => {
+    if (locked || recording) return;
+    const ok = await recorder.start();
+    if (!ok) {
+      toast.error("Can't record here", {
+        description: "Allow the microphone for this site, or use a browser that records voice notes.",
+      });
     }
+  };
+  const sendRecording = async () => {
+    const note = await recorder.stop();
+    if (!note) return;
+    await sendFile(note.file, "audio", note.durationMs / 1000);
+  };
+
+  const onShareContact = async () => {
+    setAttachOpen(false);
+    if (locked) return;
+    if (await shareContact()) toast.success("Contact card sent");
   };
 
   const goProfile = () => navigate(`/vendor/${conv.id}`);
@@ -142,20 +184,50 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const goQuote = () => navigate(isSeller ? "/quotes" : "/requirement/my-quotes");
   const hasText = draft.trim().length > 0;
 
+  const toggleBlock = async () => {
+    const next = !block.blockedByMe;
+    if (await setBlocked(next)) {
+      toast.success(next ? `${displayName} is blocked` : `${displayName} is unblocked`, {
+        description: next ? "Until you unblock, neither of you can message, call or send quotes to the other." : undefined,
+      });
+    }
+  };
+
   const menuItems: { label: string; icon: typeof Eye; danger?: boolean; onClick: () => void }[] = [
     { label: "View Quote details", icon: FileText, onClick: () => { setMenuOpen(false); goQuote(); } },
-    { label: "View Vendor Profile", icon: Eye, onClick: () => { setMenuOpen(false); goProfile(); } },
-    { label: "Mark as Read", icon: MailOpen, onClick: () => { setMenuOpen(false); toast.success("Marked as read"); } },
-    { label: "Star chat", icon: StarIcon, onClick: () => { setMenuOpen(false); toast.success("Chat starred"); } },
-    { label: "Archive chat", icon: Archive, onClick: () => { setMenuOpen(false); toast.success("Chat archived"); } },
+    { label: isSeller ? "View Buyer Profile" : "View Vendor Profile", icon: Eye, onClick: () => { setMenuOpen(false); goProfile(); } },
+    { label: "Mark as Read", icon: MailOpen, onClick: () => { setMenuOpen(false); void markRead().then((ok) => ok && toast.success("Marked as read")); } },
+    {
+      label: memberState.starred ? "Unstar chat" : "Star chat", icon: StarIcon,
+      onClick: () => { setMenuOpen(false); void updateState({ starred: !memberState.starred }).then((ok) => ok && toast.success(memberState.starred ? "Chat unstarred" : "Chat starred")); },
+    },
+    {
+      label: memberState.archived ? "Unarchive chat" : "Archive chat", icon: Archive,
+      onClick: () => {
+        setMenuOpen(false);
+        void updateState({ archived: !memberState.archived }).then((ok) => {
+          if (!ok) return;
+          toast.success(memberState.archived ? "Chat moved back to your chats" : "Chat archived", {
+            description: memberState.archived ? undefined : "Find it under Archived in Messages.",
+          });
+        });
+      },
+    },
     { label: "Report", icon: Flag, onClick: () => { setMenuOpen(false); setReportOpen(true); } },
     // Help & Support P3e: a chat with Cosora Support about this conversation.
     { label: "Get help with this chat", icon: Flag, onClick: () => { setMenuOpen(false); navigate(supportChatHref({ category: "buyer_chat", entityType: "conversation", entityId: conversationId })); } },
-    { label: "Block Vendor", icon: Ban, danger: true, onClick: () => { setMenuOpen(false); blockVendor(); } },
-    { label: "Delete chat", icon: Trash2, danger: true, onClick: () => { setMenuOpen(false); toast.success("Chat deleted"); navigate(inboxHref); } },
+    { label: block.blockedByMe ? `Unblock ${otherLabel}` : `Block ${otherLabel}`, icon: Ban, danger: !block.blockedByMe, onClick: () => { setMenuOpen(false); void toggleBlock(); } },
+    { label: "Delete chat", icon: Trash2, danger: true, onClick: () => { setMenuOpen(false); setConfirmDelete(true); } },
   ];
 
-  const blockVendor = () => { toast.success(`${conv.name} has been blocked`); navigate(inboxHref); };
+  // Deleted for me: the list hides it until a newer message, and this thread shows only what comes after.
+  // The messages stay on Cosora (chats are monitored; a review needs the record).
+  const deleteChat = async () => {
+    if (await updateState({ clear: true })) {
+      toast.success("Chat deleted", { description: "It's gone from your Messages. New messages will bring it back." });
+      navigate(inboxHref);
+    }
+  };
 
   return (
     <div className={cn("flex flex-col bg-gray-50", fills ? "h-full" : "h-[100dvh]")} style={keyboardInset ? { paddingBottom: keyboardInset } : undefined}>
@@ -185,7 +257,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               → placeCall). While the thread is under review the two sides must
               not be able to take it off-platform, so the affordance goes away
               entirely rather than sitting there dead. */}
-          {!underReview && (
+          {!locked && (
             <button onClick={() => vendorId && callVendor(vendorId, conv.rfqProduct)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
           )}
           <div className="relative shrink-0">
@@ -234,6 +306,23 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             </div>
           </div>
         )}
+
+        {/* Block banner (2026-10-18): a block either way stops messages both ways. */}
+        {blocked && (
+          <div className="w-full bg-gray-100 border-t border-gray-200">
+            <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-4 py-2.5", THREAD_WIDE)}>
+              <Ban className="w-4 h-4 text-gray-600 shrink-0" />
+              <p role="status" className="flex-1 text-[11px] font-medium text-gray-700 leading-snug">
+                {block.blockedByMe
+                  ? `You blocked ${displayName}. Neither of you can message, call or send quotes to the other.`
+                  : "You can't send messages in this chat."}
+              </p>
+              {block.blockedByMe && (
+                <button onClick={() => void toggleBlock()} className="shrink-0 text-[11px] font-bold text-brand-buyer hover:underline">Unblock</button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Messages */}
@@ -253,12 +342,45 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
                 className={cn("flex", m.sender === "user" ? "justify-end" : "justify-start")}>
                 <div className={cn("max-w-[78%] lg:max-w-[68%] rounded-2xl px-3.5 py-2 shadow-sm",
                   m.sender === "user" ? "bg-brand-buyer text-white rounded-br-md" : "bg-white text-gray-900 rounded-bl-md border border-gray-100")}>
-                  {m.kind === "image" && m.imageUrl && <img src={m.imageUrl} alt="" className="mb-1 rounded-lg max-h-48 object-cover" />}
+                  {m.kind === "image" && (
+                    m.attachmentPath && attachmentUrls[m.attachmentPath] ? (
+                      <a href={attachmentUrls[m.attachmentPath]} target="_blank" rel="noopener noreferrer" aria-label="Open photo">
+                        <img src={attachmentUrls[m.attachmentPath]} alt="Photo" className="mb-1 rounded-lg max-h-60 w-auto object-cover" />
+                      </a>
+                    ) : (
+                      <span className={cn("mb-1 flex h-32 w-48 items-center justify-center rounded-lg", m.sender === "user" ? "bg-white/15" : "bg-gray-100")}>
+                        {m.attachmentPath ? <Loader2 className="w-5 h-5 animate-spin opacity-60" /> : <ImageIcon className="w-5 h-5 opacity-60" />}
+                      </span>
+                    )
+                  )}
                   {m.kind === "file" && (
-                    <span className="mb-0.5 inline-flex items-center gap-1.5 text-sm"><FileIcon className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} /> {m.fileName}</span>
+                    <a
+                      href={m.attachmentPath ? attachmentUrls[m.attachmentPath] : undefined}
+                      target="_blank" rel="noopener noreferrer"
+                      className={cn("mb-0.5 flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm", m.sender === "user" ? "bg-white/15" : "bg-gray-50 border border-gray-100")}
+                    >
+                      <FileIcon className={cn("w-5 h-5 shrink-0", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} />
+                      <span className="min-w-0 flex-1">
+                        <span data-no-translate className="block truncate font-medium">{m.attachmentName ?? m.text.replace(/^📎\s*/, "")}</span>
+                        {m.attachmentBytes ? <span className={cn("block text-[10px]", m.sender === "user" ? "text-white/70" : "text-gray-400")}>PDF · {formatBytes(m.attachmentBytes)}</span> : null}
+                      </span>
+                      {m.attachmentPath && <Download className="w-4 h-4 shrink-0 opacity-70" />}
+                    </a>
                   )}
                   {m.kind === "audio" && (
-                    <span className="inline-flex items-center gap-1.5 text-sm"><Headphones className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} /> {m.text}</span>
+                    m.attachmentPath && attachmentUrls[m.attachmentPath] ? (
+                      <span className="block">
+                        <audio controls preload="metadata" src={attachmentUrls[m.attachmentPath]} className="h-9 w-56 max-w-full" />
+                        {m.attachmentSeconds != null && (
+                          <span className={cn("mt-0.5 block text-[10px]", m.sender === "user" ? "text-white/70" : "text-gray-400")}>Voice note · {formatSeconds(m.attachmentSeconds)}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-sm"><Headphones className={cn("w-4 h-4", m.sender === "user" ? "text-white/90" : "text-brand-buyer")} /> {m.text}</span>
+                    )
+                  )}
+                  {m.kind === "contact" && (
+                    <ContactCard message={m} name={m.sender === "user" ? "You" : displayName} locked={locked} />
                   )}
                   {(m.kind === "quote_request" || m.kind === "quote_reply") && (
                     <QuoteCard message={m} />
@@ -288,8 +410,8 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               <AttachItem icon={ImageIcon} label="Gallery" color="text-violet-600 bg-violet-100" onClick={() => galleryRef.current?.click()} />
               <AttachItem icon={Camera} label="Camera" color="text-brand-buyer bg-brand-buyer/10" onClick={() => cameraRef.current?.click()} />
               <AttachItem icon={FileIcon} label="Document" color="text-indigo-600 bg-indigo-100" onClick={() => docRef.current?.click()} />
-              <AttachItem icon={User} label="Contact" color="text-cyan-600 bg-cyan-100" onClick={() => { setAttachOpen(false); toast.success("Contact shared"); }} />
-              <AttachItem icon={Headphones} label="Audio" color="text-orange-600 bg-orange-100" onClick={() => { setAttachOpen(false); toggleRecord(); }} />
+              <AttachItem icon={User} label="Contact" color="text-cyan-600 bg-cyan-100" onClick={() => void onShareContact()} />
+              <AttachItem icon={Headphones} label="Audio" color="text-orange-600 bg-orange-100" onClick={() => { setAttachOpen(false); void startRecording(); }} />
             </div>
           </motion.div>
         )}
@@ -297,20 +419,40 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
 
       {/* Input bar */}
       <div className={cn("shrink-0 bg-white border-t border-gray-100", !keyboardInset && "pb-[env(safe-area-inset-bottom)]")}>
+        {recording ? (
+          // Recording a voice note: the length so far, throw it away, or send it.
+          <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3", THREAD_WIDE)}>
+            <button onClick={() => recorder.cancel()} aria-label="Discard voice note"
+              className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+              <X className="w-5 h-5 text-gray-600" />
+            </button>
+            <div role="status" className="flex-1 flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-2">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              <span className="text-sm font-semibold text-red-600 tabular-nums">{formatSeconds(recorder.seconds)}</span>
+              <span className="text-xs text-red-400">/ {formatSeconds(MAX_SECONDS)}</span>
+            </div>
+            <button onClick={() => void sendRecording()} aria-label="Send voice note"
+              className="shrink-0 w-10 h-10 rounded-full bg-brand-buyer flex items-center justify-center hover:bg-brand-buyer/90">
+              <Send className="w-4 h-4 text-white" />
+            </button>
+          </div>
+        ) : (
         <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-3 py-2.5 lg:px-4 lg:py-3", THREAD_WIDE)}>
-          <button onClick={() => setAttachOpen((o) => !o)} disabled={underReview} aria-label="Attach"
+          <button onClick={() => setAttachOpen((o) => !o)} disabled={locked || sendingFile} aria-label="Attach"
             className="shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 disabled:opacity-40 disabled:hover:bg-gray-100 disabled:cursor-not-allowed">
-            <motion.span animate={{ rotate: attachOpen ? 45 : 0 }} transition={{ duration: 0.18 }}><Plus className="w-5 h-5 text-gray-600" /></motion.span>
+            {sendingFile
+              ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" />
+              : <motion.span animate={{ rotate: attachOpen ? 45 : 0 }} transition={{ duration: 0.18 }}><Plus className="w-5 h-5 text-gray-600" /></motion.span>}
           </button>
-          <div className={cn("flex-1 flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2", underReview ? "bg-gray-100" : "bg-gray-50")}>
+          <div className={cn("flex-1 flex items-center gap-2 rounded-full border border-gray-200 px-3 py-2", locked ? "bg-gray-100" : "bg-gray-50")}>
             <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") void send(); }}
-              disabled={underReview}
-              placeholder={underReview ? "Sending is paused while this chat is reviewed" : "Message"}
+              disabled={locked}
+              placeholder={underReview ? "Sending is paused while this chat is reviewed" : blocked ? "Messages are blocked in this chat" : "Message"}
               // 16px on touch screens: iOS zooms the whole page when a focused
               // field's text is smaller, which threw the thread off-screen.
               className="min-w-0 flex-1 bg-transparent text-base [@media(pointer:fine)]:text-sm placeholder:text-gray-400 focus:outline-none disabled:cursor-not-allowed" />
-            <button onClick={() => docRef.current?.click()} disabled={underReview} aria-label="Attach file" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Paperclip className="w-4 h-4 text-gray-400" /></button>
-            <button onClick={() => cameraRef.current?.click()} disabled={underReview} aria-label="Camera" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Camera className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => docRef.current?.click()} disabled={locked || sendingFile} aria-label="Attach file" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Paperclip className="w-4 h-4 text-gray-400" /></button>
+            <button onClick={() => cameraRef.current?.click()} disabled={locked || sendingFile} aria-label="Camera" className="shrink-0 disabled:opacity-40 disabled:cursor-not-allowed"><Camera className="w-4 h-4 text-gray-400" /></button>
           </div>
           <AnimatePresence mode="wait" initial={false}>
             {/* Opacity is driven through `animate`, not a disabled: class:
@@ -318,33 +460,51 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
                 class — the button would be genuinely disabled but still look
                 fully enabled. */}
             {hasText ? (
-              <motion.button key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
-                onClick={() => void send()} disabled={underReview} aria-label="Send"
+              <motion.button key="send" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: locked ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
+                onClick={() => void send()} disabled={locked} aria-label="Send"
                 className="shrink-0 w-10 h-10 rounded-full bg-brand-buyer flex items-center justify-center hover:bg-brand-buyer/90 disabled:hover:bg-brand-buyer disabled:cursor-not-allowed">
                 <Send className="w-4 h-4 text-white" />
               </motion.button>
             ) : (
-              <motion.button key="mic" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: underReview ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
-                onClick={toggleRecord} disabled={underReview} aria-label="Record audio"
-                className={cn("shrink-0 w-10 h-10 rounded-full flex items-center justify-center disabled:cursor-not-allowed",
-                  recording ? "bg-red-500 animate-pulse" : "bg-brand-buyer hover:bg-brand-buyer/90 disabled:hover:bg-brand-buyer")}>
+              <motion.button key="mic" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: locked || sendingFile ? 0.4 : 1 }} exit={{ scale: 0.6, opacity: 0 }} transition={{ duration: 0.15 }}
+                onClick={() => void startRecording()} disabled={locked || sendingFile} aria-label="Record a voice note"
+                className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-brand-buyer hover:bg-brand-buyer/90 disabled:hover:bg-brand-buyer disabled:cursor-not-allowed">
                 <Mic className="w-4 h-4 text-white" />
               </motion.button>
             )}
           </AnimatePresence>
         </div>
+        )}
       </div>
 
       {/* Hidden file inputs */}
-      <input ref={galleryRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e, "image")} />
+      <input ref={galleryRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif" className="hidden" onChange={(e) => onFile(e, "image")} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => onFile(e, "image")} />
-      <input ref={docRef} type="file" className="hidden" onChange={(e) => onFile(e, "file")} />
+      <input ref={docRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => onFile(e, "file")} />
+
+      {/* Delete chat: for me only. */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent className="max-w-xs rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-center">Delete this chat?</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              It disappears from your Messages, with what was said so far. {displayName} still has their copy, and a new message brings the chat back.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-col sm:space-x-0">
+            <AlertDialogAction onClick={() => void deleteChat()} className="w-full bg-red-500 hover:bg-red-600 text-white">Delete chat</AlertDialogAction>
+            <AlertDialogCancel className="w-full mt-0">Cancel</AlertDialogCancel>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ReportModal
         open={reportOpen}
         onClose={() => setReportOpen(false)}
-        name={conv.name}
-        onBlock={blockVendor}
+        name={displayName}
+        otherLabel={otherLabel}
+        alreadyBlocked={block.blockedByMe}
+        onBlock={() => { if (!block.blockedByMe) void toggleBlock(); }}
         conversationId={conversationId}
         // submit_report() takes the offending message; the thread has no
         // per-message report affordance, so the newest one is what it refers to.
@@ -411,6 +571,57 @@ function QuoteCard({ message }: { message: ThreadMessage }) {
 }
 
 /**
+ * A contact card (2026-10-18). The number isn't in the message: chats lock on a message holding a
+ * mobile number (the off-platform rule), so the card asks the server, which reveals the sender's
+ * sign-in number to the other person in the chat only, and never while it is reviewed or blocked.
+ */
+function ContactCard({ message, name, locked }: { message: ThreadMessage; name: string; locked: boolean }) {
+  const mine = message.sender === "user";
+  const [number, setNumber] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const reveal = async () => {
+    if (loading) return;
+    setLoading(true);
+    try {
+      const n = await fetchContactNumber(message.id);
+      if (!n) toast.error("No number on this account");
+      setNumber(n);
+    } catch (e) {
+      toast.error("Couldn't show this contact", { description: errorMessage(e) });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <span className={cn("-mx-1 mb-1 block rounded-xl border px-3 py-2.5", mine ? "border-white/25 bg-white/10" : "border-gray-200 bg-gray-50")}>
+      <span className="flex items-center gap-2">
+        <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-full", mine ? "bg-white/20" : "bg-cyan-100")}>
+          <User className={cn("h-4 w-4", mine ? "text-white" : "text-cyan-600")} />
+        </span>
+        <span className="min-w-0">
+          <span className={cn("block text-[11px] font-bold uppercase tracking-wide", mine ? "text-white/90" : "text-cyan-700")}>Contact</span>
+          <span data-no-translate className={cn("block truncate text-sm font-semibold", mine ? "text-white" : "text-gray-900")}>{name}</span>
+        </span>
+      </span>
+      {mine ? (
+        <span className="mt-1.5 block text-xs text-white/80">You shared your sign-in number.</span>
+      ) : number ? (
+        <a href={`tel:${number.replace(/[^\d+]/g, "")}`} className="mt-2 flex items-center justify-center gap-1.5 rounded-lg bg-emerald-500 py-2 text-sm font-bold text-white hover:bg-emerald-600">
+          <Phone className="h-4 w-4" /> <span data-no-translate>{number}</span>
+        </a>
+      ) : (
+        <button type="button" onClick={() => void reveal()} disabled={locked || loading}
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg border border-cyan-200 bg-white py-2 text-sm font-bold text-cyan-700 hover:bg-cyan-50 disabled:cursor-not-allowed disabled:opacity-50">
+          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Phone className="h-4 w-4" />} Show number
+        </button>
+      )}
+    </span>
+  );
+}
+
+/**
  * `/chats/:vendorId` as its own route. Sellers get DashboardLayout so the
  * vendor sidebar stays reachable; the seller desktop inbox instead renders
  * <ChatThreadView> directly as a pane (see Chat.tsx).
@@ -448,6 +659,10 @@ interface ReportModalProps {
   open: boolean;
   onClose: () => void;
   name: string;
+  /** "seller" or "buyer": who the other person is to the reader. */
+  otherLabel: string;
+  /** Already blocked: the confirmation doesn't offer it again. */
+  alreadyBlocked: boolean;
   onBlock: () => void;
   conversationId: string | null;
   messageId: string | null;
@@ -465,7 +680,7 @@ interface ReportModalProps {
  * telling someone their report was filed when it was not is the one failure
  * mode this flow must not have.
  */
-function ReportModal({ open, onClose, name, onBlock, conversationId, messageId, onReported }: ReportModalProps) {
+function ReportModal({ open, onClose, name, otherLabel, alreadyBlocked, onBlock, conversationId, messageId, onReported }: ReportModalProps) {
   const [done, setDone] = useState(false);
   const [pending, setPending] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -517,10 +732,15 @@ function ReportModal({ open, onClose, name, onBlock, conversationId, messageId, 
               <div className="px-6 py-8 text-center">
                 <div className="mx-auto mb-3 w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center"><Check className="w-6 h-6 text-emerald-500" /></div>
                 <h3 className="text-base font-bold text-gray-900">Thanks for your feedback</h3>
-                <p className="mt-1 text-xs text-gray-500 leading-relaxed">When you report something, Cosora reviews it against our Community Standards. You can also block this vendor so they can no longer contact you.</p>
-                <button onClick={() => { onClose(); onBlock(); }} className="mt-5 w-full text-left flex items-center justify-between rounded-xl border border-gray-100 px-3 py-3 text-sm font-semibold text-red-500 hover:bg-red-50">
-                  Block {name} <ChevronRight className="w-4 h-4" />
-                </button>
+                <p className="mt-1 text-xs text-gray-500 leading-relaxed">
+                  When you report something, Cosora reviews it against our Community Standards.
+                  {alreadyBlocked ? "" : ` You can also block this ${otherLabel}: until you unblock, neither of you can message, call or send quotes to the other.`}
+                </p>
+                {!alreadyBlocked && (
+                  <button onClick={() => { onClose(); onBlock(); }} className="mt-5 w-full text-left flex items-center justify-between rounded-xl border border-gray-100 px-3 py-3 text-sm font-semibold text-red-500 hover:bg-red-50">
+                    Block {name} <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
                 <button onClick={onClose} className="mt-2 w-full rounded-xl bg-brand-vendor py-3 text-sm font-bold text-white hover:bg-brand-vendor/90">Close</button>
               </div>
             )}

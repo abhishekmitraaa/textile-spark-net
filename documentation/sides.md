@@ -219,6 +219,14 @@ the demand side of India's fashion and textile supply chain.
   `search_trending_terms`, off): buyers see the heading and the most searched categories. Staff watch the terms, and
   take one down, in Cosora-Admin › Trending searches.
 
+### Changed 2026-10-18 (the audit's "fix first" list; built, not live)
+- Chats: photos, PDFs and voice notes are sent for real and open on the other side; contact cards (tap "Show number"); Block / Unblock (a block also stops calls, numbers, quotes, direct requests, review replies and the seller seeing the buyer's requirements); Delete chat (for you); Star and Archive with All / Starred / Archived in Messages; Mark as Read. The same thread on the seller side, with "Block buyer".
+- My Quotes' chat shows the monitoring notice.
+- Requirements: the budget's Max is saved as typed, and quantities and prices keep their decimals ("12.50", "1.5 tons").
+- New Arrivals' "Looking for these?" shows six real live listings (trending), Call Now through the gated contact path.
+- A crash shows a message with Try again / Go home instead of a white screen; after a deploy the app reloads itself once.
+- Deleting your account: at most 5 codes a day, however often a request is cancelled and started again.
+
 ### Changed 2026-10-17 (ten fixes; live 2026-10-17)
 - **Video Closeups** work on every phone: nothing selects, Call Now's number appears above the reel, a video whose
   listing isn't available says so, and on a seller's own store the card doesn't pretend to open it.
@@ -785,6 +793,9 @@ before assuming a function is missing.
 ### Purpose
 Keep the marketplace trustworthy and monetised: verify who is real, moderate what gets
 published, intervene when a conversation goes wrong, and run the commercial layer.
+
+### Changed 2026-10-18 (built, not live)
+- Chats (`/chats/:id`): the whole conversation (it stopped at 500 messages), photos, PDFs and voice notes inline, contact cards with "Show number" (an Admin Log row), who blocked whom, each person's star / archive, and a divider where someone deleted the chat for themselves (staff still see everything).
 
 ### Changed 2026-10-16 (live 2026-10-16)
 - **Fraud reports and Feedback boards** now receive reports and feedback from every signed-in buyer and seller

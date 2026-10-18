@@ -12,6 +12,7 @@ import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import ClarityMask from "./components/analytics/ClarityMask";
 import SiteThemeApplier from "./components/SiteThemeApplier";
 import StoreSync from "./components/StoreSync";
+import { RouteErrorBoundary } from "./components/AppErrorBoundary";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -229,6 +230,8 @@ const App = () => (
               rather than a spinner: these chunks are small and load in a frame
               or two on any reasonable connection, and a flashed spinner reads
               worse than nothing. */}
+          {/* A page that throws shows a message instead of a white screen; the next route starts clean. */}
+          <RouteErrorBoundary>
           <Suspense fallback={<div className="min-h-screen bg-white" />}>
           <Routes>
             {/* <ClarityMask> hides a page from Microsoft Clarity's recordings (lib/analytics/clarity.ts):
@@ -366,6 +369,7 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
           </Suspense>
+          </RouteErrorBoundary>
           {/* Global wishlist modal: available from every page's product cards */}
           <SaveToFolderModal />
           {/* Desktop "call this number" dialog (mobile opens the dialer directly) */}

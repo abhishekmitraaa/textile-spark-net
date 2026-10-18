@@ -3,7 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { markConversationRead } from "@/lib/queries/chatUnread";
+import { markConversationRead, chatUnreadKey } from "@/lib/queries/chatUnread";
+import { shrinkImage } from "@/lib/shrinkImage";
+import { errorMessage } from "@/lib/errorMessage";
 
 // ─────────────────────────────────────────────────────────────
 // Realtime 1:1 chat thread.
@@ -21,9 +23,12 @@ export interface ThreadMessage {
   text: string;
   time: string;
   kind: string;
-  // Present on the existing thread UI; unused by realtime text messages.
-  imageUrl?: string;
-  fileName?: string;
+  // A photo, PDF or voice note (kind image / file / audio): the file sits in the private
+  // chat-attachments bucket; the thread asks for a short-lived link to show it (useAttachmentUrls).
+  attachmentPath?: string | null;
+  attachmentName?: string | null;
+  attachmentBytes?: number | null;
+  attachmentSeconds?: number | null;
   status?: "sent" | "delivered" | "read";
   // Set on structured quote messages (kind "quote_request" / "quote_reply") so
   // the thread can render them as tappable cards linking to the real record.
@@ -33,7 +38,97 @@ export interface ThreadMessage {
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 
-interface RawMessage { id: string; sender_id: string; body: string | null; kind: string; created_at: string; rfq_id?: string | null; quote_id?: string | null }
+interface RawMessage {
+  id: string; sender_id: string; body: string | null; kind: string; created_at: string;
+  rfq_id?: string | null; quote_id?: string | null;
+  attachment_path?: string | null; attachment_name?: string | null;
+  attachment_bytes?: number | null; attachment_seconds?: number | null;
+}
+
+const THREAD_COLUMNS =
+  "id, sender_id, body, kind, created_at, rfq_id, quote_id, attachment_path, attachment_name, attachment_bytes, attachment_seconds";
+
+// ─────────────────────────────────────────────────────────────
+// Chat files (2026-10-18; migration 20261018160000_chat_real_actions.sql). They used to be a text
+// placeholder ("📷 Photo") and the other side saw an empty bubble. Now a photo, a PDF or a voice note is
+// uploaded to the private chat-attachments bucket at {conversation}/{me}/{uuid}.{ext}, and the message
+// points at it. Only the two people in the chat (and support, for reviews) can read it; the database
+// checks the file exists in this chat's folder and that its type matches the message.
+// ─────────────────────────────────────────────────────────────
+
+export const CHAT_ATTACHMENT_BUCKET = "chat-attachments";
+/** The bucket's limit (10 MB). */
+export const CHAT_ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024;
+/** Links to a chat file last this long; the thread asks again before they run out. */
+const SIGNED_URL_SECONDS = 6 * 60 * 60;
+
+const AUDIO_EXT: Record<string, string> = {
+  "audio/webm": "webm", "audio/ogg": "ogg", "audio/mp4": "m4a", "audio/x-m4a": "m4a",
+  "audio/aac": "aac", "audio/mpeg": "mp3", "audio/wav": "wav",
+};
+const IMAGE_EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" };
+
+export type AttachmentKind = "image" | "file" | "audio";
+
+/** Readable size: "820 KB", "2.4 MB". */
+export function formatBytes(n: number | null | undefined): string {
+  if (!n || n <= 0) return "";
+  if (n < 1024 * 1024) return `${Math.max(1, Math.round(n / 1024))} KB`;
+  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** "0:42" for a voice note's length. */
+export function formatSeconds(n: number | null | undefined): string {
+  const s = Math.max(0, Math.round(n ?? 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/**
+ * Short-lived links for the chat files on screen. Asks once per path, in one request per batch, and again
+ * when a link is near the end of its life (a thread left open overnight).
+ */
+export function useAttachmentUrls(paths: string[]): Record<string, string> {
+  const [urls, setUrls] = useState<Record<string, { url: string; at: number }>>({});
+  const key = paths.join("|");
+  useEffect(() => {
+    const now = Date.now();
+    const missing = paths.filter((p) => !urls[p] || now - urls[p].at > (SIGNED_URL_SECONDS - 300) * 1000);
+    if (missing.length === 0) return;
+    let cancelled = false;
+    void supabase.storage.from(CHAT_ATTACHMENT_BUCKET).createSignedUrls(missing, SIGNED_URL_SECONDS).then(({ data }) => {
+      if (cancelled || !data) return;
+      setUrls((prev) => {
+        const next = { ...prev };
+        for (const d of data) if (d.path && d.signedUrl) next[d.path] = { url: d.signedUrl, at: Date.now() };
+        return next;
+      });
+    });
+    return () => { cancelled = true; };
+    // `key` stands for `paths`; `urls` is read for freshness only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return Object.fromEntries(Object.entries(urls).map(([k, v]) => [k, v.url]));
+}
+
+/** The number behind a contact card, for the people in that chat. Throws with the server's reason. */
+export async function fetchContactNumber(messageId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("chat_contact_number", { p_message_id: messageId });
+  if (error) throw error;
+  return data ?? null;
+}
+
+/** My own marks on a chat (2026-10-18): starred, archived, deleted for me up to `clearedAt`. */
+export interface ChatMemberState { starred: boolean; archived: boolean; clearedAt: string | null }
+/** A block either way stops messages both ways. */
+export interface ChatBlockState { blockedByMe: boolean; blockedMe: boolean }
+
+const NO_MEMBER_STATE: ChatMemberState = { starred: false, archived: false, clearedAt: null };
+const NO_BLOCK: ChatBlockState = { blockedByMe: false, blockedMe: false };
+
+function toBlockState(data: unknown): ChatBlockState {
+  const b = (data ?? {}) as { blocked_by_me?: boolean; blocked_me?: boolean };
+  return { blockedByMe: Boolean(b.blocked_by_me), blockedMe: Boolean(b.blocked_me) };
+}
 
 /**
  * Moderation state of a thread. 'under_review' means the regex flag trigger
@@ -100,6 +195,9 @@ export function useChatThread(otherId: string | undefined) {
   const convIdRef = useRef<string | null>(null);
   // Mirrors `status` for the realtime callbacks, whose closures are made once.
   const statusRef = useRef<ConversationStatus>("active");
+  // Star / archive / delete-for-me, and blocks (2026-10-18). Both are the signed-in person's own view.
+  const [memberState, setMemberState] = useState<ChatMemberState>(NO_MEMBER_STATE);
+  const [block, setBlock] = useState<ChatBlockState>(NO_BLOCK);
 
   const applyStatus = useCallback((next: ConversationStatus) => {
     statusRef.current = next;
@@ -128,6 +226,10 @@ export function useChatThread(otherId: string | undefined) {
     kind: m.kind,
     rfqId: m.rfq_id ?? null,
     quoteId: m.quote_id ?? null,
+    attachmentPath: m.attachment_path ?? null,
+    attachmentName: m.attachment_name ?? null,
+    attachmentBytes: m.attachment_bytes ?? null,
+    attachmentSeconds: m.attachment_seconds ?? null,
   }), [me]);
 
   useEffect(() => {
@@ -137,6 +239,8 @@ export function useChatThread(otherId: string | undefined) {
     convIdRef.current = null;
     setConversationId(null);
     applyStatus("active");
+    setMemberState(NO_MEMBER_STATE);
+    setBlock(NO_BLOCK);
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
@@ -148,18 +252,27 @@ export function useChatThread(otherId: string | undefined) {
       applyStatus(row.status);
       const conv = { id: row.id };
 
-      // Display name for the other party (vendor brand → profile name → fallback).
-      const [{ data: vp }, { data: pr }] = await Promise.all([
+      // Display name for the other party (vendor brand → profile name → fallback), my own view of
+      // the chat (star, archive, deleted-for-me) and whether either of us blocked the other.
+      const [{ data: vp }, { data: pr }, { data: ms }, { data: bs }] = await Promise.all([
         supabase.from("vendor_profiles").select("brand_name").eq("id", otherId).maybeSingle(),
         supabase.from("profiles").select("full_name").eq("id", otherId).maybeSingle(),
+        supabase.from("conversation_member_state").select("starred_at, archived_at, cleared_at").eq("conversation_id", conv.id).maybeSingle(),
+        supabase.rpc("chat_block_state", { p_other: otherId }),
       ]);
-      if (!cancelled) setOtherName(vp?.brand_name ?? pr?.full_name ?? null);
+      if (cancelled) return;
+      setOtherName(vp?.brand_name ?? pr?.full_name ?? null);
+      const clearedAt = ms?.cleared_at ?? null;
+      setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
+      setBlock(toBlockState(bs));
 
-      const { data: history } = await supabase
+      // A chat deleted for me shows only what came after.
+      let historyQuery = supabase
         .from("messages")
-        .select("id, sender_id, body, kind, created_at, rfq_id, quote_id")
-        .eq("conversation_id", conv.id)
-        .order("created_at", { ascending: true });
+        .select(THREAD_COLUMNS)
+        .eq("conversation_id", conv.id);
+      if (clearedAt) historyQuery = historyQuery.gt("created_at", clearedAt);
+      const { data: history } = await historyQuery.order("created_at", { ascending: true });
       if (cancelled) return;
       setMessages(((history ?? []) as RawMessage[]).map(mapMsg));
       setReady(true);
@@ -212,6 +325,32 @@ export function useChatThread(otherId: string | undefined) {
     };
   }, [me, otherId, mapMsg, applyStatus, refreshStatus, qc]);
 
+  /** The one place a refused message is explained. */
+  const reportSendError = useCallback((error: { message?: string; code?: string }) => {
+    const msg = error.message?.toLowerCase() ?? "";
+    // check_message_blocklist() RAISEs; PostgREST passes the text through verbatim.
+    if (msg.includes("message blocked")) {
+      toast.error("Message not sent", {
+        description: "It contains a term that isn't allowed on Cosora.",
+      });
+    } else if (msg.includes("chat blocked")) {
+      // guard_message_insert(): a block either way stops messages both ways. The other side may have
+      // just blocked: read the state again so the composer says so.
+      toast.error("You can't send messages in this chat", { description: "One of you has blocked the other." });
+      if (otherId) void supabase.rpc("chat_block_state", { p_other: otherId }).then(({ data }) => setBlock(toBlockState(data)));
+    } else if (error.code === "42501") {
+      // messages_insert additionally requires the conversation to be 'active'
+      // and the sender's account_status to be 'active'. Both read as an RLS
+      // violation, so the copy has to cover either cause.
+      toast.error("You can't send messages in this chat", {
+        description: "This chat is under review, or your account has been suspended.",
+      });
+      void refreshStatus();
+    } else {
+      toast.error("Message not sent", { description: errorMessage(error) });
+    }
+  }, [otherId, refreshStatus]);
+
   /**
    * Insert a message. Resolves true only when the row was actually written, so
    * the caller can keep the draft on failure. Nothing is added to local state
@@ -226,36 +365,150 @@ export function useChatThread(otherId: string | undefined) {
       .from("messages")
       .insert({ conversation_id: convIdRef.current, sender_id: me, body, kind });
     if (!error) return true;
+    reportSendError(error);
+    return false;
+  }, [me, reportSendError]);
 
-    // check_message_blocklist() RAISEs; PostgREST passes the text through verbatim.
-    if (error.message?.toLowerCase().includes("message blocked")) {
-      toast.error("Message not sent", {
-        description: "It contains a term that isn't allowed on Cosora.",
-      });
-    } else if (error.code === "42501") {
-      // messages_insert additionally requires the conversation to be 'active'
-      // and the sender's account_status to be 'active'. Both read as an RLS
-      // violation, so the copy has to cover either cause.
-      toast.error("You can't send messages in this chat", {
-        description: "This chat is under review, or your account has been suspended.",
-      });
+  /**
+   * Upload a photo, a PDF or a voice note and send it. Photos are shrunk first (they're opened on
+   * mobile data). Resolves true only when the message was written.
+   */
+  const sendAttachment = useCallback(async (file: File, kind: AttachmentKind, seconds?: number): Promise<boolean> => {
+    const convId = convIdRef.current;
+    if (!me || !convId) return false;
+
+    let blob: Blob = file;
+    let ext: string | undefined;
+    let mime = file.type;
+    try {
+      if (kind === "image") {
+        const shrunk = await shrinkImage(file, 1600);
+        blob = shrunk.blob;
+        mime = shrunk.blob.type || file.type;
+        ext = IMAGE_EXT[mime];
+        if (!ext) throw new Error("Send a JPEG, PNG or WebP picture.");
+      } else if (kind === "file") {
+        if (mime !== "application/pdf" && !/\.pdf$/i.test(file.name)) throw new Error("Documents are sent as PDF files.");
+        mime = "application/pdf";
+        ext = "pdf";
+      } else {
+        mime = mime.split(";")[0];
+        ext = AUDIO_EXT[mime];
+        if (!ext) throw new Error("This recording format can't be sent.");
+      }
+      if (blob.size > CHAT_ATTACHMENT_MAX_BYTES) throw new Error("Files can be up to 10 MB.");
+    } catch (e) {
+      toast.error("Couldn't send that", { description: errorMessage(e) });
+      return false;
+    }
+
+    const path = `${convId}/${me}/${crypto.randomUUID()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from(CHAT_ATTACHMENT_BUCKET)
+      .upload(path, blob, { contentType: mime, upsert: false });
+    if (upErr) {
+      // The upload policy refuses a locked or blocked chat before the message would.
+      toast.error("Couldn't upload that", { description: errorMessage(upErr) });
       void refreshStatus();
+      if (otherId) void supabase.rpc("chat_block_state", { p_other: otherId }).then(({ data }) => setBlock(toBlockState(data)));
+      return false;
+    }
+
+    const name = kind === "audio" ? null : file.name.slice(0, 200);
+    const body = kind === "image" ? "📷 Photo" : kind === "file" ? `📎 ${(name ?? "Document").slice(0, 120)}` : "🎤 Voice message";
+    const { error } = await supabase.from("messages").insert({
+      conversation_id: convId,
+      sender_id: me,
+      body,
+      kind,
+      attachment_path: path,
+      attachment_name: name,
+      attachment_seconds: kind === "audio" && seconds != null ? Math.min(600, Math.max(0, Math.round(seconds))) : null,
+    });
+    if (!error) return true;
+    reportSendError(error);
+    return false;
+  }, [me, otherId, refreshStatus, reportSendError]);
+
+  /** Send my contact card. The number stays on the server; the other person taps to reveal it. */
+  const shareContact = useCallback(async (): Promise<boolean> => {
+    const convId = convIdRef.current;
+    if (!me || !convId) return false;
+    const { error } = await supabase.rpc("share_chat_contact", { p_conversation_id: convId });
+    if (!error) return true;
+    if (error.code === "P0002") {
+      toast.error("No number to share", { description: "Your account has no sign-in mobile number." });
     } else {
-      toast.error("Message not sent", { description: error.message });
+      reportSendError(error);
     }
     return false;
-  }, [me, refreshStatus]);
+  }, [me, reportSendError]);
+
+  /** Star, archive or delete-for-me. Resolves true when saved. */
+  const updateState = useCallback(async (patch: { starred?: boolean; archived?: boolean; clear?: boolean }): Promise<boolean> => {
+    const convId = convIdRef.current;
+    if (!me || !convId) return false;
+    const { data, error } = await supabase.rpc("chat_set_state", {
+      p_conversation_id: convId,
+      p_starred: patch.starred ?? null,
+      p_archived: patch.archived ?? null,
+      p_clear: patch.clear ?? false,
+    });
+    if (error) {
+      toast.error("Couldn't update this chat", { description: errorMessage(error) });
+      return false;
+    }
+    const d = (data ?? {}) as { starred?: boolean; archived?: boolean; cleared_at?: string | null };
+    setMemberState({ starred: Boolean(d.starred), archived: Boolean(d.archived), clearedAt: d.cleared_at ?? null });
+    if (patch.clear) setMessages([]);
+    void qc.invalidateQueries({ queryKey: ["conversations", me] });
+    if (patch.clear) void qc.invalidateQueries({ queryKey: chatUnreadKey(me) });
+    return true;
+  }, [me, qc]);
+
+  /** Block or unblock the other person. Resolves true when saved. */
+  const setBlocked = useCallback(async (next: boolean): Promise<boolean> => {
+    if (!me || !otherId) return false;
+    const { data, error } = await supabase.rpc("chat_set_block", { p_other: otherId, p_block: next });
+    if (error) {
+      toast.error(next ? "Couldn't block" : "Couldn't unblock", { description: errorMessage(error) });
+      return false;
+    }
+    setBlock(toBlockState(data));
+    return true;
+  }, [me, otherId]);
+
+  /** Mark what's here read now (the menu item). Resolves true when saved. */
+  const markRead = useCallback(async (): Promise<boolean> => {
+    const convId = convIdRef.current;
+    if (!me || !convId) return false;
+    const { error } = await supabase.rpc("mark_conversation_read", { p_conversation_id: convId });
+    if (error) {
+      toast.error("Couldn't mark this chat read", { description: errorMessage(error) });
+      return false;
+    }
+    void qc.invalidateQueries({ queryKey: chatUnreadKey(me) });
+    return true;
+  }, [me, qc]);
 
   return {
     messages,
     otherName,
     ready,
     sendText,
+    sendAttachment,
+    shareContact,
     canChat: Boolean(me && otherId),
     conversationId,
     status,
     underReview: status === "under_review",
     refreshStatus,
+    memberState,
+    updateState,
+    block,
+    blocked: block.blockedByMe || block.blockedMe,
+    setBlocked,
+    markRead,
   };
 }
 
@@ -274,6 +527,9 @@ export interface ChatSummary {
   timestamp: string;
   unread: number;
   rfqProduct: string;
+  /** My own marks on the chat (2026-10-18). */
+  starred: boolean;
+  archived: boolean;
 }
 
 function relTime(iso: string | null): string {
@@ -292,13 +548,23 @@ function relTime(iso: string | null): string {
 interface RawConv { id: string; user_a: string; user_b: string; last_message: string | null; last_message_at: string | null }
 
 async function fetchConversations(userId: string): Promise<ChatSummary[]> {
-  const { data, error } = await supabase
-    .from("conversations")
-    .select("id, user_a, user_b, last_message, last_message_at")
-    .or(`user_a.eq.${userId},user_b.eq.${userId}`)
-    .order("last_message_at", { ascending: false });
+  const [{ data, error }, { data: states, error: stateError }] = await Promise.all([
+    supabase
+      .from("conversations")
+      .select("id, user_a, user_b, last_message, last_message_at")
+      .or(`user_a.eq.${userId},user_b.eq.${userId}`)
+      .order("last_message_at", { ascending: false }),
+    // My own view of each chat: starred, archived, deleted-for-me (the policy returns only mine).
+    supabase.from("conversation_member_state").select("conversation_id, starred_at, archived_at, cleared_at").eq("user_id", userId),
+  ]);
   if (error) throw error;
-  const rows = (data ?? []) as RawConv[];
+  if (stateError) throw stateError;
+  const stateOf = new Map((states ?? []).map((s) => [s.conversation_id, s]));
+  // A chat deleted for me stays out of the list until a newer message arrives.
+  const rows = ((data ?? []) as RawConv[]).filter((c) => {
+    const cleared = stateOf.get(c.id)?.cleared_at;
+    return !cleared || (c.last_message_at != null && new Date(c.last_message_at) > new Date(cleared));
+  });
 
   const others = Array.from(new Set(rows.map((c) => (c.user_a === userId ? c.user_b : c.user_a))));
   const meta = new Map<string, { name: string; avatar: string | null }>();
@@ -316,6 +582,7 @@ async function fetchConversations(userId: string): Promise<ChatSummary[]> {
   return rows.map((c) => {
     const otherId = c.user_a === userId ? c.user_b : c.user_a;
     const m = meta.get(otherId);
+    const state = stateOf.get(c.id);
     return {
       id: otherId,
       name: m?.name ?? "User",
@@ -325,6 +592,8 @@ async function fetchConversations(userId: string): Promise<ChatSummary[]> {
       timestamp: relTime(c.last_message_at),
       unread: 0,
       rfqProduct: "Chat",
+      starred: Boolean(state?.starred_at),
+      archived: Boolean(state?.archived_at),
     };
   });
 }

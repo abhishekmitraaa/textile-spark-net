@@ -21,22 +21,6 @@ with no need to dictate format, context, or reference each time.
   (no keys yet, use the platform's own searches for now).
 - Status: Open
 
-### Replace or remove New Arrivals' "Looking for these?" row: six made-up demo products — added 2026-10-14
-- Task: the "Looking for these?" row on `/home/new-arrivals` renders six hardcoded products
-  (`LOOKING_FOR_THESE` in `src/pages/NewArrivals.tsx`, around line 98; rendered around line 666). Either fill it with
-  real live listings (e.g. a `useFeedSlice()` from `src/lib/queries/feed.ts`, such as listings in the buyer's interest
-  categories or the most enquired-about) or remove the row.
-- Context: every item is invented and shown in production to every visitor: names like "Floral Midi Dress", a price
-  of "$499" (dollars, on an INR site), "800+ sold", a hardcoded 3.9 rating, the seller shown as the word
-  "Manufacturer", Unsplash photos, and ids `lft1`–`lft6` that link to `/product/lft1` (no such product, so the page
-  says it isn't found). Its Call Now dials a made-up number (`demoPhone(item.id)`). This breaks claude.md's "No mock
-  data in production" and "no fabricated data" rules. Found while fixing product cards on 2026-10-14 and left alone
-  because it was outside the eight fixes Mitra asked for. The same day the page's other invented content was removed
-  (the `BASE_PRODUCTS` fallback, when the feeds moved to `feed_products()`); this row is what is left.
-- Reference: 2026-10-14 session (eight buyer-side fixes, then the server-side feeds). Mitra: "New Arrivals' 'Looking
-  for these?' row is still six made-up demo products … add these to todo.md".
-- Status: Open
-
 ### Decide whether the Sale page keeps its "MEGA SALE" heading — added 2026-10-14
 - Task: Mitra or Andy to confirm the heading on `/home/sale` (`src/pages/Sale.tsx`, the hero's `<h1>`), or give
   wording to replace it.
