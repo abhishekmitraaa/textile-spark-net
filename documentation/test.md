@@ -202,6 +202,13 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-10-18 — Trending searches: filters that can't be dodged (local stack, then production)
+
+- `trends.sql` cases I1–I3 (now 36/36). Before `20261018130000`, I1 failed: "call 9876 5432 10", "phone ९८७६५४३२१०",
+  "call ૯૮૭૬ ૫૪૩૨", "shop.example" and "see x.co now" were all listed. After it, only "saree 2024" is.
+- Production after the apply: `admin.search_trend_terms` body md5 `fa6c0265…` equals local; run 2 recomputed
+  (month window, 2 terms, 6 categories).
+
 ### 2026-10-18 — Trending searches (local stack; nothing released)
 
 - **SQL harness** `scripts/search-trends/trends.sql` (rolled back; dates in 2030): 33/33. A term from 3 visitors is
