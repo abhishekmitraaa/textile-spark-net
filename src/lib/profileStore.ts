@@ -1,14 +1,19 @@
 import { useSyncExternalStore } from "react";
-import { img } from "@/lib/listingProducts";
 import { LANGUAGE_NAMES } from "@/lib/i18n";
 
 // ─────────────────────────────────────────────────────────────
 // Buyer profile + account settings.
 //
-// Single source of truth for the My Profile page, the Edit Profile modal,
-// and the settings sub-pages (Social Links, Notifications, Regional + Data).
-// Backed by localStorage via useSyncExternalStore so every surface stays in
-// sync and survives reloads.
+// The settings sub-pages' local state (Social Links, Notifications, Regional),
+// backed by localStorage via useSyncExternalStore so every surface stays in
+// sync and survives reloads. ProfileData is the profile's SHAPE only: the
+// profile itself lives in the database (lib/queries/profile.ts).
+//
+// 2026-10-18: the store no longer holds a profile. Its default was an invented
+// person ("Rajesh Kumar", an email, phone, Mumbai address, company, GSTIN, PAN
+// and a picsum photo), and Search greeted signed-out visitors with that name.
+// Nothing read or wrote it after that greeting went, so it is gone, and a copy a
+// browser saved earlier is dropped from storage when the store loads.
 // ─────────────────────────────────────────────────────────────
 
 export interface ProfileData {
@@ -64,7 +69,6 @@ export type RegionalSettings = {
 };
 
 export interface ProfileState {
-  profile: ProfileData;
   social: SocialLinks;
   notifications: NotificationSettings;
   regional: RegionalSettings;
@@ -116,30 +120,6 @@ export const TIMEZONES = [
 export const LANGUAGES = LANGUAGE_NAMES;
 
 const DEFAULT_STATE: ProfileState = {
-  profile: {
-    fullName: "Rajesh Kumar",
-    email: "rajesh.kumar@fabricworld.in",
-    emailVerified: true,
-    phone: "+91 98765 43210",
-    city: "Mumbai",
-    jobTitle: "Procurement Manager",
-    department: "Sourcing",
-    avatar: img("buyer-rajesh-kumar", 240, 240),
-    businessName: "Fabric World Pvt. Ltd.",
-    businessType: "Retailer",
-    website: "www.fabricworld.in",
-    interest: "Fashion & Apparel",
-    industry: "Fashion & Apparel",
-    street: "123 Fashion Avenue",
-    businessCity: "Mumbai",
-    state: "Maharashtra",
-    postalCode: "400001",
-    country: "India",
-    gstin: "27AABCU9603R1ZM",
-    pan: "ABCPK1234L",
-    location: "Mumbai, Maharashtra",
-    memberSince: "2023",
-  },
   social: { facebook: "", x: "", linkedin: "", youtube: "", instagram: "", other: "" },
   notifications: {
     emailNewQuote: true,
@@ -158,14 +138,22 @@ function load(): ProfileState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<ProfileState>;
+      const parsed = JSON.parse(raw) as Partial<ProfileState> & { profile?: unknown };
       // Merge so new fields added later still get defaults.
-      return {
-        profile: { ...DEFAULT_STATE.profile, ...parsed.profile },
+      const loaded: ProfileState = {
         social: { ...DEFAULT_STATE.social, ...parsed.social },
         notifications: { ...DEFAULT_STATE.notifications, ...parsed.notifications },
         regional: { ...DEFAULT_STATE.regional, ...parsed.regional },
       };
+      // Saved before 2026-10-18: the invented demo profile. Write the settings back without it.
+      if (parsed.profile !== undefined) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+        } catch {
+          /* storage unavailable; it is ignored anyway */
+        }
+      }
+      return loaded;
     }
   } catch {
     /* ignore corrupt storage */
@@ -186,8 +174,6 @@ function commit(next: ProfileState) {
   listeners.forEach((l) => l());
 }
 
-export const updateProfile = (patch: Partial<ProfileData>) =>
-  commit({ ...state, profile: { ...state.profile, ...patch } });
 export const updateSocial = (patch: Partial<SocialLinks>) =>
   commit({ ...state, social: { ...state.social, ...patch } });
 export const updateNotifications = (patch: Partial<NotificationSettings>) =>
