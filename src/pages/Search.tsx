@@ -10,9 +10,10 @@ import { useFeed, useLiveCategoryCounts } from "@/lib/queries/feed";
 import { useResolvedCategoryId } from "@/lib/queries/ads";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { useSearchSuggestions, useDebounced } from "@/lib/queries/search";
+import { useTrendingSearches } from "@/lib/queries/searchTrends";
 import {
   ArrowLeft, Search as SearchIcon, Mic, Camera, ImagePlus, X, BadgeCheck,
-  Gift, Truck, Shirt, Briefcase, Flame, LayoutGrid, Loader2, Store,
+  Gift, Truck, Shirt, Briefcase, Flame, LayoutGrid, Loader2, Store, TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -64,6 +65,12 @@ const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, tran
 // All of it is now derived from real rows: autocomplete comes from the
 // search_suggestions RPC, and the category rail is counted off the live
 // catalogue this page already loads.
+//
+// Trending came back on 2026-10-18 as MEASURED data (lib/searchTrends.ts): the
+// terms at least 3 different visitors searched yesterday (or this week / month
+// when yesterday is thin), and the categories people searched for, computed
+// nightly by the database. The heading names the window it really covers, and
+// no count is shown.
 // ─────────────────────────────────────────────────────────────
 
 // Navigational shortcuts. These are search terms, not claims about data — each
@@ -110,6 +117,9 @@ const Search = () => {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const isSearching = query.trim().length > 0;
+
+  // Trending searches, measured from Cosora's own searches (see the DATA note above).
+  const { trends, loading: trendsLoading } = useTrendingSearches();
 
   // Real autocomplete: categories (with live listing counts), live product
   // names, and actual vendor storefronts. Debounced so it is one request per
@@ -400,6 +410,60 @@ const Search = () => {
               onChange={(e) => { void handleImageFile(e.target.files?.[0]); e.currentTarget.value = ""; }}
             />
           </motion.div>
+
+          {/* Trending: what buyers searched, measured nightly. Loading shows a skeleton; with nothing
+              that qualifies (or the switch off) the section isn't there at all. Terms are what people
+              typed, so they aren't translated; categories are Cosora's own names, so they are. */}
+          {trendsLoading ? (
+            <div className="pt-5" aria-hidden="true">
+              <div className="h-4 w-36 rounded bg-gray-100 mb-2" />
+              <div className="flex gap-2">
+                {[0, 1, 2, 3].map((i) => <div key={i} className="h-7 w-20 rounded-full bg-gray-100" />)}
+              </div>
+            </div>
+          ) : trends && (
+            <motion.div variants={section} className="pt-5" data-testid="trending-searches">
+              <p className="inline-flex items-center gap-1.5 text-sm font-bold text-gray-900 mb-2">
+                <TrendingUp className="w-4 h-4 text-brand-buyer" />
+                {trends.window === "day" ? "Trending yesterday" : trends.window === "week" ? "Trending this week" : "Trending this month"}
+              </p>
+              {trends.terms.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {trends.terms.map((term) => (
+                    <motion.button
+                      whileTap={{ scale: 0.96 }}
+                      key={term}
+                      onClick={() => runSearch(term)}
+                      data-testid="trending-term"
+                      className="inline-flex items-center gap-1.5 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-1.5 transition-colors"
+                    >
+                      <SearchIcon className="w-3 h-3 text-gray-400" />
+                      <span className="text-xs font-medium text-gray-700" data-no-translate>{term}</span>
+                    </motion.button>
+                  ))}
+                </div>
+              )}
+              {trends.categories.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold text-gray-500 mt-3 mb-2">Most searched categories</p>
+                  <div className="flex flex-wrap gap-2">
+                    {trends.categories.map((name) => (
+                      <motion.button
+                        whileTap={{ scale: 0.96 }}
+                        key={name}
+                        onClick={() => runSearch(name)}
+                        data-testid="trending-category"
+                        className="inline-flex items-center gap-1.5 border border-gray-200 hover:border-gray-300 rounded-full px-3 py-1.5 transition-colors"
+                      >
+                        <LayoutGrid className="w-3 h-3 text-brand-buyer" />
+                        <span className="text-xs font-medium text-gray-700">{name}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </motion.div>
+          )}
 
           {/* Recent keywords */}
           {recentKeywords.length > 0 && (

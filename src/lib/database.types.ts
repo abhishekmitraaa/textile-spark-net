@@ -5392,6 +5392,15 @@ export type Database = {
           id: string
         }[]
       }
+      admin_search_trend_hide: {
+        Args: { p_reason: string; p_term: string }
+        Returns: number
+      }
+      admin_search_trend_unhide: {
+        Args: { p_reason: string; p_term: string }
+        Returns: number
+      }
+      admin_search_trends: { Args: never; Returns: Json }
       admin_set_role: {
         Args: {
           p_role: Database["public"]["Enums"]["admin_role_type"]
@@ -6376,6 +6385,7 @@ export type Database = {
           verified: boolean
         }[]
       }
+      search_trending_on: { Args: never; Returns: boolean }
       set_account_status: {
         Args: {
           p_conversation_review_id?: string
@@ -6556,6 +6566,7 @@ export type Database = {
           promoted: number
         }[]
       }
+      trending_searches: { Args: never; Returns: Json }
       user_has_password: { Args: { target_email: string }; Returns: boolean }
       vendor_account_in_good_standing: {
         Args: { p_vendor: string }

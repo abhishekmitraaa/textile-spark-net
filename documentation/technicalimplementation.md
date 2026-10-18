@@ -4285,3 +4285,37 @@ Migrations `20261013100000` to `20261013100400` (authored names; rename to the l
   fails), runs `npx playwright test tests/video-closeups-bunny.spec.ts -g T8.2` with `BUNNY_ENCODE_TIMEOUT_MS=1`, expects
   the spec's "did not finish encoding" error, then lists the library again: no new guid, and no `zz-bunny-uitest-` row.
   The spec's afterAll deletes its row only when `bunny-delete-video` answered ok.
+
+## Trending searches (2026-10-18; built, not live)
+
+What /search shows under "Trending", and how it holds up at volume. Migrations `20261018120000_search_trends.sql`
+and `20261018120100_search_trends_job.sql`; harness `scripts/search-trends/trends.sql`.
+
+- **Source.** `engagement_events`: `search_impression` rows (SearchResults logs one per seller shown, so a counted
+  term had results) and `search_click` rows (the product gives the category). A visitor is
+  `coalesce(viewer_id, 's:' || session_id)`; a term is lower-cased, trimmed, spaces collapsed (as Live Activity).
+- **Counting** (`admin.search_trend_terms(from, to)`, `admin.search_trend_categories(from, to)`; India dates,
+  inclusive). Terms: grouped (term, visitor, day) → (term, visitor) → term, `having count(qv.visitor) >= 3`; the
+  word filters and the hidden list run after grouping. Categories: clicked results' categories, plus distinct terms
+  that equal a category name or its plural either way ("shirts" → Shirt, "dresses" → Dress), matched once per
+  distinct term rather than per row. Ranked by visitors, then visitor-days, then name; top 10 terms, top 6 categories.
+- **Volume** (1M synthetic search events, local stack). The first version took 21.6 s for 30 days, for two reasons:
+  `admin.search_term_norm()` has a SET clause, so it was never inlined and ran 4× per row; and the staff exclusion
+  became a nested loop over 26 admins per row (17.5M comparisons). Now the expression is written out, staff are an
+  `array(select …)` InitPlan, and distinct counts are grouping steps: 30-day terms 5.8 s, categories 1.5 s, one day
+  0.19 s, a full refresh with a day window 0.49 s. The 30-day path only runs when traffic is thin.
+- **Storage.** `admin.search_trend_runs` (one per computation: India day, window, start, counts, source) and
+  `admin.search_trend_items` (rank, label, visitors, visitor-days). A refresh only inserts; the newest run is in
+  force; the job prunes runs over 90 days old (the delete is in the job command, not a function).
+- **Reads.** `trending_searches()` (anyone): `{version, public, shown, window, ist_day, window_start, computed_at,
+  terms:[{label}], categories:[{label}]}`, empty lists unless `search_trending_on()`. `site-config-snapshot` puts
+  the signed-out answer into `site.json` (`search_trends`); `trg_search_trend_runs_snapshot` (a new run) and
+  `trg_feature_flags_search_trending_snapshot` (a switch change) queue the rebuild, and the hourly job rebuilds it
+  too. The app (`useTrendingSearches`) uses the file when `public`, otherwise the RPC for a signed-in account the
+  switch lists (known from `my_feature_flags`), otherwise nothing: no per-visitor database call once it is on.
+- **Admin.** `admin_search_trends()` (super_admin, support, manager), `admin_search_trend_hide/_unhide(term, reason)`
+  (super_admin, support), gated by `admin.require_search_trends(write)`; both set `cosora.audit_reason` and
+  recompute. `admin.search_trend_hidden` keeps the row on unhide (`hidden = false`) as history.
+- **Local stack note.** `public.site_config_queue_snapshot()` posts to the production URL, so on the local stack a
+  new run doesn't rebuild the local `site.json`: `scripts/search-trends/rebuild-local-snapshot.mjs` runs the real
+  function under Node with a Deno shim.

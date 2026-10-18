@@ -198,6 +198,13 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-18 (trending searches; built, not live)
+- **Search shows what buyers are searching for.** Under the photo search, "Trending yesterday" (or "this week" /
+  "this month" when yesterday was quiet) lists the terms at least 3 different people searched, and "Most searched
+  categories" the categories they looked for. Tapping one runs that search. Measured nightly from searches on
+  Cosora, words only. Behind the `search_trending` switch (off). Staff can take a term down in Cosora-Admin ›
+  Trending searches.
+
 ### Changed 2026-10-17 (ten fixes; live 2026-10-17)
 - **Video Closeups** work on every phone: nothing selects, Call Now's number appears above the reel, a video whose
   listing isn't available says so, and on a seller's own store the card doesn't pretend to open it.
