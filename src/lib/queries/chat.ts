@@ -34,6 +34,23 @@ export interface ThreadMessage {
   // the thread can render them as tappable cards linking to the real record.
   rfqId?: string | null;
   quoteId?: string | null;
+  /** When it was sent (ISO). Orders the thread and is the cursor for loading older messages. */
+  createdAt?: string;
+}
+
+/**
+ * Messages loaded at a time (2026-10-19). A thread opens on its newest page and loads older ones as the person
+ * scrolls up; it used to download the whole history every time it opened.
+ */
+export const CHAT_PAGE_SIZE = 40;
+
+/** Oldest first; a message already there is not added twice. */
+function mergeMessages(prev: ThreadMessage[], incoming: ThreadMessage[]): ThreadMessage[] {
+  if (incoming.length === 0) return prev;
+  const byId = new Map(prev.map((m) => [m.id, m]));
+  for (const m of incoming) byId.set(m.id, m);
+  return [...byId.values()].sort((a, b) =>
+    (a.createdAt ?? "").localeCompare(b.createdAt ?? "") || a.id.localeCompare(b.id));
 }
 
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
@@ -198,6 +215,13 @@ export function useChatThread(otherId: string | undefined) {
   // Star / archive / delete-for-me, and blocks (2026-10-18). Both are the signed-in person's own view.
   const [memberState, setMemberState] = useState<ChatMemberState>(NO_MEMBER_STATE);
   const [block, setBlock] = useState<ChatBlockState>(NO_BLOCK);
+  // Older pages (2026-10-19): whether there is more history above, and the cursor's inputs for the callback.
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const loadingOlderRef = useRef(false);
+  const messagesRef = useRef<ThreadMessage[]>([]);
+  const clearedAtRef = useRef<string | null>(null);
+  useEffect(() => { messagesRef.current = messages; }, [messages]);
 
   const applyStatus = useCallback((next: ConversationStatus) => {
     statusRef.current = next;
@@ -230,6 +254,7 @@ export function useChatThread(otherId: string | undefined) {
     attachmentName: m.attachment_name ?? null,
     attachmentBytes: m.attachment_bytes ?? null,
     attachmentSeconds: m.attachment_seconds ?? null,
+    createdAt: m.created_at,
   }), [me]);
 
   useEffect(() => {
@@ -241,6 +266,9 @@ export function useChatThread(otherId: string | undefined) {
     applyStatus("active");
     setMemberState(NO_MEMBER_STATE);
     setBlock(NO_BLOCK);
+    setMessages([]);
+    setHasOlder(false);
+    clearedAtRef.current = null;
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
@@ -266,19 +294,11 @@ export function useChatThread(otherId: string | undefined) {
       setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
       setBlock(toBlockState(bs));
 
-      // A chat deleted for me shows only what came after.
-      let historyQuery = supabase
-        .from("messages")
-        .select(THREAD_COLUMNS)
-        .eq("conversation_id", conv.id);
-      if (clearedAt) historyQuery = historyQuery.gt("created_at", clearedAt);
-      const { data: history } = await historyQuery.order("created_at", { ascending: true });
-      if (cancelled) return;
-      setMessages(((history ?? []) as RawMessage[]).map(mapMsg));
-      setReady(true);
-      // Opened: what's on screen is read (the Chats badge and the list's count drop).
-      if (document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
+      clearedAtRef.current = clearedAt;
 
+      // Join the live channel first, then read the newest page (2026-10-19). The history used to be read before
+      // the channel joined, so a message sent in between was in neither. Now one sent while the page loads
+      // arrives on the channel, and the merge keeps each message once.
       channel = supabase
         .channel(`thread:${conv.id}`)
         .on(
@@ -286,7 +306,7 @@ export function useChatThread(otherId: string | undefined) {
           { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conv.id}` },
           (payload) => {
             const m = payload.new as RawMessage;
-            setMessages((prev) => (prev.some((x) => x.id === m.id) ? prev : [...prev, mapMsg(m)]));
+            setMessages((prev) => mergeMessages(prev, [mapMsg(m)]));
             // Arrived while the chat is open and on screen: it's read. In a background tab it stays
             // unread until the person comes back (the visibility listener below).
             if (m.sender_id !== me && document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
@@ -309,7 +329,51 @@ export function useChatThread(otherId: string | undefined) {
             applyStatus((payload.new as { status?: ConversationStatus })?.status ?? "active");
           }
         )
-        .subscribe();
+        // The channel reports "joined" a moment before the database feed behind it is live; a message sent in
+        // between would be in neither the page below nor the feed. When the feed says it's live, read the newest
+        // page once more (the merge keeps each message once).
+        .on("system", {}, (payload: { extension?: string; status?: string }) => {
+          if (payload?.extension !== "postgres_changes" || payload?.status !== "ok") return;
+          let catchUp = supabase.from("messages").select(THREAD_COLUMNS).eq("conversation_id", conv.id);
+          if (clearedAt) catchUp = catchUp.gt("created_at", clearedAt);
+          void catchUp
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .limit(CHAT_PAGE_SIZE)
+            .then(({ data }) => {
+              if (!cancelled && data) setMessages((prev) => mergeMessages(prev, (data as RawMessage[]).map(mapMsg)));
+            });
+        });
+      const joining = channel;
+      await new Promise<void>((resolve) => {
+        // Never wait more than 5 s: a thread that can't go live still shows its history.
+        const timer = window.setTimeout(resolve, 5000);
+        joining.subscribe((state) => {
+          if (state === "SUBSCRIBED" || state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
+            window.clearTimeout(timer);
+            resolve();
+          }
+        });
+      });
+      if (cancelled) return;
+
+      // The newest page. A chat deleted for me shows only what came after.
+      let historyQuery = supabase
+        .from("messages")
+        .select(THREAD_COLUMNS)
+        .eq("conversation_id", conv.id);
+      if (clearedAt) historyQuery = historyQuery.gt("created_at", clearedAt);
+      const { data: history } = await historyQuery
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(CHAT_PAGE_SIZE + 1);
+      if (cancelled) return;
+      const rows = (history ?? []) as RawMessage[];
+      setHasOlder(rows.length > CHAT_PAGE_SIZE);
+      setMessages((prev) => mergeMessages(prev, rows.slice(0, CHAT_PAGE_SIZE).map(mapMsg)));
+      setReady(true);
+      // Opened: what's on screen is read (the Chats badge and the list's count drop).
+      if (document.visibilityState === "visible") void markConversationRead(conv.id, me, qc);
     })();
 
     // Back to a tab with the chat open: what came in meanwhile is now seen.
@@ -324,6 +388,40 @@ export function useChatThread(otherId: string | undefined) {
       if (channel) supabase.removeChannel(channel);
     };
   }, [me, otherId, mapMsg, applyStatus, refreshStatus, qc]);
+
+  /**
+   * The page of messages before the oldest one shown (2026-10-19), for when the person scrolls up. Ordered by
+   * (created_at, id) so two messages sent in the same instant are neither skipped nor shown twice.
+   */
+  const loadOlder = useCallback(async (): Promise<void> => {
+    const convId = convIdRef.current;
+    const oldest = messagesRef.current[0];
+    if (!convId || !oldest?.createdAt || loadingOlderRef.current) return;
+    loadingOlderRef.current = true;
+    setLoadingOlder(true);
+    try {
+      let q = supabase
+        .from("messages")
+        .select(THREAD_COLUMNS)
+        .eq("conversation_id", convId)
+        .or(`created_at.lt."${oldest.createdAt}",and(created_at.eq."${oldest.createdAt}",id.lt.${oldest.id})`);
+      if (clearedAtRef.current) q = q.gt("created_at", clearedAtRef.current);
+      const { data, error } = await q
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .limit(CHAT_PAGE_SIZE + 1);
+      if (error) throw error;
+      if (convIdRef.current !== convId) return;
+      const rows = (data ?? []) as RawMessage[];
+      setHasOlder(rows.length > CHAT_PAGE_SIZE);
+      setMessages((prev) => mergeMessages(prev, rows.slice(0, CHAT_PAGE_SIZE).map(mapMsg)));
+    } catch (e) {
+      toast.error("Couldn't load earlier messages", { description: errorMessage(e) });
+    } finally {
+      loadingOlderRef.current = false;
+      setLoadingOlder(false);
+    }
+  }, [mapMsg]);
 
   /** The one place a refused message is explained. */
   const reportSendError = useCallback((error: { message?: string; code?: string }) => {
@@ -460,7 +558,7 @@ export function useChatThread(otherId: string | undefined) {
     }
     const d = (data ?? {}) as { starred?: boolean; archived?: boolean; cleared_at?: string | null };
     setMemberState({ starred: Boolean(d.starred), archived: Boolean(d.archived), clearedAt: d.cleared_at ?? null });
-    if (patch.clear) setMessages([]);
+    if (patch.clear) { setMessages([]); setHasOlder(false); clearedAtRef.current = d.cleared_at ?? null; }
     void qc.invalidateQueries({ queryKey: ["conversations", me] });
     if (patch.clear) void qc.invalidateQueries({ queryKey: chatUnreadKey(me) });
     return true;
@@ -493,6 +591,9 @@ export function useChatThread(otherId: string | undefined) {
 
   return {
     messages,
+    hasOlder,
+    loadingOlder,
+    loadOlder,
     otherName,
     ready,
     sendText,

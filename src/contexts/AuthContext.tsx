@@ -53,6 +53,7 @@ interface AuthContextValue {
   signInAsDemo: (role: DemoRole) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   chooseRole: (role: "buyer" | "seller") => Promise<void>;
+  finishOnboarding: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -128,14 +129,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
-  // Persist the role a first-time user picks and mark them onboarded, so every
-  // later sign-in routes straight to their chosen side.
+  // Persist the role a first-time user picks. It no longer marks them onboarded (2026-10-19): that was step 2 of 7,
+  // so anyone who stopped there was never shown the rest. A buyer is onboarded when they accept the Terms
+  // (finishOnboarding), a seller when vendor onboarding finishes (vendorOnboarding.ts); until then every sign-in
+  // goes back to role selection.
   const chooseRole = useCallback(async (role: "buyer" | "seller") => {
     if (!session?.user) return;
     const { error } = await supabase
       .from("profiles")
-      .update({ active_role: role, onboarded: true })
+      .update({ active_role: role })
       .eq("id", session.user.id);
+    if (error) throw error;
+    await loadProfile(session.user.id);
+  }, [session, loadProfile]);
+
+  // The last buyer sign-up step (Terms): from now on sign-in goes straight to Home.
+  const finishOnboarding = useCallback(async () => {
+    if (!session?.user) return;
+    const { error } = await supabase.from("profiles").update({ onboarded: true }).eq("id", session.user.id);
     if (error) throw error;
     await loadProfile(session.user.id);
   }, [session, loadProfile]);
@@ -157,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signInAsDemo,
         signInWithGoogle,
         chooseRole,
+        finishOnboarding,
         signOut,
         refreshProfile,
       }}

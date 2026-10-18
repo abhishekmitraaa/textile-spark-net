@@ -40,6 +40,14 @@ export interface FxRates {
 }
 
 /**
+ * A listing, ad or quote price as stored: "₹500", or "₹12.50" when it has paise (2026-10-19: every price was
+ * rounded to whole rupees, so ₹12.50 showed as ₹13). No grouping, like the prices it replaces.
+ */
+export function priceText(currency: string, value: number): string {
+  return Number.isInteger(value) ? `${currency}${value}` : `${currency}${value.toFixed(2)}`;
+}
+
+/**
  * An amount in `currency`. INR is formatINR's exact shape (en-IN grouping, no
  * paise), and formatINR now calls this. Other currencies show cents, since a
  * converted unit price is often a few dollars.

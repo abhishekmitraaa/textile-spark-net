@@ -47,7 +47,7 @@ const UNITS = ["pieces", "kg", "meters", "sets", "pairs"];
 const onboardingMenuLinks = [
   { label: "Cosora FAQ", href: "/help" },
   { label: "About Us", href: "/blogs/about" },
-  { label: "Terms and conditions", href: "/auth/terms" },
+  { label: "Terms and conditions", href: "/terms" },
   { label: "Report Fraud", href: "/report-fraud" },
 ];
 

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { toast } from "sonner";
+import { errorMessage } from "@/lib/errorMessage";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -8,8 +10,24 @@ import { markSignupDone } from "@/lib/signupDone";
 
 const Terms = () => {
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, finishOnboarding } = useAuth();
   const [agreed, setAgreed] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Accepting is the last sign-up step: only now is the account onboarded (2026-10-19).
+  const accept = async () => {
+    if (!agreed || saving) return;
+    setSaving(true);
+    try {
+      await finishOnboarding();
+    } catch (e) {
+      setSaving(false);
+      toast.error("Couldn't finish signing up", { description: errorMessage(e) });
+      return;
+    }
+    markSignupDone(session?.user.id);
+    navigate("/auth/welcome");
+  };
 
   return (
     <div className="min-h-screen bg-[#a4172c] flex flex-col p-4">
@@ -80,16 +98,16 @@ const Terms = () => {
         </label>
 
         <button
-          onClick={() => { markSignupDone(session?.user.id); navigate("/auth/welcome"); }}
-          disabled={!agreed}
+          onClick={accept}
+          disabled={!agreed || saving}
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",
-            agreed
+            agreed && !saving
               ? "bg-white text-[#a4172c] hover:bg-white/90"
               : "bg-white/30 text-white/50 cursor-not-allowed"
           )}
         >
-          NEXT
+          {saving ? "Saving…" : "NEXT"}
         </button>
       </motion.div>
     </div>

@@ -1,3 +1,4 @@
+import { priceText } from "@/lib/currency";
 import { useDisplayCurrency } from "@/contexts/DisplayCurrencyContext";
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
@@ -114,7 +115,7 @@ function toViewModel(row: ProductRow): ProductData {
   return {
     id: row.id,
     name: row.name,
-    price: row.priceValue != null ? `${row.currency}${Math.round(Number(row.priceValue))}` : null,
+    price: row.priceValue != null ? priceText(row.currency, Number(row.priceValue)) : null,
     unit: row.unit,
     // Seeded MOQs already carry their unit ("50 pieces"); demo listings are a
     // bare number. The old code appended "Pieces" to both — producing

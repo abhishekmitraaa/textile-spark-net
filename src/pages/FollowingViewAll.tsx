@@ -60,8 +60,10 @@ function BrandRow({ brand, onUnfollow }: { brand: Brand; onUnfollow: (b: Brand) 
           >
             <UserMinus className="w-4 h-4" /> Unfollow
           </DropdownMenuItem>
+          {/* The real report form, about this seller, as on their store page (2026-10-19: this only showed a toast;
+              nothing reached Cosora). */}
           <DropdownMenuItem
-            onClick={() => toast.success(`Reported ${brand.name}`, { description: "Our team will review this brand." })}
+            onClick={() => navigate(/^[0-9a-f-]{36}$/i.test(brand.id) ? `/report-fraud?entity_type=vendor&entity_id=${brand.id}` : "/report-fraud")}
             className="gap-2 text-sm"
           >
             <Flag className="w-4 h-4" /> Report

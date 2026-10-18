@@ -9,6 +9,9 @@ import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { saveAccountInfo } from "@/lib/queries/profile";
 
+// Something@something.tld, no spaces. Deliverability is the mail server's question, not this form's.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 const AccountInfo = () => {
   const navigate = useNavigate();
   const { profile, session, refreshProfile } = useAuth();
@@ -28,9 +31,12 @@ const AccountInfo = () => {
 
   // Prefill name + email from the signed-in (e.g. Google) account, without
   // clobbering anything the user has already typed.
+  // A mobile-OTP account's email is a `p<digits>@phone.cosora.invalid` placeholder nobody can receive mail at, so
+  // it is never offered as the buyer's address.
   useEffect(() => {
     const gName = profile?.full_name ?? "";
-    const gEmail = profile?.email ?? session?.user?.email ?? "";
+    const rawEmail = profile?.email ?? session?.user?.email ?? "";
+    const gEmail = rawEmail.endsWith(".invalid") ? "" : rawEmail;
     if (!gName && !gEmail) return;
     setForm(prev => ({
       ...prev,
@@ -39,7 +45,22 @@ const AccountInfo = () => {
     }));
   }, [profile, session]);
 
-  const isValid = form.name && form.email && form.businessName;
+  // Checked on the trimmed values, which are also what is saved (2026-10-19: only "not empty" was checked, so
+  // "   " or "abc" went through as a name and an email).
+  const name = form.name.trim();
+  const email = form.email.trim();
+  const businessName = form.businessName.trim();
+  const errors = {
+    name: name.length < 2 ? "Enter your name." : name.length > 120 ? "That name is too long." : null,
+    email: !EMAIL_RE.test(email) || email.endsWith(".invalid") || email.length > 254 ? "Enter a valid email address, like name@company.com." : null,
+    businessName: businessName.length < 2 ? "Enter your business name." : businessName.length > 120 ? "That name is too long." : null,
+    pincode: form.pincode && !/^[1-9]\d{5}$/.test(form.pincode) ? "A pincode is 6 digits." : null,
+  };
+  const isValid = !errors.name && !errors.email && !errors.businessName && !errors.pincode;
+  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const touch = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
+  const errorFor = (field: keyof typeof errors) =>
+    touched[field] && errors[field] ? <p className="mt-1 text-xs text-red-600">{errors[field]}</p> : null;
 
   const update = (field: string, value: string) =>
     setForm(prev => ({ ...prev, [field]: value }));
@@ -121,9 +142,12 @@ const AccountInfo = () => {
               type="text"
               placeholder="Enter your name"
               value={form.name}
+              maxLength={120}
               onChange={e => update("name", e.target.value)}
+              onBlur={() => touch("name")}
               className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
             />
+            {errorFor("name")}
           </div>
 
           {/* Email */}
@@ -133,9 +157,13 @@ const AccountInfo = () => {
               type="email"
               placeholder="Please enter a valid email address."
               value={form.email}
+              maxLength={254}
+              autoComplete="email"
               onChange={e => update("email", e.target.value)}
+              onBlur={() => touch("email")}
               className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
             />
+            {errorFor("email")}
           </div>
 
           {/* Location */}
@@ -178,9 +206,11 @@ const AccountInfo = () => {
                   setGeoPlace(null);
                   update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6));
                 }}
-                className="flex-1 px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors disabled:bg-gray-50 disabled:text-gray-400"
+                onBlur={() => touch("pincode")}
+                className="flex-1 min-w-0 px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors disabled:bg-gray-50 disabled:text-gray-400"
               />
             </div>
+            {errorFor("pincode")}
           </div>
 
           {/* Business Name */}
@@ -190,23 +220,27 @@ const AccountInfo = () => {
               type="text"
               placeholder="Your company or brand name"
               value={form.businessName}
+              maxLength={120}
               onChange={e => update("businessName", e.target.value)}
+              onBlur={() => touch("businessName")}
               className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
             />
+            {errorFor("businessName")}
           </div>
         </div>
 
         <button
           onClick={async () => {
-            if (!isValid || saving) return;
+            if (!isValid) { setTouched({ name: true, email: true, businessName: true, pincode: true }); return; }
+            if (saving) return;
             // Persist to the DB so the Profile page shows the real user.
             if (session?.user) {
               setSaving(true);
               try {
                 await saveAccountInfo(session.user.id, {
-                  name: form.name,
-                  email: form.email,
-                  businessName: form.businessName,
+                  name,
+                  email,
+                  businessName,
                   postalCode: form.pincode || null,
                   city: geoPlace?.city ?? null,
                   state: geoPlace?.state ?? null,
@@ -221,7 +255,7 @@ const AccountInfo = () => {
             }
             navigate("/auth/interest-preference");
           }}
-          disabled={!isValid || saving}
+          disabled={saving}
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-auto",
             isValid && !saving

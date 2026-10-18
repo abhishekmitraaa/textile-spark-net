@@ -1,3 +1,4 @@
+import { priceText } from "@/lib/currency";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -265,7 +266,7 @@ async function fetchActiveAds(
     title: a.title,
     placement: a.placement,
     productName: a.product_name,
-    price: a.price_value != null ? `${a.currency ?? "₹"}${Math.round(Number(a.price_value))}` : null,
+    price: a.price_value != null ? priceText(a.currency ?? "₹", Number(a.price_value)) : null,
     imageUrl: a.image_url,
     vendorId: a.vendor_id,
     vendorName: a.vendor_name,

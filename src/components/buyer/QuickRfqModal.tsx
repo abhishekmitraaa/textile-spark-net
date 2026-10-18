@@ -92,7 +92,11 @@ export default function QuickRfqModal({ isOpen, onClose }: QuickRfqModalProps) {
         description,
         images,
       });
-      await queryClient.invalidateQueries({ queryKey: ["rfqs"] });
+      // Waiting for review, it shows under My Quotes' submissions (2026-10-19).
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["rfqs"] }),
+        queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] }),
+      ]);
     } catch (e) {
       toast.error("Couldn't post your Quick Quote", { description: errorMessage(e) });
       setSubmitting(false);

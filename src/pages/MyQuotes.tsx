@@ -10,13 +10,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Plus, FileText, MessageCircle, TrendingUp, ArrowLeft, ChevronRight, Send,
-  Clock, CheckCircle2, XCircle, Search, ChevronDown, Award, Star, Scale, Check, X,
+  Clock, CheckCircle2, XCircle, Search, ChevronDown, Award, Star, Scale, Check, X, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { quotesForRfq, rfqStats, bestPrice, topRated } from "@/lib/quotesStore";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
-import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb } from "@/lib/queries/rfqs";
+import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb, QuoteChangedError, extendRfqDeadline, canExtendDeadline } from "@/lib/queries/rfqs";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import ReceivedQuoteCard from "@/components/buyer/quotes/ReceivedQuoteCard";
@@ -44,6 +44,13 @@ const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
 const SORTS: { key: SortKey; label: string }[] = [
   { key: "recent", label: "Most Recent" }, { key: "price", label: "Lowest Price" }, { key: "rating", label: "Highest Rating" },
 ];
+
+/** An open requirement past its 7-day deadline (2026-10-19). */
+function pastDeadline(expiresAt: string | null | undefined): boolean {
+  return Boolean(expiresAt) && new Date(expiresAt as string).getTime() <= Date.now();
+}
+const fmtDeadline = (iso: string) =>
+  new Date(iso).toLocaleString("en-IN", { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
 
 function StatCard({ icon: Icon, value, label, tint, badge }: {
   icon: typeof FileText; value: number | string; label: string; tint: string; badge?: number;
@@ -135,12 +142,32 @@ const MyQuotes = () => {
 
   const changeStatus = async (id: string, s: QuoteStatus) => {
     try {
-      await setQuoteStatusDb(id, s);
+      await setQuoteStatusDb(id, s, quotesMap[id]?.terms);
       queryClient.invalidateQueries({ queryKey: ["rfqs", "buyer", user?.id] });
       if (s === "accepted") flashBanner("accepted");
       else if (s === "rejected") flashBanner("rejected");
     } catch (e) {
+      if (e instanceof QuoteChangedError) {
+        // Show the new terms; nothing was accepted.
+        queryClient.invalidateQueries({ queryKey: ["rfqs", "buyer", user?.id] });
+        toast.error("This quote has changed", { description: e.message });
+        return;
+      }
       toast.error("Couldn't update quote", { description: errorMessage(e) });
+    }
+  };
+
+  const [extending, setExtending] = useState(false);
+  const extend = async (id: string) => {
+    setExtending(true);
+    try {
+      const until = await extendRfqDeadline(id);
+      await queryClient.invalidateQueries({ queryKey: ["rfqs", "buyer", user?.id] });
+      toast.success("Deadline extended", { description: `Sellers can quote until ${fmtDeadline(until)}.` });
+    } catch (e) {
+      toast.error("Couldn't extend the deadline", { description: errorMessage(e) });
+    } finally {
+      setExtending(false);
     }
   };
 
@@ -243,9 +270,12 @@ const MyQuotes = () => {
                             <span className={cn(
                               "rounded-full px-2 py-0.5 text-[10px] font-bold",
                               r.removedReason != null ? "bg-red-50 text-red-600"
+                                : r.status === "active" && pastDeadline(r.expiresAt) ? "bg-amber-50 text-amber-700"
                                 : r.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-gray-100 text-gray-500"
                             )}>
-                              {r.removedReason != null ? "Removed by Cosora" : r.status === "active" ? "Active" : "Closed"}
+                              {r.removedReason != null ? "Removed by Cosora"
+                                : r.status === "active" && pastDeadline(r.expiresAt) ? "Deadline passed"
+                                : r.status === "active" ? "Active" : "Closed"}
                             </span>
                             {r.newCount > 0 && (
                               <span className="rounded-full bg-brand-buyer text-white px-2 py-0.5 text-[10px] font-bold">{r.newCount} new</span>
@@ -346,6 +376,26 @@ const MyQuotes = () => {
               {/* Selected RFQ banner */}
               <div className="rounded-xl bg-brand-buyer/5 border border-brand-buyer/15 px-3.5 py-2.5 mb-4">
                 <p data-no-translate className="text-sm font-bold text-gray-900">{rfq.title}</p>
+                {/* The 7-day deadline the form promises, and its extend option (2026-10-19). */}
+                {rfq.status === "active" && rfq.removedReason == null && rfq.expiresAt && (
+                  <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                    <p className={cn("text-xs", pastDeadline(rfq.expiresAt) ? "text-amber-700" : "text-gray-500")} data-testid="rfq-deadline">
+                      {pastDeadline(rfq.expiresAt)
+                        ? `Deadline passed on ${fmtDeadline(rfq.expiresAt)}. Sellers can't send new quotes.`
+                        : `Taking quotes until ${fmtDeadline(rfq.expiresAt)}`}
+                    </p>
+                    {canExtendDeadline(rfq.expiresAt) && (
+                      <button
+                        type="button"
+                        onClick={() => extend(rfq.id)}
+                        disabled={extending}
+                        className="inline-flex items-center gap-1 rounded-lg border border-brand-buyer px-2.5 py-1 text-xs font-bold text-brand-buyer transition-colors hover:bg-brand-buyer/5 disabled:opacity-60"
+                      >
+                        {extending && <Loader2 className="h-3.5 w-3.5 animate-spin" />} Extend 7 days
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Stats 2x2 */}

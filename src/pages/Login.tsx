@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
-import { COUNTRY_CODES, PHONE_DIGITS, cleanPhoneDigits, toE164, type CountryCode } from "@/lib/auth/phone";
+import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164, type CountryCode } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 
@@ -136,7 +136,7 @@ const Login = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPhone(cleanPhoneDigits(e.target.value));
+    setPhone(cleanPhoneDigits(e.target.value, selectedCountry));
     setError(null);
   };
 
@@ -168,7 +168,7 @@ const Login = () => {
    */
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (phone.length < PHONE_DIGITS || sending) return;
+    if (!isCompletePhone(phone, selectedCountry) || sending) return;
     setSending(true);
     setError(null);
 
@@ -229,6 +229,7 @@ const Login = () => {
                 inputMode="numeric"
                 autoComplete="tel-national"
                 placeholder="Phone Number"
+                maxLength={phoneDigitsFor(selectedCountry)}
                 value={phone}
                 onChange={handlePhoneChange}
                 autoFocus
@@ -246,7 +247,7 @@ const Login = () => {
             {/* Send Code button */}
             <button
               type="submit"
-              disabled={phone.length < PHONE_DIGITS || sending}
+              disabled={!isCompletePhone(phone, selectedCountry) || sending}
               className="w-full py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {sending && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -307,7 +308,7 @@ const Login = () => {
       <CountryModal
         isOpen={countryModalOpen}
         onClose={() => setCountryModalOpen(false)}
-        onSelect={setSelectedCountry}
+        onSelect={(c) => { setSelectedCountry(c); setPhone((p) => cleanPhoneDigits(p, c)); }}
       />
     </div>
   );

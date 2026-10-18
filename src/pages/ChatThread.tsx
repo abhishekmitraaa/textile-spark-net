@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supportChatHref } from "@/lib/supportContact";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
@@ -71,7 +71,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   // insert; everything below is the honest UI for it.
   const {
     messages, otherName, sendText, sendAttachment, shareContact, conversationId, underReview, refreshStatus,
-    memberState, updateState, block, blocked, setBlocked, markRead,
+    memberState, updateState, block, blocked, setBlocked, markRead, hasOlder, loadingOlder, loadOlder,
   } = useChatThread(vendorId);
   const locked = underReview || blocked;
   const [draft, setDraft] = useState("");
@@ -91,7 +91,33 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   const cameraRef = useRef<HTMLInputElement>(null);
   const docRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+  // History comes a page at a time (2026-10-19). Scroll to the bottom when the newest message changes (opening the
+  // chat, or one sent or received), not when an older page is added above; that keeps the reading position.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const newestId = messages.length ? messages[messages.length - 1].id : null;
+  const oldestId = messages.length ? messages[0].id : null;
+  const firstScroll = useRef(true);
+  useEffect(() => {
+    if (!newestId) { firstScroll.current = true; return; }
+    endRef.current?.scrollIntoView({ behavior: firstScroll.current ? "auto" : "smooth", block: "end" });
+    firstScroll.current = false;
+  }, [newestId]);
+  const heightBeforeOlder = useRef<number | null>(null);
+  const showOlder = () => {
+    if (!hasOlder || loadingOlder || !scrollRef.current) return;
+    heightBeforeOlder.current = scrollRef.current.scrollHeight;
+    void loadOlder();
+  };
+  useLayoutEffect(() => {
+    const box = scrollRef.current;
+    if (box && heightBeforeOlder.current != null) {
+      box.scrollTop += box.scrollHeight - heightBeforeOlder.current;
+      heightBeforeOlder.current = null;
+    }
+  }, [oldestId]);
+  const onThreadScroll = () => {
+    if ((scrollRef.current?.scrollTop ?? 1000) < 120) showOlder();
+  };
 
   // The keyboard covers the foot of the screen without resizing it, and the
   // composer is the foot of the screen: lift the whole thread clear of it, and
@@ -326,7 +352,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} onScroll={onThreadScroll} className="flex-1 overflow-y-auto">
         <div className={cn("mx-auto w-full max-w-2xl px-4 py-4 lg:py-6", THREAD_WIDE)}>
           {/* Monitoring disclosure (legally required) */}
           <div className="mx-auto mb-4 flex max-w-sm items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-center">
@@ -334,7 +360,17 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
             <p className="text-[11px] text-amber-700 leading-snug text-left">{CHAT_MONITORING_NOTICE}</p>
           </div>
 
-          <div className="text-center mb-4"><span className="rounded-full bg-gray-200/70 px-3 py-0.5 text-[11px] font-medium text-gray-500">Today</span></div>
+          {/* Older messages load as you scroll up; the button is the same for keyboard and screen-reader users. */}
+          {hasOlder ? (
+            <div className="mb-4 flex justify-center">
+              <button type="button" onClick={showOlder} disabled={loadingOlder} data-testid="chat-load-older"
+                className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm ring-1 ring-gray-200 transition-colors hover:bg-gray-50 disabled:opacity-60">
+                {loadingOlder && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {loadingOlder ? "Loading…" : "Load earlier messages"}
+              </button>
+            </div>
+          ) : (
+            <div className="text-center mb-4"><span className="rounded-full bg-gray-200/70 px-3 py-0.5 text-[11px] font-medium text-gray-500">Today</span></div>
+          )}
 
           <div className="space-y-2.5">
             {messages.map((m, i) => (

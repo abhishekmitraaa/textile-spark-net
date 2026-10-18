@@ -1,3 +1,4 @@
+import { priceText } from "@/lib/currency";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
@@ -578,7 +579,7 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
       .eq("id", v.productId)
       .maybeSingle();
     if (p) {
-      if (p.price_value != null) price = `${p.currency}${Math.round(Number(p.price_value))}`;
+      if (p.price_value != null) price = priceText(p.currency, Number(p.price_value));
       moq = p.moq ?? null;
       const cat = (p as unknown as { categories: { name: string } | null }).categories?.name;
       if (cat) category = cat;

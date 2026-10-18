@@ -1,3 +1,4 @@
+import { priceText } from "@/lib/currency";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
@@ -110,7 +111,7 @@ export function useNewBrandSuggestions(limit = 12) {
           isFollowing: false,
           topProducts: (r.top_products ?? []).map((p) => ({
             name: p.name,
-            price: p.price_value != null ? `${p.currency}${Math.round(Number(p.price_value))}` : "—",
+            price: p.price_value != null ? priceText(p.currency, Number(p.price_value)) : "—",
             image: p.image,
           })),
         }),

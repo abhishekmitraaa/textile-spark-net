@@ -13,6 +13,7 @@ import { useLang } from "@/lib/i18n";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { trackRequirement, useTrackedRfqIds } from "@/lib/queries/crm";
 import RfqThumb from "@/components/RfqThumb";
+import { priceText } from "@/lib/currency";
 
 // ─────────────────────────────────────────────────────────────
 // Live buyer RFQs (the real lead pool) with inline quoting, for the vendor
@@ -172,9 +173,21 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
                 <p data-no-translate className="text-sm font-bold text-gray-900 truncate lg:text-[15px]">{r.title}</p>
                 <p className="text-xs text-gray-500 mt-0.5 lg:text-[13px]">
                   {r.units ? `${r.units.toLocaleString("en-IN")} units · ` : ""}
-                  {r.priceMin || r.priceMax ? `₹${r.priceMin}–₹${r.priceMax}/unit · ` : ""}{r.date}
+                  {r.priceMin || r.priceMax ? `${priceText("₹", r.priceMin)}–${priceText("₹", r.priceMax)}/unit · ` : ""}{r.date}
+                  {r.expiresAt ? ` · Closes ${new Date(r.expiresAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}` : ""}
                 </p>
                 {r.details.length > 0 && <LeadDetails details={r.details} />}
+                {/* Every picture the buyer added (2026-10-19: photos 2 to 5 were stored but never shown). */}
+                {r.images.length > 1 && (
+                  <div className="mt-2 flex gap-1.5 overflow-x-auto scrollbar-hide" data-testid="lead-photos">
+                    {r.images.map((src, i) => (
+                      <a key={src} href={src} target="_blank" rel="noreferrer" className="shrink-0"
+                        aria-label={`Photo ${i + 1} of ${r.images.length}, opens in a new tab`}>
+                        <img src={src} alt="" loading="lazy" className="h-14 w-14 rounded-lg bg-gray-100 object-cover" />
+                      </a>
+                    ))}
+                  </div>
+                )}
               </div>
               <RfqThumb src={r.image} alt={r.productName} className="w-12 h-12 lg:w-14 lg:h-14" />
             </div>

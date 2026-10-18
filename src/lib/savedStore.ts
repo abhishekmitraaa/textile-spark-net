@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
-import { img, makeListingProduct, type Gender, type ListingProduct } from "@/lib/listingProducts";
+import { toast } from "sonner";
+import type { Gender, ListingProduct } from "@/lib/listingProducts";
 import { supabase } from "@/lib/supabase";
 import { fetchProductCardsByIds } from "@/lib/queries/products";
 
@@ -37,66 +38,25 @@ export interface SavedState extends PersistedState {
 
 export const ALL_SAVES_ID = "all-saves";
 
-// ── Seed data ──
-function seedProduct(
-  id: string,
-  name: string,
-  manufacturer: string,
-  location: string,
-  priceValue: number,
-  moq: string,
-  rating: number,
-  reviews: number,
-  timeAgo: string,
-  verified: boolean,
-  seed: string
-): SavedProduct {
-  return {
-    ...makeListingProduct(id, {
-      name,
-      manufacturer,
-      vendorId: `v-${id}`,
-      location,
-      price: `₹${priceValue}`,
-      priceValue,
-      moq,
-      rating,
-      image: img(seed),
-      secondaryImage: img(`${seed}-b`),
-    }),
-    reviews,
-    timeAgo,
-    verified,
-    savedAt: Date.now(),
-  };
-}
-
-const SEED_PRODUCTS: SavedProduct[] = [
-  seedProduct("sp1", "Premium Cotton Polo T-Shirt", "Tirupur Textiles", "Tirupur, Tamil Nadu", 320, "MOQ: 100 pieces", 4.8, 156, "2 hours ago", true, "save-polo"),
-  seedProduct("sp2", "Women's Casual Kurta Set", "Delhi Fashion Hub", "Delhi NCR", 850, "MOQ: 50 sets", 4.6, 89, "5 hours ago", true, "save-kurta"),
-  seedProduct("sp3", "Kids Cotton Shorts", "Gujarat Garments", "Ahmedabad, Gujarat", 180, "MOQ: 200 pieces", 4.3, 45, "Yesterday", false, "save-shorts"),
-  seedProduct("sp4", "Raw Denim Jeans - Indigo", "Ahmedabad Denim Co.", "Ahmedabad, Gujarat", 890, "MOQ: 250 pieces", 4.5, 74, "Yesterday", true, "save-denim"),
-  seedProduct("sp5", "Linen Casual Shirt - Sky Blue", "Mumbai Linen House", "Mumbai, Maharashtra", 520, "MOQ: 200 pieces", 4.4, 61, "2 days ago", true, "save-linen"),
-  seedProduct("sp6", "Ribbed Tank Top", "Bangalore Knits", "Bangalore, IND", 499, "MOQ: 2", 4.1, 132, "3 days ago", false, "save-tank"),
-  seedProduct("sp7", "Camp Collar Shirt", "SilkThread Mills", "Bangalore, IND", 499, "MOQ: 2", 3.8, 54, "3 days ago", true, "save-camp"),
-  seedProduct("sp8", "Pleated Midi Skirt", "Studio Kintsugi", "Surat, IND", 640, "MOQ: 50 pieces", 4.2, 38, "4 days ago", false, "save-skirt"),
-  seedProduct("sp9", "Organic Cotton Fabric", "Verde Textiles", "Tirupur, Tamil Nadu", 180, "MOQ: 500 m", 4.9, 210, "5 days ago", true, "save-fabric"),
-  seedProduct("sp10", "Wide-Leg Trouser", "Atelier Noor", "Tirupur, IND", 720, "MOQ: 60 pieces", 4.0, 47, "1 week ago", true, "save-trouser"),
-  seedProduct("sp11", "Formal Blazer - Navy", "Corporate Threads", "Delhi NCR", 1450, "MOQ: 30 pieces", 4.5, 66, "1 week ago", true, "save-blazer"),
-  seedProduct("sp12", "Two-Piece Formal Suit", "Corporate Threads", "Delhi NCR", 2200, "MOQ: 25 sets", 4.6, 52, "2 weeks ago", true, "save-suit"),
-];
-
-const SEED_STATE: PersistedState = {
-  products: Object.fromEntries(SEED_PRODUCTS.map((p) => [p.id, p])),
-  folders: [
-    { id: ALL_SAVES_ID, name: "All Saves", productIds: SEED_PRODUCTS.map((p) => p.id) },
-    { id: "summer", name: "Summer Collection", productIds: ["sp1", "sp5", "sp6", "sp8", "sp9"] },
-    { id: "denim", name: "Denim Picks", productIds: ["sp4"] },
-    { id: "sustainable", name: "Sustainable Fabrics", productIds: ["sp9"] },
-    { id: "casual", name: "Casual Wear", productIds: ["sp3", "sp6", "sp7", "sp5"] },
-    { id: "formal", name: "Formal Attire", productIds: ["sp11", "sp12", "sp2"] },
-  ],
+// Empty to start (2026-10-19). Signed-out visitors were shown 12 invented saved products in 5 folders
+// ("Summer Collection", "Denim Picks"…) as if they had saved them.
+const EMPTY_STATE: PersistedState = {
+  products: {},
+  folders: [{ id: ALL_SAVES_ID, name: "All Saves", productIds: [] }],
 };
+
+// What a browser may still hold from the old seed: its product ids and folder ids. Dropped on load; a seed folder
+// the visitor added a real product to is kept.
+const OLD_SEED_PRODUCT = /^sp\d+$/;
+const OLD_SEED_FOLDERS = new Set(["summer", "denim", "sustainable", "casual", "formal"]);
+function withoutOldSeed(p: PersistedState): PersistedState {
+  const products = Object.fromEntries(Object.entries(p.products).filter(([id]) => !OLD_SEED_PRODUCT.test(id)));
+  const folders = p.folders
+    .map((f) => ({ ...f, productIds: f.productIds.filter((id) => !OLD_SEED_PRODUCT.test(id)) }))
+    .filter((f) => !(OLD_SEED_FOLDERS.has(f.id) && f.productIds.length === 0));
+  if (!folders.some((f) => f.id === ALL_SAVES_ID)) folders.unshift({ id: ALL_SAVES_ID, name: "All Saves", productIds: [] });
+  return { products, folders };
+}
 
 const STORAGE_KEY = "cosora.saved.v1";
 
@@ -105,12 +65,12 @@ function loadPersisted(): PersistedState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PersistedState;
-      if (parsed.folders && parsed.products) return parsed;
+      if (parsed.folders && parsed.products) return withoutOldSeed(parsed);
     }
   } catch {
     /* ignore */
   }
-  return SEED_STATE;
+  return EMPTY_STATE;
 }
 
 let state: SavedState = { ...loadPersisted(), pending: null };
@@ -221,9 +181,22 @@ function dbSaveItem(productId: string) {
   if (!userId || !isUuid(productId)) return;
   void supabase.from("saved_items").upsert({ buyer_id: userId, product_id: productId }, { onConflict: "buyer_id,product_id" }).then(() => {});
 }
+// A folder made in this tab is written before anything is put in it (2026-10-19): the folder and its first product
+// used to be sent at the same moment, the product could land first and be refused (no such folder yet), and the
+// error was ignored, so the folder came back empty on the next visit. Each new folder's write is kept here; adding to
+// it waits for it, and a failure is said.
+const folderWrites = new Map<string, Promise<boolean>>();
+
 function dbAddToFolder(folderId: string, productId: string) {
   if (!userId || folderId === ALL_SAVES_ID || !isUuid(productId) || !isUuid(folderId)) return;
-  void supabase.from("saved_folder_items").upsert({ folder_id: folderId, product_id: productId }, { onConflict: "folder_id,product_id" }).then(() => {});
+  const ready = folderWrites.get(folderId) ?? Promise.resolve(true);
+  void ready.then(async (ok) => {
+    if (!ok) return;
+    const { error } = await supabase
+      .from("saved_folder_items")
+      .upsert({ folder_id: folderId, product_id: productId }, { onConflict: "folder_id,product_id" });
+    if (error) toast.error("Couldn't save to the folder", { description: "Please try again." });
+  });
 }
 
 // ── Modal control ──
@@ -285,7 +258,15 @@ export function createFolder(name: string, withProductId?: string): string {
   const folder: Folder = { id, name: folderName, productIds: withProductId ? [withProductId] : [] };
   commit({ ...state, folders: [...state.folders, folder] });
   if (userId && isUuid(id)) {
-    void supabase.from("saved_folders").insert({ id, buyer_id: userId, name: folderName }).then(() => {});
+    const write = (async () => {
+      const { error } = await supabase.from("saved_folders").insert({ id, buyer_id: userId, name: folderName });
+      if (!error) return true;
+      // Not saved: take it back off the screen rather than show a folder that won't be there next time.
+      commit({ ...state, folders: state.folders.filter((f) => f.id !== id) });
+      toast.error(`Couldn't create "${folderName}"`, { description: "Please try again." });
+      return false;
+    })();
+    folderWrites.set(id, write);
     if (withProductId) { dbSaveItem(withProductId); dbAddToFolder(id, withProductId); }
   }
   return id;

@@ -2383,6 +2383,7 @@ export type Database = {
           customization_requested: boolean
           description: string | null
           embedding: unknown
+          expires_at: string | null
           id: string
           image: string | null
           images: string[] | null
@@ -2414,6 +2415,7 @@ export type Database = {
           customization_requested?: boolean
           description?: string | null
           embedding?: unknown
+          expires_at?: string | null
           id?: string
           image?: string | null
           images?: string[] | null
@@ -2445,6 +2447,7 @@ export type Database = {
           customization_requested?: boolean
           description?: string | null
           embedding?: unknown
+          expires_at?: string | null
           id?: string
           image?: string | null
           images?: string[] | null
@@ -6131,6 +6134,15 @@ export type Database = {
         Returns: Json
       }
       share_chat_contact: { Args: { p_conversation_id: string }; Returns: string }
+      extend_rfq_deadline: { Args: { p_rfq_id: string }; Returns: string }
+      top_vendors: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string; brand_name: string; city: string | null; rating_avg: number | null; reviews_count: number | null
+          is_verified: boolean | null; plan_expires_at: string | null; ad_verified_until: string | null
+          image_url: string | null; live_products: number
+        }[]
+      }
       mark_conversation_read: { Args: { p_conversation_id: string }; Returns: undefined }
       match_products: {
         Args: {

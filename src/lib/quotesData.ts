@@ -37,6 +37,9 @@ export interface Rfq {
    *  was removed; such a request is closed and can't be reopened. Optional so
    *  the static fixtures below need no change. */
   removedReason?: string | null;
+  /** When an open requirement stops taking quotes (7 days from approval; the buyer can extend it). Null on a
+   *  direct request. Optional so the static fixtures need no change. */
+  expiresAt?: string | null;
   newCount: number;         // "N new" badge
   lowest: number;           // lowest quote (₹) shown on the request card
   date: string;             // "March 30, 2024"
@@ -97,11 +100,24 @@ export interface VendorQuote {
   submittedAgo: string;     // "1 day ago"
   isNew: boolean;
   attachments: QuoteAttachments;
+  /** The quote's terms exactly as loaded. Accepting checks they are still these (2026-10-19). Absent on fixtures. */
+  terms?: QuoteTerms;
 }
 
-// ── Money formatting (₹ no decimals, $ two decimals) ──
+/** What a seller can change on a quote, as stored. */
+export interface QuoteTerms {
+  currency: string;
+  price_per_unit: number | null;
+  moq: number | null;
+  lead_time: string | null;
+  sampling_cost: number | null;
+  sample_timeline: string | null;
+}
+
+// ── Money formatting (₹ whole rupees, or with paise when it has them; $ two decimals) ──
+// 2026-10-19: a ₹12.50 quote showed as ₹13.
 export function fmtMoney(currency: string, value: number): string {
-  return currency === "₹" ? `${currency}${Math.round(value)}` : `${currency}${value.toFixed(2)}`;
+  return currency === "₹" && Number.isInteger(value) ? `${currency}${value}` : `${currency}${value.toFixed(2)}`;
 }
 
 const pimg = (seed: string) => `https://picsum.photos/seed/${seed}/300/300`;

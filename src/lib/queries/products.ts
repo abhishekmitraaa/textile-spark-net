@@ -1,3 +1,4 @@
+import { priceText } from "@/lib/currency";
 import { useQuery } from "@tanstack/react-query";
 import { viewerKey } from "@/lib/viewerKey";
 import type { Attributes } from "@/lib/formAttributes";
@@ -93,7 +94,7 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
   const imgs = [...(p.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
   const priceValue = p.price_value != null ? Number(p.price_value) : 0;
   const compareAtPrice = p.compare_at_price != null ? Number(p.compare_at_price) : null;
-  const price = p.price_value != null ? `${p.currency}${Math.round(priceValue)}` : "—";
+  const price = p.price_value != null ? priceText(p.currency, priceValue) : "—";
   const discountPct =
     compareAtPrice && compareAtPrice > priceValue
       ? Math.round(((compareAtPrice - priceValue) / compareAtPrice) * 100)

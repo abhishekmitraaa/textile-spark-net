@@ -8,7 +8,7 @@ import { ArrowRight, Building2, ShoppingBag, Check, Loader2, AlertCircle } from 
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { signupMetadata } from "@/lib/queries/signupProfile";
-import { COUNTRY_CODES, PHONE_DIGITS, cleanPhoneDigits, toE164 } from "@/lib/auth/phone";
+import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164 } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 
@@ -28,7 +28,7 @@ const Register = () => {
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.name === "phone" ? cleanPhoneDigits(e.target.value) : e.target.value;
+    const value = e.target.name === "phone" ? cleanPhoneDigits(e.target.value, COUNTRY_CODES[countryIndex]) : e.target.value;
     setForm({ ...form, [e.target.name]: value });
     setError(null);
   };
@@ -49,7 +49,7 @@ const Register = () => {
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
     if (step === 1) { setStep(2); return; }
-    if (submitting || form.phone.length < PHONE_DIGITS) return;
+    if (submitting || !isCompletePhone(form.phone, COUNTRY_CODES[countryIndex])) return;
 
     setSubmitting(true);
     setError(null);
@@ -316,7 +316,11 @@ const Register = () => {
                       <select
                         aria-label="Country code"
                         value={countryIndex}
-                        onChange={(e) => setCountryIndex(Number(e.target.value))}
+                        onChange={(e) => {
+                          const i = Number(e.target.value);
+                          setCountryIndex(i);
+                          setForm((f) => ({ ...f, phone: cleanPhoneDigits(f.phone, COUNTRY_CODES[i]) }));
+                        }}
                         className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm"
                       >
                         {COUNTRY_CODES.map((c, i) => (
@@ -330,6 +334,7 @@ const Register = () => {
                         inputMode="numeric"
                         autoComplete="tel-national"
                         placeholder="Phone Number"
+                        maxLength={phoneDigitsFor(COUNTRY_CODES[countryIndex])}
                         value={form.phone}
                         onChange={handleChange}
                         required
@@ -363,7 +368,7 @@ const Register = () => {
                     >
                       Back
                     </Button>
-                    <Button type="submit" variant="gold" className="flex-1 gap-2" disabled={submitting || form.phone.length < PHONE_DIGITS}>
+                    <Button type="submit" variant="gold" className="flex-1 gap-2" disabled={submitting || !isCompletePhone(form.phone, COUNTRY_CODES[countryIndex])}>
                       {submitting
                         ? <><Loader2 className="h-4 w-4 animate-spin" /> Sending…</>
                         : <>Send Code <ArrowRight className="h-4 w-4" /></>}

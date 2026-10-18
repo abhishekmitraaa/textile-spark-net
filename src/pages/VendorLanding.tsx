@@ -134,7 +134,7 @@ const menuLinks = [
   { label: "About Us", href: "/blogs/about" },
   { label: "Contact Us", href: "mailto:hello@cosora.in", external: true },
   { label: "Work with us!", href: "https://cosora.in/careers", external: true },
-  { label: "Terms and conditions", href: "/auth/terms" },
+  { label: "Terms and conditions", href: "/terms" },
   { label: "Report Fraud", href: "/report-fraud" },
   { label: "Success Stories", href: "#success-stories" },
 ];

@@ -203,83 +203,31 @@ export interface TopVendor {
 }
 
 interface RawTopVendor {
-  id: string; brand_name: string | null; city: string | null;
+  id: string; brand_name: string; city: string | null;
   rating_avg: number | null; reviews_count: number | null;
   is_verified: boolean | null; plan_expires_at: string | null; ad_verified_until: string | null;
+  image_url: string | null; live_products: number;
 }
 
-// An id list goes in the URL, so a long one is sent in pieces: with a few hundred vendors one
-// `in.(…)` filter outgrew the server's URL limit and the request failed (found 2026-10-09).
-const IN_CHUNK = 100;
-function chunks<T>(xs: T[]): T[][] {
-  const out: T[][] = [];
-  for (let i = 0; i < xs.length; i += IN_CHUNK) out.push(xs.slice(i, i + IN_CHUNK));
-  return out;
-}
-
+// The database picks them (top_vendors(), 2026-10-19): paid plan first, then rating, then review count; only sellers
+// with a live listing, the first listing's first picture as the cover. This used to download every seller and every
+// live listing to pick four in the browser, on every New Arrivals visit.
 async function fetchTopVendors(max: number): Promise<TopVendor[]> {
-  const { data, error } = await supabase
-    .from("vendor_profiles")
-    .select("id, brand_name, city, rating_avg, reviews_count, is_verified, plan_expires_at, ad_verified_until")
-    .not("brand_name", "is", null);
+  const { data, error } = await supabase.rpc("top_vendors", { p_limit: max });
   if (error) throw error;
-  const rows = (data ?? []) as RawTopVendor[];
-  if (rows.length === 0) return [];
-
-  // Live-product counts and cover images, batched over all candidates rather
-  // than one query per vendor.
-  const prodPages = await Promise.all(chunks(rows.map((r) => r.id)).map((ids) => supabase
-    .from("products")
-    .select("id, vendor_id, created_at")
-    .in("vendor_id", ids)
-    .eq("status", "live")
-    .order("created_at", { ascending: true })));
-  const prods = prodPages.flatMap((r) => r.data ?? [])
-    .sort((a, b) => String(a.created_at).localeCompare(String(b.created_at)));
-  const productsBy = new Map<string, string[]>();
-  for (const p of prods as { id: string; vendor_id: string }[]) {
-    const list = productsBy.get(p.vendor_id) ?? [];
-    list.push(p.id);
-    productsBy.set(p.vendor_id, list);
-  }
-
-  const firstProductIds = [...productsBy.values()].map((ids) => ids[0]).filter(Boolean);
-  const coverOf = new Map<string, string>();
-  if (firstProductIds.length) {
-    const imgPages = await Promise.all(chunks(firstProductIds).map((ids) => supabase
-      .from("product_images")
-      .select("product_id, url, position")
-      .in("product_id", ids)));
-    const imgs = imgPages.flatMap((r) => r.data ?? []);
-    for (const img of [...imgs].sort((a, b) => a.position - b.position)) {
-      if (!coverOf.has(img.product_id)) coverOf.set(img.product_id, img.url);
-    }
-  }
-
   const now = Date.now();
   const isPaid = (ts: string | null) => Boolean(ts && new Date(ts).getTime() > now);
-
-  return rows
-    .map((v): TopVendor => {
-      const ids = productsBy.get(v.id) ?? [];
-      return {
-        id: v.id,
-        brandName: v.brand_name as string,
-        city: v.city,
-        ratingAvg: Number(v.rating_avg ?? 0),
-        reviewsCount: Number(v.reviews_count ?? 0),
-        verified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until),
-        paid: isPaid(v.plan_expires_at),
-        imageUrl: ids.length ? coverOf.get(ids[0]) ?? null : null,
-        liveProducts: ids.length,
-      };
-    })
-    .filter((v) => v.liveProducts > 0)
-    .sort((a, b) =>
-      Number(b.paid) - Number(a.paid) ||
-      b.ratingAvg - a.ratingAvg ||
-      b.reviewsCount - a.reviewsCount)
-    .slice(0, max);
+  return ((data ?? []) as RawTopVendor[]).map((v): TopVendor => ({
+    id: v.id,
+    brandName: v.brand_name,
+    city: v.city,
+    ratingAvg: Number(v.rating_avg ?? 0),
+    reviewsCount: Number(v.reviews_count ?? 0),
+    verified: trustSealFromParts(v.is_verified, v.plan_expires_at, v.ad_verified_until),
+    paid: isPaid(v.plan_expires_at),
+    imageUrl: v.image_url,
+    liveProducts: v.live_products,
+  }));
 }
 
 export function useTopVendors(max = 4) {

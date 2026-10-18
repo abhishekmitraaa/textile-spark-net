@@ -5,7 +5,7 @@ import { trustSealFromParts } from "@/lib/plan";
 import { shrinkImage } from "@/lib/shrinkImage";
 import { ownStorageUrl } from "@/lib/storageUrl";
 import { ensureConversation } from "@/lib/queries/chat";
-import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type SizeQty } from "@/lib/quotesData";
+import { UNTARGETED, type Rfq, type VendorQuote, type QuoteStatus, type QuoteTerms, type SizeQty } from "@/lib/quotesData";
 
 // SizeQty lives with the other quote types (quotesData is the JSX-free type
 // home). Re-exported here because callers already import it from this module.
@@ -33,6 +33,8 @@ interface RawRfq {
   removed_at: string | null; removed_reason: string | null;
   // The buyer's category answers (Ranking F1).
   attributes: Record<string, unknown> | null;
+  // When an open requirement stops taking quotes (7 days, extendable; 2026-10-19). Null on a direct request.
+  expires_at: string | null;
 }
 
 // Every rfqs read names its columns rather than using select("*"), because the
@@ -45,15 +47,16 @@ interface RawRfq {
 // select string at the TYPE level to shape the result, and a `string` it cannot
 // read statically degrades every one of these queries to GenericStringError[].
 const RFQ_COLUMNS =
-  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes" as const;
+  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, expires_at" as const;
 
 // The vendor's lead pool also reads how a requirement is marked overseas (subscriptions P7):
 // RFQ_COLUMNS plus the three columns the database stamps. Only this read needs them, so a
 // buyer's pages don't depend on them. Keep it in step with RFQ_COLUMNS.
 const OPEN_LEAD_COLUMNS =
-  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, overseas, buyer_country_code, overseas_vip_until" as const;
+  "id, title, product_name, quantity, budget_min, budget_max, image, category_id, buyer_id, status, created_at, vendor_id, product_id, sizes_breakdown, colors, customization_requested, customization_notes, customization_images, removed_at, removed_reason, attributes, expires_at, overseas, buyer_country_code, overseas_vip_until, images" as const;
 interface RawLeadRfq extends RawRfq {
   overseas: boolean; buyer_country_code: string | null; overseas_vip_until: string | null;
+  images: string[] | null;
 }
 
 interface RawQuote {
@@ -88,6 +91,10 @@ function mapQuote(q: RawQuote, v?: RawVendor): VendorQuote {
     sampleTimeline: q.sample_timeline ?? "—", fabric: q.fabric ?? "—", comment: q.comment ?? "",
     submittedAgo: ago(q.created_at), isNew: q.status === "pending",
     attachments: { images: [], videos: [], documents: [] },
+    terms: {
+      currency: q.currency, price_per_unit: q.price_per_unit, moq: q.moq, lead_time: q.lead_time,
+      sampling_cost: q.sampling_cost, sample_timeline: q.sample_timeline,
+    },
   };
 }
 
@@ -100,6 +107,7 @@ function mapRfq(r: RawRfq, quotes: RawQuote[], targetVendor?: RawVendor, product
     // reference. "" shows RfqThumb's placeholder.
     image: ownStorageUrl(r.image) || productCover || ownStorageUrl(r.customization_images?.[0]) || "",
     status: r.status, removedReason: r.removed_at ? (r.removed_reason ?? "") : null,
+    expiresAt: r.expires_at ?? null,
     newCount: quotes.filter((q) => q.status === "pending").length,
     lowest: prices.length ? Math.min(...prices) : 0,
     date: new Date(r.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" }),
@@ -401,10 +409,44 @@ export async function createTargetedQuoteRequest(buyerId: string, input: NewTarg
   return data.id;
 }
 
-// ── Buyer: change a quote's status (shortlist / accept / reject) ──
-export async function setQuoteStatusDb(id: string, status: QuoteStatus): Promise<void> {
-  const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
+/** The buyer's "Extend 7 days" (extend_rfq_deadline): allowed once the deadline is a day away or past. */
+export async function extendRfqDeadline(rfqId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("extend_rfq_deadline", { p_rfq_id: rfqId });
   if (error) throw error;
+  return data as string;
+}
+
+/** Can the buyer extend it now? The same rule extend_rfq_deadline() applies. */
+export function canExtendDeadline(expiresAt: string | null | undefined, now = Date.now()): boolean {
+  return Boolean(expiresAt) && new Date(expiresAt as string).getTime() - now <= 24 * 3600_000;
+}
+
+/** The seller changed the quote after the buyer loaded it, so it wasn't accepted. */
+export class QuoteChangedError extends Error {
+  constructor() {
+    super("The seller changed this quote since you opened it. Check the new terms before accepting.");
+    this.name = "QuoteChangedError";
+  }
+}
+
+// ── Buyer: change a quote's status (shortlist / accept / reject) ──
+// Accepting checks the terms are still the ones the buyer saw (2026-10-19): a seller may revise a pending quote at
+// any time, and a bare status update accepted whatever price was there by then. The check is part of the update
+// itself, so a revision landing at the same moment can't slip between them.
+export async function setQuoteStatusDb(id: string, status: QuoteStatus, seen?: QuoteTerms): Promise<void> {
+  if (status !== "accepted" || !seen) {
+    const { error } = await supabase.from("quotes").update({ status }).eq("id", id);
+    if (error) throw error;
+    return;
+  }
+  let q = supabase.from("quotes").update({ status }).eq("id", id).eq("currency", seen.currency);
+  for (const col of ["price_per_unit", "moq", "lead_time", "sampling_cost", "sample_timeline"] as const) {
+    const v = seen[col];
+    q = v == null ? q.is(col, null) : q.eq(col, v);
+  }
+  const { data, error } = await q.select("id");
+  if (error) throw error;
+  if (!data?.length) throw new QuoteChangedError();
 }
 
 // ── Vendor: the open lead pool (active RFQs) ──
@@ -446,10 +488,16 @@ export interface LeadRfq {
   buyerCountryCode: string | null;
   /** While in the future, only VIP vendors see it; it opens to Gold then. */
   vipUntil: string | null;
+  /** All the buyer's pictures, the cover first; buyer-written URLs checked (lib/storageUrl.ts). */
+  images: string[];
+  /** When it stops taking quotes. */
+  expiresAt: string | null;
 }
 async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   const { data, error } = await supabase
     .from("rfqs").select(OPEN_LEAD_COLUMNS).eq("status", "active")
+    // Still taking quotes: an open requirement's 7-day deadline, which the buyer can extend (2026-10-19).
+    .gt("expires_at", new Date().toISOString())
     // Open marketplace only. Targeted requests (vendor_id set) belong to the
     // Direct Quote Requests inbox, not the shared lead pool. Every pre-existing
     // RFQ has vendor_id NULL, so this is a no-op for them.
@@ -493,6 +541,9 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       overseas: Boolean(r.overseas),
       buyerCountryCode: r.buyer_country_code ?? null,
       vipUntil: r.overseas_vip_until ?? null,
+      // Every picture the buyer added, the cover first (2026-10-19: only the cover reached sellers).
+      images: (r.images?.length ? r.images : [r.image]).map((u) => ownStorageUrl(u)).filter((u): u is string => Boolean(u)),
+      expiresAt: r.expires_at ?? null,
     };
   });
 

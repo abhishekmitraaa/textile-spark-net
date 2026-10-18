@@ -7,7 +7,7 @@ import * as SliderPrimitive from "@radix-ui/react-slider";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
-import { useBrandFollows, toggleBrandFollow } from "@/lib/brandFollowStore";
+import { useFollowing } from "@/lib/queries/follows";
 import { fetchCatalogueByIds } from "@/lib/queries/products";
 import { useBrowseCatalogue } from "@/lib/queries/feed";
 import { useQuery } from "@tanstack/react-query";
@@ -240,8 +240,20 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
   const navigate = useNavigate();
   const t = useT();
   const rail = useDragScroll<HTMLDivElement>();
-  const follows = useBrandFollows();
-  const following = follows.has(brand.id);
+  // The account's real follows (2026-10-19: this heart saved to the browser only, so it never reached Following or
+  // the seller's follower count). Signed out, follow() asks the visitor to sign in.
+  const { brands: followed, follow, unfollow } = useFollowing();
+  const following = followed.some((b) => b.id === brand.id);
+  const [busy, setBusy] = useState(false);
+  const toggleFollow = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await (following ? unfollow(brand.id) : follow(brand.id));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   // SINSANG-style store card: an image-forward, minimal surface. Just the store
   // header (logo · name · location/followers · heart-follow) and a row of product
@@ -268,7 +280,7 @@ function BrandCard({ brand, products }: { brand: BrandResult; products: BrandPro
             </span>
           </span>
         </button>
-        <button onClick={() => toggleBrandFollow(brand.id)} aria-label={following ? "Unfollow" : "Follow"} className="shrink-0 -mr-1 p-1.5">
+        <button onClick={toggleFollow} disabled={busy} aria-pressed={following} aria-label={following ? "Unfollow" : "Follow"} className="shrink-0 -mr-1 p-1.5 disabled:opacity-60">
           <Heart className={cn("w-[22px] h-[22px] transition-colors", following ? "text-brand-buyer fill-brand-buyer" : "text-gray-300 hover:text-gray-400")} />
         </button>
       </div>

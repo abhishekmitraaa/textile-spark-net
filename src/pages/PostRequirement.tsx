@@ -745,7 +745,9 @@ const PostRequirement = () => {
         // the title, quantity and budget columns.
         attributes: requirementAttributes(values),
       });
+      // It is a submission until Cosora approves it: My Quotes lists those under ["rfq_submissions"] (2026-10-19).
       queryClient.invalidateQueries({ queryKey: ["rfqs"] });
+      queryClient.invalidateQueries({ queryKey: ["rfq_submissions"] });
     } catch (e) {
       toast.error("Couldn't submit your requirement", { description: errorMessage(e) });
       setSubmitting(false);
