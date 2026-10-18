@@ -196,10 +196,11 @@ select pg_temp.ok('G7', 'hoodie' = any (pg_temp.terms()), 'unhidden, it is back'
 select pg_temp.ok('G8', (select not hidden from admin.search_trend_hidden where term_norm = 'hoodie'), 'the row is kept as history');
 
 -- ── I. The word filters can't be dodged (20261018130000) ─────────────────────
--- A phone number in small groups or in Devanagari / Gujarati digits, and a bare host name. A term with a
+-- A phone number in small groups or in Indian / Arabic digits, and a host name however spaced or written. A term with a
 -- year in it (4 digits) still passes. Searched on 14 Jan 2032, listed with "now" on 15 Jan 2032.
 select pg_temp.search(q, v, '2032-01-14 10:00')
-  from unnest(array['call 9876 5432 10', 'phone ९८७६५४३२१०', 'call ૯૮૭૬ ૫૪૩૨', 'shop.example', 'see x.co now', 'saree 2024']) q,
+  from unnest(array['call 9876 5432 10', 'phone ९८७६५४३२१०', 'call ૯૮૭૬ ૫૪૩૨', 'call ٩٨٧٦ ৯৮৭৬', 'shop.example', 'see x.co now',
+                     'shop .com', 'ｓｈｏｐ．ｃｏｍ', 'shop。com', 'saree 2024']) q,
        unnest(array['s:k1', 's:k2', 's:k3']) v;
 create function pg_temp.refresh_2032() returns bigint language sql as $f$
   select admin.search_trends_refresh('manual', timestamp '2032-01-15 09:00' at time zone 'Asia/Kolkata')
@@ -207,7 +208,8 @@ $f$;
 select pg_temp.refresh_2032();
 select pg_temp.ok('I1', not exists (select 1 from unnest(pg_temp.terms()) t where t like 'call%' or t like 'phone%'),
                   'a phone number in groups or other scripts never appears: ' || array_to_string(pg_temp.terms(), ', '));
-select pg_temp.ok('I2', not exists (select 1 from unnest(pg_temp.terms()) t where t like '%.%'), 'no bare host name appears');
+select pg_temp.ok('I2', not exists (select 1 from unnest(pg_temp.terms()) t where t ~ 'shop|x\.co'),
+                  'no host name appears, however it is spaced or written: ' || array_to_string(pg_temp.terms(), ', '));
 select pg_temp.ok('I3', 'saree 2024' = any (pg_temp.terms()), 'a term with a 4-digit year still appears');
 
 -- ── H. A new run queues the site-config rebuild ──────────────────────────────

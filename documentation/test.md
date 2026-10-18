@@ -202,6 +202,16 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-10-18 — Trending searches: filters, second pass (local stack, then production)
+
+- `trends.sql` I1–I2 now try 10 dodges. Before `20261018140000`, I1 failed listing "call ٩٨٧٦ ৯৮৭৬", "shop .com",
+  "ｓｈｏｐ．ｃｏｍ" and "shop。com" (and "saree 2024", which should pass); after, only "saree 2024". 36/36.
+- Production: `[[:digit:]]` counts all 16 digits of six scripts under `en_US.UTF-8`; NFKC turns "ｓｈｏｐ．ｃｏｍ" into
+  "shop.com". After the apply the body md5 `a366535c…` equals local; run 3 recomputed (2 terms).
+- Production browser check (demo-buyer listed on the switch; tracking RPCs and Clarity answered in the browser, so
+  nothing counted): demo-buyer sees "Trending this month", 2 terms, 6 categories (Jeans, Activewear, Denim, Shirt,
+  Belts, Kids Wear), one `trending_searches` call, no page errors; a signed-out visitor sees no section and makes no call.
+
 ### 2026-10-18 — Trending searches: filters that can't be dodged (local stack, then production)
 
 - `trends.sql` cases I1–I3 (now 36/36). Before `20261018130000`, I1 failed: "call 9876 5432 10", "phone ९८७६५४३२१०",

@@ -158,7 +158,8 @@ undocumented. Deep technical rationale for each lives in
     `20261018120100`) and after every hide or unhide. It lists yesterday's terms; with fewer than 5 it widens to the
     7 days, then the 30, and the page's heading names the window ("Trending yesterday / this week / this month").
   - **A typed term is published only once 3 different visitors searched it** (the Live Activity floor; a privacy
-    rule, so changing it is a policy decision). Staff don't count; more than 4 digits in all (Indian scripts too), an "@", a link or a host name never appear.
+    rule, so changing it is a policy decision). Staff don't count; after NFKC, more than 4 digits of any script, a dot, an "@", "http" or "www" never appear.
+    These filters only keep the obvious out (free text is always written round a filter): staff take-down is the control.
     Categories are Cosora's names and need no floor. Staff hide a term with a reason (`admin_search_trend_hide`).
   - The public gets words only (`trending_searches()`), never counts. They ride in `site-config/site.json` when the
     `search_trending` switch is on for everyone; listed accounts read the function. A list not for yesterday isn't
