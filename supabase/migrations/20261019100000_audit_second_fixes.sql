@@ -9,8 +9,9 @@
 --      and their scores. Neither app calls it; only admin.lead_alert_fanout() does (as its owner). Browsers lose it.
 --   4. log_engagement_event() (vendor analytics) took unlimited signed-out calls with no length limits. Now: the
 --      text fields are cut to size, and each caller gets 300 events per 10 minutes (signed in: per account; signed
---      out: per network address, else per browser session). Over the limit the event is dropped silently, as a
---      failed event always was.
+--      out: per network address, else per browser session), and signed-out events at most 2,000 per 10 minutes per
+--      seller, a ceiling no rotation of addresses or sessions gets past. Over a limit the event is dropped silently, as
+--      a failed event always was.
 --   5. Requirements never expired, though Post Your Requirement promises "an automatic 7-day deadline. Once it's
 --      reached, you'll get an option to extend it." rfqs.expires_at is set by the database when an open requirement
 --      is approved (7 days); a browser can't set or change it. extend_rfq_deadline() gives the buyer 7 more days
@@ -254,14 +255,18 @@ begin
   p_query_text := nullif(left(btrim(coalesce(p_query_text, '')), 200), '');
   p_cta_name   := nullif(left(btrim(coalesce(p_cta_name, '')), 60), '');
 
-  -- 300 events per 10 minutes per caller (2026-10-19): per account when signed in; signed out, per network address
-  -- (the leftmost x-forwarded-for the API gateway passes on), else per browser session. Over it, dropped silently.
+  -- 300 events per 10 minutes per caller (2026-10-19): per account when signed in; signed out, per network address,
+  -- else per browser session. Over it, dropped silently. The address is cf-connecting-ip, which Cloudflare sets at
+  -- the edge (a client can't choose it); only without it the leftmost x-forwarded-for, which a client CAN prefix.
+  -- That is why signed-out events also have a per-seller ceiling below, which no rotation of keys gets past.
   if auth.uid() is not null then
     v_key := 'eng:user:' || auth.uid()::text;
   else
     begin
-      v_ip := nullif(btrim(split_part(
-                coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''), ',', 1)), '');
+      v_ip := coalesce(
+        nullif(btrim(current_setting('request.headers', true)::json ->> 'cf-connecting-ip'), ''),
+        nullif(btrim(split_part(
+          coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''), ',', 1)), ''));
     exception when others then
       v_ip := null;
     end;
@@ -296,6 +301,13 @@ begin
   end if;
 
   if v_vendor is null then
+    return;
+  end if;
+
+  -- Signed-out events count toward a ceiling per seller: 2,000 per 10 minutes. Whatever keys a script rotates, it
+  -- can't push more than that into one seller's analytics. Signed-in events are bounded per account above.
+  if auth.uid() is null
+     and not admin.engagement_rate_ok('eng:vendor:' || v_vendor::text, 2000, 600) then
     return;
   end if;
 
