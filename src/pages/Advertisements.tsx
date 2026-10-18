@@ -119,6 +119,15 @@ const MANUFACTURERS_CARDS = [
   { title: "Trusted Platform",       desc: "Secure & verified buyers"   },
 ];
 
+const SUCCESS_STORIES = [
+  { name: "Rajesh Chhabria", business: "Chhabria and Sons", type: "sanitaryware dealers",   years: 13 },
+  { name: "Varsha Mehta",    business: "V2 Modular",        type: "makeup artist",          years: 8  },
+  { name: "Amit Kumar",      business: "Fashion Hub",        type: "garment manufacturer",   years: 5  },
+  { name: "Priya Singh",     business: "Silk Route Exports", type: "fabric exporter",        years: 7  },
+  { name: "Deepak Sharma",   business: "Cotton King",        type: "textile wholesaler",     years: 11 },
+  { name: "Neha Gupta",      business: "Weave Masters",      type: "loom manufacturer",      years: 4  },
+];
+
 const FAQS = [
   { q: "How does advertising on Cosora work?",    a: "Cosora advertising helps you reach millions of potential customers searching for businesses like yours. You create targeted ads, set your budget, choose your audience, and track performance in real-time." },
   { q: "What is the minimum budget required?",    a: "You can start advertising with as little as ₹22/day. You have complete control over your daily and total budget, and can adjust anytime." },
@@ -1245,6 +1254,89 @@ function CostSummary({
   );
 }
 
+// ── SuccessStoriesCarousel ──
+function SuccessStoriesCarousel() {
+  const [idx, setIdx] = useState(0);
+  const [cardW, setCardW] = useState(85);
+
+  useEffect(() => {
+    const update = () => {
+      if (window.innerWidth < 768) setCardW(85);
+      else if (window.innerWidth < 1024) setCardW(46);
+      else setCardW(31);
+    };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
+  const max = SUCCESS_STORIES.length - 1;
+
+  return (
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100 mt-10 lg:p-8">
+      <div className="mb-6 flex items-end justify-between lg:mb-8">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-1 lg:text-3xl">Success Stories</h2>
+          <p className="text-gray-600 text-sm">5.9 Lakh+ Advertisers</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => setIdx(p => p === 0 ? max : p - 1)}
+            className="w-10 h-10 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-all active:scale-90">
+            <ChevronLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          <button onClick={() => setIdx(p => p === max ? 0 : p + 1)}
+            className="w-10 h-10 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-all active:scale-90">
+            <ChevronRight className="w-5 h-5 text-gray-700" />
+          </button>
+        </div>
+      </div>
+
+      <div className="overflow-hidden">
+        <div className="flex transition-transform duration-500 ease-in-out"
+          style={{ transform: `translateX(-${idx * cardW}%)` }}>
+          {SUCCESS_STORIES.map((s, i) => (
+            <div key={i} className="w-[85%] md:w-[46%] lg:w-[31%] shrink-0 px-2">
+              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 h-full">
+                <div className="relative mb-6 rounded-xl">
+                  <div className="w-full h-48 bg-gray-100 rounded-xl flex items-center justify-center">
+                    <Building2 className="w-16 h-16 text-gray-300" />
+                  </div>
+                  <div className="absolute bottom-[-15px] left-3">
+                    <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-4 border-gray-100">
+                      <svg className="w-5 h-5 text-blue-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+                <div className="mt-2">
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{s.name}</h3>
+                  <p className="text-sm text-gray-600 mb-3 flex flex-col">
+                    <span className="font-semibold text-gray-700">{s.business}</span>
+                    <span className="text-gray-500 text-xs tracking-wider font-bold mt-0.5">{s.type}</span>
+                  </p>
+                  <p className="text-xs text-gray-500 font-bold italic mb-4">Customer since {s.years} years</p>
+                  <a href="#" className="inline-flex items-center gap-2 text-blue-600 font-bold text-sm hover:gap-3 transition-all">
+                    Visit Business <ChevronRight className="w-4 h-4" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex justify-center gap-2 mt-8">
+        {SUCCESS_STORIES.slice(0, Math.ceil(SUCCESS_STORIES.length - (100 / cardW) + 1)).map((_, i) => (
+          <button key={i} onClick={() => setIdx(i)}
+            className={cn("h-1.5 rounded-full transition-all duration-300",
+              idx === i ? "bg-purple-600 w-8" : "bg-gray-200 hover:bg-gray-300 w-2")} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── FAQSection ──
 function FAQSection() {
   const [open, setOpen] = useState<number | null>(null);
@@ -1596,9 +1688,9 @@ const Advertisements = () => {
                 />
               </div>
             </motion.div>
-            {/* "Success Stories" was here until 2026-10-18: six invented advertisers ("Rajesh Chhabria,
-                Chhabria and Sons", …), "5.9 Lakh+ Advertisers" and "Visit Business" links to "#". A
-                testimonial goes on a page only when a real, consenting customer gives it (claude.md). */}
+            <motion.div variants={section}>
+              <SuccessStoriesCarousel />
+            </motion.div>
             <motion.div variants={section}>
               <FAQSection />
             </motion.div>

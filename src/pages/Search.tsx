@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useSpeechSearch } from "@/hooks/useSpeechSearch";
+import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
 
 function toListing(p: ProductCardData): ListingProduct {
@@ -112,6 +113,13 @@ const Search = () => {
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
   const isSearching = query.trim().length > 0;
+
+  // The greeting above the live feed (Mitra, 2026-10-18): a signed-in buyer's own first name from their
+  // account (profiles.full_name), "Guest" for a visitor who isn't signed in. Never a default person: it used
+  // to fall back to profileStore's demo "Rajesh". `loading` lasts until a signed-in visitor's profile has
+  // loaded, so nobody signed in is ever called Guest; an account with no name gets no name.
+  const { session, profile: authProfile, loading: authLoading } = useAuth();
+  const greetName = authLoading ? null : session ? authProfile?.full_name?.trim().split(/\s+/)[0] || "" : "Guest";
 
   // Trending searches, measured from Cosora's own searches (see the DATA note above).
   const { trends, loading: trendsLoading } = useTrendingSearches();
@@ -523,9 +531,26 @@ const Search = () => {
           {/* Live catalogue feed, optionally scoped by the category chip above.
               Previously headed "Sponsored" — nothing here is paid placement, so
               the label was a false claim on the buyer's read of the ranking.
-              No greeting above it (2026-10-18): "<first name>, here's what's live"
-              greeted a signed-out visitor as "Rajesh", profileStore's demo default. */}
+              The greeting names the signed-in buyer, or "Guest" (see greetName). */}
           <motion.div variants={section} className="pt-6">
+            {greetName === null ? (
+              <div className="h-5 w-44 rounded bg-gray-100 mb-3" aria-hidden="true" />
+            ) : (
+              <p className="text-sm mb-3" data-testid="search-greeting">
+                {greetName && (
+                  <>
+                    {/* A person's own name is never translated; "Guest" is Cosora's word, so it is. */}
+                    <span className="text-blue-600 font-semibold" data-no-translate={session ? true : undefined}>{greetName}</span>
+                    <span className="text-gray-900 font-bold">, </span>
+                  </>
+                )}
+                <span className="text-gray-900 font-bold">
+                  {selectedCat
+                    ? (greetName ? `browsing ${selectedCat}` : `Browsing ${selectedCat}`)
+                    : (greetName ? "here's what's live" : "Here's what's live")}
+                </span>
+              </p>
+            )}
             <motion.div key={selectedCat ?? "all"} variants={reduced ? {} : listContainer} initial="hidden" animate="show" className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-5">
               {feedNodes}
             </motion.div>

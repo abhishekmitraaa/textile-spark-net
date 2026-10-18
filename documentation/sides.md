@@ -198,6 +198,10 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-10-18 (search greeting by name; Success Stories back; live 2026-10-18)
+- **Search greets by name again:** a signed-in buyer sees their own first name ("Asha, here's what's live"), a
+  visitor "Guest, here's what's live". **Success Stories are back on Advertisements** (Mitra's decision).
+
 ### Changed 2026-10-18 (invented people removed; live 2026-10-18)
 - **Advertisements (seller side):** the "Success Stories" carousel of six invented advertisers and "5.9 Lakh+
   Advertisers" is gone. **The app keeps no demo buyer profile** in the browser any more ("Rajesh Kumar" and his

@@ -513,8 +513,9 @@
   "description is up to 4,000 characters",
   "Product limit reached: your {0} plan allows {1} listed product(s); you already have {2}. Upgrade your plan or remove a listing."
  ],
- "computed_source": "Text the code builds into a variable or a constant before rendering it, which the extractor (display positions only) can't see: the plan buttons on /subscription (Subscription.tsx) and the missed-calls note on Advertisements (lib/queries/callAnalytics.ts). Also Profile.tsx's placeholders, CompetitorAds.tsx's \"Category average\", BusinessProfile.tsx's \"Your brand\" and Analytics.tsx's activity notes. Found by the subscriptions sweep in Hindi, 2026-10-09. Also the Interest Preference count (InterestPreference.tsx, 2026-10-11). Add such text here. Since 2026-10-13 also the GSTIN and PAN messages on /onboarding (Onboarding.tsx, gstinProblem) and the ones trg_vendor_profiles_tax_ids raises (migration 20261013100000).",
+ "computed_source": "Text the code builds into a variable or a constant before rendering it, which the extractor (display positions only) can't see: the plan buttons on /subscription (Subscription.tsx) and the missed-calls note on Advertisements (lib/queries/callAnalytics.ts). Also Profile.tsx's placeholders, CompetitorAds.tsx's \"Category average\", BusinessProfile.tsx's \"Your brand\" and Analytics.tsx's activity notes. Found by the subscriptions sweep in Hindi, 2026-10-09. Also the Interest Preference count (InterestPreference.tsx, 2026-10-11). Add such text here. Since 2026-10-13 also the GSTIN and PAN messages on /onboarding (Onboarding.tsx, gstinProblem) and the ones trg_vendor_profiles_tax_ids raises (migration 20261013100000). Since 2026-10-18 also \"Guest\", the search greeting for a visitor who is not signed in (Search.tsx, greetName).",
  "computed": [
+  "Guest",
   "Upgrade to {0}",
   "Switch to {0}",
   "Switch to yearly",

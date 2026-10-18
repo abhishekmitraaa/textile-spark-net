@@ -971,6 +971,10 @@ undocumented. Deep technical rationale for each lives in
   when a real, consenting customer supplied it; rewording an invented quote does not make it
   real. Same rule for imagery: nothing hotlinked from a placeholder service, and an image the
   project does not own is replaced with nothing, not with another placeholder.
+  **Exception, Mitra's decision (2026-10-18):** the "Success Stories" carousel on `/advertisements` (six named
+  advertisers, "5.9 Lakh+ Advertisers") stays, although its names and figures are invented. It was removed on
+  2026-10-18 and restored the same day at Mitra's request, after being told so and of the risk (India's consumer
+  rules treat fake endorsements as misleading). Don't remove it again without asking; don't add more like it.
 - **Curated is not trending (2026-09-11).** A surface that shows hand-picked content must say so
   ("curated", "suggested") and must not print numbers that imply measurement — search growth,
   "top sellers", trend deltas — unless a real data source produces them. `/home/trends` carried
