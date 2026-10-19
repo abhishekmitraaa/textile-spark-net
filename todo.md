@@ -77,6 +77,14 @@ short list of things someone has to *decide*.
 
 ---
 
+- **Vendors never learn a product was rejected** (2026-10-20 admin audit; Mitra deferred it). When a moderator
+  rejects a product in Cosora-Admin, `enforce_products_moderation` insists on a reason "the vendor can act on",
+  but the vendor never sees it: `toUiStatus()` in `src/lib/queries/products.ts` maps `rejected` to "Draft", no
+  vendor screen reads `products.rejection_reason`, and no trigger sends a notification. The vendor just sees
+  a draft and doesn't know why it isn't live. Catalogues, videos and documents already show their reason
+  (UploadCatalogue, UploadVideo, Kyc). To build: a "Not approved" state with the reason on the vendor's
+  listings, a notification on rejection, and a way to fix it and send it back for review.
+
 ## Medium priority
 
 - **Retire the old buyer interest ids, on or after 2026-11-12** (Interest Preference v2). `pref_category_map` still
