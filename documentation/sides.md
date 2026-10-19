@@ -198,7 +198,7 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
-### Changed 2026-10-19 (the rest of the buyer audit; built, not live)
+### Changed 2026-10-19 (the rest of the buyer audit; live 2026-10-19)
 - Sign-up: a buyer who stops part-way is taken back through it at the next sign-in (only accepting the Terms finishes it); Account Info says what is wrong with a name, email or pincode. The phone field takes Hong Kong (8), Australian, Thai, Taiwanese and Vietnamese (9) and Chinese (11) numbers.
 - Signed out, My Saves is empty (no invented saves). The brand heart in search results follows the seller for real; Following's Report opens the report form.
 - Requirements take quotes for 7 days; My Quotes shows until when and offers "Extend 7 days" near or after the end. Sellers stop seeing a requirement past its deadline, see all its photos and when it closes. Accepting a quote the seller has just changed shows the new terms instead. A new requirement shows in My Quotes straight away. Prices show paise (₹12.50).

@@ -112,6 +112,8 @@ is not what red is for; each skip message says how to re-arm it.
 - **Earlier harnesses after the change:** `chat-actions-test.sql` 35/35, `block-everywhere-test.sql` 22/22, `name-moderation-test.sql` 3/3.
 - **Browser:** `tests/local/audit-second.spec.ts` 8/8 (row above). The first run of the chat test missed the live message: the channel reports "joined" before its database feed is live. Fixed in `useChatThread` (the newest page is read again when the feed confirms); passes since.
 - **Static:** `tsc -p tsconfig.app.json` 0 errors; eslint: no new problems on the changed files (5 old warnings); i18n 8,012/8,012 (hi, gu); `vite build` OK.
+- **Follow-up `20261019110000`** (push security review): harness **41/41** with 5j (310 addresses in one IPv6 /64 keep 300), 5k (2,005 events for a made-up seller: nothing in the limiter or System Health), 5l (10,010 Cloudflare-addressed events from 41 addresses keep 10,000), 5m (the ceiling record keeps no caller text).
+- **Production after release (signed out, read-only):** New Arrivals calls `rpc/top_vendors` (200, 4 rows); `/saved` has no seed; Login takes Hong Kong 8 and China 11 digits; no page errors.
 - **Full local suite** (both apps, 149 tests): 144 passed, 2 skipped, 3 failed: the same three that failed on 2026-10-18 and fail identically on origin/main (plans-and-refunds "7-day guarantee": leftover local refund rows; subscriptions-p1 ×2: invoice PDF on local).
 
 #### 2026-10-18 — the audit's "fix first" list (branch `fix/first-fixes-2026-10-18`, local stack)
