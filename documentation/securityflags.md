@@ -118,7 +118,7 @@ in the next one.
 
 ## Log
 
-### 2026-10-20 — Admin audit: serious findings fixed on branches (not live yet) — Severity: High / Medium
+### 2026-10-20 — Admin audit: serious findings fixed and live — Severity: High / Medium
 - **Blog JSON-LD script injection (High, super_admin-written):** `JsonLd.tsx` replaced `<` with `'<'`, which JavaScript reads as "<", so a post title containing `</script>` ran as script on www.cosora.in (proven locally: `window.__xss = 1`). Fixed in cosora-blogs `fix/jsonld-escape` (<, >, &, U+2028/2029 escaped; proven: no execution, structured data unchanged).
 - **Unfiltered requirement photo links in Cosora-Admin Leads (Medium):** fixed in the app (http(s) only) and in the database (`rfqs_image_urls_web`, `rfq_submissions_image_urls_web`, migration `20261020120000`). Production data was clean (checked 2026-10-20).
 - **Account emails readable by every staff role (Medium):** `admin_profile_search` / `admin_profile_emails` checked `is_admin()` only and the search didn't escape `%` / `_` ("__" returned 500 accounts locally). Now role-gated to the roles whose pages call them.
