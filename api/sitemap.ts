@@ -86,7 +86,26 @@ type BlogRow = {
   published_at: string | null;
   category: { slug: string } | { slug: string }[] | null;
   author: { slug: string } | { slug: string }[] | null;
+  noindex: boolean | null;
+  canonical_url: string | null;
 };
+
+// Paths the Journal serves itself (cosora-blogs src/app): a post with one of these slugs can't be reached
+// at /blogs/<slug>, the static page answers instead.
+const RESERVED_BLOG_SLUGS = new Set(["about", "authors", "category", "page", "api"]);
+
+/**
+ * A post the sitemap may list: not marked noindex, canonical here (no canonical_url, or one naming this
+ * address), and reachable at /blogs/<slug>. Listing the others put "Submitted URL marked noindex" and
+ * canonical conflicts in Search Console (2026-10-20 audit). They still count toward their category's and
+ * author's lastmod: those pages list them.
+ */
+function listablePost(p: BlogRow): boolean {
+  if (p.noindex) return false;
+  if (RESERVED_BLOG_SLUGS.has(p.slug)) return false;
+  const canonical = (p.canonical_url ?? "").trim().replace(/\/+$/, "");
+  return !canonical || canonical === `${ORIGIN}/blogs/${p.slug}`;
+}
 
 type Listing = { slug: string; lastmod?: string };
 
@@ -112,7 +131,7 @@ async function fetchBlog(): Promise<BlogData> {
   const [postsRes, catsRes] = await Promise.all([
     supabase
       .from("blog_posts")
-      .select("slug,updated_at,published_at,category:blog_categories(slug),author:authors(slug)")
+      .select("slug,updated_at,published_at,noindex,canonical_url,category:blog_categories(slug),author:authors(slug)")
       .in("status", ["published", "scheduled"])
       .not("published_at", "is", null)
       .lte("published_at", new Date().toISOString())
@@ -198,7 +217,7 @@ export default async function handler(req: Req, res: Res) {
     ),
     // Full ISO-8601 rather than a date: a same-day correction is otherwise
     // invisible to a crawler that already fetched the page today.
-    ...posts.map((p) =>
+    ...posts.filter(listablePost).map((p) =>
       urlEntry(
         `${ORIGIN}/blogs/${p.slug}`,
         p.updated_at ?? p.published_at ?? undefined,

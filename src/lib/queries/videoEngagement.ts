@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { viewerKey } from "@/lib/viewerKey";
 
 // ─────────────────────────────────────────────────────────────
 // Video closeup engagement — views, likes, saves.
@@ -28,7 +29,8 @@ import { supabase } from "@/lib/supabase";
  * recount, a new session does.
  */
 export async function recordVideoView(id: string): Promise<void> {
-  const { error } = await supabase.rpc("increment_video_view", { p: id });
+  // p_viewer: the browser key product views use, so a signed-out visitor counts once a day (2026-10-20).
+  const { error } = await supabase.rpc("increment_video_view", { p: id, p_viewer: viewerKey() });
   if (error) throw error;
 }
 

@@ -118,6 +118,13 @@ in the next one.
 
 ## Log
 
+### 2026-10-20 — Admin audit, medium list: fixed on branches (not live yet) — Severity: Medium
+- **Leaked-password protection off:** a Pro-plan setting; Cosora is on Free. Mitigated in the app: Have I Been Pwned (k-anonymity) at every place staff choose a password (admin-staff `set_password`, ResetPassword). Still open: a password set through the Auth API directly isn't checked.
+- **Staff temporary passwords:** server-side now (`is_admin()` / `admin_role()` / `admin.am_staff()` read `must_change_password` from the token), 72-hour expiry, manager reset of a deactivated super admin refused.
+- **Unthrottled counters:** `ad_click` and `increment_video_view` limited (once per viewer per day, owner excluded, 100 signed-out a day per item).
+- **Blog revalidate secret in the URL:** the route takes the header only.
+- **7-day guarantee closable on a failed refund:** `admin_refund_guarantee_close` checks `refund_status`.
+
 ### 2026-10-20 — Admin audit: serious findings fixed and live — Severity: High / Medium
 - **Blog JSON-LD script injection (High, super_admin-written):** `JsonLd.tsx` replaced `<` with `'<'`, which JavaScript reads as "<", so a post title containing `</script>` ran as script on www.cosora.in (proven locally: `window.__xss = 1`). Fixed in cosora-blogs `fix/jsonld-escape` (<, >, &, U+2028/2029 escaped; proven: no execution, structured data unchanged).
 - **Unfiltered requirement photo links in Cosora-Admin Leads (Medium):** fixed in the app (http(s) only) and in the database (`rfqs_image_urls_web`, `rfq_submissions_image_urls_web`, migration `20261020120000`). Production data was clean (checked 2026-10-20).

@@ -6081,7 +6081,7 @@ export type Database = {
       }
       increment_product_enquiry: { Args: { p: string }; Returns: undefined }
       increment_product_view: { Args: { p: string; p_viewer?: string }; Returns: undefined }
-      increment_video_view: { Args: { p: string }; Returns: undefined }
+      increment_video_view: { Args: { p: string; p_viewer?: string }; Returns: undefined }
       is_ad_eligible: {
         Args: {
           a: Database["public"]["Tables"]["advertisements"]["Row"]
