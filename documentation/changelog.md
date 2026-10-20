@@ -1,4 +1,4 @@
-- 2026-10-20 (branch `fix/low-2026-10-20`; migration `20261020140000_account_search_by_phone.sql`; Cosora-Admin `fix/low-2026-10-20`) The admin audit's low list.
+- 2026-10-20 (branch `fix/low-2026-10-20`; migration `20261020140000_account_search_by_phone.sql`; Cosora-Admin `fix/low-2026-10-20`) The admin audit's low list. **RELEASED 2026-10-21**: migration applied with the CLI (not in the ledger; function body = local tested), buyer main 8539e7d, Cosora-Admin e555ee8.
   - Why: Mitra, 2026-10-20: "go on with the low list".
   - `admin_profile_search` also matches the digits of a phone number (6 or more) against the sign-in number and the profile number, so Accounts finds a mobile-only buyer; the number is matched, never returned.
   - Subscription page: a GSTIN or PAN typed before the saved one loads is kept (the late load used to wipe it; the intermittent `subscriptions-p0` GSTIN test failure).

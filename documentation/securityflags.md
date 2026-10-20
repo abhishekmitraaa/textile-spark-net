@@ -118,7 +118,7 @@ in the next one.
 
 ## Log
 
-### 2026-10-20 — Admin audit, low list: account search by phone (not live yet) — Severity: Info
+### 2026-10-20 — Admin audit, low list: account search by phone (live 2026-10-21) — Severity: Info
 - `admin_profile_search` now matches phone digits (6 or more) for super admin, support and manager. It answers "which account has this number" and never returns a number, so it reveals no more than the audited reveal-contact path; it lets those roles confirm whether a number has an account, which a fraud report needs.
 
 ### 2026-10-20 — Admin audit, medium list: fixed and live — Severity: Medium
