@@ -119,7 +119,7 @@ test("5. account search and emails answer only the roles whose pages use them", 
   const ctx = await contextWithSession(browser, support.session, { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_URL}/accounts`);
-  await page.getByRole("textbox", { name: "Search by name or email" }).fill("Local Buyer");
+  await page.getByRole("textbox", { name: /^Search by name/ }).fill("Local Buyer");
   await expect(page.getByText("local-buyer@cosora.test").first()).toBeVisible({ timeout: 30_000 });
   await ctx.close();
 });

@@ -266,7 +266,7 @@ test("Cosora-Admin still finds accounts by email and resolves chat participants"
   const reads = watchContactReads(page);
 
   await page.goto(`${ADMIN_URL}/accounts`, { waitUntil: "networkidle" });
-  await page.getByLabel("Search by name or email").fill(buyer.email);
+  await page.getByLabel(/^Search by name/).fill(buyer.email);
   const row = page.getByRole("row").filter({ hasText: buyer.email });
   await expect(row, "found by email, and the email is shown").toHaveCount(1);
   await row.getByRole("button", { name: "Manage" }).click();

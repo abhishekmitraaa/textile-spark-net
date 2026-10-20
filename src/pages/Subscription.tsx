@@ -117,12 +117,14 @@ export default function Subscription() {
     if (!user) return;
     // GSTIN is a public column; PAN is private (admin completion Phase 4) and
     // comes from my_vendor_private(), the vendor's own row only.
+    // A field the vendor has already typed into keeps what they typed: the saved value arriving late
+    // used to replace it, so a GSTIN typed in the first moments was lost (2026-10-20 audit).
     supabase.from("vendor_profiles").select("gstin").eq("id", user.id).maybeSingle()
       .then(({ data }) => {
-        if (data) { setGstin(data.gstin ?? ""); setSavedTax((s) => ({ ...s, gstin: data.gstin ?? "" })); }
+        if (data) { setGstin((cur) => cur || (data.gstin ?? "")); setSavedTax((s) => ({ ...s, gstin: data.gstin ?? "" })); }
       });
     fetchMyVendorPrivate(user.id)
-      .then((priv) => { if (priv) { setPan(priv.pan ?? ""); setSavedTax((s) => ({ ...s, pan: priv.pan ?? "" })); } })
+      .then((priv) => { if (priv) { setPan((cur) => cur || (priv.pan ?? "")); setSavedTax((s) => ({ ...s, pan: priv.pan ?? "" })); } })
       .catch(() => { /* the field stays empty; saving still works */ });
   }, [user]);
 

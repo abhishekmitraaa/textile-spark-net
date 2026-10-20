@@ -214,7 +214,7 @@ test("#11 a token refresh doesn't replace the page: what's typed survives", asyn
   const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_URL}/accounts`);
-  const box = page.getByRole("textbox", { name: "Search by name or email" });
+  const box = page.getByRole("textbox", { name: /^Search by name/ });
   await box.fill(`unsaved ${tag}`);
   await page.evaluate(async () => {
     const m = await import("/src/lib/supabase.ts");

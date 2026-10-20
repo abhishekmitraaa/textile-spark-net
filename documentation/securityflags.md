@@ -118,6 +118,9 @@ in the next one.
 
 ## Log
 
+### 2026-10-20 — Admin audit, low list: account search by phone (not live yet) — Severity: Info
+- `admin_profile_search` now matches phone digits (6 or more) for super admin, support and manager. It answers "which account has this number" and never returns a number, so it reveals no more than the audited reveal-contact path; it lets those roles confirm whether a number has an account, which a fraud report needs.
+
 ### 2026-10-20 — Admin audit, medium list: fixed and live — Severity: Medium
 - **Leaked-password protection off:** a Pro-plan setting; Cosora is on Free. Mitigated in the app: Have I Been Pwned (k-anonymity) at every place staff choose a password (admin-staff `set_password`, ResetPassword). Still open: a password set through the Auth API directly isn't checked.
 - **Staff temporary passwords:** server-side now (`is_admin()` / `admin_role()` / `admin.am_staff()` read `must_change_password` from the token), 72-hour expiry, manager reset of a deactivated super admin refused.

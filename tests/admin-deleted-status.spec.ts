@@ -89,7 +89,7 @@ test("Accounts: a deleted row shows a neutral 'deleted' badge and offers no acti
   const { ctx, page, statusWrites } = await adminPage(browser);
   try {
     await page.goto(`${ADMIN_URL}/accounts`, { waitUntil: "networkidle" });
-    await page.getByLabel("Search by name or email").fill("demo-");
+    await page.getByLabel(/^Search by name/).fill("demo-");
     const rowFor = (email: string) => page.getByRole("row").filter({ hasText: email });
     const deletedRow = rowFor("demo-buyer@cosora.dev");
     const suspendedRow = rowFor("demo-vendor@cosora.dev");

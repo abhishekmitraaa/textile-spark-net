@@ -1,3 +1,9 @@
+- 2026-10-20 (branch `fix/low-2026-10-20`; migration `20261020140000_account_search_by_phone.sql`; Cosora-Admin `fix/low-2026-10-20`) The admin audit's low list.
+  - Why: Mitra, 2026-10-20: "go on with the low list".
+  - `admin_profile_search` also matches the digits of a phone number (6 or more) against the sign-in number and the profile number, so Accounts finds a mobile-only buyer; the number is matched, never returned.
+  - Subscription page: a GSTIN or PAN typed before the saved one loads is kept (the late load used to wipe it; the intermittent `subscriptions-p0` GSTIN test failure).
+  - Cosora-Admin (its CHANGELOG): Certificates and Vendors read every row in pages; banner days are IST; a chat search matching hundreds of people works; chat file links are re-signed before they lapse.
+  - New local specs: `tests/local/low-fixes.spec.ts` and `tests/local/admin-pages.spec.ts` (every Cosora-Admin page, every role).
 - 2026-10-20 (branch `fix/medium-2026-10-20`; migration `20261020130000_admin_audit_medium_fixes.sql`; Cosora-Admin `fix/medium-2026-10-20`; cosora-blogs `fix/revalidate-hardening`) The admin audit's medium list. **RELEASED 2026-10-20**: migration applied with the CLI (not in the ledger; all 12 function bodies = local tested), admin-staff v6 and admin-refund-payment v10 deployed with the CLI, buyer main 00336e5, Cosora-Admin 750256e, cosora-blogs 8d1571c; the sweep ran on production (succeeded).
   - Why: Mitra, 2026-10-20: "tackle leaked-password protection is off, the staff temporary-password gaps, and also the medium list now and after fixing, test each fix".
   - Leaked passwords: Supabase's own protection needs a paid plan (the organisation is on Free). Instead Cosora-Admin checks Have I Been Pwned (k-anonymity) wherever staff choose a password: admin-staff `set_password` and the set-password / reset page; that page now asks for 10 characters with letters and numbers, like `set_password`.
