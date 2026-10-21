@@ -34,11 +34,13 @@ export interface VendorDashboard {
 // ─────────────────────────────────────────────────────────────
 // Business Profile Score
 //
-// Thirteen signals, each worth a fixed weight, summing to 100. This is the
-// single definition of the score: the /business-profile-score checklist, the
-// dashboard ring and the `vendor_profiles.profile_score` column all derive
-// from it, so a vendor filling in a field sees the number move by exactly the
-// weight listed here. Tune the numbers freely, but keep the total at 100.
+// Fifteen signals, each worth a fixed weight, summing to 100. The /business-profile-score
+// checklist and the dashboard ring derive from it, so a vendor filling in a field sees the
+// number move by exactly the weight listed here. Keep the total at 100.
+//
+// The database has the same formula, point for point: public.vendor_profile_score_of()
+// (migration 20261022100000) computes the stored `vendor_profiles.profile_score`, which ranks
+// sellers for buyers. Change a weight or a signal here and there together.
 // ─────────────────────────────────────────────────────────────
 
 // REWEIGHTED 2026-09-08 when annualTurnover and capacity were added as signals.
@@ -245,21 +247,6 @@ async function count<T extends CountableTable>(
 }
 
 /**
- * Recompute `vendor_profiles.profile_score` from what is actually in the
- * database and store it. Returns the score written.
- *
- * This exists so a write path that is not the dashboard — onboarding submit is
- * the only one today — can persist a score without inventing a second formula.
- * `saveVendorOnboarding` used to carry its own `computeProfileScore()`: nine
- * unweighted booleans against the in-memory payload, versus the fifteen
- * weighted signals every screen reads. Same column, two authors, whichever ran
- * last won — so a vendor finished onboarding on one number and watched it
- * change on their first dashboard load, with nothing to explain the drop.
- *
- * Call it AFTER every other write in a flow: it scores rows, not intentions,
- * so products inserted later in the same submit have to already be there.
- */
-/**
  * The vendor's OWN row, shaped for the scorer: the public columns in `extra` and
  * PROFILE_SCORE_COLUMNS, plus phone and owner_email from my_vendor_private(),
  * which only ever returns the caller's own. Throws if either read fails, so a
@@ -284,22 +271,6 @@ async function fetchProfileScoreRow<Extra extends object = object>(
     phone: priv?.phone ?? null,
     owner_email: priv?.owner_email ?? null,
   } as ProfileScoreRow & Extra;
-}
-
-export async function syncProfileScore(vendorId: string): Promise<number> {
-  const [productsTotal, productsLive, quotesSent] = await Promise.all([
-    count("products", (q) => q.eq("vendor_id", vendorId)),
-    count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "live")),
-    count("quotes", (q) => q.eq("vendor_id", vendorId)),
-  ]);
-  const vp = await fetchProfileScoreRow(vendorId);
-
-  const { score } = calculateProfileScore(
-    profileScoreInputFrom(vp, { productsTotal, productsLive, quotesSent }),
-  );
-  const { error } = await supabase.from("vendor_profiles").update({ profile_score: score }).eq("id", vendorId);
-  if (error) throw error;
-  return score;
 }
 
 async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> {
@@ -345,22 +316,9 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
   });
   const { score: profileScore, checks: profileChecks } = calculateProfileScore(scoreInput);
 
-  // Keep the stored column in sync for anything that reads it directly (admin
-  // tooling, the buyer-facing vendor page), but never let that write affect
-  // this read: the value returned below is the freshly computed one either way.
-  // supabase-js resolves rather than throws on a Postgres error, so both paths
-  // are handled.
-  if (vp && profileScore !== vp.profile_score) {
-    try {
-      const { error } = await supabase
-        .from("vendor_profiles")
-        .update({ profile_score: profileScore })
-        .eq("id", vendorId);
-      if (error) console.warn("[vendorDashboard] profile_score write-back failed:", error.message);
-    } catch (e) {
-      console.warn("[vendorDashboard] profile_score write-back threw:", e);
-    }
-  }
+  // The stored column is the database's own (vendor_profile_score_of(), migration 20261022100000, the same
+  // formula); it ranks sellers for buyers, so the browser no longer writes it.
+
 
   return {
     productsTotal,

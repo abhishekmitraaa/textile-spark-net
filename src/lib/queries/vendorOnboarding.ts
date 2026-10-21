@@ -3,7 +3,6 @@ import { fileExt } from "@/lib/fileExt";
 import type { Json } from "@/lib/database.types";
 import { resolveCategoryId } from "@/lib/queries/products";
 import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
-import { syncProfileScore } from "@/lib/queries/vendorDashboard";
 import { writeOwnVendorRow } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
@@ -319,20 +318,7 @@ export async function saveVendorOnboarding(vendorId: string, p: VendorOnboarding
   // Mark the account as an onboarded seller (best-effort; non-blocking).
   await supabase.from("profiles").update({ active_role: "seller", onboarded: true }).eq("id", vendorId);
 
-  // Score the rows that now exist, using the same function every screen reads.
-  // LAST, on purpose: `syncProfileScore` counts products, so the step-7 listing
-  // has to be inserted before it runs.
-  //
-  // Non-blocking, matching the `profiles` update above and the dashboard's own
-  // write-back: the vendor has a completed registration either way, the next
-  // dashboard load recomputes this column regardless, and failing a submit that
-  // already persisted everything real — over a derived integer — would be the
-  // worse outcome. It warns rather than passing silently.
-  try {
-    await syncProfileScore(vendorId);
-  } catch (e) {
-    console.warn("[vendorOnboarding] profile_score sync failed:", e);
-  }
+  // The profile score is the database's (migration 20261022100000): it is recomputed as these rows land.
 }
 
 // ─────────────────────────────────────────────────────────────

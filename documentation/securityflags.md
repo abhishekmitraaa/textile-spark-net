@@ -118,6 +118,10 @@ in the next one.
 
 ## Log
 
+### 2026-10-22 — Profile score ranks sellers; CSV import off (not live yet) — Severity: Medium
+- **Self-written ranking input:** `vendor_profiles.profile_score` was computed and written by the seller's browser. Harmless while only the seller saw it; once it ranks sellers for buyers a seller could have set 100. Now computed by the database (`vendor_profile_score_of()`, trigger `trg_vendor_profiles_zz_profile_score` replaces any client value; listings and quotes rescore through `admin.vendor_score_refresh()`). The inputs are the seller's own fields and counts, so it rewards a complete profile; the checks themselves (e.g. "a website", "2 quotes sent") can still be filled with little effort, which is why it ranks only within the same plan tier and is a small push on requirement matching.
+- **CSV import off:** `import_products` revoked from clients and the switch off. It was the only way to put outside photo addresses on a listing (whose content can change after review).
+
 ### 2026-10-21 — Vendor audit, items 6-10 (live 2026-10-21) — Severity: Info
 - `my_quoted_rfqs()` (security definer, authenticated only) returns, for requirements the caller has quoted, the title, product name, quantity, picture, buyer id, status and the number of quotes from all sellers. It bypasses rfqs_select for those rows only: a seller keeps the details of a requirement they quoted after it is removed, closed or its buyer blocks them (the chat itself stays blocked). It reveals no competitor's identity or price, only the count the card already promised.
 

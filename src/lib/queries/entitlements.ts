@@ -14,7 +14,7 @@ import { supabase } from "@/lib/supabase";
 /** A feature a page can belong to. A key here is one the database returns as a yes or no. */
 export type EntitlementFeature =
   | "lead_alerts" | "crm" | "account_manager" | "international" | "realtime_alerts" | "overseas_leads"
-  | "crm_pipeline" | "crm_analytics" | "am_page" | "visibility_page" | "bulk_import";
+  | "crm_pipeline" | "crm_analytics" | "am_page" | "visibility_page";
 
 export interface VendorEntitlements {
   planId: string;
