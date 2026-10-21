@@ -1,4 +1,4 @@
-- 2026-10-21 (branch `fix/vendor-rest-2026-10-21`; migration `20261021130000_vendor_rest.sql`) The rest of the vendor audit.
+- 2026-10-21 (branch `fix/vendor-rest-2026-10-21`; migration `20261021130000_vendor_rest.sql`) The rest of the vendor audit. **RELEASED 2026-10-21**: migration applied with the CLI (not in the ledger; both function bodies = local tested, 4 triggers, `quotes.updated_at`), buyer main 4bf67e1.
   - Why: Mitra, 2026-10-21: "now fix the items which are left and merge to main".
   - #11 A seller is told when Cosora approves or rejects their listing, video or catalogue, with the moderator's reason (`admin.notify_moderation_outcome()` after a staff status change; a removal keeps its own notice). Products shows a rejected listing as **Rejected** with the reason, and has a Rejected filter (it showed "Draft"; was in todo.md). Edit and Save sends it back for review.
   - #12 The quote form starts empty on another lead (Leads and Direct Quote Requests); terms typed for one buyer used to carry over.
