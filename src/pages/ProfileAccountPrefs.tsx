@@ -215,6 +215,7 @@ const ProfileAccountPrefs = () => {
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-gray-900">Export All Data</p>
                   <p className="text-xs text-gray-500">Your profile, RFQs, quotes received, chats, reviews, saved items, recently viewed, and the vendors you follow or contacted, as a JSON file</p>
+                  <p className="text-xs text-gray-500">Sellers also get their store, listings, quotes sent, catalogues, videos and invoices.</p>
                   {/* Said up front so the seller's messages in the file are no surprise. */}
                   <p className="text-[11px] text-gray-400 mt-1">{CHAT_SCOPE_NOTE}</p>
                 </div>

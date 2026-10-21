@@ -146,6 +146,8 @@ test("#10 a listing a buyer asked about can be deleted, and its files go with it
   const row = page.locator("tr, div").filter({ hasText: name }).filter({ has: page.getByRole("button", { name: "More actions" }) }).last();
   await row.getByRole("button", { name: "More actions" }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).last().click();
+  // Delete asks first (vendor-rest.spec.ts).
+  await page.getByRole("alertdialog").getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Product deleted")).toBeVisible({ timeout: 30_000 });
 
   expect(sql(`select count(*) from public.products where id = '${pid}'`)).toBe("0");

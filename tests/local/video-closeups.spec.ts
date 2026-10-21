@@ -96,6 +96,9 @@ test("every Video Close-Ups control works for a buyer", async ({ browser }) => {
   await expect.poll(() => sql(`select count(*) from public.saved_videos where buyer_id = '${buyer.id}' and video_id = '${f.tagged}'`)).toBe("1");
 
   // ── The card opens the listing; back returns to the same video.
+  // The "Saved" toast lies over the card for a few seconds; tapping through it made Playwright retry and scroll
+  // the reel, which moved the active video, so the tap sometimes landed on the next one (2026-10-21).
+  await expect(page.getByText("Find it in My Saves.")).toBeHidden({ timeout: 15_000 });
   await card(page).tap();
   await expect(page).toHaveURL(new RegExp(`/product/${f.product}$`));
   await page.goBack();

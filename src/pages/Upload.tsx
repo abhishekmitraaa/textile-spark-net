@@ -481,6 +481,7 @@ const Upload = () => {
       // Asked but never kept until 2026-10-17: the SKU, the sub-type picked on the sub-category step, and every
       // colour picked (the colour column holds the first). The admin's review shows them all.
       const attributes = productAttributes(formValues);
+      delete attributes.sku;
       if (sku.trim()) attributes.sku = sku.trim();
       if (selectedSubType) attributes.subType = selectedSubType;
       const pickedColours = formValues["colors"];

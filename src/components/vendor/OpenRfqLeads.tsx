@@ -105,6 +105,12 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState({ price: "", moq: "", leadTime: "", comment: "" });
+  // One form serves every card, so opening another card starts it empty (2026-10-21): terms typed for one
+  // buyer used to carry over, one tap from being sent to another.
+  const openQuote = (id: string) => {
+    if (id !== openId) setForm({ price: "", moq: "", leadTime: "", comment: "" });
+    setOpenId(id);
+  };
   const [busy, setBusy] = useState(false);
 
   if (!user || isLoading || rfqs.length === 0) return null;
@@ -214,7 +220,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOpenId(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
+              <button onClick={() => openQuote(r.id)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="w-3.5 h-3.5" /> Submit Quote
               </button>
             )}

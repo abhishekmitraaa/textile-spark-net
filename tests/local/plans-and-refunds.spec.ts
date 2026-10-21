@@ -85,7 +85,11 @@ test("upgrade is prorated, a downgrade waits for the next period, and only one i
 
 test("the 7-day guarantee: the seller asks, finance refunds and closes, the plan ends", async ({ browser }) => {
   test.setTimeout(120_000);
-  const who = await freshAccount("p-refund", { seller: true });
+  // A name of its own: a run that stops part-way leaves its request open, and with every run named "p-refund"
+  // the admin page listed many identical requests (15 by 2026-10-21) and the buttons couldn't be told apart.
+  const prefix = `p-refund-${Date.now().toString(36)}`;
+  const brand = `${prefix} Textiles`;
+  const who = await freshAccount(prefix, { seller: true });
   allowFeature("subscription_checkout", who.id); // checkouts are closed to unlisted accounts (subscriptions P0)
   listed.push(who.id);
   const ctx = await contextWithSession(browser, who.session, { width: 1440, height: 1000 });
@@ -115,13 +119,19 @@ test("the 7-day guarantee: the seller asks, finance refunds and closes, the plan
   const admin = await adminCtx.newPage();
   await admin.goto(`${ADMIN_URL}/subscriptions`);
   const panel = admin.locator("section, div", { has: admin.getByText("7-day money-back guarantee", { exact: true }) }).first();
-  await expect(admin.getByText(`p-refund Textiles`).first()).toBeVisible();
-  await expect(admin.getByRole("button", { name: "Close and end the plan" })).toBeDisabled();
+  // This seller's request: its own card in the guarantee panel.
+  // The innermost card holding both its name and its button (the panel around it holds them too).
+  const request = admin.locator("div.rounded-xl")
+    .filter({ has: admin.getByText(brand, { exact: true }) })
+    .filter({ has: admin.getByRole("button", { name: "Close and end the plan" }) })
+    .last();
+  await expect(request).toBeVisible();
+  await expect(request.getByRole("button", { name: "Close and end the plan" })).toBeDisabled();
   // The Razorpay refund itself can't run locally (no keys); record it as admin-refund-payment would.
   sql(`update public.subscription_invoices set razorpay_refund_id = 'rfnd_local', refund_status = 'processed', status = 'refunded',
          refunded_at = now() where vendor_id = '${who.id}';`);
   await admin.reload();
-  await admin.getByRole("button", { name: "Close and end the plan" }).first().click();
+  await request.getByRole("button", { name: "Close and end the plan" }).click();
   await admin.getByRole("dialog").getByRole("button", { name: "Close and end the plan" }).click();
   await expect(admin.getByText("Request closed. The plan has ended and the seller has been told.")).toBeVisible();
   expect(await panel.count()).toBeGreaterThan(0);

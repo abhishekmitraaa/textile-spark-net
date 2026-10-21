@@ -64,6 +64,8 @@ interface RawQuote {
   price_per_unit: number | null; price_inr: number | null; moq: number | null;
   lead_time: string | null; sampling_cost: number | null; sample_timeline: string | null;
   fabric: string | null; comment: string | null; status: QuoteStatus; created_at: string;
+  /** When the seller last revised the terms (set by the database); null until then. */
+  updated_at?: string | null;
 }
 interface RawVendor { id: string; brand_name: string | null; is_verified: boolean; city: string | null; rating_avg: number; reviews_count: number; plan_expires_at: string | null; ad_verified_until: string | null }
 
@@ -636,7 +638,7 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
       leadTime: q.lead_time ?? "—",
       submittedDate: fmtDate(q.created_at),
       submittedDateIso: q.created_at,
-      lastUpdated: fmtDate(q.created_at),
+      lastUpdated: fmtDate(q.updated_at ?? q.created_at),
       pcs: rfq?.quantity != null ? `${rfq.quantity} pcs` : "—",
       totalQuotes: rfq?.quotes_total ?? 1,
       status: mapQuoteStatus(q.status),

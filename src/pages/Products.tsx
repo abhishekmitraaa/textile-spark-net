@@ -12,6 +12,10 @@ import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
+  AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Plus, Search, Share2, MoreVertical,
   Eye, MessageSquare, Edit2, Trash2, Copy,
   ChevronDown, Camera, PackageOpen, SearchX, LogIn, PauseCircle,
@@ -56,7 +60,19 @@ const STATUS = {
   draft:   { label: "Draft",        pill: "bg-gray-100 text-gray-500" },
   // Over the plan's limit: hidden from buyers until the plan allows it again (subscriptions P4).
   paused:  { label: "Paused",       pill: "bg-blue-100 text-blue-700" },
+  // Turned down by Cosora's review, with its reason under the name (2026-10-21; it showed as "Draft").
+  rejected: { label: "Rejected",    pill: "bg-red-100 text-red-700" },
 } as const;
+
+/** Cosora's reason on a rejected listing; edit and save to send it for review again. */
+function RejectionNote({ product }: { product: VendorProductRow }) {
+  if (product.status !== "rejected" || !product.rejectionReason) return null;
+  return (
+    <p className="mt-1.5 text-[11px] leading-snug text-red-700 line-clamp-3 lg:text-xs">
+      <span className="font-semibold">Reason:</span> {product.rejectionReason}
+    </p>
+  );
+}
 
 const DAY = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
 
@@ -205,6 +221,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
               </span>
             )}
           </div>
+          <RejectionNote product={product} />
         </div>
 
         <div className="pointer-events-auto flex flex-col items-end gap-2 shrink-0">
@@ -245,6 +262,7 @@ function ProductRow({ product, onDelete, onDuplicate }: {
               {status.label}
             </span>
           </div>
+          <RejectionNote product={product} />
         </div>
 
         {/* Price */}
@@ -370,6 +388,8 @@ const Products = () => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["products"] });
 
+  // Delete asks first (2026-10-21): one tap in the row menu used to delete a listing for good.
+  const [deleting, setDeleting] = useState<VendorProductRow | null>(null);
   const handleDelete = async (id: string) => {
     try {
       await deleteProduct(id);
@@ -558,6 +578,7 @@ const Products = () => {
                   <option value="draft">Draft</option>
                   <option value="pending">Pending Review</option>
                   <option value="paused">Paused</option>
+                  <option value="rejected">Rejected</option>
                 </select>
                 <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
               </div>
@@ -645,7 +666,7 @@ const Products = () => {
                 <ProductRow
                   key={p.id}
                   product={p}
-                  onDelete={handleDelete}
+                  onDelete={(id) => setDeleting(filtered.find((x) => x.id === id) ?? null)}
                   onDuplicate={handleDuplicate}
                 />
               ))}
@@ -653,6 +674,27 @@ const Products = () => {
           )}
 
         </motion.div>
+
+        <AlertDialog open={deleting !== null} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+          <AlertDialogContent className="max-w-sm rounded-2xl">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this listing?</AlertDialogTitle>
+              <AlertDialogDescription>
+                <span data-no-translate className="font-semibold text-foreground">{deleting?.name}</span> and its photos and
+                PDFs are deleted for good. Buyers' requests about it keep their details.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-red-600 text-white hover:bg-red-700"
+                onClick={() => { if (deleting) void handleDelete(deleting.id); setDeleting(null); }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <LiveListingsDialog
           open={picker !== null}

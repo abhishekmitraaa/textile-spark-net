@@ -269,7 +269,7 @@ function SubmittedQuotesList({ quotes, onSwitchToRequests }: { quotes: MySubmitt
                 {/* Title + price */}
                 <div className="flex items-start justify-between gap-2 mb-1 lg:gap-6">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 leading-snug lg:text-base">{q.rfqTitle}</p>
+                    <p data-no-translate className="text-sm font-bold text-gray-900 leading-snug lg:text-base">{q.rfqTitle}</p>
                     <p className="text-xs text-gray-400 lg:text-[13px]">{q.buyerName}</p>
                   </div>
                   <div className="text-right shrink-0">

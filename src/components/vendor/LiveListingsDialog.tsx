@@ -13,6 +13,7 @@ const STATE_LABEL: Record<VendorProductRow["status"], string> = {
   pending: "Under review",
   paused: "Paused",
   draft: "Draft",
+  rejected: "Rejected",
 };
 
 /**

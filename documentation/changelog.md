@@ -1,3 +1,11 @@
+- 2026-10-21 (branch `fix/vendor-rest-2026-10-21`; migration `20261021130000_vendor_rest.sql`) The rest of the vendor audit.
+  - Why: Mitra, 2026-10-21: "now fix the items which are left and merge to main".
+  - #11 A seller is told when Cosora approves or rejects their listing, video or catalogue, with the moderator's reason (`admin.notify_moderation_outcome()` after a staff status change; a removal keeps its own notice). Products shows a rejected listing as **Rejected** with the reason, and has a Rejected filter (it showed "Draft"; was in todo.md). Edit and Save sends it back for review.
+  - #12 The quote form starts empty on another lead (Leads and Direct Quote Requests); terms typed for one buyer used to carry over.
+  - #14 A seller's "Export All Data" also has their store (with the private fields through `my_vendor_private()`), listings, quotes sent, catalogues, videos, business documents, invoices, ad orders and CRM.
+  - Low: `quotes.updated_at` (set by the database on a revision of the terms) is My Quotes' "Last updated"; a SKU emptied in the edit form is removed; buyer-written titles on My Quotes and customization notes are kept out of the page translator; Delete on Products asks first.
+  - Not changed: `vendor_profiles.profile_score` stays client-written (only the seller sees it; nothing ranks on it).
+  - New local spec: `tests/local/vendor-rest.spec.ts`.
 - 2026-10-21 (branch `fix/vendor-6-10-2026-10-21`; migration `20261021120000_vendor_items_6_10.sql`) The vendor audit's items 6-10. **RELEASED 2026-10-21**: migration applied with the CLI (not in the ledger; `my_quoted_rfqs` body = local tested, the key is SET NULL), buyer main efb7751.
   - Why: Mitra, 2026-10-21: "make it live and then fix the items from 6 - 10 for the found issues list".
   - #6 A quote card counts every seller's quotes on the requirement (it always said "1 quotes total": quotes_select shows a seller only their own). #9 A won quote keeps its requirement's title, quantity, buyer and chat link after the requirement is removed or closed, and Total Order Value keeps its value (rfqs_select hid the row, so the order counted ₹0). Both through `my_quoted_rfqs()` (definer; only requirements the caller quoted). The requirement's picture on My Quotes is kept only when it is Cosora's Storage (`ownStorageUrl`).

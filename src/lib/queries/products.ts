@@ -558,7 +558,9 @@ export interface VendorProductRow {
   unit: string;
   image: string;
   /** paused: over the plan's limit, hidden from buyers until the plan allows it again (P4). */
-  status: "active" | "draft" | "pending" | "paused";
+  status: "active" | "draft" | "pending" | "paused" | "rejected";
+  /** Cosora's reason, on a rejected listing (shown on Products; the seller is also notified). */
+  rejectionReason: string | null;
   /** Denormalised category label off the product row. Drives the real
    *  "Views by Category" breakdown on Analytics; null when uncategorised. */
   categoryName: string | null;
@@ -585,6 +587,7 @@ interface RawMyProduct {
   id: string; name: string; price_value: number | null; status: string;
   enquiries_count: number; views_count: number; description: string | null; fabric: string | null;
   category_name: string | null; unit: string | null; currency: string | null; moq: string | null;
+  rejection_reason: string | null;
   gsm: string | null; fit_type: string | null; gender: string | null; location: string | null;
   sold_count: number | null; rating_avg: number | null; reviews_count: number | null; created_at: string;
   product_images: RawImage[] | null;
@@ -595,7 +598,10 @@ function toUiStatus(s: string): VendorProductRow["status"] {
   if (s === "live") return "active";
   if (s === "under_review") return "pending";
   if (s === "paused") return "paused";
-  return "draft"; // draft + rejected both render as non-public here
+  // Rejected is its own state (2026-10-21): it rendered as "Draft", so a seller never learned Cosora had
+  // turned the listing down, or why.
+  if (s === "rejected") return "rejected";
+  return "draft";
 }
 
 // Rough listing-completeness score (mirrors the "Profile Score" idea) so the
@@ -613,7 +619,7 @@ function completeness(p: RawMyProduct): number {
 async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, price_value, status, enquiries_count, views_count, description, fabric, category_name, unit, currency, moq, gsm, fit_type, gender, location, sold_count, rating_avg, reviews_count, created_at, product_images ( url, position )")
+    .select("id, name, price_value, status, enquiries_count, views_count, description, fabric, category_name, unit, currency, moq, gsm, fit_type, gender, location, sold_count, rating_avg, reviews_count, created_at, rejection_reason, product_images ( url, position )")
     .eq("vendor_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -629,6 +635,7 @@ async function fetchMyProducts(vendorId: string): Promise<VendorProductRow[]> {
       unit: p.unit || "Piece",
       image: img,
       status: toUiStatus(p.status),
+      rejectionReason: p.status === "rejected" ? p.rejection_reason : null,
       categoryName: p.category_name,
       views: p.views_count ?? 0,
       inquiries: p.enquiries_count,

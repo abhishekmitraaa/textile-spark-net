@@ -2118,6 +2118,7 @@ export type Database = {
           sample_timeline: string | null
           sampling_cost: number | null
           status: Database["public"]["Enums"]["quote_status"]
+          updated_at: string | null
           vendor_id: string
         }
         Insert: {
@@ -2134,6 +2135,7 @@ export type Database = {
           sample_timeline?: string | null
           sampling_cost?: number | null
           status?: Database["public"]["Enums"]["quote_status"]
+          updated_at?: string | null
           vendor_id: string
         }
         Update: {
@@ -2150,6 +2152,7 @@ export type Database = {
           sample_timeline?: string | null
           sampling_cost?: number | null
           status?: Database["public"]["Enums"]["quote_status"]
+          updated_at?: string | null
           vendor_id?: string
         }
         Relationships: [

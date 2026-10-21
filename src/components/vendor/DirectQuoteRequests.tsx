@@ -27,6 +27,12 @@ export default function DirectQuoteRequests() {
 
   const [openId, setOpenId] = useState<string | null>(null);
   const [form, setForm] = useState({ price: "", moq: "", leadTime: "", comment: "" });
+  // One form serves every card, so opening another card starts it empty (2026-10-21): terms typed for one
+  // buyer used to carry over, one tap from being sent to another.
+  const openQuote = (id: string) => {
+    if (id !== openId) setForm({ price: "", moq: "", leadTime: "", comment: "" });
+    setOpenId(id);
+  };
   const [busy, setBusy] = useState(false);
 
   if (!user || isLoading || requests.length === 0) return null;
@@ -109,7 +115,7 @@ export default function DirectQuoteRequests() {
                 <div className="flex gap-2">
                   <dt className="w-20 shrink-0 text-gray-500">Custom</dt>
                   <dd className="min-w-0 text-gray-900">
-                    <span className="font-semibold">{r.customizationNotes || "Requested"}</span>
+                    {r.customizationNotes ? <span data-no-translate className="font-semibold">{r.customizationNotes}</span> : <span className="font-semibold">Requested</span>}
                     {r.customizationImages.length > 0 && (
                       <span className="mt-1.5 flex flex-wrap gap-1.5">
                         {r.customizationImages.map((src, i) => (
@@ -148,7 +154,7 @@ export default function DirectQuoteRequests() {
                 </div>
               </div>
             ) : (
-              <button onClick={() => setOpenId(r.id)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
+              <button onClick={() => openQuote(r.id)} className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-bold transition-colors hover:bg-brand-vendor/5" style={{ borderColor: BLUE, color: BLUE }}>
                 <Send className="h-3.5 w-3.5" /> Send Quote
               </button>
             )}

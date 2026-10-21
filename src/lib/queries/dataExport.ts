@@ -164,6 +164,67 @@ export async function buildRfqHistoryCsv(userId: string): Promise<RfqCsvExport> 
   };
 }
 
+// ── A seller's own records (2026-10-21) ─────────────────────
+// A seller's Settings offer "Download your data", and the export had only the buyer side: none of the
+// quotes they sent, their listings, store, catalogues, videos, documents, invoices or CRM. Each read
+// filters on the owner column. Search vectors and their index text are left out: Cosora's, not the seller's.
+
+const notSearchIndex = (rows: Row[]): Row[] =>
+  rows.map((r) => Object.fromEntries(Object.entries(r).filter(([k]) => !/embedding|search_text/.test(k))));
+
+const STORE_COLS =
+  "id, brand_name, owner_name, about, business_type, primary_type, category, capabilities, capacity, served_states, " +
+  "city, state, state_code, country, website, social, logo_url, banner_url, office_photos, year_established, " +
+  "employee_count, annual_turnover, gstin, cin, has_phone, has_whatsapp, is_verified, plan_id, plan_expires_at, " +
+  "ad_verified_until, followers_count, rating_avg, reviews_count, profile_score, onboarding_complete, notifications, " +
+  "regional, created_at";
+
+async function sellerRecords(userId: string): Promise<Record<string, unknown> | null> {
+  // The readable columns, plus the private ones (address, PAN, contact) through my_vendor_private(), which
+  // returns only the caller's own row: those columns aren't client-selectable on vendor_profiles.
+  const [{ data: pub, error }, { data: priv, error: privErr }] = await Promise.all([
+    supabase.from("vendor_profiles").select(STORE_COLS).eq("id", userId).maybeSingle(),
+    supabase.rpc("my_vendor_private"),
+  ]);
+  if (error) throw error;
+  if (!pub) return null;
+  if (privErr) throw privErr;
+  const store = { ...(pub as unknown as Row), ...((priv ?? [])[0] ?? {}) };
+  const [listings, quotesSent, catalogues, videos, documents, invoices, adOrders, pipeline, notes, followups] = await Promise.all([
+    allPages((from, to) => supabase.from("products").select("*, product_images ( url, position )").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("quotes").select(`${QUOTE_COLS}, updated_at`).eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("catalogues").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("product_videos").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("vendor_documents").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("subscription_invoices").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("ad_orders").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("order_id").range(from, to)),
+    allPages((from, to) => supabase.from("vendor_lead_pipeline").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("vendor_lead_notes").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+    allPages((from, to) => supabase.from("vendor_lead_followups").select("*").eq("vendor_id", userId)
+      .order("created_at", { ascending: true }).order("id").range(from, to)),
+  ]);
+  return {
+    store: notSearchIndex([store as Row])[0],
+    listings: notSearchIndex(listings),
+    quotes_sent: quotesSent,
+    catalogues,
+    videos: notSearchIndex(videos),
+    business_documents: documents,
+    subscription_invoices: invoices,
+    ad_orders: adOrders,
+    crm: { pipeline, notes, follow_ups: followups },
+  };
+}
+
 // ── JSON ─────────────────────────────────────────────────────
 
 export const CHAT_SCOPE_NOTE =
@@ -190,6 +251,7 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
 
   const rfqs = await myRfqs(userId);
   const quotes = await quotesOn(rfqs.map((r) => String(r.id)));
+  const seller = await sellerRecords(userId);
 
   const conversations = await allPages((from, to) =>
     supabase.from("conversations")
@@ -308,6 +370,10 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     saved_folder_items: folderItems.length,
     recently_viewed: recentlyViewed.length,
     following: following.length,
+    ...(seller ? {
+      seller_listings: (seller.listings as Row[]).length,
+      seller_quotes_sent: (seller.quotes_sent as Row[]).length,
+    } : {}),
   };
 
   const doc = {
@@ -318,7 +384,9 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
       contents:
         "Your profile, business details, RFQs, the quotes you received on them, your conversations and their messages, " +
         "the reviews you wrote, the vendors you contacted (by chat, call or quote) and those you messaged, " +
-        "your saved items and folders, the products you viewed recently, and the vendors you follow.",
+        "your saved items and folders, the products you viewed recently, and the vendors you follow. " +
+        "For a seller, also your store, listings, the quotes you sent, catalogues, videos, business documents, " +
+        "invoices, ad orders and CRM.",
       links:
         "Links open on the site this file was exported from. A null link means the product is no longer listed " +
         "or the vendor no longer exists.",
@@ -338,6 +406,7 @@ export async function buildAllDataJson(userId: string): Promise<AllDataExport> {
     saved,
     recently_viewed: recentlyViewedOut,
     following,
+    seller,
   };
 
   return {
