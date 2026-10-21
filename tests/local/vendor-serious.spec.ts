@@ -139,6 +139,14 @@ test("#3 a photo a listing uses can't be overwritten or replaced in Storage", as
   const spellings = [
     `${plain}?v=1`, `${plain}#x`, plain.replace("free.png", "fre%65.png"), plain.replace(`/${pid}/`, `/${pid}/./`),
     plain.replace("/object/public/", "/render/image/public/"), plain.replace("/storage/v1/", "/STORAGE/v1/"),
+    // Spellings a browser or the server normalises (second security review): backslashes are slashes, tabs
+    // and newlines are dropped, percent-encoding is decoded.
+    `${new URL(plain).origin}${new URL(plain).pathname.split("/").join("\\")}?v=1`,
+    `${plain.replace("/storage/", "/stor\tage/")}?v=1`,
+    `${plain.replace("/storage/", "/st\norage/")}?v=1`,
+    `${plain.replace("/storage/", "/%73torage/")}?v=1`,
+    `${plain.replace("/storage/", "/%2573torage/")}?v=1`,
+    `${plain.replace("/storage/v1/", "/storage%2Fv1/")}?v=1`,
   ];
   for (const url of spellings) {
     const r = await db.from("product_images").insert({ product_id: pid, url, position: 9 });
@@ -147,6 +155,14 @@ test("#3 a photo a listing uses can't be overwritten or replaced in Storage", as
   expect((await db.from("product_images").insert({ product_id: pid, url: "https://images.example.com/a.jpg", position: 9 })).error,
     "outside link").toBeNull();
   sql(`delete from public.product_images where product_id = '${pid}' and position = 9`);
+
+  // Another seller can't put this seller's file on their own listing (a stolen photo, which also froze the
+  // owner's file as "in use").
+  const other = await sellerWithListing("vs3b");
+  const stolen = await other.db.from("product_images").insert({ product_id: other.pid, url: plain, position: 9 });
+  expect(stolen.error, "another seller's file on a listing").not.toBeNull();
+  expect((await db.storage.from("product-images").upload(free1, png("free-2"), { upsert: true, contentType: "image/png" })).error,
+    "the owner can still replace a file no listing of theirs uses").toBeNull();
 
   // A picture no listing uses (a store logo, say) can still be replaced.
   const free = `${seller.id}/store/logo-${tag}.png`;
