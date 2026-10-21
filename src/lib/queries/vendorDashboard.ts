@@ -316,7 +316,10 @@ async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> 
     count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "live")),
     count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "under_review")),
     count("product_videos", (q) => q.eq("vendor_id", vendorId)),
-    count("rfqs", (q) => q.eq("status", "active")),
+    // What Leads lists (fetchOpenRfqs), 2026-10-21: rfqs_select also shows the seller their own requirements
+    // (as a buyer) and every expired one still marked active.
+    count("rfqs", (q) => q.eq("status", "active").is("vendor_id", null)
+      .gt("expires_at", new Date().toISOString()).neq("buyer_id", vendorId)),
     count("quotes", (q) => q.eq("vendor_id", vendorId)),
     count("quotes", (q) => q.eq("vendor_id", vendorId).eq("status", "accepted")),
   ]);

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { fetchMyQuotedRfqs } from "@/lib/queries/rfqs";
 
 // ─────────────────────────────────────────────────────────────
 // Vendor analytics — the real computations behind the Analytics page.
@@ -111,12 +112,10 @@ async function fetchVendorOrderValue(vendorId: string): Promise<VendorOrderValue
   }[];
   if (rows.length === 0) return { orders: [], total: 0, unpriced: 0 };
 
-  const rfqIds = Array.from(new Set(rows.map((q) => q.rfq_id)));
+  // Through my_quoted_rfqs (2026-10-21): rfqs_select hides a requirement once it is removed, closed or its
+  // buyer blocked the seller, and a won order then counted as unpriced (₹0).
   const qtyOf = new Map<string, number | null>();
-  if (rfqIds.length) {
-    const { data: rfqRows } = await supabase.from("rfqs").select("id, quantity").in("id", rfqIds);
-    for (const r of (rfqRows ?? []) as { id: string; quantity: number | null }[]) qtyOf.set(r.id, r.quantity);
-  }
+  for (const [id, r] of await fetchMyQuotedRfqs()) qtyOf.set(id, r.quantity);
 
   let unpriced = 0;
   const orders: WonOrder[] = rows.map((q) => {
@@ -332,13 +331,22 @@ async function fetchLeadFunnel(vendorId: string): Promise<{
   rfqs: { id: string; vendorId: string | null; createdAt: string }[];
   quotes: { id: string; status: string; createdAt: string }[];
 }> {
-  const [{ data: rfqRows, error: rfqErr }, { data: quoteRows, error: qErr }] = await Promise.all([
-    // RLS: open RFQs are readable by any vendor; directed RFQs only by their
-    // target. Both are legitimately "leads this vendor could act on".
-    supabase.from("rfqs").select("id, vendor_id, created_at"),
-    supabase.from("quotes").select("id, status, created_at").eq("vendor_id", vendorId),
-  ]);
-  if (rfqErr) throw rfqErr;
+  // Leads this vendor could act on: active open requirements and ones sent to them, from the widest window
+  // (a year). Filtered here, not left to RLS (2026-10-21): rfqs_select also shows the vendor their own
+  // requirements and requests to other sellers (as a buyer), and an admin every requirement. Paged, since
+  // PostgREST returns at most 1,000 rows a request.
+  const since = windowStart(365).toISOString();
+  const rfqRows: { id: string; vendor_id: string | null; created_at: string }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase.from("rfqs").select("id, vendor_id, created_at")
+      .eq("status", "active").neq("buyer_id", vendorId).or(`vendor_id.is.null,vendor_id.eq.${vendorId}`)
+      .gte("created_at", since).order("created_at").order("id").range(from, from + 999);
+    if (error) throw error;
+    rfqRows.push(...((data ?? []) as typeof rfqRows));
+    if ((data ?? []).length < 1000) break;
+  }
+  const { data: quoteRows, error: qErr } = await supabase
+    .from("quotes").select("id, status, created_at").eq("vendor_id", vendorId);
   if (qErr) throw qErr;
   return {
     rfqs: ((rfqRows ?? []) as { id: string; vendor_id: string | null; created_at: string }[]).map((r) => ({

@@ -6195,6 +6195,19 @@ export type Database = {
           phone: string
         }[]
       }
+      my_quoted_rfqs: {
+        Args: never
+        Returns: {
+          buyer_id: string
+          image: string | null
+          product_name: string | null
+          quantity: number | null
+          quotes_total: number
+          rfq_id: string
+          status: Database["public"]["Enums"]["rfq_status"]
+          title: string
+        }[]
+      }
       my_feature_flags: {
         Args: never
         Returns: {

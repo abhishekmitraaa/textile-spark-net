@@ -588,17 +588,29 @@ function mapQuoteStatus(s: QuoteStatus): MySubmittedQuote["status"] {
   return "awaiting"; // pending
 }
 
+/** A requirement the seller has quoted, as my_quoted_rfqs() returns it. */
+export interface QuotedRfq {
+  rfq_id: string; title: string; product_name: string | null; quantity: number | null; image: string | null;
+  buyer_id: string; status: "active" | "closed"; quotes_total: number;
+}
+
+/**
+ * Every requirement the signed-in seller has quoted, with its quote count from all sellers (2026-10-21).
+ * Not read from rfqs and quotes directly: their policies show a seller only active requirements and only
+ * their own quotes, so each card said "1 quotes total" and a removed requirement lost its title and quantity.
+ */
+export async function fetchMyQuotedRfqs(): Promise<Map<string, QuotedRfq>> {
+  const { data, error } = await supabase.rpc("my_quoted_rfqs");
+  if (error) throw error;
+  return new Map(((data ?? []) as QuotedRfq[]).map((r) => [r.rfq_id, r]));
+}
+
 async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuote[]> {
   const { data: quotes, error } = await supabase
     .from("quotes").select("*").eq("vendor_id", vendorId).order("created_at", { ascending: false });
   if (error) throw error;
   const rows = (quotes ?? []) as RawQuote[];
-  const rfqIds = Array.from(new Set(rows.map((q) => q.rfq_id)));
-  const rfqMap = new Map<string, RawRfq>();
-  if (rfqIds.length) {
-    const { data } = await supabase.from("rfqs").select(RFQ_COLUMNS).in("id", rfqIds);
-    for (const r of (data ?? []) as RawRfq[]) rfqMap.set(r.id, r);
-  }
+  const rfqMap = rows.length ? await fetchMyQuotedRfqs() : new Map<string, QuotedRfq>();
 
   // Real buyer names, batched over the distinct buyers behind those RFQs — same
   // shape as fetchConversations in chat.ts. One query, not one per row.
@@ -607,17 +619,6 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
   if (buyerIds.length) {
     const { data } = await supabase.from("profiles").select("id, full_name").in("id", buyerIds);
     for (const pr of data ?? []) if (pr.full_name) buyerNames.set(pr.id, pr.full_name);
-  }
-
-  // Competing-quote counts: how many vendors have quoted each of these RFQs.
-  // PostgREST has no GROUP BY, so pull just the rfq_id column for the relevant
-  // RFQs and tally client-side — still one round trip, not one per row.
-  const quoteCounts = new Map<string, number>();
-  if (rfqIds.length) {
-    const { data } = await supabase.from("quotes").select("rfq_id").in("rfq_id", rfqIds);
-    for (const row of (data ?? []) as { rfq_id: string }[]) {
-      quoteCounts.set(row.rfq_id, (quoteCounts.get(row.rfq_id) ?? 0) + 1);
-    }
   }
 
   const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-IN", { year: "numeric", month: "short", day: "numeric" });
@@ -637,9 +638,10 @@ async function fetchMySubmittedQuotes(vendorId: string): Promise<MySubmittedQuot
       submittedDateIso: q.created_at,
       lastUpdated: fmtDate(q.created_at),
       pcs: rfq?.quantity != null ? `${rfq.quantity} pcs` : "—",
-      totalQuotes: quoteCounts.get(q.rfq_id) ?? 0,
+      totalQuotes: rfq?.quotes_total ?? 1,
       status: mapQuoteStatus(q.status),
-      image: rfq?.image ?? undefined,
+      // A buyer-written URL: only this project's Storage is shown (lib/storageUrl.ts).
+      image: ownStorageUrl(rfq?.image) ?? undefined,
     };
   });
 }

@@ -669,10 +669,31 @@ function assertWrote(rows: { id: string }[] | null, action: string): void {
 }
 
 // Mutations. RLS guarantees a vendor can only touch their own rows.
+// Deleting a row doesn't delete its Storage objects (claude.md), so the listing's photos and PDFs are read
+// first, the row deleted (its image and document rows cascade; a buyer's direct request about it keeps its
+// text, its product link set to null since 20261021120000), then the files removed. Only files in the
+// vendor's own folder: a CSV import's photo links point elsewhere. A failed removal only leaves files behind.
 export async function deleteProduct(id: string): Promise<void> {
+  const [{ data: imgs }, { data: docs }, { data: auth }] = await Promise.all([
+    supabase.from("product_images").select("url").eq("product_id", id),
+    supabase.from("product_documents").select("path").eq("product_id", id),
+    supabase.auth.getUser(),
+  ]);
   const { data, error } = await supabase.from("products").delete().eq("id", id).select("id");
   if (error) throw error;
   assertWrote(data, "Delete");
+
+  const uid = auth.user?.id;
+  if (!uid) return;
+  const base = supabase.storage.from("product-images").getPublicUrl("").data.publicUrl;
+  const imagePaths = (imgs ?? []).map((r) => r.url as string)
+    .filter((u) => u.startsWith(`${base}${uid}/`)).map((u) => decodeURIComponent(u.slice(base.length)));
+  const docPaths = (docs ?? []).map((r) => r.path as string).filter((p) => p.startsWith(`${uid}/`));
+  const results = await Promise.all([
+    imagePaths.length ? supabase.storage.from("product-images").remove(imagePaths) : null,
+    docPaths.length ? supabase.storage.from("product-files").remove(docPaths) : null,
+  ]);
+  for (const r of results) if (r?.error) console.warn("[deleteProduct] files left in storage:", r.error.message);
 }
 
 export async function duplicateProduct(vendorId: string, sourceId: string): Promise<void> {

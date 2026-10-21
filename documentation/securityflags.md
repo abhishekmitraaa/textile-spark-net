@@ -118,7 +118,10 @@ in the next one.
 
 ## Log
 
-### 2026-10-21 — Storage links, follow-up (migration 20261021110000) — Severity: High
+### 2026-10-21 — Vendor audit, items 6-10 (not live yet) — Severity: Info
+- `my_quoted_rfqs()` (security definer, authenticated only) returns, for requirements the caller has quoted, the title, product name, quantity, picture, buyer id, status and the number of quotes from all sellers. It bypasses rfqs_select for those rows only: a seller keeps the details of a requirement they quoted after it is removed, closed or its buyer blocks them (the chat itself stays blocked). It reveals no competitor's identity or price, only the count the card already promised.
+
+### 2026-10-21 — Storage links, follow-up (live 2026-10-21) — Severity: High
 - **Parser differential:** the "looks like Storage" test ran on the raw address, so `\` for `/`, a tab or newline inside "storage", or `%73torage` passed as an outside link while a browser (and the server) loaded Cosora's file, which could then be swapped after review. Now decided on a normalised copy (percent-decoded, `\`→`/`, controls and whitespace dropped, lower case); anything mentioning supabase or storage…v1 must be the plain address. Found by the automated security reviews of the 20261021100000 commit and push.
 - **Cross-seller links:** a seller could link another seller's file on their own listing (a stolen photo), which also froze it as "in use" for its owner. Links into Cosora's Storage must be in the row owner's folder; only the owner's links count as in use.
 
