@@ -118,7 +118,7 @@ in the next one.
 
 ## Log
 
-### 2026-10-22 — Profile score ranks sellers; CSV import off (not live yet) — Severity: Medium
+### 2026-10-22 — Profile score ranks sellers; CSV import off (live 2026-10-22) — Severity: Medium
 - **Self-written ranking input:** `vendor_profiles.profile_score` was computed and written by the seller's browser. Harmless while only the seller saw it; once it ranks sellers for buyers a seller could have set 100. Now computed by the database (`vendor_profile_score_of()`, trigger `trg_vendor_profiles_zz_profile_score` replaces any client value; listings and quotes rescore through `admin.vendor_score_refresh()`). The inputs are the seller's own fields and counts, so it rewards a complete profile; the checks themselves (e.g. "a website", "2 quotes sent") can still be filled with little effort, which is why it ranks only within the same plan tier and is a small push on requirement matching.
 - **CSV import off:** `import_products` revoked from clients and the switch off. It was the only way to put outside photo addresses on a listing (whose content can change after review).
 
