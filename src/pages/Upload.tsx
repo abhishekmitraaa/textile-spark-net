@@ -2,6 +2,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useState, useRef, useEffect } from "react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { supabase } from "@/lib/supabase";
+import { fileExt } from "@/lib/fileExt";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
@@ -76,6 +77,10 @@ function resolveColour(values: Record<string, string | string[]>): string | null
 
 type Step = "category" | "subcategory" | "details" | "images" | "pricing";
 
+/** A photo on the form: one the listing already has (`rowId`), or a newly picked File. */
+type PickedImage = { src: string; rowId?: string; file?: File };
+const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
+
 const ALL_STEPS: { id: Step; label: string }[] = [
   { id: "category", label: "Category" },
   { id: "subcategory", label: "Sub-category" },
@@ -105,14 +110,15 @@ const Upload = () => {
   const steps = isEdit ? ALL_STEPS.filter((s) => s.id !== "category" && s.id !== "subcategory") : ALL_STEPS;
   const [submitting, setSubmitting] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  // Real File objects for the picked images (parallel to `images` previews),
-  // uploaded to Storage on submit.
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [currentStep, setCurrentStep] = useState<Step>(isEdit ? "details" : "category");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedSubCategory, setSelectedSubCategory] = useState<string | null>(null);
   const [selectedSubType, setSelectedSubType] = useState<string | null>(null);
-  const [images, setImages] = useState<string[]>([]);
+  // The listing's photos in display order. One list for both kinds (2026-10-21): a photo the listing already
+  // has carries its product_images row id; a newly picked one carries its File, uploaded on submit. Two
+  // parallel arrays (previews and Files) fell out of step in edit mode, so removing an existing photo dropped
+  // a new one instead.
+  const [images, setImages] = useState<PickedImage[]>([]);
   // Real files since 2026-10-17 (only their names were kept, and nothing uploaded). A video becomes a Video
   // Closeup tagged to this listing (same upload, moderation and player); a PDF goes to product-files.
   const [videoFiles, setVideoFiles] = useState<{ file: File; probe: VideoProbe }[]>([]);
@@ -135,7 +141,7 @@ const Upload = () => {
     setProductName(editing.name);
     setProductDescription(editing.description ?? "");
     setPrice(editing.price_value != null ? String(editing.price_value) : "");
-    setImages(editing.images);
+    setImages(editing.imageRows.map((r) => ({ src: r.url, rowId: r.id })));
     setCustomizationAvailable(editing.customization_available);
     setUnit(editing.unit ?? "");
     setSku(typeof editing.attributes?.sku === "string" ? editing.attributes.sku : "");
@@ -224,13 +230,15 @@ const Upload = () => {
     }
   };
 
-  // Add real image Files (from drop or the file picker), capped at 6, keeping a
-  // preview URL and the File itself in lockstep.
+  // Add real image Files (from drop or the file picker), capped at 6 photos in all. Storage takes pictures of
+  // at most 10 MB (the bucket's limit since 2026-10-21), so a bigger one is refused here, with the reason.
   const addImageFiles = (files: File[]) => {
     const imgs = files.filter((f) => f.type.startsWith("image/"));
-    if (imgs.length === 0) return;
-    setImages((prev) => [...prev, ...imgs.map((f) => URL.createObjectURL(f))].slice(0, 6));
-    setImageFiles((prev) => [...prev, ...imgs].slice(0, 6));
+    const tooBig = imgs.filter((f) => f.size > MAX_IMAGE_BYTES);
+    if (tooBig.length) toast.error(tooBig.length === 1 ? "This photo is over 10 MB" : "Some photos are over 10 MB", { description: "Add a smaller photo." });
+    const fit = imgs.filter((f) => f.size <= MAX_IMAGE_BYTES);
+    if (fit.length === 0) return;
+    setImages((prev) => [...prev, ...fit.map((file) => ({ src: URL.createObjectURL(file), file }))].slice(0, 6));
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -247,7 +255,6 @@ const Upload = () => {
 
   const removeImage = (index: number) => {
     setImages((prev) => prev.filter((_, i) => i !== index));
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Each file is checked before it's accepted: a video the reel couldn't play, or a "PDF" that isn't one, is
@@ -312,19 +319,69 @@ const Upload = () => {
     }
   };
 
-  // Upload the picked image Files to the product-images bucket under the
-  // vendor's own folder (<uid>/<productId>/…) and return their public URLs.
-  const uploadImages = async (productId: string): Promise<string[]> => {
+  // Upload newly picked image Files to the product-images bucket under the vendor's own folder and return
+  // their public URLs, in order. Every file gets a name of its own (2026-10-21): the name used to be its
+  // index from 0, so a photo added while editing overwrote the listing's cover at <uid>/<pid>/0. Storage
+  // also refuses to overwrite a picture a listing uses (migration 20261021100000), so no upsert.
+  const uploadImages = async (productId: string, files: File[]): Promise<string[]> => {
     const urls: string[] = [];
-    for (let i = 0; i < imageFiles.length; i++) {
-      const file = imageFiles[i];
-      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
-      const path = `${user!.id}/${productId}/${i}.${ext}`;
-      const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+    for (const file of files) {
+      const ext = fileExt(file.name, "jpg");
+      const path = `${user!.id}/${productId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from("product-images").upload(path, file, { contentType: file.type || undefined });
       if (error) throw error;
       urls.push(supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl);
     }
     return urls;
+  };
+
+  // The edit form's photos, saved: rows the vendor removed are deleted (then their files), new files are
+  // uploaded, and every photo's position follows the form's order. Removing or reordering a live listing's
+  // photos sends it back to review (trg_product_images_rereview), as adding one always did.
+  const saveEditedImages = async (productId: string) => {
+    const before = editing?.imageRows ?? [];
+    const keptIds = new Set(images.flatMap((i) => (i.rowId ? [i.rowId] : [])));
+    const removed = before.filter((r) => !keptIds.has(r.id));
+    const newFiles = images.flatMap((i) => (i.file ? [i.file] : []));
+    if (removed.length === 0 && newFiles.length === 0
+        && images.every((img, k) => img.rowId === before[k]?.id && before[k]?.position === k)) {
+      return; // nothing changed
+    }
+
+    if (removed.length > 0) {
+      const { data, error } = await supabase.from("product_images").delete()
+        .eq("product_id", productId).in("id", removed.map((r) => r.id)).select("id");
+      if (error) throw error;
+      if ((data ?? []).length !== removed.length) throw new Error("Some photos couldn't be removed. Reload and try again.");
+      // The rows are gone, so the files are no listing's now: remove the ones in this vendor's own folder
+      // (not a photo linked from elsewhere, nor a second row's copy). A failure here only leaves a file behind.
+      const base = supabase.storage.from("product-images").getPublicUrl("").data.publicUrl;
+      const stillUsed = new Set(before.filter((r) => keptIds.has(r.id)).map((r) => r.url));
+      const paths = removed.map((r) => r.url)
+        .filter((u) => u.startsWith(`${base}${user!.id}/`) && !stillUsed.has(u))
+        .map((u) => decodeURIComponent(u.slice(base.length)));
+      if (paths.length) {
+        const { error: rmErr } = await supabase.storage.from("product-images").remove(paths);
+        if (rmErr) console.warn("[Upload] removed photos left in storage:", rmErr.message);
+      }
+    }
+
+    const newUrls = await uploadImages(productId, newFiles);
+    let next = 0;
+    const order = images.map((img) => (img.file ? { url: newUrls[next++] } : { rowId: img.rowId! }));
+    // Kept rows move to their place first; their positions can only shrink or swap, and position isn't unique.
+    for (const [k, slot] of order.entries()) {
+      if (!slot.rowId) continue;
+      const was = before.find((r) => r.id === slot.rowId);
+      if (was && was.position === k) continue;
+      const { error } = await supabase.from("product_images").update({ position: k }).eq("id", slot.rowId);
+      if (error) throw error;
+    }
+    const inserts = order.flatMap((slot, k) => (slot.url ? [{ product_id: productId, url: slot.url, position: k }] : []));
+    if (inserts.length > 0) {
+      const { error } = await supabase.from("product_images").insert(inserts);
+      if (error) throw error;
+    }
   };
 
   // Driven by the two action buttons: "Save as Draft" → draft (hidden),
@@ -433,7 +490,7 @@ const Upload = () => {
       const unitValue = unit || null;
 
       if (isEdit && editId) {
-        // Edit: update the row + append any newly-picked images (existing ones stay).
+        // Edit: update the row, then the photos as the form now has them (saveEditedImages).
         await updateProduct(editId, {
           name: productName,
           description: productDescription || null,
@@ -459,18 +516,7 @@ const Upload = () => {
           // the edit, so it goes through review when the plan has room for it again.
           status: pausedEdit ? undefined : nextStatus,
         });
-        if (imageFiles.length > 0) {
-          const { count } = await supabase
-            .from("product_images")
-            .select("*", { count: "exact", head: true })
-            .eq("product_id", editId);
-          const start = count ?? 0;
-          const urls = await uploadImages(editId);
-          const { error: imgErr } = await supabase
-            .from("product_images")
-            .insert(urls.map((url, i) => ({ product_id: editId, url, position: start + i })));
-          if (imgErr) throw imgErr;
-        }
+        await saveEditedImages(editId);
         await uploadMedia(editId, subNameForMedia());
         queryClient.invalidateQueries({ queryKey: ["products"] });
         toast.success("Product updated", {
@@ -527,7 +573,7 @@ const Upload = () => {
         .single();
       if (error) throw error;
 
-      const urls = await uploadImages(inserted.id);
+      const urls = await uploadImages(inserted.id, images.flatMap((i) => (i.file ? [i.file] : [])));
       if (urls.length > 0) {
         const { error: imgErr } = await supabase
           .from("product_images")
@@ -941,9 +987,9 @@ const Upload = () => {
 
               {images.length > 0 && (
                 <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-6 lg:gap-4">
-                  {images.map((src, index) => (
+                  {images.map(({ src, rowId }, index) => (
                     <motion.div
-                      key={index}
+                      key={rowId ?? src}
                       initial={{ opacity: 0, scale: 0.8 }}
                       animate={{ opacity: 1, scale: 1 }}
                       className="group relative aspect-square overflow-hidden rounded-lg border border-border"
@@ -961,6 +1007,7 @@ const Upload = () => {
                       <button
                         type="button"
                         onClick={() => removeImage(index)}
+                        aria-label={`Remove image ${index + 1}`}
                         className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground"
                       >
                         <X className="h-3 w-3" />

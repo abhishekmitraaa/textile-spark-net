@@ -502,6 +502,9 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
     // Direct Quote Requests inbox, not the shared lead pool. Every pre-existing
     // RFQ has vendor_id NULL, so this is a no-op for them.
     .is("vendor_id", null)
+    // Not the seller's own requirements (posted as a buyer): they can't be quoted (enforce_quote_rfq_open,
+    // 2026-10-21), and rfqs_select shows a buyer their own rows, so the pool listed them.
+    .neq("buyer_id", vendorId)
     .order("created_at", { ascending: false });
   if (error) throw error;
   const rows = (data ?? []) as RawLeadRfq[];

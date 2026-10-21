@@ -1,6 +1,7 @@
 import { priceText } from "@/lib/currency";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { fileExt } from "@/lib/fileExt";
 import type { VideoCloseUp } from "@/components/buyer/VideoCloseUpsViewer";
 import videoThumbPlaceholder from "@/assets/placeholders/video-thumb-placeholder.svg";
 
@@ -543,7 +544,7 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     thumbnail_url = slot.thumbnailUrl;
   } else {
     const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const vext = v.file.name.split(".").pop()?.toLowerCase() || "mp4";
+    const vext = fileExt(v.file.name, "mp4");
     // Resumable, so a dropped connection mid-upload continues rather than
     // restarting. The vendorId prefix is what the storage RLS policy checks.
     //
@@ -555,7 +556,7 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     video_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(vpath).data.publicUrl;
 
     if (v.thumbnail) {
-      const text = v.thumbnail.name.split(".").pop()?.toLowerCase() || "jpg";
+      const text = fileExt(v.thumbnail.name, "jpg");
       // Derive the poster path from the video path that actually won, not from
       // `key`. On a resumed upload those differ, and pairing them means a retry
       // overwrites its own poster (upsert) instead of leaving one stranded.

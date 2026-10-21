@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { fileExt } from "@/lib/fileExt";
 import type { Json } from "@/lib/database.types";
 import { resolveCategoryId } from "@/lib/queries/products";
 import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
@@ -495,7 +496,7 @@ export async function uploadSignature(vendorId: string, dataUrl: string): Promis
 
 /** One image for the step-7 product. Mirrors Upload.tsx's `<vendor>/<key>/<i>` shape. */
 export async function uploadOnboardingProductImage(vendorId: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const ext = fileExt(file.name, "jpg");
   const suffix = Math.random().toString(36).slice(2, 8);
   const path = `${vendorId}/onboarding-product/${Date.now()}-${suffix}.${ext}`;
   const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });

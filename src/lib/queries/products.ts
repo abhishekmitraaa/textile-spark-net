@@ -843,6 +843,8 @@ export interface EditableProduct {
   category_id: string | null;
   status: string;
   images: string[];
+  /** The rows behind `images`, in the same order: the edit form removes and reorders photos by row. */
+  imageRows: { id: string; url: string; position: number }[];
   sizes: string[] | null;
   colour: string | null;
   // Edit mode skips the category/subcategory steps, so the Details step renders
@@ -868,12 +870,15 @@ export interface EditableProduct {
 async function fetchProductForEdit(id: string): Promise<EditableProduct | null> {
   const { data, error } = await supabase
     .from("products")
-    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, unit, attributes, product_images ( url, position )")
+    .select("id, name, description, price_value, moq, fabric, gsm, fit_type, gender, category_id, status, sizes, colour, pattern, occasion, neck_type, sleeve_type, collar_type, country_of_origin, waist_sizes, lengths, customization_available, location, unit, attributes, product_images ( id, url, position )")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
   if (!data) return null;
-  const row = data as unknown as (EditableProduct & { product_images: RawImage[] | null });
+  const row = data as unknown as (EditableProduct & { product_images: (RawImage & { id: string })[] | null });
+  const imageRows = [...(row.product_images ?? [])]
+    .sort((a, b) => a.position - b.position || a.id.localeCompare(b.id))
+    .map((i) => ({ id: i.id, url: i.url, position: i.position }));
   return {
     id: row.id, name: row.name, description: row.description, price_value: row.price_value,
     moq: row.moq, fabric: row.fabric, gsm: row.gsm, fit_type: row.fit_type, gender: row.gender,
@@ -892,7 +897,8 @@ async function fetchProductForEdit(id: string): Promise<EditableProduct | null> 
     location: row.location ?? null,
     unit: row.unit ?? null,
     attributes: (row.attributes ?? {}) as Attributes,
-    images: [...(row.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url),
+    images: imageRows.map((i) => i.url),
+    imageRows,
   };
 }
 

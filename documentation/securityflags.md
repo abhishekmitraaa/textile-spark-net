@@ -118,6 +118,11 @@ in the next one.
 
 ## Log
 
+### 2026-10-21 — Vendor audit, serious list (not live yet) — Severity: High
+- **Moderation bypass through Storage:** a seller could overwrite (upsert), or remove and upload again, the file behind an approved listing photo, catalogue or video; buyers saw the new file while the listing stayed live. The owner insert and update policies on product-images, catalogues and product-videos now refuse a path that a `product_images`, `catalogues` or `product_videos` row points at (`public.storage_object_in_use`, definer, authenticated only). Removing such a file is still allowed: it breaks the picture but can't swap it. The check matches the plain address, so those rows may point at Cosora's Storage only by it (`storage_url_plain` constraints): a second spelling (`?v=1`, `#x`, `%65`, `/./`, the render endpoint, `/STORAGE/`) loads the same file but wasn't seen as in use (found by the automated security review of the migration; fixed before release). Still open: CSV-import photo links can be outside addresses, whose content can change after review.
+- **Open public buckets:** product-images, avatars and catalogues had no size limit and no type list, so any signed-in account (a buyer included) could keep any file there (20 MB of binary was accepted): free public hosting, and Free-plan storage used up. Now pictures up to 10 MB (catalogues: PDFs and pictures up to 20 MB); no SVG.
+- **Self-dealing quotes:** a seller could quote, and as the buyer accept, their own requirement, inflating order value and acceptance rate. Now refused by `enforce_quote_rfq_open`.
+
 ### 2026-10-20 — Admin audit, low list: account search by phone (live 2026-10-21) — Severity: Info
 - `admin_profile_search` now matches phone digits (6 or more) for super admin, support and manager. It answers "which account has this number" and never returns a number, so it reveals no more than the audited reveal-contact path; it lets those roles confirm whether a number has an account, which a fraud report needs.
 

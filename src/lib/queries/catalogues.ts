@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
+import { fileExt } from "@/lib/fileExt";
 
 // ─────────────────────────────────────────────────────────────
 // Vendor catalogues (PDF lookbooks). A vendor uploads a PDF → it enters
@@ -137,7 +138,7 @@ export async function createCatalogue(vendorId: string, c: NewCatalogue): Promis
 
   let cover_url: string | null = null;
   if (c.cover) {
-    const ext = c.cover.name.split(".").pop()?.toLowerCase() || "jpg";
+    const ext = fileExt(c.cover.name, "jpg");
     const cpath = `${vendorId}/${key}-cover.${ext}`;
     const { error: ce } = await supabase.storage.from("catalogues").upload(cpath, c.cover, { upsert: true });
     if (ce) throw ce;

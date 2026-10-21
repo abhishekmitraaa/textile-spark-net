@@ -8429,5 +8429,10 @@
  "Enter a valid email address, like name@company.com.": "सही ईमेल पता लिखें, जैसे name@company.com।",
  "Enter your business name.": "अपने व्यवसाय का नाम लिखें।",
  "A pincode is 6 digits.": "पिनकोड 6 अंकों का होता है।",
- "Couldn't finish signing up": "साइन अप पूरा नहीं हो सका"
+ "Couldn't finish signing up": "साइन अप पूरा नहीं हो सका",
+ "This photo is over 10 MB": "यह फ़ोटो 10 MB से बड़ी है",
+ "Some photos are over 10 MB": "कुछ फ़ोटो 10 MB से बड़ी हैं",
+ "Add a smaller photo.": "छोटी फ़ोटो जोड़ें।",
+ "Some photos couldn't be removed. Reload and try again.": "कुछ फ़ोटो हटाई नहीं जा सकीं। पेज दोबारा लोड करके फिर कोशिश करें।",
+ "Remove image {0}": "फ़ोटो {0} हटाएँ"
 }
