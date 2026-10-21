@@ -118,7 +118,7 @@ in the next one.
 
 ## Log
 
-### 2026-10-21 — Vendor audit, items 6-10 (not live yet) — Severity: Info
+### 2026-10-21 — Vendor audit, items 6-10 (live 2026-10-21) — Severity: Info
 - `my_quoted_rfqs()` (security definer, authenticated only) returns, for requirements the caller has quoted, the title, product name, quantity, picture, buyer id, status and the number of quotes from all sellers. It bypasses rfqs_select for those rows only: a seller keeps the details of a requirement they quoted after it is removed, closed or its buyer blocks them (the chat itself stays blocked). It reveals no competitor's identity or price, only the count the card already promised.
 
 ### 2026-10-21 — Storage links, follow-up (live 2026-10-21) — Severity: High
