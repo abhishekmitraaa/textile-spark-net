@@ -17,7 +17,11 @@ declare
     'a super admin adds a question and it is audited', 'a manager can''t save a question',
     'a core question can''t be deactivated', 'a core question keeps its key and kind',
     'a super admin deactivates and reactivates a question',
-    'a requirement question carries the listing key it means'];
+    'a requirement question carries the listing key it means',
+    'a seller''s unknown listing key is refused', 'a listing value of the wrong kind is refused',
+    'sku, subType and colours are accepted', 'every question set''s full answers are accepted',
+    'staff and the database are never refused', 'a key defined with two kinds accepts both shapes',
+    'a turned-off question''s key is still accepted', 'a buyer''s unknown requirement key is refused'];
   wants text[] := array[
     '773', '188',
     'one fewer', '42501',
@@ -25,7 +29,11 @@ declare
     'saved|audited', '42501',
     '22023', 'quantity|text',
     'false|true',
-    'budget|0;colors|1;fabric|1'];
+    'budget|0;colors|1;fabric|1',
+    '22023', '22023|22023',
+    'ok', '19 of 19',
+    'ok|ok', 'ok|ok',
+    'ok', '22023'];
   got text; i int; n int; m int; rid uuid;
   out text := '';
 begin
@@ -107,6 +115,61 @@ begin
           select string_agg(d.k || '|' || d.w, ';' order by d.k) into got
             from (select distinct key as k, match_weight::int::text as w from public.attribute_definitions
                    where form = 'requirement' and schema_key = 'womens' and key in ('colors', 'fabric', 'budget')) d;
+        elsif i = 13 then
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H13', 'draft', '{"zzzUnknown": "x"}');
+          got := 'ok';
+        elsif i = 14 then
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          begin
+            insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H14a', 'draft', '{"washCare": {"a": 1}}');
+            got := 'ok';
+          exception when others then got := sqlstate; end;
+          begin
+            insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H14b', 'draft', '{"neckType": 5}');
+            got := got || '|ok';
+          exception when others then got := got || '|' || sqlstate; end;
+        elsif i = 15 then
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.products (vendor_id, name, status, attributes)
+          values (vendor, 'H15', 'draft', '{"sku": "A-1", "subType": "Polo", "colours": ["Red", "Blue"], "washCare": ["Machine Wash"], "neckType": "Round Neck", "brand": "true"}');
+          got := 'ok';
+        elsif i = 16 then
+          -- One answer to every question of each set (a list for the multi-choice ones), plus the price boxes.
+          select count(*) filter (where public.attributes_problem('requirement', a) is null)::text || ' of ' || count(*)
+            into got
+            from (select jsonb_object_agg(key, case when kind = 'chips' then to_jsonb(array[coalesce(options[1], 'x')])
+                                                     else to_jsonb(coalesce(options[1], 'x')) end)
+                         || '{"budgetMin": "100", "budgetMax": "200"}'::jsonb as a
+                    from public.attribute_definitions where form = 'requirement' group by schema_key) s;
+        elsif i = 17 then
+          perform set_config('request.jwt.claims', json_build_object('sub', admn, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H17a', 'draft', '{"zzzStaff": "x"}');
+          execute 'reset role';
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H17b', 'draft', '{"zzzDb": "x"}');
+          got := 'ok|ok';
+        elsif i = 18 then
+          -- "material" is a single choice in some categories and a list in others.
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H18a', 'draft', '{"material": "Cotton"}');
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H18b', 'draft', '{"material": ["Cotton", "Silk"]}');
+          got := 'ok|ok';
+        elsif i = 19 then
+          update public.attribute_definitions set active = false where form = 'product' and key = 'washCare';
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.products (vendor_id, name, status, attributes) values (vendor, 'H19', 'draft', '{"washCare": ["Hand Wash"]}');
+          got := 'ok';
+        elsif i = 20 then
+          perform set_config('request.jwt.claims', json_build_object('sub', buyer, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          insert into public.rfq_submissions (buyer_id, title, quantity, attributes) values (buyer, 'H20', 10, '{"zzzUnknown": "x"}');
+          got := 'ok';
         end if;
       exception when others then
         got := sqlstate;
