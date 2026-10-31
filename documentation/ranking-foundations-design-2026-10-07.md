@@ -4,7 +4,7 @@
 of three: **Foundations → Fit (Part 3) → Standing (Part 2)**. Ranking itself does not change in Part 1; Parts 3 and 2
 read what it stores.
 
-**F1 and F2 LIVE 2026-10-07. F3 built 2026-10-31** (plan `documentation/ranking-f3-plan-2026-10-31.md`; its "Decisions" section refines the F3 section below: requirement questions are mapped to listing questions with `match_key` rather than rebuilt from them).
+**F1 and F2 LIVE 2026-10-07. F3 LIVE 2026-11-01** (plan `documentation/ranking-f3-plan-2026-10-31.md`; its "Decisions" section refines the F3 section below: requirement questions are mapped to listing questions with `match_key` rather than rebuilt from them).
 
 ## The decisions (Mitra, 2026-10-06/07)
 
