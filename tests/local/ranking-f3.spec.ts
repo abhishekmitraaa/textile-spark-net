@@ -6,7 +6,7 @@
  *   3c If the questions can't be read, the form asks today's questions.
  */
 import { expect, test, type Page } from "@playwright/test";
-import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, signedInContext, sql } from "./stack";
 
 const tag = Date.now().toString(36);
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
@@ -151,4 +151,82 @@ test("5b if the questions can't be read, the requirement form asks today's quest
   await expect(reqField(page, /^Composition/)).toBeVisible({ timeout: 30_000 });
   await expect(reqField(page, /^Quantity/)).toBeVisible();
   await ctx.close();
+});
+
+// ── Cosora-Admin › Attributes (Task 6) ──
+test("6a a super admin edits a listing question: label, Hindi label, a new option; the Admin Log has it", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const before = snapshot("neckType");
+  const beforeHi = sql(`select coalesce(label_hi, '') from public.attribute_definitions where ${TEE} and key = 'neckType'`);
+  const id = sql(`select id from public.attribute_definitions where ${TEE} and key = 'neckType'`);
+  try {
+    const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+    const page = await ctx.newPage();
+    await page.goto(`${ADMIN_URL}/attributes`);
+    await page.getByLabel("Category", { exact: true }).selectOption("apparel-home");
+    await page.getByLabel("Subcategory").selectOption("mens-tshirts");
+    const row = page.locator("tr", { hasText: "neckType" });
+    await row.getByRole("button", { name: "Edit" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Label", { exact: true }).fill(`Neckline (admin) ${tag}`);
+    await dialog.getByLabel("Label in Hindi").fill(`गले का प्रकार ${tag}`);
+    const options = dialog.getByLabel("Options (one per line)");
+    await options.fill(`${await options.inputValue()}\nAdmin Option ${tag}`);
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Question saved")).toBeVisible();
+    expect(sql(`select label || '|' || label_hi || '|' || ('Admin Option ${tag}' = any (options))::text
+                  from public.attribute_definitions where id = '${id}'`)).toBe(`Neckline (admin) ${tag}|गले का प्रकार ${tag}|true`);
+    expect(Number(sql(`select count(*) from admin.audit_log where target_table = 'public.attribute_definitions' and target_id = '${id}'`))).toBeGreaterThan(0);
+    await ctx.close();
+  } finally {
+    restore("neckType", before);
+    sql(`update public.attribute_definitions set label_hi = ${beforeHi ? `'${beforeHi}'` : "null"} where id = '${id}'`);
+  }
+});
+
+test("6b a super admin adds a requirement question", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const key = `adm${tag}`;
+  try {
+    const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+    const page = await ctx.newPage();
+    await page.goto(`${ADMIN_URL}/attributes`);
+    await page.getByRole("button", { name: "Requirement form" }).click();
+    await page.getByLabel("Question set").selectOption("fabrics");
+    await page.getByRole("button", { name: "Add a question" }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Key").fill(key);
+    await dialog.getByLabel("Label", { exact: true }).fill(`Admin added ${tag}`);
+    await dialog.getByLabel("Kind").selectOption("select");
+    await dialog.getByLabel("Options (one per line)").fill("Yes\nNo");
+    await dialog.getByRole("button", { name: "Save" }).click();
+    await expect(page.getByText("Question added")).toBeVisible();
+    expect(sql(`select schema_key || '|' || kind || '|' || array_to_string(options, ',') || '|' || active::text
+                  from public.attribute_definitions where form = 'requirement' and key = '${key}'`)).toBe("fabrics|select|Yes,No|true");
+    await expect(page.locator("tr", { hasText: key })).toBeVisible();
+    await ctx.close();
+  } finally {
+    sql(`delete from public.attribute_definitions where form = 'requirement' and key = '${key}'`);
+  }
+});
+
+test("6c a question is turned off and on; a core question can't be turned off", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const id = sql(`select id from public.attribute_definitions where form = 'requirement' and schema_key = 'fabrics' and key = 'weave'`);
+  try {
+    const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+    const page = await ctx.newPage();
+    await page.goto(`${ADMIN_URL}/attributes`);
+    await page.getByRole("button", { name: "Requirement form" }).click();
+    await page.getByLabel("Question set").selectOption("fabrics");
+    await expect(page.locator("tr", { hasText: "quantity" }).getByRole("button", { name: "Turn off" })).toHaveCount(0);
+    const weave = page.locator("tr", { hasText: "weave" });
+    await weave.getByRole("button", { name: "Turn off" }).click();
+    await expect.poll(() => sql(`select active::text from public.attribute_definitions where id = '${id}'`)).toBe("false");
+    await weave.getByRole("button", { name: "Turn on" }).click();
+    await expect.poll(() => sql(`select active::text from public.attribute_definitions where id = '${id}'`)).toBe("true");
+    await ctx.close();
+  } finally {
+    sql(`update public.attribute_definitions set active = true where id = '${id}'`);
+  }
 });
