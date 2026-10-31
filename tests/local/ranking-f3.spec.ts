@@ -122,8 +122,8 @@ test("5a an admin's new requirement question is asked, and its answer is stored"
   sql(`insert into public.attribute_definitions (form, schema_key, section_title, section_position, key, label, kind, position)
        select 'requirement', 'fabrics', section_title, 0, '${key}', 'F3 shrinkage ${tag}', 'text', 99
          from public.attribute_definitions where form = 'requirement' and schema_key = 'fabrics' and section_position = 0 limit 1`);
+  const buyer = await freshAccount(`f3r${tag}`);
   try {
-    const buyer = await freshAccount(`f3r${tag}`);
     const ctx = await contextWithSession(browser, buyer.session, { width: 390, height: 900 }, true);
     const page = await ctx.newPage();
     await openFabricRequirement(page);
@@ -137,6 +137,8 @@ test("5a an admin's new requirement question is asked, and its answer is stored"
     expect(sql(`select attributes ->> '${key}' from public.rfq_submissions where buyer_id = '${buyer.id}'`)).toBe("Under 3%");
     await ctx.close();
   } finally {
+    // Questions are never deleted in the app (only turned off); this test's own question is, so its answer goes too.
+    sql(`delete from public.rfq_submissions where buyer_id = '${buyer.id}'`);
     sql(`delete from public.attribute_definitions where form = 'requirement' and key = '${key}'`);
   }
 });
