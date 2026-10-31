@@ -50,6 +50,7 @@ import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import { DynamicFormFields } from "@/components/upload/DynamicFormFields";
 import { getCategoryById, getFieldsForCategory, getOptionalCategoryFields, getSubCategoryById } from "@/data/sellerCategories";
+import { useVocabulary } from "@/lib/queries/attributeDefinitions";
 import { productAttributes } from "@/lib/formAttributes";
 import { createProductVideo, validateVideoFile, type VideoProbe } from "@/lib/queries/videos";
 import { checkPdf, fileSizeLabel, uploadProductDocuments, MAX_PDFS } from "@/lib/queries/productDocuments";
@@ -180,12 +181,14 @@ const Upload = () => {
   const currentStepIndex = steps.findIndex((s) => s.id === currentStep);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
-  const category = selectedCategory ? getCategoryById(selectedCategory) : null;
-  const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined) : [];
+  // The questions super admins edit (public.attribute_definitions, Ranking F3), or the code list if they can't be read.
+  const { vocabulary } = useVocabulary();
+  const category = selectedCategory ? getCategoryById(selectedCategory, vocabulary) : null;
+  const dynamicFields = selectedCategory ? getFieldsForCategory(selectedCategory, selectedSubCategory || undefined, vocabulary) : [];
   // Subcategory is passed so the category-level fallbacks skip anything the
   // subcategory already asks — see getOptionalCategoryFields.
   const optionalFields = selectedCategory
-    ? getOptionalCategoryFields(selectedCategory, selectedSubCategory || undefined)
+    ? getOptionalCategoryFields(selectedCategory, selectedSubCategory || undefined, vocabulary)
     : [];
   const [showOptionalSpecs, setShowOptionalSpecs] = useState(false);
 
@@ -204,8 +207,8 @@ const Upload = () => {
     void sellerIdsForCategoryId(editing.category_id).then((r) => { if (live) setEditSeller(r); });
     return () => { live = false; };
   }, [isEdit, editing?.category_id]);
-  const editSub = editSeller ? getSubCategoryById(editSeller.categoryId, editSeller.subCategoryId) : undefined;
-  const editSizeField = editSub?.fields.find((f) => f.id === "sizes" && f.type === "size-selector");
+  const editSub = editSeller ? getSubCategoryById(editSeller.categoryId, editSeller.subCategoryId, vocabulary) : undefined;
+  const editSizeField = editSub?.fields?.find((f) => f.id === "sizes" && f.type === "size-selector");
   // The chips the Pricing step offers, or null for none: the edited listing's own set; else, for a garment
   // without a size field, the generic letters. What's already chosen always stays visible.
   const pricingSizeBase: string[] | null = isEdit

@@ -1465,14 +1465,29 @@ export const sellerCategories: SellerCategory[] = [
   },
 ];
 
+/**
+ * Everything the listing form asks, in one value (Ranking F3, 2026-10-31). `codeVocabulary` is this file; the
+ * form normally runs on the one built from public.attribute_definitions (lib/queries/attributeDefinitions.ts,
+ * useVocabulary), which super admins edit, and falls back to this one when that can't be read.
+ */
+export interface Vocabulary {
+  categories: SellerCategory[];
+  baseFields: Record<SellerCategory["type"], FormField[]>;
+}
+
+export const codeVocabulary: Vocabulary = {
+  categories: sellerCategories,
+  baseFields: { product: productCommonFields, service: serviceCommonFields, freelancer: freelancerCommonFields },
+};
+
 // Helper function to get category by ID
-export const getCategoryById = (id: string): SellerCategory | undefined => {
-  return sellerCategories.find((cat) => cat.id === id);
+export const getCategoryById = (id: string, vocab: Vocabulary = codeVocabulary): SellerCategory | undefined => {
+  return vocab.categories.find((cat) => cat.id === id);
 };
 
 // Helper function to get subcategory
-export const getSubCategoryById = (categoryId: string, subCategoryId: string): SubCategory | undefined => {
-  const category = getCategoryById(categoryId);
+export const getSubCategoryById = (categoryId: string, subCategoryId: string, vocab: Vocabulary = codeVocabulary): SubCategory | undefined => {
+  const category = getCategoryById(categoryId, vocab);
   return category?.subCategories.find((sub) => sub.id === subCategoryId);
 };
 
@@ -1489,12 +1504,12 @@ export const getSubCategoryById = (categoryId: string, subCategoryId: string): S
 // Passing the subcategory drops any fallback the vendor is already being asked,
 // whether by the subcategory itself or by the base common fields. This is a
 // single generic rule keyed on field id, not a per-field special case.
-export const getOptionalCategoryFields = (categoryId: string, subCategoryId?: string): FormField[] => {
-  const category = getCategoryById(categoryId);
+export const getOptionalCategoryFields = (categoryId: string, subCategoryId?: string, vocab: Vocabulary = codeVocabulary): FormField[] => {
+  const category = getCategoryById(categoryId, vocab);
   if (!category) return [];
 
   const alreadyAsked = new Set(
-    getFieldsForCategory(categoryId, subCategoryId).map((f) => f.id),
+    getFieldsForCategory(categoryId, subCategoryId, vocab).map((f) => f.id),
   );
   return (category.commonFields || []).filter((f) => {
     if (alreadyAsked.has(f.id)) return false;
@@ -1506,6 +1521,21 @@ export const getOptionalCategoryFields = (categoryId: string, subCategoryId?: st
     return true;
   });
 };
+
+/**
+ * The vocabulary vendorOptions() reads by default: the code list, or — for the length of one filter build —
+ * the one the search page loaded (withFacetVocabulary, called by lib/searchFilters.ts resolveFilterSchema).
+ */
+let facetVocabulary: Vocabulary = codeVocabulary;
+export function withFacetVocabulary<T>(vocab: Vocabulary, build: () => T): T {
+  const previous = facetVocabulary;
+  facetVocabulary = vocab;
+  try {
+    return build();
+  } finally {
+    facetVocabulary = previous;
+  }
+}
 
 /**
  * The option list a vendor actually chooses from for `fieldId`, unioned across
@@ -1524,10 +1554,11 @@ export const vendorOptions = (
   fieldId: string,
   subCategoryIds: string[],
   categoryId = "apparel-home",
+  vocab: Vocabulary = facetVocabulary,
 ): string[] => {
   const seen = new Set<string>();
   for (const sub of subCategoryIds) {
-    const fields = [...getFieldsForCategory(categoryId, sub), ...getOptionalCategoryFields(categoryId, sub)];
+    const fields = [...getFieldsForCategory(categoryId, sub, vocab), ...getOptionalCategoryFields(categoryId, sub, vocab)];
     for (const o of fields.find((f) => f.id === fieldId)?.options ?? []) {
       if (o !== "N/A" && o !== "None") seen.add(o);
     }
@@ -1536,21 +1567,17 @@ export const vendorOptions = (
 };
 
 // Get all fields for a category + subcategory combination (excluding optional category commonFields)
-export const getFieldsForCategory = (categoryId: string, subCategoryId?: string): FormField[] => {
-  const category = getCategoryById(categoryId);
+export const getFieldsForCategory = (categoryId: string, subCategoryId?: string, vocab: Vocabulary = codeVocabulary): FormField[] => {
+  const category = getCategoryById(categoryId, vocab);
   if (!category) return [];
 
   // Get base common fields based on seller type
-  const baseFields = category.type === "product" 
-    ? productCommonFields 
-    : category.type === "service" 
-    ? serviceCommonFields 
-    : freelancerCommonFields;
+  const baseFields = vocab.baseFields[category.type];
 
   // Get subcategory-specific fields
   let subCategoryFields: FormField[] = [];
   if (subCategoryId) {
-    const subCategory = getSubCategoryById(categoryId, subCategoryId);
+    const subCategory = getSubCategoryById(categoryId, subCategoryId, vocab);
     subCategoryFields = subCategory?.fields || [];
   }
 

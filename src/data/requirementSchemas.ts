@@ -420,6 +420,9 @@ export const SCHEMAS: Record<string, Section[]> = {
   ],
 };
 
+/** The code list of question sets (the fallback; see the note at the top). */
+export const requirementSchemas: Record<string, Section[]> = SCHEMAS;
+
 /** The question sets for a category picked on the requirement form (the generic set when none is bespoke). */
 export function schemaForCategory(categoryId: string | undefined, schemas: Record<string, Section[]> = SCHEMAS): Section[] {
   if (!categoryId) return schemas.generic ?? SCHEMAS.generic;

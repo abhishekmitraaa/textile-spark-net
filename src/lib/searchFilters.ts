@@ -1,4 +1,4 @@
-import { vendorOptions } from "@/data/sellerCategories";
+import { codeVocabulary, vendorOptions, withFacetVocabulary, type Vocabulary } from "@/data/sellerCategories";
 
 // Context-aware search filters.
 //
@@ -118,8 +118,9 @@ const waist = (): Facet =>
 // Bottomwear inseam, backed by products.lengths.
 const inseam = (): Facet =>
   ({ id: "inseam", label: "Length (inseam)", field: "lengths", options: vendorOptions("lengths", BOTTOM_SUBS) });
-const ORIGIN: Facet =
-  { id: "origin", label: "Country of Origin", field: "countryOfOrigin", options: vendorOptions("originCountry", ["mens-tshirts"]) };
+// A function, so its options come from the vocabulary of the build that asks (withFacetVocabulary).
+const origin = (): Facet =>
+  ({ id: "origin", label: "Country of Origin", field: "countryOfOrigin", options: vendorOptions("originCountry", ["mens-tshirts"]) });
 // Buyer-facing category tree. Options are filled in at query time from the
 // result set (see SearchResults) because they depend on what actually matched.
 const CATEGORY: Facet = { id: "category", label: "Category", field: "category", options: [] };
@@ -146,14 +147,14 @@ const teeFacets = (): Facet[] => [
   fit, fabric(vendorOptions("fabric", ["mens-tshirts"])),
   neck(["mens-tshirts"]), sleeve(["mens-tshirts"]), pattern(["mens-tshirts"]),
   sizes(["mens-tshirts"]), occasion(["mens-tshirts"]),
-  GSM, COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  GSM, COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const poloFacets = (): Facet[] => [
   CATEGORY,
   type("Polo Style", ["Classic", "Tipped", "Pique", "Colour-Block", "Long-Sleeve"]),
   fit, fabric(vendorOptions("fabric", ["mens-tshirts"])),
   neck(["mens-tshirts"]), sleeve(["mens-tshirts"]), pattern(["mens-tshirts"]),
-  sizes(["mens-tshirts"]), GSM, COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  sizes(["mens-tshirts"]), GSM, COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const shirtFacets = (): Facet[] => [
   CATEGORY,
@@ -161,7 +162,7 @@ const shirtFacets = (): Facet[] => [
   fit, fabric(vendorOptions("fabric", SHIRT_SUBS)),
   collar(SHIRT_SUBS), sleeve(SHIRT_SUBS), pattern(SHIRT_SUBS),
   sizes(SHIRT_SUBS), occasion(SHIRT_SUBS),
-  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const womensTopFacets = (): Facet[] => [
   CATEGORY,
@@ -169,7 +170,7 @@ const womensTopFacets = (): Facet[] => [
   fit, fabric(vendorOptions("fabric", ["womens-tops"])),
   neck(["womens-tops"]), sleeve(["womens-tops"]), pattern(["womens-tops"]),
   sizes(["womens-tops"]), occasion(["womens-tops"]),
-  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const TOP_GROUPS: ItemGroup[] = [
   { key: "tee", kws: ["t-shirt", "tshirt", "t shirt", "tee"], facets: teeFacets },
@@ -183,26 +184,26 @@ const jeansFacets = (): Facet[] => [
   type("Jeans Style", ["Skinny", "Slim", "Straight", "Bootcut", "Relaxed", "Baggy", "Mom", "Boyfriend"]),
   fit, { id: "wash", label: "Wash", options: vendorOptions("wash", ["mens-jeans"]) },
   waist(), inseam(), pattern(BOTTOM_SUBS),
-  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const shortsFacets = (): Facet[] => [
   CATEGORY,
   type("Shorts Type", ["Bermuda", "Cargo", "Denim", "Chino", "Sports", "Boxer"]),
   fit, fabric(vendorOptions("fabric", ["mens-pants"])),
   waist(), inseam(), pattern(BOTTOM_SUBS),
-  COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const joggersFacets = (): Facet[] => [
   CATEGORY,
   type("Type", ["Joggers", "Track Pants", "Leggings", "Sweatpants", "Cargo Joggers", "Pyjamas"]),
   fit, fabric(vendorOptions("fabric", ["mens-pants"])), GSM,
-  waist(), inseam(), COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  waist(), inseam(), COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const trousersFacets = (): Facet[] => [
   CATEGORY,
   type("Trouser Type", ["Formal", "Chino", "Cargo", "Casual", "Pleated", "Cropped"]),
   fit, fabric(vendorOptions("fabric", ["mens-pants"])), waist(), inseam(),
-  pattern(BOTTOM_SUBS), COLOUR, PRICE, MOQ, ORIGIN, RATING, VERIFIED,
+  pattern(BOTTOM_SUBS), COLOUR, PRICE, MOQ, origin(), RATING, VERIFIED,
 ];
 const BOTTOM_GROUPS: ItemGroup[] = [
   { key: "jeans", kws: ["jean", "jeans"], facets: jeansFacets },
@@ -372,7 +373,7 @@ const DEFAULT_DOMAIN: Domain = {
   build: () => [gender(),
     fabric(APPAREL_FABRICS),
     pattern(APPAREL_SUBS),
-    CATEGORY, COLOUR, GSM, PRICE, MOQ, ORIGIN, RATING, VERIFIED],
+    CATEGORY, COLOUR, GSM, PRICE, MOQ, origin(), RATING, VERIFIED],
 };
 
 // ── Gender detection ──
@@ -403,12 +404,14 @@ function titleCase(q: string): string {
 }
 
 // ── Resolver ──
-export function resolveFilterSchema(query: string): FilterSchema {
+// `vocab`: the vendor questions the facet options come from — the search page passes the ones super admins edit
+// (useVocabulary, Ranking F3); the code list otherwise.
+export function resolveFilterSchema(query: string, vocab: Vocabulary = codeVocabulary): FilterSchema {
   const q = query.toLowerCase().trim();
   const g = detectGender(q);
   const domain = DOMAINS.find((d) => d.keywords.some((k) => wordHit(q, k))) ?? DEFAULT_DOMAIN;
 
-  let facets = domain.build(q);
+  let facets = withFacetVocabulary(vocab, () => domain.build(q));
   // If the query already implies a gender, keep it as a pre-scope but hide the
   // (now redundant) gender facet so the panel stays focused on the item.
   if (g) facets = facets.map((f) => (f.field === "gender" ? { ...f, hidden: true } : f));
@@ -443,8 +446,8 @@ export function resolveFilterSchema(query: string): FilterSchema {
 // countryOfOrigin, sizes, waist, lengths, category) matches a real column.
 
 // Initial selections — pre-scope gender if the query implies it (e.g. "mens shorts").
-export function defaultSelections(query: string): Record<string, string[]> {
+export function defaultSelections(query: string, vocab: Vocabulary = codeVocabulary): Record<string, string[]> {
   const g = detectGender(query.toLowerCase());
-  const hasGenderFacet = resolveFilterSchema(query).facets.some((f) => f.id === "gender");
+  const hasGenderFacet = resolveFilterSchema(query, vocab).facets.some((f) => f.id === "gender");
   return g && hasGenderFacet ? { gender: [g] } : {};
 }

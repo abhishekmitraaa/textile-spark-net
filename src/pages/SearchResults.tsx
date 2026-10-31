@@ -36,6 +36,7 @@ import {
   resolveFilterSchema, defaultSelections, gsmBucket, ratingThreshold, hashPick, moqBucket,
   type Facet,
 } from "@/lib/searchFilters";
+import { useVocabulary } from "@/lib/queries/attributeDefinitions";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 import { useT } from "@/lib/i18n";
@@ -618,15 +619,17 @@ const SearchResults = () => {
   // Context-aware filters resolved from the search query. The price range's
   // bounds are overridden with the catalogue's actual min/max so the slider
   // always fits the real data instead of the schema's static fallback.
+  // Facet options from the questions super admins edit (Ranking F3), or the code list until they load.
+  const { vocabulary } = useVocabulary();
   const baseSchema = useMemo(() => {
-    const s = resolveFilterSchema(query);
+    const s = resolveFilterSchema(query, vocabulary);
     return {
       ...s,
       facets: s.facets.map((f) =>
         f.kind === "range" && f.id === "price" ? { ...f, min: priceBounds.min, max: priceBounds.max } : f
       ),
     };
-  }, [query, priceBounds]);
+  }, [query, priceBounds, vocabulary]);
 
   const [filterOpen, setFilterOpen] = useState(false);
   const [selections, setSelections] = useState<Record<string, string[]>>(() => defaultSelections(query));
