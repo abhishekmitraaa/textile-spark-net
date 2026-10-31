@@ -21,7 +21,8 @@ declare
     'a seller''s unknown listing key is refused', 'a listing value of the wrong kind is refused',
     'sku, subType and colours are accepted', 'every question set''s full answers are accepted',
     'staff and the database are never refused', 'a key defined with two kinds accepts both shapes',
-    'a turned-off question''s key is still accepted', 'a buyer''s unknown requirement key is refused'];
+    'a turned-off question''s key is still accepted', 'a buyer''s unknown requirement key is refused',
+    'a long answer (3,000 characters) to a long-text question is accepted'];
   wants text[] := array[
     '773', '188',
     'one fewer', '42501',
@@ -33,7 +34,8 @@ declare
     '22023', '22023|22023',
     'ok', '19 of 19',
     'ok|ok', 'ok|ok',
-    'ok', '22023'];
+    'ok', '22023',
+    'null'];
   got text; i int; n int; m int; rid uuid;
   out text := '';
 begin
@@ -170,6 +172,8 @@ begin
           execute 'set local role authenticated';
           insert into public.rfq_submissions (buyer_id, title, quantity, attributes) values (buyer, 'H20', 10, '{"zzzUnknown": "x"}');
           got := 'ok';
+        elsif i = 21 then
+          got := coalesce(public.attributes_problem('requirement', jsonb_build_object('scope', repeat('a', 3000))), 'null');
         end if;
       exception when others then
         got := sqlstate;

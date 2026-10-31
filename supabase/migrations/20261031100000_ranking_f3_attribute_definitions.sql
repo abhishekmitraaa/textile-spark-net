@@ -1164,7 +1164,7 @@ insert into public.attribute_definitions (form, category_id, subcategory_id, lay
 -- A listing's or a requirement's `attributes` (Ranking F1) may hold only answers to questions of its form —
 -- active or turned off, so editing an older listing keeps its answers — plus the keys the forms write
 -- themselves (listings: sku, subType, colours; requirements: the price boxes budgetMin, budgetMax). A value is
--- what lib/formAttributes.ts clean() writes: a string (at most 1,000 characters) or true for a one-answer
+-- what lib/formAttributes.ts clean() writes: a string (at most 5,000 characters: a long answer such as a project scope can run long; a listing's answers stay within products_attributes_shape's 8 KB) or true for a one-answer
 -- question, a list of strings (at most 100) — or one string — for a several-answer question. Staff, the
 -- service role and the database itself are not checked.
 create index attribute_definitions_form_key on public.attribute_definitions (form, key);
@@ -1189,10 +1189,10 @@ begin
     return 'The details aren''t in the right shape.';
   end if;
   for e in select j.key, j.value from jsonb_each(p_attrs) j loop
-    v_one  := (jsonb_typeof(e.value) = 'string' and char_length(e.value #>> '{}') <= 1000) or e.value = 'true'::jsonb;
+    v_one  := (jsonb_typeof(e.value) = 'string' and char_length(e.value #>> '{}') <= 5000) or e.value = 'true'::jsonb;
     v_list := jsonb_typeof(e.value) = 'array' and jsonb_array_length(e.value) <= 100
               and not exists (select 1 from jsonb_array_elements(e.value) x
-                               where jsonb_typeof(x) <> 'string' or char_length(x #>> '{}') > 1000);
+                               where jsonb_typeof(x) <> 'string' or char_length(x #>> '{}') > 5000);
     if (p_form = 'product' and e.key in ('sku', 'subType')) or (p_form = 'requirement' and e.key in ('budgetMin', 'budgetMax')) then
       if not v_one then
         return format('"%s" has the wrong kind of answer.', e.key);
