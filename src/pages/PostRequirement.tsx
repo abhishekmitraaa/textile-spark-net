@@ -12,7 +12,8 @@ import { UPLOAD_IMAGE_TYPES } from "@/lib/shrinkImage";
 import { resolveSubcategoryId, resolveParentCategoryId } from "@/lib/queries/products";
 import { getCategoryById } from "@/data/sellerCategories";
 import { requirementAttributes } from "@/lib/formAttributes";
-import { SCHEMAS, SCHEMA_BY_TAXONOMY, type Field, type Section } from "@/data/requirementSchemas";
+import { schemaForCategory, type Field } from "@/data/requirementSchemas";
+import { useVocabulary } from "@/lib/queries/attributeDefinitions";
 import { CategorySelector } from "@/components/upload/CategorySelector";
 import { SubCategorySelector } from "@/components/upload/SubCategorySelector";
 import BuyerShell from "@/components/buyer/BuyerShell";
@@ -187,10 +188,10 @@ const PostRequirement = () => {
 
   const category = categoryId ? (getCategoryById(categoryId) ?? null) : null;
   const subCategory = category?.subCategories.find((s) => s.id === subCategoryId) ?? null;
-  const sections = categoryId
-    // A category without questions of its own gets the generic set (it used to get the women's-wear questions).
-    ? (SCHEMAS[SCHEMA_BY_TAXONOMY[categoryId] ?? ""] ?? SCHEMAS.generic)
-    : [];
+  // The question sets super admins edit (public.attribute_definitions, Ranking F3), or the code list if they
+  // can't be read. A category without questions of its own gets the generic set.
+  const { requirementSchemas } = useVocabulary();
+  const sections = categoryId ? schemaForCategory(categoryId, requirementSchemas) : [];
 
   // Reset the form whenever the chosen category changes (fields differ per
   // category). The subcategory is cleared too: it belongs to the old parent and

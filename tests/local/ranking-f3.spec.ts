@@ -104,3 +104,51 @@ test("3c if the questions can't be read, the listing form asks today's questions
     restore("neckType", before);
   }
 });
+
+// ── The requirement form (Task 5) ──
+async function openFabricRequirement(page: Page) {
+  await page.goto(`${BUYER_URL}/requirement/post-requirement`);
+  await page.getByRole("button", { name: /Create New Requirement/ }).click();
+  await page.getByRole("button", { name: /Raw Materials/ }).first().click();
+  await page.getByRole("button", { name: /Knitted Fabrics/ }).first().click();
+  await page.getByRole("button", { name: "Continue", exact: true }).click();
+}
+const reqField = (page: Page, labelText: RegExp) =>
+  page.locator("div", { has: page.locator(":scope > label", { hasText: labelText }) }).locator(":scope > input").first();
+
+test("5a an admin's new requirement question is asked, and its answer is stored", async ({ browser }) => {
+  test.setTimeout(150_000);
+  const key = `f3q${tag}`;
+  sql(`insert into public.attribute_definitions (form, schema_key, section_title, section_position, key, label, kind, position)
+       select 'requirement', 'fabrics', section_title, 0, '${key}', 'F3 shrinkage ${tag}', 'text', 99
+         from public.attribute_definitions where form = 'requirement' and schema_key = 'fabrics' and section_position = 0 limit 1`);
+  try {
+    const buyer = await freshAccount(`f3r${tag}`);
+    const ctx = await contextWithSession(browser, buyer.session, { width: 390, height: 900 }, true);
+    const page = await ctx.newPage();
+    await openFabricRequirement(page);
+    await reqField(page, new RegExp(`^F3 shrinkage ${tag}`)).fill("Under 3%");
+    const fabricType = page.locator("div", { has: page.locator(":scope > label", { hasText: /^Fabric Type/ }) }).first();
+    await fabricType.getByRole("button").first().click();
+    await fabricType.getByRole("button", { name: "Linen", exact: true }).click();
+    await reqField(page, /^Quantity/).fill("500 metres");
+    await page.getByRole("button", { name: /Submit Quote Request/ }).click();
+    await expect(page).toHaveURL(/\/requirement\/my-quotes$/, { timeout: 30_000 });
+    expect(sql(`select attributes ->> '${key}' from public.rfq_submissions where buyer_id = '${buyer.id}'`)).toBe("Under 3%");
+    await ctx.close();
+  } finally {
+    sql(`delete from public.attribute_definitions where form = 'requirement' and key = '${key}'`);
+  }
+});
+
+test("5b if the questions can't be read, the requirement form asks today's questions", async ({ browser }) => {
+  test.setTimeout(120_000);
+  const buyer = await freshAccount(`f3s${tag}`);
+  const ctx = await contextWithSession(browser, buyer.session, { width: 390, height: 900 }, true);
+  const page = await ctx.newPage();
+  await page.route(/\/rest\/v1\/attribute_definitions/, (r) => r.fulfill({ status: 500, body: "{}" }));
+  await openFabricRequirement(page);
+  await expect(reqField(page, /^Composition/)).toBeVisible({ timeout: 30_000 });
+  await expect(reqField(page, /^Quantity/)).toBeVisible();
+  await ctx.close();
+});
