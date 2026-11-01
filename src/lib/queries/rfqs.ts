@@ -476,11 +476,13 @@ export interface LeadRfq {
   /** Cosine similarity between the RFQ and the vendor's catalogue centroid.
    *  null when either side has no embedding yet, or when scoring failed. */
   similarity: number | null;
-  /** 0.7 * similarity + 0.3 * matched, from match_vendor_rfqs. Sort key. */
+  /** Fit, from match_vendor_rfqs (documentation/ranking-fit-design-2026-11-01.md). Sort key. */
   score: number;
   /** Semantic fit strong enough to say so in the UI. Distinct from `matched`:
    *  that one claims a category match specifically, and must stay truthful. */
   strongMatch: boolean;
+  /** The buyer's profile state is the vendor's, or one it serves (as they were when the lead was posted). */
+  near: boolean;
   /** The buyer's category answers as label/value pairs (Ranking F1). */
   details: { label: string; value: string }[];
   /** From a buyer outside India (subscriptions P7). Only Gold and VIP vendors read these;
@@ -522,12 +524,12 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
   // Degrades to the chronological list rather than failing: until both sides
   // have an embedding, similarity comes back null and score collapses to the
   // category term alone; a failed RPC leaves every score at 0.
-  let matchOf = new Map<string, { similarity: number | null; categoryMatch: boolean; score: number }>();
+  let matchOf = new Map<string, { similarity: number | null; categoryMatch: boolean; score: number; near: boolean }>();
   const { data: scores, error: scoreErr } = await supabase
     .rpc("match_vendor_rfqs", { p_vendor_id: vendorId, match_count: 200 });
   if (!scoreErr && scores) {
-    matchOf = new Map((scores as { rfq_id: string; similarity: number | null; category_match: boolean; score: number }[])
-      .map((s) => [s.rfq_id, { similarity: s.similarity, categoryMatch: s.category_match, score: s.score }]));
+    matchOf = new Map((scores as { rfq_id: string; similarity: number | null; category_match: boolean; score: number; near: boolean }[])
+      .map((s) => [s.rfq_id, { similarity: s.similarity, categoryMatch: s.category_match, score: s.score, near: Boolean(s.near) }]));
   }
 
   const leads: LeadRfq[] = rows.map((r) => {
@@ -542,6 +544,7 @@ async function fetchOpenRfqs(vendorId: string): Promise<LeadRfq[]> {
       similarity: m?.similarity ?? null,
       score: m?.score ?? 0,
       strongMatch: (m?.similarity ?? 0) >= STRONG_MATCH_SIMILARITY,
+      near: m?.near ?? false,
       details: attributeDetails(r.attributes),
       overseas: Boolean(r.overseas),
       buyerCountryCode: r.buyer_country_code ?? null,

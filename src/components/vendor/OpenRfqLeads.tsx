@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import { Send, Check, Loader2, Sparkles, Globe2, Clock, KanbanSquare } from "lucide-react";
+import { Send, Check, Loader2, Sparkles, Globe2, Clock, KanbanSquare, MapPin } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOpenRfqs, submitQuote } from "@/lib/queries/rfqs";
 import { useNow, timeUntil } from "@/lib/queries/overseas";
@@ -162,7 +162,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
                     and says so in its own words rather than borrowing the
                     category badge's. The category badge wins when both hold,
                     being the more specific claim. */}
-                {(r.matched || r.strongMatch || r.overseas) && (
+                {(r.matched || r.strongMatch || r.near || r.overseas) && (
                   <div className="mb-1 flex flex-wrap items-center gap-1.5">
                     {r.matched ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
@@ -173,6 +173,11 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
                         <Sparkles className="h-3 w-3" /> Strong match
                       </span>
                     ) : null}
+                    {r.near && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 px-2 py-0.5 text-[10px] font-bold text-brand-vendor">
+                        <MapPin className="h-3 w-3" /> Near you
+                      </span>
+                    )}
                     {r.overseas && <OverseasBadge code={r.buyerCountryCode} vipUntil={r.vipUntil} />}
                   </div>
                 )}

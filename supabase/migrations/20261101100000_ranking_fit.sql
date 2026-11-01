@@ -123,8 +123,10 @@ begin
 end
 $function$;
 revoke all on function admin.vendor_location_track() from public, anon, authenticated;
+-- On every update, not "update of state_code": the profile writes the state's name and sync_state_code derives
+-- the code in a BEFORE trigger, which a column-list trigger never sees.
 create trigger trg_vendor_profiles_location_history
-  after insert or update of state_code, served_states on public.vendor_profiles
+  after insert or update on public.vendor_profiles
   for each row execute function admin.vendor_location_track();
 
 -- Today's locations count for every lead already posted.

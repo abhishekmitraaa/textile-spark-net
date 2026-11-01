@@ -40,7 +40,8 @@ declare
     'a near lead ranks first and only it is near',
     'who sees a lead is unchanged (an overseas lead stays hidden from a free vendor)',
     'a buyer can''t read a vendor''s feed', 'clients can''t call the scoring function',
-    'location: a vendor''s change after a lead was posted doesn''t change that lead'];
+    'location: a vendor''s change after a lead was posted doesn''t change that lead',
+    'location: a state picked in the app (free text, code derived) is recorded'];
   wants text[] := array[
     'apparel-home|apparel-home|apparel-home|-|-',
     '1', '0.8',
@@ -56,7 +57,8 @@ declare
     'near-first|t|f',
     'hidden',
     '42501', '42501',
-    '1|1|0.25'];
+    '1|1|0.25',
+    'GJ'];
   got text; i int;
   out text := '';
   apparel uuid; shirts uuid; grand uuid; legacy uuid; itroot uuid;
@@ -202,6 +204,13 @@ begin
           select pg_temp.n(f.loc_part) into b from admin.rfq_fit(vendor, r1) f;
           perform pg_temp.repost(r1);
           select a || '|' || b || '|' || pg_temp.n(f.loc_part) into got from admin.rfq_fit(vendor, r1) f;
+        elsif i = 21 then
+          -- What the business profile does: it writes the state's name; sync_state_code derives the code.
+          set local session_replication_role = origin;
+          update public.vendor_profiles set state = 'Gujarat' where id = vendor;
+          set local session_replication_role = replica;
+          select coalesce(h.state_code, '-') into got from admin.vendor_location_history h
+           where h.vendor_id = vendor order by h.valid_from desc, h.id desc limit 1;
         end if;
       exception when others then
         got := sqlstate || ' ' || sqlerrm;
