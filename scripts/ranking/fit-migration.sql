@@ -61,6 +61,44 @@ as $function$
 $function$;
 revoke all on function admin.fit_values(jsonb) from public, anon, authenticated;
 
+-- ── Where a vendor was, over time ──────────────────────────────────────────────────────────────────────────
+-- A buyer's state is private (buyer_profiles is readable by the buyer and support only). Location is scored
+-- against the vendor's state and served states AS THEY WERE WHEN THE LEAD WAS POSTED, so changing them later
+-- can't be cycled to probe a posted lead's buyer: each lead tells a vendor at most what "Near you" says.
+create table admin.vendor_location_history (
+  id             bigserial primary key,
+  vendor_id      uuid not null references public.vendor_profiles(id) on delete cascade,
+  state_code     text,
+  served_states  text[] not null default '{}',
+  valid_from     timestamptz not null default clock_timestamp()
+);
+create index vendor_location_history_vendor on admin.vendor_location_history (vendor_id, valid_from desc, id desc);
+revoke all on table admin.vendor_location_history from public, anon, authenticated;
+revoke all on sequence admin.vendor_location_history_id_seq from public, anon, authenticated;
+
+create function admin.vendor_location_track()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $function$
+begin
+  if tg_op = 'INSERT' or new.state_code is distinct from old.state_code or new.served_states is distinct from old.served_states then
+    insert into admin.vendor_location_history (vendor_id, state_code, served_states)
+    values (new.id, new.state_code, coalesce(new.served_states, '{}'));
+  end if;
+  return null;
+end
+$function$;
+revoke all on function admin.vendor_location_track() from public, anon, authenticated;
+create trigger trg_vendor_profiles_location_history
+  after insert or update of state_code, served_states on public.vendor_profiles
+  for each row execute function admin.vendor_location_track();
+
+-- Today's locations count for every lead already posted.
+insert into admin.vendor_location_history (vendor_id, state_code, served_states, valid_from)
+select vp.id, vp.state_code, coalesce(vp.served_states, '{}'), '-infinity' from public.vendor_profiles vp;
+
 -- ── The three new parts of Fit ─────────────────────────────────────────────────────────────────────────────
 create function admin.rfq_fit(p_vendor uuid, p_rfq uuid)
 returns table(attr_part double precision, loc_part double precision, scale_part double precision)
@@ -85,13 +123,18 @@ declare
   v_num      double precision := 0;
   v_den      double precision := 0;
 begin
-  select rq.attributes, rq.overseas, rq.buyer_id, rq.category_id, rq.quantity into r
+  select rq.attributes, rq.overseas, rq.buyer_id, rq.category_id, rq.quantity, rq.created_at into r
     from public.rfqs rq where rq.id = p_rfq;
   if not found then
     return;
   end if;
-  select vp.state_code, vp.served_states, vp.capabilities into v_state, v_served, v_caps
-    from public.vendor_profiles vp where vp.id = p_vendor;
+  select vp.capabilities into v_caps from public.vendor_profiles vp where vp.id = p_vendor;
+  -- Where the vendor was when the lead was posted (see admin.vendor_location_history).
+  select h.state_code, h.served_states into v_state, v_served
+    from admin.vendor_location_history h
+   where h.vendor_id = p_vendor and h.valid_from <= r.created_at
+   order by h.valid_from desc, h.id desc
+   limit 1;
   v_served := coalesce(v_served, '{}');
   v_caps := coalesce(v_caps, '{}');
 
@@ -244,6 +287,12 @@ begin
      or has_function_privilege('anon', 'admin.rfq_fit(uuid,uuid)', 'execute')
      or has_function_privilege('authenticated', 'public.category_root_of(uuid)', 'execute') then
     raise exception 'self-check: clients can call the Fit helpers';
+  end if;
+  if (select count(*) from admin.vendor_location_history) < (select count(*) from public.vendor_profiles) then
+    raise exception 'self-check: a vendor has no location history';
+  end if;
+  if has_table_privilege('authenticated', 'admin.vendor_location_history', 'select') then
+    raise exception 'self-check: clients can read vendor location history';
   end if;
   -- Every top-level taxonomy row has a family (a renamed root would silently lose scale).
   if exists (select 1 from public.categories c

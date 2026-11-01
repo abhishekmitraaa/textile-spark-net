@@ -96,10 +96,20 @@ true: the buyer's profile state is the vendor's state or one they serve.
 
 ## Privacy
 
-`match_vendor_rfqs` is a definer function and now reads the buyer's `state_code`. Vendors still never see a buyer's
-state. A "Near you" badge does tell a vendor that the buyer is in their state or a state they serve. A vendor could
-change their state repeatedly to probe a buyer's state. A state is coarse, and the vendor already talks to the buyer
-once they quote, so this is logged in `securityflags.md` as Low.
+`match_vendor_rfqs` is a definer function and now reads the buyer's `state_code`. A buyer's state is private:
+`buyer_profiles` is readable only by the buyer and by support. The automated security review of the first version
+caught a probe. A vendor could cycle their "states I serve" and watch "Near you", or the score, to binary-search a
+buyer's state in about six edits.
+
+**Fix:** location is scored against the vendor's state and served states **as they were when the lead was posted**.
+`admin.vendor_location_history` records every change; it isn't readable by clients. Editing them later doesn't
+change how an already-posted lead scores. Each lead therefore tells a vendor at most what "Near you" is meant to
+say, once.
+
+- **Existing vendors:** today's location counts for leads already posted (a backfilled row dated `-infinity`).
+- **New vendors:** a vendor who sets a state after a lead was posted is neutral on that lead.
+- **What is left:** several vendor accounts with different states could each learn one bit about a new lead. This
+  is logged in `securityflags.md` as Low.
 
 ## Testing
 

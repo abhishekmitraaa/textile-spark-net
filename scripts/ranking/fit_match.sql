@@ -9,6 +9,16 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 create or replace function pg_temp.n(x double precision) returns text language sql immutable as
 $$ select case when x is null then '-' else rtrim(rtrim(round(x::numeric, 3)::text, '0'), '.') end $$;
+-- A vendor's location change, through the history trigger (fixtures otherwise run as replica, which skips it).
+create or replace function pg_temp.vloc(v uuid, code text, served text[]) returns void language plpgsql as $$
+begin
+  set local session_replication_role = origin;
+  update public.vendor_profiles set state_code = code, served_states = served where id = v;
+  set local session_replication_role = replica;
+end $$;
+-- A lead counts as posted now (location is read as it was when the lead was posted).
+create or replace function pg_temp.repost(r uuid) returns void language sql as
+$$ update public.rfqs set created_at = clock_timestamp() where id = r $$;
 
 do $fit$
 declare
@@ -29,7 +39,8 @@ declare
     'a vendor with no new data gets today''s score plus 0.175',
     'a near lead ranks first and only it is near',
     'who sees a lead is unchanged (an overseas lead stays hidden from a free vendor)',
-    'a buyer can''t read a vendor''s feed', 'clients can''t call the scoring function'];
+    'a buyer can''t read a vendor''s feed', 'clients can''t call the scoring function',
+    'location: a vendor''s change after a lead was posted doesn''t change that lead'];
   wants text[] := array[
     'apparel-home|apparel-home|apparel-home|-|-',
     '1', '0.8',
@@ -44,7 +55,8 @@ declare
     '0.175',
     'near-first|t|f',
     'hidden',
-    '42501', '42501'];
+    '42501', '42501',
+    '1|1|0.25'];
   got text; i int;
   out text := '';
   apparel uuid; shirts uuid; grand uuid; legacy uuid; itroot uuid;
@@ -60,13 +72,15 @@ begin
     begin
       set local session_replication_role = replica;
       -- A clean vendor and buyers for every case.
-      update public.vendor_profiles set state_code = null, served_states = '{}', capabilities = '{}' where id = vendor;
+      update public.vendor_profiles set capabilities = '{}' where id = vendor;
       insert into public.buyer_profiles (id, state_code) values (buyer, null), (buyer2, null)
         on conflict (id) do update set state_code = null;
       delete from public.products where vendor_id = vendor;
       delete from public.vendor_capacity where vendor_id = vendor;
       insert into public.rfqs (id, buyer_id, title, status, category_id, quantity)
         values (r1, buyer, 'FIT one', 'active', shirts, 1000);
+      perform pg_temp.vloc(vendor, null, '{}');
+      perform pg_temp.repost(r1);
       got := null;
       begin
         if i = 1 then
@@ -77,22 +91,25 @@ begin
               || '|' || coalesce(public.category_root_of(null), '-');
         elsif i between 2 and 6 then
           if i = 2 then
-            update public.vendor_profiles set state_code = 'GJ' where id = vendor;
+            perform pg_temp.vloc(vendor, 'GJ', '{}');
             update public.buyer_profiles set state_code = 'GJ' where id = buyer;
           elsif i = 3 then
-            update public.vendor_profiles set state_code = 'MH', served_states = '{GJ,KA}' where id = vendor;
+            perform pg_temp.vloc(vendor, 'MH', '{GJ,KA}');
             update public.buyer_profiles set state_code = 'GJ' where id = buyer;
           elsif i = 4 then
-            update public.vendor_profiles set state_code = 'MH', served_states = '{KA}' where id = vendor;
+            perform pg_temp.vloc(vendor, 'MH', '{KA}');
             update public.buyer_profiles set state_code = 'GJ' where id = buyer;
           elsif i = 5 then
-            update public.vendor_profiles set state_code = 'MH' where id = vendor;
+            perform pg_temp.vloc(vendor, 'MH', '{}');
             update public.buyer_profiles set state_code = 'GJ' where id = buyer;
           end if;
+          perform pg_temp.repost(r1);
           if i = 6 then
-            update public.vendor_profiles set state_code = 'GJ' where id = vendor;
+            perform pg_temp.vloc(vendor, 'GJ', '{}');
+            perform pg_temp.repost(r1);
             select pg_temp.n(f.loc_part) into a from admin.rfq_fit(vendor, r1) f;
-            update public.vendor_profiles set state_code = null where id = vendor;
+            perform pg_temp.vloc(vendor, null, '{}');
+            perform pg_temp.repost(r1);
             update public.buyer_profiles set state_code = 'GJ' where id = buyer;
             select a || '|' || pg_temp.n(f.loc_part) into got from admin.rfq_fit(vendor, r1) f;
           else
@@ -100,7 +117,7 @@ begin
           end if;
         elsif i = 7 then
           update public.rfqs set overseas = true where id = r1;
-          update public.vendor_profiles set state_code = 'GJ', capabilities = '{export_ready}' where id = vendor;
+          update public.vendor_profiles set capabilities = '{export_ready}' where id = vendor;
           select pg_temp.n(f.loc_part) into a from admin.rfq_fit(vendor, r1) f;
           update public.vendor_profiles set capabilities = '{}' where id = vendor;
           select a || '|' || pg_temp.n(f.loc_part) into got from admin.rfq_fit(vendor, r1) f;
@@ -150,10 +167,12 @@ begin
           select pg_temp.n(m.score - (0.45 * coalesce(m.similarity, 0) + 0.20 * m.category_match::int)) into got
             from public.match_vendor_rfqs(vendor, 5000) m where m.rfq_id = r1;
         elsif i = 16 then
-          update public.vendor_profiles set state_code = 'GJ' where id = vendor;
+          perform pg_temp.vloc(vendor, 'GJ', '{}');
+          perform pg_temp.repost(r1);
           update public.buyer_profiles set state_code = case id when buyer then 'MH' else 'GJ' end where id in (buyer, buyer2);
           insert into public.rfqs (id, buyer_id, title, status, category_id, quantity)
             values (r2, buyer2, 'FIT two', 'active', shirts, 1000);
+          perform pg_temp.repost(r2);
           -- The two leads differ only in the buyer's state: buyer2 is in the vendor's state.
           select case when m.rfq_id = r2 then 'near-first' else 'far-first' end into a
             from public.match_vendor_rfqs(vendor, 5000) m where m.rfq_id in (r1, r2) order by m.score desc, m.rfq_id limit 1;
@@ -174,6 +193,15 @@ begin
           execute 'set local role authenticated';
           perform * from admin.rfq_fit(vendor, r1);
           got := 'called';
+        elsif i = 20 then
+          perform pg_temp.vloc(vendor, 'GJ', '{}');
+          update public.buyer_profiles set state_code = 'GJ' where id = buyer;
+          perform pg_temp.repost(r1);
+          select pg_temp.n(f.loc_part) into a from admin.rfq_fit(vendor, r1) f;
+          perform pg_temp.vloc(vendor, 'MH', '{}');
+          select pg_temp.n(f.loc_part) into b from admin.rfq_fit(vendor, r1) f;
+          perform pg_temp.repost(r1);
+          select a || '|' || b || '|' || pg_temp.n(f.loc_part) into got from admin.rfq_fit(vendor, r1) f;
         end if;
       exception when others then
         got := sqlstate || ' ' || sqlerrm;
