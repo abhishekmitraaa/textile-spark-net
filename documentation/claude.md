@@ -2021,6 +2021,8 @@ Depth — schema, invariants, integrations, tech debt — lives in
 - Test data & results: `documentation/test.md`
 - Technical depth: `documentation/technicalimplementation.md`
 - Routes/pages: `documentation/sitemap.md`
+- How search works end to end (indexing, ranking, suggestions, results page, sponsored cards, logging, trending):
+  `documentation/search.md`. Update it with any change to search.
 - Buyer/Vendor/Admin feature detail: `documentation/sides.md`
 - Security flags & gaps: `documentation/securityflags.md`
 - Flags found and not fixed during the phased My Profile brief (2026-09-23 onward), and
