@@ -6,6 +6,160 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Close the buyer audit's five unfixed security findings — added 2026-11-01
+- Task: fix, in one migration with md5 pre-checks like the other audit migrations:
+  1. `ad_category_benchmarks(uuid)`: its caller check isn't coalesced and anon holds EXECUTE (securityflags.md says it
+     returns null for signed-out callers: that note is wrong). Coalesce the check, revoke anon.
+  2. `hero_slides` read policy checks the end date only, so a slide scheduled for later shows before its
+     `starts_at`. Add `starts_at <= now()`.
+  3. `notifications` UPDATE policy lets a user change any column of their own rows; allow `read_at` (or the read flag)
+     only, e.g. a column grant or a function.
+  4. `profiles.avatar_url` and review `photos` accept any URL (a tracking pixel loads for every viewer). Accept only
+     Cosora storage URLs (as `rfqs.image` does via `lib/storageUrl.ts` and a guard).
+  5. `image-search` and `embed-query` edge functions return the upstream (OpenAI) error text to the browser. Return a
+     plain code; log the detail.
+- Context: found in the 2026-10-18 full buyer audit; not on the list Mitra asked to fix on 2026-10-19, so left open
+  (securityflags.md, "Buyer audit, open findings", and the 2026-10-19 log entry). None fixed by later sessions as of
+  2026-11-01 (main 26ad8d7).
+- Reference: 2026-10-18/19 buyer audit session; 2026-11-01 "give me the list of task or flags from this session",
+  then "store everything in the todo.md".
+- Status: Open
+
+### Check four audit suspicions against production — added 2026-11-01
+- Task: confirm or rule out, on production (read-only) or the local stack:
+  1. no server-side length or rate limit on chat messages (`messages` insert);
+  2. a buyer can write their own `country_code`, which stamps requirements as overseas (`rfqs_overseas_stamp`);
+  3. support data isn't purged after an account is deleted (the `support-sweep` job is unscheduled, D-21);
+  4. buyer GSTIN, PAN and phone are saved without validation (onboarding / profile).
+  Fix what holds, or log it in securityflags.md.
+- Context: listed as "plausible, not verified" in the 2026-10-18 audit (SESSION-CONTEXT.md); the baseline Lovable
+  tables (messages, conversations, products) aren't in migrations, so their constraints weren't visible then.
+- Reference: 2026-10-18 buyer audit; 2026-11-01 todo request.
+- Status: Open
+
+### Confirm the database API receives Cloudflare's visitor address (cf-connecting-ip) — added 2026-11-01
+- Task: check that a PostgREST call on production carries `cf-connecting-ip` in `request.headers` (for example a
+  temporary SECURITY DEFINER function that returns only whether the header is present, called once and dropped).
+- Context: `log_engagement_event()` keys signed-out visitors on it (migrations 20261019100000–20261020110000). If it
+  is missing on this path, every signed-out visitor counts toward the shared 2,000-per-seller-per-10-minutes ceiling
+  instead of the 10,000 one, and a flood could pause a seller's signed-out view counts. Another session showed the
+  header carries the real address on the image-search EDGE FUNCTION path (securityflags.md log); the database path
+  wasn't tested. Drops show in Cosora-Admin › System Health (`seller:<id>`).
+- Reference: 2026-10-19/20 analytics-limit releases; 2026-11-01 todo request.
+- Status: Open
+
+### Replace the generated phone numbers on Service Vendors and Freelancers — added 2026-11-01
+- Task: give the Service Vendors and Freelancers pages real contacts, or remove Call Now there, or take the pages
+  down until there are real providers.
+- Context: their Call Now dials `demoPhone()` (`src/lib/queries/calls.ts`), a hash-generated real-format +91 number
+  that may belong to a stranger, and the providers, ratings and reviews are seed data shown as real. Mitra chose
+  "Keep them as is" on 2026-10-18; the risk is logged in securityflags.md.
+- Reference: 2026-10-18 audit "fix first" list, AskUserQuestion on Service Vendors/Freelancers.
+- Status: Open
+
+### Rewrite the Advertisements page's unbacked claims — added 2026-11-01
+- Task: reword or remove on `/advertisements` (FAQ and "Why Cosora"): "millions of potential customers", "your ad
+  goes live instantly. No approval delays" (ads are reviewed), "as little as ₹22/day", "Join thousands of suppliers",
+  "Every buyer is vetted".
+- Context: flagged on 2026-10-18 while removing invented people; Mitra said "not yet". The Success Stories carousel
+  was restored by Mitra's decision (a recorded exception in claude.md; don't remove it without asking). Related to
+  the older "Remove invented claims and real brand names still on live pages" entry below.
+- Reference: 2026-10-18 sessions (demo identities, Success Stories restored).
+- Status: Open
+
+### Let typed search terms into Trending once they can't be faked — added 2026-11-01
+- Task: before switching `search_trending_terms` on, make typed terms safe: staff approval of each term, or count
+  signed-in searches only.
+- Context: a script posing as 3 guest sessions can publish any filter-passing words (push security review,
+  2026-10-18); since then only categories are public (Mitra: "Categories only for now"). Securityflags.md row
+  "Trending searches publish what people typed".
+- Reference: 2026-10-18 trending searches release.
+- Status: Open
+
+### Make the local stack's snapshot trigger call itself, not production — added 2026-11-01
+- Task: have `public.site_config_queue_snapshot()` read the function URL from configuration (Vault or a setting)
+  instead of the hardcoded production URL.
+- Context: on the local stack every banner, picture, carousel or trending change posts the LOCAL service key to
+  production's `site-config-snapshot` (refused there; a stray outbound call). Securityflags.md, Low, 2026-10-18.
+- Reference: 2026-10-18 trending searches session.
+- Status: Open
+
+### Apply the requirement deadline everywhere leads are counted or announced — added 2026-11-01
+- Task: leave requirements past `rfqs.expires_at` out of `overseas_lead_count()`, `my_lead_alerts()` and
+  `lead_digest_run()`, and show "Deadline passed" (not live) for them in Cosora-Admin's requirement pages.
+- Context: the 7-day deadline (migration 20261019100000) is enforced in `enforce_quote_rfq_open`,
+  `match_vendor_rfqs` and the app's lead list; those three functions and the admin pages weren't changed, so a count
+  or alert can include a requirement a seller can no longer quote on.
+- Reference: 2026-10-19 buyer audit second batch.
+- Status: Open
+
+### Show a block to the other person straight away — added 2026-11-01
+- Task: add `chat_blocks` (or a per-conversation signal) to realtime so the other side's composer locks the moment
+  they are blocked, not on their next send or reload.
+- Context: blocks are enforced by the database either way (`guard_message_insert`, `chat_blocked_between`); this is
+  only what the other person sees. Noted as not done in technicalimplementation.md (chat files section).
+- Reference: 2026-10-18 "fix first" chat menu work.
+- Status: Open
+
+### Date the chat thread's day labels — added 2026-11-01
+- Task: replace the fixed "Today" pill at the top of a chat (`src/pages/ChatThread.tsx`) with real day separators
+  ("Today", "Yesterday", a date) between messages.
+- Context: since paging (2026-10-19) older pages load above it, and the label says "Today" on chats weeks old.
+- Reference: 2026-10-19 paged chat history.
+- Status: Open
+
+### Finish sign-up for buyers who register through the Register page — added 2026-11-01
+- Task: send a buyer who signs up on `/register` through Account Info, Interest Preference and Terms (or mark them
+  onboarded there), so they aren't sent to role selection at their next sign-in.
+- Context: since 2026-10-19 only accepting the Terms marks a buyer onboarded (`finishOnboarding()`); `OtpVerify`
+  sends a Register buyer straight to Home with `onboarded = false` (pre-existing route), so the next sign-in shows
+  the role screen. Sign-in itself must not change (claude.md, mobile + OTP rule).
+- Reference: 2026-10-19 sign-up fix (onboarding finished at the Terms).
+- Status: Open
+
+### Fix Video Closeups' feed: paging and the copied end-of-feed cards — added 2026-11-01
+- Task: page the Video Closeups feed (it shows the 30 all-time most viewed, no more), and remove the "-fill" clone
+  cards with fake ids that pad the end of the feed.
+- Context: found in the 2026-10-18 audit (item 23); not fixed since.
+- Reference: 2026-10-18 buyer audit.
+- Status: Open
+
+### Make the Discount sort work and give buyers their own Notifications wording — added 2026-11-01
+- Task: the "Discount" sort option does nothing (results stay in the same order); the buyer Notifications page shows
+  seller wording. Fix both.
+- Context: found in the 2026-10-18 audit (item 23); not fixed since.
+- Reference: 2026-10-18 buyer audit.
+- Status: Open
+
+### Review the phone-number lengths chosen per country — added 2026-11-01
+- Task: Mitra to confirm the lengths the sign-in phone field takes: India, Japan, US, Canada, UK, Argentina 10;
+  China 11; Taiwan, Australia, Vietnam, Thailand 9; Hong Kong 8 (`src/lib/auth/phone.ts`). Argentina's mobiles are
+  often written with a leading 9 (11 digits); adjust if buyers there can't sign in.
+- Context: chosen by Claude under "decide by yourself" on 2026-10-19 (the field took exactly 10 digits, so Hong
+  Kong, Australian and Thai numbers couldn't be entered and Chinese ones were cut). Sign-in itself is unchanged.
+- Reference: 2026-10-19 buyer audit second batch.
+- Status: Open
+
+### Record the October CLI migrations in the ledger, and fix the audit's migration numbering — added 2026-11-01
+- Task: (1) mark as applied in `supabase_migrations.schema_migrations` (e.g. `supabase migration repair --status
+  applied <version>`) the migrations applied with `db query`: 20261018160000, 160100, 160200, 160300;
+  20261019100000, 110000, 120000, 130000; 20261020100000, 110000. (2) Before merging `fix/review-2026-10-13`,
+  re-version its five migrations (20261013100000–100400 are taken on main). (3) `20261012040000` is older than
+  applied migrations (needs `--include-all` or the SQL editor). (4) `pause_ad_campaign_by_vendor`,
+  `resume_ad_campaign`, `resubmit_ad_campaign` have no creating migration: add one from production's definitions.
+- Context: the live site isn't affected; a rebuild from the ledger or `db push` would miss or re-run these.
+- Reference: 2026-10-18 audit (migration hygiene) and the 2026-10-18/19/20 releases.
+- Status: Open
+
+### Remove the buyer-audit worktrees — added 2026-11-01
+- Task: `git worktree remove` buyer `.worktrees/first-fixes`, `.worktrees/audit-second`,
+  `.worktrees/audit-2026-10-18`, `.worktrees/todo-audit` and admin `.worktrees/chat-files`; delete branches
+  `fix/first-fixes-2026-10-18`, `fix/audit-second-2026-10-19`, `docs/todo-buyer-audit-leftovers` and admin
+  `fix/chat-files-review-2026-10-18`. Everything in them is on main.
+- Context: housekeeping after the 2026-10-18–20 releases.
+- Reference: 2026-11-01 todo request.
+- Status: Open
+
 ### Feed /search's trending list from Google Trends once there is access — added 2026-10-18
 - Task: when Cosora has a Google Trends API key (the official API is an invite-only alpha; apply at Google's Trends
   API page) or a paid provider (SerpApi, DataForSEO), add the garment and fashion terms India is searching for to the
