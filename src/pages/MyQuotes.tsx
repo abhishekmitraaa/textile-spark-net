@@ -26,6 +26,9 @@ import CompareTable from "@/components/buyer/quotes/CompareTable";
 import DirectRequestThread from "@/components/buyer/quotes/DirectRequestThread";
 import { cn } from "@/lib/utils";
 import RfqThumb from "@/components/RfqThumb";
+import BuyerStateNudge from "@/components/buyer/BuyerStateNudge";
+import { stateCodeFor } from "@/data/indiaStates";
+import { useProfileFull } from "@/lib/queries/profile";
 
 // "received" is the open-marketplace comparison screen (many competing
 // vendors). "direct" is a product-page request addressed to one vendor, where
@@ -77,6 +80,9 @@ const MyQuotes = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { data: buyerData } = useBuyerQuotes(user?.id);
+  const { data: profile } = useProfileFull(user?.id);
+  // For this visit only, like the profile's nudges.
+  const [stateNudgeDismissed, setStateNudgeDismissed] = useState(false);
   const rfqs = buyerData?.rfqs ?? [];
   // Requirements still with Cosora's review, or not approved (2026-10-17). An approved one is in `rfqs`.
   const { data: submissions = [] } = useMyRfqSubmissions(user?.id);
@@ -212,6 +218,10 @@ const MyQuotes = () => {
                   <Plus className="w-4 h-4" /> Create New
                 </button>
               </div>
+
+              {profile && !stateNudgeDismissed && !stateCodeFor(profile.state) && (
+                <BuyerStateNudge onDismiss={() => setStateNudgeDismissed(true)} className="mb-4" />
+              )}
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-3 mb-5">

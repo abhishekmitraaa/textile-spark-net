@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import StateSelect from "@/components/StateSelect";
 import CountrySelect from "@/components/CountrySelect";
@@ -17,6 +17,7 @@ import { errorMessage } from "@/lib/errorMessage";
 
 const ProfileBusinessDetails = () => {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
   const { signedOut, form, set, save } = useEditableProfile();
   const [saving, setSaving] = useState(false);
 
@@ -74,7 +75,7 @@ const ProfileBusinessDetails = () => {
                     <input id="bd-city" className={inputCls} value={form.businessCity} onChange={(e) => set({ businessCity: e.target.value })} />
                   </Field>
                   <Field label="State/Province" htmlFor="bd-state">
-                    <StateSelect id="bd-state" className={inputCls} value={form.state} onChange={(state) => set({ state })} />
+                    <StateSelect id="bd-state" className={inputCls} value={form.state} onChange={(state) => set({ state })} autoFocus={params.get("focus") === "state"} />
                   </Field>
                 </div>
                 <div className="grid grid-cols-2 gap-3">

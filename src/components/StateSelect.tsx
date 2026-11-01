@@ -16,12 +16,14 @@ export default function StateSelect({
   onChange,
   className,
   placeholder = "Select state",
+  autoFocus,
 }: {
   id?: string;
   value: string;
   onChange: (name: string) => void;
   className?: string;
   placeholder?: string;
+  autoFocus?: boolean;
 }) {
   const lang = useLang();
   const current = stateByCode(stateCodeFor(value));
@@ -30,6 +32,7 @@ export default function StateSelect({
     <select
       id={id}
       className={className}
+      autoFocus={autoFocus}
       value={current?.code ?? ""}
       onChange={(e) => onChange(stateByCode(e.target.value)?.name ?? "")}
     >
