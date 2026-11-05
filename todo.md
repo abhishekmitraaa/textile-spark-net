@@ -3,7 +3,7 @@
 Durable record of everything explicitly **deferred rather than built**, so it
 does not get lost the way the previous "still open" ledger nearly did.
 
-Last reviewed: 2026-09-14 (Ads v4 follow-up).
+Last reviewed: 2026-11-05 (every item checked against the code and changelog; all still open).
 Longer-form engineering notes live in `documentation/ToDo.md`; this file is the
 short list of things someone has to *decide*.
 
