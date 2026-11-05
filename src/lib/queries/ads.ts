@@ -92,6 +92,20 @@ export function useMyAds(vendorId: string | undefined) {
   });
 }
 
+/** Cosora-Admin's ad reason codes and their labels (`ad_reason_labels()`, migration 20261105110000), so a campaign
+ *  card says "Misleading or unverifiable claims" rather than the stored code. */
+export function useAdReasonLabels() {
+  return useQuery({
+    queryKey: ["ad_reason_labels"],
+    staleTime: 60 * 60 * 1000,
+    queryFn: async (): Promise<Record<string, string>> => {
+      const { data, error } = await supabase.rpc("ad_reason_labels");
+      if (error) throw error;
+      return Object.fromEntries(((data ?? []) as { code: string; label: string }[]).map((r) => [r.code, r.label]));
+    },
+  });
+}
+
 /** The vendor's own state (india_states code), where a state plan's ad starts; null when the profile has none. */
 export function useVendorHomeState(vendorId: string | undefined, enabled = true) {
   return useQuery({

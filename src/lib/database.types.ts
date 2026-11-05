@@ -4627,6 +4627,13 @@ export type Database = {
     Functions: {
       accept_buyer_terms: { Args: { p_version: string }; Returns: undefined }
       buyer_terms_version: { Args: never; Returns: string }
+      ad_reason_labels: {
+        Args: never
+        Returns: {
+          code: string
+          label: string
+        }[]
+      }
       admin_attribute_save: {
         Args: { p_id: string | null; p_row: Json }
         Returns: string

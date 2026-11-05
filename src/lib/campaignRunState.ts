@@ -47,11 +47,24 @@ function fmt(d: string | null | undefined): string | null {
  * read path already stopped serving it, so claiming "live" here would be the
  * dashboard lying about something the buyer side had already stopped doing.
  */
-export function runStateOf(c: CampaignLike, now: Date = new Date()): RunState {
+/**
+ * An admin's reason as stored, "<code> <note>" (ad_apply_decision), in words: the code's label (from
+ * ad_reason_labels()) and the note, if any. Anything that doesn't start with a known code is shown as written.
+ */
+export function moderationReasonText(raw: string | null | undefined, labels: Record<string, string> = {}): string | null {
+  const text = raw?.trim();
+  if (!text) return null;
+  const m = /^([a-z_]+)(?:\s+([\s\S]*))?$/.exec(text);
+  if (!m || !labels[m[1]]) return text;
+  const note = m[2]?.trim();
+  return note ? `${labels[m[1]]} — ${note}` : labels[m[1]];
+}
+
+export function runStateOf(c: CampaignLike, now: Date = new Date(), reasonLabels: Record<string, string> = {}): RunState {
   const s = c.status;
   const ends = c.endsAt ? new Date(c.endsAt) : null;
   const starts = c.startsAt ? new Date(c.startsAt) : null;
-  const why = c.moderationReason?.trim() || null;
+  const why = moderationReasonText(c.moderationReason, reasonLabels);
 
   if (s === "archived") {
     return { label: "Archived", tone: "stopped", reason: "This campaign has been archived.", serving: false, action: "none" };

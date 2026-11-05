@@ -26,7 +26,7 @@ import { supportChatHref } from "@/lib/supportContact";
 import { useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
-import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorHomeState, type AdRow } from "@/lib/queries/ads";
+import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorHomeState, useAdReasonLabels, type AdRow } from "@/lib/queries/ads";
 import { useFeatureFlag } from "@/lib/queries/featureFlags";
 import { INDIA_STATES } from "@/data/indiaStates";
 import { useLang } from "@/lib/i18n";
@@ -80,14 +80,14 @@ const AD_TYPES: AdType[] = [
   { id: "featuredProduct",      name: "Featured Product",            price: "₹55",  period: "/day", Icon: Star,         description: "Premium placement for your key products on category pages. The highest-visibility position for serious buyers.", image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=800&auto=format&fit=crop" },
   { id: "storePromotion",       name: "Store Promotion",             price: "₹99",  period: "/day", Icon: Store,        description: "Promote your entire store for maximum brand exposure. Best for building long-term relationships with bulk buyers.", image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop" },
   { id: "directBroadcast",      name: "Direct Broadcast",            price: "₹15",  period: "/msg", Icon: Radio,        description: "Send direct messages to targeted buyers who match your product category. Pay only per message sent.", image: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=800&auto=format&fit=crop" },
-  { id: "wholesalerPick",       name: "Wholesaler Pick Ad",          price: "₹59",  period: "",     Icon: ShoppingBag,  description: "Get featured in the exclusive Wholesaler Pick section. 72-hour guaranteed exposure with bumps.", image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=800&auto=format&fit=crop" },
-  { id: "brandAd",              name: "Brand Ad",                    price: "₹69",  period: "",     Icon: Award,        description: "Showcase your entire brand story and collection. Drives visits via store and key product exposures.", image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop" },
+  { id: "wholesalerPick",       name: "Wholesaler Pick Ad",          price: "₹59",  period: "/day",     Icon: ShoppingBag,  description: "Get featured in the exclusive Wholesaler Pick section. 72-hour guaranteed exposure with bumps.", image: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?q=80&w=800&auto=format&fit=crop" },
+  { id: "brandAd",              name: "Brand Ad",                    price: "₹69",  period: "/day",     Icon: Award,        description: "Showcase your entire brand story and collection. Drives visits via store and key product exposures.", image: "https://images.unsplash.com/photo-1557804506-669a67965ba0?q=80&w=800&auto=format&fit=crop" },
   { id: "websiteBanner",        name: "Website Banner Ad",           price: "₹89",  period: "/day", Icon: Globe,        description: "Large scale visibility on the Cosora desktop website. Maximum impact for site-wide brand awareness.", image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?q=80&w=800&auto=format&fit=crop" },
   { id: "mobileBanner",         name: "Mobile Banner Ad",            price: "₹99",  period: "/day", Icon: Smartphone,   description: "Optimized banners for the Cosora mobile app. Reach on-the-go buyers with high-converting mobile placements.", image: "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=800&auto=format&fit=crop" },
-  { id: "webMobileCombo",       name: "Web & Mobile Combo",          price: "₹129", period: "",     Icon: Monitor,      description: "The ultimate visibility package. Reach buyers across all devices with synchronized desktop and mobile banners.", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop" },
-  { id: "fbInsta",              name: "Facebook & Instagram Ad",     price: "₹59",  period: "",     Icon: Facebook,     description: "Leverage social media to drive traffic to your Cosora store. Reaches buyers outside the platform.", image: "https://images.unsplash.com/photo-1611162617263-435d74236edc?q=80&w=800&auto=format&fit=crop" },
-  { id: "googleProduct",        name: "Google Product Ad",           price: "₹59",  period: "",     Icon: BarChart3,    description: "Appear in Google search results and shopping tab. Captures high-intent buyers actively searching.", image: "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=800&auto=format&fit=crop" },
-  { id: "socialCombo",          name: "Social Media Combo",          price: "₹99",  period: "",     Icon: Megaphone,    description: "Combined reach of Facebook, Instagram and Google. Maximum off-platform exposure.", image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=800&auto=format&fit=crop" },
+  { id: "webMobileCombo",       name: "Web & Mobile Combo",          price: "₹129", period: "/day",     Icon: Monitor,      description: "The ultimate visibility package. Reach buyers across all devices with synchronized desktop and mobile banners.", image: "https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=800&auto=format&fit=crop" },
+  { id: "fbInsta",              name: "Facebook & Instagram Ad",     price: "₹59",  period: "/day",     Icon: Facebook,     description: "Leverage social media to drive traffic to your Cosora store. Reaches buyers outside the platform.", image: "https://images.unsplash.com/photo-1611162617263-435d74236edc?q=80&w=800&auto=format&fit=crop" },
+  { id: "googleProduct",        name: "Google Product Ad",           price: "₹59",  period: "/day",     Icon: BarChart3,    description: "Appear in Google search results and shopping tab. Captures high-intent buyers actively searching.", image: "https://images.unsplash.com/photo-1573164713714-d95e436ab8d6?q=80&w=800&auto=format&fit=crop" },
+  { id: "socialCombo",          name: "Social Media Combo",          price: "₹99",  period: "/day",     Icon: Megaphone,    description: "Combined reach of Facebook, Instagram and Google. Maximum off-platform exposure.", image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?q=80&w=800&auto=format&fit=crop" },
   { id: "trustedSeal",          name: "Trusted Seal & Verified Badge",price: "₹44", period: "",     Icon: Shield,       description: "Boost conversion with a trusted seller badge on your profile and all product cards.", image: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?q=80&w=800&auto=format&fit=crop" },
   { id: "verifiedCertificate",  name: "Cosora Verified Certificate", price: "₹199", period: "",     Icon: BadgeCheck,   description: "Official premium trust signal. Verified certificate displayed on your full profile.", image: "https://images.unsplash.com/photo-1523240715639-99a86501111b?q=80&w=800&auto=format&fit=crop" },
 ];
@@ -1477,6 +1477,7 @@ function AdvertiseCards() {
 function MyCampaigns({ ads, onToggle, onDelete }: {
   ads: AdRow[]; onToggle: (id: string, status: "active" | "paused") => void; onDelete: (id: string) => void;
 }) {
+  const { data: reasonLabels } = useAdReasonLabels();
   if (ads.length === 0) return null;
   // Tone per run state, not per raw status: the states a vendor needs to tell
   // apart are "running", "waiting on Cosora", "needs your attention" and
@@ -1517,7 +1518,7 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
           // campaign showed the bare word "pending_review" with nothing saying
           // that payment had gone through, that Cosora was reviewing it, or
           // that there was nothing for the vendor to do.
-          const rs = runStateOf(a);
+          const rs = runStateOf(a, undefined, reasonLabels);
           return (
             <div key={a.id} className="rounded-xl border border-gray-100 p-3">
               <div className="flex items-center gap-3">
