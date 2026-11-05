@@ -514,7 +514,7 @@ const MyStore = () => {
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                 <h3 className="text-sm font-medium text-gray-500 mb-3">{t("More information")}</h3>
                 <div className="space-y-1">
-                  <MenuRow icon={Shield}    label={t("Privacy Policy")} onClick={() => navigate("/terms")} />
+                  <MenuRow icon={Shield}    label={t("Privacy Policy")} onClick={() => navigate("/privacy")} />
                   <MenuRow icon={FileText}  label={t("Terms of Use")}   onClick={() => navigate("/terms")} />
                   <MenuRow icon={Lightbulb} label={t("What's New")}     onClick={() => navigate("/seller/blogs")} />
                   {/* /blogs/about lives in the Journal app, proxied onto this

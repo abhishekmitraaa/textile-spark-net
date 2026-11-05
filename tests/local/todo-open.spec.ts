@@ -47,7 +47,10 @@ test("the Privacy Policy is a real page and every link points to it", async ({ b
   await expect(page.getByRole("heading", { name: "Privacy Policy", level: 1 })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Support chats, calls and reports/ })).toBeVisible();
   await page.goto(`${BUYER_URL}/register`);
+  await page.getByRole("button", { name: /^Buyer/ }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
   await expect(page.getByRole("link", { name: "Privacy Policy" }).first()).toHaveAttribute("href", "/privacy");
+  await expect(page.getByRole("link", { name: "Terms of Service" }).first()).toHaveAttribute("href", "/terms");
 
   const ctx = await signedInContext(browser, "buyer", { width: 1440, height: 1000 });
   const p2 = await ctx.newPage();

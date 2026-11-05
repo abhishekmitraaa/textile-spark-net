@@ -311,6 +311,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/privacy",
+      "destination": "/index.html"
+    },
+    {
       "source": "/product/:id",
       "destination": "/index.html"
     },

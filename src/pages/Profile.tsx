@@ -366,7 +366,7 @@ const Profile = () => {
             <ScrollText className="w-4 h-4" /> Terms &amp; Conditions
           </button>
           <div>
-            <button onClick={() => navigate("/profile/terms")} className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600">
+            <button onClick={() => navigate("/privacy")} className="inline-flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-600">
               <ShieldCheck className="w-4 h-4" /> Privacy Policy
             </button>
           </div>

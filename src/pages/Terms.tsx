@@ -74,9 +74,8 @@ const Terms = () => {
           />
           <span className="text-sm text-white">
             <label htmlFor="terms-agree" className="cursor-pointer">I agree to</label>{" "}
-            {/* Both open the Terms page: Cosora has no separate Privacy Policy yet (ToDo, counsel). */}
             <Link to="/terms" className="underline font-semibold">Terms &amp; Conditions</Link> and{" "}
-            <Link to="/terms" className="underline font-semibold">Privacy Policy</Link>
+            <Link to="/privacy" className="underline font-semibold">Privacy Policy</Link>
           </span>
         </div>
 

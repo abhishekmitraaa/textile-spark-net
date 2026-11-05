@@ -360,10 +360,9 @@ const Register = () => {
 
                   <p className="text-xs text-muted-foreground">
                     By creating an account, you agree to our{" "}
-                    {/* Both open the Terms page: there is no separate Privacy Policy yet (ToDo, counsel). */}
                     <Link to="/terms" className="text-accent hover:underline">Terms of Service</Link>
                     {" "}and{" "}
-                    <Link to="/terms" className="text-accent hover:underline">Privacy Policy</Link>.
+                    <Link to="/privacy" className="text-accent hover:underline">Privacy Policy</Link>.
                   </p>
 
                   {error && (

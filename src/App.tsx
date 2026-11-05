@@ -88,6 +88,7 @@ import ProfileEdit from "./pages/ProfileEdit";
 import ProfileBusinessDetails from "./pages/ProfileBusinessDetails";
 import BuyerSettings from "./pages/Settings";
 import TermsConditions from "./pages/TermsConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 // Help & Support P6c (D-15): hidden until the Grievance Officer is named (src/lib/grievance.ts).
 import Grievance from "./pages/Grievance";
 import SavedCollections from "./pages/SavedCollections";
@@ -306,6 +307,7 @@ const App = () => (
             <Route path="/profile/regional-settings" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
             <Route path="/profile/data-export" element={<ClarityMask><ProfileAccountPrefs /></ClarityMask>} />
             <Route path="/profile/terms" element={<TermsConditions />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/saved" element={<SavedCollections />} />
             <Route path="/saved/:collectionId" element={<SavedCollectionDetail />} />
             <Route path="/my-store" element={<MyStore />} />
