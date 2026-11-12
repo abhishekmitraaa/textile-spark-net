@@ -4218,6 +4218,42 @@ export type Database = {
           },
         ]
       }
+      vendor_premises_photos: {
+        Row: {
+          created_at: string
+          id: string
+          position: number
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["product_status"]
+          url: string
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          position?: number
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          url: string
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          position?: number
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["product_status"]
+          url?: string
+          vendor_id?: string
+        }
+        Relationships: []
+      }
       vendor_profiles: {
         Row: {
           about: string | null
@@ -4236,6 +4272,7 @@ export type Database = {
           cin: string | null
           city: string | null
           country: string | null
+          country_code: string | null
           created_at: string
           employee_count: string | null
           followers_count: number
@@ -4287,6 +4324,7 @@ export type Database = {
           cin?: string | null
           city?: string | null
           country?: string | null
+          country_code?: string | null
           created_at?: string
           employee_count?: string | null
           followers_count?: number
@@ -4338,6 +4376,7 @@ export type Database = {
           cin?: string | null
           city?: string | null
           country?: string | null
+          country_code?: string | null
           created_at?: string
           employee_count?: string | null
           followers_count?: number
@@ -4395,6 +4434,42 @@ export type Database = {
             referencedColumns: ["code"]
           },
         ]
+      }
+      vendor_registrations: {
+        Row: {
+          country_code: string
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          reason: string | null
+          result: Json
+          status: string
+          vendor_id: string
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id: string
+          reason?: string | null
+          result?: Json
+          status: string
+          vendor_id: string
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          reason?: string | null
+          result?: Json
+          status?: string
+          vendor_id?: string
+        }
+        Relationships: []
       }
       vendor_subscriptions: {
         Row: {
@@ -5467,6 +5542,20 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_premises_photo_queue: {
+        Args: { p_after?: string; p_after_id?: string; p_limit?: number }
+        Returns: {
+          brand_name: string | null
+          created_at: string
+          id: string
+          url: string
+          vendor_id: string
+        }[]
+      }
+      admin_premises_photo_review: {
+        Args: { p_approve: boolean; p_photo: string; p_reason?: string }
+        Returns: undefined
+      }
       admin_profile_emails: {
         Args: { p_ids: string[] }
         Returns: {
@@ -5506,6 +5595,20 @@ export type Database = {
           vendor_name: string
         }[]
       }
+      admin_registration_queue: {
+        Args: { p_after?: string; p_after_id?: string; p_kind: string; p_limit?: number }
+        Returns: {
+          brand_name: string | null
+          country_code: string | null
+          days_waiting: number
+          kind: string
+          pending_docs: number
+          submission_id: string | null
+          vendor_id: string
+          waiting_since: string
+        }[]
+      }
+      admin_registration_queue_counts: { Args: never; Returns: Json }
       admin_report_summary: {
         Args: { p_from?: string; p_to?: string }
         Returns: Json
@@ -5809,6 +5912,10 @@ export type Database = {
           whatsapp: string
         }[]
       }
+      admin_vendor_registration_decide: {
+        Args: { p_approve: boolean; p_reason?: string; p_vendor: string }
+        Returns: undefined
+      }
       admin_whoami: {
         Args: never
         Returns: {
@@ -5976,6 +6083,7 @@ export type Database = {
         Args: { p_ad_certificate_id: string; p_reason: string }
         Returns: string
       }
+      my_seller_registration: { Args: never; Returns: Json }
       product_review_stats: {
         Args: { p_product_ids: string[] }
         Returns: { product_id: string; reviews_count: number; rating_avg: number }[]
@@ -6113,6 +6221,7 @@ export type Database = {
           p_on_sale?: boolean
           p_query?: string
           p_sort?: string
+          p_supplier?: string
           p_vendor_ids?: string[]
         }
         Returns: {
@@ -6142,6 +6251,7 @@ export type Database = {
           sold_count: number
           views_count: number
           vendor_city: string | null
+          vendor_country_code: string | null
           vendor_id: string
         }[]
       }
@@ -6234,8 +6344,17 @@ export type Database = {
         Args: { p_archived?: boolean | null; p_clear?: boolean; p_conversation_id: string; p_starred?: boolean | null }
         Returns: Json
       }
+      seller_registered: { Args: { p_vendor: string }; Returns: boolean }
       share_chat_contact: { Args: { p_conversation_id: string }; Returns: string }
       extend_rfq_deadline: { Args: { p_rfq_id: string }; Returns: string }
+      sign_supplier_agreement: {
+        Args: { p_signature_path: string | null; p_signed_name: string }
+        Returns: undefined
+      }
+      submit_vendor_registration: {
+        Args: { p: Json; p_submission: string }
+        Returns: Json
+      }
       top_vendors: {
         Args: { p_limit?: number }
         Returns: {

@@ -1,3 +1,5 @@
+import { registrationErrorText } from "@/lib/registrationValidation";
+
 /**
  * The human-readable message of anything a `catch` can receive.
  *
@@ -14,6 +16,12 @@
  * Storage, Auth, Functions errors); a string as-is; anything else stringified.
  */
 export function errorMessage(e: unknown): string {
+  const m = rawMessage(e);
+  // Seller registration refuses with a key (submit_vendor_registration); the seller reads a sentence.
+  return registrationErrorText(m) ?? m;
+}
+
+function rawMessage(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (typeof e === "object" && e !== null && "message" in e) {
     const m = (e as { message: unknown }).message;

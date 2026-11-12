@@ -39,35 +39,12 @@ export interface OnboardingProduct {
   images?: string[];
 }
 
-/** The kinds of business registration onboarding accepts (vendor_documents.detail.kind). */
-export type BusinessRegistrationKind = "udyam" | "incorporation" | "shop_establishment" | "partnership" | "other";
-
-export const BUSINESS_REGISTRATION_KINDS: {
-  id: BusinessRegistrationKind;
-  label: string;
-  /** What the number is called, and whether it's required. */
-  numberLabel: string;
-  numberRequired: boolean;
-  placeholder: string;
-  /** A format check only: nothing here can look a number up. */
-  pattern?: RegExp;
-  patternHint?: string;
-}[] = [
-  {
-    id: "udyam", label: "Udyam (MSME) registration certificate", numberLabel: "Udyam registration number",
-    numberRequired: true, placeholder: "UDYAM-GJ-01-0000001",
-    pattern: /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/, patternHint: "A Udyam number looks like UDYAM-GJ-01-0000001.",
-  },
-  {
-    id: "incorporation", label: "Certificate of incorporation (company or LLP)", numberLabel: "CIN or LLPIN",
-    numberRequired: true, placeholder: "U17110GJ2015PTC012345",
-    pattern: /^([LU]\d{5}[A-Z]{2}\d{4}[A-Z]{3}\d{6}|[A-Z]{3}-\d{4})$/,
-    patternHint: "A CIN has 21 characters (for example U17110GJ2015PTC012345); an LLPIN looks like AAA-1234.",
-  },
-  { id: "shop_establishment", label: "Shop and establishment licence", numberLabel: "Licence number (optional)", numberRequired: false, placeholder: "" },
-  { id: "partnership", label: "Partnership deed", numberLabel: "Registration number, if registered (optional)", numberRequired: false, placeholder: "" },
-  { id: "other", label: "Other business registration", numberLabel: "Registration number (optional)", numberRequired: false, placeholder: "" },
-];
+// The kinds of business registration, their number formats and the payload type live in registrationValidation.ts
+// (pure, so scripts/registration-validation-check.mjs can run them); re-exported here for existing imports.
+export { BUSINESS_REGISTRATION_KINDS, type BusinessRegistrationKind } from "@/lib/registrationValidation";
+import type { BusinessRegistrationKind, OwnerIdKind, RegistrationPayload } from "@/lib/registrationValidation";
+import { shrinkImage } from "@/lib/shrinkImage";
+import { fetchMySellerRegistration } from "@/lib/queries/sellerRegistration";
 
 export interface VendorOnboardingPayload {
   businessName: string;
@@ -368,7 +345,7 @@ export function assertKycBucket(bucket: string): void {
  */
 export async function uploadKycDocument(vendorId: string, file: File): Promise<string> {
   assertKycBucket(KYC_BUCKET);
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const ext = fileExt(file.name, file.type === "application/pdf" ? "pdf" : "jpg");
   const suffix = Math.random().toString(36).slice(2, 8);
   const path = `${vendorId}/kyc/${Date.now()}-${suffix}.${ext}`;
   const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: true });
@@ -489,3 +466,154 @@ export async function uploadOnboardingProductImage(vendorId: string, file: File)
   if (error) throw error;
   return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
 }
+
+// ─────────────────────────────────────────────────────────────
+// The registration submit (2026-11-13): upload, then ONE database call.
+//
+// Every file is uploaded when the seller submits, never when it is picked, so an abandoned form leaves nothing in
+// storage. Then submit_vendor_registration() writes the whole registration in one transaction, or nothing. If it
+// refuses, the files this attempt uploaded point at nothing and are removed: but only after the database confirms
+// no registration exists, because a reply lost after a successful commit would otherwise delete files a real
+// registration now points at.
+// ─────────────────────────────────────────────────────────────
+
+/** The files a registration carries, as the form holds them. */
+export interface RegistrationFiles {
+  pan?: File | null;
+  gst?: File | null;
+  registration?: File | null;
+  aadhaar?: File | null;
+  taxId?: File | null;
+  ownerId?: File | null;
+  /** Staff-reference catalogue files (PDF, Excel, CSV, images). */
+  catalogue: File[];
+  /** The one PDF published to the store's catalogue section (through catalogue review). */
+  cataloguePdf?: File | null;
+  /** A drawn signature, as the canvas's data: URL. */
+  signature?: string | null;
+  premises: File[];
+  productImages: File[];
+}
+
+/** What the uploads produced: every path (for cleanup) and the values the payload needs. */
+export interface UploadedFiles {
+  privatePaths: string[];
+  publicFiles: { bucket: "product-images" | "catalogues"; path: string }[];
+  pan?: string;
+  gst?: string;
+  registration?: string;
+  aadhaar?: string;
+  taxId?: string;
+  ownerId?: string;
+  catalogue: { path: string; name: string; mime: string }[];
+  cataloguePdf?: { url: string; title: string };
+  signature?: string;
+  premises: string[];
+  productImages: string[];
+}
+
+const uploadSuffix = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+/** Run at most `limit` uploads at once: a phone on mobile data shouldn't open twenty at a time. */
+async function inBatches<T, R>(items: T[], limit: number, fn: (item: T, i: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) {
+      const i = next++;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}
+
+export async function uploadRegistrationFiles(uid: string, files: RegistrationFiles): Promise<UploadedFiles> {
+  assertKycBucket(KYC_BUCKET);
+  const up: UploadedFiles = { privatePaths: [], publicFiles: [], catalogue: [], premises: [], productImages: [] };
+  const privateFile = async (f: File): Promise<string> => {
+    const path = await uploadKycDocument(uid, f);
+    up.privatePaths.push(path);
+    return path;
+  };
+  const publicImage = async (f: File, folder: "office" | "onboarding-product"): Promise<string> => {
+    const { blob, ext } = await shrinkImage(f, 1600);
+    const path = `${uid}/${folder}/${uploadSuffix()}.${ext}`;
+    const { error } = await supabase.storage.from("product-images").upload(path, blob, { upsert: false, contentType: blob.type || undefined });
+    if (error) throw error;
+    up.publicFiles.push({ bucket: "product-images", path });
+    return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+  };
+
+  if (files.pan) up.pan = await privateFile(files.pan);
+  if (files.gst) up.gst = await privateFile(files.gst);
+  if (files.registration) up.registration = await privateFile(files.registration);
+  if (files.aadhaar) up.aadhaar = await privateFile(files.aadhaar);
+  if (files.taxId) up.taxId = await privateFile(files.taxId);
+  if (files.ownerId) up.ownerId = await privateFile(files.ownerId);
+  up.catalogue = await inBatches(files.catalogue, 3, async (f) => ({ path: await privateFile(f), name: f.name, mime: f.type }));
+  if (files.cataloguePdf) {
+    const path = `${uid}/${uploadSuffix()}.pdf`;
+    const { error } = await supabase.storage.from("catalogues").upload(path, files.cataloguePdf, { upsert: false, contentType: "application/pdf" });
+    if (error) throw error;
+    up.publicFiles.push({ bucket: "catalogues", path });
+    const title = files.cataloguePdf.name.replace(/\.pdf$/i, "").replace(/[_-]+/g, " ").trim().slice(0, 120) || "Catalogue";
+    up.cataloguePdf = { url: supabase.storage.from("catalogues").getPublicUrl(path).data.publicUrl, title };
+  }
+  if (files.signature) {
+    up.signature = await uploadSignature(uid, files.signature);
+    up.privatePaths.push(up.signature);
+  }
+  up.premises = await inBatches(files.premises, 3, (f) => publicImage(f, "office"));
+  up.productImages = await inBatches(files.productImages, 3, (f) => publicImage(f, "onboarding-product"));
+  return up;
+}
+
+export type SubmitResult = { status: "registered" | "pending_review"; supersededFiles: string[] };
+
+/** The one call that registers the seller. A retry with the same submission id returns the first answer. */
+export async function submitVendorRegistration(submissionId: string, payload: RegistrationPayload): Promise<SubmitResult> {
+  const { data, error } = await supabase.rpc("submit_vendor_registration", {
+    p_submission: submissionId,
+    p: payload as unknown as Json,
+  });
+  if (error) throw error;
+  const r = (data ?? {}) as { status?: string; superseded_files?: unknown };
+  const status = r.status === "pending_review" ? "pending_review" : "registered";
+  const supersededFiles = Array.isArray(r.superseded_files) ? r.superseded_files.filter((x): x is string => typeof x === "string") : [];
+  // The files the new documents replaced (a resubmission): best effort, never a reason to fail the registration.
+  if (supersededFiles.length) {
+    const { error: se } = await supabase.storage.from(KYC_BUCKET).remove(supersededFiles);
+    if (se) console.warn("[registration] superseded KYC files not removed:", se.message);
+  }
+  return { status, supersededFiles };
+}
+
+/**
+ * After a refused submit: remove what this attempt uploaded, ONLY once the database says the account has no
+ * registration from it. Any doubt (the read fails, or a registration exists) keeps the files: a stray file is
+ * cheaper than a registration pointing at deleted documents.
+ */
+export async function cleanupRegistrationUploads(uploaded: UploadedFiles, submissionId: string): Promise<void> {
+  let safe = false;
+  try {
+    const r = await fetchMySellerRegistration();
+    safe = (r.status === "none" || r.status === "rejected") && r.latestSubmission !== submissionId;
+  } catch {
+    safe = false;
+  }
+  if (!safe) return;
+  if (uploaded.privatePaths.length) {
+    const { error } = await supabase.storage.from(KYC_BUCKET).remove(uploaded.privatePaths);
+    if (error) console.warn("[registration] uploads not removed:", error.message);
+  }
+  for (const bucket of ["product-images", "catalogues"] as const) {
+    const paths = uploaded.publicFiles.filter((f) => f.bucket === bucket).map((f) => f.path);
+    if (paths.length) {
+      const { error } = await supabase.storage.from(bucket).remove(paths);
+      if (error) console.warn(`[registration] ${bucket} uploads not removed:`, error.message);
+    }
+  }
+}
+
+export type { OwnerIdKind, RegistrationPayload };
