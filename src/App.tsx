@@ -333,7 +333,7 @@ const App = () => (
             <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
             <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />
             <Route path="/seller" element={<VendorLanding />} />
-            <Route path="/onboarding" element={<RegisteredVendorGate><ClarityMask><Onboarding /></ClarityMask></RegisteredVendorGate>} />
+            <Route path="/onboarding" element={<RegisteredVendorGate showPending><ClarityMask><Onboarding /></ClarityMask></RegisteredVendorGate>} />
             
             <Route path="/reviews" element={<Reviews />} />
             <Route path="/competitor-ads" element={<CompetitorAds />} />

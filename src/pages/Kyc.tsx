@@ -14,6 +14,9 @@ import {
   KYC_FILE_TYPES, MAX_CATALOGUE_FILES, MAX_KYC_BYTES, type BusinessRegistrationKind,
 } from "@/lib/queries/vendorOnboarding";
 import { supabase } from "@/lib/supabase";
+import { useSellerRegistration } from "@/lib/queries/sellerRegistration";
+import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
@@ -332,6 +335,63 @@ function useMyProductCount(vendorId: string | undefined) {
 
 const REG_KIND_LABELS = Object.fromEntries(BUSINESS_REGISTRATION_KINDS.map((k) => [k.id, k.label])) as Record<string, string>;
 
+/**
+ * A seller registered before the agreement existed (or by a registration that failed half-way, before 2026-11-13)
+ * has no Supplier Agreement on file, and may not publish while seller_registration_required is on. They sign it
+ * here: a typed signature, which is complete evidence (signed name + version + time + the tick).
+ */
+function SignAgreementCard({ onSigned }: { onSigned: () => void }) {
+  const [name, setName] = useState("");
+  const [agreed, setAgreed] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
+  const sign = async () => {
+    setBusy(true);
+    const { error } = await supabase.rpc("sign_supplier_agreement", { p_signed_name: name.trim(), p_signature_path: null });
+    setBusy(false);
+    if (error) {
+      toast.error("Couldn't record your signature", { description: errorMessage(error) });
+      return;
+    }
+    toast.success("Supplier Agreement signed");
+    onSigned();
+  };
+  return (
+    <section aria-labelledby="sign-agreement-title" className="rounded-2xl border border-brand-vendor/30 bg-white p-4 shadow-sm space-y-3">
+      <h2 id="sign-agreement-title" className="text-sm font-semibold text-gray-900">Sign the Supplier Agreement</h2>
+      <p className="text-xs text-gray-500">
+        Your registration has no signed agreement on file. Sign it to add listings, videos, catalogues, ads and quotes.
+      </p>
+      <button type="button" onClick={() => setOpen(true)} className="text-xs font-semibold text-brand-vendor underline underline-offset-2">
+        Read the Supplier Agreement
+      </button>
+      <div className="space-y-1">
+        <Label htmlFor="sign-name" className="text-xs">Your full name</Label>
+        <Input id="sign-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={120} />
+      </div>
+      <label className="flex items-start gap-2 text-xs text-gray-700">
+        <Checkbox checked={agreed} onCheckedChange={(v) => setAgreed(!!v)} className="mt-0.5" />
+        <span>I agree to comply with Cosora's Supplier Agreement (version {SUPPLIER_AGREEMENT_VERSION}).</span>
+      </label>
+      <Button onClick={() => void sign()} disabled={busy || !agreed || name.trim().length < 2} className="w-full rounded-full">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : "Sign the agreement"}
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Cosora Supplier Agreement</DialogTitle>
+            <DialogDescription>Version {SUPPLIER_AGREEMENT_VERSION}</DialogDescription>
+          </DialogHeader>
+          {/* English only: the record names this wording (claude.md, Supplier Agreement). */}
+          <div data-no-translate className="max-h-[56vh] space-y-3 overflow-y-auto text-sm leading-6">
+            {SUPPLIER_AGREEMENT_CLAUSES.map((c) => <p key={c}>{c}</p>)}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
 const Kyc = () => {
   const navigate = useNavigate();
   const reduced = useReducedMotion();
@@ -340,6 +400,9 @@ const Kyc = () => {
   const { data: docs, isLoading } = useMyVendorDocuments(user?.id);
 
   const { data: productCount = 0 } = useMyProductCount(user?.id);
+  const qc = useQueryClient();
+  const { data: registration } = useSellerRegistration(user?.id);
+  const needsAgreement = registration?.status === "registered" && !registration.contractSigned;
   const submitted = docs ?? [];
   // A catalogue can be several files (one row each); every other type is one row.
   const catalogs = submitted.filter((d) => d.docType === "catalog");
@@ -385,6 +448,12 @@ const Kyc = () => {
             <p className="text-xs text-gray-400 mt-0.5">Verify your business documents</p>
           </div>
         </motion.div>
+
+        {needsAgreement && (
+          <motion.div variants={section}>
+            <SignAgreementCard onSigned={() => void qc.invalidateQueries({ queryKey: ["seller_registration", user?.id] })} />
+          </motion.div>
+        )}
 
         {/* Status band */}
         <motion.div variants={section} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">

@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { RegistrationBanner } from "@/components/vendor/RegistrationBanner";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -34,6 +35,8 @@ export const DashboardLayout = ({ children, variant = "default" }: DashboardLayo
               : "min-h-[calc(100vh-3.5rem)] pb-20 lg:pb-0 p-4 lg:min-h-[calc(100vh-4rem)] lg:p-6"
           }
         >
+          {/* Why an unregistered seller can't publish yet (seller_registration_required). */}
+          {!fullScreen && <RegistrationBanner />}
           {children}
         </main>
       </div>
