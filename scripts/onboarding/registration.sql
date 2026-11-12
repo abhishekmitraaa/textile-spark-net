@@ -499,6 +499,95 @@ begin
 end $c$;
 rollback to savepoint c;
 
--- @@TASK4@@
+-- ═════════════════════════════ Task 4: publishing needs a registered seller ══════════════════
+-- Like as_seller, but returns "<sqlstate>:<message>" so the registration message can be checked.
+create function pg_temp.as_seller_msg(u uuid, stmt text) returns text
+language plpgsql as $$
+begin
+  perform pg_temp.claims(u);
+  begin
+    set local role authenticated;
+    execute stmt;
+    reset role;
+    return 'ok';
+  exception when others then
+    return sqlstate || ':' || sqlerrm;
+  end;
+end $$;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t4-off'); r text;
+begin
+  update public.feature_flags set enabled = false, allow_profile_ids = '{}' where key = 'seller_registration_required';
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Unregistered Off');
+  r := pg_temp.as_seller_msg(u, format('insert into public.products (vendor_id, name) values (%L, %L)', u, 'Off listing'));
+  perform pg_temp.ok('switch off: unregistered seller inserts a product', r = 'ok', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t4-on'); r text; rfq uuid;
+begin
+  update public.feature_flags set enabled = true where key = 'seller_registration_required';
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Unregistered On');
+  r := pg_temp.as_seller_msg(u, format('insert into public.products (vendor_id, name) values (%L, %L)', u, 'On listing'));
+  perform pg_temp.ok('switch on: unregistered seller product → 42501 registration', r like '42501:Finish your seller registration first%', r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.product_videos (vendor_id) values (%L)', u));
+  perform pg_temp.ok('switch on: unregistered seller video → 42501 registration', r like '42501:Finish your seller registration first%', r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.catalogues (vendor_id, title) values (%L, %L)', u, 'Range'));
+  perform pg_temp.ok('switch on: unregistered seller catalogue → 42501 registration', r like '42501:Finish your seller registration first%', r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.advertisements (vendor_id, title) values (%L, %L)', u, 'Ad'));
+  perform pg_temp.ok('switch on: unregistered seller ad → 42501 registration', r like '42501:Finish your seller registration first%', r);
+  select id into rfq from public.rfqs limit 1;
+  r := pg_temp.as_seller_msg(u, format('insert into public.quotes (rfq_id, vendor_id) values (%L, %L)', rfq, u));
+  perform pg_temp.ok('switch on: unregistered seller quote → 42501 registration', r like '42501:Finish your seller registration first%', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t4-reg'); r text;
+begin
+  update public.feature_flags set enabled = true where key = 'seller_registration_required';
+  r := pg_temp.as_seller_msg('22222222-2222-2222-2222-222222222222',
+         'insert into public.products (vendor_id, name, status) values (''22222222-2222-2222-2222-222222222222'', ''Exempt listing'', ''draft'')');
+  perform pg_temp.ok('switch on: exempt 22222222-… inserts a product', r = 'ok', r);
+  r := pg_temp.submit(u, gen_random_uuid(), jsonb_set(pg_temp.india_payload(u), '{product}', 'null')
+                       || jsonb_build_object('documents', pg_temp.india_payload(u) -> 'documents'
+                            || jsonb_build_object('catalogue', jsonb_build_array(jsonb_build_object('path', u || '/kyc/cat.pdf', 'name', 'cat.pdf', 'mime', 'application/pdf')))));
+  r := pg_temp.as_seller_msg(u, format('insert into public.products (vendor_id, name) values (%L, %L)', u, 'Registered listing'));
+  perform pg_temp.ok('switch on: registered seller with contract inserts a product', r = 'ok', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t4-edit'); pid uuid; r text;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Has Listing');
+  insert into public.products (vendor_id, name) values (u, 'Old listing') returning id into pid;
+  update public.feature_flags set enabled = true where key = 'seller_registration_required';
+  r := pg_temp.as_seller_msg(u, format('update public.products set name = %L where id = %L', 'Old listing, edited', pid));
+  perform pg_temp.ok('switch on: existing listing still editable', r = 'ok', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t4-admin'); r text;
+begin
+  update public.feature_flags set enabled = true where key = 'seller_registration_required';
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Moderated');
+  insert into admin.admin_users (id, admin_role, is_active) values ('33333333-3333-3333-3333-333333333333', 'product_moderator', true)
+    on conflict (id) do update set admin_role = 'product_moderator', is_active = true;
+  r := pg_temp.as_seller_msg('33333333-3333-3333-3333-333333333333',
+         format('insert into public.products (vendor_id, name) values (%L, %L)', u, 'Moderator listing'));
+  perform pg_temp.ok('switch on: product_moderator insert unaffected', r = 'ok', r);
+end $c$;
+rollback to savepoint c;
+
+-- @@TASK5@@
 
 rollback;
