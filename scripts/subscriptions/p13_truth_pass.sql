@@ -73,10 +73,13 @@ begin
                  when 'pipeline' then x.d ->> 'crm' = 'Pipeline + follow-ups'
                  when 'analytics' then x.d ->> 'crm' like '%analytics%'
                  else x.d ->> 'crm' like '%success review%' end
+           -- Free shows its one PDF catalogue (limits.catalogues_max = 1, 2026-11-13). Paid plans say "PDF catalogue":
+           -- the CSV bulk import is off since 2026-10-22, so no plan may promise it.
            and case x.l ->> 'catalogue'
-                 when 'manual' then x.d ->> 'catalog' = 'Add products one by one'
-                 when 'pdf' then x.d ->> 'catalog' = 'PDF catalogue'
-                 else x.d ->> 'catalog' ~* 'bulk import' end);
+                 when 'manual' then x.d ->> 'catalog' = case when (x.l ->> 'catalogues_max')::int = 1
+                                                             then '1 PDF catalogue; add products one by one'
+                                                             else 'Add products one by one' end
+                 else x.d ->> 'catalog' ~ '^PDF catalogue' and x.d ->> 'catalog' !~* 'bulk import' end);
         want := '';
 
       elsif i = 4 then
