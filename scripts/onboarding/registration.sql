@@ -588,6 +588,148 @@ begin
 end $c$;
 rollback to savepoint c;
 
--- @@TASK5@@
+-- ═════════════════════════════ Task 5: photo review, registration queue, decisions ═══════════
+create function pg_temp.as_admin(role text) returns uuid
+language plpgsql as $$
+begin
+  insert into admin.admin_users (id, admin_role, is_active)
+  values ('33333333-3333-3333-3333-333333333333', role::public.admin_role_type, true)
+  on conflict (id) do update set admin_role = excluded.admin_role, is_active = true;
+  return '33333333-3333-3333-3333-333333333333'::uuid;
+end $$;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t5-photo'); pid uuid; r text; mod uuid; n int;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Photo Seller');
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url, position) values (%L, %L, 0)',
+                                       u, pg_temp.pub(u || '/office/front.jpg')));
+  select id into pid from public.vendor_premises_photos where vendor_id = u;
+  perform pg_temp.ok('seller inserts photo → under_review, not in office_photos',
+    r = 'ok' and (select status::text from public.vendor_premises_photos where id = pid) = 'under_review'
+    and (select cardinality(office_photos) from public.vendor_profiles where id = u) = 0, r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url) values (%L, %L)',
+                                       u, pg_temp.pub(gen_random_uuid() || '/office/theirs.jpg')));
+  perform pg_temp.ok('seller cannot add a photo from another account''s folder', r like '22023:invalid_file%', r);
+
+  mod := pg_temp.as_admin('support');
+  r := pg_temp.as_seller_msg(mod, format('select public.admin_premises_photo_review(%L, true, null)', pid));
+  perform pg_temp.ok('support cannot review photos (42501)', r like '42501%', r);
+
+  mod := pg_temp.as_admin('product_moderator');
+  r := pg_temp.as_seller_msg(mod, format('select public.admin_premises_photo_review(%L, false, null)', pid));
+  perform pg_temp.ok('reject without reason → 22023', r like '22023%', r);
+  r := pg_temp.as_seller_msg(mod, format('select public.admin_premises_photo_review(%L, true, null)', pid));
+  perform pg_temp.ok('moderator approves → in office_photos',
+    r = 'ok' and (select office_photos from public.vendor_profiles where id = u) = array[pg_temp.pub(u || '/office/front.jpg')], r);
+  r := pg_temp.as_seller_msg(mod, format('select public.admin_premises_photo_review(%L, false, %L)', pid, 'Shutter is closed'));
+  select count(*) into n from public.notifications where profile_id = u and kind = 'premises_photo_rejected';
+  perform pg_temp.ok('reject → notification row, photo leaves office_photos',
+    r = 'ok' and n = 1 and (select cardinality(office_photos) from public.vendor_profiles where id = u) = 0, r || ' n=' || n);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t5-cap'); r text; i int;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Twelve Photos');
+  for i in 1..12 loop
+    insert into public.vendor_premises_photos (vendor_id, url, position) values (u, pg_temp.pub(u || '/office/p' || i || '.jpg'), i);
+  end loop;
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url) values (%L, %L)',
+                                       u, pg_temp.pub(u || '/office/p13.jpg')));
+  perform pg_temp.ok('13th photo refused', r like '22023:premises_photo_limit%', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare a uuid := pg_temp.new_user('t5-qa'); b uuid := pg_temp.new_user('t5-qb'); adm uuid; first record; nxt record;
+        r text; c jsonb;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(a, gen_random_uuid(), pg_temp.overseas_payload(a));
+  perform pg_temp.submit(b, gen_random_uuid(), pg_temp.overseas_payload(b));
+  update public.vendor_registrations set created_at = now() - interval '6 days' where vendor_id = a;
+  adm := pg_temp.as_admin('vendor_ops');
+  perform pg_temp.claims(adm);
+  set local role authenticated;
+  select * into first from public.admin_registration_queue('approval', 1) q
+   where q.vendor_id in (a, b) order by q.waiting_since limit 1;
+  select * into nxt from public.admin_registration_queue('approval', 50, first.waiting_since, first.submission_id) q
+   where q.vendor_id in (a, b) limit 1;
+  c := public.admin_registration_queue_counts();
+  reset role;
+  perform pg_temp.ok('approval queue: oldest first, keyset continues',
+    first.vendor_id = a and first.days_waiting >= 5 and nxt.vendor_id = b,
+    coalesce(first.vendor_id::text, 'null') || ' then ' || coalesce(nxt.vendor_id::text, 'null'));
+  perform pg_temp.ok('counts.overdue counts a registration waiting > 5 days', (c ->> 'overdue')::int >= 1, c::text);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t5-docs'); adm uuid; n int;
+begin
+  perform pg_temp.submit(u, gen_random_uuid(), pg_temp.india_payload(u));
+  adm := pg_temp.as_admin('support');
+  perform pg_temp.claims(adm);
+  set local role authenticated;
+  select count(*) into n from public.admin_registration_queue('documents', 100) q where q.vendor_id = u and q.pending_docs = 3;
+  reset role;
+  perform pg_temp.ok('documents queue lists a seller with 3 unreviewed documents', n = 1, 'rows=' || n);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t5-dec'); w uuid := pg_temp.new_user('t5-dec2'); adm uuid; r text; s jsonb;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
+  perform pg_temp.submit(w, gen_random_uuid(), pg_temp.overseas_payload(w));
+
+  adm := pg_temp.as_admin('product_moderator');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', u));
+  perform pg_temp.ok('product_moderator cannot decide registrations (42501)', r like '42501%', r);
+
+  adm := pg_temp.as_admin('vendor_ops');
+  delete from public.vendor_contracts where vendor_id = w;
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', w));
+  perform pg_temp.ok('approve overseas without contract refused', r like 'P0001:no_contract%', r);
+
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', u));
+  perform pg_temp.ok('approve overseas → flag true, status registered, seller told',
+    r = 'ok' and (select onboarding_complete from public.vendor_profiles where id = u)
+    and (select status from public.vendor_registrations where vendor_id = u) = 'registered'
+    and exists (select 1 from public.notifications where profile_id = u and kind = 'registration_approved'), r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t5-rej'); adm uuid; r text; s jsonb;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
+  adm := pg_temp.as_admin('vendor_ops');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, false, null)', u));
+  perform pg_temp.ok('reject without a reason → 22023', r like '22023%', r);
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, false, %L)', u, 'Licence is expired'));
+  perform pg_temp.claims(u);
+  set local role authenticated;
+  s := public.my_seller_registration();
+  reset role;
+  perform pg_temp.ok('reject overseas → status rejected with reason, my_seller_registration shows it',
+    r = 'ok' and s ->> 'status' = 'rejected' and s ->> 'reason' = 'Licence is expired'
+    and not (select onboarding_complete from public.vendor_profiles where id = u), r || ' ' || s::text);
+  r := pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
+  perform pg_temp.ok('a rejected overseas seller can resubmit (pending again)', r = 'pending_review', r);
+end $c$;
+rollback to savepoint c;
+
+-- @@TASK6@@
 
 rollback;
