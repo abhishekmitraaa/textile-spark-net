@@ -445,6 +445,60 @@ begin
 end $c$;
 rollback to savepoint c;
 
--- @@TASK3@@
+-- ═════════════════════════════ Task 3: the flag and the photo cache are server-owned ══════════
+-- Run one statement as the account; returns 'ok' or the SQLSTATE.
+create function pg_temp.as_seller(u uuid, stmt text) returns text
+language plpgsql as $$
+begin
+  perform pg_temp.claims(u);
+  begin
+    set local role authenticated;
+    execute stmt;
+    reset role;
+    return 'ok';
+  exception when others then
+    return sqlstate;
+  end;
+end $$;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t3-ins'); r text;
+begin
+  r := pg_temp.as_seller(u, format('insert into public.vendor_profiles (id, brand_name, onboarding_complete) values (%L, %L, true)', u, 'Bypass Co'));
+  perform pg_temp.ok('browser insert onboarding_complete=true → 42501 (the audit''s bypass POST)', r = '42501', r);
+  r := pg_temp.as_seller(u, format('insert into public.vendor_profiles (id, brand_name, office_photos) values (%L, %L, %L)',
+                                   u, 'Photo Co', array[pg_temp.pub(u || '/office/x.jpg')]));
+  perform pg_temp.ok('browser insert with office_photos → 42501', r = '42501', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t3-upd'); r text;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Plain Co');
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set onboarding_complete = true where id = %L', u));
+  perform pg_temp.ok('browser update onboarding_complete → 42501', r = '42501', r);
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set office_photos = %L where id = %L',
+                                   array[pg_temp.pub(u || '/office/x.jpg')], u));
+  perform pg_temp.ok('browser update office_photos → 42501', r = '42501', r);
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set brand_name = %L where id = %L', 'Renamed Co', u));
+  perform pg_temp.ok('browser update brand_name still works',
+    r = 'ok' and (select brand_name from public.vendor_profiles where id = u) = 'Renamed Co', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('t3-rpc'); r text;
+begin
+  r := pg_temp.submit(u, gen_random_uuid(), pg_temp.india_payload(u));
+  perform pg_temp.ok('submit RPC still sets the flag',
+    r = 'registered' and (select onboarding_complete from public.vendor_profiles where id = u), r);
+end $c$;
+rollback to savepoint c;
+
+-- @@TASK4@@
 
 rollback;
