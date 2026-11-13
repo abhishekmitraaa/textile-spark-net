@@ -590,14 +590,15 @@ test("the KYC panel shows what came with each document: PAN holder, GSTIN, an ov
   sql(`insert into public.vendor_documents (vendor_id, doc_type, file_url, detail) values
          ('${who.id}', 'pan', '${who.id}/kyc/pan.png', '{"holder_name": "Spec Holder", "address": "12 Ring Road, Surat"}'),
          ('${who.id}', 'gst', '${who.id}/kyc/gst.pdf', '{"number": "24ABCDE1234F1Z5"}'),
-         ('${who.id}', 'tax_id', '${who.id}/kyc/trn.pdf', '{"number": "TRN100200300", "country": "United Arab Emirates"}'),
-         ('${who.id}', 'owner_id', '${who.id}/kyc/id.png', '{"kind": "passport", "country": "United Arab Emirates"}');`);
+         ('${who.id}', 'tax_id', '${who.id}/kyc/trn.pdf', '{"number": "TRN100200300", "country": "AE"}'),
+         ('${who.id}', 'owner_id', '${who.id}/kyc/id.png', '{"kind": "passport", "country": "AE"}');`);
   const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
   const page = await ctx.newPage();
   await page.goto(`${ADMIN_URL}/vendors/${who.id}`);
   await expect(page.getByText("Name: Spec Holder · Address: 12 Ring Road, Surat")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("GSTIN 24ABCDE1234F1Z5")).toBeVisible();
-  await expect(page.getByText("TRN100200300 · United Arab Emirates")).toBeVisible();
-  await expect(page.getByText("Passport · United Arab Emirates")).toBeVisible();
+  // The submit stores the country's code; the panel names it.
+  await expect(page.getByText("TRN100200300 · United Arab Emirates (AE)")).toBeVisible();
+  await expect(page.getByText("Passport · United Arab Emirates (AE)")).toBeVisible();
   await ctx.close();
 });

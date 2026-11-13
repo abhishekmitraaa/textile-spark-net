@@ -431,7 +431,8 @@ const VendorProfile = () => {
                   <p className="text-lg font-bold text-white leading-tight">{vpProducts.length}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              {/* Wraps on a phone: the International label would otherwise squeeze the business type onto two lines. */}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 {vendor.businessType && <p className="text-xs text-white/80 font-medium">{vendor.businessType}</p>}
                 <InternationalSupplierTag countryCode={vendor.countryCode} withCountry
                   className="bg-white/20 px-2 text-[10px] font-bold text-white backdrop-blur" />

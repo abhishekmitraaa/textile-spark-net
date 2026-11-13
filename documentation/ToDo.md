@@ -43,6 +43,11 @@ with no need to dictate format, context, or reference each time.
   - `/kyc` says "Add it below" when the PAN is missing, but offers no way to add a PAN there.
   - A rejected Aadhaar keeps its file in `business-docs` until the seller replaces it.
   - The signature pad redraws on every pointer move (slow on old phones).
+  - Found in the 2026-11-13 walkthrough: the seller header on phones says "Kumar Textiles • Mumbai" for every seller
+    (`src/components/layout/DashboardHeader.tsx`, hardcoded; invented data on the seller's own pages); `/onboarding`
+    shows "Login" to a signed-in seller, and its banner reads "0% comission, get sales accross globe" (two typos;
+    "0% commission" also sits beside the Supplier Agreement's commission clause, see the unbacked-claims item);
+    Cosora-Admin's shared `Tabs` shows a small vertical scroll arrow when tabs carry counts (Blogs, Registrations).
 - Reference: the audit's list delivered in chat on 2026-11-13; items 1–20 were fixed on branch
   `onboarding/registration-fixes`.
 - Status: Open
