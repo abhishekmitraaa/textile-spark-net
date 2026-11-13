@@ -10,7 +10,7 @@ import { ChevronLeft, Check, Clock, FileText, ExternalLink, ShieldCheck, AlertTr
 import { useAuth } from "@/contexts/AuthContext";
 import { useMyVendorProfile } from "@/lib/queries/vendorStore";
 import {
-  resubmitKycDocument, submitCatalogue, catalogueFileProblem, BUSINESS_REGISTRATION_KINDS, CATALOGUE_ACCEPT,
+  resubmitKycDocument, submitCatalogue, catalogueFileProblem, addPanDocument, panProblem, BUSINESS_REGISTRATION_KINDS, CATALOGUE_ACCEPT,
   KYC_FILE_TYPES, MAX_CATALOGUE_FILES, MAX_KYC_BYTES, type BusinessRegistrationKind,
 } from "@/lib/queries/vendorOnboarding";
 import { supabase } from "@/lib/supabase";
@@ -68,8 +68,8 @@ const listItem = {
  * ones here. Any other type on file (a legacy CIN row) still renders after these.
  */
 const COLLECTED_DOC_TYPES = ["pan", "gst", "business_registration", "aadhaar", "catalog"] as const;
-/** Types a seller can add here when they never gave one. */
-type AddableType = "business_registration" | "aadhaar" | "catalog";
+/** Types a seller can add here when they never gave one (the PAN since 2026-11-13, onboarding audit #33). */
+type AddableType = "pan" | "business_registration" | "aadhaar" | "catalog";
 
 /**
  * "View document" — mints a signed URL for THIS document only, at the moment
@@ -185,8 +185,15 @@ function ReplaceDocumentButton({ vendorId, doc }: { vendorId: string; doc: Vendo
  * catalogue files. The same upload and row rules as onboarding; the new rows go
  * into review like any other.
  */
-function AddDocumentButton({ vendorId, type }: { vendorId: string; type: AddableType }) {
+function AddDocumentButton({ vendorId, type, currentPan = "", gstin = "" }: {
+  vendorId: string; type: AddableType;
+  /** For the PAN: the number already on the profile (kept as it is), and a GSTIN it must match. */
+  currentPan?: string; gstin?: string;
+}) {
   const qc = useQueryClient();
+  const [panNumber, setPanNumber] = useState(currentPan);
+  const [holderName, setHolderName] = useState("");
+  const [address, setAddress] = useState("");
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [kind, setKind] = useState<BusinessRegistrationKind | "">("");
@@ -197,7 +204,9 @@ function AddDocumentButton({ vendorId, type }: { vendorId: string; type: Addable
   const kindInfo = BUSINESS_REGISTRATION_KINDS.find((k) => k.id === kind);
   const numberOk = !kindInfo ? false : kindInfo.numberRequired ? Boolean(kindInfo.pattern?.test(number.trim().toUpperCase())) : true;
   const label = DOC_TYPE_LABELS[type] ?? type;
-  const ready = files.length > 0 && (type === "catalog" || (type === "aadhaar" ? consent : kind !== "" && numberOk));
+  const panIssue = type === "pan" ? panProblem({ number: panNumber, holderName, address, currentPan, gstin }) : null;
+  const ready = files.length > 0 && (
+    type === "catalog" || (type === "pan" ? !panIssue : type === "aadhaar" ? consent : kind !== "" && numberOk));
 
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files ?? []);
@@ -225,6 +234,9 @@ function AddDocumentButton({ vendorId, type }: { vendorId: string; type: Addable
     try {
       if (type === "catalog") {
         await submitCatalogue(vendorId, files);
+      } else if (type === "pan") {
+        await addPanDocument(vendorId, { number: panNumber, holderName, address, file: files[0], currentPan, gstin });
+        await qc.invalidateQueries({ queryKey: ["vendor_profile", "mine", vendorId] });
       } else if (type === "aadhaar") {
         await resubmitKycDocument(vendorId, "aadhaar", files[0], { masked: true, consent_at: new Date().toISOString() });
       } else {
@@ -254,10 +266,13 @@ function AddDocumentButton({ vendorId, type }: { vendorId: string; type: Addable
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {type === "aadhaar" ? "Add your masked Aadhaar" : type === "catalog" ? "Add your product catalogue" : "Add your business registration"}
+              {type === "pan" ? "Add your PAN"
+                : type === "aadhaar" ? "Add your masked Aadhaar" : type === "catalog" ? "Add your product catalogue" : "Add your business registration"}
             </DialogTitle>
             <DialogDescription>
-              {type === "aadhaar"
+              {type === "pan"
+                ? "Enter the details as they're printed on the PAN card, then upload the card."
+                : type === "aadhaar"
                 ? "Upload a masked Aadhaar, where only the last 4 digits show. You can download one from myAadhaar (uidai.gov.in)."
                 : type === "catalog"
                   ? `A PDF, Excel or CSV file, or photos of your range, up to ${MAX_CATALOGUE_FILES} files.`
@@ -265,6 +280,30 @@ function AddDocumentButton({ vendorId, type }: { vendorId: string; type: Addable
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
+            {type === "pan" && (
+              <>
+                <div className="space-y-1">
+                  <Label htmlFor="kyc-pan-number" className="text-xs">PAN number</Label>
+                  {currentPan ? (
+                    // A number is already on file: it stays. Changing it goes through support.
+                    <p id="kyc-pan-number" className="text-sm font-medium text-gray-900" data-no-translate>{currentPan}</p>
+                  ) : (
+                    <Input id="kyc-pan-number" value={panNumber} maxLength={10} placeholder="ABCDE1234F"
+                      onChange={(e) => setPanNumber(e.target.value.toUpperCase())} />
+                  )}
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="kyc-pan-name" className="text-xs">Name on the PAN card</Label>
+                  <Input id="kyc-pan-name" value={holderName} maxLength={120} onChange={(e) => setHolderName(e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="kyc-pan-address" className="text-xs">Address</Label>
+                  <Input id="kyc-pan-address" value={address} maxLength={300} onChange={(e) => setAddress(e.target.value)} />
+                </div>
+                {/* Said once the number is complete, so it doesn't nag while the seller types. */}
+                {panIssue && panNumber.trim().length >= 10 && <p className="text-xs text-red-600">{panIssue}</p>}
+              </>
+            )}
             {type === "business_registration" && (
               <>
                 <Select value={kind} onValueChange={(v) => { setKind(v as BusinessRegistrationKind); setNumber(""); }}>
@@ -512,7 +551,8 @@ const Kyc = () => {
               const number = numbers[type];
               const rejected = doc ? isRejected(doc) : false;
               const notNeeded = !doc && ((type === "gst" && noGst) || (type === "catalog" && productStandsIn));
-              const addable = !doc && !notNeeded && (type === "business_registration" || type === "aadhaar" || type === "catalog");
+              const addable = !doc && !notNeeded
+                && (type === "pan" || type === "business_registration" || type === "aadhaar" || type === "catalog");
               return (
                 <motion.div variants={listItem} key={type}
                   className="border-b border-gray-100 px-4 py-4 last:border-0">
@@ -533,7 +573,10 @@ const Kyc = () => {
 
                     <div className="flex shrink-0 items-center gap-2">
                       {type !== "catalog" && doc?.fileUrl && <ViewDocumentButton doc={doc} />}
-                      {addable && user?.id && <AddDocumentButton vendorId={user.id} type={type as AddableType} />}
+                      {addable && user?.id && (
+                        <AddDocumentButton vendorId={user.id} type={type as AddableType}
+                          currentPan={store?.pan ?? ""} gstin={store?.gstin ?? ""} />
+                      )}
                       {notNeeded ? (
                         <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
                           Not needed
@@ -605,14 +648,14 @@ const Kyc = () => {
         {/* Honest note about what this page can and cannot do. A REJECTED
             document can be replaced on its row (Master Prompt 8, Phase 3), and
             since 2026-10-02 a missing business registration, masked Aadhaar or
-            catalogue can be added on its row. A PAN or GST number still goes
-            through support: it lives in the business profile, not here. */}
+            catalogue can be added on its row, and since 2026-11-13 a missing
+            PAN. Changing a PAN or GST number on file still goes through support. */}
         <motion.div variants={section} className="flex items-start gap-2 rounded-2xl border border-gray-100 bg-gray-50 p-4">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-gray-400" />
           <p className="text-xs leading-5 text-gray-600">
             Documents are collected during seller registration and verified by the Cosora team. If one is missing, add it
-            on its row; if one is rejected, upload a replacement and it goes back into review. For your PAN or GST number,
-            contact support from{" "}
+            on its row; if one is rejected, upload a replacement and it goes back into review. To change your PAN or GST
+            number, contact support from{" "}
             <button onClick={() => navigate(supportChatHref({ category: "vendor_kyc" }))} className="font-semibold text-brand-vendor underline">
               Help &amp; Support
             </button>

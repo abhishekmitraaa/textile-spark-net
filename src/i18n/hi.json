@@ -7441,7 +7441,6 @@
  "Not registered for GST": "GST में रजिस्टर्ड नहीं",
  "Your listed products stand in for a catalogue": "आपके लिस्टेड उत्पाद कैटलॉग की जगह काम करते हैं",
  "Not needed": "ज़रूरी नहीं",
- "Documents are collected during seller registration and verified by the Cosora team. If one is missing, add it on its row; if one is rejected, upload a replacement and it goes back into review. For your PAN or GST number, contact support from": "दस्तावेज़ विक्रेता पंजीकरण के दौरान लिए जाते हैं और कोसोरा की टीम उन्हें वेरिफ़ाई करती है। अगर कोई कम है, तो उसे उसकी पंक्ति पर जोड़ें; अगर कोई अस्वीकार हुआ है, तो उसकी जगह नई कॉपी अपलोड करें और वह फिर से समीक्षा में जाएगी। अपने PAN या GST नंबर के लिए, यहाँ से सपोर्ट से संपर्क करें:",
  "See your plan": "अपना प्लान देखें",
  "Report this listing": "इस लिस्टिंग की रिपोर्ट करें",
  "Report this seller": "इस विक्रेता की रिपोर्ट करें",
@@ -8586,5 +8585,14 @@
  "Take a business photo": "व्यवसाय की फ़ोटो लें",
  "Format looks right": "फ़ॉर्मेट सही लगता है",
  "First product added. It's sent with your registration.": "पहला उत्पाद जुड़ गया। यह आपके पंजीकरण के साथ भेजा जाएगा।",
- "Banner picture": "बैनर की तस्वीर"
+ "Banner picture": "बैनर की तस्वीर",
+ "Check the PAN: 5 letters, 4 digits, then a letter (ABCDE1234F).": "PAN जाँचें: 5 अक्षर, 4 अंक, फिर एक अक्षर (ABCDE1234F)।",
+ "A different PAN is on file. Contact support to change it.": "आपकी फ़ाइल में दूसरा PAN दर्ज है। उसे बदलने के लिए सपोर्ट से संपर्क करें।",
+ "Enter the name as it's printed on the PAN card.": "नाम वैसे ही लिखें जैसा PAN कार्ड पर छपा है।",
+ "Enter the address on the PAN card.": "PAN कार्ड पर लिखा पता दर्ज करें।",
+ "Add your PAN": "अपना PAN जोड़ें",
+ "Enter the details as they're printed on the PAN card, then upload the card.": "PAN कार्ड पर छपे विवरण दर्ज करें, फिर कार्ड अपलोड करें।",
+ "PAN number": "PAN नंबर",
+ "Name on the PAN card": "PAN कार्ड पर नाम",
+ "Documents are collected during seller registration and verified by the Cosora team. If one is missing, add it on its row; if one is rejected, upload a replacement and it goes back into review. To change your PAN or GST number, contact support from": "दस्तावेज़ विक्रेता पंजीकरण के दौरान लिए जाते हैं और कोसोरा की टीम उन्हें वेरिफ़ाई करती है। अगर कोई कम है, तो उसे उसकी पंक्ति पर जोड़ें; अगर कोई अस्वीकार हुआ है, तो उसकी जगह नई कॉपी अपलोड करें और वह फिर से समीक्षा में जाएगी। अपना PAN या GST नंबर बदलने के लिए, यहाँ से सपोर्ट से संपर्क करें:"
 }

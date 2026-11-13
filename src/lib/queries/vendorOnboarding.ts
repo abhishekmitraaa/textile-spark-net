@@ -20,6 +20,7 @@ import { writeOwnVendorRow } from "@/lib/queries/vendorStore";
 export { BUSINESS_REGISTRATION_KINDS, type BusinessRegistrationKind } from "@/lib/registrationValidation";
 import type { BusinessRegistrationKind, OwnerIdKind, RegistrationPayload } from "@/lib/registrationValidation";
 import { shrinkImage } from "@/lib/shrinkImage";
+import { isValidPan, normaliseTaxId, panOfGstin } from "@/lib/taxIds";
 import { fetchMySellerRegistration } from "@/lib/queries/sellerRegistration";
 
 /**
@@ -181,6 +182,39 @@ export async function resubmitKycDocument(
     if (progress.newRows === "no") await supabase.storage.from(KYC_BUCKET).remove([path]);
     throw err;
   }
+}
+
+/** Why a PAN can't be added on /kyc, or null when it can (the registration's rules, registrationValidation.ts). */
+export function panProblem(input: { number: string; holderName: string; address: string; currentPan: string; gstin: string }): string | null {
+  const pan = normaliseTaxId(input.number);
+  if (!isValidPan(pan)) return "Check the PAN: 5 letters, 4 digits, then a letter (ABCDE1234F).";
+  if (input.currentPan && normaliseTaxId(input.currentPan) !== pan) return "A different PAN is on file. Contact support to change it.";
+  if (input.gstin && panOfGstin(normaliseTaxId(input.gstin)) !== pan) return "The GSTIN doesn't match your PAN. A GSTIN contains the PAN it was issued for.";
+  const name = input.holderName.trim().length;
+  if (name < 3 || name > 120) return "Enter the name as it's printed on the PAN card.";
+  const address = input.address.trim().length;
+  if (address < 5 || address > 300) return "Enter the address on the PAN card.";
+  return null;
+}
+
+/**
+ * /kyc: a seller with no PAN card on file adds it (onboarding audit #33), as the registration stores it: the number
+ * on the profile (vendor_profiles.pan, whose guard checks it again) and the card as a document with the name and
+ * address on it. A number already on file is kept: changing one goes through support. The number is saved first, so
+ * a failed upload leaves a seller who can try the card again, never a card with no number.
+ */
+export async function addPanDocument(
+  vendorId: string,
+  input: { number: string; holderName: string; address: string; file: File; currentPan: string; gstin: string },
+): Promise<void> {
+  const problem = panProblem(input);
+  if (problem) throw new Error(problem);
+  const pan = normaliseTaxId(input.number);
+  if (!input.currentPan) await writeOwnVendorRow({ id: vendorId, pan });
+  await resubmitKycDocument(vendorId, "pan", input.file, {
+    holder_name: input.holderName.trim().replace(/\s+/g, " "),
+    address: input.address.trim().replace(/\s+/g, " "),
+  });
 }
 
 /**
