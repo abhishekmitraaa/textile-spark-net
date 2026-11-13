@@ -7,7 +7,7 @@
  */
 import { expect, test, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { BUYER_URL, allowFeature, contextWithSession, disallowFeature, freshAccount, sql, stack, watchErrors } from "./stack";
+import { ADMIN_URL, BUYER_URL, allowFeature, contextWithSession, disallowFeature, freshAccount, signedInContext, sql, stack, watchErrors } from "./stack";
 
 const GATE = "seller_registration_required";
 const switchedOn: string[] = [];
@@ -481,5 +481,118 @@ test("a Free seller publishes 1 PDF catalogue; the second is refused with the pl
   await client.auth.setSession({ access_token: who.session.access_token, refresh_token: who.session.refresh_token });
   const { error } = await client.from("catalogues").insert({ vendor_id: who.id, title: "Second" });
   expect(error?.message).toBe("The Free plan includes 1 PDF catalogue. Upgrade to Basic or above to add more.");
+  await ctx.close();
+});
+
+// ═════════════════════════════ Task 11: Cosora-Admin ═════════════════════════════
+/** A seller outside India waiting for approval, with a signed agreement, submitted `daysAgo` days ago. */
+async function pendingOverseasSeller(prefix: string, daysAgo = 0) {
+  const who = await freshAccount(prefix);
+  const brand = `${prefix} ${Date.now().toString(36)}`;
+  sql(`insert into public.vendor_profiles (id, brand_name, country, country_code) values ('${who.id}', '${brand}', 'United Arab Emirates', 'AE');
+       insert into public.vendor_registrations (id, vendor_id, country_code, status, created_at)
+         values (gen_random_uuid(), '${who.id}', 'AE', 'pending_review', now() - interval '${daysAgo} days');`);
+  signContract(who.id);
+  return { ...who, brand };
+}
+
+test("an admin approves an overseas registration from the queue, and the seller can publish", async ({ browser }) => {
+  const seller = await pendingOverseasSeller("rf-approve");
+  gateOn(seller.id);
+  const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  const errors = watchErrors(page);
+  await page.goto(`${ADMIN_URL}/registrations`);
+  const row = page.getByTestId("registration-row").filter({ hasText: seller.brand });
+  await expect(row).toBeVisible({ timeout: 15_000 });
+  await expect(row).toContainText("United Arab Emirates (AE)");
+  await row.getByRole("button", { name: "Approve" }).click();
+  await expect(row).toHaveCount(0, { timeout: 15_000 });
+  expect(sql(`select r.status || ':' || v.onboarding_complete from public.vendor_registrations r join public.vendor_profiles v on v.id = r.vendor_id where r.vendor_id = '${seller.id}';`))
+    .toBe("registered:true");
+  expect(errors).toEqual([]);
+  await ctx.close();
+
+  // Registered: the publish gate lets the seller's listing in (to review).
+  const s = stack();
+  const client = createClient(s.API, s.ANON, { auth: { persistSession: false } });
+  await client.auth.setSession({ access_token: seller.session.access_token, refresh_token: seller.session.refresh_token });
+  const { error } = await client.from("products").insert({ vendor_id: seller.id, name: "First overseas listing" });
+  expect(error).toBeNull();
+});
+
+test("the registrations queue lists the oldest first with days waiting, and a rejection needs a reason", async ({ browser }) => {
+  const older = await pendingOverseasSeller("rf-older", 7);
+  const newer = await pendingOverseasSeller("rf-newer", 1);
+  const ctx = await signedInContext(browser, "support", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  await page.goto(`${ADMIN_URL}/registrations`);
+  const rows = page.getByTestId("registration-row");
+  await expect(rows.filter({ hasText: newer.brand })).toBeVisible({ timeout: 15_000 });
+  const names = await rows.allInnerTexts();
+  const at = (b: string) => names.findIndex((t) => t.includes(b));
+  expect(at(older.brand)).toBeGreaterThanOrEqual(0);
+  expect(at(older.brand)).toBeLessThan(at(newer.brand));
+  await expect(rows.filter({ hasText: older.brand })).toContainText("7 days waiting");
+
+  await rows.filter({ hasText: newer.brand }).getByRole("button", { name: "Ask for changes" }).click();
+  const send = page.getByRole("button", { name: "Send back to the seller" });
+  await expect(send).toBeDisabled();
+  await page.getByPlaceholder(/registration certificate has expired/).fill("The licence copy is unreadable.");
+  await send.click();
+  await expect(rows.filter({ hasText: newer.brand })).toHaveCount(0, { timeout: 15_000 });
+  expect(sql(`select status || ':' || reason from public.vendor_registrations where vendor_id = '${newer.id}';`))
+    .toBe("rejected:The licence copy is unreadable.");
+  await ctx.close();
+});
+
+test("a moderator approves and rejects premises photos from the queue", async ({ browser }) => {
+  const who = await freshAccount("rf-queue", { seller: true });
+  const good = photoUrl(who.id, "good");
+  const dark = photoUrl(who.id, "dark");
+  // Oldest in the queue, so they're on its first page whatever else is waiting locally.
+  sql(`insert into public.vendor_premises_photos (vendor_id, url, position, created_at) values
+         ('${who.id}', '${good}', 0, '2020-01-01'), ('${who.id}', '${dark}', 1, '2020-01-02');`);
+  const ctx = await signedInContext(browser, "moderator", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  await page.goto(`${ADMIN_URL}/premises-photos`);
+  // By this seller's own files: every seller from freshAccount("rf-queue") has the same name.
+  const cards = page.getByTestId("photo-card").filter({ has: page.locator(`img[src*="/${who.id}/"]`) });
+  await expect(cards).toHaveCount(2, { timeout: 15_000 });
+  await cards.filter({ has: page.locator(`img[src="${good}"]`) }).getByRole("button", { name: "Approve" }).click();
+  await expect(cards).toHaveCount(1, { timeout: 15_000 });
+  await cards.getByRole("button", { name: "Reject" }).click();
+  await page.getByPlaceholder(/photo is blurred/).fill("Too dark to see the floor.");
+  await page.getByRole("button", { name: "Reject photo" }).click();
+  await expect(cards).toHaveCount(0, { timeout: 15_000 });
+  expect(sql(`select string_agg(status || ':' || coalesce(rejection_reason, ''), ',' order by position) from public.vendor_premises_photos where vendor_id = '${who.id}';`))
+    .toBe("live:,rejected:Too dark to see the floor.");
+  expect(sql(`select array_to_string(office_photos, ',') from public.vendor_profiles where id = '${who.id}';`)).toBe(good);
+
+  // An approved photo can be pulled down later, with a reason; it leaves the store.
+  await page.getByRole("button", { name: "Approved" }).click();
+  await expect(cards).toHaveCount(1, { timeout: 15_000 });
+  await cards.getByRole("button", { name: "Pull down" }).click();
+  await page.getByPlaceholder(/photo is blurred/).fill("Shows another company's signboard.");
+  await page.getByRole("button", { name: "Pull down photo" }).click();
+  await expect(cards).toHaveCount(0, { timeout: 15_000 });
+  expect(sql(`select cardinality(office_photos) from public.vendor_profiles where id = '${who.id}';`)).toBe("0");
+  await ctx.close();
+});
+
+test("the KYC panel shows what came with each document: PAN holder, GSTIN, an overseas seller's IDs", async ({ browser }) => {
+  const who = await freshAccount("rf-kyc", { seller: true });
+  sql(`insert into public.vendor_documents (vendor_id, doc_type, file_url, detail) values
+         ('${who.id}', 'pan', '${who.id}/kyc/pan.png', '{"holder_name": "Spec Holder", "address": "12 Ring Road, Surat"}'),
+         ('${who.id}', 'gst', '${who.id}/kyc/gst.pdf', '{"number": "24ABCDE1234F1Z5"}'),
+         ('${who.id}', 'tax_id', '${who.id}/kyc/trn.pdf', '{"number": "TRN100200300", "country": "United Arab Emirates"}'),
+         ('${who.id}', 'owner_id', '${who.id}/kyc/id.png', '{"kind": "passport", "country": "United Arab Emirates"}');`);
+  const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  await page.goto(`${ADMIN_URL}/vendors/${who.id}`);
+  await expect(page.getByText("Name: Spec Holder · Address: 12 Ring Road, Surat")).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("GSTIN 24ABCDE1234F1Z5")).toBeVisible();
+  await expect(page.getByText("TRN100200300 · United Arab Emirates")).toBeVisible();
+  await expect(page.getByText("Passport · United Arab Emirates")).toBeVisible();
   await ctx.close();
 });
