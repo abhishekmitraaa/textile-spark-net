@@ -1005,8 +1005,9 @@ undocumented. Deep technical rationale for each lives in
   steps stored `URL.createObjectURL()` results, which are alive only in the tab that made
   them, so `vendor_documents.file_url` was always null and `office_photos` always empty.
 - **The app never claims to have verified something it cannot verify.** There is no PAN
-  lookup wired to this project, so onboarding does a **format** check and reports "Submitted
-  for review"; `vendor_documents.verified` is flipped by an admin and by nothing in the
+  lookup wired to this project, so onboarding does a **format** check and reports "Format
+  looks right" (it said "Submitted for review" until 2026-11-13, when nothing had been sent
+  yet); `vendor_documents.verified` is flipped by an admin and by nothing in the
   client. A green "Verified" tick derived from a regex and a `setTimeout` is the app vouching
   for a document nobody has looked at. Same rule retired the OTP modal's `482931` auto-fill.
 - **A vendor sees exactly the trust seal buyers see.** `/business-profile` gates TrustedSEAL

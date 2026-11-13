@@ -912,7 +912,7 @@ dashboard.
 **KYC is read-only to the vendor and unverifiable by the app.** `vendorDocuments.ts` backs
 `/kyc`; `vendor_documents.verified` is flipped by an admin and by nothing in this codebase, so
 the only states are *not submitted*, *in review* and *verified*. Onboarding's PAN check is a
-**format** check that says "Submitted for review" — it previously showed a green "Verified"
+**format** check that says "Format looks right" (until 2026-11-13 "Submitted for review", before anything was sent) — it once showed a green "Verified"
 tick derived from a regex and a 1.2-second timer, which is the app vouching for a document
 nobody had looked at. `saveVendorOnboarding` deletes and rewrites this vendor's rows for the
 doc types it is about to insert, so a retried submit does not grow duplicates (there is no
