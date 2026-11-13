@@ -2952,8 +2952,39 @@ documents: sellers with unreviewed documents, through the partial index `vendor_
   slower (760–1,040 ms against 175–199 ms locally). `scripts/onboarding/reach.sql` pins the unfiltered results to
   md5 baselines taken before the change.
 
-**Tests.** `scripts/onboarding/registration.sql` (85 cases), `reach.sql` (17), `race.mjs`,
-`scripts/registration-validation-check.mjs` (32), `tests/local/registration-fixes.spec.ts` (29, buyer and admin).
+**After the final review (2026-11-13).**
+- *Cosora's own Storage.* `admin.storage_origin` holds the project's address (production's is seeded; a local stack
+  sets its own: `update admin.storage_origin set origin = 'http://127.0.0.1:54321'`). `public.own_storage_object(url,
+  bucket, owner)` (definer; public buckets only; a signed-in caller about their own folder) is true for a plain URL
+  on that origin, in the owner's folder, whose object exists. The premises-photo guard, the submit's file checks and
+  `admin_premises_photo_review` (approve) use it, and Cosora-Admin compares the photo's origin with its own.
+- *A photo's file can't be swapped.* Three restrictive policies on `storage.objects` refuse a browser's insert,
+  update or delete of an object a `vendor_premises_photos` row points at (`premises_photo_file_in_use`). Delete the
+  row first, then the file. `storage_object_in_use` is untouched (the unreleased 2026-11-05 security branch rewrites
+  it; patching it here would collide).
+- *Country.* `admin.sync_vendor_country_code()` refuses a browser that makes `country_code` anything but India (a
+  first row may say India or nothing; a later edit may only fill in India where nothing was known). Admins and the
+  definer submit aren't refused.
+- *Held until registered.* `trg_hold_until_registered` (before update of status on products, product_videos,
+  catalogues) refuses `live` while `public.registration_held(vendor)`: the latest registration is pending or sent
+  back and the seller isn't registered or exempt. Whatever the gate switch says.
+- *Resubmission.* The registration's `result` records `product_id` and `catalogue_id`. A resubmission after a
+  rejection replaces that product and catalogue if never approved (they don't count against the limits), counts
+  approved photos against the 12, and hands back to the browser (`superseded_files`, `superseded_public`) only files
+  nothing points at any more. Replaying a submission that was sent back raises `submission_closed`.
+- *Decisions name their submission:* `admin_vendor_registration_decide(vendor, submission, approve, reason)`.
+- *The browser's cleanup.* Uploads are removed only when nothing can have been saved with them: the submit never
+  left, or the database answered with an SQLSTATE (`isServerRefusal`). A dropped connection keeps them, and the next
+  Submit sends the same files with the same submission id while the picks are unchanged
+  (`registrationFilesSignature`). After a refusal the form starts a new submission id.
+- *Smaller:* staff ids (`reviewed_by`, `decided_by`) aren't client-readable (column grants); `seller_registered()`
+  answers a signed-in caller about themselves only; the photo cache writes only when the approved set changed;
+  every address `office_photos` held before is kept in `admin.office_photos_before_20261113`; 100900 rebuilds the
+  cache from the approved photos.
+
+**Tests.** `scripts/onboarding/registration.sql` (113 cases), `reach.sql` (18; the feed is compared with its
+previous version, recreated in the run), `race.mjs`, `audit-repro.mjs`, `scripts/registration-validation-check.mjs`
+(32), `tests/local/registration-fixes.spec.ts` (30, buyer and admin).
 
 ## Integrations
 

@@ -207,14 +207,18 @@ test("India happy path: one contract, the flag, the numbers as typed, consent re
   await ctx.close();
 });
 
-test("a failed submit leaves no registration and no files, and Submit works again", async ({ browser }) => {
+test("a refused submit leaves no registration and no files, and Submit works again", async ({ browser }) => {
   test.setTimeout(180_000);
   const who = await freshAccount("rf-fail");
   const ctx = await contextWithSession(browser, who.session);
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/onboarding`);
   await register(page, { stopBeforeSubmit: true });
-  await page.route("**/rest/v1/rpc/submit_vendor_registration", (r) => r.abort("failed"));
+  // The database refuses (as it does for a bad agreement): the transaction rolled back, so the uploads go.
+  await page.route("**/rest/v1/rpc/submit_vendor_registration", (r) => r.fulfill({
+    status: 400, contentType: "application/json",
+    body: JSON.stringify({ code: "22023", message: "invalid_contract", details: null, hint: null }),
+  }));
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await expect(page.getByText("Registration not saved")).toBeVisible({ timeout: 30_000 });
   await expect.poll(() => objectsOf(who.id), { timeout: 15_000 }).toBe(0);
@@ -223,6 +227,29 @@ test("a failed submit leaves no registration and no files, and Submit works agai
   await page.unroute("**/rest/v1/rpc/submit_vendor_registration");
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await expect(page.getByText("Welcome to Cosora")).toBeVisible({ timeout: 30_000 });
+  expect(sql(`select count(*) from public.products where vendor_id = '${who.id}';`)).toBe("1");
+  await ctx.close();
+});
+
+test("a dropped connection keeps the uploads, and Submit sends the same files again", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const who = await freshAccount("rf-drop");
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/onboarding`);
+  await register(page, { stopBeforeSubmit: true });
+  // No answer at all: the database may still be saving, so nothing it might use is removed (review #6).
+  await page.route("**/rest/v1/rpc/submit_vendor_registration", (r) => r.abort("failed"));
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(page.getByText("Registration not saved")).toBeVisible({ timeout: 30_000 });
+  const files = objectsOf(who.id);
+  expect(files).toBeGreaterThan(0);
+  expect(sql(`select count(*) from public.vendor_registrations where vendor_id = '${who.id}';`)).toBe("0");
+  await page.unroute("**/rest/v1/rpc/submit_vendor_registration");
+  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await expect(page.getByText("Welcome to Cosora")).toBeVisible({ timeout: 30_000 });
+  // The same files were sent again: no second copy, nothing left over.
+  expect(objectsOf(who.id)).toBe(files);
   expect(sql(`select count(*) from public.products where vendor_id = '${who.id}';`)).toBe("1");
   await ctx.close();
 });
@@ -555,7 +582,9 @@ test("a moderator approves and rejects premises photos from the queue", async ({
   const who = await freshAccount("rf-queue", { seller: true });
   const good = photoUrl(who.id, "good");
   const dark = photoUrl(who.id, "dark");
-  // Oldest in the queue, so they're on its first page whatever else is waiting locally.
+  // Their files exist (approval checks), and they're the oldest in the queue, so they're on its first page.
+  sql(`insert into storage.objects (bucket_id, name, metadata) values
+         ('product-images', '${who.id}/office/good.png', '{}'), ('product-images', '${who.id}/office/dark.png', '{}');`);
   sql(`insert into public.vendor_premises_photos (vendor_id, url, position, created_at) values
          ('${who.id}', '${good}', 0, '2020-01-01'), ('${who.id}', '${dark}', 1, '2020-01-02');`);
   const ctx = await signedInContext(browser, "moderator", { width: 1440, height: 1000 });

@@ -171,6 +171,13 @@ begin
   on conflict do nothing;
 end $$;
 
+-- Cosora's own Storage address on this stack, for the run (the migration seeds production's; review #1).
+update admin.storage_origin set origin = 'http://127.0.0.1:54321';
+
+-- The submission an admin would see in the queue: the seller's latest.
+create function pg_temp.latest_sub(u uuid) returns uuid
+language sql as $$ select r.id from public.vendor_registrations r where r.vendor_id = u order by r.created_at desc limit 1 $$;
+
 create function pg_temp.pub(path text) returns text
 language sql as $$ select 'http://127.0.0.1:54321/storage/v1/object/public/product-images/' || path $$;
 
@@ -603,6 +610,7 @@ do $c$
 declare u uuid := pg_temp.new_user('t5-photo'); pid uuid; r text; mod uuid; n int;
 begin
   insert into public.vendor_profiles (id, brand_name) values (u, 'Photo Seller');
+  perform pg_temp.obj('product-images', u || '/office/front.jpg');  -- the file exists, as after a real upload
   r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url, position) values (%L, %L, 0)',
                                        u, pg_temp.pub(u || '/office/front.jpg')));
   select id into pid from public.vendor_premises_photos where vendor_id = u;
@@ -697,15 +705,15 @@ begin
   perform pg_temp.submit(w, gen_random_uuid(), pg_temp.overseas_payload(w));
 
   adm := pg_temp.as_admin('product_moderator');
-  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', u));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, true, null)', u, pg_temp.latest_sub(u)));
   perform pg_temp.ok('product_moderator cannot decide registrations (42501)', r like '42501%', r);
 
   adm := pg_temp.as_admin('vendor_ops');
   delete from public.vendor_contracts where vendor_id = w;
-  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', w));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, true, null)', w, pg_temp.latest_sub(w)));
   perform pg_temp.ok('approve overseas without contract refused', r like 'P0001:no_contract%', r);
 
-  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, true, null)', u));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, true, null)', u, pg_temp.latest_sub(u)));
   perform pg_temp.ok('approve overseas → flag true, status registered, seller told',
     r = 'ok' and (select onboarding_complete from public.vendor_profiles where id = u)
     and (select status from public.vendor_registrations where vendor_id = u) = 'registered'
@@ -720,9 +728,9 @@ begin
   update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
   perform pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
   adm := pg_temp.as_admin('vendor_ops');
-  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, false, null)', u));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, false, null)', u, pg_temp.latest_sub(u)));
   perform pg_temp.ok('reject without a reason → 22023', r like '22023%', r);
-  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, false, %L)', u, 'Licence is expired'));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, false, %L)', u, pg_temp.latest_sub(u), 'Licence is expired'));
   perform pg_temp.claims(u);
   set local role authenticated;
   s := public.my_seller_registration();
@@ -732,6 +740,215 @@ begin
     and not (select onboarding_complete from public.vendor_profiles where id = u), r || ' ' || s::text);
   r := pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
   perform pg_temp.ok('a rejected overseas seller can resubmit (pending again)', r = 'pending_review', r);
+end $c$;
+rollback to savepoint c;
+
+-- ═════════════════════════════ The final review's fixes (2026-11-13) ═════════════════════════════
+
+-- #1 a premises photo is a file in Cosora's own Storage, and its file can't be swapped once a row points at it
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r1-host'); r text; adm uuid; ph uuid;
+begin
+  insert into public.vendor_profiles (id, brand_name, onboarding_complete) values (u, 'Host Co', true);
+  perform pg_temp.obj('product-images', u || '/office/x.jpg');
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url) values (%L, %L)',
+         u, 'https://evil.example/storage/v1/object/public/product-images/' || u || '/office/x.jpg'));
+  perform pg_temp.ok('#1 a photo on another host is refused', r like '22023:invalid_file%', r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url) values (%L, %L)',
+         u, pg_temp.pub(u || '/office/missing.jpg')));
+  perform pg_temp.ok('#1 a photo whose file does not exist is refused', r like '22023:invalid_file%', r);
+  r := pg_temp.as_seller_msg(u, format('insert into public.vendor_premises_photos (vendor_id, url) values (%L, %L)',
+         u, pg_temp.pub(u || '/office/x.jpg')));
+  perform pg_temp.ok('#1 a photo in Cosora''s Storage is accepted', r = 'ok', r);
+  perform pg_temp.ok('#1 its file counts as in use', public.premises_photo_file_in_use('product-images', u || '/office/x.jpg'), '');
+  r := pg_temp.as_seller_msg(u, format('update storage.objects set metadata = %L::jsonb where bucket_id = %L and name = %L',
+         '{"swapped": true}', 'product-images', u || '/office/x.jpg'));
+  perform pg_temp.ok('#1 the seller can''t overwrite the file behind the photo',
+    coalesce((select metadata ->> 'swapped' from storage.objects where bucket_id = 'product-images' and name = u || '/office/x.jpg'), '') = '', r);
+
+  insert into public.vendor_premises_photos (vendor_id, url, position)
+  values (u, 'https://evil.example/storage/v1/object/public/product-images/' || u || '/office/x.jpg', 5) returning id into ph;
+  adm := pg_temp.as_admin('product_moderator');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_premises_photo_review(%L, true, null)', ph));
+  perform pg_temp.ok('#1 staff can''t approve a photo stored elsewhere', r like '22023%', r);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r1-submit'); p jsonb; r text;
+begin
+  p := pg_temp.india_payload(u);
+  p := jsonb_set(p, '{premises_photos}', jsonb_build_array(
+         'https://evil.example/storage/v1/object/public/product-images/' || u || '/office/o1.jpg'));
+  r := pg_temp.submit(u, gen_random_uuid(), p);
+  perform pg_temp.ok('#1 the submit refuses a photo on another host', r like 'ERR 22023 invalid_file%', r);
+end $c$;
+rollback to savepoint c;
+
+-- #2 a browser can't move its registered country
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r2-cc'); w uuid := pg_temp.new_user('r2-new'); x uuid := pg_temp.new_user('r2-null');
+        r text; adm uuid;
+begin
+  insert into public.vendor_profiles (id, brand_name, country, onboarding_complete) values (u, 'India Co', 'India', true);
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set country_code = %L where id = %L', 'AE', u));
+  perform pg_temp.ok('#2 country_code → AE refused', r = '42501', r);
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set country = %L where id = %L', 'United Arab Emirates', u));
+  perform pg_temp.ok('#2 country → United Arab Emirates refused', r = '42501', r);
+  r := pg_temp.as_seller(u, format('update public.vendor_profiles set city = %L where id = %L', 'Surat', u));
+  perform pg_temp.ok('#2 other edits still save', r = 'ok', r);
+  r := pg_temp.as_seller(w, format('insert into public.vendor_profiles (id, brand_name, country) values (%L, %L, %L)', w, 'Gulf Co', 'United Arab Emirates'));
+  perform pg_temp.ok('#2 a new row outside India refused', r = '42501', r);
+  r := pg_temp.as_seller(w, format('insert into public.vendor_profiles (id, brand_name, country) values (%L, %L, %L)', w, 'Desi Co', 'India'));
+  perform pg_temp.ok('#2 a new row in India accepted', r = 'ok', r);
+  insert into public.vendor_profiles (id, brand_name, country, country_code) values (x, 'Unknown Co', 'Narnia', null);
+  r := pg_temp.as_seller(x, format('update public.vendor_profiles set country = %L where id = %L', 'India', x));
+  perform pg_temp.ok('#2 an unknown country may become India', r = 'ok' and (select country_code from public.vendor_profiles where id = x) = 'IN', r);
+  adm := pg_temp.as_admin('super_admin');
+  r := pg_temp.as_seller(adm, format('update public.vendor_profiles set country = %L where id = %L', 'United Arab Emirates', u));
+  perform pg_temp.ok('#2 staff may correct it', r = 'ok', r);
+end $c$;
+rollback to savepoint c;
+
+-- #3 nothing goes live while a registration waits or was sent back
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r3-hold'); r text; adm uuid;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
+  begin
+    update public.products set status = 'live' where vendor_id = u;
+    r := 'went live';
+  exception when others then
+    r := sqlstate || ':' || sqlerrm;
+  end;
+  perform pg_temp.ok('#3 a pending overseas seller''s first product can''t be approved', r like 'P0001:%waiting for Cosora%', r);
+  adm := pg_temp.as_admin('vendor_ops');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, true, null)', u, pg_temp.latest_sub(u)));
+  update public.products set status = 'live' where vendor_id = u;
+  perform pg_temp.ok('#3 after approval it can',
+    r = 'ok' and (select status::text from public.products where vendor_id = u) = 'live', r);
+end $c$;
+rollback to savepoint c;
+
+-- #4 a resubmission replaces what the sent-back one left in review; the 12 count approved photos
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r4-resub'); adm uuid; r text; s jsonb; i int;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.obj('catalogues', u || '/range.pdf');
+  r := pg_temp.submit(u, gen_random_uuid(), jsonb_set(pg_temp.overseas_payload(u), '{documents,catalogue_pdf}',
+         jsonb_build_object('title', 'Range', 'url', 'http://127.0.0.1:54321/storage/v1/object/public/catalogues/' || u || '/range.pdf')));
+  adm := pg_temp.as_admin('vendor_ops');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, false, %L)', u, pg_temp.latest_sub(u), 'Wrong licence'));
+  -- The payload (and its files) is made as the harness, then sent as the seller.
+  s := jsonb_set(pg_temp.overseas_payload(u), '{documents,catalogue_pdf}', jsonb_build_object('title', 'Range',
+         'url', 'http://127.0.0.1:54321/storage/v1/object/public/catalogues/' || u || '/range.pdf'));
+  perform pg_temp.claims(u);
+  set local role authenticated;
+  s := public.submit_vendor_registration(gen_random_uuid(), s);
+  reset role;
+  perform pg_temp.ok('#4 resubmitting keeps one first product and one catalogue (no catalogue_limit)',
+    s ->> 'status' = 'pending_review'
+    and (select count(*) from public.products where vendor_id = u) = 1
+    and (select count(*) from public.catalogues where vendor_id = u) = 1, s::text);
+  perform pg_temp.ok('#4 the first submission''s product and catalogue are gone, and a file sent again isn''t handed back',
+    (s ->> 'catalogue_id') is not null
+    and not exists (select 1 from jsonb_array_elements(s -> 'superseded_public') sp(f) where sp.f ->> 'path' like '%/range.pdf')
+    and not exists (select 1 from jsonb_array_elements_text(s -> 'superseded_files') o(f) where o.f like '%/licence.pdf'), s::text);
+
+  update public.vendor_registrations set status = 'registered' where vendor_id = u;
+  update public.vendor_profiles set onboarding_complete = false where id = u;
+  delete from public.vendor_registrations where vendor_id = u;
+  for i in 1..11 loop
+    perform pg_temp.obj('product-images', u || '/office/live' || i || '.jpg');
+    insert into public.vendor_premises_photos (vendor_id, url, position, status)
+    values (u, pg_temp.pub(u || '/office/live' || i || '.jpg'), i, 'live');
+  end loop;
+  perform pg_temp.obj('product-images', u || '/office/o2.jpg');
+  r := pg_temp.submit(u, gen_random_uuid(), jsonb_set(pg_temp.overseas_payload(u), '{premises_photos}',
+         jsonb_build_array(pg_temp.pub(u || '/office/o1.jpg'), pg_temp.pub(u || '/office/o2.jpg'))));
+  perform pg_temp.ok('#4 11 approved + 2 new photos → premises_photo_limit', r like 'ERR 22023 premises_photo_limit%', r);
+end $c$;
+rollback to savepoint c;
+
+-- #7 a decided submission can't be replayed into a false success
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r7-replay'); sid uuid := gen_random_uuid(); adm uuid; r text;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(u, sid, pg_temp.overseas_payload(u));
+  adm := pg_temp.as_admin('vendor_ops');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, false, %L)', u, sid, 'Unreadable passport'));
+  r := pg_temp.submit(u, sid, pg_temp.overseas_payload(u));
+  perform pg_temp.ok('#7 replaying a sent-back submission → submission_closed', r like 'ERR P0001 submission_closed%', r);
+end $c$;
+rollback to savepoint c;
+
+-- #8 a decision names the submission the admin reviewed
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r8-stale'); old_sid uuid := gen_random_uuid(); adm uuid; r text;
+begin
+  update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  perform pg_temp.submit(u, old_sid, pg_temp.overseas_payload(u));
+  adm := pg_temp.as_admin('vendor_ops');
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, false, %L)', u, old_sid, 'Fix the licence'));
+  perform pg_temp.submit(u, gen_random_uuid(), pg_temp.overseas_payload(u));
+  r := pg_temp.as_seller_msg(adm, format('select public.admin_vendor_registration_decide(%L, %L, true, null)', u, old_sid));
+  perform pg_temp.ok('#8 approving with the old submission id → not_pending', r like 'P0001:not_pending%', r);
+end $c$;
+rollback to savepoint c;
+
+-- #9 crafted payloads get refusal keys, not raw errors
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r9-a'); w uuid := pg_temp.new_user('r9-b'); x uuid := pg_temp.new_user('r9-c'); r text;
+begin
+  r := pg_temp.submit(u, gen_random_uuid(), jsonb_set(pg_temp.india_payload(u), '{documents,registration,kind}', 'null'::jsonb));
+  perform pg_temp.ok('#9 a missing registration kind → invalid_registration', r like 'ERR 22023 invalid_registration%', r);
+  r := pg_temp.submit(w, gen_random_uuid(), jsonb_set(pg_temp.india_payload(w), '{product,moq}', '1e30'::jsonb));
+  perform pg_temp.ok('#9 a huge MOQ → invalid_product', r like 'ERR 22023 invalid_product%', r);
+  r := pg_temp.submit(x, gen_random_uuid(), jsonb_set(pg_temp.india_payload(x), '{whatsapp_updates}', '"yes"'::jsonb));
+  perform pg_temp.ok('#9 a non-boolean whatsapp_updates is ignored, not a crash', r = 'registered', r);
+end $c$;
+rollback to savepoint c;
+
+-- #11 staff ids aren't readable; a seller asks only about themselves
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r11-a'); w uuid := pg_temp.new_user('r11-b'); r text;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'A Co'), (w, 'B Co');
+  r := pg_temp.as_seller(u, 'select reviewed_by from public.vendor_premises_photos limit 1');
+  perform pg_temp.ok('#11 reviewed_by not readable', r = '42501', r);
+  r := pg_temp.as_seller(u, 'select decided_by from public.vendor_registrations limit 1');
+  perform pg_temp.ok('#11 decided_by not readable', r = '42501', r);
+  perform pg_temp.claims(u);
+  set local role authenticated;
+  r := coalesce(public.seller_registered(w)::text, 'null');
+  reset role;
+  perform pg_temp.ok('#11 seller_registered about someone else → null', r = 'null', r);
+end $c$;
+rollback to savepoint c;
+
+-- #12 a photo added for review doesn't rewrite the profile
+savepoint c;
+do $c$
+declare u uuid := pg_temp.new_user('r12-cache'); before xid; after xid;
+begin
+  insert into public.vendor_profiles (id, brand_name) values (u, 'Cache Co');
+  perform pg_temp.obj('product-images', u || '/office/c.jpg');
+  select xmin into before from public.vendor_profiles where id = u;
+  insert into public.vendor_premises_photos (vendor_id, url) values (u, pg_temp.pub(u || '/office/c.jpg'));
+  select xmin into after from public.vendor_profiles where id = u;
+  perform pg_temp.ok('#12 an under-review photo leaves vendor_profiles untouched', before = after, before || ' ' || after);
 end $c$;
 rollback to savepoint c;
 

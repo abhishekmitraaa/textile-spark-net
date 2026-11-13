@@ -16,6 +16,16 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5).
 - Status: Open
 
+### Release the registration branch and the 2026-11-05 security branch in a known order — added 2026-11-13
+- Task: decide which ships first, and rehearse the second against the first on a copy of production.
+- Context: the local stack carries both. The security branch (`20261105100000`, not on production) rewrites
+  `storage_object_in_use` and pins the body production has today; the registration branch deliberately doesn't touch
+  that function (it adds separate storage policies instead), but both pin other function bodies by md5. After either
+  release, re-check the other's pins before applying it. Also: keep `seller_registration_required` off until
+  `20261113100900` is live (before it, a browser can still set `onboarding_complete`).
+- Reference: 2026-11-13, the registration branch's final review.
+- Status: Open
+
 ### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
 - Task: the CA confirms how a plan or ad bought by a seller outside India is taxed and invoiced.
 - Context: Mitra (D9): overseas sellers buy plans and ads, billed IGST. As built, the invoice has no Indian place of

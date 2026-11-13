@@ -4,10 +4,10 @@
 -- Every case runs in its own savepoint and prints PASS/FAIL; the file ROLLS BACK.
 -- HOW TO RUN (local stack): bash scripts/onboarding/run.sh scripts/onboarding/reach.sql
 --
--- The md5 baselines were taken on the local stack on 2026-11-13, BEFORE 20261113100400 was applied, from
--- the same queries. They prove a signed-out visitor and a buyer without a trade type see exactly what they
--- saw before. They stay valid only while the local stack's live listings are unchanged; retake them (the
--- queries are pg_temp.feed_md5 / pg_temp.search_md5 below, on the old functions) if listings change.
+-- The feed is compared with the function as it was before 20261113100400 (copied below from
+-- 20261017190000_demand_everywhere.sql, the body that migration pins), on the same data at run time, so views and
+-- demand that other specs add don't matter. The search md5s were taken on the local stack on 2026-11-13, before
+-- the change; retake them on the old functions if listings change.
 -- ─────────────────────────────────────────────────────────────────────────────
 \set ON_ERROR_STOP off
 begin;
@@ -70,13 +70,124 @@ begin
   return r;
 end $$;
 
+-- The feed before 20261113100400, verbatim but for its name.
+CREATE FUNCTION pg_temp.feed_products_v0(p_sort text DEFAULT 'newest'::text, p_limit integer DEFAULT 24, p_offset integer DEFAULT 0, p_category_ids uuid[] DEFAULT NULL::uuid[], p_gender text DEFAULT NULL::text, p_vendor_ids uuid[] DEFAULT NULL::uuid[], p_on_sale boolean DEFAULT false, p_query text DEFAULT NULL::text, p_exclude_ids uuid[] DEFAULT NULL::uuid[], p_discount_above integer DEFAULT NULL::integer, p_discount_upto integer DEFAULT NULL::integer, p_ids uuid[] DEFAULT NULL::uuid[])
+ RETURNS TABLE(id uuid, vendor_id uuid, name text, price_value numeric, currency text, compare_at_price numeric, moq text, fabric text, gsm text, fit_type text, gender text, rating_avg numeric, enquiries_count integer, sold_count integer, views_count integer, location text, category_id uuid, category_name text, images text[], created_at timestamp with time zone, brand_name text, vendor_city text, is_verified boolean, plan_id text, plan_expires_at timestamp with time zone, ad_verified_until timestamp with time zone, boost integer)
+ LANGUAGE plpgsql
+ STABLE SECURITY DEFINER
+ SET search_path TO ''
+AS $function$
+declare
+  v_sort   text    := coalesce(nullif(btrim(p_sort), ''), 'newest');
+  v_limit  integer := least(greatest(coalesce(p_limit, 24), 1), case when p_ids is null then 96 else 200 end);
+  v_offset integer := least(greatest(coalesce(p_offset, 0), 0), 960);
+  v_query  text    := nullif(btrim(coalesce(p_query, '')), '');
+  v_like   text;
+begin
+  if v_sort not in ('newest', 'trending', 'discount', 'price_asc', 'price_desc', 'rating') then
+    raise exception 'Unknown sort %', v_sort using errcode = '22023';
+  end if;
+  if coalesce(cardinality(p_vendor_ids), 0) > 500 or coalesce(cardinality(p_exclude_ids), 0) > 200
+     or coalesce(cardinality(p_ids), 0) > 200
+     or coalesce(cardinality(p_category_ids), 0) > 300 then
+    raise exception 'Too many ids in one request' using errcode = '22023';
+  end if;
+  if v_query is not null then
+    v_query := left(v_query, 60);
+    v_like  := '%' || replace(replace(replace(v_query, '\', '\\'), '%', '\%'), '_', '\_') || '%';
+  end if;
+
+  return query
+  with keyed as (
+    -- Only what the sort needs, for every matching live listing.
+    select p.id, p.created_at, p.price_value, p.rating_avg,
+           case when v.plan_expires_at > now()
+                then coalesce((sp.limits ->> 'search_boost_tier')::integer, 0) else 0 end as k_boost,
+           -- Recent demand (log2 of the decayed sum, 20261017190000), joined set-wise; only trending orders on it.
+           case when v_sort = 'trending' then coalesce(tr.log2_score, '-infinity'::double precision) end as k_score,
+           case when p.compare_at_price > p.price_value and p.compare_at_price > 0
+                then (p.compare_at_price - p.price_value) / p.compare_at_price end as k_discount
+      from public.products p
+      join public.vendor_profiles v on v.id = p.vendor_id
+      left join public.subscription_plans sp on sp.id = v.plan_id
+      left join public.product_trend tr on tr.product_id = p.id
+     where p.status = 'live'
+       and (p_category_ids is null or p.category_id = any (p_category_ids))
+       and (p_vendor_ids is null or p.vendor_id = any (p_vendor_ids))
+       and (p_exclude_ids is null or not (p.id = any (p_exclude_ids)))
+       and (p_ids is null or p.id = any (p_ids))
+       and (p_gender is null or lower(p.gender) = lower(p_gender))
+       and (not coalesce(p_on_sale, false) and v_sort <> 'discount' and p_discount_above is null and p_discount_upto is null
+            or p.compare_at_price > p.price_value)
+       and (p_discount_above is null
+            or round((p.compare_at_price - p.price_value) / nullif(p.compare_at_price, 0) * 100) > p_discount_above)
+       and (p_discount_upto is null
+            or round((p.compare_at_price - p.price_value) / nullif(p.compare_at_price, 0) * 100) <= p_discount_upto)
+       and (v_like is null or p.name ilike v_like or v.brand_name ilike v_like)
+  ),
+  page as (
+    -- ORDER BY ... LIMIT keeps only the top rows while it reads (a top-N sort), where a window
+    -- function over every matching row would sort them all.
+    select k.*
+      from keyed k
+     order by
+             case when v_sort in ('newest', 'trending') then k.k_boost end desc nulls last,
+             case when v_sort = 'trending' then k.k_score end desc nulls last,
+             -- No recent demand yet: best-rated first, then newest (not "popular" by default).
+             case when v_sort = 'trending' then k.rating_avg end desc nulls last,
+             case when v_sort = 'discount' then k.k_discount end desc nulls last,
+             case when v_sort = 'price_asc' then k.price_value end asc nulls last,
+             case when v_sort = 'price_desc' then k.price_value end desc nulls last,
+             case when v_sort = 'rating' then k.rating_avg end desc nulls last,
+             k.created_at desc, k.id desc
+     limit v_limit offset v_offset
+  )
+  -- The card, for this page's rows only.
+  select p.id, p.vendor_id, p.name, p.price_value, p.currency, p.compare_at_price, p.moq, p.fabric, p.gsm,
+         p.fit_type, p.gender, p.rating_avg, p.enquiries_count, p.sold_count, p.views_count, p.location, p.category_id,
+         c.name,
+         array(select i.url from public.product_images i where i.product_id = p.id order by i.position, i.id limit 2),
+         p.created_at, v.brand_name, v.city, v.is_verified, v.plan_id, v.plan_expires_at, v.ad_verified_until,
+         pg.k_boost
+    from page pg
+    join public.products p on p.id = pg.id
+    join public.vendor_profiles v on v.id = p.vendor_id
+    left join public.categories c on c.id = p.category_id
+   order by
+             case when v_sort in ('newest', 'trending') then pg.k_boost end desc nulls last,
+             case when v_sort = 'trending' then pg.k_score end desc nulls last,
+             case when v_sort = 'trending' then pg.rating_avg end desc nulls last,
+             case when v_sort = 'discount' then pg.k_discount end desc nulls last,
+             case when v_sort = 'price_asc' then pg.price_value end asc nulls last,
+             case when v_sort = 'price_desc' then pg.price_value end desc nulls last,
+             case when v_sort = 'rating' then pg.rating_avg end desc nulls last,
+             pg.created_at desc, pg.id desc;
+end
+$function$;
+
+create function pg_temp.feed_md5_v0(viewer uuid, sort text) returns text
+language plpgsql as $$
+declare r text;
+begin
+  perform pg_temp.claims(viewer);
+  if viewer is null then set local role anon; else set local role authenticated; end if;
+  select md5(string_agg(f::text, '|' order by o)) into r from (
+    select row(id, vendor_id, name, price_value, currency, compare_at_price, moq, fabric, gsm, fit_type, gender, rating_avg,
+               enquiries_count, sold_count, views_count, location, category_id, category_name, images, created_at, brand_name,
+               vendor_city, is_verified, plan_id, plan_expires_at, ad_verified_until, boost) as f, row_number() over () as o
+      from pg_temp.feed_products_v0(sort, 96, 0)) t;
+  reset role;
+  return r;
+end $$;
+
 -- ═════════════════ baselines: signed-out and untyped buyers see what they saw before ═════════════════
 savepoint c;
 do $c$
 declare b uuid := '11111111-1111-1111-1111-111111111111';
 begin
-  perform pg_temp.ok('baseline: anon feed newest unchanged', pg_temp.feed_md5(null, 'newest') = 'fa1895edd539205400913c92efb288ec');
-  perform pg_temp.ok('baseline: anon feed trending unchanged', pg_temp.feed_md5(null, 'trending') = 'd796b0d2a02bc47c5e4906c1fba04cbb');
+  perform pg_temp.ok('baseline: anon feed newest unchanged', pg_temp.feed_md5(null, 'newest') = pg_temp.feed_md5_v0(null, 'newest'));
+  perform pg_temp.ok('baseline: anon feed trending unchanged', pg_temp.feed_md5(null, 'trending') = pg_temp.feed_md5_v0(null, 'trending'));
+  perform pg_temp.ok('baseline: untyped buyer feed trending unchanged', pg_temp.feed_md5(b, 'trending') = pg_temp.feed_md5_v0(b, 'trending'));
   perform pg_temp.ok('baseline: anon search unchanged', pg_temp.search_md5(null, 'shirt') = 'b6aefaa2af757742fa896d6e3591574b');
   perform pg_temp.ok('baseline: untyped buyer search unchanged', pg_temp.search_md5(b, 'shirt') = 'b6aefaa2af757742fa896d6e3591574b');
 exception when others then perform pg_temp.ok('baselines', false, sqlstate || ' ' || sqlerrm);

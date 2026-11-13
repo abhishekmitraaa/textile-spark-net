@@ -35,6 +35,15 @@ end
 $function$;
 revoke all on function admin.vendor_profiles_registration_guard() from public, anon, authenticated;
 
+-- What an old app wrote into office_photos between part A and now is replaced by the approved set (review #10).
+update public.vendor_profiles v
+   set office_photos = coalesce((select array_agg(p.url order by p.position, p.created_at)
+                                   from public.vendor_premises_photos p
+                                  where p.vendor_id = v.id and p.status = 'live'), '{}'::text[])
+ where v.office_photos is distinct from coalesce((select array_agg(p.url order by p.position, p.created_at)
+                                                   from public.vendor_premises_photos p
+                                                  where p.vendor_id = v.id and p.status = 'live'), '{}'::text[]);
+
 create trigger trg_vendor_profiles_registration_guard
   before insert or update on public.vendor_profiles
   for each row execute function admin.vendor_profiles_registration_guard();

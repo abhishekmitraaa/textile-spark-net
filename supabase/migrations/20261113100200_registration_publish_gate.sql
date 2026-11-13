@@ -36,6 +36,48 @@ create trigger trg_0_registered_seller before insert on public.advertisements
 create trigger trg_0_registered_seller before insert on public.quotes
   for each row execute function admin.require_registered_seller();
 
+-- ── Nothing goes live while a registration waits or was sent back (review #3) ──
+-- What a seller outside India sent with their registration (the first product, a catalogue), or added since, goes to
+-- the usual review queues; a moderator approving it must not put it in front of buyers before Cosora approves the
+-- registration. Applies to every writer: moderators, approve_vendor_content(), jobs. Sellers without a registration
+-- row (before 2026-11-13, the demo sellers) are untouched.
+create or replace function public.registration_held(p_vendor uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select not exists (select 1 from public.vendor_profiles v where v.id = p_vendor and v.onboarding_complete)
+     and not exists (select 1 from admin.registration_exempt e where e.vendor_id = p_vendor)
+     and coalesce((select r.status from public.vendor_registrations r
+                     where r.vendor_id = p_vendor order by r.created_at desc limit 1) in ('pending_review', 'rejected'), false)
+$function$;
+revoke all on function public.registration_held(uuid) from public, anon, authenticated;
+grant execute on function public.registration_held(uuid) to authenticated, service_role;
+
+create or replace function admin.hold_until_registered()
+returns trigger
+language plpgsql
+set search_path = ''
+as $function$
+begin
+  if new.status::text = 'live' and old.status::text is distinct from 'live' and public.registration_held(new.vendor_id) then
+    raise exception 'This seller''s registration is waiting for Cosora''s approval; approve the registration first'
+      using errcode = 'P0001', hint = 'registration_pending';
+  end if;
+  return new;
+end
+$function$;
+revoke all on function admin.hold_until_registered() from public, anon, authenticated;
+
+create trigger trg_hold_until_registered before update of status on public.products
+  for each row execute function admin.hold_until_registered();
+create trigger trg_hold_until_registered before update of status on public.product_videos
+  for each row execute function admin.hold_until_registered();
+create trigger trg_hold_until_registered before update of status on public.catalogues
+  for each row execute function admin.hold_until_registered();
+
 -- ── Self-check ───────────────────────────────────────────────────────────────
 do $check$
 declare
@@ -52,6 +94,12 @@ begin
            and (tgtype & 2) = 2 and (tgtype & 4) = 4 and (tgtype & 1) = 1
          order by tgname limit 1) <> 'trg_0_registered_seller' then
       raise exception 'self-check: on %, another BEFORE INSERT trigger fires before the registration gate', t;
+    end if;
+  end loop;
+  foreach t in array array['products', 'product_videos', 'catalogues'] loop
+    if not exists (select 1 from pg_trigger where tgname = 'trg_hold_until_registered'
+                     and tgrelid = ('public.' || t)::regclass) then
+      raise exception 'self-check: % can go live while its seller''s registration waits', t;
     end if;
   end loop;
   if (select prosecdef from pg_proc where oid = 'admin.require_registered_seller()'::regprocedure) then

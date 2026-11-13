@@ -7,7 +7,7 @@
 --                                                           registrations waiting) or 'documents' (sellers with
 --                                                           documents nobody has reviewed), oldest first
 --   admin_registration_queue_counts()                      the four counts for Cosora-Admin's navigation
---   admin_vendor_registration_decide(vendor, approve, reason)  super_admin, vendor_ops, support
+--   admin_vendor_registration_decide(vendor, submission, approve, reason)  super_admin, vendor_ops, support
 --
 -- Queues page by keyset (created_at, id), oldest first, so "Load more" stays cheap at any size. A rejection needs
 -- a reason, the seller is told either way (notify), and the reason reaches the Admin Log (cosora.audit_reason).
@@ -45,9 +45,13 @@ begin
   if p_approve is null then
     raise exception 'approve or reject' using errcode = '22023';
   end if;
-  select ph.id, ph.vendor_id into v_photo from public.vendor_premises_photos ph where ph.id = p_photo for update;
+  select ph.id, ph.vendor_id, ph.url into v_photo from public.vendor_premises_photos ph where ph.id = p_photo for update;
   if not found then
     raise exception 'That photo no longer exists' using errcode = 'P0002';
+  end if;
+  -- Only a file in Cosora's own Storage, in the seller's folder, is approved (review #1).
+  if p_approve and not public.own_storage_object(v_photo.url, 'product-images', v_photo.vendor_id) then
+    raise exception 'This photo isn''t stored on Cosora. Reject it with a reason.' using errcode = '22023';
   end if;
   if p_approve then
     update public.vendor_premises_photos ph
@@ -159,7 +163,8 @@ end
 $function$;
 
 -- ── An overseas registration: approve or reject ──────────────────────────────
-create or replace function public.admin_vendor_registration_decide(p_vendor uuid, p_approve boolean, p_reason text)
+-- Names the submission the admin reviewed (review #8): a stale queue can't approve documents nobody saw.
+create or replace function public.admin_vendor_registration_decide(p_vendor uuid, p_submission uuid, p_approve boolean, p_reason text)
 returns void
 language plpgsql
 volatile
@@ -171,13 +176,13 @@ declare
   v_reason text := admin.reg_text(p_reason);
 begin
   perform admin.require_admin_role(array['super_admin', 'vendor_ops', 'support']::public.admin_role_type[]);
-  if p_vendor is null or p_approve is null then
-    raise exception 'say which seller, and approve or reject' using errcode = '22023';
+  if p_vendor is null or p_submission is null or p_approve is null then
+    raise exception 'say which seller and submission, and approve or reject' using errcode = '22023';
   end if;
   perform pg_advisory_xact_lock(hashtextextended('cosora.vendor_registration:' || p_vendor::text, 0));
   select r.id, r.status into v_reg from public.vendor_registrations r
    where r.vendor_id = p_vendor order by r.created_at desc limit 1;
-  if v_reg.status is distinct from 'pending_review' then
+  if v_reg.status is distinct from 'pending_review' or v_reg.id is distinct from p_submission then
     raise exception 'not_pending' using errcode = 'P0001';
   end if;
   if p_approve then
@@ -215,7 +220,7 @@ begin
     'public.admin_premises_photo_queue(integer, timestamptz, uuid)',
     'public.admin_registration_queue(text, integer, timestamptz, uuid)',
     'public.admin_registration_queue_counts()',
-    'public.admin_vendor_registration_decide(uuid, boolean, text)'] loop
+    'public.admin_vendor_registration_decide(uuid, uuid, boolean, text)'] loop
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to authenticated', f);
   end loop;
@@ -225,7 +230,7 @@ $grants$;
 -- ── Self-check ───────────────────────────────────────────────────────────────
 do $check$
 begin
-  if has_function_privilege('anon', 'public.admin_vendor_registration_decide(uuid, boolean, text)', 'EXECUTE')
+  if has_function_privilege('anon', 'public.admin_vendor_registration_decide(uuid, uuid, boolean, text)', 'EXECUTE')
      or has_function_privilege('anon', 'public.admin_registration_queue(text, integer, timestamptz, uuid)', 'EXECUTE')
      or has_function_privilege('anon', 'public.admin_premises_photo_review(uuid, boolean, text)', 'EXECUTE') then
     raise exception 'self-check: an admin function is open to anon';

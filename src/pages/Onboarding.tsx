@@ -27,7 +27,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
 import {
-  uploadRegistrationFiles, submitVendorRegistration, cleanupRegistrationUploads, emptyUploads,
+  uploadRegistrationFiles, submitVendorRegistration, cleanupRegistrationUploads, emptyUploads, isServerRefusal,
+  registrationFilesSignature,
   BUSINESS_REGISTRATION_KINDS, KYC_FILE_TYPES, MAX_KYC_BYTES,
   CATALOGUE_ACCEPT, MAX_CATALOGUE_FILES, catalogueFileProblem, type BusinessRegistrationKind,
   type OwnerIdKind, type RegistrationPayload, type UploadedFiles,
@@ -287,6 +288,9 @@ export default function Onboarding() {
   // One id per form session: a retry of the same submit is answered from the first (submit_vendor_registration).
   const submissionId = useRef<string>(crypto.randomUUID());
   const attempts = useRef(0);
+  // The files sent with a submit whose reply was lost: the next Submit sends the same ones again (same submission
+  // id), so nothing is uploaded twice and nothing in use is removed. Kept only while the picked files are unchanged.
+  const lastUploads = useRef<{ up: UploadedFiles; sig: string } | null>(null);
   const queryClient = useQueryClient();
   const overseasOn = useFeatureFlag("overseas_seller_registration") === true;
   const { data: registration } = useSellerRegistration(user?.id);
@@ -682,25 +686,46 @@ export default function Onboarding() {
         return;
       }
       const categoryId = hasProduct ? await resolveCategoryId(category, productName) : null;
-      const up = emptyUploads();
+      const files = {
+        pan: india ? panDocumentFile : null,
+        gst: india && hasGstin ? gstDocumentFile : null,
+        registration: india ? regDocumentFile : osRegFile,
+        aadhaar: india && aadhaarConsent ? aadhaarFile : null,
+        taxId: !india && osHasTax ? osTaxFile : null,
+        ownerId: india ? null : osIdFile,
+        catalogue: catalogueFiles,
+        cataloguePdf,
+        signature: manualSignatureDataUrl,
+        premises: businessImages.map((i) => i.file),
+        productImages: hasProduct ? productImages.map((i) => i.file) : [],
+      };
+      const sig = registrationFilesSignature(files);
+      const reuse = lastUploads.current !== null && lastUploads.current.sig === sig;
+      const up = reuse ? lastUploads.current!.up : emptyUploads();
+      // Whether the submit reached the database: before that, nothing this attempt uploaded can be in use.
+      let sent = false;
       try {
-        await uploadRegistrationFiles(user.id, {
-          pan: india ? panDocumentFile : null,
-          gst: india && hasGstin ? gstDocumentFile : null,
-          registration: india ? regDocumentFile : osRegFile,
-          aadhaar: india && aadhaarConsent ? aadhaarFile : null,
-          taxId: !india && osHasTax ? osTaxFile : null,
-          ownerId: india ? null : osIdFile,
-          catalogue: catalogueFiles,
-          cataloguePdf,
-          signature: manualSignatureDataUrl,
-          premises: businessImages.map((i) => i.file),
-          productImages: hasProduct ? productImages.map((i) => i.file) : [],
-        }, up);
+        if (!reuse) await uploadRegistrationFiles(user.id, files, up);
+        sent = true;
         const result = await submitVendorRegistration(submissionId.current, buildPayload(up, categoryId));
+        lastUploads.current = null;
         finishSubmit(result.status);
       } catch (err) {
-        await cleanupRegistrationUploads(up, submissionId.current);
+        // Remove the uploads only when nothing can have been saved with them: the submit never left, or the
+        // database refused it (the transaction rolled back). A lost reply keeps them: the registration may have
+        // committed, and the retry asks the database first (review #6).
+        const refused = isServerRefusal(err);
+        if (!sent || refused) {
+          await cleanupRegistrationUploads(up, submissionId.current);
+          lastUploads.current = null;
+        } else {
+          lastUploads.current = { up, sig };
+        }
+        // A refusal is final for this submission: the next Submit is a new one (review #7).
+        if (refused) {
+          submissionId.current = crypto.randomUUID();
+          attempts.current = 0;
+        }
         fail(errorMessage(err));
       }
     } finally {

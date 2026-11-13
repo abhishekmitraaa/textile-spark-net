@@ -5913,7 +5913,7 @@ export type Database = {
         }[]
       }
       admin_vendor_registration_decide: {
-        Args: { p_approve: boolean; p_reason?: string; p_vendor: string }
+        Args: { p_approve: boolean; p_reason?: string; p_submission: string; p_vendor: string }
         Returns: undefined
       }
       admin_whoami: {

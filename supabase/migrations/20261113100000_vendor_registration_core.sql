@@ -30,6 +30,18 @@ begin
   elsif new.country is distinct from old.country and new.country_code is not distinct from old.country_code then
     new.country_code := public.country_code_for(new.country);
   end if;
+  -- A browser can't move its registered country (review #2): it decides the International label, the
+  -- trade-buyer lift and how plans are invoiced, and outside India it needs Cosora's approval. A browser's first
+  -- row may say India (or nothing); later it may only fill in India where nothing was known. Admins and the
+  -- definer paths (the registration submit) aren't browsers here.
+  if current_user = 'authenticated' and not coalesce(public.is_admin(), false)
+     and new.country_code is not null
+     and (case when tg_op = 'INSERT' then new.country_code <> 'IN'
+               else new.country_code is distinct from old.country_code
+                    and not (old.country_code is null and new.country_code = 'IN') end) then
+    raise exception 'Your registered country is set by your seller registration. Contact Cosora support to change it.'
+      using errcode = '42501';
+  end if;
   return new;
 end
 $function$;
@@ -65,7 +77,9 @@ create index vendor_registrations_pending_idx on public.vendor_registrations (cr
 
 alter table public.vendor_registrations enable row level security;
 revoke all on public.vendor_registrations from anon, authenticated;
-grant select on public.vendor_registrations to authenticated;
+-- Every column but decided_by: which staff member decided is the Admin Log's, not the seller's (review #11).
+grant select (id, vendor_id, country_code, status, reason, result, decided_at, created_at)
+  on public.vendor_registrations to authenticated;
 
 create policy vendor_registrations_select on public.vendor_registrations
   for select to authenticated
@@ -130,7 +144,9 @@ create index vendor_premises_photos_queue_idx on public.vendor_premises_photos (
 
 alter table public.vendor_premises_photos enable row level security;
 revoke all on public.vendor_premises_photos from anon, authenticated;
-grant select on public.vendor_premises_photos to anon, authenticated;
+-- Every column but reviewed_by (review #11).
+grant select (id, vendor_id, url, position, status, rejection_reason, created_at, reviewed_at)
+  on public.vendor_premises_photos to anon, authenticated;
 grant insert (vendor_id, url, position), delete on public.vendor_premises_photos to authenticated;
 
 create policy vendor_premises_photos_select on public.vendor_premises_photos
@@ -148,6 +164,72 @@ create policy vendor_premises_photos_delete on public.vendor_premises_photos
   for delete to authenticated
   using (vendor_id = (select auth.uid()) and (select public.account_not_deleted((select auth.uid()))));
 
+-- ── 6b. Cosora's own Storage, and files a photo points at (review #1) ──────
+-- The project's address, so a photo URL can't name another host that serves different content later (or logs
+-- who looks). Production's address; a local stack sets its own: update admin.storage_origin set origin = '<API>'.
+create table admin.storage_origin (
+  id     boolean primary key default true check (id),
+  origin text not null check (origin ~ '^https?://[A-Za-z0-9.:-]+$')
+);
+insert into admin.storage_origin (origin) values ('https://vxdhhgdfubqedfpwfyrb.supabase.co') on conflict (id) do nothing;
+revoke all on admin.storage_origin from public, anon, authenticated;
+
+-- A plain public URL in Cosora's own Storage, in `p_owner`'s folder, whose object exists. Public buckets only, and
+-- a signed-in caller may ask only about their own folder (no probing of other sellers' files).
+create or replace function public.own_storage_object(p_url text, p_bucket text, p_owner uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select coalesce(
+       p_bucket in ('product-images', 'catalogues')
+       and p_owner is not null
+       and (auth.uid() is null or p_owner = auth.uid() or coalesce(public.is_admin(), false))
+       and char_length(p_url) <= 500
+       and public.storage_url_plain(p_url, p_bucket)
+       and exists (select 1 from admin.storage_origin o
+                    where starts_with(p_url, o.origin || '/storage/v1/object/public/' || p_bucket || '/'))
+       and split_part(substring(p_url from '/storage/v1/object/public/' || p_bucket || '/(.*)$'), '/', 1) = p_owner::text
+       and exists (select 1 from storage.objects so
+                    where so.bucket_id = p_bucket
+                      and so.name = substring(p_url from '/storage/v1/object/public/' || p_bucket || '/(.*)$')),
+       false)
+$function$;
+revoke all on function public.own_storage_object(text, text, uuid) from public, anon, authenticated;
+grant execute on function public.own_storage_object(text, text, uuid) to authenticated, service_role;
+
+-- Whether a premises photo row points at this object: then it can't be overwritten, replaced or removed until the
+-- row is gone, so what Cosora approved is what buyers see (storage_object_in_use does the same for listings,
+-- catalogues and videos; these are separate restrictive policies so that function stays as it is).
+create or replace function public.premises_photo_file_in_use(p_bucket text, p_name text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $function$
+  select p_bucket = 'product-images' and exists (
+    select 1 from public.vendor_premises_photos ph
+     where ph.vendor_id::text = split_part(p_name, '/', 1)
+       and right(ph.url, char_length('/storage/v1/object/public/product-images/' || p_name))
+           = '/storage/v1/object/public/product-images/' || p_name)
+$function$;
+revoke all on function public.premises_photo_file_in_use(text, text) from public, anon, authenticated;
+grant execute on function public.premises_photo_file_in_use(text, text) to authenticated;
+
+create policy premises_photo_files_kept_insert on storage.objects as restrictive
+  for insert to authenticated
+  with check (not public.premises_photo_file_in_use(bucket_id, name));
+create policy premises_photo_files_kept_update on storage.objects as restrictive
+  for update to authenticated
+  using (not public.premises_photo_file_in_use(bucket_id, name))
+  with check (not public.premises_photo_file_in_use(bucket_id, name));
+create policy premises_photo_files_kept_delete on storage.objects as restrictive
+  for delete to authenticated
+  using (not public.premises_photo_file_in_use(bucket_id, name));
+
 -- A browser's new photo starts unreviewed, under the seller's own folder, at most 12 per seller.
 create or replace function admin.vendor_premises_photos_guard()
 returns trigger
@@ -163,7 +245,7 @@ begin
   end if;
   if current_user = 'authenticated' then
     v_path := substring(new.url from '/storage/v1/object/public/product-images/(.*)$');
-    if v_path is null or split_part(v_path, '/', 1) <> new.vendor_id::text then
+    if v_path is null or not public.own_storage_object(new.url, 'product-images', new.vendor_id) then
       raise exception 'invalid_file' using errcode = '22023';
     end if;
     new.status := 'under_review';
@@ -190,12 +272,14 @@ set search_path = ''
 as $function$
 declare
   v_vendor uuid := coalesce(new.vendor_id, old.vendor_id);
+  v_urls   text[];
 begin
-  update public.vendor_profiles v
-     set office_photos = coalesce((select array_agg(p.url order by p.position, p.created_at)
-                                     from public.vendor_premises_photos p
-                                    where p.vendor_id = v_vendor and p.status = 'live'), '{}'::text[])
-   where v.id = v_vendor;
+  v_urls := coalesce((select array_agg(p.url order by p.position, p.created_at)
+                        from public.vendor_premises_photos p
+                       where p.vendor_id = v_vendor and p.status = 'live'), '{}'::text[]);
+  -- Only when the approved set changed: a photo added for review doesn't rescore the profile (review #12).
+  update public.vendor_profiles v set office_photos = v_urls
+   where v.id = v_vendor and v.office_photos is distinct from v_urls;
   return null;
 end
 $function$;
@@ -217,6 +301,11 @@ select v.id, u.url, (u.ord - 1)::int, 'under_review'
  where u.url ~ '^https?://[A-Za-z0-9.:-]+/storage/v1/object/public/product-images/'
    and public.storage_url_plain(u.url, 'product-images')
    and u.ord <= 12;
+-- Every address as it was, kept for staff: URLs outside Cosora's Storage, or past 12, aren't migrated (review #5).
+create table admin.office_photos_before_20261113 as
+  select v.id as vendor_id, v.office_photos, now() as saved_at
+    from public.vendor_profiles v where cardinality(v.office_photos) > 0;
+revoke all on admin.office_photos_before_20261113 from public, anon, authenticated;
 update public.vendor_profiles set office_photos = '{}'::text[] where cardinality(office_photos) > 0;
 
 -- ── 7. The rule for "may this seller publish" ────────────────────────────────
@@ -227,11 +316,14 @@ stable
 security definer
 set search_path = ''
 as $function$
-  select not admin.feature_on_for('seller_registration_required', p_vendor)
-      or exists (select 1 from admin.registration_exempt e where e.vendor_id = p_vendor)
-      or exists (select 1 from public.vendor_profiles v
-                  where v.id = p_vendor and v.onboarding_complete
-                    and exists (select 1 from public.vendor_contracts c where c.vendor_id = v.id))
+  -- A signed-in caller asks about themselves only (review #11); staff and the service role about anyone.
+  select case when auth.uid() is not null and p_vendor is distinct from auth.uid() and not coalesce(public.is_admin(), false)
+              then null
+         else not admin.feature_on_for('seller_registration_required', p_vendor)
+           or exists (select 1 from admin.registration_exempt e where e.vendor_id = p_vendor)
+           or exists (select 1 from public.vendor_profiles v
+                       where v.id = p_vendor and v.onboarding_complete
+                         and exists (select 1 from public.vendor_contracts c where c.vendor_id = v.id)) end
 $function$;
 revoke all on function public.seller_registered(uuid) from public, anon, authenticated;
 grant execute on function public.seller_registered(uuid) to authenticated, service_role;

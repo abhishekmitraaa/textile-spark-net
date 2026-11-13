@@ -339,15 +339,51 @@ export async function submitVendorRegistration(submissionId: string, payload: Re
     p: payload as unknown as Json,
   });
   if (error) throw error;
-  const r = (data ?? {}) as { status?: string; superseded_files?: unknown };
-  const status = r.status === "pending_review" ? "pending_review" : "registered";
+  const r = (data ?? {}) as { status?: string; superseded_files?: unknown; superseded_public?: unknown };
+  // Only these two are a saved registration; anything else (a submission Cosora has since answered) is not a success.
+  if (r.status !== "registered" && r.status !== "pending_review") {
+    throw Object.assign(new Error("submission_closed"), { code: "P0001" });
+  }
+  const status = r.status;
   const supersededFiles = Array.isArray(r.superseded_files) ? r.superseded_files.filter((x): x is string => typeof x === "string") : [];
-  // The files the new documents replaced (a resubmission): best effort, never a reason to fail the registration.
+  // The files the new submission replaced (a resubmission), which nothing points at any more: best effort, never a
+  // reason to fail the registration.
   if (supersededFiles.length) {
     const { error: se } = await supabase.storage.from(KYC_BUCKET).remove(supersededFiles);
     if (se) console.warn("[registration] superseded KYC files not removed:", se.message);
   }
+  const publicFiles = Array.isArray(r.superseded_public)
+    ? (r.superseded_public as { bucket?: unknown; path?: unknown }[]).filter(
+        (f): f is { bucket: "product-images" | "catalogues"; path: string } =>
+          (f.bucket === "product-images" || f.bucket === "catalogues") && typeof f.path === "string")
+    : [];
+  for (const bucket of ["product-images", "catalogues"] as const) {
+    const paths = publicFiles.filter((f) => f.bucket === bucket).map((f) => f.path);
+    if (!paths.length) continue;
+    const { error: pe } = await supabase.storage.from(bucket).remove(paths);
+    if (pe) console.warn(`[registration] superseded ${bucket} files not removed:`, pe.message);
+  }
   return { status, supersededFiles };
+}
+
+/** Which files a submit sends, by identity: equal signatures mean the same picks (for reusing a lost submit's uploads). */
+export function registrationFilesSignature(files: RegistrationFiles): string {
+  const id = (f: File | null | undefined) => (f ? [f.name, f.size, f.lastModified, f.type] : null);
+  return JSON.stringify({
+    pan: id(files.pan), gst: id(files.gst), registration: id(files.registration), aadhaar: id(files.aadhaar),
+    taxId: id(files.taxId), ownerId: id(files.ownerId), catalogue: files.catalogue.map(id),
+    cataloguePdf: id(files.cataloguePdf), signature: files.signature ?? null,
+    premises: files.premises.map(id), productImages: files.productImages.map(id),
+  });
+}
+
+/**
+ * True when the database answered with a refusal (an SQLSTATE): the transaction rolled back, so nothing this
+ * attempt sent was saved. A network failure or a lost reply has no code: the registration may have been saved.
+ */
+export function isServerRefusal(e: unknown): boolean {
+  const code = (e as { code?: unknown } | null)?.code;
+  return typeof code === "string" && /^[0-9A-Z]{5}$/.test(code);
 }
 
 /**

@@ -75,17 +75,9 @@ stable
 security definer
 set search_path = ''
 as $function$
-declare
-  v_name text;
 begin
-  if p_url is null or char_length(p_url) > 500
-     or p_url !~ ('^https?://[A-Za-z0-9.:-]+/storage/v1/object/public/' || p_bucket || '/')
-     or not public.storage_url_plain(p_url, p_bucket) then
-    return false;
-  end if;
-  v_name := substring(p_url from '/storage/v1/object/public/' || p_bucket || '/(.*)$');
-  return split_part(v_name, '/', 1) = p_uid::text
-     and exists (select 1 from storage.objects o where o.bucket_id = p_bucket and o.name = v_name);
+  -- Cosora's own Storage, not just its path (review #1), the caller's folder, and the object exists.
+  return public.own_storage_object(p_url, p_bucket, p_uid);
 end
 $function$;
 
@@ -145,6 +137,10 @@ declare
   v_product  uuid;
   v_status   text;
   v_result   jsonb;
+  v_prev_product   uuid;
+  v_prev_catalogue uuid;
+  v_catalogue      uuid;
+  v_old_public     jsonb := '[]'::jsonb;
   v_old_files text[];
   v_doc_types text[];
   x          jsonb;
@@ -166,10 +162,14 @@ begin
   perform pg_advisory_xact_lock(hashtextextended('cosora.vendor_registration:' || v_uid::text, 0));
 
   -- The same submit again: the first answer, nothing written twice.
-  select r.vendor_id, r.result into v_prev from public.vendor_registrations r where r.id = p_submission;
+  select r.vendor_id, r.status, r.result into v_prev from public.vendor_registrations r where r.id = p_submission;
   if found then
     if v_prev.vendor_id is distinct from v_uid then
       raise exception 'not your submission' using errcode = '42501';
+    end if;
+    -- Sent back since: this submission is closed, and the form starts a new one (review #7).
+    if v_prev.status = 'rejected' then
+      raise exception 'submission_closed' using errcode = 'P0001';
     end if;
     return v_prev.result;
   end if;
@@ -179,6 +179,19 @@ begin
   if (select r.status from public.vendor_registrations r where r.vendor_id = v_uid order by r.created_at desc limit 1)
      = 'pending_review' then
     raise exception 'awaiting_approval' using errcode = 'P0001';
+  end if;
+
+  -- A seller sent back resubmits: the first product and catalogue they sent last time, never approved, are
+  -- replaced by this submit's, and don't count against the plan's limits (review #4).
+  select (r.result ->> 'product_id')::uuid, (r.result ->> 'catalogue_id')::uuid into v_prev_product, v_prev_catalogue
+    from public.vendor_registrations r where r.vendor_id = v_uid order by r.created_at desc limit 1;
+  if v_prev_product is not null
+     and not exists (select 1 from public.products pr where pr.id = v_prev_product and pr.vendor_id = v_uid and pr.status::text <> 'live') then
+    v_prev_product := null;
+  end if;
+  if v_prev_catalogue is not null
+     and not exists (select 1 from public.catalogues ca where ca.id = v_prev_catalogue and ca.vendor_id = v_uid and ca.status::text <> 'live') then
+    v_prev_catalogue := null;
   end if;
 
   -- ── Who and where ──
@@ -286,8 +299,11 @@ begin
   if cardinality(v_photos) = 0 then
     perform admin.reg_fail('missing_premises_photo');
   end if;
-  if cardinality(v_photos) > 12
-     or exists (select 1 from unnest(v_photos) u where not admin.reg_public_file_ok(v_uid, 'product-images', u)) then
+  if cardinality(v_photos) + (select count(*) from public.vendor_premises_photos ph
+                                 where ph.vendor_id = v_uid and ph.status = 'live') > 12 then
+    perform admin.reg_fail('premises_photo_limit');
+  end if;
+  if exists (select 1 from unnest(v_photos) u where not admin.reg_public_file_ok(v_uid, 'product-images', u)) then
     perform admin.reg_fail('invalid_file');
   end if;
 
@@ -324,7 +340,7 @@ begin
     end if;
     v_kind := v_docs #>> '{registration,kind}';
     v_regno := upper(admin.reg_text(v_docs #>> '{registration,number}'));
-    if v_kind not in ('udyam', 'incorporation', 'shop_establishment', 'partnership', 'other')
+    if coalesce(v_kind, '') not in ('udyam', 'incorporation', 'shop_establishment', 'partnership', 'other')
        or (v_kind = 'udyam' and coalesce(v_regno, '') !~ '^UDYAM-[A-Z]{2}-[0-9]{2}-[0-9]{7}$')
        or (v_kind = 'incorporation'
            and coalesce(v_regno, '') !~ '^([LU][0-9]{5}[A-Z]{2}[0-9]{4}[A-Z]{3}[0-9]{6}|[A-Z]{3}-[0-9]{4})$')
@@ -350,7 +366,7 @@ begin
     v_kind := v_docs #>> '{registration,kind}';
     v_regno := upper(admin.reg_text(v_docs #>> '{registration,number}'));
     if v_kind is distinct from 'foreign_registration' or v_regno is null or char_length(v_regno) > 60
-       or (v_docs #>> '{owner_id,kind}') not in ('passport', 'national_id')
+       or coalesce(v_docs #>> '{owner_id,kind}', '') not in ('passport', 'national_id')
        or (jsonb_typeof(v_docs -> 'tax_id') = 'object'
            and char_length(coalesce(admin.reg_text(v_docs #>> '{tax_id,number}'), '')) not between 2 and 40) then
       perform admin.reg_fail('invalid_registration');
@@ -402,10 +418,12 @@ begin
       perform admin.reg_fail('invalid_product');
     end if;
     if v_prod ->> 'moq' is not null then
-      v_moq := (v_prod ->> 'moq')::numeric;
-      if v_moq <> (v_prod ->> 'moq')::numeric or v_moq not between 1 and 10000000 then
+      -- Checked as a number before it is stored as one (a huge value overflowed the cast: review #9).
+      if (v_prod ->> 'moq')::numeric not between 1 and 10000000
+         or (v_prod ->> 'moq')::numeric <> trunc((v_prod ->> 'moq')::numeric) then
         perform admin.reg_fail('invalid_product');
       end if;
+      v_moq := (v_prod ->> 'moq')::numeric;
     end if;
     if v_prod ->> 'category_id' is not null
        and not exists (select 1 from public.categories c where c.id::text = v_prod ->> 'category_id') then
@@ -440,7 +458,8 @@ begin
   v_plan := public.vendor_cap_plan(v_uid);
   if v_prod is not null then
     select coalesce((sp.limits ->> 'product_cap')::int, -1) into v_limit from public.subscription_plans sp where sp.id = v_plan;
-    select count(*) into v_used from public.products pr where pr.vendor_id = v_uid and pr.status::text in ('under_review', 'live');
+    select count(*) into v_used from public.products pr
+     where pr.vendor_id = v_uid and pr.status::text in ('under_review', 'live') and pr.id is distinct from v_prev_product;
     if coalesce(v_limit, -1) >= 0 and v_used >= v_limit then
       perform admin.reg_fail('too_many_products');
     end if;
@@ -449,7 +468,7 @@ begin
     perform pg_advisory_xact_lock(hashtextextended('cosora.catalogue_cap:' || v_uid::text, 0));
     select coalesce((sp.limits ->> 'catalogues_max')::int, -1) into v_limit from public.subscription_plans sp where sp.id = v_plan;
     select count(*) into v_used from public.catalogues ca
-     where ca.vendor_id = v_uid and ca.status::text in ('draft', 'under_review', 'live');
+     where ca.vendor_id = v_uid and ca.status::text in ('draft', 'under_review', 'live') and ca.id is distinct from v_prev_catalogue;
     if coalesce(v_limit, -1) >= 0 and v_used >= v_limit then
       perform admin.reg_fail('catalogue_limit');
     end if;
@@ -510,8 +529,26 @@ begin
     values (v_uid, 'catalog', x ->> 'path', jsonb_build_object('name', left(x ->> 'name', 200), 'mime', left(coalesce(x ->> 'mime', ''), 120)));
   end loop;
 
-  -- Premises photos: this submit's set replaces any that were never approved.
-  delete from public.vendor_premises_photos ph where ph.vendor_id = v_uid and ph.status <> 'live';
+  -- Premises photos: this submit's set replaces any that were never approved; their files go back to the browser
+  -- to remove (the rows first, so the files are no longer in use).
+  with gone as (
+    delete from public.vendor_premises_photos ph where ph.vendor_id = v_uid and ph.status <> 'live' returning ph.url)
+  select v_old_public || coalesce(jsonb_agg(jsonb_build_object('bucket', 'product-images',
+           'path', substring(g.url from '/storage/v1/object/public/product-images/(.*)$'))), '[]'::jsonb)
+    into v_old_public from gone g;
+  -- The first product and catalogue a sent-back submission left in review (review #4).
+  if v_prev_product is not null then
+    select v_old_public || coalesce(jsonb_agg(jsonb_build_object('bucket', 'product-images',
+             'path', substring(pi.url from '/storage/v1/object/public/product-images/(.*)$'))), '[]'::jsonb)
+      into v_old_public from public.product_images pi where pi.product_id = v_prev_product;
+    delete from public.products pr where pr.id = v_prev_product;
+  end if;
+  if v_prev_catalogue is not null then
+    select v_old_public || coalesce(jsonb_agg(jsonb_build_object('bucket', 'catalogues',
+             'path', substring(ca.file_url from '/storage/v1/object/public/catalogues/(.*)$'))), '[]'::jsonb)
+      into v_old_public from public.catalogues ca where ca.id = v_prev_catalogue;
+    delete from public.catalogues ca where ca.id = v_prev_catalogue;
+  end if;
   for i in 1 .. cardinality(v_photos) loop
     insert into public.vendor_premises_photos (vendor_id, url, position, status) values (v_uid, v_photos[i], i - 1, 'under_review');
   end loop;
@@ -532,7 +569,8 @@ begin
 
   if v_pdf is not null then
     insert into public.catalogues (vendor_id, title, file_url, status)
-    values (v_uid, admin.reg_text(v_pdf ->> 'title'), v_pdf ->> 'url', 'under_review');
+    values (v_uid, admin.reg_text(v_pdf ->> 'title'), v_pdf ->> 'url', 'under_review')
+    returning id into v_catalogue;
   end if;
 
   if not exists (select 1 from public.vendor_contracts vc where vc.vendor_id = v_uid and vc.agreement_version = c_agreement) then
@@ -540,14 +578,25 @@ begin
     values (v_uid, v_sign, v_contract ->> 'signature_path', c_agreement);
   end if;
 
-  if coalesce((p ->> 'whatsapp_updates')::boolean, false) then
+  if jsonb_typeof(p -> 'whatsapp_updates') = 'boolean' and (p ->> 'whatsapp_updates')::boolean then
     perform public.set_contact_consent('whatsapp', true, 'onboarding');
   end if;
 
   update public.profiles pr set active_role = 'seller', onboarded = true where pr.id = v_uid;
 
   v_status := case when v_india then 'registered' else 'pending_review' end;
-  v_result := jsonb_build_object('status', v_status, 'submission_id', p_submission, 'superseded_files', to_jsonb(v_old_files));
+  -- The files handed back to remove are only those nothing points at any more: a resubmission may send the same
+  -- file again, and removing it would break the new row.
+  v_result := jsonb_build_object('status', v_status, 'submission_id', p_submission,
+    'superseded_files', (select coalesce(jsonb_agg(o.f), '[]'::jsonb) from unnest(v_old_files) as o(f)
+                          where not exists (select 1 from public.vendor_documents d where d.vendor_id = v_uid and d.file_url = o.f)
+                            and o.f is distinct from v_contract ->> 'signature_path'),
+    'superseded_public', (select coalesce(jsonb_agg(sp.f), '[]'::jsonb)
+                            from jsonb_array_elements(v_old_public) as sp(f)
+                           where sp.f ->> 'path' is not null
+                             and not public.storage_object_in_use(sp.f ->> 'bucket', sp.f ->> 'path')
+                             and not public.premises_photo_file_in_use(sp.f ->> 'bucket', sp.f ->> 'path')),
+    'product_id', v_product, 'catalogue_id', v_catalogue);
   insert into public.vendor_registrations (id, vendor_id, country_code, status, result)
   values (p_submission, v_uid, v_country, v_status, v_result);
 

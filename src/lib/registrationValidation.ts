@@ -107,6 +107,7 @@ export const REGISTRATION_ERROR_TEXT: Record<string, string> = {
   invalid_contract: "Type your full name to sign the Supplier Agreement.",
   already_registered: "This account is already registered as a seller.",
   awaiting_approval: "Your registration is waiting for Cosora's approval.",
+  submission_closed: "Cosora has already answered this registration. Check your details and submit again.",
   account_inactive: "This account can't register right now. Contact Cosora support.",
 };
 

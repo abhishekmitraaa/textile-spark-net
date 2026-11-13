@@ -1459,6 +1459,11 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
   Cosora's own WhatsApp messages need the separate opt-in (`set_contact_consent()`), never pre-ticked.
 - **Registration asks for the business type (and optional capabilities) only;** states served and capacity are
   asked for on Business Profile (D4).
+- **A file a seller's row points at must be in Cosora's own Storage** (2026-11-13 review). Check it with
+  `public.own_storage_object(url, bucket, owner)`, which reads the project's address from `admin.storage_origin`
+  (a local stack sets its own row). Matching only the path lets another host serve different content after review.
+- **A seller's registered country is not the browser's to change** (`admin.sync_vendor_country_code()`), and
+  **nothing goes live while a registration waits or was sent back** (`trg_hold_until_registered`).
 
 ### An edit to approved content goes back to review (Mitra, 2026-10-10)
 - A seller's change to anything buyers see on a live listing, video or catalogue (pictures included) sends it back
