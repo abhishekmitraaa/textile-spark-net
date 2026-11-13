@@ -11,9 +11,12 @@ import { ADMIN_URL, BUYER_URL, allowFeature, contextWithSession, disallowFeature
 
 const GATE = "seller_registration_required";
 const switchedOn: string[] = [];
+/** Sellers whose listings a test made: removed after it, so the feeds (and reach.sql's baselines) stay as they were. */
+const listingSellers: string[] = [];
 
 test.afterEach(() => {
   while (switchedOn.length) disallowFeature(GATE, switchedOn.pop()!);
+  while (listingSellers.length) sql(`delete from public.products where vendor_id = '${listingSellers.pop()}';`);
 });
 
 function gateOn(id: string) {
@@ -355,6 +358,7 @@ async function overseasSellerWithListing(prefix: string) {
   const name = `Spec ${prefix} ${Date.now().toString(36)}`;
   sql(`update public.vendor_profiles set country = 'United Arab Emirates', country_code = 'AE' where id = '${who.id}';
        insert into public.products (vendor_id, name, price_value, currency, moq, status) values ('${who.id}', '${name}', 250, '₹', '50', 'live');`);
+  listingSellers.push(who.id);
   return { ...who, product: name };
 }
 
@@ -517,6 +521,7 @@ test("an admin approves an overseas registration from the queue, and the seller 
   const s = stack();
   const client = createClient(s.API, s.ANON, { auth: { persistSession: false } });
   await client.auth.setSession({ access_token: seller.session.access_token, refresh_token: seller.session.refresh_token });
+  listingSellers.push(seller.id);
   const { error } = await client.from("products").insert({ vendor_id: seller.id, name: "First overseas listing" });
   expect(error).toBeNull();
 });

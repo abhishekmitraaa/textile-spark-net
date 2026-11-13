@@ -650,6 +650,9 @@ declare a uuid := pg_temp.new_user('t5-qa'); b uuid := pg_temp.new_user('t5-qb')
         r text; c jsonb;
 begin
   update public.feature_flags set enabled = true where key = 'overseas_seller_registration';
+  -- The queue is global: other registrations waiting on this stack (spec runs) would fill its first page. This case
+  -- is rolled back, so they come back afterwards.
+  delete from public.vendor_registrations where status = 'pending_review';
   perform pg_temp.submit(a, gen_random_uuid(), pg_temp.overseas_payload(a));
   perform pg_temp.submit(b, gen_random_uuid(), pg_temp.overseas_payload(b));
   update public.vendor_registrations set created_at = now() - interval '6 days' where vendor_id = a;
@@ -673,6 +676,8 @@ savepoint c;
 do $c$
 declare u uuid := pg_temp.new_user('t5-docs'); adm uuid; n int;
 begin
+  -- As above: other sellers' unreviewed documents (rolled back with the case) would fill the oldest-first page.
+  delete from public.vendor_documents where not verified and reviewed_at is null;
   perform pg_temp.submit(u, gen_random_uuid(), pg_temp.india_payload(u));
   adm := pg_temp.as_admin('support');
   perform pg_temp.claims(adm);
