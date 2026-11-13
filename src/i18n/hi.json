@@ -8439,5 +8439,10 @@
  "Delete this listing?": "यह लिस्टिंग हटाएँ?",
  "and its photos and PDFs are deleted for good. Buyers' requests about it keep their details.": "और इसकी फ़ोटो और PDF हमेशा के लिए हट जाती हैं। इसके बारे में खरीदारों के अनुरोधों का विवरण बना रहता है।",
  "PDF catalogue; done-for-you catalogue coming soon": "PDF कैटलॉग; आपके लिए तैयार कैटलॉग जल्द आ रहा है",
- "PDF catalogue; AI catalogue coming soon": "PDF कैटलॉग; AI कैटलॉग जल्द आ रहा है"
+ "PDF catalogue; AI catalogue coming soon": "PDF कैटलॉग; AI कैटलॉग जल्द आ रहा है",
+ "Finish your seller registration to call buyers.": "खरीदारों को कॉल करने के लिए अपना विक्रेता पंजीकरण पूरा करें।",
+ "Buyer numbers are limited right now": "खरीदारों के नंबर अभी सीमित हैं",
+ "You've opened many buyers' numbers in a short time. Try again later, or message the buyer in chat.": "आपने कम समय में कई खरीदारों के नंबर खोले हैं। बाद में फिर कोशिश करें, या चैट में खरीदार को संदेश भेजें।",
+ "This buyer's number isn't available right now": "इस खरीदार का नंबर अभी उपलब्ध नहीं है",
+ "Many sellers have asked for it today. Message the buyer in chat instead.": "आज कई विक्रेताओं ने इसे माँगा है। इसकी जगह चैट में खरीदार को संदेश भेजें।"
 }
