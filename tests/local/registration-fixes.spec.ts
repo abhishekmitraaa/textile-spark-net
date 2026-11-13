@@ -47,7 +47,7 @@ test("a pending overseas seller sees the waiting screen", async ({ browser }) =>
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/onboarding`);
   await expect(page.getByRole("heading", { name: /waiting for Cosora's approval/i })).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("button", { name: "Edit details" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Edit details", exact: true })).toHaveCount(0);
   await ctx.close();
 });
 
@@ -116,7 +116,7 @@ async function pasteInto(page: Page, selector: string, text: string) {
 
 /** Walks the whole form as a new seller would. */
 async function register(page: Page, o: RegisterOpts = {}) {
-  await page.getByRole("button", { name: "Edit details" }).click();
+  await page.getByRole("button", { name: "Edit details", exact: true }).click();
   // Step 2: business details.
   if (o.overseas) await page.locator("#registered-country").selectOption({ label: "United Arab Emirates" });
   await page.getByPlaceholder("Business name").fill(o.overseas ? "Dubai Spec Trading" : "Spec Mills");
@@ -176,9 +176,9 @@ async function register(page: Page, o: RegisterOpts = {}) {
   await page.getByLabel("Product images").setInputFiles([png("kurta.png")]);
   await page.locator("#product-name").fill("Spec Cotton Kurta");
   await page.locator("#product-price").fill("450");
-  await page.getByRole("button", { name: "Submit", exact: true }).click();
+  await page.getByRole("button", { name: "Next", exact: true }).click();  // step 8 adds the product; nothing is sent until step 9
   // Step 9: the agreement.
-  await page.getByRole("button", { name: "Edit details" }).click({ timeout: 10_000 });
+  await page.getByRole("button", { name: "Edit details", exact: true }).click({ timeout: 10_000 });
   await page.locator("#contract-name").fill("Spec Owner");
   await page.locator("#supplier-agreement").click();
   if (!o.stopBeforeSubmit) await page.getByRole("button", { name: "Submit", exact: true }).click();
@@ -290,7 +290,7 @@ test("location: an unknown state stays unpicked and blocks the address; a typed 
     body: JSON.stringify({ city: "Surat", locality: "Athwa", principalSubdivision: "Gujarat State", postcode: "395001" }),
   }));
   await page.goto(`${BUYER_URL}/onboarding`);
-  await page.getByRole("button", { name: "Edit details" }).click();
+  await page.getByRole("button", { name: "Edit details", exact: true }).click();
   await page.getByPlaceholder("Business name").fill("Geo Mills");
   await page.locator("#mobile").fill("9123456780");
   await page.getByRole("button", { name: "Next", exact: true }).click();
@@ -312,7 +312,7 @@ test("steps 5 and 6 can't be skipped, and the owner email must be real", async (
   const ctx = await contextWithSession(browser, who.session);
   const page = await ctx.newPage();
   await page.goto(`${BUYER_URL}/onboarding`);
-  await page.getByRole("button", { name: "Edit details" }).click();
+  await page.getByRole("button", { name: "Edit details", exact: true }).click();
   await page.getByPlaceholder("Business name").fill("Skip Mills");
   await page.locator("#mobile").fill("9123456780");
   await page.getByRole("button", { name: "Next", exact: true }).click();
@@ -366,7 +366,7 @@ test("a rejected overseas seller sees the reason and the details they gave", asy
     const page = await ctx.newPage();
     await page.goto(`${BUYER_URL}/onboarding`);
     await expect(page.getByText("Licence is expired")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Edit details" }).click();
+    await page.getByRole("button", { name: "Edit details", exact: true }).click();
     await expect(page.getByPlaceholder("Business name")).toHaveValue("Rejected Trading");
     await expect(page.locator("#registered-country")).toHaveValue("AE");
     await ctx.close();

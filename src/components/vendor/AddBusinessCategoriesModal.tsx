@@ -36,9 +36,9 @@ function SelectCategoryModal({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center bg-black/50">
-      <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+      <div role="dialog" aria-modal="true" aria-label="Add Business Categories" onKeyDown={(ev) => { if (ev.key === "Escape") onClose(); }} className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-          <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
+          <button type="button" onClick={onClose} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
           <h3 className="text-base font-bold text-gray-900">Add Business Categories</h3>
         </div>
         <div className="px-5 py-3 border-b border-gray-100">
@@ -115,9 +115,9 @@ export function AddBusinessCategoriesModal({
   return (
     <>
       <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
-        <div className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
+        <div role="dialog" aria-modal="true" aria-label="Add Business Categories" onKeyDown={(ev) => { if (ev.key === "Escape") onClose(); }} className="w-full max-w-md bg-white rounded-t-2xl sm:rounded-2xl flex flex-col max-h-[90vh]">
           <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-            <button onClick={onClose}><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
+            <button type="button" onClick={onClose} aria-label="Back"><ArrowLeft className="w-5 h-5 text-gray-500" /></button>
             <h3 className="text-base font-bold text-gray-900">Add Business Categories</h3>
           </div>
           <div className="flex-1 overflow-y-auto px-5 py-4">

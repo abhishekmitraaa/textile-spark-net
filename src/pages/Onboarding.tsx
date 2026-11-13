@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Drawer, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -293,6 +293,17 @@ export default function Onboarding() {
   // One id per form session: a retry of the same submit is answered from the first (submit_vendor_registration).
   const submissionId = useRef<string>(crypto.randomUUID());
   const attempts = useRef(0);
+  // While a field is focused (the keyboard is up on a phone) the floating help button covered the form.
+  const [fieldFocused, setFieldFocused] = useState(false);
+  useEffect(() => {
+    const isField = (t: EventTarget | null) =>
+      t instanceof HTMLElement && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT");
+    const onIn = (e: FocusEvent) => { if (isField(e.target)) setFieldFocused(true); };
+    const onOut = () => setFieldFocused(false);
+    document.addEventListener("focusin", onIn);
+    document.addEventListener("focusout", onOut);
+    return () => { document.removeEventListener("focusin", onIn); document.removeEventListener("focusout", onOut); };
+  }, []);
   // The files sent with a submit whose reply was lost: the next Submit sends the same ones again (same submission
   // id), so nothing is uploaded twice and nothing in use is removed. Kept only while the picked files are unchanged.
   const lastUploads = useRef<{ up: UploadedFiles; sig: string } | null>(null);
@@ -302,6 +313,7 @@ export default function Onboarding() {
   const rejected = registration?.status === "rejected";
   const { data: myStore } = useMyVendorProfile(rejected ? user?.id : undefined);
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
+  const businessCameraInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const gstDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const regDocumentInputRef = useRef<HTMLInputElement | null>(null);
@@ -313,7 +325,6 @@ export default function Onboarding() {
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const signatureStrokeRef = useRef<{ x: number; y: number }[][]>([]);
   const signatureIsDrawingRef = useRef(false);
-  const keepManualSignatureRef = useRef(false);
 
   useEffect(() => {
     if (ownerName.trim()) {
@@ -649,6 +660,15 @@ export default function Onboarding() {
     };
   };
 
+  // Unsent answers: anything past the first screen, until the registration is saved.
+  const unsentAnswers = currentStep > 1 && !showWelcome && !showPendingResult;
+  useEffect(() => {
+    if (!unsentAnswers) return;
+    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [unsentAnswers]);
+
   const finishSubmit = (status: "registered" | "pending_review") => {
     void queryClient.invalidateQueries({ queryKey: ["seller_registration", user?.id] });
     if (status === "pending_review") setShowPendingResult(true);
@@ -742,24 +762,28 @@ export default function Onboarding() {
   const overviewSteps = [
     {
       label: "Business information",
+      step: 2,
       helper: "Edit details >",
       icon: Building2,
       state: "done",
     },
     {
       label: "Business documents",
+      step: 7,
       helper: "Continue >",
       icon: FileText,
       state: businessInfoComplete ? "done" : "locked",
     },
     {
       label: "Products details",
+      step: 8,
       helper: "Category, Products.",
       icon: Package,
       state: currentStep > 8 ? "done" : "locked",
     },
     {
       label: "Partner contract",
+      step: 9,
       helper: "",
       icon: FileSignature,
       state: currentStep >= TOTAL_STEPS ? "active" : "locked",
@@ -816,8 +840,16 @@ export default function Onboarding() {
     const point = getCanvasPoint(event);
     if (!point) return;
     const stroke = signatureStrokeRef.current[signatureStrokeRef.current.length - 1];
+    const last = stroke[stroke.length - 1];
     stroke.push(point);
-    syncSignatureCanvasSize();
+    // Only the new segment: resizing the canvas and redrawing every stroke on each move lagged on cheap phones.
+    // The pen was set up by syncSignatureCanvasSize() when this stroke started.
+    const context = signatureCanvasRef.current?.getContext("2d");
+    if (!context || !last) return;
+    context.beginPath();
+    context.moveTo(last.x, last.y);
+    context.lineTo(point.x, point.y);
+    context.stroke();
   };
   const endDrawingSignature = (event: React.PointerEvent<HTMLCanvasElement>) => {
     if (!signatureIsDrawingRef.current) return;
@@ -837,12 +869,14 @@ export default function Onboarding() {
   };
   const saveManualSignature = () => {
     const canvas = signatureCanvasRef.current;
-    if (!canvas || signatureStrokeRef.current.length === 0) {
-      toast.error("Draw your signature before saving");
-      return;
+    if (!canvas) return;
+    if (signatureStrokeRef.current.length === 0) {
+      // Cleared and saved: back to the signature generated from the typed name.
+      setManualSignatureDataUrl(null);
+      toast.success("Using the signature made from your name");
+    } else {
+      setManualSignatureDataUrl(canvas.toDataURL("image/png"));
     }
-    keepManualSignatureRef.current = true;
-    setManualSignatureDataUrl(canvas.toDataURL("image/png"));
     setSignatureDrawerOpen(false);
   };
 
@@ -947,6 +981,7 @@ export default function Onboarding() {
                 />
               </Link>
               <div className="flex items-center gap-2">
+                {!user && (
                 <Link to="/login">
                   <Button
                     variant="outline"
@@ -956,6 +991,7 @@ export default function Onboarding() {
                     Login
                   </Button>
                 </Link>
+                )}
                 <Sheet>
                   <SheetTrigger asChild>
                     <button
@@ -1039,7 +1075,7 @@ export default function Onboarding() {
           <button
             type="button"
             onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
-            className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
+            className={cn("fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg", fieldFocused && "hidden")}
             aria-label="WhatsApp help"
           >
             <MessageCircle className="h-5 w-5" />
@@ -1061,6 +1097,7 @@ export default function Onboarding() {
               />
             </Link>
             <div className="flex items-center gap-2">
+              {!user && (
               <Link to="/login">
                 <Button
                   variant="outline"
@@ -1070,6 +1107,7 @@ export default function Onboarding() {
                   Login
                 </Button>
               </Link>
+              )}
               <Sheet>
                 <SheetTrigger asChild>
                   <button
@@ -1224,7 +1262,7 @@ export default function Onboarding() {
         <button
           type="button"
           onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
+          className={cn("fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg", fieldFocused && "hidden")}
           aria-label="WhatsApp help"
         >
           <MessageCircle className="h-5 w-5" />
@@ -1233,16 +1271,9 @@ export default function Onboarding() {
         <Drawer
           open={signatureDrawerOpen}
           onOpenChange={(open) => {
+            // Closing without saving keeps the saved signature (it used to be deleted). "Change" opens a blank pad.
             setSignatureDrawerOpen(open);
-            if (open) {
-              keepManualSignatureRef.current = false;
-              setTimeout(syncSignatureCanvasSize, 0);
-              return;
-            }
-            if (!keepManualSignatureRef.current) {
-              setManualSignatureDataUrl(null);
-            }
-            keepManualSignatureRef.current = false;
+            if (open) setTimeout(syncSignatureCanvasSize, 0);
           }}
         >
           <DrawerContent className="border-brand-border bg-white">
@@ -1256,10 +1287,9 @@ export default function Onboarding() {
                     lives inside a vaul Drawer, which reads a pointer drag
                     across its content as swipe-to-dismiss. `touch-none` stops
                     that for a finger; the browser ignores touch-action for a
-                    MOUSE, so on desktop the first stroke dismissed the drawer —
-                    and onOpenChange nulls manualSignatureDataUrl when it closes
-                    unsaved, so the signature was discarded with no error. A
-                    desktop vendor could not draw a signature at all. */}
+                    MOUSE, so on desktop the first stroke dismissed the drawer
+                    and the drawing was lost with no error. A desktop vendor
+                    could not draw a signature at all. */}
                 <canvas
                   ref={signatureCanvasRef}
                   data-vaul-no-drag
@@ -1284,11 +1314,7 @@ export default function Onboarding() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setManualSignatureDataUrl(null);
-                    keepManualSignatureRef.current = false;
-                    setSignatureDrawerOpen(false);
-                  }}
+                  onClick={() => setSignatureDrawerOpen(false)}
                   className="text-sm font-medium text-[#6b7280]"
                 >
                   Close
@@ -1371,6 +1397,7 @@ export default function Onboarding() {
               />
             </Link>
             <div className="flex items-center gap-2">
+              {!user && (
               <Link to="/login">
                 <Button
                   variant="outline"
@@ -1380,6 +1407,7 @@ export default function Onboarding() {
                   Login
                 </Button>
               </Link>
+              )}
               <Sheet>
                 <SheetTrigger asChild>
                   <button
@@ -1459,8 +1487,15 @@ export default function Onboarding() {
                     const labelStyle = isLocked ? "text-brand-border" : "text-brand-ink";
                     const helperStyle = isLocked ? "text-brand-border" : "text-brand-vendor";
 
+                    // A row that isn't locked opens its step ("Edit details >" looked like a link and did nothing).
                     return (
-                      <div key={item.label} className="flex items-center gap-3 rounded-xl border border-brand-border bg-white p-4 shadow-sm">
+                      <button
+                        type="button"
+                        key={item.label}
+                        disabled={isLocked}
+                        onClick={() => setCurrentStep(item.step)}
+                        className="flex w-full items-center gap-3 rounded-xl border border-brand-border bg-white p-4 text-left shadow-sm disabled:cursor-default"
+                      >
                         <div className={cn("h-10 w-10 rounded-full border flex items-center justify-center", iconStyle)}>
                           <Icon className="h-5 w-5" />
                         </div>
@@ -1468,7 +1503,7 @@ export default function Onboarding() {
                           <p className={cn("text-sm font-semibold", labelStyle)}>{item.label}</p>
                           {item.helper && <p className={cn("text-xs", helperStyle)}>{item.helper}</p>}
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
 
@@ -1514,7 +1549,9 @@ export default function Onboarding() {
                           </div>
                         ))}
                       </div>
-                      <Button className="mt-5 w-full rounded-full bg-brand-vendor text-white">Okay</Button>
+                      <DialogClose asChild>
+                        <Button className="mt-5 w-full rounded-full bg-brand-vendor text-white">Okay</Button>
+                      </DialogClose>
                     </DialogContent>
                   </Dialog>
                 </div>
@@ -1685,14 +1722,7 @@ export default function Onboarding() {
                 <h2 className="text-2xl font-bold text-brand-ink">Business Address</h2>
 
                 <div className="space-y-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-ink/60" />
-                    <Input
-                      placeholder="Search for area, street name"
-                      className="h-11 rounded-xl border-brand-border pl-9 focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
-                    />
-                  </div>
-
+                  {/* The search box that stood here searched nothing; the map follows the address typed below. */}
                   <div className="relative overflow-hidden rounded-2xl border border-brand-border">
                     {/* Follows what the vendor has actually typed. It was
                         hardcoded to `q=Delhi%20NCR`, so a Surat mill filling in
@@ -1717,8 +1747,7 @@ export default function Onboarding() {
                     <div className="pointer-events-none absolute inset-0">
                       <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                         <div className="mb-2 rounded-full bg-white px-3 py-1 text-[10px] font-medium text-brand-ink shadow">
-                          This is your business location
-                          <span className="ml-1 text-brand-ink/70">Move pin to add to exact location</span>
+                          Your business area, from the address below
                         </div>
                         <div className="flex items-center justify-center">
                           <div className="h-10 w-10 rounded-full bg-brand-vendor/15 flex items-center justify-center">
@@ -1742,7 +1771,15 @@ export default function Onboarding() {
                 <div className="rounded-2xl border border-brand-border bg-white p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-semibold text-brand-ink">Complete business address</h3>
-                    <button type="button" className="text-brand-ink/70">
+                    <button
+                      type="button"
+                      aria-label="Clear the address"
+                      className="text-brand-ink/70"
+                      onClick={() => {
+                        setBuilding(""); setArea(""); setLandmark(""); setCity(""); setState(""); setPincode("");
+                        setAddressConfirmed(false);
+                      }}
+                    >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -1917,9 +1954,7 @@ export default function Onboarding() {
             {currentStep === 5 && (
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <button type="button" onClick={goPrev} className="mt-1 text-brand-ink" aria-label="Back">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
+                  <div className="w-4" />
                   <div className="text-center flex-1">
                     <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
                     <p className="text-xs text-brand-ink/70">For Sellers</p>
@@ -2031,9 +2066,7 @@ export default function Onboarding() {
             {currentStep === 6 && (
               <div className="space-y-6">
                 <div className="flex items-start gap-3">
-                  <button type="button" onClick={goPrev} className="mt-1 text-brand-ink" aria-label="Back">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
+                  <div className="w-4" />
                   <div className="text-center flex-1">
                     <img src="/cosoravendorlogo.png" alt="Cosora For Sellers" className="mx-auto h-10 w-auto object-contain" draggable={false} />
                     <p className="text-xs text-brand-ink/70">For Sellers</p>
@@ -2067,7 +2100,7 @@ export default function Onboarding() {
                       <button
                         type="button"
                         className="flex h-24 flex-col items-center justify-center rounded-xl bg-[#f5f5f5] text-brand-ink"
-                        onClick={() => businessImageInputRef.current?.click()}
+                        onClick={() => businessCameraInputRef.current?.click()}
                       >
                         <UploadIcon className="h-6 w-6 text-brand-vendor" />
                         <span className="mt-2 text-sm font-medium">Camera</span>
@@ -2183,6 +2216,16 @@ export default function Onboarding() {
                   aria-label="Business images"
                   onChange={handleBusinessImageFiles}
                 />
+                {/* A phone opens its camera for this one; a computer opens the file picker. */}
+                <input
+                  ref={businessCameraInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  capture="environment"
+                  className="hidden"
+                  aria-label="Take a business photo"
+                  onChange={handleBusinessImageFiles}
+                />
               </div>
             )}
 
@@ -2190,9 +2233,7 @@ export default function Onboarding() {
             {currentStep === 7 && !documentsSuccess && (
               <div className="space-y-6 pb-14">
                 <div className="flex items-center justify-between">
-                  <button type="button" onClick={goPrev} className="flex h-8 w-8 items-center justify-center rounded-full text-brand-ink" aria-label="Back">
-                    <ArrowLeft className="h-4 w-4" />
-                  </button>
+                  <div className="h-8 w-8" />
                   <h2 className="text-base font-semibold text-brand-ink">Business documents</h2>
                   <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-brand-ink">{india ? "India" : "Outside India"}</span>
                 </div>
@@ -2219,7 +2260,7 @@ export default function Onboarding() {
                     />
                     {panStatus === "submitted" ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-vendor">
-                        <Clock className="h-4 w-4" /> Submitted for review
+                        <Check className="h-4 w-4" /> Format looks right
                       </span>
                     ) : panStatus === "invalid" ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-buyer">
@@ -2256,7 +2297,7 @@ export default function Onboarding() {
                       </span>
                     ) : panNameStatus === "submitted" ? (
                       <span className="inline-flex items-center gap-1 whitespace-nowrap text-sm font-medium text-brand-vendor">
-                        <Clock className="h-4 w-4" /> Submitted for review
+                        <Check className="h-4 w-4" /> Format looks right
                       </span>
                     ) : (
                       <Button type="button" variant="outline" className="rounded-full border-brand-vendor text-brand-vendor" onClick={checkPanName}>
@@ -2784,13 +2825,13 @@ export default function Onboarding() {
                   disabled={!canFinishProducts}
                   className="w-full bg-brand-vendor text-white rounded-full font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Submit
+                  Next
                 </Button>
               </div>
             )}
             {currentStep === 8 && productSuccess && (
               <SuccessScreen
-                text="Product details uploaded"
+                text="First product added. It's sent with your registration."
                 onContinue={() => {
                   setProductSuccess(false);
                   setContractStage("overview");
@@ -2820,7 +2861,7 @@ export default function Onboarding() {
         <button
           type="button"
           onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
-          className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
+          className={cn("fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg", fieldFocused && "hidden")}
           aria-label="WhatsApp help"
         >
           <MessageCircle className="h-5 w-5" />
