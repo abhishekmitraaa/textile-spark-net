@@ -111,3 +111,17 @@ for (const role of ROLES) {
     await ctx.close();
   });
 }
+
+test("a tab bar with counts doesn't scroll up and down (vertical scroll arrows on Windows)", async ({ browser }) => {
+  const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  await page.goto(`${ADMIN_URL}/registrations`);
+  const bar = page.getByRole("button", { name: /Documents to review/ }).locator("..");
+  await expect(bar).toBeVisible({ timeout: 15_000 });
+  const box = await bar.evaluate((el) => ({
+    overflowY: getComputedStyle(el).overflowY, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight,
+  }));
+  expect(box.overflowY).toBe("hidden");
+  expect(box.scrollHeight).toBeLessThanOrEqual(box.clientHeight);
+  await ctx.close();
+});
