@@ -2884,6 +2884,77 @@ The plan and its decisions are in `documentation/help-feature-plan.md` (D-01 to 
 - **Resets:** the work email has no mailbox, so "Forgot password" can't reach these accounts. `reset_password` issues a new temporary password the same way, and nobody can reset their own. Existing sessions aren't signed out: GoTrue's admin API can't revoke another user's sessions by id.
 - **Not touched:** buyer and vendor sign-in. No `auth.users.phone` is set, and `otp-dev-verify` only opens accounts it created.
 
+## Seller registration — one submit, a publish gate, reviewed photos (2026-11-13)
+
+Onboarding audit fixes 1–20 (Mitra's decisions D1–D10 in `subscription-session/SESSION-CONTEXT.md`). Branch
+`onboarding/registration-fixes` in both repos. Migrations, in release order: `20261113100000` core, `100100` submit,
+`100200` publish gate, `100300` admin, `100400` Free catalogue / overseas billing / reach, then both apps, then
+`100900` (the browser-write guard, which would break the old app's onboarding if it went first).
+
+**State.** `vendor_registrations` (one row per submission: `pending_review`, `registered`, `rejected`, the reason,
+who decided) beside `vendor_profiles.onboarding_complete`, which stays the flag every older reader uses.
+`my_seller_registration()` returns `{status: none|pending|rejected|registered|exempt, reason, contract_signed,
+country_code, gate_on, latest_submission}`; `seller_registered(uuid)` is the boolean the gate uses.
+`admin.registration_exempt` lists the six demo sellers. `vendor_profiles.country_code` follows `country`
+(`admin.sync_vendor_country_code`).
+
+**The submit.** The browser uploads every file first (KYC to the private `business-docs` bucket under
+`<uid>/kyc/` or `<uid>/contract/`, pictures to `product-images/<uid>/…`), then calls
+`submit_vendor_registration(p_submission uuid, p jsonb)` once. The function:
+- checks the caller is signed in and active and the payload is at most 64 KB;
+- takes `pg_advisory_xact_lock(hashtextextended('cosora.vendor_registration:' || uid, 0))`, so two tabs or a
+  double tap serialise; a repeated `p_submission` gets the first answer back (the lost-reply retry);
+- refuses `already_registered` and `awaiting_approval` (P0001);
+- validates everything (22023 with one key each: `invalid_phone`, `gstin_pan_mismatch`, `missing_document`…;
+  `src/lib/registrationValidation.ts` mirrors the rules and `registrationErrorText()` words the keys), including
+  that each private file exists in the caller's own folder (`admin.reg_private_file_ok`) and each public URL is a
+  plain Storage URL in the caller's folder (`admin.reg_public_file_ok`);
+- writes the profile, documents (returning the files of the documents it replaced as `superseded_files`, which the
+  browser then removes), premises photos, the first product and its pictures, the catalogue (through review), the
+  contract, the WhatsApp consent and the profile's role, and for India sets `onboarding_complete` last. An overseas
+  submission stays `pending_review` until `admin_vendor_registration_decide()`.
+The browser removes its uploads only when the database refused the submit; when the answer was lost it keeps them
+(the registration may have been saved) and retries with the same submission id. `scripts/onboarding/race.mjs` fires
+parallel submits: one registration, one product, one contract.
+
+**The gate.** `admin.require_registered_seller()` runs as `trg_0_registered_seller` (named to run first) BEFORE
+INSERT on products, product_videos, catalogues, advertisements and quotes, for `authenticated` callers that aren't
+admins, while `admin.feature_on_for('seller_registration_required', uid)`; message "Finish your seller registration
+first", hint `registration_required`. The app's `RegistrationBanner` says the same before the seller tries.
+`RegisteredVendorGate` waits for `my_seller_registration()` instead of trusting the localStorage hint (the race that
+showed a registered seller an empty form).
+
+**Server-owned columns.** `trg_vendor_profiles_registration_guard` (migration `100900`) refuses an `authenticated`
+write of `onboarding_complete` or `office_photos` (42501). Only definer functions set them.
+
+**Premises photos.** `vendor_premises_photos` (url, position, status `under_review|live|rejected`, reason, reviewer).
+The seller inserts (url, position) and deletes own rows; `admin.vendor_premises_photos_guard()` forces a browser's
+row into review, checks the folder and keeps at most 12 not rejected under a lock per seller.
+`admin.vendor_premises_photos_cache()` (definer, after every change) rewrites `vendor_profiles.office_photos` with
+the approved URLs in order, so the store reads one column. Decisions: `admin_premises_photo_review()`.
+
+**Admin queues.** `admin_registration_queue(kind, limit, after, after_id)` (approvals: pending registrations;
+documents: sellers with unreviewed documents, through the partial index `vendor_documents_unreviewed_idx`) and
+`admin_premises_photo_queue(...)` page oldest first by keyset; `admin_registration_queue_counts()` feeds the nav
+(refetched every minute). `admin.require_admin_role(roles[])` is the shared role check. Every decision RPC takes
+`p_reason` with no default: send `''` when approving, or PostgREST finds no function.
+
+**Free catalogue, overseas billing, reach** (`100400`; each patched function's body is pinned by md5 first):
+- `enforce_catalogue_plan()`: a plan without automatic catalogues keeps `limits.catalogues_max` (Free 1) catalogues
+  not rejected, counted under `cosora.catalogue_cap:<vendor>`.
+- `subscription_fulfil()`: an overseas seller's invoice has no place of supply, inter-state supply (IGST), and the
+  recipient carries `country` and `country_code`.
+- `admin.viewer_trade_buyer()`: the viewer's buyer type is one of the five trade types. `match_products` multiplies
+  a registered overseas seller's score by 1.10 for them; `feed_products` adds 1.0 to its trending score.
+- `feed_products` was dropped and recreated (a new parameter overloads otherwise): `p_supplier` ('india' |
+  'international') and the column `vendor_country_code` (null until the seller is registered). The filter is an
+  `IN (select … from vendor_profiles)` subquery: an `OR` over the joined seller's columns made every call about 5x
+  slower (760–1,040 ms against 175–199 ms locally). `scripts/onboarding/reach.sql` pins the unfiltered results to
+  md5 baselines taken before the change.
+
+**Tests.** `scripts/onboarding/registration.sql` (85 cases), `reach.sql` (17), `race.mjs`,
+`scripts/registration-validation-check.mjs` (32), `tests/local/registration-fixes.spec.ts` (29, buyer and admin).
+
 ## Integrations
 
 ### Supabase

@@ -68,6 +68,9 @@ Rules decided before or outside of Claude Code sessions.
   GST certificate when registered for GST (registering without GST is allowed); a business
   registration (Udyam/MSME, incorporation certificate, shop licence, partnership deed or
   other); the owner's masked Aadhaar; a product catalogue, or a first product instead.
+  **Outside India** (Mitra, 2026-11-13): the business's registration certificate and its number, its tax ID when it
+  has one, the owner's passport or national ID, and a catalogue or a first product; Cosora approves the registration
+  before the seller can publish. Rules: "Seller registration" below.
 - **Plan changes** (Subscription FAQ): an upgrade starts now and the unused part of what's
   paid comes off; a downgrade (or yearly → monthly) is paid now and starts at the next period;
   one period paid ahead at most. One rule, in `admin.subscription_quote`.
@@ -260,7 +263,7 @@ undocumented. Deep technical rationale for each lives in
   `gstin_is_valid()` and `src/lib/taxIds.ts` (`scripts/tax-id-check.mjs` compares them); `india_states.gst_code`
   is the two-digit state code a GSTIN starts with. Cosora's own GSTIN, legal name, address and SAC code are
   `admin.billing_entity` (Cosora-Admin Billing details, super admin and finance admin). Onboarding still saves
-  a GSTIN unchecked (ToDo).
+  a GSTIN unchecked (ToDo); since 2026-11-13 `submit_vendor_registration()` checks it with the same rule.
 - **A plan order is completed by one database transaction, and nothing else** (subscriptions P1, 2026-10-08;
   migration `20261009171650_subscriptions_p1_billing_core.sql`).
   - `public.subscription_fulfil(order, payment, source)` (service role) claims the order, confirms its code,
@@ -1041,8 +1044,9 @@ undocumented. Deep technical rationale for each lives in
   (Master Prompt 8, 2026-09-11). `/onboarding` is reachable by buyers on purpose, so a
   pick-time upload put a PAN scan under an account with no vendor profile the moment a
   buyer chose a file, and abandoning left it there. Onboarding holds `File` objects and
-  uploads at submit; a failed submit calls `discardUnreferencedKycUploads()`. Any new
-  identity-document input follows the same rule.
+  uploads at submit; a refused submit removes what it uploaded (`cleanupRegistrationUploads()`), but a submit whose
+  answer was lost keeps them, because the registration may have been saved (2026-11-13). Any new identity-document
+  input follows the same rule.
 - **Authorization for a moderation verdict goes INSIDE a SECURITY DEFINER function.** A
   client UPDATE that RLS denies matches zero rows and returns success. This repo has been
   bitten by that; `set_vendor_document_verified()` follows `set_account_status()` — same
@@ -1058,8 +1062,10 @@ undocumented. Deep technical rationale for each lives in
   see.
 - **A signed contract is append-only.** `vendor_contracts` has select and insert policies and
   **no update or delete for anyone, admins included** — an editable contract is not evidence.
-  It is written inside `saveVendorOnboarding()`, in the same call that sets
-  `onboarding_complete`, so "onboarded but no contract on file" is not a reachable state.
+  It is written inside `submit_vendor_registration()` (2026-11-13; before that, `saveVendorOnboarding()` wrote it
+  from the browser, and a failed write could leave a seller registered with no contract: one production seller is),
+  in the same transaction that sets `onboarding_complete`, so for a new registration "registered but no contract on
+  file" can't happen. A seller already in that state signs on `/kyc` (`sign_supplier_agreement()`).
   `agreement_version` comes from one constant that is rendered AND stored, so the record
   always names the wording the vendor actually read.
 - **RLS policies are not the whole story — check the foreign keys too.** `vendor_contracts`
@@ -1254,6 +1260,8 @@ undocumented. Deep technical rationale for each lives in
   column, two authors, whichever ran last won, so a vendor finished onboarding on one
   number and watched it change on their first dashboard load. `syncProfileScore` must be
   called AFTER every other write in a flow: it scores rows, not intentions.
+- **Superseded 2026-10-02: the owner's masked Aadhaar IS collected** (Seller Registration FAQ; see "Aadhaar" under
+  Legal & compliance). The 2026-09-09 rule is kept for the record:
 - **Aadhaar is deliberately NOT collected, and the app must not ask for it (2026-09-09).**
   Retaining Aadhaar numbers or images is constrained by the Aadhaar Act 2016 and UIDAI rules
   for any entity that is not an authorised KUA/AUA, and PAN already identifies the business
@@ -1412,6 +1420,45 @@ undocumented. Deep technical rationale for each lives in
   what was applied (md5-compared). Reports cite the file's raw GitHub URL. Older files use
   authored timestamps (`MIGRATIONS.md`), and 45 live migrations, the whole base schema
   among them, are in neither repo.
+
+### Seller registration (Mitra, 2026-11-13; onboarding audit fixes 1–20)
+Migrations `20261113100000`–`100400` and `100900` (the last one ships after both apps); harness
+`scripts/onboarding/registration.sql`, `reach.sql`, `race.mjs`; specs `tests/local/registration-fixes.spec.ts`.
+- **A registration is one database transaction: `submit_vendor_registration(submission, payload)`.** The browser
+  uploads the files, then sends everything once; the function checks it all (the same rules as
+  `src/lib/registrationValidation.ts`, which `scripts/registration-validation-check.mjs` compares) and writes the
+  profile, documents, premises photos, first product, catalogue, contract, consent and the registration together,
+  under a lock per seller, and answers a repeated submission id with the first answer. Nothing else registers a
+  seller. Never write `onboarding_complete` or `office_photos` from a browser: the database refuses both
+  (`trg_vendor_profiles_registration_guard`, migration `100900`).
+- **Where a registration stands is `my_seller_registration()`** (none, pending, rejected, registered, exempt) and
+  `seller_registered(uuid)`; the app reads it through `useSellerRegistration()`. `vendor_registrations` keeps every
+  submission and decision.
+- **Publishing needs a registered seller** (Mitra D1): a new listing, video, catalogue, ad or quote is refused with
+  "Finish your seller registration first" (`trg_0_registered_seller`, `admin.require_registered_seller()`) while the
+  `seller_registration_required` switch is on for the account. Plan checkout and revealing a buyer's phone already
+  needed `onboarding_complete` (`subscription_checkout_gate()`, `call_buyer_contact()`). Existing content stays. The six demo sellers are exempt (`admin.registration_exempt`, D2). A new way to publish
+  gets the same trigger.
+- **Sellers outside India** (D5, D9) register only where the `overseas_seller_registration` switch allows, with their
+  own country's documents; Cosora approves them (`admin_vendor_registration_decide()`, Cosora-Admin › Registrations;
+  approval needs a signed agreement). They buy plans and ads; the invoice has no Indian place of supply and is IGST.
+  GST on those sales is for the CA to confirm (ToDo).
+- **Premises photos are reviewed before buyers see them** (D3): `vendor_premises_photos` rows (at most 12 not
+  rejected, in the seller's own folder), decided by `admin_premises_photo_review()` (super admin, product
+  moderator; a rejection needs a reason the seller sees). The approved URLs are cached in
+  `vendor_profiles.office_photos` by a trigger; the store reads only that. Never show a stock picture instead.
+- **The Free plan keeps one PDF catalogue** (D6, `subscription_plans.limits.catalogues_max`, counted under a lock in
+  `enforce_catalogue_plan()`; rejected ones don't count). The registration's first PDF goes through review like
+  any catalogue.
+- **"International supplier"** (D10) is shown, and the Supplier location filter (`feed_products(p_supplier)`) lists,
+  a registered seller outside India only: `feed_products` returns `vendor_country_code` only once registered, and
+  the app reads `registeredCountry()`. Trade buyers (Exporter, Importer, Wholesaler, Distributor, Corporate;
+  `admin.viewer_trade_buyer()`) see those sellers a little higher: ×1.10 in search (`match_products`), +1.0 in the
+  trending feed. Bounded on purpose; don't widen it without Mitra.
+- **The buyer's Call reaches the business number; the mobile is WhatsApp only when the seller opted in** (D8).
+  Cosora's own WhatsApp messages need the separate opt-in (`set_contact_consent()`), never pre-ticked.
+- **Registration asks for the business type (and optional capabilities) only;** states served and capacity are
+  asked for on Business Profile (D4).
 
 ### An edit to approved content goes back to review (Mitra, 2026-10-10)
 - A seller's change to anything buyers see on a live listing, video or catalogue (pictures included) sends it back

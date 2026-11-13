@@ -6,6 +6,47 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Turn on seller registration's two switches — added 2026-11-13
+- Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
+  videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`
+  (Cosora-Admin › Feature switches, with a reason).
+- Context: both ship off (migration `20261113100000`). Before the first: check Cosora-Admin › Registrations has
+  someone reviewing documents (sellers are told 3–5 days) and that the seller registered without an agreement has
+  signed on `/kyc` (production had one, "Abc"). Before the second: the CA item below.
+- Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5).
+- Status: Open
+
+### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
+- Task: the CA confirms how a plan or ad bought by a seller outside India is taxed and invoiced.
+- Context: Mitra (D9): overseas sellers buy plans and ads, billed IGST. As built, the invoice has no Indian place of
+  supply ("Outside India") and charges IGST at the usual rate (`subscription_fulfil()`, migration
+  `20261113100400`). If it is an export of services (zero-rated under LUT, or IGST paid and refunded), the rate and
+  the invoice wording change; `_shared/gst.ts` stays the only formula.
+- Reference: 2026-11-13, onboarding audit fixes 1–20.
+- Status: Open
+
+### Rewrite the production onboarding specs for the single submit — added 2026-11-13
+- Task: rewrite `tests/vendor-onboarding-write-path.spec.ts` and `tests/mp4-phase2-callback-onboarding.spec.ts`
+  for the new form (no Skip; one `submit_vendor_registration()` call), or retire them in favour of
+  `tests/local/registration-fixes.spec.ts`.
+- Context: they drive the old form against production and already fail on every main push (CI E2E needs secrets);
+  the old `saveVendorOnboarding()` they relied on is gone. The older item below about the first spec's storage
+  cleanup goes with it.
+- Reference: 2026-11-13, onboarding audit fixes 1–20 (Task 9).
+- Status: Open
+
+### Onboarding audit 2026-11-13: the findings outside items 1–20 — added 2026-11-13
+- Task: decide and fix, item by item.
+- Context (each still in the code on 2026-11-13):
+  - The registration page's WhatsApp help button opens `wa.me/918821826465` (`Onboarding.tsx`, two places), not
+    the support number in `src/lib/supportContact.ts` (+91 88155 78226). Confirm which number Cosora answers.
+  - `/kyc` says "Add it below" when the PAN is missing, but offers no way to add a PAN there.
+  - A rejected Aadhaar keeps its file in `business-docs` until the seller replaces it.
+  - The signature pad redraws on every pointer move (slow on old phones).
+- Reference: the audit's list delivered in chat on 2026-11-13; items 1–20 were fixed on branch
+  `onboarding/registration-fixes`.
+- Status: Open
+
 ### Close the buyer audit's five unfixed security findings — added 2026-11-01
 - Task: fix, in one migration with md5 pre-checks like the other audit migrations:
   1. `ad_category_benchmarks(uuid)`: its caller check isn't coalesced and anon holds EXECUTE (securityflags.md says it
@@ -424,8 +465,11 @@ with no need to dictate format, context, or reference each time.
     an authorised KUA/AUA.
   - Live since 2026-10-02 (released at the user's instruction before counsel answered). As built: the seller uploads a **masked** Aadhaar only (UIDAI's masked copy, first 8 digits
     hidden), ticks a consent line, and the file goes to the private `business-docs` bucket like every KYC scan,
-    opened only by Cosora's team and deleted with the account. The number is never asked for or stored, and the
+    opened only by Cosora's team. The number is never asked for or stored, and the
     database refuses an Aadhaar row not marked masked (`vendor_documents_detail_check`).
+  - The consent says the copy "is deleted if I delete my account", but a seller can't delete their account in the
+    app (a vendor's request is refused and sent to support), so today only support removes it (found 2026-11-13).
+    Counsel words it, or account deletion for sellers is built.
   - Open questions for counsel: whether a private marketplace may *require* it (the 2018 Puttaswamy judgment limits
     private use of Aadhaar), or should accept another photo ID as an alternative; the consent wording; how long to
     keep it.
@@ -687,11 +731,6 @@ with no need to dictate format, context, or reference each time.
   - `/advertisements`: the FAQ says an ad "goes live instantly. No approval delays", but ads are
     reviewed first; invented "success stories" with names.
   - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
-  - `/vendor/:id` (`VendorProfile.tsx`), added 2026-09-28: the same content for every vendor in
-    two places: the office pictures (stock photos, though vendors can upload their own
-    `office_photos`) and the "Sells" chips. (The category tiles were fixed on 2026-10-17: "Brand's Categories"
-    shows the categories of the store's live listings, with the site-wide category pictures.) Phase 4a removed the invented identity
-    and contact details; the demo catalogues went on 2026-10-14 (a seller without one shows none).
 - Reference: 2026-09-26, the language-translation fix.
 - Status: Open
 
@@ -971,7 +1010,6 @@ with no need to dictate format, context, or reference each time.
     | same | "Downgrades will take effect from your next billing cycle" | A lower plan is bought like any other: it starts immediately and replaces the current one. The page enables every plan except the current one and Free |
     | What happens when I reach my lead limit? (subscription) | "You'll receive notifications as you approach your limit" | Nothing sends a notification about the limit. `/leads` shows "N/cap leads used", and quoting at the cap is refused with an upgrade prompt |
     | How are leads managed on Cosora? (seller) | Notified "via dashboard, email, or WhatsApp" | No email or WhatsApp is sent, and no in-app notification fires for new RFQs (Phase 7). Leads appear on `/leads` |
-    | What documents are required to register? (seller) | GST, PAN, business registration (or MSME/Udyam), Aadhaar, product catalog | Onboarding requires only PAN; GST and CIN are optional. KYC collects PAN, GST and CIN (`COLLECTED_DOC_TYPES` in `Kyc.tsx`). Aadhaar is deliberately not collected, and there's no MSME/Udyam document type. Catalogues have their own upload page (`UploadCatalogue.tsx`) |
     | I don't have a GST number… (seller) | Marked "Unverified Seller", which "may affect visibility and lead access" | There's no such label. Searching the SQL and the app found no ranking or lead-access gate on `is_verified`. GST is optional at registration |
     | Is there any cost to register? (seller) | "Basic registration is free… pay for Premium listings, Pay-per-lead access, Featured vendor badges" | Registration is free (the **Free** plan), but "Basic" is the name of a ₹699/month plan on the Subscription page. Pay-per-lead doesn't exist; Andy's own lead answer calls it future |
 
@@ -979,6 +1017,10 @@ with no need to dictate format, context, or reference each time.
     - what Cosora is, and who can register;
     - buyers call or chat;
     - verification time (now 3–5 days across the app);
+    - the documents asked for at registration: PAN, the GST certificate when registered for GST, a business
+      registration (Udyam/MSME among the kinds), the owner's masked Aadhaar, and a catalogue or a first product
+      (collected since 2026-10-02; one all-or-nothing submit since 2026-11-13). Sellers outside India give their
+      own country's documents, which Andy's answer doesn't mention;
     - no shipping through Cosora;
     - the annual discount: yearly is 10× monthly, about 16.7%, so "up to 17%" and "2 months
       free" are right;
