@@ -223,6 +223,24 @@ export function useMyVendorProfile(id: string | undefined) {
   });
 }
 
+/**
+ * The signed-in seller's brand name and city, for the dashboard header (2026-11-13: it showed "Kumar Textiles •
+ * Mumbai" to every seller). Two public columns, cached, so it costs nothing on each page; the store's edits
+ * invalidate ["vendor_profile", "mine", id], which covers this key.
+ */
+export function useMyStoreName(id: string | undefined) {
+  return useQuery({
+    queryKey: ["vendor_profile", "mine", id, "name"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("vendor_profiles").select("brand_name, city").eq("id", id as string).maybeSingle();
+      if (error) throw error;
+      return { brandName: data?.brand_name?.trim() ?? "", city: data?.city?.trim() ?? "" };
+    },
+    enabled: Boolean(id),
+    staleTime: 5 * 60_000,
+  });
+}
+
 export interface VendorStorePatch {
   brandName?: string;
   about?: string;

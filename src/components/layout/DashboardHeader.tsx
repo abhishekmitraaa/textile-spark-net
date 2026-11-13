@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { useUnreadCount } from "@/lib/queries/notifications";
+import { useAuth } from "@/contexts/AuthContext";
+import { useMyStoreName } from "@/lib/queries/vendorStore";
 
 interface DashboardHeaderProps {
   onMenuClick: () => void;
@@ -26,6 +28,8 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const unread = useUnreadCount();
+  const { user } = useAuth();
+  const store = useMyStoreName(role === "seller" ? user?.id : undefined).data;
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
 
   return (
@@ -57,10 +61,11 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
                   draggable={false}
                 />
               </button>
-              {role === "seller" && (
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-medium text-foreground leading-none">Kumar Textiles</span>
-                  <span className="text-xs text-muted-foreground">• Mumbai</span>
+              {/* The seller's own name and city; nothing while loading or when the store has no name yet. */}
+              {role === "seller" && store?.brandName && (
+                <div className="flex min-w-0 items-center gap-1" data-no-translate>
+                  <span className="truncate text-sm font-medium text-foreground leading-none">{store.brandName}</span>
+                  {store.city && <span className="truncate text-xs text-muted-foreground">• {store.city}</span>}
                 </div>
               )}
             </div>
