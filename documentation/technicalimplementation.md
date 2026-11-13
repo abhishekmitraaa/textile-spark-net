@@ -2984,7 +2984,7 @@ documents: sellers with unreviewed documents, through the partial index `vendor_
 
 **Tests.** `scripts/onboarding/registration.sql` (113 cases), `reach.sql` (18; the feed is compared with its
 previous version, recreated in the run), `race.mjs`, `audit-repro.mjs`, `scripts/registration-validation-check.mjs`
-(32), `tests/local/registration-fixes.spec.ts` (30, buyer and admin).
+(32), `tests/local/registration-fixes.spec.ts` (22, buyer and admin).
 
 ## Integrations
 
