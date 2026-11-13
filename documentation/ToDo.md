@@ -10,20 +10,12 @@ with no need to dictate format, context, or reference each time.
 - Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
   videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`
   (Cosora-Admin › Feature switches, with a reason).
-- Context: both ship off (migration `20261113100000`). Before the first: check Cosora-Admin › Registrations has
-  someone reviewing documents (sellers are told 3–5 days) and that the seller registered without an agreement has
-  signed on `/kyc` (production had one, "Abc"). Before the second: the CA item below.
+- Context: both are live and off since 2026-11-13 (migration `20261113100000`). Before the first: check Cosora-Admin
+  › Registrations has someone reviewing documents (sellers are told 3–5 days) and that the seller registered without
+  an agreement has signed on `/kyc` (production had one, "Abc"). Review the 10 office photos that moved into
+  Cosora-Admin › Premises photos (5 sellers); until approved they don't show on the stores. Before the second: the CA
+  item below.
 - Reference: 2026-11-13, onboarding audit fixes 1–20 (Mitra D1, D5).
-- Status: Open
-
-### Release the registration branch and the 2026-11-05 security branch in a known order — added 2026-11-13
-- Task: decide which ships first, and rehearse the second against the first on a copy of production.
-- Context: the local stack carries both. The security branch (`20261105100000`, not on production) rewrites
-  `storage_object_in_use` and pins the body production has today; the registration branch deliberately doesn't touch
-  that function (it adds separate storage policies instead), but both pin other function bodies by md5. After either
-  release, re-check the other's pins before applying it. Also: keep `seller_registration_required` off until
-  `20261113100900` is live (before it, a browser can still set `onboarding_complete`).
-- Reference: 2026-11-13, the registration branch's final review.
 - Status: Open
 
 ### CA: GST on plans and ads sold to sellers outside India — added 2026-11-13
