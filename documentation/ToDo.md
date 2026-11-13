@@ -48,8 +48,6 @@ with no need to dictate format, context, or reference each time.
 ### Onboarding audit 2026-11-13: the findings outside items 1–20 — added 2026-11-13
 - Task: decide and fix, item by item.
 - Context (each still in the code on 2026-11-13):
-  - The registration page's WhatsApp help button opens `wa.me/918821826465` (`Onboarding.tsx`, two places), not
-    the support number in `src/lib/supportContact.ts` (+91 88155 78226). Confirm which number Cosora answers.
   - `/kyc` says "Add it below" when the PAN is missing, but offers no way to add a PAN there.
   - A rejected Aadhaar keeps its file in `business-docs` until the seller replaces it.
   - The signature pad redraws on every pointer move (slow on old phones).

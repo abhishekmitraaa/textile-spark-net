@@ -1,4 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
+import { SUPPORT_PHONE } from "@/lib/supportContact";
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -47,6 +48,10 @@ import { PRIMARY_TYPES, CAPABILITIES } from "@/data/vendorTypes";
 import { stateByCode, stateCodeFor } from "@/data/indiaStates";
 import { RegistrationPending } from "@/components/vendor/RegistrationPending";
 import { useQueryClient } from "@tanstack/react-query";
+
+// The help button reaches Cosora Support's number (Mitra, 2026-11-13: +91 88155 78226); it used to open
+// wa.me/918821826465, which isn't Cosora's support line.
+const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, "")}`;
 
 /** A picked picture held in the browser until submit, with a preview that lives only in this tab. */
 interface HeldImage { file: File; preview: string }
@@ -1033,7 +1038,7 @@ export default function Onboarding() {
 
           <button
             type="button"
-            onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+            onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
             className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
             aria-label="WhatsApp help"
           >
@@ -1218,7 +1223,7 @@ export default function Onboarding() {
 
         <button
           type="button"
-          onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+          onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
           className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
           aria-label="WhatsApp help"
         >
@@ -2814,7 +2819,7 @@ export default function Onboarding() {
       {!showWelcome && (
         <button
           type="button"
-          onClick={() => window.open("https://wa.me/918821826465", "_blank")}
+          onClick={() => window.open(SUPPORT_WHATSAPP_URL, "_blank")}
           className="fixed bottom-6 right-6 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-brand-success text-white shadow-lg"
           aria-label="WhatsApp help"
         >
