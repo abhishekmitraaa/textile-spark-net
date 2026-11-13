@@ -372,12 +372,14 @@ export async function uploadVendorImage(id: string, file: File, kind: "logo" | "
 // but gallery images accumulate rather than replace, so the filename carries a
 // random suffix as well as a timestamp: a multi-file picker can fire several
 // uploads inside the same millisecond and `upsert: true` would silently
-// overwrite the earlier ones.
+// overwrite the earlier ones. Shrunk first, as the registration's photos are
+// (onboarding audit #32): a phone photo of several MB is downloaded by every
+// buyer who opens the store.
 export async function uploadVendorGalleryImage(id: string, file: File): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+  const { blob, ext } = await shrinkImage(file, 1600);
   const suffix = Math.random().toString(36).slice(2, 8);
   const path = `${id}/office/${Date.now()}-${suffix}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
+  const { error } = await supabase.storage.from("product-images").upload(path, blob, { upsert: true, contentType: blob.type || undefined });
   if (error) throw error;
   return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
 }

@@ -47,6 +47,7 @@ import { COUNTRIES } from "@/data/countries";
 import { PRIMARY_TYPES, CAPABILITIES } from "@/data/vendorTypes";
 import { stateByCode, stateCodeFor } from "@/data/indiaStates";
 import { RegistrationPending } from "@/components/vendor/RegistrationPending";
+import { pictureProblem } from "@/lib/queries/premisesPhotos";
 import { useQueryClient } from "@tanstack/react-query";
 
 // The help button reaches Cosora Support's number (Mitra, 2026-11-13: +91 88155 78226); it used to open
@@ -55,8 +56,6 @@ const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, "")}`
 
 /** A picked picture held in the browser until submit, with a preview that lives only in this tab. */
 interface HeldImage { file: File; preview: string }
-const PICTURE_TYPES = /^image\/(jpeg|png|webp)$/;
-const MAX_PICTURE_BYTES = 5 * 1024 * 1024;
 
 // 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
 // · 7 documents · 8 product · 9 contract
@@ -384,12 +383,9 @@ export default function Onboarding() {
         toast.error("That's as many pictures as this step takes.");
         break;
       }
-      if (!PICTURE_TYPES.test(f.type)) {
-        toast.error("Use a JPEG, PNG or WebP picture", { description: `${f.name} is not one of those.` });
-        continue;
-      }
-      if (f.size > MAX_PICTURE_BYTES) {
-        toast.error(`${f.name} is over 5 MB`, { description: "Use a smaller picture." });
+      const problem = pictureProblem(f);
+      if (problem) {
+        toast.error(problem.title, { description: problem.description });
         continue;
       }
       held.push({ file: f, preview: URL.createObjectURL(f) });

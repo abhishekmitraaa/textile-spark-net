@@ -13,6 +13,21 @@ import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
 
 export const PREMISES_PHOTO_LIMIT = 12;
 
+/**
+ * The pictures a seller adds, at registration and on Business Profile (onboarding audit #32): JPEG, PNG or WebP up
+ * to 5 MB, shrunk in the browser before upload. One rule, so the two pages can't take different files.
+ */
+export const PICTURE_TYPES = /^image\/(jpeg|png|webp)$/;
+export const PICTURE_ACCEPT = "image/jpeg,image/png,image/webp";
+export const MAX_PICTURE_BYTES = 5 * 1024 * 1024;
+
+/** Why a picture can't be used, as a toast's title and description, or null when it can. */
+export function pictureProblem(file: File): { title: string; description: string } | null {
+  if (!PICTURE_TYPES.test(file.type)) return { title: "Use a JPEG, PNG or WebP picture", description: `${file.name} is not one of those.` };
+  if (file.size > MAX_PICTURE_BYTES) return { title: `${file.name} is over 5 MB`, description: "Use a smaller picture." };
+  return null;
+}
+
 export type PremisesPhotoStatus = "under_review" | "live" | "rejected";
 
 export interface PremisesPhoto {

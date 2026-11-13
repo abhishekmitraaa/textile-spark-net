@@ -27,7 +27,7 @@ import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { trustSealFromParts } from "@/lib/plan";
 import {
   useMyPremisesPhotos, addPremisesPhotos, deletePremisesPhoto, countedPhotos, premisesPhotosKey,
-  PREMISES_PHOTO_LIMIT, type PremisesPhoto,
+  PREMISES_PHOTO_LIMIT, PICTURE_ACCEPT, pictureProblem, type PremisesPhoto,
 } from "@/lib/queries/premisesPhotos";
 import PhotoStatusBadge from "@/components/vendor/PhotoStatusBadge";
 import { AddBusinessCategoriesModal } from "@/components/vendor/AddBusinessCategoriesModal";
@@ -513,8 +513,14 @@ const BusinessProfile = () => {
   const [photoPage, setPhotoPage] = useState(0);
 
   const handlePhotoFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []);
+    const picked = Array.from(e.target.files ?? []);
     e.target.value = ""; // let the same file be picked again after a failure
+    // The registration's rule (JPEG, PNG or WebP up to 5 MB): a file that breaks it is named and skipped.
+    const files = picked.filter((f) => {
+      const problem = pictureProblem(f);
+      if (problem) toast.error(problem.title, { description: problem.description });
+      return !problem;
+    });
     if (files.length === 0) return;
     if (!user) { toast.error("Sign in to add office photos"); return; }
     if (files.length > photoSlotsLeft) {
@@ -622,6 +628,8 @@ const BusinessProfile = () => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
+    const problem = pictureProblem(file);
+    if (problem) { toast.error(problem.title, { description: problem.description }); return; }
     if (!user) { toast.error("Sign in to change your banner"); return; }
     setUploadingBanner(true);
     try {
@@ -1818,14 +1826,15 @@ const BusinessProfile = () => {
       <input
         ref={photoInputRef}
         type="file"
-        accept="image/*"
+        accept={PICTURE_ACCEPT}
         multiple
         className="hidden"
+        aria-label="Add premises photos"
         onChange={handlePhotoFiles}
       />
 
       {/* Banner picker. */}
-      <input ref={bannerInputRef} type="file" accept="image/*" className="hidden" onChange={handleBannerFile} />
+      <input ref={bannerInputRef} type="file" accept={PICTURE_ACCEPT} className="hidden" aria-label="Banner picture" onChange={handleBannerFile} />
 
       <YearEstablishedModal
         isOpen={showYearModal}
