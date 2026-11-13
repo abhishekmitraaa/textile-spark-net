@@ -53,9 +53,17 @@ export interface VendorDocumentInsert {
   detail?: Record<string, unknown>;
 }
 
+/**
+ * How far replaceVendorDocuments got. "no": the new rows aren't saved (nothing was sent, or the database refused
+ * them). "maybe": the insert's answer was lost. "yes": they are saved, even if a later step failed. A caller
+ * removes the files it uploaded for them only on "no" (onboarding audit #31: a saved row lost its file).
+ */
+export interface ReplaceProgress { newRows: "no" | "maybe" | "yes" }
+
 export async function replaceVendorDocuments(
   vendorId: string,
   docs: VendorDocumentInsert[],
+  progress: ReplaceProgress = { newRows: "no" },
 ): Promise<void> {
   if (!docs.length) return;
   const docTypes = docs.map((d) => d.doc_type);
@@ -67,10 +75,15 @@ export async function replaceVendorDocuments(
     .in("doc_type", docTypes);
   if (re) throw re;
 
+  progress.newRows = "maybe";
   const { error: ie } = await supabase
     .from("vendor_documents")
     .insert(docs.map((d) => ({ ...d, detail: (d.detail ?? {}) as Json })));
-  if (ie) throw ie;
+  if (ie) {
+    if (isServerRefusal(ie)) progress.newRows = "no";
+    throw ie;
+  }
+  progress.newRows = "yes";
 
   const oldIds = (superseded ?? []).map((d) => d.id as string);
   if (oldIds.length) {
@@ -151,18 +164,21 @@ export async function uploadKycDocument(vendorId: string, file: File): Promise<s
  * support", and onboarding, the only upload path, is closed once
  * onboarding_complete is set. Uploads through uploadKycDocument(), so the
  * bucket and `${vendorId}/kyc/...` path rules are the same ones onboarding
- * obeys, then swaps the row through replaceVendorDocuments(). If the row
- * write fails, the new object is referenced by nothing, so it is removed
- * rather than left as an orphan identity scan.
+ * obeys, then swaps the row through replaceVendorDocuments(). If the database
+ * refused the new row, the new object is referenced by nothing, so it is
+ * removed rather than left as an orphan identity scan. If the row may be saved
+ * (its answer was lost, or removing the old row failed) the file stays: a stray
+ * scan is cheaper than a document pointing at nothing. A retry supersedes it.
  */
 export async function resubmitKycDocument(
   vendorId: string, docType: string, file: File, detail?: Record<string, unknown>,
 ): Promise<void> {
   const path = await uploadKycDocument(vendorId, file);
+  const progress: ReplaceProgress = { newRows: "no" };
   try {
-    await replaceVendorDocuments(vendorId, [{ vendor_id: vendorId, doc_type: docType, file_url: path, detail }]);
+    await replaceVendorDocuments(vendorId, [{ vendor_id: vendorId, doc_type: docType, file_url: path, detail }], progress);
   } catch (err) {
-    await supabase.storage.from(KYC_BUCKET).remove([path]);
+    if (progress.newRows === "no") await supabase.storage.from(KYC_BUCKET).remove([path]);
     throw err;
   }
 }
@@ -170,17 +186,19 @@ export async function resubmitKycDocument(
 /**
  * /kyc: add the catalogue (or replace it) as a set of files, one row each. A seller
  * registered before 2026-10-02 was never asked for one. Same bucket and path rules
- * as every KYC upload; if the rows can't be written the new objects are removed.
+ * as every KYC upload; if the database refused the rows the new objects are removed, and kept when the rows may be
+ * saved (as resubmitKycDocument).
  */
 export async function submitCatalogue(vendorId: string, files: File[]): Promise<void> {
   const paths: string[] = [];
+  const progress: ReplaceProgress = { newRows: "no" };
   try {
     for (const f of files) paths.push(await uploadKycDocument(vendorId, f));
     await replaceVendorDocuments(vendorId, files.map((f, i) => ({
       vendor_id: vendorId, doc_type: "catalog", file_url: paths[i], detail: { name: f.name, mime: f.type },
-    })));
+    })), progress);
   } catch (err) {
-    if (paths.length) await supabase.storage.from(KYC_BUCKET).remove(paths);
+    if (paths.length && progress.newRows === "no") await supabase.storage.from(KYC_BUCKET).remove(paths);
     throw err;
   }
 }
