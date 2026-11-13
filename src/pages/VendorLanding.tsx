@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useUserRole } from "@/contexts/UserRoleContext";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import {
@@ -144,6 +145,10 @@ const VendorLanding = () => {
   // live, signed out included. They replaced a hardcoded list here (2026-09-23).
   const { data: faqs, isPending: faqsLoading } = useFaqs("seller_registration");
   const lang = useLang();
+  // A registered seller reaches this page by going back from Seller Home after registering: the buttons take them home
+  // instead of offering to register again (2026-11-14).
+  const { vendorRegistered } = useUserRole();
+  const startTo = vendorRegistered ? "/seller-home" : "/onboarding";
 
   return (
     <div className="vendor-shell min-h-screen bg-[#ffffff] text-brand-ink">
@@ -220,9 +225,9 @@ const VendorLanding = () => {
                 <div className="mt-5 rounded-2xl border border-brand-border bg-[#f5f5f5] p-3 text-xs text-brand-ink/70">
                   For support, write to <span className="font-semibold text-brand-ink">hello@cosora.in</span>
                 </div>
-                <Link to="/onboarding" className="mt-4 block">
+                <Link to={startTo} className="mt-4 block">
                   <Button className="w-full rounded-full bg-brand-vendor text-[#ffffff] hover:bg-brand-vendor/90">
-                    Get Started
+                    {vendorRegistered ? "Go to seller home" : "Get Started"}
                   </Button>
                 </Link>
               </SheetContent>
@@ -278,9 +283,9 @@ const VendorLanding = () => {
             </div>
 
             <div className="mt-4 space-y-2">
-              <Link to="/onboarding" className="block">
+              <Link to={startTo} className="block">
                 <Button className="h-12 w-full rounded-full bg-brand-vendor text-base font-semibold text-[#ffffff] hover:bg-brand-vendor/90">
-                  Get Started
+                  {vendorRegistered ? "Go to seller home" : "Get Started"}
                 </Button>
               </Link>
               <button
@@ -373,9 +378,9 @@ const VendorLanding = () => {
             ))}
           </div>
           <div className="flex justify-center">
-            <Link to="/onboarding">
+            <Link to={startTo}>
               <Button className="rounded-full bg-brand-vendor px-6 py-3 text-sm font-semibold text-[#ffffff] hover:bg-brand-vendor/90">
-                Get Started
+                {vendorRegistered ? "Go to seller home" : "Get Started"}
               </Button>
             </Link>
           </div>
@@ -467,9 +472,9 @@ const VendorLanding = () => {
                 <p className="mt-1 text-sm text-brand-ink/70">List products and get verified at no cost.</p>
               </div>
             </div>
-            <Link to="/onboarding" className="mt-4 block">
+            <Link to={startTo} className="mt-4 block">
               <Button className="h-11 w-full rounded-full bg-brand-vendor text-sm font-semibold text-[#ffffff] hover:bg-brand-vendor/90">
-                Get Started
+                {vendorRegistered ? "Go to seller home" : "Get Started"}
               </Button>
             </Link>
           </div>
@@ -487,9 +492,9 @@ const VendorLanding = () => {
           <div className="mt-4 flex h-40 items-center justify-center rounded-2xl border border-brand-border bg-[#f5f5f5]">
             <Globe className="h-16 w-16 text-brand-vendor/40" />
           </div>
-          <Link to="/onboarding" className="mt-4 inline-flex">
+          <Link to={startTo} className="mt-4 inline-flex">
             <Button className="rounded-full bg-brand-vendor px-6 py-3 text-sm font-semibold text-[#ffffff] hover:bg-brand-vendor/90">
-              Get Started
+              {vendorRegistered ? "Go to seller home" : "Get Started"}
             </Button>
           </Link>
         </motion.section>

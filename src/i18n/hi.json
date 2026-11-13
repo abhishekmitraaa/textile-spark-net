@@ -8594,5 +8594,9 @@
  "Enter the details as they're printed on the PAN card, then upload the card.": "PAN कार्ड पर छपे विवरण दर्ज करें, फिर कार्ड अपलोड करें।",
  "PAN number": "PAN नंबर",
  "Name on the PAN card": "PAN कार्ड पर नाम",
- "Documents are collected during seller registration and verified by the Cosora team. If one is missing, add it on its row; if one is rejected, upload a replacement and it goes back into review. To change your PAN or GST number, contact support from": "दस्तावेज़ विक्रेता पंजीकरण के दौरान लिए जाते हैं और कोसोरा की टीम उन्हें वेरिफ़ाई करती है। अगर कोई कम है, तो उसे उसकी पंक्ति पर जोड़ें; अगर कोई अस्वीकार हुआ है, तो उसकी जगह नई कॉपी अपलोड करें और वह फिर से समीक्षा में जाएगी। अपना PAN या GST नंबर बदलने के लिए, यहाँ से सपोर्ट से संपर्क करें:"
+ "Documents are collected during seller registration and verified by the Cosora team. If one is missing, add it on its row; if one is rejected, upload a replacement and it goes back into review. To change your PAN or GST number, contact support from": "दस्तावेज़ विक्रेता पंजीकरण के दौरान लिए जाते हैं और कोसोरा की टीम उन्हें वेरिफ़ाई करती है। अगर कोई कम है, तो उसे उसकी पंक्ति पर जोड़ें; अगर कोई अस्वीकार हुआ है, तो उसकी जगह नई कॉपी अपलोड करें और वह फिर से समीक्षा में जाएगी। अपना PAN या GST नंबर बदलने के लिए, यहाँ से सपोर्ट से संपर्क करें:",
+ "Leave your registration?": "अपना रजिस्ट्रेशन छोड़ें?",
+ "Your answers are saved only when you submit on the last step. If you leave now, they're lost and you start again.": "आपके जवाब सिर्फ़ आख़िरी स्टेप पर सबमिट करने पर सेव होते हैं। अभी छोड़ने पर वे मिट जाएँगे और आपको फिर से शुरू करना होगा।",
+ "Stay and continue": "रुकें और जारी रखें",
+ "Leave": "छोड़ें"
 }

@@ -1,7 +1,7 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { SUPPORT_PHONE } from "@/lib/supportContact";
 import { useState, useEffect, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft, ArrowRight, ChevronRight, Menu, MessageCircle, MapPin, Upload as UploadIcon,
@@ -57,6 +57,14 @@ const SUPPORT_WHATSAPP_URL = `https://wa.me/${SUPPORT_PHONE.replace(/\D/g, "")}`
 /** A picked picture held in the browser until submit, with a preview that lives only in this tab. */
 interface HeldImage { file: File; preview: string }
 
+/**
+ * Where the form is, stored in the browser's history entry (2026-11-14): each step, and the contract screen, is its
+ * own entry, so the phone's back button walks the steps like the on-screen Back. `onboardingVisit` ties the entry to
+ * this mount: an entry from an earlier visit (kept by a reload) has none of its answers. `guard` is the entry before
+ * step 1, where back from step 1 lands and is asked before leaving.
+ */
+interface StepEntry { onboardingVisit: string; onboardingStep: number; contract?: boolean; guard?: boolean }
+
 // 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
 // · 7 documents · 8 product · 9 contract
 const TOTAL_STEPS = 9;
@@ -84,17 +92,17 @@ const menuLinkClass =
  * origin. Same origin, but outside this router: a react-router <Link> would
  * navigate client side, match nothing, and render the 404 screen.
  */
-function OnboardingMenuLinks() {
+function OnboardingMenuLinks({ onLeave }: { onLeave?: (to: string) => (e: React.MouseEvent) => void }) {
   return (
     <nav className="mt-4 space-y-2">
       {onboardingMenuLinks.map((item) =>
         item.href.startsWith("/blogs") ? (
-          <a key={item.label} href={item.href} className={menuLinkClass}>
+          <a key={item.label} href={item.href} className={menuLinkClass} onClick={onLeave?.(item.href)}>
             {item.label}
             <ChevronRight className="h-4 w-4 text-brand-ink/60" />
           </a>
         ) : (
-          <Link key={item.label} to={item.href} className={menuLinkClass}>
+          <Link key={item.label} to={item.href} className={menuLinkClass} onClick={onLeave?.(item.href)}>
             {item.label}
             <ChevronRight className="h-4 w-4 text-brand-ink/60" />
           </Link>
@@ -163,9 +171,13 @@ function KycDocumentUpload({
 
 export default function Onboarding() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { setRole, setVendorRegistered } = useUserRole();
+  // Set only from the history entry (the effect below); move with goToStep() / goPrev().
   const [currentStep, setCurrentStep] = useState(1);
+  // The furthest step reached in this visit: past step 1 there are answers that only this page holds.
+  const [furthestStep, setFurthestStep] = useState(1);
 
   // Vendor registration is complete: flag it (so future Buyer→Seller switches
   // skip onboarding) and flip the active role to seller before leaving.
@@ -492,16 +504,86 @@ export default function Onboarding() {
     setter(list.includes(val) ? list.filter((x) => x !== val) : [...list, val]);
   };
 
+  // ── The steps are history entries (2026-11-14) ──
+  // The phone's back button used to leave the whole form: the steps were React state only, so back went to the page
+  // before /onboarding, with no warning, and every answer was gone. Now a visit starts with two entries, a guard and
+  // step 1, and every step after that is pushed (positions: guard 0, step n at n, the contract screen at 10). Back and
+  // forward walk the steps; the on-screen Back is the same move (navigate(-1)). Back from step 1 lands on the guard,
+  // which asks before leaving once anything was answered, and simply carries on back when nothing was.
+  const visit = useRef<string | null>(null);
+  const firstKey = useRef<string | null>(null);
+  // React Router's index of the guard entry in the tab's history (window.history.state.idx), for the jump back on submit.
+  const guardIdx = useRef<number | null>(null);
+  const settling = useRef(false);
+  const leaving = useRef(false);
+  const finishing = useRef(false);
+  const homeOnArrival = useRef(false);
+  const [leaveAsk, setLeaveAsk] = useState<null | { to: string | -1 }>(null);
+  const here = location.pathname + location.search;
+  const entry = location.state as Partial<StepEntry> | null;
+  const entryOf = (step: number, extra: Partial<StepEntry> = {}): StepEntry =>
+    ({ onboardingVisit: visit.current as string, onboardingStep: step, ...extra });
+
+  const goToStep = (step: number, extra: Partial<StepEntry> = {}) => {
+    // A second tap before the page moved (a double tap on a success screen) must not push the same step twice.
+    if (entry?.onboardingVisit === visit.current && entry?.onboardingStep === step && !entry?.guard
+      && Boolean(entry?.contract) === Boolean(extra.contract)) return;
+    setFurthestStep((f) => Math.max(f, step));
+    // On the guard (the step behind it was left), put step 1 back first so every step keeps its place after the guard.
+    if (entry?.guard) navigate(here, { state: entryOf(1) });
+    navigate(here, { state: entryOf(step, extra) });
+  };
+  const goPrev = () => {
+    if (currentStep > 1 || contractStage === "contract") navigate(-1);
+  };
+
+  useEffect(() => {
+    if (visit.current === null) {
+      visit.current = crypto.randomUUID();
+      firstKey.current = location.key;
+      settling.current = true;
+      navigate(here, { replace: true, state: entryOf(1, { guard: true }) });
+      guardIdx.current = typeof window.history.state?.idx === "number" ? window.history.state.idx : null;
+      navigate(here, { state: entryOf(1) });
+      return;
+    }
+    if (location.key === firstKey.current) return; // still the entry this visit replaced; the new ones are on their way
+    if (entry?.onboardingVisit !== visit.current) {
+      // An entry from before this visit (an earlier visit's steps, kept by a reload): its answers are gone. Carry on back.
+      navigate(-1);
+      return;
+    }
+    setCurrentStep(entry.onboardingStep ?? 1);
+    setContractStage(entry.contract ? "contract" : "overview");
+    setOwnerSuccess(false); setDocumentsSuccess(false); setProductSuccess(false);
+    setSignatureDrawerOpen(false); setAgreementModalOpen(false);
+    if (!entry.guard) {
+      settling.current = false;
+      leaving.current = false;
+      setLeaveAsk(null);
+      return;
+    }
+    // The guard.
+    if (settling.current) return; // the replace and the push of a new visit, seen one at a time
+    if (finishing.current) {
+      // Registered: the welcome (or waiting) screen stands here, and Seller Home will take this entry's place.
+      if (homeOnArrival.current) navigate("/seller-home", { replace: true });
+      return;
+    }
+    if (leaving.current || furthestStep < 2) {
+      leaving.current = true;
+      navigate(-1);
+      return;
+    }
+    setLeaveAsk({ to: -1 });
+  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const goNext = () => {
     if (currentStep === 4 && !ownerSuccess) { setOwnerSuccess(true); return; }
     if (currentStep === 7 && !documentsSuccess) { setDocumentsSuccess(true); return; }
     if (currentStep === 8 && !productSuccess) { setProductSuccess(true); return; }
-    if (currentStep < TOTAL_STEPS) {
-      setCurrentStep((s) => s + 1);
-      setOwnerSuccess(false); setDocumentsSuccess(false); setProductSuccess(false);
-    }
+    if (currentStep < TOTAL_STEPS) goToStep(currentStep + 1);
   };
-  const goPrev = () => currentStep > 1 && setCurrentStep((s) => s - 1);
 
   // Prefill from what the buyer already gave at signup (name, email, business
   // name, phone verified via OTP, address) so the vendor never re-types it.
@@ -656,19 +738,80 @@ export default function Onboarding() {
     };
   };
 
-  // Unsent answers: anything past the first screen, until the registration is saved.
-  const unsentAnswers = currentStep > 1 && !showWelcome && !showPendingResult;
+  // Unsent answers: anything past the first screen (also after going back to it), until the registration is saved.
+  const unsentAnswers = furthestStep > 1 && !showWelcome && !showPendingResult;
   useEffect(() => {
     if (!unsentAnswers) return;
-    const warn = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ""; };
+    const warn = (e: BeforeUnloadEvent) => {
+      if (leaving.current) return; // already asked ("Leave")
+      e.preventDefault(); e.returnValue = "";
+    };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [unsentAnswers]);
 
+  /** A link out of the form (the logo, Help, the menu, sign in): asks first while there are unsent answers. */
+  const leaveTo = (to: string) => (e: React.MouseEvent) => {
+    if (!unsentAnswers) return;
+    e.preventDefault();
+    setLeaveAsk({ to });
+  };
+  const stayHere = () => {
+    const ask = leaveAsk;
+    setLeaveAsk(null);
+    if (ask?.to === -1) navigate(1); // back to step 1, the entry after the guard
+  };
+  const leaveNow = () => {
+    const ask = leaveAsk;
+    setLeaveAsk(null);
+    if (!ask) return;
+    leaving.current = true;
+    if (ask.to === -1) navigate(-1);
+    else if (ask.to.startsWith("/blogs")) window.location.assign(ask.to); // the Journal app, outside this router
+    else navigate(ask.to);
+  };
+  const leaveDialog = (
+    <Dialog open={leaveAsk !== null} onOpenChange={(open) => { if (!open) stayHere(); }}>
+      <DialogContent className="rounded-2xl border border-brand-border bg-white p-5">
+        <DialogHeader>
+          <DialogTitle className="text-base font-semibold text-brand-ink">Leave your registration?</DialogTitle>
+        </DialogHeader>
+        <p className="text-sm text-brand-ink/80">
+          Your answers are saved only when you submit on the last step. If you leave now, they're lost and you start again.
+        </p>
+        <div className="mt-2 flex flex-col gap-2 sm:flex-row-reverse">
+          <Button type="button" className="rounded-full bg-brand-vendor text-white" onClick={stayHere}>
+            Stay and continue
+          </Button>
+          <Button type="button" variant="outline" className="rounded-full" onClick={leaveNow}>
+            Leave
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+
   const finishSubmit = (status: "registered" | "pending_review") => {
     void queryClient.invalidateQueries({ queryKey: ["seller_registration", user?.id] });
     if (status === "pending_review") setShowPendingResult(true);
-    else setShowWelcome(true);
+    else {
+      finishVendorRegistration(); // saved now, whether or not the welcome screen is tapped
+      setShowWelcome(true);
+    }
+    // Go back to this visit's guard entry (step n sits n entries after it, the contract screen 10): the welcome screen
+    // stands there and Seller Home replaces it. Seller Home's back used to land on /onboarding, which sent the seller
+    // straight back to Seller Home; now it goes to the page before the registration.
+    finishing.current = true;
+    const idx = window.history.state?.idx;
+    const depth = typeof idx === "number" && guardIdx.current !== null
+      ? idx - guardIdx.current
+      : currentStep + (contractStage === "contract" ? 1 : 0);
+    if (depth > 0) navigate(-depth);
+  };
+  // The welcome screen's tap: Seller Home takes the guard entry's place (once the jump back above has landed there).
+  const goToSellerHome = () => {
+    if (entry?.onboardingVisit === visit.current && entry?.guard) navigate("/seller-home", { replace: true });
+    else homeOnArrival.current = true;
   };
 
   const submitContract = async () => {
@@ -939,9 +1082,9 @@ export default function Onboarding() {
         className="vendor-shell fixed inset-0 z-50 flex items-center justify-center bg-[#f0fdf4] px-6 text-center"
         role="button"
         tabIndex={0}
-        onClick={() => { finishVendorRegistration(); navigate("/seller-home"); }}
+        onClick={goToSellerHome}
         onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") { finishVendorRegistration(); navigate("/seller-home"); }
+          if (e.key === "Enter" || e.key === " ") goToSellerHome();
         }}
       >
         <motion.div
@@ -968,7 +1111,7 @@ export default function Onboarding() {
         <div className="vendor-shell min-h-screen bg-[#ffffff] pb-24">
           <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
             <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-              <Link to="/" className="block">
+              <Link to="/" className="block" onClick={leaveTo("/")}>
                 <img
                   src="/cosoravendorlogo.png"
                   alt="Cosora For Sellers"
@@ -978,7 +1121,7 @@ export default function Onboarding() {
               </Link>
               <div className="flex items-center gap-2">
                 {!user && (
-                <Link to="/login">
+                <Link to="/login" onClick={leaveTo("/login")}>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1004,14 +1147,18 @@ export default function Onboarding() {
                         Cosora Menu
                       </SheetTitle>
                     </SheetHeader>
-                    <OnboardingMenuLinks />
+                    <OnboardingMenuLinks onLeave={leaveTo} />
                   </SheetContent>
                 </Sheet>
               </div>
             </div>
           </header>
 
-          <div className="mx-auto max-w-2xl px-4 pt-5">
+          <div className="mx-auto max-w-2xl px-4 pt-3">
+            {/* Step 9 had no way back: a mistake spotted here could only be fixed by the phone's back, which lost everything. */}
+            <button type="button" onClick={goPrev} className="mb-2 flex items-center gap-1 text-sm text-brand-ink">
+              <ArrowLeft className="h-4 w-4" /> Back
+            </button>
             <div className="rounded-[1.75rem] bg-[#f5f5f5] p-4 shadow-sm">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-vendor">Registration Set 4</p>
               <h1 className="mt-2 text-2xl font-bold text-brand-ink">Partner contract checkpoint</h1>
@@ -1060,7 +1207,7 @@ export default function Onboarding() {
                 <Button
                   type="button"
                   className="mt-4 w-full rounded-full bg-brand-vendor text-white font-semibold"
-                  onClick={() => setContractStage("contract")}
+                  onClick={() => goToStep(TOTAL_STEPS, { contract: true })}
                 >
                   Edit details
                 </Button>
@@ -1076,6 +1223,7 @@ export default function Onboarding() {
           >
             <MessageCircle className="h-5 w-5" />
           </button>
+          {leaveDialog}
         </div>
       );
     }
@@ -1084,7 +1232,7 @@ export default function Onboarding() {
       <div className="vendor-shell min-h-screen bg-[#ffffff] pb-28">
         <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-            <Link to="/" className="block">
+            <Link to="/" className="block" onClick={leaveTo("/")}>
               <img
                 src="/cosoravendorlogo.png"
                 alt="Cosora For Sellers"
@@ -1094,7 +1242,7 @@ export default function Onboarding() {
             </Link>
             <div className="flex items-center gap-2">
               {!user && (
-              <Link to="/login">
+              <Link to="/login" onClick={leaveTo("/login")}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1120,14 +1268,17 @@ export default function Onboarding() {
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
-                  <OnboardingMenuLinks />
+                  <OnboardingMenuLinks onLeave={leaveTo} />
                 </SheetContent>
               </Sheet>
             </div>
           </div>
         </header>
 
-        <div className="mx-auto max-w-2xl px-4 pt-5">
+        <div className="mx-auto max-w-2xl px-4 pt-3">
+          <button type="button" onClick={goPrev} className="mb-2 flex items-center gap-1 text-sm text-brand-ink">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
           <div className="rounded-[1.75rem] border border-brand-border bg-white p-4 shadow-sm">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -1235,7 +1386,7 @@ export default function Onboarding() {
                     <p className="text-sm font-semibold text-brand-ink">Registration not saved</p>
                     <p className="text-sm text-brand-ink">{submitError}</p>
                     {!user && (
-                      <Link to="/login" className="inline-block text-sm font-semibold text-brand-vendor underline underline-offset-2">
+                      <Link to="/login" className="inline-block text-sm font-semibold text-brand-vendor underline underline-offset-2" onClick={leaveTo("/login")}>
                         Go to sign in
                       </Link>
                     )}
@@ -1327,6 +1478,7 @@ export default function Onboarding() {
           </DrawerContent>
         </Drawer>
 
+        {leaveDialog}
         <Dialog open={agreementModalOpen} onOpenChange={setAgreementModalOpen}>
           <DialogContent className="max-h-[80vh] rounded-2xl border border-brand-border bg-white p-5">
             <DialogHeader>
@@ -1352,10 +1504,7 @@ export default function Onboarding() {
     return (
       <BusinessInfoSuccessScreen
         text="Business information added"
-        onContinue={() => {
-          setOwnerSuccess(false);
-          setCurrentStep(5);
-        }}
+        onContinue={() => goToStep(5)}
       />
     );
   }
@@ -1375,7 +1524,7 @@ export default function Onboarding() {
             >
               <ArrowLeft className="h-4 w-4" />
             </button>
-            <Link to="/help" className="text-sm font-medium text-brand-vendor">
+            <Link to="/help" className="text-sm font-medium text-brand-vendor" onClick={leaveTo("/help")}>
               Help?
             </Link>
           </div>
@@ -1384,7 +1533,7 @@ export default function Onboarding() {
       ) : (
         <header className="sticky top-0 z-50 border-b border-brand-border bg-[#ffffff]/95 backdrop-blur">
           <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-            <Link to="/" className="block">
+            <Link to="/" className="block" onClick={leaveTo("/")}>
               <img
                 src="/cosoravendorlogo.png"
                 alt="Cosora For Sellers"
@@ -1394,7 +1543,7 @@ export default function Onboarding() {
             </Link>
             <div className="flex items-center gap-2">
               {!user && (
-              <Link to="/login">
+              <Link to="/login" onClick={leaveTo("/login")}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -1420,7 +1569,7 @@ export default function Onboarding() {
                       Cosora Menu
                     </SheetTitle>
                   </SheetHeader>
-                  <OnboardingMenuLinks />
+                  <OnboardingMenuLinks onLeave={leaveTo} />
                 </SheetContent>
               </Sheet>
             </div>
@@ -1489,7 +1638,7 @@ export default function Onboarding() {
                         type="button"
                         key={item.label}
                         disabled={isLocked}
-                        onClick={() => setCurrentStep(item.step)}
+                        onClick={() => goToStep(item.step)}
                         className="flex w-full items-center gap-3 rounded-xl border border-brand-border bg-white p-4 text-left shadow-sm disabled:cursor-default"
                       >
                         <div className={cn("h-10 w-10 rounded-full border flex items-center justify-center", iconStyle)}>
@@ -2042,7 +2191,7 @@ export default function Onboarding() {
                 )}
 
                 <Button
-                  onClick={() => setCurrentStep(6)}
+                  onClick={() => goToStep(6)}
                   disabled={!canContinueCategories}
                   className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -2196,7 +2345,7 @@ export default function Onboarding() {
                 </p>
 
                 <Button
-                  onClick={() => setCurrentStep(7)}
+                  onClick={() => goToStep(7)}
                   disabled={!canUploadBusinessImages}
                   className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
@@ -2711,7 +2860,7 @@ export default function Onboarding() {
               </div>
             )}
             {currentStep === 7 && documentsSuccess && (
-              <BusinessInfoSuccessScreen text="Business documents added" onContinue={() => { setDocumentsSuccess(false); setCurrentStep(8); }} />
+              <BusinessInfoSuccessScreen text="Business documents added" onContinue={() => goToStep(8)} />
             )}
 
             {/* STEP 8 — FIRST PRODUCT */}
@@ -2829,11 +2978,8 @@ export default function Onboarding() {
               <SuccessScreen
                 text="First product added. It's sent with your registration."
                 onContinue={() => {
-                  setProductSuccess(false);
-                  setContractStage("overview");
                   setManualSignatureDataUrl(null);
-                  setSignatureDrawerOpen(false);
-                  setCurrentStep(9);
+                  goToStep(TOTAL_STEPS);
                 }}
               />
             )}
@@ -2863,6 +3009,7 @@ export default function Onboarding() {
           <MessageCircle className="h-5 w-5" />
         </button>
       )}
+      {leaveDialog}
     </div>
   );
 }

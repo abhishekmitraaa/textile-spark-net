@@ -1463,6 +1463,12 @@ Migrations `20261113100000`–`100400` and `100900` (the last one ships after bo
 - **A file a seller's row points at must be in Cosora's own Storage** (2026-11-13 review). Check it with
   `public.own_storage_object(url, bucket, owner)`, which reads the project's address from `admin.storage_origin`
   (a local stack sets its own row). Matching only the path lets another host serve different content after review.
+- **The registration's steps are browser history entries** (2026-11-14). Move between steps only with `goToStep()` and
+  `goPrev()` in `Onboarding.tsx`, never `setCurrentStep()`: the step is read from the history entry (`StepEntry`), so the
+  phone's back walks the steps. A visit is a guard entry, then step 1, then one entry per step (the contract screen is
+  its own); back from step 1 lands on the guard, which asks before leaving. A new screen inside the form gets its own
+  entry, and a new link out of it goes through `leaveTo()`. On submit the form returns to the guard and Seller Home
+  replaces it.
 - **A seller's registered country is not the browser's to change** (`admin.sync_vendor_country_code()`), and
   **nothing goes live while a registration waits or was sent back** (`trg_hold_until_registered`).
 
