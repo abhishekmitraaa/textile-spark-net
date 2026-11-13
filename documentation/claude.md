@@ -2030,6 +2030,13 @@ Depth — schema, invariants, integrations, tech debt — lives in
   decision record: `documentation/myprofileflags-fixed.md`
 - ToDo list: `documentation/ToDo.md`
 - Razorpay runbook: `supabase/RAZORPAY.md`
+- Knowledge graph of all three repos, qc and the docs (built 2026-11-05): `graphify-out/` in the `cosora testing`
+  folder, above this repo and in no git repo. Ask it before grepping: `graphify query "<question>"`, `graphify path
+  "A" "B"`, `graphify explain "X"`, run from that folder; `GRAPH_REPORT.md` is the overview. After changing code or
+  docs, run `graphify update .` there (it doesn't run by itself). SQL migrations only count with `graphifyy[sql]`
+  installed. Docs are read by Claude subagents, not Gemini, though a Gemini key is set: they include securityflags.
+  Screenshots are not in it. Some links are wrong (one call link joins two same-named functions in different repos),
+  so check the file before acting on an answer.
 
 ## Documentation Protocol — follow every session, unprompted
 

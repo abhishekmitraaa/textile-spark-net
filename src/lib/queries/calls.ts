@@ -396,6 +396,23 @@ const NO_RFQ_RELATIONSHIP_COPY: BlockCopy = {
   description: "You can call a buyer after you've quoted on one of their requests.",
 };
 
+// call_buyer_contact's own refusals (security audit F02): a registered seller, at most 30 different
+// buyers an hour (100 a day), and each buyer's number to at most 20 sellers a day.
+const BUYER_CONTACT_REFUSAL_COPY: Record<string, BlockCopy> = {
+  not_a_vendor: {
+    title: "Calling is unavailable",
+    description: "Finish your seller registration to call buyers.",
+  },
+  rate_limited: {
+    title: "Buyer numbers are limited right now",
+    description: "You've opened many buyers' numbers in a short time. Try again later, or message the buyer in chat.",
+  },
+  buyer_limited: {
+    title: "This buyer's number isn't available right now",
+    description: "Many sellers have asked for it today. Message the buyer in chat instead.",
+  },
+};
+
 export function useCallBuyer() {
   const navigate = useNavigate();
 
@@ -414,7 +431,9 @@ export function useCallBuyer() {
             ? CALL_BLOCK_COPY[error.message as CallBlockReason]
             : error.message === "no_rfq_relationship"
               ? NO_RFQ_RELATIONSHIP_COPY
-              : { title: "Couldn't get the buyer's number", description: errorMessage(error) };
+              : Object.prototype.hasOwnProperty.call(BUYER_CONTACT_REFUSAL_COPY, error.message)
+                ? BUYER_CONTACT_REFUSAL_COPY[error.message]
+                : { title: "Couldn't get the buyer's number", description: errorMessage(error) };
         toastBlock(copy, navigate);
         return;
       }

@@ -100,6 +100,18 @@ short list of things someone has to *decide*.
 
 ## Low priority / blocked
 
+- **Decide how the knowledge graph stays current** (added 2026-11-05). `graphify-out/` in the `cosora testing` folder
+  goes stale with every merge: nothing reruns `graphify update .`, because that folder isn't a git repo and so can't
+  carry a commit hook. Choose between running it by hand after each release (code is free; changed docs cost tokens),
+  a commit hook in each of the three repos that runs it at the workspace root, or a scheduled run. Also decide whether
+  the 295 screenshots go in: each needs its own subagent, roughly 300 runs, so they were left out.
+
+- **Two skill folders are broken links** (found 2026-11-05). `cosora lovable/.claude/skills/design-taste-frontend` and
+  this repo's `.claude/skills/emil-design-eng` still point at `Desktop/cosora lovable/...`, where the project lived
+  before it moved into `cosora testing`; git prints "could not open directory" on every `git status` and graphify
+  can't read them. Both skills are still there in the `.agents/skills/` folders the links meant. Repoint the links
+  (one `mklink /D` each) or delete them.
+
 - **WhatsApp Business Cloud API.** Requires a Meta Business account and a BSP
   relationship, neither of which exists. Current state: click-to-chat
   (`wa.me`) only, through the `MessagingProvider` seam in `src/lib/messaging.ts`
