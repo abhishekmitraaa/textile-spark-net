@@ -32,7 +32,7 @@ export interface VendorDocumentRow {
   detail: Record<string, unknown>;
 }
 
-/** Human labels for the doc_type values saveVendorOnboarding writes. */
+/** Human labels for the doc_type values submit_vendor_registration writes. */
 export const DOC_TYPE_LABELS: Record<string, string> = {
   pan: "PAN",
   gst: "GST",

@@ -6,38 +6,14 @@ import { SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
 import { writeOwnVendorRow } from "@/lib/queries/vendorStore";
 
 // ─────────────────────────────────────────────────────────────
-// Persist the vendor registration (8-step Onboarding) to the DB.
-// Text/identity → vendor_profiles; KYC numbers + the uploaded scan →
-// vendor_documents; the step-7 product becomes a real under_review listing
-// with its images. Completing onboarding also flags the account as an
-// onboarded seller.
+// The vendor registration: its files and the one call that saves it (submit_vendor_registration, 2026-11-13),
+// plus /kyc's document replacements. The database writes the profile, documents, first product, premises photos,
+// catalogue and Supplier Agreement in one transaction, or nothing.
 //
 // Everything here is written from files the vendor actually uploaded to
 // storage first — the form used to hand blob: URLs straight to the DB, which
 // die on reload and point at nothing for anyone else.
 // ─────────────────────────────────────────────────────────────
-
-export interface OnboardingProduct {
-  name: string;
-  price?: string;
-  /** Selling unit for `price` — pieces/kg/meters/sets/pairs. */
-  unit?: string;
-  moq?: string;
-  fabric?: string;
-  gsm?: string;
-  category?: string | null;
-  sizes?: string[];
-  /**
-   * `products.colour` is ONE text value across this codebase (see
-   * resolveColour in Upload.tsx, which truncates a multiselect the same way).
-   * The onboarding chip picker is multi-select, so the first pick is the one
-   * that lands on the listing and the form says so out loud rather than
-   * silently dropping the rest.
-   */
-  colours?: string[];
-  /** Public storage URLs, already uploaded. Become product_images rows. */
-  images?: string[];
-}
 
 // The kinds of business registration, their number formats and the payload type live in registrationValidation.ts
 // (pure, so scripts/registration-validation-check.mjs can run them); re-exported here for existing imports.
@@ -45,54 +21,6 @@ export { BUSINESS_REGISTRATION_KINDS, type BusinessRegistrationKind } from "@/li
 import type { BusinessRegistrationKind, OwnerIdKind, RegistrationPayload } from "@/lib/registrationValidation";
 import { shrinkImage } from "@/lib/shrinkImage";
 import { fetchMySellerRegistration } from "@/lib/queries/sellerRegistration";
-
-export interface VendorOnboardingPayload {
-  businessName: string;
-  phone?: string;
-  whatsapp?: string;
-  website?: string;
-  addressLine?: string;
-  area?: string;
-  city?: string;
-  state?: string;
-  postalCode?: string;
-  landmark?: string;
-  ownerName?: string;
-  ownerEmail?: string;
-  country?: string;
-  pan?: string;
-  gstin?: string;
-  /** CIN or LLPIN, when the business registration is a certificate of incorporation (vendor_profiles.cin). */
-  cin?: string;
-  /** Business categories (vendor_profiles.category). Empty = invisible to category search. */
-  category?: string[];
-  /** Public storage URLs of the premises photos (vendor_profiles.office_photos). */
-  officePhotos?: string[];
-  /** Storage PATH of the uploaded PAN scan (business-docs) → vendor_documents.file_url. */
-  panFileUrl?: string;
-  /** Storage PATH of the uploaded GST certificate (business-docs). */
-  gstFileUrl?: string;
-  /**
-   * The business registration (Seller Registration FAQ: "Business registration (or
-   * MSME/Udyam)", 2026-10-02): which kind, its number, and the uploaded certificate.
-   */
-  businessRegistration?: { kind: BusinessRegistrationKind; number?: string; fileUrl: string };
-  /**
-   * The owner's MASKED Aadhaar (first 8 digits hidden), with the time they agreed to
-   * share it. The Aadhaar number itself is never asked for or stored.
-   */
-  aadhaar?: { fileUrl: string; consentAt: string };
-  /** Catalogue files (PDF, Excel, CSV or images). A first product can stand in for these. */
-  catalogue?: { fileUrl: string; name: string; mime: string }[];
-  /** The signed supplier agreement. Written in the same call as the profile, so
-   *  a vendor with onboarding_complete = true always has a contract on file. */
-  contract?: {
-    signedName: string;
-    /** business-docs path of the signature PNG, when one was drawn. */
-    signatureUrl?: string;
-  };
-  product?: OnboardingProduct;
-}
 
 /**
  * One active document per type, and no stranded scan behind it.
@@ -161,143 +89,6 @@ export async function replaceVendorDocuments(
   }
 }
 
-export async function saveVendorOnboarding(vendorId: string, p: VendorOnboardingPayload): Promise<void> {
-  // An update, or an insert on a first registration, never an updating upsert:
-  // the private columns written here aren't client-readable (writeOwnVendorRow).
-  await writeOwnVendorRow(
-    {
-      id: vendorId,
-      brand_name: p.businessName || null,
-      phone: p.phone || null,
-      whatsapp: p.whatsapp || null,
-      website: p.website || null,
-      address_line: p.addressLine || null,
-      area: p.area || null,
-      city: p.city || null,
-      state: p.state || null,
-      postal_code: p.postalCode || null,
-      landmark: p.landmark || null,
-      owner_name: p.ownerName || null,
-      owner_email: p.ownerEmail || null,
-      country: p.country || "India",
-      pan: p.pan || null,
-      gstin: p.gstin || null,
-      cin: p.cin || null,
-      // Arrays are written as-is: an empty array is a meaningful "none yet",
-      // not the same thing as null, so the `|| null` used for empty strings
-      // above would be wrong here.
-      ...(p.category ? { category: p.category } : {}),
-      ...(p.officePhotos ? { office_photos: p.officePhotos } : {}),
-      onboarding_complete: true,
-    },
-  );
-
-  // Record which KYC documents were supplied, with the uploaded scan where
-  // there is one. `verified` stays false: an admin flips it after review — this
-  // app has no way to verify a PAN and must not claim it did.
-  //
-  // The set is the Seller Registration FAQ's (Andy, 2026-10-01/02): PAN card, GST
-  // certificate (when registered for GST), a business registration (Udyam/MSME, an
-  // incorporation certificate, a shop licence or a partnership deed), the owner's
-  // Aadhaar, and a product catalogue, for which a first product can stand in.
-  //
-  // Aadhaar is the MASKED copy only (first 8 digits hidden, as UIDAI's masked Aadhaar
-  // shows it), with the moment the owner agreed to share it. The number is never
-  // asked for or stored: Aadhaar Act 2016 / UIDAI rules constrain what an entity
-  // that isn't an authorised KUA/AUA may keep. Counsel to confirm before launch
-  // (ToDo.md); the database refuses an Aadhaar row not marked masked.
-  const docs: VendorDocumentInsert[] = [];
-  if (p.pan) docs.push({ vendor_id: vendorId, doc_type: "pan", file_url: p.panFileUrl ?? null });
-  if (p.gstin) docs.push({ vendor_id: vendorId, doc_type: "gst", file_url: p.gstFileUrl ?? null });
-  if (p.businessRegistration) {
-    docs.push({
-      vendor_id: vendorId, doc_type: "business_registration", file_url: p.businessRegistration.fileUrl,
-      detail: { kind: p.businessRegistration.kind, ...(p.businessRegistration.number ? { number: p.businessRegistration.number } : {}) },
-    });
-  }
-  if (p.aadhaar) {
-    docs.push({ vendor_id: vendorId, doc_type: "aadhaar", file_url: p.aadhaar.fileUrl, detail: { masked: true, consent_at: p.aadhaar.consentAt } });
-  }
-  for (const c of p.catalogue ?? []) {
-    docs.push({ vendor_id: vendorId, doc_type: "catalog", file_url: c.fileUrl, detail: { name: c.name, mime: c.mime } });
-  }
-  await replaceVendorDocuments(vendorId, docs);
-  // The step-7 product becomes a real listing (buyers see it once approved).
-  if (p.product?.name) {
-    const category_id = await resolveCategoryId(p.product.category, p.product.name);
-    const { data: created, error: prErr } = await supabase
-      .from("products")
-      .insert({
-        vendor_id: vendorId,
-        name: p.product.name,
-        price_value: p.product.price ? Number(p.product.price) : null,
-        currency: "₹",
-        category_id,
-        moq: p.product.moq || "2",
-        unit: p.product.unit || null,
-        fabric: p.product.fabric || null,
-        gsm: p.product.gsm || null,
-        sizes: p.product.sizes?.length ? p.product.sizes : null,
-        colour: p.product.colours?.[0] ?? null,
-        status: "under_review",
-      })
-      .select("id")
-      .single();
-    if (prErr) throw prErr;
-
-    const images = p.product.images ?? [];
-    if (created && images.length > 0) {
-      const { error: imgErr } = await supabase
-        .from("product_images")
-        .insert(images.map((url, i) => ({ product_id: created.id, url, position: i })));
-      if (imgErr) throw imgErr;
-    }
-  }
-
-  // The signed supplier agreement. Deliberately inside this function rather
-  // than alongside it: onboarding_complete = true and "no contract on file"
-  // must not be a reachable combination, so the same call that sets the flag
-  // writes the record.
-  if (p.contract?.signedName?.trim()) {
-    // One signature per (vendor, agreement version). A retried submit against
-    // the SAME agreement text is a no-op, not a second signature: the table has
-    // no UPDATE or DELETE policy for anyone, so a duplicate written here could
-    // never be removed by any means. A re-sign after SUPPLIER_AGREEMENT_VERSION
-    // changes is a different version and still inserts — that is a genuinely new
-    // signature event.
-    //
-    // `trg_vendor_contracts_one_per_version` enforces this in the database and
-    // is the real guarantee; this check just means the normal retry path never
-    // depends on the trigger firing. It is not an `.upsert(onConflict:…)`
-    // because there is no unique index to conflict on — the historical
-    // duplicate this bug produced is deliberately preserved, and a UNIQUE
-    // constraint cannot be created over it.
-    const { data: alreadySigned, error: cse } = await supabase
-      .from("vendor_contracts")
-      .select("id")
-      .eq("vendor_id", vendorId)
-      .eq("agreement_version", SUPPLIER_AGREEMENT_VERSION)
-      .limit(1)
-      .maybeSingle();
-    if (cse) throw cse;
-
-    if (!alreadySigned) {
-      const { error: ce } = await supabase.from("vendor_contracts").insert({
-        vendor_id: vendorId,
-        signed_name: p.contract.signedName.trim(),
-        signature_url: p.contract.signatureUrl ?? null,
-        agreement_version: SUPPLIER_AGREEMENT_VERSION,
-      });
-      if (ce) throw ce;
-    }
-  }
-
-  // Mark the account as an onboarded seller (best-effort; non-blocking).
-  await supabase.from("profiles").update({ active_role: "seller", onboarded: true }).eq("id", vendorId);
-
-  // The profile score is the database's (migration 20261022100000): it is recomputed as these rows land.
-}
-
 // ─────────────────────────────────────────────────────────────
 // Uploads for the registration form.
 //
@@ -351,30 +142,6 @@ export async function uploadKycDocument(vendorId: string, file: File): Promise<s
   const { error } = await supabase.storage.from(KYC_BUCKET).upload(path, file, { upsert: true });
   if (error) throw error;
   return path;
-}
-
-/**
- * After a FAILED onboarding submit: remove the KYC scans that submit uploaded
- * but that no `vendor_documents` row points at (Master Prompt 8, Phase 4).
- *
- * Only unreferenced ones: saveVendorOnboarding() can fail AFTER it has written
- * the document rows (for example on the product insert), and removing those
- * objects would leave live rows pointing at missing files. A referenced upload
- * is superseded, and removed, by the next successful submit.
- */
-export async function discardUnreferencedKycUploads(vendorId: string, paths: string[]): Promise<void> {
-  if (!paths.length) return;
-  const { data } = await supabase
-    .from("vendor_documents")
-    .select("file_url")
-    .eq("vendor_id", vendorId)
-    .in("file_url", paths);
-  const referenced = new Set((data ?? []).map((d) => d.file_url as string));
-  const loose = paths.filter((p) => !referenced.has(p));
-  if (loose.length) {
-    const { error } = await supabase.storage.from(KYC_BUCKET).remove(loose);
-    if (error) console.warn("[vendorOnboarding] unreferenced KYC uploads not removed:", error.message);
-  }
 }
 
 /**
@@ -457,16 +224,6 @@ export async function uploadSignature(vendorId: string, dataUrl: string): Promis
   return path;
 }
 
-/** One image for the step-7 product. Mirrors Upload.tsx's `<vendor>/<key>/<i>` shape. */
-export async function uploadOnboardingProductImage(vendorId: string, file: File): Promise<string> {
-  const ext = fileExt(file.name, "jpg");
-  const suffix = Math.random().toString(36).slice(2, 8);
-  const path = `${vendorId}/onboarding-product/${Date.now()}-${suffix}.${ext}`;
-  const { error } = await supabase.storage.from("product-images").upload(path, file, { upsert: true });
-  if (error) throw error;
-  return supabase.storage.from("product-images").getPublicUrl(path).data.publicUrl;
-}
-
 // ─────────────────────────────────────────────────────────────
 // The registration submit (2026-11-13): upload, then ONE database call.
 //
@@ -528,9 +285,13 @@ async function inBatches<T, R>(items: T[], limit: number, fn: (item: T, i: numbe
   return out;
 }
 
-export async function uploadRegistrationFiles(uid: string, files: RegistrationFiles): Promise<UploadedFiles> {
+/** An empty record of uploads: the caller keeps it, so an upload that fails half-way still lists what landed. */
+export function emptyUploads(): UploadedFiles {
+  return { privatePaths: [], publicFiles: [], catalogue: [], premises: [], productImages: [] };
+}
+
+export async function uploadRegistrationFiles(uid: string, files: RegistrationFiles, up: UploadedFiles = emptyUploads()): Promise<UploadedFiles> {
   assertKycBucket(KYC_BUCKET);
-  const up: UploadedFiles = { privatePaths: [], publicFiles: [], catalogue: [], premises: [], productImages: [] };
   const privateFile = async (f: File): Promise<string> => {
     const path = await uploadKycDocument(uid, f);
     up.privatePaths.push(path);

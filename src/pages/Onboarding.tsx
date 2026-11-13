@@ -27,13 +27,30 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useUserRole } from "@/contexts/UserRoleContext";
 import { useProfileFull } from "@/lib/queries/profile";
 import {
-  saveVendorOnboarding, uploadKycDocument, uploadOnboardingProductImage, uploadSignature,
-  discardUnreferencedKycUploads, BUSINESS_REGISTRATION_KINDS, KYC_FILE_TYPES, MAX_KYC_BYTES,
+  uploadRegistrationFiles, submitVendorRegistration, cleanupRegistrationUploads, emptyUploads,
+  BUSINESS_REGISTRATION_KINDS, KYC_FILE_TYPES, MAX_KYC_BYTES,
   CATALOGUE_ACCEPT, MAX_CATALOGUE_FILES, catalogueFileProblem, type BusinessRegistrationKind,
+  type OwnerIdKind, type RegistrationPayload, type UploadedFiles,
 } from "@/lib/queries/vendorOnboarding";
 import { SUPPLIER_AGREEMENT_CLAUSES, SUPPLIER_AGREEMENT_VERSION } from "@/lib/supplierAgreement";
-import { uploadVendorGalleryImage } from "@/lib/queries/vendorStore";
 import { isValidGstin, isValidPan, normaliseTaxId, panOfGstin } from "@/lib/taxIds";
+import {
+  normalisePhone, isValidEmail, normaliseWebsite, validateRegistration, REGISTRATION_ERROR_TEXT,
+} from "@/lib/registrationValidation";
+import { fetchMySellerRegistration, useSellerRegistration } from "@/lib/queries/sellerRegistration";
+import { useFeatureFlag } from "@/lib/queries/featureFlags";
+import { useMyVendorProfile } from "@/lib/queries/vendorStore";
+import { resolveCategoryId } from "@/lib/queries/products";
+import { COUNTRIES } from "@/data/countries";
+import { PRIMARY_TYPES, CAPABILITIES } from "@/data/vendorTypes";
+import { stateByCode, stateCodeFor } from "@/data/indiaStates";
+import { RegistrationPending } from "@/components/vendor/RegistrationPending";
+import { useQueryClient } from "@tanstack/react-query";
+
+/** A picked picture held in the browser until submit, with a preview that lives only in this tab. */
+interface HeldImage { file: File; preview: string }
+const PICTURE_TYPES = /^image\/(jpeg|png|webp)$/;
+const MAX_PICTURE_BYTES = 5 * 1024 * 1024;
 
 // 1 overview · 2 details · 3 address · 4 owner · 5 category · 6 images
 // · 7 documents · 8 product · 9 contract
@@ -155,8 +172,10 @@ export default function Onboarding() {
   // Step 2
   const [businessName, setBusinessName] = useState("");
   const [mobile, setMobile] = useState("");
-  const [countryCode, setCountryCode] = useState("+91");
+  // "Buyers can WhatsApp me": the mobile becomes the store's WhatsApp number (what buyers tap).
   const [whatsappOptIn, setWhatsappOptIn] = useState(true);
+  // Cosora's own WhatsApp updates need a recorded opt-in, never a pre-ticked one (set_contact_consent).
+  const [whatsappUpdates, setWhatsappUpdates] = useState(false);
   const [sameContact, setSameContact] = useState(true);
   const [primaryContact, setPrimaryContact] = useState("");
   const [hasWebsite, setHasWebsite] = useState(false);
@@ -182,14 +201,17 @@ export default function Onboarding() {
   // Step 5 — business categories (vendor_profiles.category)
   const [businessCategories, setBusinessCategories] = useState<string[]>([]);
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  // What the business is (Ranking F2): one type, any capabilities.
+  const [businessType, setBusinessType] = useState("");
+  const [capabilities, setCapabilities] = useState<string[]>([]);
 
   // Step 6 — premises photos. Holds PUBLIC STORAGE URLS, not blob: URLs:
   // these are uploaded as they are picked so they survive a reload and mean
   // something to everyone else.
   const [businessImagePickerOpen, setBusinessImagePickerOpen] = useState(false);
   const [businessImageGuidelinesOpen, setBusinessImageGuidelinesOpen] = useState(false);
-  const [businessImageUploads, setBusinessImageUploads] = useState<string[]>([]);
-  const [uploadingBusinessImages, setUploadingBusinessImages] = useState(0);
+  // Held until submit (nothing uploads on pick, so an abandoned form leaves nothing in storage).
+  const [businessImages, setBusinessImages] = useState<HeldImage[]>([]);
 
   // Step 7 — KYC. `checked` means "the format is well-formed and it has been
   // queued for review", never "verified": nothing in this app can verify a PAN.
@@ -224,12 +246,19 @@ export default function Onboarding() {
   const [aadhaarFileName, setAadhaarFileName] = useState("");
   const [aadhaarConsent, setAadhaarConsent] = useState(false);
   const [catalogueFiles, setCatalogueFiles] = useState<File[]>([]);
+  // Sellers outside India: the business's registration, its tax ID if it has one, the owner's photo ID.
+  const [osRegNumber, setOsRegNumber] = useState("");
+  const [osRegFile, setOsRegFile] = useState<File | null>(null);
+  const [osHasTax, setOsHasTax] = useState(false);
+  const [osTaxNumber, setOsTaxNumber] = useState("");
+  const [osTaxFile, setOsTaxFile] = useState<File | null>(null);
+  const [osIdKind, setOsIdKind] = useState<OwnerIdKind>("passport");
+  const [osIdFile, setOsIdFile] = useState<File | null>(null);
   const [panGuidelinesOpen, setPanGuidelinesOpen] = useState(false);
   const [documentsSuccess, setDocumentsSuccess] = useState(false);
 
   // Step 8 — first product. Also public storage URLs.
-  const [productImages, setProductImages] = useState<string[]>([]);
-  const [uploadingProductImages, setUploadingProductImages] = useState(0);
+  const [productImages, setProductImages] = useState<HeldImage[]>([]);
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
   const [unit, setUnit] = useState("pieces");
@@ -254,12 +283,24 @@ export default function Onboarding() {
   // worse than an error — the vendor believes they are registered.
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showPendingResult, setShowPendingResult] = useState(false);
+  // One id per form session: a retry of the same submit is answered from the first (submit_vendor_registration).
+  const submissionId = useRef<string>(crypto.randomUUID());
+  const attempts = useRef(0);
+  const queryClient = useQueryClient();
+  const overseasOn = useFeatureFlag("overseas_seller_registration") === true;
+  const { data: registration } = useSellerRegistration(user?.id);
+  const rejected = registration?.status === "rejected";
+  const { data: myStore } = useMyVendorProfile(rejected ? user?.id : undefined);
   const businessImageInputRef = useRef<HTMLInputElement | null>(null);
   const panDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const gstDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const regDocumentInputRef = useRef<HTMLInputElement | null>(null);
   const aadhaarInputRef = useRef<HTMLInputElement | null>(null);
   const catalogueInputRef = useRef<HTMLInputElement | null>(null);
+  const osRegInputRef = useRef<HTMLInputElement | null>(null);
+  const osTaxInputRef = useRef<HTMLInputElement | null>(null);
+  const osIdInputRef = useRef<HTMLInputElement | null>(null);
   const signatureCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const signatureStrokeRef = useRef<{ x: number; y: number }[][]>([]);
   const signatureIsDrawingRef = useRef(false);
@@ -312,35 +353,47 @@ export default function Onboarding() {
     setPanNameStatus(name.length >= 3 && /^[A-Za-z][A-Za-z\s.&'()-]*$/.test(name) ? "submitted" : "invalid");
   };
 
-  // ── Uploads ───────────────────────────────────────────────────
-  // Every picker here uploads to Supabase storage and keeps the PUBLIC URL.
-  // They used to keep URL.createObjectURL() blobs, which are alive only in the
-  // tab that made them: the vendor saw their photos, the database got nothing,
-  // and a reload lost them.
-  const requireSession = (what: string): boolean => {
-    if (user) return true;
-    toast.error(`Sign in to upload ${what}`, { description: "Your registration is saved to your account." });
-    return false;
+  // ── Files ─────────────────────────────────────────────────────
+  // Nothing uploads when it is picked (2026-11-13): an abandoned form used to leave premises and product photos in
+  // the public bucket, referenced by nothing. Pictures are held here with an in-tab preview (never saved anywhere)
+  // and uploaded at submit, with the documents, by uploadRegistrationFiles().
+  const holdPictures = (picked: File[], room: number): HeldImage[] => {
+    const held: HeldImage[] = [];
+    for (const f of picked) {
+      if (held.length >= room) {
+        toast.error("That's as many pictures as this step takes.");
+        break;
+      }
+      if (!PICTURE_TYPES.test(f.type)) {
+        toast.error("Use a JPEG, PNG or WebP picture", { description: `${f.name} is not one of those.` });
+        continue;
+      }
+      if (f.size > MAX_PICTURE_BYTES) {
+        toast.error(`${f.name} is over 5 MB`, { description: "Use a smaller picture." });
+        continue;
+      }
+      held.push({ file: f, preview: URL.createObjectURL(f) });
+    }
+    return held;
   };
+  const dropHeld = (setter: React.Dispatch<React.SetStateAction<HeldImage[]>>, preview: string) => {
+    URL.revokeObjectURL(preview);
+    setter((list) => list.filter((i) => i.preview !== preview));
+  };
+  // Previews live only in this tab: release them when the page goes.
+  const heldRef = useRef<HeldImage[]>([]);
+  heldRef.current = [...businessImages, ...productImages];
+  useEffect(() => () => heldRef.current.forEach((i) => URL.revokeObjectURL(i.preview)), []);
 
-  const handleBusinessImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = ""; // let the same file be re-picked after a failure
-    if (files.length === 0) return;
-    if (!requireSession("business images")) return;
+  const MAX_PREMISES_PHOTOS = 12;
+  const handleBusinessImageFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = ""; // let the same file be re-picked
+    if (picked.length === 0) return;
     setBusinessImageGuidelinesOpen(false);
     setBusinessImagePickerOpen(false);
-    setUploadingBusinessImages(files.length);
-    try {
-      const urls = await Promise.all(files.map((f) => uploadVendorGalleryImage(user!.id, f)));
-      setBusinessImageUploads((current) => [...current, ...urls]);
-    } catch (err) {
-      toast.error("Couldn't upload business images", {
-        description: errorMessage(err),
-      });
-    } finally {
-      setUploadingBusinessImages(0);
-    }
+    const held = holdPictures(picked, MAX_PREMISES_PHOTOS - businessImages.length);
+    if (held.length) setBusinessImages((current) => [...current, ...held]);
   };
 
   /**
@@ -372,11 +425,15 @@ export default function Onboarding() {
     setFile(file);
     setName(file.name);
   };
+  const noName = () => undefined;
 
   const handlePanDocumentFile = makeKycFileHandler("your PAN", setPanDocumentFile, setPanDocumentName);
   const handleGstDocumentFile = makeKycFileHandler("your GST certificate", setGstDocumentFile, setGstDocumentName);
   const handleRegDocumentFile = makeKycFileHandler("your business registration", setRegDocumentFile, setRegDocumentName);
   const handleAadhaarFile = makeKycFileHandler("your masked Aadhaar", setAadhaarFile, setAadhaarFileName);
+  const handleOsRegFile = makeKycFileHandler("your registration certificate", setOsRegFile, noName);
+  const handleOsTaxFile = makeKycFileHandler("your tax registration", setOsTaxFile, noName);
+  const handleOsIdFile = makeKycFileHandler("the owner's ID", setOsIdFile, noName);
 
   // Catalogue files: PDF, Excel, CSV or images, up to 5 (vendorOnboarding.ts).
   const handleCatalogueFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -397,6 +454,8 @@ export default function Onboarding() {
     }
     setCatalogueFiles(keep);
   };
+  // The first PDF also goes on the store's catalogue section, through review (the Free plan's one catalogue).
+  const cataloguePdf = catalogueFiles.find((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name)) ?? null;
   const regKindInfo = BUSINESS_REGISTRATION_KINDS.find((k) => k.id === regKind);
   const regNumberValid = !regKindInfo
     ? false
@@ -405,23 +464,12 @@ export default function Onboarding() {
       : true;
 
   const MAX_PRODUCT_IMAGES = 6;
-  const handleProductImageFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProductImageFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const picked = Array.from(e.target.files || []);
     e.target.value = "";
-    const files = picked.slice(0, MAX_PRODUCT_IMAGES - productImages.length);
-    if (files.length === 0) return;
-    if (!requireSession("product images")) return;
-    setUploadingProductImages(files.length);
-    try {
-      const urls = await Promise.all(files.map((f) => uploadOnboardingProductImage(user!.id, f)));
-      setProductImages((current) => [...current, ...urls]);
-    } catch (err) {
-      toast.error("Couldn't upload product images", {
-        description: errorMessage(err),
-      });
-    } finally {
-      setUploadingProductImages(0);
-    }
+    if (picked.length === 0) return;
+    const held = holdPictures(picked, MAX_PRODUCT_IMAGES - productImages.length);
+    if (held.length) setProductImages((current) => [...current, ...held]);
   };
 
   const toggleChip = (val: string, list: string[], setter: (l: string[]) => void) => {
@@ -457,8 +505,31 @@ export default function Onboarding() {
     }
   }, [prefill]);
 
-  // Real geolocation → reverse-geocode (BigDataCloud, keyless + CORS-friendly)
-  // to fill the business city/area on the address step.
+  // A registration Cosora asked to change: what the seller gave last time, so they fix it rather than retype it.
+  // Files aren't refilled (they are attached again).
+  useEffect(() => {
+    if (!rejected || !myStore) return;
+    const code = COUNTRIES.find((c) => c.name === myStore.country)?.code;
+    if (code && (code === "IN" || overseasOn)) setCountry(code);
+    setBusinessName((v) => v || myStore.brandName || "");
+    setArea((v) => v || myStore.area || "");
+    setCity((v) => v || myStore.city || "");
+    setState((v) => v || myStore.state || "");
+    setPincode((v) => v || myStore.postalCode || "");
+    setBuilding((v) => v || myStore.addressLine || "");
+    setLandmark((v) => v || myStore.landmark || "");
+    setOwnerName((v) => v || myStore.ownerName || "");
+    setOwnerEmail((v) => v || myStore.ownerEmail || "");
+    if (myStore.website) { setHasWebsite(true); setWebsiteUrl((v) => v || myStore.website); }
+    if (myStore.phone) setMobile((v) => v || (code === "IN" ? myStore.phone.replace(/^\+91/, "") : myStore.phone));
+    if (myStore.primaryType) setBusinessType((v) => v || myStore.primaryType || "");
+    if (myStore.capabilities?.length) setCapabilities((v) => (v.length ? v : myStore.capabilities));
+    if (myStore.category?.length) setBusinessCategories((v) => (v.length ? v : myStore.category));
+  }, [rejected, myStore, overseasOn]);
+
+  // Real geolocation → reverse-geocode (BigDataCloud, keyless + CORS-friendly) to fill the address step.
+  // It fills only what is blank (a typed city stays), and a state only when it is one of the list's: a name the
+  // list doesn't know used to be saved behind a "Select state" box, with no state code (onboarding audit #9).
   const handleUseCurrentLocation = () => {
     if (!("geolocation" in navigator)) {
       toast.error("Location isn't supported on this device");
@@ -472,18 +543,17 @@ export default function Onboarding() {
             `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.latitude}&longitude=${coords.longitude}&localityLanguage=en`
           );
           const data = await res.json();
-          const detectedCity = data.city || data.locality || data.principalSubdivision || "";
+          const detectedCity = data.city || data.locality || "";
           const detectedArea = data.locality || data.city || "";
-          const detectedState = data.principalSubdivision || "";
+          const matchedState = stateByCode(stateCodeFor(data.principalSubdivision || ""));
           const detectedPostcode = (data.postcode || "").replace(/\D/g, "").slice(0, 6);
-          if (detectedCity) setCity(detectedCity);
+          if (detectedCity) setCity((v) => v || detectedCity);
           if (detectedArea) setArea((v) => v || detectedArea);
-          // State and pincode are new required fields; the reverse geocode
-          // already returns both, so filling them here saves the vendor typing
-          // what the browser just told us.
-          if (detectedState) setState((v) => v || detectedState);
+          if (matchedState) setState((v) => v || matchedState.name);
           if (detectedPostcode.length === 6) setPincode((v) => v || detectedPostcode);
-          toast.success(detectedCity ? `Location set — ${detectedCity}` : "Location detected");
+          toast.success(detectedCity ? `Location set — ${detectedCity}` : "Location detected", {
+            description: matchedState ? undefined : "Choose your state from the list.",
+          });
         } catch {
           toast.error("Couldn't look up your location details");
         } finally {
@@ -502,6 +572,80 @@ export default function Onboarding() {
     );
   };
 
+  // ── The submit ────────────────────────────────────────────────
+  // One database call writes the whole registration or nothing (submit_vendor_registration). The payload is
+  // checked first (registrationValidation.ts, the same rules), then the files upload, then the call. A refusal
+  // removes this attempt's uploads only once the database confirms nothing was saved; a retry after a reply that
+  // never arrived asks the database first, so it can't register twice or strand a second set of files.
+  const buildPayload = (up: UploadedFiles | null, categoryId: string | null): RegistrationPayload => {
+    const file = (path: string | undefined, has: boolean) => (up ? path ?? "" : has ? "pending" : "");
+    const regNo = regNumber.trim().toUpperCase();
+    const catalogue = up ? up.catalogue : catalogueFiles.map((c) => ({ path: "pending", name: c.name, mime: c.type }));
+    const catalogue_pdf = up ? up.cataloguePdf ?? null : cataloguePdf ? { url: "pending", title: "pending" } : null;
+    return {
+      business_name: businessName.trim(),
+      country_code: country,
+      business_phone: businessPhoneE164 ?? "",
+      whatsapp: whatsappOptIn ? mobileE164 : null,
+      website: websiteValue,
+      whatsapp_updates: whatsappUpdates,
+      address: {
+        line: [building, floor].map((v) => v.trim()).filter(Boolean).join(", ") || null,
+        area: area.trim(),
+        city: city.trim(),
+        state: india ? stateByCode(stateCodeFor(state))?.name ?? state : state.trim() || null,
+        postal_code: pincode.trim(),
+        landmark: landmark.trim() || null,
+      },
+      owner: { name: ownerName.trim(), email: ownerEmail.trim() },
+      primary_type: businessType,
+      capabilities,
+      categories: businessCategories,
+      premises_photos: up ? up.premises : businessImages.map(() => "pending"),
+      documents: india
+        ? {
+            pan: { number: panValue, holder_name: panFullName.trim(), address: panAddress.trim(), path: file(up?.pan, !!panDocumentFile) },
+            gst: hasGstin && gstinValue ? { number: gstinValue, path: file(up?.gst, !!gstDocumentFile) } : null,
+            registration: regKind ? { kind: regKind, number: regNo || null, path: file(up?.registration, !!regDocumentFile) } : null,
+            aadhaar: aadhaarFile && aadhaarConsent ? { path: file(up?.aadhaar, true) } : null,
+            catalogue,
+            catalogue_pdf,
+          }
+        : {
+            registration: osRegFile ? { kind: "foreign_registration", number: osRegNumber.trim().toUpperCase(), path: file(up?.registration, true) } : null,
+            tax_id: osHasTax && osTaxFile ? { number: osTaxNumber.trim(), path: file(up?.taxId, true) } : null,
+            owner_id: osIdFile ? { kind: osIdKind, path: file(up?.ownerId, true) } : null,
+            catalogue,
+            catalogue_pdf,
+          },
+      product: hasProduct
+        ? {
+            name: productName.trim(),
+            price: Number(price),
+            unit,
+            moq: moq.trim() ? Number(moq) : null,
+            category_id: categoryId,
+            fabric: fabric || null,
+            gsm: gsm.trim() || null,
+            sizes: [],
+            colour: selectedColors[0] ?? null,
+            images: up ? up.productImages : productImages.map(() => "pending"),
+          }
+        : null,
+      contract: {
+        signed_name: contractName.trim(),
+        signature_path: up ? up.signature ?? null : null,
+        agreement_version: SUPPLIER_AGREEMENT_VERSION,
+      },
+    };
+  };
+
+  const finishSubmit = (status: "registered" | "pending_review") => {
+    void queryClient.invalidateQueries({ queryKey: ["seller_registration", user?.id] });
+    if (status === "pending_review") setShowPendingResult(true);
+    else setShowWelcome(true);
+  };
+
   const submitContract = async () => {
     if (!agreed || !contractName.trim()) return toast.error("Complete the name and agreement to continue");
 
@@ -516,94 +660,52 @@ export default function Onboarding() {
       return;
     }
 
-    setSubmitting(true);
-    setSubmitError(null);
-    // KYC scans upload now, at submit (see the state comment above). GST and
-    // CIN only when their number is given: saveVendorOnboarding() writes no row
-    // for a type without a number, so uploading one would be exactly the
-    // orphan this avoids.
-    const kycUploads: string[] = [];
-    const uploadKyc = async (f: File | null): Promise<string | undefined> => {
-      if (!f) return undefined;
-      const path = await uploadKycDocument(user.id, f);
-      kycUploads.push(path);
-      return path;
-    };
-    try {
-      // The drawn signature, if there is one, goes to private storage first —
-      // saveVendorOnboarding stores a path, never a data: URL.
-      let signatureUrl: string | undefined;
-      if (manualSignatureDataUrl) {
-        signatureUrl = await uploadSignature(user.id, manualSignatureDataUrl);
-      }
-
-      const panFileUrl = await uploadKyc(pan.trim() ? panDocumentFile : null);
-      const gstFileUrl = await uploadKyc(hasGstin && gstin.trim() ? gstDocumentFile : null);
-      const regFileUrl = await uploadKyc(regKind ? regDocumentFile : null);
-      const aadhaarFileUrl = await uploadKyc(aadhaarConsent ? aadhaarFile : null);
-      const catalogue: { fileUrl: string; name: string; mime: string }[] = [];
-      for (const f of catalogueFiles) {
-        const fileUrl = await uploadKyc(f);
-        if (fileUrl) catalogue.push({ fileUrl, name: f.name, mime: f.type });
-      }
-      const regNo = regNumber.trim().toUpperCase();
-
-      await saveVendorOnboarding(user.id, {
-        businessName: businessName || contractName,
-        phone: mobile ? `${countryCode} ${mobile}` : (primaryContact || undefined),
-        whatsapp: whatsappOptIn && mobile ? `${countryCode} ${mobile}` : undefined,
-        website: hasWebsite ? websiteUrl : undefined,
-        addressLine: [building, floor].filter(Boolean).join(", ") || undefined,
-        area: area || undefined,
-        city: city || undefined,
-        state: state || undefined,
-        postalCode: pincode || undefined,
-        landmark: landmark || undefined,
-        ownerName: ownerName || contractName,
-        ownerEmail: ownerEmail || undefined,
-        country: country === "IN" ? "India" : country || undefined,
-        pan: panValue || undefined,
-        gstin: hasGstin ? gstinValue || undefined : undefined,
-        // A certificate of incorporation's number is the CIN (vendor_profiles.cin).
-        cin: regKind === "incorporation" && regNo ? regNo : undefined,
-        category: businessCategories.length ? businessCategories : undefined,
-        officePhotos: businessImageUploads.length ? businessImageUploads : undefined,
-        panFileUrl,
-        gstFileUrl,
-        businessRegistration: regKind && regFileUrl ? { kind: regKind, number: regNo || undefined, fileUrl: regFileUrl } : undefined,
-        aadhaar: aadhaarFileUrl ? { fileUrl: aadhaarFileUrl, consentAt: new Date().toISOString() } : undefined,
-        catalogue: catalogue.length ? catalogue : undefined,
-        contract: { signedName: contractName.trim(), signatureUrl },
-        product: productName
-          ? {
-              name: productName,
-              price: price || undefined,
-              unit: unit || undefined,
-              moq: moq || undefined,
-              fabric: fabric || undefined,
-              gsm: gsm || undefined,
-              category,
-              sizes: selectedSizes,
-              colours: selectedColors,
-              images: productImages,
-            }
-          : undefined,
-      });
-    } catch (err) {
-      // A scan this attempt uploaded that no row points at would be an orphan
-      // identity document. Remove those; a retry uploads afresh.
-      await discardUnreferencedKycUploads(user.id, kycUploads);
-      // Same reasoning as the signed-out case: a write that failed is a
-      // registration that does not exist, so it must not look like one that
-      // succeeded. Everything typed stays on screen and Submit can be retried.
-      const msg = errorMessage(err);
+    const fail = (msg: string) => {
       setSubmitError(`We couldn't save your registration: ${msg}`);
       toast.error("Couldn't save your registration", { description: msg });
-      return;
+    };
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      if (attempts.current > 0) {
+        // The last reply may have been lost after the database saved it.
+        const r = await fetchMySellerRegistration().catch(() => null);
+        if (r && r.latestSubmission === submissionId.current && (r.status === "registered" || r.status === "pending")) {
+          finishSubmit(r.status === "pending" ? "pending_review" : "registered");
+          return;
+        }
+      }
+      attempts.current += 1;
+      const problem = validateRegistration(buildPayload(null, null));
+      if (problem) {
+        fail(REGISTRATION_ERROR_TEXT[problem.key] ?? problem.key);
+        return;
+      }
+      const categoryId = hasProduct ? await resolveCategoryId(category, productName) : null;
+      const up = emptyUploads();
+      try {
+        await uploadRegistrationFiles(user.id, {
+          pan: india ? panDocumentFile : null,
+          gst: india && hasGstin ? gstDocumentFile : null,
+          registration: india ? regDocumentFile : osRegFile,
+          aadhaar: india && aadhaarConsent ? aadhaarFile : null,
+          taxId: !india && osHasTax ? osTaxFile : null,
+          ownerId: india ? null : osIdFile,
+          catalogue: catalogueFiles,
+          cataloguePdf,
+          signature: manualSignatureDataUrl,
+          premises: businessImages.map((i) => i.file),
+          productImages: hasProduct ? productImages.map((i) => i.file) : [],
+        }, up);
+        const result = await submitVendorRegistration(submissionId.current, buildPayload(up, categoryId));
+        finishSubmit(result.status);
+      } catch (err) {
+        await cleanupRegistrationUploads(up, submissionId.current);
+        fail(errorMessage(err));
+      }
     } finally {
       setSubmitting(false);
     }
-    setShowWelcome(true);
   };
 
   const businessInfoComplete = currentStep > 4;
@@ -714,45 +816,62 @@ export default function Onboarding() {
     setSignatureDrawerOpen(false);
   };
 
+  // ── What each step needs (the same rules the database applies: registrationValidation.ts) ──
+  const india = country === "IN";
+  // Digits are cleaned before any length is taken: pasting "+91 98765 43210" used to keep "9198765".
+  const mobileE164 = normalisePhone(mobile, country);
+  const businessPhoneE164 = sameContact ? mobileE164 : normalisePhone(primaryContact, country);
+  const websiteValue = hasWebsite ? normaliseWebsite(websiteUrl) : null;
+  const websiteInvalid = hasWebsite && websiteUrl.trim().length > 0 && !websiteValue;
   const canContinueStep2 =
-    businessName.trim().length > 0 &&
-    mobile.trim().length >= 10 &&
-    (!hasWebsite || websiteUrl.trim().length > 0) &&
-    (sameContact || primaryContact.trim().length >= 10);
-  // State and pincode are required, not optional: `state` feeds the location
-  // line buyers see on /vendor/:id and `postal_code` is the only thing that
-  // makes an address deliverable. Both columns existed and were written by
-  // saveVendorOnboarding all along — the form simply never asked.
-  const pincodeValid = /^\d{6}$/.test(pincode);
+    businessName.trim().length >= 2 &&
+    mobileE164 !== null &&
+    businessPhoneE164 !== null &&
+    (!hasWebsite || websiteValue !== null);
+  // State and pincode are required in India: `state` gives ranking and ad reach its state code, `postal_code` makes
+  // an address deliverable. A state is one of the list's (StateSelect); City is required everywhere.
+  const pincodeValid = india ? /^[1-9]\d{5}$/.test(pincode) : /^[A-Za-z0-9][A-Za-z0-9 -]{1,9}$/.test(pincode.trim());
   // What the embedded map should actually point at. Pincode first — it is the
   // most precise thing this form has — then the city/state the vendor typed.
   const mapQuery = pincodeValid
     ? [pincode, city, state].filter(Boolean).join(", ")
     : [city, state].filter((v) => v && v.trim()).join(", ");
-  const canAddAddress = area.trim().length > 0 && state.trim().length > 0 && pincodeValid;
-  const canSaveOwner =
-    ownerName.trim().length > 0 &&
-    ownerEmail.trim().length > 0 &&
-    country.trim().length > 0;
-  const canContinueCategories = businessCategories.length > 0;
-  const canUploadBusinessImages = businessImageUploads.length > 0 && uploadingBusinessImages === 0;
-  // Step 7 can't be skipped and needs the Seller Registration FAQ's documents
-  // (2026-10-02): the PAN card; the GST certificate when registered for GST (a seller
-  // without GST can still register, as the FAQ says); a business registration of some
-  // kind, with its number where it has a fixed format; and the owner's masked Aadhaar
-  // with their consent. The catalogue can wait for step 8, where a first product can
-  // stand in for it. Files are attached here and uploaded at submit.
-  const canSubmitPanDocuments =
-    panValid &&
-    panFullName.trim().length > 0 &&
-    panAddress.trim().length > 0 &&
-    panDocumentFile !== null &&
-    (!hasGstin || (gstinValue.length > 0 && gstinProblem === null && gstDocumentFile !== null)) &&
-    regKind !== "" && regNumberValid && regDocumentFile !== null &&
-    aadhaarFile !== null && aadhaarConsent;
-  // Step 8: a catalogue from step 7, or a first product with a name and a photo.
-  const hasProduct = productName.trim().length > 0 && productImages.length > 0;
-  const canFinishProducts = (catalogueFiles.length > 0 || hasProduct) && uploadingProductImages === 0;
+  const canAddAddress =
+    area.trim().length > 0 &&
+    city.trim().length >= 2 &&
+    (india ? stateCodeFor(state) !== null : state.trim().length <= 80) &&
+    pincodeValid;
+  const ownerEmailInvalid = ownerEmail.trim().length > 0 && !isValidEmail(ownerEmail);
+  const canSaveOwner = ownerName.trim().length >= 2 && isValidEmail(ownerEmail);
+  const canContinueCategories = businessType !== "" && businessCategories.length > 0;
+  const canUploadBusinessImages = businessImages.length > 0;
+  // Step 7 can't be skipped. India: the Seller Registration FAQ's documents (2026-10-02): the PAN card with the name
+  // and address on it; the GST certificate when registered for GST; a business registration, with its number where
+  // it has a fixed format; the owner's masked Aadhaar with their consent. Overseas (2026-11-13): the business's
+  // registration certificate and number, its tax ID when it has one, and the owner's passport or national ID.
+  // The catalogue can wait for step 8, where a first product can stand in for it.
+  const canSubmitPanDocuments = india
+    ? panValid &&
+      panFullName.trim().length >= 3 &&
+      panAddress.trim().length >= 5 &&
+      panDocumentFile !== null &&
+      (!hasGstin || (gstinValue.length > 0 && gstinProblem === null && gstDocumentFile !== null)) &&
+      regKind !== "" && regNumberValid && regDocumentFile !== null &&
+      aadhaarFile !== null && aadhaarConsent
+    : osRegNumber.trim().length > 0 && osRegFile !== null && osIdFile !== null &&
+      (!osHasTax || (osTaxNumber.trim().length >= 2 && osTaxFile !== null));
+  // Step 8: a catalogue from step 7, or a first product with a name, a price above zero, a whole-number MOQ (or none)
+  // and a photo. Half a product is never saved: a name without a photo used to become a photo-less listing in review.
+  const priceValid = price.trim() !== "" && Number(price) > 0 && Number(price) <= 10_000_000;
+  const moqValid = moq.trim() === "" || (Number.isInteger(Number(moq)) && Number(moq) >= 1);
+  const productStarted = productName.trim() !== "" || productImages.length > 0 || price.trim() !== "" || moq.trim() !== "";
+  const hasProduct = productName.trim().length >= 2 && productImages.length > 0 && priceValid && moqValid;
+  const productProblem = productStarted && !hasProduct
+    ? "Finish the product (a name, a price above zero, a whole-number MOQ and a photo), or clear it to use your catalogue."
+    : null;
+  const canFinishProducts = hasProduct || (catalogueFiles.length > 0 && !productStarted);
+
+  if (showPendingResult) return <RegistrationPending />;
 
   if (showWelcome) {
     return (
@@ -984,7 +1103,7 @@ export default function Onboarding() {
                         </button>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-[220px] text-xs">
-                        This signature is used on invoices and credit notes and is generated from the name above.
+                        Generated from the name above. It records that you agreed to the Supplier Agreement.
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -1022,7 +1141,7 @@ export default function Onboarding() {
                   </button>
                 </div>
                 <p className="text-xs leading-5 text-[#6b7280]">
-                  By clicking "submit" my e-signature is recorded for issuing invoices/credit notes to my customers
+                  When you press Submit, your signature is recorded as your agreement to Cosora's Supplier Agreement
                 </p>
               </div>
 
@@ -1282,6 +1401,16 @@ export default function Onboarding() {
             {/* STEP 1 */}
             {currentStep === 1 && (
               <div className="space-y-6">
+                {rejected && (
+                  <div role="alert" className="flex items-start gap-2 rounded-2xl border border-brand-buyer/40 bg-brand-buyer/5 p-4">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-buyer" />
+                    <div className="space-y-1 text-sm text-brand-ink">
+                      <p className="font-semibold">Cosora asked for changes to your registration</p>
+                      {registration?.reason && <p data-no-translate>{registration.reason}</p>}
+                      <p className="text-xs text-brand-ink/70">Your details are filled in. Attach your documents again and submit.</p>
+                    </div>
+                  </div>
+                )}
                 <div className="w-full rounded-2xl overflow-hidden">
                   <img
                     src="/vendorhelp.jpg"
@@ -1333,14 +1462,20 @@ export default function Onboarding() {
                         {/* This list must name only what the form actually takes
                             (step 7, and step 8 for the product). Since 2026-10-02
                             it is the Seller Registration FAQ's list. */}
-                        {[
+                        {(india ? [
                           "PAN card",
                           "GST certificate and GSTIN, if registered for GST",
                           "Business registration: Udyam (MSME), incorporation certificate, shop licence or partnership deed",
                           "Masked Aadhaar of the owner",
                           "A product catalogue (PDF, Excel or images), or your first product",
                           "Primary information",
-                        ].map((item) => (
+                        ] : [
+                          "Your business's registration certificate and its number",
+                          "Your business tax ID, if it has one (EIN, VAT number, TRN or similar)",
+                          "The owner's passport or national ID card",
+                          "A product catalogue (PDF, Excel or images), or your first product",
+                          "Primary information",
+                        ]).map((item) => (
                           <div key={item} className="flex items-center gap-2">
                             <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-success">
                               <Check className="h-3 w-3 text-white" />
@@ -1365,6 +1500,25 @@ export default function Onboarding() {
               <div className="space-y-6">
                 <h2 className="text-2xl font-bold text-brand-ink">Business Details</h2>
 
+                {/* The country decides the address and the documents the form asks for (2026-11-13). Sellers outside
+                    India can register only while the overseas_seller_registration switch allows the account. */}
+                <div className="space-y-2">
+                  <Label htmlFor="registered-country" className="text-sm font-medium text-brand-ink">Registered country*</Label>
+                  <select
+                    id="registered-country"
+                    value={country}
+                    onChange={(e) => { setCountry(e.target.value); setMobile(""); setPrimaryContact(""); setState(""); setPincode(""); }}
+                    className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor"
+                  >
+                    {(overseasOn ? COUNTRIES : COUNTRIES.filter((c) => c.code === "IN")).map((c) => (
+                      <option key={c.code} value={c.code} data-no-translate>{c.name}</option>
+                    ))}
+                  </select>
+                  {!overseasOn && (
+                    <p className="text-xs text-brand-ink/70">Registration is open to businesses in India.</p>
+                  )}
+                </div>
+
                 <div className="space-y-2">
                   <Label className="text-sm font-medium text-brand-ink">Business name*</Label>
                   <p className="text-xs text-brand-ink/70">Customers will see this name on Cosora</p>
@@ -1372,62 +1526,76 @@ export default function Onboarding() {
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
                     placeholder="Business name"
+                    maxLength={120}
                     className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-brand-ink">Mobile Number*</Label>
+                  <Label htmlFor="mobile" className="text-sm font-medium text-brand-ink">Mobile number*</Label>
                   <div className="flex items-center gap-2">
-                    <Select value={countryCode} onValueChange={setCountryCode}>
-                      <SelectTrigger className="h-11 w-24 rounded-xl border-brand-border text-xs">
-                        <SelectValue placeholder="+91" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="+91">🇮🇳 +91</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    {/* A plain contact field. There was a "Verify" button here
-                        that opened an OTP modal, accepted ANY six digits and
-                        then showed a green "Verified" tick — while
-                        startOtpFlow toasted "OTP sent" and sent nothing. This
-                        project has no SMS provider (signInWithOtp returns
-                        phone_provider_disabled), so there is nothing to verify
-                        against and the tick was a claim the app could not
-                        support. */}
+                    {india && (
+                      <span className="flex h-11 items-center rounded-xl border border-brand-border px-3 text-sm text-brand-ink">🇮🇳 +91</span>
+                    )}
+                    {/* No maxLength: it cut a pasted number BEFORE the digits were cleaned, so "+91 98765 43210"
+                        became 9198765. The digits are cleaned first, then capped. */}
                     <Input
+                      id="mobile"
                       value={mobile}
-                      onChange={(e) => setMobile(e.target.value.replace(/\D/g, "").slice(0, 10))}
-                      placeholder="Phone number"
+                      onChange={(e) => {
+                        if (!india) { setMobile(e.target.value.replace(/[^\d+\s()-]/g, "").slice(0, 22)); return; }
+                        let d = e.target.value.replace(/\D/g, "");
+                        if (d.length > 10 && d.startsWith("91")) d = d.slice(2);
+                        else if (d.length > 10 && d.startsWith("0")) d = d.slice(1);
+                        setMobile(d.slice(0, 10));
+                      }}
+                      placeholder={india ? "Mobile number" : "+971 50 123 4567"}
                       className="h-11 flex-1 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
-                      inputMode="numeric"
-                      maxLength={10}
+                      inputMode={india ? "numeric" : "tel"}
                     />
                   </div>
                   <p className="text-xs text-brand-ink/70">
-                    Buyers and our support team use this number to reach you.
+                    {india ? "Cosora reaches you on this number." : "Include your country code, for example +971 50 123 4567."}
                   </p>
-                  <div className="flex items-center gap-2">
-                    <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} />
-                    <Label htmlFor="wa" className="cursor-pointer text-sm text-brand-ink">Get business updates via WhatsApp</Label>
-                  </div>
+                  {mobile.trim() !== "" && mobileE164 === null && (
+                    <p className="text-xs text-brand-buyer">{india ? "Enter all 10 digits of your mobile number." : "Enter the whole number, starting with + and your country code."}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-sm font-medium text-brand-ink">Business's primary contact number*</Label>
-                  <p className="text-xs text-brand-ink/70">Customers, support team may call you on this number</p>
-                  <Input
-                    value={primaryContact}
-                    onChange={(e) => setPrimaryContact(e.target.value)}
-                    placeholder="Primary contact number"
-                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
-                    inputMode="numeric"
-                    maxLength={10}
-                    disabled={sameContact}
-                  />
+                  <Label className="text-sm font-medium text-brand-ink">Business phone number*</Label>
+                  <p className="text-xs text-brand-ink/70">Buyers who tap Call on your store reach this number. A landline with its STD code is fine.</p>
                   <div className="flex items-center gap-2">
                     <Checkbox id="same" checked={sameContact} onCheckedChange={(v) => setSameContact(!!v)} />
-                    <Label htmlFor="same" className="cursor-pointer text-sm text-brand-ink">Same as owner mobile number</Label>
+                    <Label htmlFor="same" className="cursor-pointer text-sm text-brand-ink">Business number is the same as my mobile</Label>
+                  </div>
+                  {!sameContact && (
+                    <>
+                      <Input
+                        value={primaryContact}
+                        onChange={(e) => setPrimaryContact(e.target.value.replace(/[^\d+\s()-]/g, "").slice(0, 22))}
+                        placeholder="Business phone number"
+                        className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                        inputMode="tel"
+                      />
+                      {primaryContact.trim() !== "" && businessPhoneE164 === null && (
+                        <p className="text-xs text-brand-buyer">
+                          {india ? "Enter a 10-digit number, or a landline with its STD code (for example 0261 2345678)." : "Enter the whole number, starting with + and the country code."}
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                <div className="space-y-3 rounded-2xl border border-brand-border p-3">
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="wa" checked={whatsappOptIn} onCheckedChange={(v) => setWhatsappOptIn(!!v)} className="mt-0.5" />
+                    <Label htmlFor="wa" className="cursor-pointer text-sm text-brand-ink">Buyers can WhatsApp me on my mobile</Label>
+                  </div>
+                  {/* Cosora's own messages need a recorded opt-in: never pre-ticked (set_contact_consent). */}
+                  <div className="flex items-start gap-2">
+                    <Checkbox id="wa-updates" checked={whatsappUpdates} onCheckedChange={(v) => setWhatsappUpdates(!!v)} className="mt-0.5" />
+                    <Label htmlFor="wa-updates" className="cursor-pointer text-sm text-brand-ink">Send me Cosora updates on WhatsApp</Label>
                   </div>
                 </div>
 
@@ -1456,12 +1624,18 @@ export default function Onboarding() {
                     </button>
                   </div>
                   {hasWebsite && (
-                    <Input
-                      value={websiteUrl}
-                      onChange={(e) => setWebsiteUrl(e.target.value)}
-                      placeholder="https://yourwebsite.com"
-                      className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
-                    />
+                    <>
+                      <Input
+                        value={websiteUrl}
+                        onChange={(e) => setWebsiteUrl(e.target.value)}
+                        placeholder="https://yourwebsite.com"
+                        maxLength={200}
+                        className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                      />
+                      {websiteInvalid && (
+                        <p className="text-xs text-brand-buyer">Enter your website's address, like yourbusiness.com, or choose None.</p>
+                      )}
+                    </>
                   )}
                 </div>
 
@@ -1564,7 +1738,7 @@ export default function Onboarding() {
                     <Label className="text-sm font-medium text-brand-ink">Area / Sector / Locality*</Label>
                     <Input
                       value={area}
-                      onChange={(e) => setArea(e.target.value)}
+                      onChange={(e) => { setArea(e.target.value); setAddressConfirmed(false); }}
                       placeholder="Area / Sector / Locality*"
                       className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
@@ -1574,35 +1748,49 @@ export default function Onboarding() {
                       <Label className="text-sm font-medium text-brand-ink">City*</Label>
                       <Input
                         value={city}
-                        onChange={(e) => setCity(e.target.value)}
+                        onChange={(e) => { setCity(e.target.value); setAddressConfirmed(false); }}
                         placeholder="City"
                         className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label htmlFor="onboarding-state" className="text-sm font-medium text-brand-ink">State*</Label>
-                      {/* One list for every state field (Ranking F2); the pincode lookup's
-                          state name is matched to it, older spellings included. */}
-                      <StateSelect
-                        id="onboarding-state"
-                        value={state}
-                        onChange={setState}
-                        className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor"
-                      />
-                    </div>
+                    {india ? (
+                      <div className="space-y-1">
+                        <Label htmlFor="onboarding-state" className="text-sm font-medium text-brand-ink">State*</Label>
+                        {/* One list for every state field (Ranking F2): a state is picked, never typed. */}
+                        <StateSelect
+                          id="onboarding-state"
+                          value={state}
+                          onChange={(v) => { setState(v); setAddressConfirmed(false); }}
+                          className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor"
+                        />
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <Label htmlFor="onboarding-region" className="text-sm font-medium text-brand-ink">State or region</Label>
+                        <Input
+                          id="onboarding-region"
+                          value={state}
+                          onChange={(e) => { setState(e.target.value.slice(0, 80)); setAddressConfirmed(false); }}
+                          placeholder="State, province or region"
+                          className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                        />
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm font-medium text-brand-ink">Pincode*</Label>
+                    <Label className="text-sm font-medium text-brand-ink">{india ? "Pincode*" : "Postal code*"}</Label>
                     <Input
                       value={pincode}
-                      onChange={(e) => setPincode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                      placeholder="6-digit pincode"
-                      inputMode="numeric"
-                      maxLength={6}
+                      onChange={(e) => {
+                        setPincode(india ? e.target.value.replace(/\D/g, "").slice(0, 6) : e.target.value.slice(0, 10));
+                        setAddressConfirmed(false);
+                      }}
+                      placeholder={india ? "6-digit pincode" : "Postal code"}
+                      inputMode={india ? "numeric" : "text"}
                       className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                     />
                     {pincode.length > 0 && !pincodeValid && (
-                      <p className="text-xs text-brand-buyer">Enter all 6 digits of your pincode.</p>
+                      <p className="text-xs text-brand-buyer">{india ? "Enter all 6 digits of your pincode." : "Enter your postal code (letters, digits, spaces or dashes)."}</p>
                     )}
                   </div>
                   <div className="space-y-1">
@@ -1657,6 +1845,7 @@ export default function Onboarding() {
                     value={ownerName}
                     onChange={(e) => setOwnerName(e.target.value)}
                     placeholder="Full name"
+                    maxLength={120}
                     className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
                   />
                 </div>
@@ -1667,22 +1856,16 @@ export default function Onboarding() {
                     value={ownerEmail}
                     onChange={(e) => setOwnerEmail(e.target.value)}
                     placeholder="name@company.com"
-                    className="rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                    maxLength={254}
+                    aria-invalid={ownerEmailInvalid}
+                    className={cn(
+                      "rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor",
+                      ownerEmailInvalid && "border-brand-buyer",
+                    )}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium text-brand-ink">Registered country*</Label>
-                  <Select value={country} onValueChange={setCountry}>
-                    <SelectTrigger className="rounded-xl border-brand-border">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="IN">India</SelectItem>
-                      <SelectItem value="US">United States</SelectItem>
-                      <SelectItem value="UK">United Kingdom</SelectItem>
-                      <SelectItem value="AE">United Arab Emirates</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  {ownerEmailInvalid && (
+                    <p className="text-xs text-brand-buyer">Enter a working email address, like name@business.com.</p>
+                  )}
                 </div>
                 <Button
                   onClick={goNext}
@@ -1716,8 +1899,50 @@ export default function Onboarding() {
 
                 <div className="space-y-2">
                   <h2 className="text-lg font-semibold text-brand-ink">What kind of business are you?</h2>
-                  <p className="text-sm font-normal text-brand-ink">
-                    Buyers browse and filter by these categories. Pick every one that describes what you make, trade or provide.
+                </div>
+
+                {/* Ranking F2's type and capabilities: the storefront's "Business Type" reads the type, and ranking
+                    will. States served and monthly capacity are added on Business Profile. */}
+                <div className="space-y-2">
+                  <Label htmlFor="business-type" className="text-sm font-medium text-brand-ink">Business type*</Label>
+                  <select
+                    id="business-type"
+                    value={businessType}
+                    onChange={(e) => setBusinessType(e.target.value)}
+                    className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm focus-visible:outline-none focus-visible:border-brand-vendor focus-visible:ring-1 focus-visible:ring-brand-vendor"
+                  >
+                    <option value="">Choose one</option>
+                    {PRIMARY_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-brand-ink">What you offer (optional)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {CAPABILITIES.map((c) => {
+                      const on = capabilities.includes(c.value);
+                      return (
+                        <button
+                          key={c.value}
+                          type="button"
+                          aria-pressed={on}
+                          onClick={() => toggleChip(c.value, capabilities, setCapabilities)}
+                          className={cn(
+                            "rounded-full border px-3 py-1.5 text-sm",
+                            on ? "border-brand-vendor bg-brand-vendor text-white" : "border-brand-border bg-white text-brand-ink",
+                          )}
+                        >
+                          {c.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-brand-ink">Business categories*</p>
+                  <p className="text-sm font-normal text-brand-ink/80">
+                    Buyers see these on your storefront. Pick every one that describes what you make, trade or provide.
                   </p>
                 </div>
 
@@ -1800,7 +2025,7 @@ export default function Onboarding() {
                 >
                   <UploadIcon className="mx-auto h-10 w-10 text-brand-vendor" />
                   <p className="mt-3 font-semibold text-brand-vendor">Add business images</p>
-                  <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or jpg formats up to 5MB</p>
+                  <p className="mt-1 text-xs text-brand-ink/70">jpeg, png or webp up to 5MB, up to 12 photos</p>
                 </button>
 
                 <Dialog open={businessImagePickerOpen} onOpenChange={setBusinessImagePickerOpen}>
@@ -1890,43 +2115,42 @@ export default function Onboarding() {
                   Guidelines to upload business images
                 </button>
 
-                {(businessImageUploads.length > 0 || uploadingBusinessImages > 0) && (
+                {businessImages.length > 0 && (
                   <div className="grid grid-cols-3 gap-2">
-                    {businessImageUploads.map((src, i) => (
-                      <div key={src} className="relative aspect-square overflow-hidden rounded-xl border border-brand-border">
-                        <img src={src} alt={`Business photo ${i + 1}`} className="h-full w-full object-cover" />
+                    {businessImages.map((img, i) => (
+                      <div key={img.preview} className="relative aspect-square overflow-hidden rounded-xl border border-brand-border">
+                        <img src={img.preview} alt={`Business photo ${i + 1}`} className="h-full w-full object-cover" />
                         <button
                           type="button"
                           className="absolute right-1 top-1 rounded-full bg-white p-1 shadow"
                           aria-label="Remove photo"
-                          onClick={() => setBusinessImageUploads((items) => items.filter((item) => item !== src))}
+                          onClick={() => dropHeld(setBusinessImages, img.preview)}
                         >
                           <X className="h-3 w-3" />
                         </button>
                       </div>
                     ))}
-                    {Array.from({ length: uploadingBusinessImages }).map((_, i) => (
-                      <div key={`uploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-xl bg-[#eef0f3]">
-                        <span className="text-[10px] text-brand-ink/60">Uploading…</span>
-                      </div>
-                    ))}
                   </div>
                 )}
+                <p className="text-xs text-brand-ink/70">
+                  Photos upload when you submit. Cosora's team checks them before buyers see them on your store.
+                </p>
 
                 <Button
                   onClick={() => setCurrentStep(7)}
                   disabled={!canUploadBusinessImages}
                   className="w-full rounded-full bg-brand-vendor text-white font-semibold hover:bg-[#1f5fe0] disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {uploadingBusinessImages > 0 ? "Uploading…" : "Next"}
+                  Next
                 </Button>
 
                 <input
                   ref={businessImageInputRef}
                   type="file"
-                  accept="image/*"
+                  accept="image/jpeg,image/png,image/webp"
                   multiple
                   className="hidden"
+                  aria-label="Business images"
                   onChange={handleBusinessImageFiles}
                 />
               </div>
@@ -1940,9 +2164,10 @@ export default function Onboarding() {
                     <ArrowLeft className="h-4 w-4" />
                   </button>
                   <h2 className="text-base font-semibold text-brand-ink">Business documents</h2>
-                  <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-brand-ink">1 of 4</span>
+                  <span className="rounded-full bg-[#f5f5f5] px-3 py-1 text-sm text-brand-ink">{india ? "India" : "Outside India"}</span>
                 </div>
 
+                {india ? (<>
                 <div>
                   <h3 className="text-lg font-semibold text-brand-ink">PAN details</h3>
                 </div>
@@ -2021,8 +2246,8 @@ export default function Onboarding() {
                 <div className="flex items-start gap-2 rounded-2xl border border-brand-border bg-[#f5f5f5] p-3">
                   <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-vendor" />
                   <p className="text-xs leading-5 text-brand-ink">
-                    Cosora checks the format here and queues your documents for review. A member of our team verifies them
-                    against your uploads, usually within 3–5 days, and your profile is marked verified once that is done.
+                    Cosora checks the format here. A member of our team reviews your documents, usually within 3–5 days, and
+                    each approved document shows as verified on your KYC page.
                   </p>
                 </div>
 
@@ -2193,7 +2418,7 @@ export default function Onboarding() {
 
                 {/* The owner's Aadhaar, MASKED only (Seller Registration FAQ:
                     "Aadhar card"). The number is never asked for or kept; see
-                    saveVendorOnboarding(). */}
+                    submit_vendor_registration(). */}
                 <div className="space-y-2">
                   <h4 className="text-sm font-semibold text-brand-ink">Masked Aadhaar of the owner*</h4>
                   <p className="text-xs text-brand-ink/70">
@@ -2221,6 +2446,104 @@ export default function Onboarding() {
                   </Label>
                 </div>
 
+                </>) : (
+                  /* Sellers outside India (2026-11-13): their country's documents, and Cosora approves the registration. */
+                  <div className="space-y-5">
+                    <div className="space-y-1">
+                      <h3 className="text-lg font-semibold text-brand-ink">Business registration*</h3>
+                      <p className="text-xs text-brand-ink/70">
+                        The certificate your country issued when the business was registered: a trade licence, a company
+                        registration or similar.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="os-reg-number" className="text-sm font-medium text-brand-ink">Registration number*</Label>
+                      <Input
+                        id="os-reg-number"
+                        value={osRegNumber}
+                        onChange={(e) => setOsRegNumber(e.target.value.toUpperCase())}
+                        maxLength={60}
+                        className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                      />
+                    </div>
+                    <KycDocumentUpload
+                      label="registration certificate"
+                      attached={osRegFile !== null}
+                      name={osRegFile?.name ?? ""}
+                      onPick={() => osRegInputRef.current?.click()}
+                      onRemove={() => setOsRegFile(null)}
+                    />
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-brand-ink">Tax registration (if your business has one)</h4>
+                      <p className="text-xs text-brand-ink/70">For example an EIN, a VAT number or a TRN.</p>
+                      <div className="flex items-center gap-4">
+                        <Label className="flex items-center gap-2 text-sm font-medium text-brand-ink">
+                          <input type="radio" name="tax" checked={osHasTax} onChange={() => setOsHasTax(true)} /> Yes
+                        </Label>
+                        <Label className="flex items-center gap-2 text-sm font-medium text-brand-ink">
+                          <input type="radio" name="tax" checked={!osHasTax} onChange={() => setOsHasTax(false)} /> No
+                        </Label>
+                      </div>
+                      {osHasTax && (
+                        <>
+                          <Input
+                            id="os-tax-number"
+                            value={osTaxNumber}
+                            onChange={(e) => setOsTaxNumber(e.target.value.toUpperCase())}
+                            placeholder="Tax ID"
+                            maxLength={40}
+                            className="h-11 rounded-xl border-brand-border focus-visible:border-brand-vendor focus-visible:ring-brand-vendor"
+                          />
+                          <KycDocumentUpload
+                            label="tax registration"
+                            attached={osTaxFile !== null}
+                            name={osTaxFile?.name ?? ""}
+                            onPick={() => osTaxInputRef.current?.click()}
+                            onRemove={() => setOsTaxFile(null)}
+                          />
+                        </>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-semibold text-brand-ink">Owner's photo ID*</h4>
+                      <select
+                        id="os-id-kind"
+                        aria-label="Kind of photo ID"
+                        value={osIdKind}
+                        onChange={(e) => setOsIdKind(e.target.value as OwnerIdKind)}
+                        className="flex h-10 w-full rounded-xl border border-brand-border bg-background px-3 text-sm"
+                      >
+                        <option value="passport">Passport</option>
+                        <option value="national_id">National ID card</option>
+                      </select>
+                      <KycDocumentUpload
+                        label="owner's ID"
+                        attached={osIdFile !== null}
+                        name={osIdFile?.name ?? ""}
+                        onPick={() => osIdInputRef.current?.click()}
+                        onRemove={() => setOsIdFile(null)}
+                      />
+                    </div>
+
+                    <div className="flex items-start gap-2 rounded-2xl border border-brand-border bg-[#f5f5f5] p-3">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-brand-vendor" />
+                      <p className="text-xs leading-5 text-brand-ink">
+                        Cosora's team checks these documents and approves your registration, usually within 3–5 days.
+                        You can look around your seller pages meanwhile; listings open once you're approved.
+                      </p>
+                    </div>
+
+                    <input ref={osRegInputRef} type="file" accept="image/jpeg,image/png,application/pdf" className="hidden"
+                      aria-label="Registration certificate file" onChange={handleOsRegFile} />
+                    <input ref={osTaxInputRef} type="file" accept="image/jpeg,image/png,application/pdf" className="hidden"
+                      aria-label="Tax ID file" onChange={handleOsTaxFile} />
+                    <input ref={osIdInputRef} type="file" accept="image/jpeg,image/png,application/pdf" className="hidden"
+                      aria-label="Owner ID file" onChange={handleOsIdFile} />
+                  </div>
+                )}
+
                 {/* The product catalogue, or a first product in the next step
                     (Andy, 2026-10-02: "instead of the catalog, they can also just
                     post 1 product"). */}
@@ -2228,6 +2551,10 @@ export default function Onboarding() {
                   <h4 className="text-sm font-semibold text-brand-ink">Product catalogue</h4>
                   <p className="text-xs text-brand-ink/70">
                     {`A PDF, Excel or CSV file, or photos of your range, up to ${MAX_CATALOGUE_FILES} files. No catalogue? Add your first product in the next step instead.`}
+                  </p>
+                  <p className="text-xs text-brand-ink/70">
+                    Your first PDF also goes on your store's catalogue section once Cosora has reviewed it (the Free plan
+                    includes 1 PDF catalogue). The other files are kept for Cosora's team.
                   </p>
                   <button
                     type="button"
@@ -2276,15 +2603,17 @@ export default function Onboarding() {
                 <input
                   ref={panDocumentInputRef}
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,application/pdf"
                   className="hidden"
+                  aria-label="PAN file"
                   onChange={handlePanDocumentFile}
                 />
                 <input
                   ref={gstDocumentInputRef}
                   type="file"
-                  accept="image/*,application/pdf"
+                  accept="image/jpeg,image/png,application/pdf"
                   className="hidden"
+                  aria-label="GST certificate file"
                   onChange={handleGstDocumentFile}
                 />
                 <input
@@ -2327,50 +2656,40 @@ export default function Onboarding() {
                   <label
                     className={cn(
                       "block rounded-xl border-2 border-dashed border-brand-border bg-[#f5f5f5] p-6 text-center hover:bg-[#eef0f3]",
-                      productImages.length >= MAX_PRODUCT_IMAGES || uploadingProductImages > 0
-                        ? "cursor-not-allowed opacity-60"
-                        : "cursor-pointer",
+                      productImages.length >= MAX_PRODUCT_IMAGES ? "cursor-not-allowed opacity-60" : "cursor-pointer",
                     )}
                   >
                     <UploadIcon className="w-6 h-6 mx-auto text-brand-ink mb-2" />
                     <p className="text-sm">
-                      {uploadingProductImages > 0
-                        ? "Uploading…"
-                        : productImages.length >= MAX_PRODUCT_IMAGES
-                          ? `${MAX_PRODUCT_IMAGES} images added`
-                          : "Click to upload"}
+                      {productImages.length >= MAX_PRODUCT_IMAGES ? `${MAX_PRODUCT_IMAGES} images added` : "Click to add photos"}
                     </p>
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/jpeg,image/png,image/webp"
                       multiple
                       className="hidden"
-                      disabled={productImages.length >= MAX_PRODUCT_IMAGES || uploadingProductImages > 0}
+                      aria-label="Product images"
+                      disabled={productImages.length >= MAX_PRODUCT_IMAGES}
                       onChange={handleProductImageFiles}
                     />
                   </label>
-                  {(productImages.length > 0 || uploadingProductImages > 0) && (
+                  {productImages.length > 0 && (
                     <div className="grid grid-cols-3 gap-2">
-                      {productImages.map((src, i) => (
+                      {productImages.map((img, i) => (
                         /* The "Remove BG" / "Crop" / "Rotate" buttons that used
                            to live in this overlay had no handlers at all — three
                            icons that did nothing on hover. Remove is the one
                            action that was real, so it is the one that stayed. */
-                        <div key={src} className="relative aspect-square rounded-lg overflow-hidden border group">
-                          <img src={src} alt={`Product image ${i + 1}`} className="w-full h-full object-cover" />
+                        <div key={img.preview} className="relative aspect-square rounded-lg overflow-hidden border group">
+                          <img src={img.preview} alt={`Product image ${i + 1}`} className="w-full h-full object-cover" />
                           <button
                             type="button"
                             aria-label="Remove image"
-                            onClick={() => setProductImages((items) => items.filter((item) => item !== src))}
+                            onClick={() => dropHeld(setProductImages, img.preview)}
                             className="absolute right-1 top-1 rounded-full bg-white p-1.5 shadow"
                           >
                             <X className="w-3 h-3" />
                           </button>
-                        </div>
-                      ))}
-                      {Array.from({ length: uploadingProductImages }).map((_, i) => (
-                        <div key={`puploading-${i}`} className="flex aspect-square animate-pulse items-center justify-center rounded-lg bg-[#eef0f3]">
-                          <span className="text-[10px] text-brand-ink/60">Uploading…</span>
                         </div>
                       ))}
                     </div>
@@ -2378,7 +2697,7 @@ export default function Onboarding() {
                 </div>
                 <div className="space-y-2"><Label htmlFor="product-name">Product / Service Name</Label><Input id="product-name" value={productName} onChange={(e) => setProductName(e.target.value)} /></div>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-2 col-span-2"><Label htmlFor="product-price">Price</Label><Input id="product-price" type="number" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
+                  <div className="space-y-2 col-span-2"><Label htmlFor="product-price">Price (₹)</Label><Input id="product-price" type="number" min="0.01" step="0.01" inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} /></div>
                   <div className="space-y-2">
                     <Label>Unit</Label>
                     <Select value={unit} onValueChange={setUnit}>
@@ -2387,7 +2706,7 @@ export default function Onboarding() {
                     </Select>
                   </div>
                 </div>
-                <div className="space-y-2"><Label htmlFor="product-moq">MOQ (Minimum Order Qty)</Label><Input id="product-moq" type="number" value={moq} onChange={(e) => setMoq(e.target.value)} /></div>
+                <div className="space-y-2"><Label htmlFor="product-moq">MOQ (Minimum Order Qty, optional)</Label><Input id="product-moq" type="number" min="1" step="1" inputMode="numeric" value={moq} onChange={(e) => setMoq(e.target.value)} /></div>
                 <div className="space-y-2">
                   <Label>Category</Label>
                   <CategorySelector selectedCategory={category} onSelectCategory={setCategory} />
@@ -2402,14 +2721,9 @@ export default function Onboarding() {
                   </div>
                   <div className="space-y-2"><Label htmlFor="product-gsm">GSM</Label><Input id="product-gsm" value={gsm} onChange={(e) => setGsm(e.target.value)} /></div>
                 </div>
-                <div className="space-y-2">
-                  <Label>Sizes</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SIZES.map((s) => (
-                      <button key={s} onClick={() => toggleChip(s, selectedSizes, setSelectedSizes)} className={cn("px-3 py-1.5 rounded-full text-sm border", selectedSizes.includes(s) ? "bg-brand-vendor text-white border-brand-vendor" : "bg-white hover:bg-brand-vendor/10 border border-brand-border")}>{s}</button>
-                    ))}
-                  </div>
-                </div>
+                {/* No sizes here: each garment type has its own size set (2026-10-17), and this short form only
+                    knows the top-level category. Sizes are added on the full listing form. */}
+                <p className="text-xs text-brand-ink/70">Sizes are added later on the full listing form, from your product's own size chart.</p>
                 <div className="space-y-2">
                   <Label>Colors</Label>
                   <div className="flex flex-wrap gap-2">
@@ -2428,9 +2742,11 @@ export default function Onboarding() {
                     </p>
                   )}
                 </div>
-                {!canFinishProducts && uploadingProductImages === 0 && (
+                {productProblem ? (
+                  <p className="text-xs text-brand-buyer">{productProblem}</p>
+                ) : !canFinishProducts && (
                   <p className="text-xs text-brand-ink/70">
-                    Add your first product with a name and a photo, or go back and upload a product catalogue.
+                    Add your first product with a name, a price and a photo, or go back and upload a product catalogue.
                   </p>
                 )}
                 <Button
@@ -2465,9 +2781,7 @@ export default function Onboarding() {
         {currentStep > 4 && currentStep < TOTAL_STEPS && !documentsSuccess && !productSuccess && (
           <div className="flex items-center justify-between mt-8">
             <Button variant="outline" onClick={goPrev}><ArrowLeft className="w-4 h-4 mr-1" /> Previous</Button>
-            {currentStep !== 7 && !(currentStep === 8 && catalogueFiles.length === 0) && (
-              <Button variant="ghost" onClick={goNext}>Skip <ArrowRight className="w-4 h-4 ml-1" /></Button>
-            )}
+            {/* No Skip: it stepped round the categories and premises photos the next screens rely on. */}
           </div>
         )}
       </div>
