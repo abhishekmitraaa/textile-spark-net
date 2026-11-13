@@ -15,7 +15,7 @@ import { useLang } from "@/lib/i18n";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  useMyVendorProfile, saveVendorProfile, uploadVendorGalleryImage, uploadVendorImage,
+  useMyVendorProfile, saveVendorProfile, uploadVendorImage,
   useVendorCapacity, saveVendorCapacity, type CapacityRow,
 } from "@/lib/queries/vendorStore";
 import { memberSinceLabel } from "@/lib/memberSince";
@@ -25,6 +25,11 @@ import { useMyCatalogues, webUrl } from "@/lib/queries/catalogues";
 import { useMyVideos, onThumbError } from "@/lib/queries/videos";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { trustSealFromParts } from "@/lib/plan";
+import {
+  useMyPremisesPhotos, addPremisesPhotos, deletePremisesPhoto, countedPhotos, premisesPhotosKey,
+  PREMISES_PHOTO_LIMIT, type PremisesPhoto,
+} from "@/lib/queries/premisesPhotos";
+import PhotoStatusBadge from "@/components/vendor/PhotoStatusBadge";
 import { AddBusinessCategoriesModal } from "@/components/vendor/AddBusinessCategoriesModal";
 
 const E = [0.23, 1, 0.32, 1] as [number, number, number, number];
@@ -56,7 +61,8 @@ import {
 // DATA
 // ─────────────────────────────────────────────────────────────
 
-// Office photos come from vendor_profiles.office_photos as plain URLs.
+// Office photos are vendor_premises_photos rows that Cosora reviews before buyers see them (2026-11-13,
+// queries/premisesPhotos.ts); this page shows the seller every photo with its status and any rejection reason.
 // The old hardcoded array carried per-photo labels ("Factory Floor", ...);
 // those were decorative fiction with no way for a vendor to set them, so the
 // real feature stores URLs only.
@@ -494,9 +500,12 @@ const BusinessProfile = () => {
   };
 
   // ── Office photos ─────────────────────────────────────────────
-  // Read straight from the profile row (no local mirror): uploads finish by
+  // The seller's own premises photos, every status (no local mirror): uploads and deletes finish by
   // invalidating the query, so the refetch is the single source of truth.
-  const officePhotos = store?.officePhotos ?? [];
+  const premises = useMyPremisesPhotos(user?.id);
+  const officePhotos: PremisesPhoto[] = premises.data ?? [];
+  const approvedPhotos = officePhotos.filter((p) => p.status === "live").length;
+  const photoSlotsLeft = Math.max(0, PREMISES_PHOTO_LIMIT - countedPhotos(officePhotos));
   const photoInputRef = useRef<HTMLInputElement | null>(null);
   const [uploadingPhotos, setUploadingPhotos] = useState(0);
   // The strip's dot indicator tracks real scroll position rather than being a
@@ -508,17 +517,38 @@ const BusinessProfile = () => {
     e.target.value = ""; // let the same file be picked again after a failure
     if (files.length === 0) return;
     if (!user) { toast.error("Sign in to add office photos"); return; }
+    if (files.length > photoSlotsLeft) {
+      toast.error(photoSlotsLeft === 1 ? "You can add 1 more photo" : `You can add ${photoSlotsLeft} more photos`, {
+        description: "A store shows up to 12 premises photos. Delete one to add another.",
+      });
+      return;
+    }
     setUploadingPhotos(files.length);
     try {
-      const urls = await Promise.all(files.map((f) => uploadVendorGalleryImage(user.id, f)));
-      await persist(
-        { officePhotos: [...officePhotos, ...urls] },
-        urls.length === 1 ? "Photo added" : `${urls.length} photos added`
-      );
+      const added = await addPremisesPhotos(user.id, files, officePhotos);
+      toast.success(added === 1 ? "Photo sent for review" : `${added} photos sent for review`, {
+        description: "Buyers see a photo once Cosora approves it, usually within 24–48 hours.",
+      });
     } catch (err) {
       toast.error("Couldn't upload photos", { description: errorMessage(err) });
     } finally {
       setUploadingPhotos(0);
+      qc.invalidateQueries({ queryKey: premisesPhotosKey(user.id) });
+    }
+  };
+
+  const removePhoto = async (photo: PremisesPhoto) => {
+    if (!user) return;
+    try {
+      await deletePremisesPhoto(photo);
+      toast.success("Photo deleted");
+    } catch (err) {
+      toast.error("Couldn't delete the photo", { description: errorMessage(err) });
+    } finally {
+      qc.invalidateQueries({ queryKey: premisesPhotosKey(user.id) });
+      // An approved photo leaves the storefront and the profile score.
+      qc.invalidateQueries({ queryKey: ["vendor_profile", "mine", user.id] });
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard", user.id] });
     }
   };
 
@@ -670,6 +700,10 @@ const BusinessProfile = () => {
   const saveType = (type: string, capabilities: string[]) =>
     persist({ primaryType: type, capabilities, businessType: primaryTypeLabel(type) }, "Business type updated");
   const saveServedStates = (servedStates: string[]) => persist({ servedStates }, "States updated");
+  // Registration asks only for the business type (Mitra, 2026-11-13, D4); where a seller delivers and how much they
+  // make are asked for here instead, until both are in.
+  const needsServedStates = Boolean(store) && (store?.servedStates ?? []).length === 0;
+  const needsCapacity = Boolean(store) && capacityRows.length === 0;
   const saveCapacity = async (rows: CapacityRow[]): Promise<boolean> => {
     if (!user) { toast.error("Sign in to edit your business profile"); return false; }
     try {
@@ -809,7 +843,7 @@ const BusinessProfile = () => {
               <button
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                disabled={uploadingPhotos > 0}
+                disabled={uploadingPhotos > 0 || photoSlotsLeft === 0}
                 className="flex-shrink-0 flex flex-col items-center disabled:opacity-60"
               >
                 <div className="h-20 w-20 rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50">
@@ -826,10 +860,11 @@ const BusinessProfile = () => {
                 </div>
               ))}
 
-              {officePhotos.map((url, i) => (
-                <div key={url} className="flex-shrink-0 text-center">
-                  <div className="h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
-                    <img src={url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+              {officePhotos.map((photo, i) => (
+                <div key={photo.id} className="flex-shrink-0 text-center">
+                  <div className="relative h-20 w-20 overflow-hidden rounded-xl border border-gray-100 bg-gray-100">
+                    <img src={photo.url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                    <PhotoStatusBadge status={photo.status} />
                   </div>
                 </div>
               ))}
@@ -837,13 +872,38 @@ const BusinessProfile = () => {
             {/* Scroll dots — one per photo, hidden entirely when there's nothing to scroll */}
             {officePhotos.length > 1 && (
               <div className="flex items-center justify-center gap-1 mt-2">
-                {officePhotos.map((url, i) => (
-                  <span key={url} className={`h-1.5 rounded-full transition-all ${i === photoPage ? "w-4 bg-blue-500" : "w-1.5 bg-gray-300"}`} />
+                {officePhotos.map((photo, i) => (
+                  <span key={photo.id} className={`h-1.5 rounded-full transition-all ${i === photoPage ? "w-4 bg-blue-500" : "w-1.5 bg-gray-300"}`} />
                 ))}
               </div>
             )}
           </div>
         </motion.section>
+
+        {(needsServedStates || needsCapacity) && (
+          <motion.section variants={section} data-testid="reach-nudge"
+            className="rounded-2xl border border-brand-vendor/30 bg-brand-vendor/5 p-4">
+            <h2 className="text-sm font-bold text-gray-900">Finish your business details</h2>
+            <p className="mt-1 text-xs leading-5 text-gray-600">
+              Add the states you deliver to and how much you can make each month. Your capacity stays private to you
+              and Cosora.
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {needsServedStates && (
+                <button type="button" onClick={() => setShowStatesSheet(true)}
+                  className="rounded-full bg-brand-vendor px-3 py-1.5 text-xs font-semibold text-white">
+                  Add the states you deliver to
+                </button>
+              )}
+              {needsCapacity && (
+                <button type="button" onClick={() => setShowCapacitySheet(true)}
+                  className="rounded-full border border-brand-vendor px-3 py-1.5 text-xs font-semibold text-brand-vendor">
+                  Add how much you make each month
+                </button>
+              )}
+            </div>
+          </motion.section>
+        )}
 
         {/* ══════════════════════════════════════════════════════
             ABOUT US
@@ -1160,16 +1220,20 @@ const BusinessProfile = () => {
         <motion.section id="office-pictures" variants={section} className={`rounded-2xl border bg-white p-4 transition-colors duration-500 ${highlight === "office-pictures" ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}>
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900">Office Pictures</h2>
-            {/* The profile score rewards 5 or more, so show progress toward that. */}
-            {officePhotos.length > 0 && officePhotos.length < 5 && (
-              <span className="text-[10px] font-medium text-gray-400">{officePhotos.length} of 5 added</span>
+            {/* The profile score rewards 5 or more approved photos, so show progress toward that. */}
+            {officePhotos.length > 0 && approvedPhotos < 5 && (
+              <span className="text-[10px] font-medium text-gray-400">{`${approvedPhotos} of 5 approved`}</span>
             )}
           </div>
+          <p className="mb-3 text-xs text-gray-500">
+            Cosora checks each photo before buyers see it, usually within 24–48 hours. Up to 12 photos.
+          </p>
           <motion.div variants={listContainer} className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => photoInputRef.current?.click()}
-              disabled={uploadingPhotos > 0}
+              disabled={uploadingPhotos > 0 || photoSlotsLeft === 0}
+              aria-label="Add premises photos"
               className="aspect-square rounded-xl bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 disabled:opacity-60"
             >
               <Plus className="h-7 w-7 text-blue-500" />
@@ -1177,12 +1241,34 @@ const BusinessProfile = () => {
             {Array.from({ length: uploadingPhotos }).map((_, i) => (
               <div key={`gup-${i}`} className="aspect-square animate-pulse rounded-xl bg-gray-200" />
             ))}
-            {officePhotos.slice(0, 5).map((url, i) => (
-              <motion.div variants={listItem} key={url} className="aspect-square overflow-hidden rounded-xl">
-                <img src={url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+            {officePhotos.map((photo, i) => (
+              <motion.div variants={listItem} key={photo.id} className="relative aspect-square overflow-hidden rounded-xl"
+                data-testid="premises-photo" data-status={photo.status}>
+                <img src={photo.url} alt={`Office photo ${i + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                <PhotoStatusBadge status={photo.status} />
+                <button
+                  type="button"
+                  onClick={() => void removePhoto(photo)}
+                  aria-label={`Delete office photo ${i + 1}`}
+                  className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white hover:bg-black/75"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
               </motion.div>
             ))}
           </motion.div>
+          {/* A rejected photo says why, so the seller can replace it: a rejection reason must reach the seller. */}
+          {officePhotos.some((p) => p.status === "rejected") && (
+            <ul className="mt-3 space-y-1" data-testid="premises-photo-rejections">
+              {officePhotos.map((photo, i) => photo.status === "rejected" && (
+                <li key={photo.id} className="text-xs text-brand-buyer">
+                  <span>{`Photo ${i + 1} wasn't approved.`}</span>{" "}
+                  {photo.rejectionReason && <span data-no-translate>{photo.rejectionReason}</span>}{" "}
+                  <span>Delete it and add another.</span>
+                </li>
+              ))}
+            </ul>
+          )}
           {officePhotos.length === 0 && uploadingPhotos === 0 && (
             <p className="mt-3 text-xs text-gray-400">
               Add photos of your factory, sampling unit and packing area so buyers can see how you operate.

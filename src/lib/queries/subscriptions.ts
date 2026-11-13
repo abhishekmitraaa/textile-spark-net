@@ -102,6 +102,8 @@ export interface InvoiceSupplier {
 export interface InvoiceRecipient {
   name: string | null; owner_name: string | null; address: string | null; city: string | null; state: string | null;
   state_code: string | null; gst_state_code: string | null; postal_code: string | null; gstin: string | null; email: string | null;
+  /** Frozen with the invoice since 2026-11-13; absent on older ones (read as India). */
+  country?: string | null; country_code?: string | null;
 }
 
 interface RawInvoice {

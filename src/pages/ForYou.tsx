@@ -123,6 +123,7 @@ function toListing(p: ProductCardData): ListingProduct {
     fabric: p.fabric,
     gsm: p.gsm,
     fitType: p.fitType,
+    vendorCountryCode: p.vendorCountryCode,
     image: p.image,
     secondaryImage: p.secondaryImage,
     gender: (p.gender.toLowerCase() as Gender),

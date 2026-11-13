@@ -8,7 +8,7 @@ import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import ToTopButton from "@/components/buyer/ToTopButton";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useFollowing } from "@/lib/queries/follows";
-import { fetchCatalogueByIds } from "@/lib/queries/products";
+import { fetchCatalogueByIds, isInternationalSupplier } from "@/lib/queries/products";
 import { useBrowseCatalogue } from "@/lib/queries/feed";
 import { useQuery } from "@tanstack/react-query";
 import { useProductSearch } from "@/lib/queries/search";
@@ -33,9 +33,10 @@ import {
 } from "lucide-react";
 import trustedSeal from "@/assets/Trustedseal.png";
 import {
-  resolveFilterSchema, defaultSelections, gsmBucket, ratingThreshold, hashPick, moqBucket,
+  resolveFilterSchema, defaultSelections, gsmBucket, ratingThreshold, hashPick, moqBucket, supplierFromLabel,
   type Facet,
 } from "@/lib/searchFilters";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { useVocabulary } from "@/lib/queries/attributeDefinitions";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
@@ -96,6 +97,8 @@ interface RProduct {
   categoryName?: string; parentCategoryName?: string;
   // Subscriptions P10: the seller's seal variant, plan boost and location (for "nearby buyers").
   sealTier?: SealTier | null; boost?: number; vendorStateCode?: string | null; vendorServedStates?: string[];
+  /** The registered seller's country (2026-11-13): the Supplier location facet and the International label. */
+  vendorCountryCode?: string | null;
 }
 
 // Thumbnails rendered in the Video Close-Ups teaser rail. The viewer still
@@ -217,6 +220,7 @@ function ProductCard({ p, compact, query, featured, tiers }: { p: RProduct; comp
           <MapPin className={cn("text-gray-500 shrink-0", compact ? "w-2 h-2" : "w-2.5 h-2.5 lg:w-3 lg:h-3")} />
           <span className={cn("font-bold text-gray-700 truncate", compact ? "text-[8px]" : "text-[10px] lg:text-xs")}>{p.location}</span>
         </div>
+        <InternationalSupplierTag countryCode={p.vendorCountryCode} className={cn("mt-0.5 self-start", compact ? "text-[8px]" : "text-[9px] lg:text-[10px]")} />
         {!compact && (
           <>
             <p className="text-[10px] lg:text-[11px] text-gray-500 mt-0.5">Fabric: {p.fabric} | GSM: {p.gsm}</p>
@@ -351,6 +355,12 @@ function matchFacet(p: RProduct, f: Facet, values?: string[]): boolean {
     case "moq": return p.moqValue != null && values.includes(moqBucket(p.moqValue));
     case "rating": return p.rating >= Math.min(...values.map(ratingThreshold));
     case "verified": return p.verified;
+    case "supplier": {
+      const where = supplierFromLabel(values);
+      if (where === "international") return isInternationalSupplier(p.vendorCountryCode);
+      if (where === "india") return !isInternationalSupplier(p.vendorCountryCode);
+      return true;
+    }
 
     // ── Real vendor-entered attributes ──
     // Array columns match if the product carries ANY of the selected values.
@@ -583,7 +593,10 @@ const SearchResults = () => {
   // unconditionally (rules of hooks); `enabled` decides which one runs.
   const hasQuery = query.trim().length > 0;
   const { data: searchData, isLoading: searchLoading } = useProductSearch(query);
-  const browse = useBrowseCatalogue(!hasQuery);
+  const [selections, setSelections] = useState<Record<string, string[]>>(() => defaultSelections(query));
+  // Browsing (nothing typed), the database applies Supplier location: sellers outside India are few, and
+  // filtering loaded pages would read up to 960 listings to find them. With a query the facet filters the 200.
+  const browse = useBrowseCatalogue(!hasQuery, supplierFromLabel(selections.supplier));
   const browseData = hasQuery ? undefined : browse.rows;
   const browseLoading = browse.isLoading;
   const browseMoreRef = useRef<HTMLDivElement | null>(null);
@@ -632,7 +645,6 @@ const SearchResults = () => {
   }, [query, priceBounds, vocabulary]);
 
   const [filterOpen, setFilterOpen] = useState(false);
-  const [selections, setSelections] = useState<Record<string, string[]>>(() => defaultSelections(query));
 
   // The Category facet is the one facet whose options can't be written ahead of
   // time — they're the taxonomy rows that actually have matching products. Both

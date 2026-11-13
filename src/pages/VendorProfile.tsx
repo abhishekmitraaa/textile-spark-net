@@ -37,12 +37,7 @@ import trustedSeal from "@/assets/Trustedseal.png";
 import { useCategoryPicture } from "@/hooks/useCategoryPicture";
 import { tileForSellerSub } from "@/lib/categoryPicture";
 import { categoryTileSlot } from "@/lib/categoryImageSlots";
-import officeSewingLine from "@/assets/office/sewing-line.jpg";
-import officeStitching from "@/assets/office/stitching.jpg";
-import officeFabricRolls from "@/assets/office/fabric-rolls.jpg";
-import officeWarehouse from "@/assets/office/warehouse.jpg";
-import officeThreadRack from "@/assets/office/thread-rack.jpg";
-import officeFactoryFloor from "@/assets/office/factory-floor.jpg";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { ReportReviewButton } from "@/components/reviews/ReportReviewButton";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
 
@@ -56,23 +51,11 @@ const listContainer = { show: { transition: { staggerChildren: 0.05 } } };
 const listItem = { hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0, transition: { ease: E, duration: 0.26 } } };
 
 // ─────────────────────────────────────────────────────────────
-// DATA. Placeholder content still shown for every vendor: the office pictures and the "Sells" chips
-// (ToDo.md). The category tiles are the seller's own since 2026-10-17. The
-// vendor's identity, contact and business details come from their own row, or
-// read "Not provided".
+// DATA. Everything on this page is the seller's own: identity, contact and business details from their row (or
+// "Not provided"), the category tiles from their live listings (2026-10-17), and since 2026-11-13 the premises
+// photos Cosora approved and the business categories they registered with. The stock factory pictures and the
+// invented "Sells" list that every store used to show are gone.
 // ─────────────────────────────────────────────────────────────
-
-// Office / facility photos shown to buyers. There is no office-photo upload
-// pipeline yet (the vendor-side BusinessProfile uses static placeholders too),
-// so this is a read-only demo set representing the manufacturer's premises.
-const officePhotos = [
-  { label: "Production Floor", src: officeSewingLine },
-  { label: "Stitching Unit", src: officeStitching },
-  { label: "Fabric Store", src: officeFabricRolls },
-  { label: "Warehouse", src: officeWarehouse },
-  { label: "Yarn & Threads", src: officeThreadRack },
-  { label: "Factory Floor", src: officeFactoryFloor },
-];
 
 const capacityOptions = [
   { key: "Small-batch", desc: "Small-batch manufacturers (10–200 pcs per design)" },
@@ -81,11 +64,6 @@ const capacityOptions = [
   { key: "Export-grade", desc: "Export-grade manufacturers (international compliance)" },
 ];
 // Which tiers this vendor operates at (read-only for buyers)
-
-const sells = [
-  "Men's T-Shirts", "Women's Kurtis", "Denim Jackets", "Custom Printing",
-  "Hospital Uniforms", "Men's Sweaters", "Corporate Wear", "Private Label Manufacturing",
-];
 
 // The vocabulary of this page's GENDER filter dropdown — capitalised because
 // that is what it displays. Deliberately NOT called `Gender`: the saved-items
@@ -455,6 +433,8 @@ const VendorProfile = () => {
               </div>
               <div className="flex items-center gap-2">
                 {vendor.businessType && <p className="text-xs text-white/80 font-medium">{vendor.businessType}</p>}
+                <InternationalSupplierTag countryCode={vendor.countryCode} withCountry
+                  className="bg-white/20 px-2 text-[10px] font-bold text-white backdrop-blur" />
                 {vendor?.international && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur">
                     <Globe className="h-3 w-3" /> International-ready
@@ -739,15 +719,17 @@ const VendorProfile = () => {
                     </div>
                   )}
 
-                  {/* Sells */}
-                  <div>
-                    <p className="text-sm font-bold text-gray-900 mb-2">Sells</p>
-                    <div className="flex flex-wrap gap-2">
-                      {sells.map((s) => (
-                        <span key={s} className="rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-3 py-1 text-xs font-medium text-brand-buyer">{s}</span>
-                      ))}
+                  {/* Sells: the business categories the seller registered with (2026-11-13); none, no row. */}
+                  {vendor.categories.length > 0 && (
+                    <div data-testid="store-sells">
+                      <p className="text-sm font-bold text-gray-900 mb-2">Sells</p>
+                      <div className="flex flex-wrap gap-2">
+                        {vendor.categories.map((s) => (
+                          <span key={s} className="rounded-full bg-brand-buyer/5 border border-brand-buyer/20 px-3 py-1 text-xs font-medium text-brand-buyer">{s}</span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Website — a contact channel, so it lives behind the same
                       gate as the phone even though it sits in this section.
@@ -775,25 +757,25 @@ const VendorProfile = () => {
           </AnimatePresence>
         </motion.section>
 
-        {/* ══ OFFICE PICTURES (grid) ══ */}
-        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4">
+        {/* ══ OFFICE PICTURES (grid) ══ The seller's premises photos that Cosora approved (2026-11-13); a store
+            without any shows no section, never a stock picture. */}
+        {vendor.officePhotos.length > 0 && (
+        <motion.section variants={section} className="rounded-2xl border border-gray-200 bg-white p-4" data-testid="office-pictures">
           <div className="flex items-center gap-2 mb-1">
             <Factory className="h-4 w-4 text-brand-buyer" />
             <h2 className="text-sm font-bold text-gray-900">Office Pictures</h2>
           </div>
           <p className="text-xs text-gray-400 mb-3">A look inside this brand's manufacturing & office premises</p>
           <motion.div variants={listContainer} className="grid grid-cols-3 gap-2 lg:grid-cols-6">
-            {officePhotos.map((photo) => (
-              <motion.div variants={listItem} key={photo.label}
+            {vendor.officePhotos.map((url, i) => (
+              <motion.div variants={listItem} key={url}
                 className="relative aspect-square overflow-hidden rounded-xl ring-1 ring-gray-100">
-                <img src={photo.src} alt={photo.label} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
-                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent px-2 py-1.5">
-                  <p className="text-[10px] font-semibold text-white truncate">{photo.label}</p>
-                </div>
+                <img src={url} alt={`Business premises photo ${i + 1}`} className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
               </motion.div>
             ))}
           </motion.div>
         </motion.section>
+        )}
 
         {/* ══ BRAND'S CATEGORIES (horizontal scroll) ══ Hidden for a store with no live listings yet. A tap narrows
             the store's items below to that category. */}

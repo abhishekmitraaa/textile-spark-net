@@ -86,7 +86,7 @@ export interface VendorStoreData {
   onboardingComplete: boolean;
   /** Business categories the vendor sells in (vendor_profiles.category, text[]). */
   category: string[];
-  /** Public URLs of office/premises photos (vendor_profiles.office_photos, text[]). */
+  /** Approved premises photos (vendor_profiles.office_photos, kept by the review since 2026-11-13). */
   officePhotos: string[];
   yearEstablished: number | null;
   /** Free-text bucket, e.g. "250 - 500". Not a number: the UI offers ranges. */
@@ -244,7 +244,8 @@ export interface VendorStorePatch {
   ownerName?: string;
   ownerEmail?: string;
   category?: string[];
-  officePhotos?: string[];
+  // No officePhotos: since 2026-11-13 premises photos are reviewed rows (queries/premisesPhotos.ts) and the
+  // database refuses a browser's write to office_photos.
   yearEstablished?: number | null;
   employeeCount?: string;
   annualTurnover?: string;
@@ -279,7 +280,6 @@ export async function saveVendorProfile(id: string, p: VendorStorePatch): Promis
   // "cleared" value here, not the same thing as null, so the `|| null` coercion
   // used for empty strings above would be wrong.
   if (p.category !== undefined) row.category = p.category;
-  if (p.officePhotos !== undefined) row.office_photos = p.officePhotos;
   if (p.yearEstablished !== undefined) row.year_established = p.yearEstablished;
   if (p.employeeCount !== undefined) row.employee_count = p.employeeCount || null;
   if (p.annualTurnover !== undefined) row.annual_turnover = p.annualTurnover || null;

@@ -20,6 +20,7 @@ import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { useTopVendors } from "@/lib/queries/vendor";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { NEW_ARRIVALS_TILES, categoryTileSlot } from "@/lib/categoryImageSlots";
 import { useCategoryPicture } from "@/hooks/useCategoryPicture";
@@ -32,6 +33,8 @@ import trustedSeal from "@/assets/Trustedseal.png";
 // ─────────────────────────────────────────────────────────────
 
 interface Product {
+  /** The registered seller's country (2026-11-13); outside India shows "International supplier". */
+  vendorCountryCode?: string | null;
   id: string;
   vendorId: string;
   name: string;
@@ -168,6 +171,7 @@ function ProductCard({ product }: { product: Product }) {
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
+        <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
 

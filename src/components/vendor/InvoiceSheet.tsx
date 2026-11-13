@@ -55,7 +55,9 @@ export function InvoiceSheet({ invoice, planName, legacyBillTo }: {
   const r = invoice.recipient;
   const b = legacyBillTo;
   const legacyAddr = [b?.address_line, b?.area, b?.city, b?.state, b?.postal_code].filter(Boolean).join(", ");
-  const posLabel = invoice.placeOfSupply
+  // A seller outside India has no Indian place of supply (2026-11-13): the invoice is an export of services, IGST.
+  const outsideIndia = !invoice.placeOfSupply && Boolean(r?.country_code && r.country_code !== "IN");
+  const posLabel = outsideIndia ? `Outside India${r?.country ? ` (${r.country})` : ""}` : invoice.placeOfSupply
     ? r?.state_code === invoice.placeOfSupply && r?.state ? `${r.state}${r.gst_state_code ? ` (${r.gst_state_code})` : ""}` : invoice.placeOfSupply
     : null;
 

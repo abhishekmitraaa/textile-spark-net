@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { trustSealFromParts } from "@/lib/plan";
-import { mapProductRow, PRODUCT_CARD_SELECT, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
+import { mapProductRow, PRODUCT_CARD_SELECT, registeredCountry, type ProductCardData, type RawProduct, type RawVendor } from "@/lib/queries/products";
 
 // Cached map plan_id → has_international, for the "International-ready" indicator.
 let planIntlCache: Map<string, boolean> | null = null;
@@ -59,6 +59,13 @@ export interface VendorProfileData {
    *  the buyer page renders nothing rather than guessing. */
   capacity: string[];
   annualTurnover: string | null;
+  /** Premises photos Cosora approved (vendor_profiles.office_photos, kept by the review: 2026-11-13). Empty: the
+   *  store shows no Office Pictures section. Never a stock picture. */
+  officePhotos: string[];
+  /** The business categories the seller registered with (vendor_profiles.category); the store's "Sells". */
+  categories: string[];
+  /** The registered seller's country (registeredCountry()); outside India shows "International supplier". */
+  countryCode: string | null;
   products: ProductCardData[];
   videos: VideoCloseUp[];
 }
@@ -81,7 +88,7 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   const { data: v, error } = await supabase
     .from("vendor_profiles")
     .select(
-      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, website, owner_name, gstin, cin, has_phone, has_whatsapp, employee_count, year_established, created_at, capacity, annual_turnover",
+      "id, brand_name, about, city, state, country, business_type, is_verified, plan_expires_at, ad_verified_until, plan_id, followers_count, rating_avg, reviews_count, logo_url, banner_url, website, owner_name, gstin, cin, has_phone, has_whatsapp, employee_count, year_established, created_at, capacity, annual_turnover, office_photos, category, country_code, onboarding_complete",
     )
     .eq("id", id)
     .maybeSingle();
@@ -94,7 +101,10 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
   // International-ready = active plan (Gold/VIP) with has_international.
   const planActive = Boolean(v.plan_expires_at && new Date(v.plan_expires_at).getTime() > Date.now());
   const international = planActive && Boolean(v.plan_id && (await loadPlanIntl()).get(v.plan_id));
-  const vendorMini: RawVendor = { brand_name: v.brand_name, is_verified: displaySeal, city: v.city };
+  const vendorMini: RawVendor = {
+    brand_name: v.brand_name, is_verified: displaySeal, city: v.city,
+    country_code: v.country_code, onboarding_complete: v.onboarding_complete,
+  };
 
   const { data: prods } = await supabase
     .from("products")
@@ -155,6 +165,9 @@ async function fetchVendorProfile(id: string): Promise<VendorProfileData | null>
     createdAt: v.created_at,
     capacity: v.capacity ?? [],
     annualTurnover: v.annual_turnover,
+    officePhotos: (v.office_photos ?? []).filter(Boolean),
+    categories: v.category ?? [],
+    countryCode: registeredCountry(vendorMini),
     products,
     videos,
   };

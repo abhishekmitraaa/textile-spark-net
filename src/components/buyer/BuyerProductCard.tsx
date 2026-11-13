@@ -9,6 +9,7 @@ import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useFeaturedListingsOn } from "@/lib/queries/visibility";
 import { SEAL_TIER_LABEL } from "@/lib/plan";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 
 export interface BuyerProductCardData {
   id: string;
@@ -30,6 +31,8 @@ export interface BuyerProductCardData {
   verified?: boolean;
   /** Which seal (subscriptions P10); the Gold and VIP variants show where the switch is on. */
   sealTier?: "verified" | "gold" | "vip" | null;
+  /** The registered seller's country (2026-11-13); outside India shows "International supplier". */
+  vendorCountryCode?: string | null;
 }
 
 interface BuyerProductCardProps {
@@ -122,6 +125,7 @@ const BuyerProductCard = ({ product, className }: BuyerProductCardProps) => {
           <MapPin className="h-3.5 w-3.5 shrink-0" />
           <span>{product.location}</span>
         </div>
+        <InternationalSupplierTag countryCode={product.vendorCountryCode} className="self-start text-[10px]" />
 
         <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
           <span>Fabric: {product.fabric}</span>

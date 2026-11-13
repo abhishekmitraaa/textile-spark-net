@@ -7,6 +7,7 @@ import type { ListingProduct } from "@/lib/listingProducts";
 import { openSaveModal, useSaved } from "@/lib/savedStore";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 
 // ─────────────────────────────────────────────────────────────
 // Shared compact listing card used across buyer feed pages
@@ -75,6 +76,7 @@ const ListingProductCard = ({ product, className }: ListingProductCardProps) => 
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
+        <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
         <p className="text-[10px] lg:text-xs text-gray-500 mt-1 lg:mt-1.5">Fabric: {product.fabric} | GSM: {product.gsm}</p>
         <p className="text-[10px] lg:text-xs text-gray-500 mt-0.5">Fit Type: {product.fitType}</p>
 

@@ -49,7 +49,19 @@ export interface ProductCardData {
   /** Plan search-boost tier of the owning vendor (0 = Free/none … 4 = VIP),
    *  used as a real ranking weight in the buyer feed/search. */
   boost: number;
+  /** The registered seller's country (ISO code); null while unknown or not registered. A code other than IN
+   *  shows the "International supplier" label (2026-11-13). */
+  vendorCountryCode?: string | null;
 }
+
+/** A seller's country as buyers are told it: only once the seller is registered, the same rule as
+ *  feed_products' vendor_country_code and its p_supplier filter. */
+export function registeredCountry(v?: Pick<RawVendor, "country_code" | "onboarding_complete"> | null): string | null {
+  return v?.onboarding_complete ? v.country_code ?? null : null;
+}
+
+/** True for a registered seller outside India. */
+export const isInternationalSupplier = (code: string | null | undefined) => !!code && code !== "IN";
 
 // Compact counts, e.g. 5600 -> "5.6k".
 function fmtK(n: number): string {
@@ -71,7 +83,9 @@ interface RawImage { url: string; position: number }
 // plan_expires_at feeds the displayed trust seal (admin is_verified OR active
 // paid plan); plan_id + a resolved searchBoost feed search ranking. All optional
 // so callers that don't need them can omit them.
-export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null; plan_expires_at?: string | null; ad_verified_until?: string | null; plan_id?: string | null; searchBoost?: number; state_code?: string | null; served_states?: string[] | null }
+export interface RawVendor { brand_name: string | null; is_verified: boolean; city: string | null; plan_expires_at?: string | null; ad_verified_until?: string | null; plan_id?: string | null; searchBoost?: number; state_code?: string | null; served_states?: string[] | null;
+  /** vendor_profiles.country_code, read with onboarding_complete: see registeredCountry(). */
+  country_code?: string | null; onboarding_complete?: boolean | null }
 export interface RawProduct {
   id: string; vendor_id: string; name: string; price_value: number | null; currency: string;
   compare_at_price: number | null; moq: string | null; fabric: string | null; gsm: string | null;
@@ -125,6 +139,7 @@ export function mapProductRow(p: RawProduct, vendor?: RawVendor): ProductCardDat
     verified: trustSealFromParts(vendor?.is_verified, vendor?.plan_expires_at, vendor?.ad_verified_until),
     sealTier: sealTierFromParts(vendor?.is_verified, vendor?.plan_id, vendor?.plan_expires_at, vendor?.ad_verified_until),
     boost: vendor?.searchBoost ?? 0,
+    vendorCountryCode: registeredCountry(vendor),
   };
 }
 
@@ -166,7 +181,7 @@ export async function fetchProductCardsByIds(ids: string[]): Promise<Record<stri
   const vendorMap = new Map<string, RawVendor>();
   if (vendorIds.length) {
     const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id").in("id", vendorIds);
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, country_code, onboarding_complete").in("id", vendorIds);
     for (const v of vendors ?? []) vendorMap.set(v.id, v as RawVendor);
   }
   const out: Record<string, ProductCardData> = {};
@@ -190,6 +205,8 @@ export interface CatalogueRow {
   /** The vendor's state and the states it serves (Ranking F2), for Gold's "nearby buyers" (P10). */
   vendorStateCode: string | null;
   vendorServedStates: string[];
+  /** See ProductCardData.vendorCountryCode. */
+  vendorCountryCode: string | null;
   // Real vendor-entered attributes, so the search facets can filter on the
   // actual product instead of hashPick()ing a stable fake value per id.
   moqValue: number | null;
@@ -243,7 +260,7 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
   if (vendorIds.length) {
     const boosts = await loadPlanBoosts();
     const { data: vendors } = await supabase
-      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, state_code, served_states").in("id", vendorIds);
+      .from("vendor_profiles").select("id, brand_name, is_verified, city, plan_expires_at, ad_verified_until, plan_id, state_code, served_states, country_code, onboarding_complete").in("id", vendorIds);
     for (const v of vendors ?? []) {
       const rv = v as RawVendor;
       rv.searchBoost = vendorBoost(boosts, rv.plan_id, rv.plan_expires_at);
@@ -284,6 +301,7 @@ export async function mapCatalogueRows(rows: RawCatalogueRow[]): Promise<Catalog
       boost: v?.searchBoost ?? 0,
       vendorStateCode: v?.state_code ?? null,
       vendorServedStates: v?.served_states ?? [],
+      vendorCountryCode: registeredCountry(v),
       // `moq` is free text the vendor typed ("100", "100 pcs", "MOQ 500"), so
       // pull the first number out of it rather than trusting the whole string.
       moqValue: (() => {

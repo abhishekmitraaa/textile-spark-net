@@ -21,6 +21,7 @@ import SponsoredRail from "@/components/buyer/SponsoredRail";
 import { AD_SLOTS } from "@/lib/adSlots";
 import { useCallVendor } from "@/lib/queries/calls";
 import CardLinkOverlay, { ABOVE_CARD_LINK } from "@/components/buyer/CardLinkOverlay";
+import InternationalSupplierTag from "@/components/buyer/InternationalSupplierTag";
 import trustedSeal from "@/assets/Trustedseal.png";
 
 // ─────────────────────────────────────────────────────────────
@@ -49,6 +50,8 @@ const HOME_TABS = [
 // DATA
 // ─────────────────────────────────────────────────────────────
 interface SaleProduct {
+  /** The registered seller's country (2026-11-13); outside India shows "International supplier". */
+  vendorCountryCode?: string | null;
   id: string;
   vendorId: string;
   name: string;
@@ -80,6 +83,7 @@ function toSale(p: ProductCardData): SaleProduct {
     name: p.name,
     manufacturer: p.manufacturer,
     location: p.location,
+    vendorCountryCode: p.vendorCountryCode,
     originalValue: p.compareAtPrice ?? p.priceValue,
     saleValue: p.priceValue,
     moq: `MOQ: ${p.moq}`,
@@ -175,6 +179,7 @@ function SaleCard({ product, compact = false }: { product: SaleProduct; compact?
           <MapPin className="w-2.5 lg:w-3 h-2.5 lg:h-3 text-gray-500 shrink-0" />
           <span className="text-[10px] lg:text-xs font-bold text-gray-700">{product.location}</span>
         </div>
+        <InternationalSupplierTag countryCode={product.vendorCountryCode} className="mt-1 self-start text-[9px] lg:text-[10px]" />
         {!compact && (
           <>
             <p className="text-[10px] lg:text-xs text-gray-500 mt-1">Fabric: {product.fabric} | GSM: {product.gsm}</p>

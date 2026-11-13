@@ -194,9 +194,14 @@ const UploadCatalogue = () => {
   const qc = useQueryClient();
   const { data: myCatalogues = [] } = useMyCatalogues(user?.id);
   const { data: vplan } = useVendorPlan(user?.id);
-  // "Automatic catalog upload" is a paid-tier feature (has_auto_catalog); Free is
-  // manual only. Block only once we KNOW the plan (don't block while loading).
-  const autoCatalogBlocked = vplan ? !vplan.limits.has_auto_catalog : false;
+  // Paid plans publish any number of PDF catalogues (has_auto_catalog). The Free plan keeps
+  // limits.catalogues_max of them (1, Mitra 2026-11-13), not counting rejected ones: the same count
+  // enforce_catalogue_plan() makes, which decides. Block only once we KNOW the plan (not while loading).
+  const catalogueMax = vplan && !vplan.limits.has_auto_catalog
+    ? Math.max(0, vplan.limits.catalogues_max ?? 0)
+    : null;
+  const cataloguesKept = myCatalogues.filter((c) => c.status !== "rejected").length;
+  const autoCatalogBlocked = catalogueMax !== null && cataloguesKept >= catalogueMax;
 
   // Upload state
   const [dragActive, setDragActive] = useState(false);
@@ -269,8 +274,8 @@ const UploadCatalogue = () => {
   const handleSubmit = async () => {
     if (!user) { toast.error("Sign in as a vendor to publish"); return; }
     if (autoCatalogBlocked) {
-      toast.error("Catalogue upload is a paid feature", {
-        description: "Upgrade to Basic or above to publish PDF catalogues to buyers.",
+      toast.error("The Free plan includes 1 PDF catalogue", {
+        description: "Upgrade to Basic or above to add more.",
       });
       navigate("/subscription");
       return;
@@ -353,18 +358,23 @@ const UploadCatalogue = () => {
           </div>
         </motion.div>
 
-        {/* ── Plan gate (Free = manual catalogues only) ── */}
-        {autoCatalogBlocked && (
+        {/* ── Plan allowance (Free = 1 PDF catalogue, Mitra 2026-11-13) ── */}
+        {autoCatalogBlocked ? (
           <motion.button
             variants={section}
             onClick={() => navigate("/subscription")}
+            data-testid="catalogue-allowance"
             className="w-full flex items-center justify-between gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left"
           >
             <span className="text-sm font-semibold text-amber-800">
-              Automatic catalogue upload is a paid feature. On the Free plan you can't publish PDF catalogues — upgrade to Basic or above.
+              The Free plan includes 1 PDF catalogue. Upgrade to Basic or above to add more.
             </span>
             <span className="shrink-0 text-sm font-bold text-amber-900">Upgrade →</span>
           </motion.button>
+        ) : catalogueMax !== null && (
+          <motion.p variants={section} data-testid="catalogue-allowance" className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-700">
+            Your Free plan includes 1 PDF catalogue. Paid plans add as many as you like.
+          </motion.p>
         )}
 
         {/* ── Upload section ── */}

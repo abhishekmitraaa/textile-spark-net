@@ -16,7 +16,9 @@ export type MatchField =
   // facet without a `field` still falls back to hashPick, which is a stable
   // fake — only leave it unset when no column exists to match against.
   | "pattern" | "occasion" | "neckType" | "sleeveType" | "collarType"
-  | "countryOfOrigin" | "sizes" | "waist" | "lengths" | "category";
+  | "countryOfOrigin" | "sizes" | "waist" | "lengths" | "category"
+  // Where the seller is registered (2026-11-13): India, or a registered seller outside it.
+  | "supplier";
 
 export interface Facet {
   id: string;
@@ -80,6 +82,17 @@ const GSM: Facet = { id: "gsm", label: "GSM (fabric weight)", field: "gsm", opti
 const MOQ: Facet = { id: "moq", label: "Minimum Order (MOQ)", field: "moq", options: MOQ_BUCKETS };
 const RATING: Facet = { id: "rating", label: "Vendor Rating", field: "rating", multi: false, options: RATING_OPTIONS };
 const VERIFIED: Facet = { id: "verified", label: "Vendor", field: "verified", options: ["TrustedSEAL Verified"] };
+/** Labels of the Supplier location facet; supplierFromLabel() turns one into feed_products' p_supplier. */
+export const SUPPLIER_INDIA = "India";
+export const SUPPLIER_INTERNATIONAL = "International";
+const SUPPLIER: Facet = {
+  id: "supplier", label: "Supplier location", field: "supplier", multi: false,
+  options: [SUPPLIER_INDIA, SUPPLIER_INTERNATIONAL],
+};
+export function supplierFromLabel(values: string[] | undefined): "india" | "international" | null {
+  if (!values?.length) return null;
+  return values[0] === SUPPLIER_INTERNATIONAL ? "international" : values[0] === SUPPLIER_INDIA ? "india" : null;
+}
 // Options are compared to products.gender exactly, so they mirror the column's
 // real vocabulary. "Boys"/"Girls" were offered here and match nothing; "Unisex"
 // was omitted and so its listings were unreachable through this facet AND
@@ -411,7 +424,8 @@ export function resolveFilterSchema(query: string, vocab: Vocabulary = codeVocab
   const g = detectGender(q);
   const domain = DOMAINS.find((d) => d.keywords.some((k) => wordHit(q, k))) ?? DEFAULT_DOMAIN;
 
-  let facets = withFacetVocabulary(vocab, () => domain.build(q));
+  // Every group ends with Supplier location, added here once rather than in each group's list.
+  let facets = [...withFacetVocabulary(vocab, () => domain.build(q)), SUPPLIER];
   // If the query already implies a gender, keep it as a pre-scope but hide the
   // (now redundant) gender facet so the panel stays focused on the item.
   if (g) facets = facets.map((f) => (f.field === "gender" ? { ...f, hidden: true } : f));

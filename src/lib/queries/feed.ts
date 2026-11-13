@@ -32,7 +32,11 @@ export interface FeedFilters {
   discountUpto?: number | null;
   /** Only these listings (For You's ranked ids). At most 200; a page may then hold all of them. */
   ids?: string[] | null;
+  /** Sellers in India, or registered sellers outside it (2026-11-13); null for all. */
+  supplier?: SupplierLocation | null;
 }
+
+export type SupplierLocation = "india" | "international";
 
 export const FEED_PAGE_SIZE = 24;
 /** feed_products' deepest offset is 960: 41 pages of 24. */
@@ -46,6 +50,8 @@ interface FeedRow {
   images: string[] | null; created_at: string; brand_name: string | null; vendor_city: string | null;
   is_verified: boolean; plan_id: string | null; plan_expires_at: string | null;
   ad_verified_until: string | null; boost: number;
+  /** The seller's country, only once registered (null otherwise). */
+  vendor_country_code: string | null;
 }
 
 /** A feed row as a card, through the same mapping every other card uses. */
@@ -62,6 +68,8 @@ export function mapFeedRow(r: FeedRow): ProductCardData {
     brand_name: r.brand_name, is_verified: r.is_verified, city: r.vendor_city,
     plan_expires_at: r.plan_expires_at, ad_verified_until: r.ad_verified_until, plan_id: r.plan_id,
     searchBoost: r.boost,
+    // feed_products already returns the country only for a registered seller.
+    country_code: r.vendor_country_code, onboarding_complete: r.vendor_country_code != null,
   };
   return mapProductRow(product, vendor);
 }
@@ -80,6 +88,7 @@ async function fetchFeedPage(f: FeedFilters, offset: number, limit: number): Pro
     p_discount_above: f.discountAbove ?? undefined,
     p_discount_upto: f.discountUpto ?? undefined,
     p_ids: f.ids ?? undefined,
+    p_supplier: f.supplier ?? undefined,
   });
   if (error) throw error;
   return ((data ?? []) as unknown as FeedRow[]).map(mapFeedRow);
@@ -87,7 +96,7 @@ async function fetchFeedPage(f: FeedFilters, offset: number, limit: number): Pro
 
 function feedKey(f: FeedFilters) {
   return ["feed", f.sort, f.categoryIds ?? null, f.gender ?? null, f.vendorIds ?? null, f.onSale ?? false,
-    f.query?.trim() || null, f.excludeIds ?? null, f.discountAbove ?? null, f.discountUpto ?? null, f.ids ?? null] as const;
+    f.query?.trim() || null, f.excludeIds ?? null, f.discountAbove ?? null, f.discountUpto ?? null, f.ids ?? null, f.supplier ?? null] as const;
 }
 
 /**
@@ -142,12 +151,16 @@ export function useFeedSlice(filters: FeedFilters, limit: number, { enabled = tr
  * filters what has loaded and asks for the next 96 as the buyer scrolls. It used to download the
  * whole catalogue (useCatalogue), cut at 1,000 rows.
  */
-export function useBrowseCatalogue(enabled: boolean) {
+export function useBrowseCatalogue(enabled: boolean, supplier: SupplierLocation | null = null) {
   const PAGE = 96;
   const q = useInfiniteQuery({
-    queryKey: ["feed", "browse-catalogue"],
+    // The supplier location is filtered by the database: sellers outside India are few, and filtering
+    // loaded pages would read up to 960 listings to find them.
+    queryKey: ["feed", "browse-catalogue", supplier],
     queryFn: async ({ pageParam }): Promise<{ rows: CatalogueRow[]; count: number }> => {
-      const { data, error } = await supabase.rpc("feed_products", { p_sort: "newest", p_limit: PAGE, p_offset: pageParam as number });
+      const { data, error } = await supabase.rpc("feed_products", {
+        p_sort: "newest", p_limit: PAGE, p_offset: pageParam as number, p_supplier: supplier ?? undefined,
+      });
       if (error) throw error;
       const ids = ((data ?? []) as { id: string }[]).map((r) => r.id);
       const at = new Map(ids.map((id, i) => [id, i]));

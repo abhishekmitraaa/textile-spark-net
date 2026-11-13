@@ -344,3 +344,142 @@ test("a rejected overseas seller sees the reason and the details they gave", asy
     disallowFeature("overseas_seller_registration", who.id);
   }
 });
+
+// ═════════════════════════════ Task 10: what buyers see ═════════════════════════════
+/** A public product-images URL in the seller's own folder: the shape vendor_premises_photos accepts. */
+const photoUrl = (vendor: string, name: string) => `${stack().API}/storage/v1/object/public/product-images/${vendor}/office/${name}.png`;
+
+/** A registered seller outside India with one live listing (written as postgres: no review, no publish gate). */
+async function overseasSellerWithListing(prefix: string) {
+  const who = await freshAccount(prefix, { seller: true });
+  const name = `Spec ${prefix} ${Date.now().toString(36)}`;
+  sql(`update public.vendor_profiles set country = 'United Arab Emirates', country_code = 'AE' where id = '${who.id}';
+       insert into public.products (vendor_id, name, price_value, currency, moq, status) values ('${who.id}', '${name}', 250, '₹', '50', 'live');`);
+  return { ...who, product: name };
+}
+
+test("a new seller's store shows no stock photos and no invented Sells list", async ({ browser }) => {
+  const who = await freshAccount("rf-store");
+  sql(`insert into public.vendor_profiles (id, brand_name, onboarding_complete) values ('${who.id}', 'Plain Store Spec', true);`);
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const page = await ctx.newPage();
+  const errors = watchErrors(page);
+  await page.goto(`${BUYER_URL}/vendor/${who.id}`);
+  await expect(page.getByText("Plain Store Spec").first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByTestId("office-pictures")).toHaveCount(0);
+  await expect(page.getByTestId("store-sells")).toHaveCount(0);
+  await expect(page.getByText("Hospital Uniforms")).toHaveCount(0);
+  const stock = await page.locator("img").evaluateAll((imgs) =>
+    imgs.filter((i) => /sewing-line|factory-floor|thread-rack/.test((i as HTMLImageElement).src)).length);
+  expect(stock).toBe(0);
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
+
+test("an approved premises photo and the registered categories reach the store; a rejected photo says why", async ({ browser }) => {
+  const who = await freshAccount("rf-photos", { seller: true });
+  const approved = photoUrl(who.id, "approved");
+  sql(`update public.vendor_profiles set category = '{Menswear,Fabrics}' where id = '${who.id}';
+       insert into public.vendor_premises_photos (vendor_id, url, position, status) values ('${who.id}', '${approved}', 0, 'live');
+       insert into public.vendor_premises_photos (vendor_id, url, position, status, rejection_reason)
+         values ('${who.id}', '${photoUrl(who.id, "rejected")}', 1, 'rejected', 'Blurry, please retake in daylight');`);
+  // The cache column holds the approved photo only.
+  expect(sql(`select array_to_string(office_photos, ',') from public.vendor_profiles where id = '${who.id}';`)).toBe(approved);
+
+  const buyer = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const store = await buyer.newPage();
+  await store.goto(`${BUYER_URL}/vendor/${who.id}`);
+  const pics = store.getByTestId("office-pictures");
+  await expect(pics).toBeVisible({ timeout: 15_000 });
+  await expect(pics.locator("img")).toHaveCount(1);
+  await expect(pics.locator("img")).toHaveAttribute("src", approved);
+  await expect(store.getByTestId("store-sells")).toContainText("Menswear");
+  await expect(store.getByTestId("store-sells")).toContainText("Fabrics");
+  await buyer.close();
+
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/business-profile`);
+  await expect(page.getByTestId("premises-photo-rejections")).toContainText("Blurry, please retake in daylight", { timeout: 15_000 });
+  await expect(page.locator('[data-testid="premises-photo"][data-status="rejected"]')).toContainText("Not approved");
+  await ctx.close();
+});
+
+test("adding a photo on Business Profile sends it for review instead of publishing it", async ({ browser }) => {
+  const who = await freshAccount("rf-addphoto", { seller: true });
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  const errors = watchErrors(page);
+  await page.goto(`${BUYER_URL}/business-profile`);
+  await expect(page.getByRole("button", { name: "Add premises photos" })).toBeVisible({ timeout: 15_000 });
+  // Registration no longer asks where the seller delivers or how much they make: Business Profile does (D4).
+  await expect(page.getByTestId("reach-nudge").getByRole("button", { name: "Add the states you deliver to" })).toBeVisible();
+  await expect(page.getByTestId("reach-nudge").getByRole("button", { name: "Add how much you make each month" })).toBeVisible();
+  await page.locator('input[type="file"][multiple]').setInputFiles({ name: "floor.png", mimeType: "image/png", buffer: PNG });
+  await expect(page.locator('[data-testid="premises-photo"][data-status="under_review"]')).toContainText("In review", { timeout: 15_000 });
+  expect(sql(`select status || ':' || (url like '%/product-images/${who.id}/%')::text from public.vendor_premises_photos where vendor_id = '${who.id}';`))
+    .toBe("under_review:true");
+  // Not on the store until Cosora approves it.
+  expect(sql(`select cardinality(office_photos) from public.vendor_profiles where id = '${who.id}';`)).toBe("0");
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
+
+test("a registered seller outside India carries the International supplier label on the store and the card", async ({ browser }) => {
+  const who = await overseasSellerWithListing("rf-intl");
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/vendor/${who.id}`);
+  await expect(page.getByTestId("international-supplier").first())
+    .toContainText("International supplier · United Arab Emirates", { timeout: 15_000 });
+
+  // Search Results, browsing with Supplier location: International (the database filters).
+  await page.goto(`${BUYER_URL}/search/results`);
+  await page.getByRole("button", { name: /filter/i }).first().click();
+  await page.getByRole("button", { name: "International", exact: true }).click();
+  const card = page.locator("div.rounded-xl").filter({ hasText: who.product });
+  await expect(card.first()).toBeVisible({ timeout: 15_000 });
+  await expect(card.first().getByTestId("international-supplier")).toHaveText("International supplier");
+  await ctx.close();
+});
+
+test("Supplier location: International lists only registered sellers outside India", async () => {
+  const intl = await overseasSellerWithListing("rf-only");
+  // Waiting for approval: not registered, so neither labelled nor listed.
+  const pending = await overseasSellerWithListing("rf-wait");
+  sql(`update public.vendor_profiles set onboarding_complete = false where id = '${pending.id}';`);
+  const s = stack();
+  const anon = createClient(s.API, s.ANON, { auth: { persistSession: false } });
+  const { data, error } = await anon.rpc("feed_products", { p_sort: "newest", p_limit: 96, p_supplier: "international" });
+  expect(error).toBeNull();
+  const rows = (data ?? []) as { name: string; vendor_country_code: string | null }[];
+  expect(rows.some((r) => r.name === intl.product)).toBe(true);
+  expect(rows.some((r) => r.name === pending.product)).toBe(false);
+  expect(rows.every((r) => r.vendor_country_code != null && r.vendor_country_code !== "IN")).toBe(true);
+  const all = await anon.rpc("feed_products", { p_sort: "newest", p_limit: 200 });
+  const waiting = ((all.data ?? []) as { name: string; vendor_country_code: string | null }[]).find((r) => r.name === pending.product);
+  expect(waiting).toBeTruthy();
+  expect(waiting?.vendor_country_code).toBeNull();
+});
+
+test("a Free seller publishes 1 PDF catalogue; the second is refused with the plan's message", async ({ browser }) => {
+  const who = await freshAccount("rf-cat", { seller: true });
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/upload-catalogue`);
+  await expect(page.getByTestId("catalogue-allowance")).toContainText("Your Free plan includes 1 PDF catalogue", { timeout: 15_000 });
+  await page.locator('input[type="file"][accept="application/pdf"]').setInputFiles({ name: "range.pdf", mimeType: "application/pdf", buffer: PDF });
+  await page.getByPlaceholder("e.g. Summer Collection 2025").fill("Spec range");
+  await page.getByRole("button", { name: "Upload Catalogue" }).click();
+  await expect(page.getByTestId("catalogue-allowance"))
+    .toContainText("The Free plan includes 1 PDF catalogue. Upgrade to Basic or above to add more.", { timeout: 15_000 });
+  expect(sql(`select count(*) from public.catalogues where vendor_id = '${who.id}';`)).toBe("1");
+
+  // The database decides, whatever the page shows.
+  const s = stack();
+  const client = createClient(s.API, s.ANON, { auth: { persistSession: false } });
+  await client.auth.setSession({ access_token: who.session.access_token, refresh_token: who.session.refresh_token });
+  const { error } = await client.from("catalogues").insert({ vendor_id: who.id, title: "Second" });
+  expect(error?.message).toBe("The Free plan includes 1 PDF catalogue. Upgrade to Basic or above to add more.");
+  await ctx.close();
+});

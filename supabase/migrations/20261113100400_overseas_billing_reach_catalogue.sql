@@ -203,7 +203,8 @@ begin
          c.name,
          array(select i.url from public.product_images i where i.product_id = p.id order by i.position, i.id limit 2),
          p.created_at, v.brand_name, v.city, v.is_verified, v.plan_id, v.plan_expires_at, v.ad_verified_until,
-         pg.k_boost, v.country_code
+         -- The country only of a registered seller: the International label and filter follow one rule.
+         pg.k_boost, case when v.onboarding_complete then v.country_code end
     from page pg
     join public.products p on p.id = pg.id
     join public.vendor_profiles v on v.id = p.vendor_id

@@ -26,6 +26,8 @@ export interface ListingProduct {
   /** Optional taxonomy used by preference-filtered feeds (e.g. For You). */
   category?: string;
   locationId?: string;
+  /** The registered seller's country (2026-11-13); outside India shows "International supplier". */
+  vendorCountryCode?: string | null;
 }
 
 export const img = (seed: string, w = 500, h = 650) => `https://picsum.photos/seed/${seed}/${w}/${h}`;

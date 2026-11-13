@@ -24,6 +24,9 @@ export interface PlanLimits {
   has_realtime_alerts: boolean;
   has_crm: boolean;
   has_auto_catalog: boolean;
+  /** PDF catalogues a plan without automatic upload may keep (Free: 1; -1 unlimited; Mitra 2026-11-13).
+   *  Rejected ones don't count. enforce_catalogue_plan() decides; this only explains. */
+  catalogues_max?: number;
   has_international: boolean;
   /** How the plan tells a vendor about a matching requirement (subscriptions P6): app, email,
    *  whatsapp, sms as it happens; digest for the daily email. Absent before that migration. */
