@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import BuyerTopBar from "./BuyerTopBar";
 import ToTopButton from "./ToTopButton";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
+import BuyerSignupGate from "@/components/auth/BuyerSignupGate";
 
 interface BuyerShellProps {
   children: ReactNode;
@@ -22,6 +23,7 @@ interface BuyerShellProps {
  *  - MobileBottomNav (already role-aware; reused as-is)
  *  - ToTop button (global pattern per buyer-side documentation Section 1.3:
  *    "appears on all pages when user scrolls down")
+ *  - BuyerSignupGate: an account that hasn't finished buyer sign-up is sent back to it (switch buyer_signup_required)
  *
  * Desktop has no sidebar in the buyer experience by design — the
  * BuyerTopBar's drawer covers secondary navigation instead, so content
@@ -29,13 +31,15 @@ interface BuyerShellProps {
  */
 export default function BuyerShell({ children }: BuyerShellProps) {
   return (
-    <div className="min-h-screen bg-white">
-      <BuyerTopBar />
-      <main className="pb-20 lg:pb-10">
-        {children}
-      </main>
-      <MobileBottomNav />
-      <ToTopButton />
-    </div>
+    <BuyerSignupGate>
+      <div className="min-h-screen bg-white">
+        <BuyerTopBar />
+        <main className="pb-20 lg:pb-10">
+          {children}
+        </main>
+        <MobileBottomNav />
+        <ToTopButton />
+      </div>
+    </BuyerSignupGate>
   );
 }

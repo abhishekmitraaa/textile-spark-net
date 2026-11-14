@@ -32,7 +32,10 @@ const roles = [
 const RoleSelection = () => {
   const navigate = useNavigate();
   const { session, chooseRole } = useAuth();
-  const [selected, setSelected] = useState<string | null>(null);
+  // The side Register's form already asked for (it rides in the sign-up metadata): picked for them, still theirs to
+  // change (buyer sign-up audit item 11d). A Login sign-up has none, so nothing is picked.
+  const fromRegister = session?.user.user_metadata?.active_role;
+  const [selected, setSelected] = useState<string | null>(fromRegister === "buyer" || fromRegister === "seller" ? fromRegister : null);
   const [saving, setSaving] = useState(false);
 
   const handleContinue = async () => {

@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { allowFeature, BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
 
 const STEPS = ["/auth/sub-role", "/auth/account-info", "/auth/interest-preference", "/auth/terms"];
 
@@ -379,6 +379,89 @@ test.describe("B4 · interests are never lost or wiped", () => {
       await page.locator("[data-interest-id]").first().click({ force: true });
       await expect(page.getByRole("button", { name: /^Save/ })).toBeDisabled();
       await expect(page.locator("[data-interest-id][aria-pressed='true']")).toHaveCount(2, { timeout: 10_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("B6 · an unfinished sign-up is finished first, behind buyer_signup_required", () => {
+  test("an unfinished buyer opening Home goes to role selection", async ({ browser }) => {
+    const who = await freshAccount("b6-unfinished", { onboarded: false });
+    allowFeature("buyer_signup_required", who.id);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/new-arrivals`);
+      await expect(page).toHaveURL(/\/auth\/role-selection$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("an onboarded buyer with no Terms record accepts them once, then stays on Home", async ({ browser }) => {
+    const who = await freshAccount("b6-terms", { terms: false });
+    allowFeature("buyer_signup_required", who.id);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/new-arrivals`);
+      await expect(page).toHaveURL(/\/auth\/terms$/);
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "NEXT" }).click();
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+      await page.reload();
+      await page.waitForTimeout(1500);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
+      expect(sql(`select source from public.terms_acceptances where profile_id = '${who.id}'`)).toBe("reaccept");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("with the switch off nothing redirects", async ({ browser }) => {
+    const who = await freshAccount("b6-off", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/new-arrivals`);
+      await page.waitForTimeout(2500);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a registered seller is never caught, on either side", async ({ browser }) => {
+    const who = await freshAccount("b6-seller", { seller: true, terms: false });
+    sql(`update public.profiles set active_role = 'seller' where id = '${who.id}';
+         insert into public.vendor_contracts (vendor_id, signed_name, agreement_version) values ('${who.id}', 'b6 seller', 'harness')
+         on conflict do nothing;`);
+    allowFeature("buyer_signup_required", who.id);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      for (const path of ["/seller-home", "/home/new-arrivals"]) {
+        await page.goto(`${BUYER_URL}${path}`);
+        await page.waitForTimeout(2500);
+        await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+      }
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Help stays open for an unfinished account", async ({ browser }) => {
+    const who = await freshAccount("b6-help", { onboarded: false });
+    allowFeature("buyer_signup_required", who.id);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      for (const path of ["/profile/help", "/help"]) {
+        await page.goto(`${BUYER_URL}${path}`);
+        await page.waitForTimeout(2000);
+        await expect(page, path).toHaveURL(new RegExp(`${path}$`));
+      }
     } finally {
       await ctx.close();
     }

@@ -15,7 +15,7 @@ import { useAuth } from "@/contexts/AuthContext";
 // ─────────────────────────────────────────────────────────────
 
 export type FeatureKey = "subscription_checkout" | "subscription_lifecycle" | "ad_state_targeting" | "search_trending"
-  | "seller_registration_required" | "overseas_seller_registration";
+  | "seller_registration_required" | "overseas_seller_registration" | "buyer_signup_required";
 
 async function fetchMyFeatureFlags(): Promise<Record<string, boolean>> {
   const { data, error } = await supabase.rpc("my_feature_flags");
