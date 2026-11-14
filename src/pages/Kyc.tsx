@@ -204,7 +204,10 @@ function AddDocumentButton({ vendorId, type, currentPan = "", gstin = "" }: {
   const kindInfo = BUSINESS_REGISTRATION_KINDS.find((k) => k.id === kind);
   const numberOk = !kindInfo ? false : kindInfo.numberRequired ? Boolean(kindInfo.pattern?.test(number.trim().toUpperCase())) : true;
   const label = DOC_TYPE_LABELS[type] ?? type;
-  const panIssue = type === "pan" ? panProblem({ number: panNumber, holderName, address, currentPan, gstin }) : null;
+  // A PAN on file is the number (the field isn't shown then). It may load after this button first rendered, so it is
+  // read here rather than copied into state once (the copy stayed empty and kept "Send for review" disabled).
+  const pan = currentPan || panNumber;
+  const panIssue = type === "pan" ? panProblem({ number: pan, holderName, address, currentPan, gstin }) : null;
   const ready = files.length > 0 && (
     type === "catalog" || (type === "pan" ? !panIssue : type === "aadhaar" ? consent : kind !== "" && numberOk));
 
@@ -235,7 +238,7 @@ function AddDocumentButton({ vendorId, type, currentPan = "", gstin = "" }: {
       if (type === "catalog") {
         await submitCatalogue(vendorId, files);
       } else if (type === "pan") {
-        await addPanDocument(vendorId, { number: panNumber, holderName, address, file: files[0], currentPan, gstin });
+        await addPanDocument(vendorId, { number: pan, holderName, address, file: files[0], currentPan, gstin });
         await qc.invalidateQueries({ queryKey: ["vendor_profile", "mine", vendorId] });
       } else if (type === "aadhaar") {
         await resubmitKycDocument(vendorId, "aadhaar", files[0], { masked: true, consent_at: new Date().toISOString() });
