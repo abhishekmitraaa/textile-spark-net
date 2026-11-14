@@ -164,16 +164,6 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-10-19 paged chat history.
 - Status: Open
 
-### Finish sign-up for buyers who register through the Register page — added 2026-11-01
-- Task: send a buyer who signs up on `/register` through Account Info, Interest Preference and Terms (or mark them
-  onboarded there), so they aren't sent to role selection at their next sign-in.
-- Context: since 2026-10-19 only accepting the Terms marks a buyer onboarded (`finishOnboarding()`); `OtpVerify`
-  sends a Register buyer straight to Home with `onboarded = false` (pre-existing route), so the next sign-in shows
-  the role screen. Sign-in itself must not change (claude.md, mobile + OTP rule).
-- Reference: 2026-10-19 sign-up fix (onboarding finished at the Terms).
-- Status: Fixed on branch `buyer-signup/fixes` (2026-11-14), not released: a Register buyer goes on to Sub-role after
-  the code, and the `buyer_signup_required` gate sends an unfinished account back to sign-up. Remove once live.
-
 ### Fix Video Closeups' feed: paging and the copied end-of-feed cards — added 2026-11-01
 - Task: page the Video Closeups feed (it shows the 30 all-time most viewed, no more), and remove the "-fill" clone
   cards with fake ids that pad the end of the feed.
@@ -200,9 +190,10 @@ with no need to dictate format, context, or reference each time.
 ### Record the October CLI migrations in the ledger, and fix the audit's migration numbering — added 2026-11-01
 - Task: (1) mark as applied in `supabase_migrations.schema_migrations` (e.g. `supabase migration repair --status
   applied <version>`) the migrations applied with `db query`: 20261018160000, 160100, 160200, 160300;
-  20261019100000, 110000, 120000, 130000; 20261020100000, 110000. (2) Before merging `fix/review-2026-10-13`,
-  re-version its five migrations (20261013100000–100400 are taken on main). (3) `20261012040000` is older than
-  applied migrations (needs `--include-all` or the SQL editor). (4) `pause_ad_campaign_by_vendor`,
+  20261019100000, 110000, 120000, 130000; 20261020100000, 110000; and the buyer sign-up release of 2026-11-14:
+  20261114100000, 100100, 100150, 100200, 100300, 100600, 100500. (2) Before merging `fix/review-2026-10-13`,
+  re-version its five migrations (20261013100000–100400 are taken on main). (3) Done 2026-11-14: `20261012040000`
+  applied (guarded on the bodies it replaced) and repaired into the ledger. (4) `pause_ad_campaign_by_vendor`,
   `resume_ad_campaign`, `resubmit_ad_campaign` have no creating migration: add one from production's definitions.
 - Context: the live site isn't affected; a rebuild from the ledger or `db push` would miss or re-run these.
 - Reference: 2026-10-18 audit (migration hygiene) and the 2026-10-18/19/20 releases.
