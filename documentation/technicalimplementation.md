@@ -4509,9 +4509,10 @@ The buyer sign-up audit of 2026-11-13 (items 1–15). Plan and findings: `subscr
     retries after 1, 2 and 4 s); AuthContext `profileError` (latest read wins, `readSeq`); AuthCallback and OtpVerify show
     Retry / Sign out. `lib/authHistory.ts`: Login and Register read `history.state.idx` on arrival (Login passes it to
     Register in link state) and `markAuthStart()` stores it in sessionStorage `cosora.authStart` when the code is sent;
-    `finishAuthFlow()` takes the mark (≤ 2 h old), `history.go(mark - now)`, waits for `popstate` (1.5 s cap), then
-    `navigate(dest, { replace: true })`; `cosora.authFinishing` (a timestamp, 3 s) stops Login's signed-in redirect from
-    racing it. OtpVerify: a new account's next step replaces the code screen (Register buyer → Sub-role, Register seller →
+    `finishAuthFlow()` takes the mark (≤ 2 h old), leaves `{ at, dest }` in sessionStorage `cosora.authFinishing`,
+    `history.go(mark - now)`, waits for `popstate` (5 s cap; not after `pagehide`), then navigates to `dest` unless the
+    page it landed on already did: Login and Register call `takeAuthLanding()` on arrival (valid 10 s), which is what
+    lands a rewind to an entry of an earlier page load (after a reload the browser loads that entry afresh). OtpVerify: a new account's next step replaces the code screen (Register buyer → Sub-role, Register seller →
     `/onboarding` with the mark cleared, Login → role selection); a returning one finishes the flow. Login and OtpVerify
     send an account that is already signed in on arrival to its place. `cleanPhoneDigits()` drops a written country code
     (exactly code + a full number, or code + 0 + number) and leading zeros; the phone inputs have no `maxLength`.
