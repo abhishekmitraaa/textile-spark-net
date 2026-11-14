@@ -16,13 +16,16 @@ type Decision = "open" | "login" | "home";
  * screen is still showing, and that must not jump away before the screen moves on.
  */
 export default function SignupStep({ children }: { children: ReactNode }) {
-  const { session, profile, loading } = useAuth();
+  const { session, profile, profileError, loading } = useAuth();
   const { pathname } = useLocation();
   const onArrival = useRef<Decision | null>(null);
 
   if (loading) return null;
   if (onArrival.current === null) {
     if (!session) onArrival.current = "login";
+    // The profile couldn't be read even after retrying: show the step rather than a blank page. Its saves go to the
+    // account, and the database refuses what a finished account may not redo.
+    else if (!profile && profileError) onArrival.current = "open";
     // Signed in but the profile hasn't loaded yet: wait for it rather than decide on nothing.
     else if (!profile || profile.id !== session.user.id) return null;
     else if (profile.onboarded && (profile.terms_version || pathname !== "/auth/terms")) onArrival.current = "home";

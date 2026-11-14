@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { allowFeature, BUYER_URL, contextWithSession, freshAccount, routeDummyOtp, sql } from "./stack";
+import { ADMIN_URL, allowFeature, BUYER_URL, contextWithSession, freshAccount, routeDummyOtp, signedInContext, sql } from "./stack";
 
 const STEPS = ["/auth/sub-role", "/auth/account-info", "/auth/interest-preference", "/auth/terms"];
 
@@ -782,6 +782,76 @@ test.describe("C3 · the phone field takes a number however it is written", () =
       await expect(field).toHaveValue("7700900123");
       await field.fill("+44 7700 900123");
       await expect(field).toHaveValue("7700900123");
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("D1 · staff see which emails nobody verified (Cosora-Admin)", () => {
+  test("a typed email says 'not verified' on Accounts and on the support request; a confirmed one doesn't", async ({ browser }) => {
+    const typed = await freshAccount("d1-typed");
+    const confirmed = await freshAccount("d1-google");
+    const tag = Date.now().toString(36);
+    // The typed one: the profile's email isn't the account's confirmed sign-in address.
+    sql(`update public.profiles set email = 'typed-${tag}@example.com', full_name = 'D1 Typed ${tag}' where id = '${typed.id}';
+         update public.profiles set full_name = 'D1 Google ${tag}' where id = '${confirmed.id}';
+         insert into public.support_tickets (id, requester_id, requester_side, channel, category, subject, status, is_test, created_at)
+         values (gen_random_uuid(), '${typed.id}', 'buyer', 'chat', 'other', 'D1 ${tag}', 'open', true, now());
+         insert into public.support_ticket_staff (ticket_id) select id from public.support_tickets where subject = 'D1 ${tag}';`);
+    const ticketNo = sql(`select ticket_no from public.support_tickets where subject = 'D1 ${tag}'`);
+    const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${ADMIN_URL}/accounts?q=D1%20Typed%20${tag}`);
+      const typedRow = page.getByRole("row").filter({ hasText: `typed-${tag}@example.com` });
+      await expect(typedRow.getByText("not verified")).toBeVisible();
+
+      await page.goto(`${ADMIN_URL}/accounts?q=D1%20Google%20${tag}`);
+      const googleRow = page.getByRole("row").filter({ hasText: confirmed.email });
+      await expect(googleRow).toBeVisible();
+      await expect(googleRow.getByText("not verified")).toHaveCount(0);
+
+      await page.goto(`${ADMIN_URL}/support/${ticketNo}`);
+      await expect(page.getByText(`typed-${tag}@example.com`)).toBeVisible();
+      await expect(page.getByText("not verified")).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("C1 · a sign-up step whose profile read fails", () => {
+  test("shows the step instead of a blank page", async ({ browser }) => {
+    const who = await freshAccount("c1-step", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.route(PROFILE_READ, (route) => route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }));
+      await page.goto(`${BUYER_URL}/auth/sub-role`);
+      await expect(page.getByRole("radiogroup")).toBeVisible({ timeout: 15_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("C2 · a rewind that lands on a fresh page load", () => {
+  test("the sign-in page it lands on finishes the landing", async ({ browser }) => {
+    const who = await freshAccount("c2-crossdoc");
+    const ctx = await contextWithSession(browser, who.session);
+    // What finishAuthFlow leaves behind when history.go reaches an entry of another page load: the old page never
+    // gets to navigate, so the sign-in page that loads must.
+    await ctx.addInitScript(() => {
+      if (!sessionStorage.getItem("c2-once")) {
+        sessionStorage.setItem("c2-once", "1");
+        sessionStorage.setItem("cosora.authFinishing", JSON.stringify({ at: Date.now(), dest: "/auth/welcome" }));
+      }
+    });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/login`);
+      await expect(page).toHaveURL(/\/(auth\/welcome|home\/new-arrivals)$/, { timeout: 10_000 });
     } finally {
       await ctx.close();
     }

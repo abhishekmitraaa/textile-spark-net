@@ -53,9 +53,22 @@ function takeMark(): Mark | null {
   }
 }
 
-/** True while finishAuthFlow is going back to the start: the sign-in page it passes through must not redirect. */
-export function isFinishingAuth(): boolean {
-  try { return Date.now() - Number(sessionStorage.getItem(FINISHING) ?? 0) < 3000; } catch { return false; }
+/**
+ * The destination a rewind left behind, taken once (valid for 10 s). The page the rewind lands on (Login or Register)
+ * calls it on arrival and goes there: when that entry belongs to an earlier page load, the browser loads it afresh and
+ * the page that started the rewind never gets to navigate. Null when no rewind is under way.
+ */
+export function takeAuthLanding(): string | null {
+  try {
+    const raw = sessionStorage.getItem(FINISHING);
+    if (!raw) return null;
+    sessionStorage.removeItem(FINISHING);
+    const v = JSON.parse(raw) as { at?: unknown; dest?: unknown };
+    if (typeof v !== "object" || v === null || typeof v.dest !== "string" || typeof v.at !== "number") return null;
+    return Date.now() - v.at < 10_000 ? v.dest : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -66,14 +79,22 @@ export async function finishAuthFlow(navigate: NavigateFunction, dest: string): 
   const mark = takeMark();
   const now = currentIdx();
   if (mark && now !== null && mark.idx < now) {
-    // Kept for a moment after the rewind: the sign-in page passed through renders after it.
-    try { sessionStorage.setItem(FINISHING, String(Date.now())); } catch { /* private mode */ }
+    try { sessionStorage.setItem(FINISHING, JSON.stringify({ at: Date.now(), dest })); } catch { /* private mode */ }
+    let leaving = false;
+    const onHide = () => { leaving = true; };
+    window.addEventListener("pagehide", onHide);
     await new Promise<void>((resolve) => {
       const done = () => { window.removeEventListener("popstate", done); clearTimeout(timer); resolve(); };
-      const timer = setTimeout(done, 1500);
+      // popstate comes at once when the entry is in this page load; otherwise the page unloads and the landing page
+      // finishes (takeAuthLanding). The timer only covers a traversal that went nowhere.
+      const timer = setTimeout(done, 5000);
       window.addEventListener("popstate", done);
       window.history.go(mark.idx - now);
     });
+    window.removeEventListener("pagehide", onHide);
+    if (leaving) return;
+    // The page it landed on may already have taken the destination and gone there.
+    if (takeAuthLanding() === null) return;
   }
   navigate(dest, { replace: true });
 }

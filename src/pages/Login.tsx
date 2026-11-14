@@ -12,7 +12,7 @@ import { chooseLang } from "@/lib/languagePreference";
 import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, toE164, type CountryCode } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
-import { historyIndex, isFinishingAuth, markAuthStart } from "@/lib/authHistory";
+import { historyIndex, markAuthStart, takeAuthLanding } from "@/lib/authHistory";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -128,11 +128,14 @@ const Login = () => {
   // Already signed in (a bookmark, or back into this page): go to the account's place instead, once, on arrival.
   const arrived = useRef(false);
   useEffect(() => {
-    if (arrived.current || loading) return;
+    if (arrived.current) return;
+    // A sign-in or sign-up that just finished went back to this entry: finish its landing (lib/authHistory.ts).
+    const landing = takeAuthLanding();
+    if (landing) { arrived.current = true; navigate(landing, { replace: true }); return; }
+    if (loading) return;
     if (!session) { arrived.current = true; return; }
     if (!profile) return;
     arrived.current = true;
-    if (isFinishingAuth()) return;
     const home = profile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals";
     navigate(profile.onboarded ? home : "/auth/role-selection", { replace: true });
   }, [loading, session, profile, navigate]);
