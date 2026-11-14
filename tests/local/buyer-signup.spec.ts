@@ -654,7 +654,7 @@ test.describe("C2 · after sign-in or sign-up, back leaves the sign-in pages", (
       await page.goto(`${BUYER_URL}/categories`);
       await signInByPhone(page, freshPhone());
       await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
-      await page.getByRole("button", { name: /^BUYER/ }).click();
+      await page.getByRole("radio", { name: /^BUYER/ }).click();
       await page.getByRole("button", { name: "Continue" }).click();
       await finishBuyerSteps(page);
       await page.goBack();
@@ -710,7 +710,7 @@ test.describe("C2 · after sign-in or sign-up, back leaves the sign-in pages", (
       await page.goto(`${BUYER_URL}/categories`);
       await signInByPhone(page, freshPhone());
       await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
-      await page.getByRole("button", { name: /^BUYER/ }).click();
+      await page.getByRole("radio", { name: /^BUYER/ }).click();
       await page.getByRole("button", { name: "Continue" }).click();
       await expect(page).toHaveURL(/\/auth\/sub-role$/);
       await page.reload();
