@@ -8,6 +8,9 @@
  *   4 Search suggestions: sellers by paid plan, then profile score, then followers.
  *   5 Lead alerts for a buyer's requirement: within an equally good match, the higher profile score is told first.
  *   6 The CSV import is switched off: no page, no link, the database refuses it, the plans don't offer it.
+ * Since Ranking Standing (2026-11-15, migration 20261115110000) 2–5 rank by Standing, of which profile score is one
+ * part; between two new sellers with nothing else apart, the fuller profile still comes first. Standing is kept by
+ * an hourly job, so each test refreshes it after its setup.
  */
 import { expect, test } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
@@ -17,6 +20,7 @@ const tag = Date.now().toString(36);
 const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/;
 const id = (out: string) => out.match(UUID)![0];
 const cleanup: string[] = [];
+const refreshStanding = () => sql(`select admin.refresh_vendor_standing()`);
 
 test.afterAll(() => {
   for (const v of cleanup) {
@@ -106,6 +110,7 @@ test("2 Recommended Premium Brands: paid plan first, then profile score, then ra
   forceColumns(rated.id, `rating_avg = 5, reviews_count = 40`);
   forceColumns(paid.id, `plan_expires_at = now() + interval '30 days'`);
   expect(score(full.id)).toBeGreaterThan(score(rated.id));
+  refreshStanding();
 
   const buyer = await clientAs("buyer");
   const { data, error } = await buyer.rpc("top_vendors", { p_limit: 12 });
@@ -124,6 +129,7 @@ test("3 brand suggestions: paid plan first, then profile score, then how recent"
   completeProfile(full.id);
   liveProduct(full.id, `PS3 ${tag} older`, { created: "now() - interval '2 days'" });
   liveProduct(fresh.id, `PS3 ${tag} newer`);
+  refreshStanding();
   const buyer = await freshAccount(`ps3c${tag}`);
   const { data, error } = await clientFor(buyer.session).rpc("new_brand_suggestions", { p_limit: 24 });
   expect(error).toBeNull();
@@ -141,6 +147,7 @@ test("4 search suggestions: sellers by paid plan, then profile score, then follo
     const f = await freshAccount(`ps4f${i}${tag}`);
     sql(`insert into public.follows (follower_id, vendor_id) values ('${f.id}', '${popular.id}')`);
   }
+  refreshStanding();
   const buyer = await clientAs("buyer");
   const { data, error } = await buyer.rpc("search_suggestions", { q: `psr${tag}`, max_results: 10 });
   expect(error).toBeNull();
@@ -163,6 +170,7 @@ test("5 lead alerts: between equally good matches, the higher profile score is t
     sql(`insert into public.vendor_subscriptions (vendor_id, plan_id, billing_cycle, status, current_period_start, current_period_end)
          values ('${v.id}', 'gold', 'monthly', 'active', now() - interval '3 days', now() + interval '27 days')`);
   }
+  refreshStanding();
   const max = sql(`select max_vendors from admin.lead_alert_config`);
   sql(`update admin.lead_alert_config set max_vendors = 1`);
   try {

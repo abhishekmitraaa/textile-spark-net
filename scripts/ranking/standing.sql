@@ -22,7 +22,7 @@ begin
   delete from public.vendor_registrations where vendor_id = v;
   delete from admin.fraud_findings where subject_profile_id = v;
   update public.vendor_profiles set onboarding_complete = false, is_verified = false, ad_verified_until = null,
-         plan_expires_at = null, profile_score = 0 where id = v;
+         plan_expires_at = null, profile_score = 0, created_at = now() - interval '400 days' where id = v;
   update public.products set created_at = now() - interval '400 days' where vendor_id = v;
 end $$;
 
@@ -33,21 +33,23 @@ declare
   admn   uuid := '33333333-3333-3333-3333-333333333333';
   labels text[] := array[
     'no data: no interest, no activity, reviews at the platform average, no trust, no profile',
-    'interest: unique people across views, follows and messages, plus repeat visits; own views ignored',
+    'interest: unique signed-in people across views, follows and messages, plus repeat visits; own and browser-only views ignored',
     'interest: 200 interested people is the ceiling',
     'reviews: the Bayesian average of seller and listing reviews',
     'activity: three quotes within 4 hours',
     'activity: one quote after 38 hours',
     'trust: registered, then a verified document, then the seal; a paid plan adds nothing',
     'trust: a fraud finding zeroes trust and halves Standing; a withdrawn one doesn''t',
-    'a new seller''s interest and activity are at least 0.5 for 30 days',
+    'a new account''s interest and activity are at least 0.5 for 30 days; a fresh listing on an old account isn''t new',
     'Standing is 0.30 I + 0.25 R + 0.15 A + 0.15 T + 0.15 P',
     'the refresh writes one row per seller; clients can''t read the table or run the refresh',
-    'vendor_standing() is rounded to 2 decimals, 0.5 without a row, and open to visitors',
+    'vendor_standing() is rounded to 2 decimals, 0.5 without a row, and closed to visitors',
     'Recommended Premium Brands: paid first, then Standing',
     'seller search suggestions: paid first, then Standing',
     'the requirement match, lead alerts and brand suggestions read Standing, not profile score',
-    'a buyer''s quotes in Standing order, for their own requirement only'];
+    'a buyer''s quotes in Standing order, for their own requirement only',
+    'browser-only viewers add no interest, however many',
+    'the two seller lists run as definer and visitors can still call them'];
   wants text[] := array[
     '0|neutral|0|0|0',
     '0.392',
@@ -57,14 +59,16 @@ declare
     '0.351',
     '0.5|0.75|1|0.5',
     '0|halved|0.5',
-    '0.5|0.5|0|0',
+    '0.5|0.5|0|0|0|0',
     'sum',
     'rows|42501|42501',
-    '0.12|0.5|t',
+    '0.12|0.5|f',
     'alpha,beta|beta,alpha',
     'alpha,beta|beta,alpha',
     '3 of 3',
-    'q2,q1|42501'];
+    'q2,q1|42501',
+    '0',
+    't|t|t'];
   got text; i int; acc text; b text;
   out text := '';
   r1 uuid := gen_random_uuid(); r2 uuid := gen_random_uuid(); r3 uuid := gen_random_uuid();
@@ -90,9 +94,10 @@ begin
               || '|' || pg_temp.n(s.a) || '|' || pg_temp.n(s.t) || '|' || pg_temp.n(s.p);
         elsif i = 2 then
           insert into public.product_view_daily (product_id, viewer_key, day) values
-            (p1, 'b:v1', current_date), (p1, 'b:v2', current_date), (p1, 'b:v3', current_date),
-            (p1, 'b:v4', current_date), (p1, 'b:v4', current_date - 1),
-            (p1, 'u:' || vendor, current_date);
+            (p1, 'u:00000000-0000-0000-0000-0000000000a1', current_date), (p1, 'u:00000000-0000-0000-0000-0000000000a2', current_date),
+            (p1, 'u:00000000-0000-0000-0000-0000000000a3', current_date),
+            (p1, 'u:00000000-0000-0000-0000-0000000000a4', current_date), (p1, 'u:00000000-0000-0000-0000-0000000000a4', current_date - 1),
+            (p1, 'u:' || vendor, current_date), (p1, 'b:someone-signed-out', current_date);
           insert into public.follows (follower_id, vendor_id, created_at) values (buyer, vendor, now());
           insert into public.conversations (id, user_a, user_b, created_at) values (conv, least(admn, vendor), greatest(admn, vendor), now());
           insert into public.messages (conversation_id, sender_id, body, created_at) values (conv, admn, 'hi', now());
@@ -100,7 +105,7 @@ begin
           select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
         elsif i = 3 then
           insert into public.product_view_daily (product_id, viewer_key, day)
-            select p1, 'b:x' || g, current_date from generate_series(1, 250) g;
+            select p1, 'u:' || gen_random_uuid(), current_date from generate_series(1, 250) g;
           select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
         elsif i = 4 then
           insert into public.reviews (vendor_id, buyer_id, rating, body) values (vendor, buyer, 5, 'a'), (vendor, admn, 5, 'b');
@@ -145,9 +150,12 @@ begin
           update admin.fraud_findings set withdrawn_at = now() where id = r1;
           select got || '|' || pg_temp.n(x.t) into got from admin.vendor_standing_parts(vendor) x;
         elsif i = 9 then
-          update public.products set created_at = now() - interval '5 days' where id = p1;
+          update public.vendor_profiles set created_at = now() - interval '5 days' where id = vendor;
           select pg_temp.n(s2.i) || '|' || pg_temp.n(s2.a) into acc from admin.vendor_standing_parts(vendor) s2;
-          update public.products set created_at = now() - interval '40 days' where id = p1;
+          update public.vendor_profiles set created_at = now() - interval '40 days' where id = vendor;
+          select acc || '|' || pg_temp.n(s2.i) || '|' || pg_temp.n(s2.a) into acc from admin.vendor_standing_parts(vendor) s2;
+          -- Unlisting everything and listing afresh doesn't make an old account new.
+          update public.products set created_at = now() - interval '1 day' where vendor_id = vendor;
           select acc || '|' || pg_temp.n(s2.i) || '|' || pg_temp.n(s2.a) into got from admin.vendor_standing_parts(vendor) s2;
         elsif i = 10 then
           insert into public.vendor_registrations (id, vendor_id, country_code, status) values (gen_random_uuid(), vendor, 'IN', 'registered');
@@ -222,6 +230,15 @@ begin
             perform * from public.quote_order_for_rfq(r1);
             got := acc || '|read';
           exception when others then got := acc || '|' || sqlstate; end;
+        elsif i = 17 then
+          insert into public.product_view_daily (product_id, viewer_key, day)
+            select p1, 'b:x' || g, current_date from generate_series(1, 250) g;
+          select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
+        elsif i = 18 then
+          select string_agg(left(p.prosecdef::text, 1), '|' order by p.proname) into acc
+            from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+           where n.nspname = 'public' and p.proname in ('top_vendors', 'new_brand_suggestions');
+          got := acc || '|' || left(has_function_privilege('anon', 'public.top_vendors(integer)', 'execute')::text, 1);
         end if;
       exception when others then
         got := sqlstate || ' ' || sqlerrm;

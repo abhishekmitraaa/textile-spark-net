@@ -42,9 +42,10 @@ three sorts stay.
 Buyer interest weighs most and more than activity (decision, 2026-10-07: "buyer interest weighted more").
 
 ### I — buyer interest
-- **Unique people:** the distinct viewers of the seller's listings in the last 90 days (a viewer key is counted once
-  per listing per day, already capped against scripts by the 2026-10-18 audit), plus followers who followed in that
-  window, plus buyers who started a chat with the seller in that window.
+- **Unique people:** the distinct signed-in viewers of the seller's listings in the last 90 days (never the seller),
+  plus followers who followed in that window, plus people who messaged the seller in that window; a person counts
+  once across the three. A signed-out viewer's key is made by the browser, so anyone could mint them: those views
+  don't count (found by the automated security review).
 - **Repeat visits:** viewers who came back on at least two different days.
 - `I = min(1, log2(1 + unique + repeat) / log2(201))`. A seller with 200 interested people in 90 days is at the top.
   **Call:** the 200 ceiling is fixed, not relative to the busiest seller, so one big seller doesn't flatten everyone.
@@ -72,18 +73,20 @@ Buyer interest weighs most and more than activity (decision, 2026-10-07: "buyer 
   Standing. **Call.**
 
 ### New sellers
-For the first 30 days after a seller's first listing goes live, I and A count as at least 0.5, so a new seller isn't
-buried for having no history yet. **Call.**
+For the first 30 days of a seller's account, I and A count as at least 0.5, so a new seller isn't buried for having
+no history yet. **Call.** The account's age, not its listings': unlisting everything and listing afresh doesn't make
+an old seller new (security review).
 
 ## How it is kept
 
 - `admin.vendor_standing`: one row per seller (Standing and its five parts, when computed). Not readable by clients.
 - `admin.refresh_vendor_standing()` recomputes every seller; a pg_cron job, `vendor-standing-refresh`, runs it
   every hour. A seller without a row yet counts 0.5 until the next run.
-- `public.vendor_standing(p_vendor uuid)` returns a seller's Standing rounded to two decimals (0.5 without a row).
-  Two of the ranking functions run with the visitor's rights (`top_vendors`, `new_brand_suggestions`), so they read
-  it through this definer function. **Call:** anyone can read a seller's total this way; its parts and the counts
-  behind them stay private, and the public lists already show the order. Nothing in the app shows the number.
+- `public.vendor_standing(p_vendor uuid)` returns a seller's Standing rounded to two decimals (0.5 without a row),
+  for the ranking functions only: no client can call it. A queryable number would let anyone watch a seller's
+  Standing halve when staff record a fraud finding (security review). `top_vendors` and `new_brand_suggestions`,
+  which ran with the visitor's rights, now run as definer to read it; their filters are explicit (live listings, the
+  caller's own follows), so they return what they returned before. Nothing in the app shows the number.
 - **My Quotes:** `quote_order_for_rfq(p_rfq uuid)` returns the caller's own requirement's quote ids, best Standing
   first (42501 for anyone else's requirement). It returns ids only, never the scores.
 
@@ -109,5 +112,6 @@ buried for having no history yet. **Call.**
 2. A buyer's own quotes ordered by Standing with no paid tier; Recommended as the default sort.
 3. The ceilings: 200 interested people, 30 quotes, 4 to 72 hours.
 4. Trust: a paid plan's seal not counted; a fraud finding halves Standing.
+7. Only signed-in viewers count towards interest (signed-out views can't be told from minted ones).
 5. The 30-day floor for new sellers.
 6. Company type left out of the score.

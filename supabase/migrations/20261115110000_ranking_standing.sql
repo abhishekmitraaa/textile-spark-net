@@ -56,12 +56,15 @@ begin
     return;
   end if;
 
-  -- Buyer interest: distinct people over 90 days (listing viewers, new followers, people who messaged the
-  -- seller; a signed-in person counts once across all three), plus viewers who came back on another day.
+  -- Buyer interest: distinct signed-in people over 90 days (listing viewers, new followers, people who messaged
+  -- the seller; each counts once across all three), plus viewers who came back on another day. A signed-out
+  -- viewer's key is made by the browser, so anyone could mint them: those views don't count (security review,
+  -- 2026-11-15).
   select count(*) into v_people from (
     select d.viewer_key as k
       from public.product_view_daily d join public.products pr on pr.id = d.product_id
-     where pr.vendor_id = p_vendor and d.day >= current_date - 90 and d.viewer_key <> 'u:' || p_vendor
+     where pr.vendor_id = p_vendor and d.day >= current_date - 90 and d.viewer_key like 'u:%'
+       and d.viewer_key <> 'u:' || p_vendor
     union
     select 'u:' || f.follower_id from public.follows f
      where f.vendor_id = p_vendor and f.created_at >= now() - interval '90 days'
@@ -73,7 +76,8 @@ begin
   select count(*) into v_repeat from (
     select d.viewer_key
       from public.product_view_daily d join public.products pr on pr.id = d.product_id
-     where pr.vendor_id = p_vendor and d.day >= current_date - 90 and d.viewer_key <> 'u:' || p_vendor
+     where pr.vendor_id = p_vendor and d.day >= current_date - 90 and d.viewer_key like 'u:%'
+       and d.viewer_key <> 'u:' || p_vendor
      group by d.viewer_key having count(distinct d.day) >= 2
   ) back;
   i := least(1, ln(1 + v_people + v_repeat) / ln(201));
@@ -112,8 +116,9 @@ begin
 
   p := least(1, greatest(0, coalesce(v_score, 0) / 100.0));
 
-  -- A new seller (first live listing under 30 days old) isn't buried for having no history.
-  select min(pr.created_at) into v_first from public.products pr where pr.vendor_id = p_vendor and pr.status = 'live';
+  -- A new seller (an account under 30 days old) isn't buried for having no history. The account's age, not its
+  -- listings': unlisting everything and listing afresh mustn't make an old seller new (security review, 2026-11-15).
+  select vp.created_at into v_first from public.vendor_profiles vp where vp.id = p_vendor;
   if v_first is not null and v_first > now() - interval '30 days' then
     i := greatest(i, 0.5);
     a := greatest(a, 0.5);
@@ -151,8 +156,9 @@ $function$;
 revoke all on function admin.refresh_vendor_standing() from public, anon, authenticated;
 
 -- ── What the app and the rankings read ─────────────────────────────────────────────────────────────────────
--- The total, rounded to 2 decimals; 0.5 for a seller not computed yet. top_vendors and new_brand_suggestions run
--- with the visitor's rights, so they read it through this. Its parts stay private.
+-- The total, rounded to 2 decimals; 0.5 for a seller not computed yet. For the definer rankings only: no client
+-- can call it, so nobody can watch a seller's number (a fraud finding halves it; security review, 2026-11-15).
+-- top_vendors and new_brand_suggestions become definer functions below to read it.
 create function public.vendor_standing(p_vendor uuid)
 returns numeric
 language sql
@@ -162,8 +168,8 @@ set search_path = ''
 as $function$
   select coalesce((select round(w.standing::numeric, 2) from admin.vendor_standing w where w.vendor_id = p_vendor), 0.5)
 $function$;
-revoke all on function public.vendor_standing(uuid) from public;
-grant execute on function public.vendor_standing(uuid) to anon, authenticated, service_role;
+revoke all on function public.vendor_standing(uuid) from public, anon, authenticated;
+grant execute on function public.vendor_standing(uuid) to service_role;
 
 -- A buyer's own requirement: its quotes, best-standing seller first (no paid tier: the buyer asked these
 -- sellers for offers). Ids and positions only.
@@ -194,7 +200,7 @@ grant execute on function public.quote_order_for_rfq(uuid) to authenticated, ser
 CREATE OR REPLACE FUNCTION public.top_vendors(p_limit integer DEFAULT 4)
  RETURNS TABLE(id uuid, brand_name text, city text, rating_avg numeric, reviews_count integer, is_verified boolean, plan_expires_at timestamp with time zone, ad_verified_until timestamp with time zone, image_url text, live_products integer)
  LANGUAGE sql
- STABLE
+ STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
   with live as (
@@ -221,7 +227,7 @@ $function$;
 CREATE OR REPLACE FUNCTION public.new_brand_suggestions(p_limit integer DEFAULT 12)
  RETURNS TABLE(vendor_id uuid, brand_name text, city text, is_verified boolean, followers_count integer, logo_url text, live_count integer, top_products jsonb)
  LANGUAGE sql
- STABLE
+ STABLE SECURITY DEFINER
  SET search_path TO ''
 AS $function$
   with me as materialized (
@@ -541,9 +547,15 @@ begin
      or has_function_privilege('authenticated', 'admin.vendor_standing_parts(uuid)', 'execute') then
     raise exception 'self-check: clients can reach Standing''s parts';
   end if;
-  if not has_function_privilege('anon', 'public.vendor_standing(uuid)', 'execute')
+  if has_function_privilege('anon', 'public.vendor_standing(uuid)', 'execute')
+     or has_function_privilege('authenticated', 'public.vendor_standing(uuid)', 'execute')
      or has_function_privilege('anon', 'public.quote_order_for_rfq(uuid)', 'execute') then
     raise exception 'self-check: the public helpers have the wrong grants';
+  end if;
+  if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+              where n.nspname = 'public' and p.proname in ('top_vendors', 'new_brand_suggestions') and not p.prosecdef)
+     or not has_function_privilege('anon', 'public.top_vendors(integer)', 'execute') then
+    raise exception 'self-check: the seller lists must run as definer and stay open to visitors';
   end if;
   if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
               where (n.nspname, p.proname) in (('public', 'top_vendors'), ('public', 'new_brand_suggestions'),
