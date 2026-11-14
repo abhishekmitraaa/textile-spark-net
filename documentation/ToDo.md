@@ -104,16 +104,6 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-10-18 audit "fix first" list, AskUserQuestion on Service Vendors/Freelancers.
 - Status: Open
 
-### Rewrite the Advertisements page's unbacked claims — added 2026-11-01
-- Task: reword or remove on `/advertisements` (FAQ and "Why Cosora"): "millions of potential customers", "your ad
-  goes live instantly. No approval delays" (ads are reviewed), "as little as ₹22/day", "Join thousands of suppliers",
-  "Every buyer is vetted".
-- Context: flagged on 2026-10-18 while removing invented people; Mitra said "not yet". The Success Stories carousel
-  was restored by Mitra's decision (a recorded exception in claude.md; don't remove it without asking). Related to
-  the older "Remove invented claims and real brand names still on live pages" entry below.
-- Reference: 2026-10-18 sessions (demo identities, Success Stories restored).
-- Status: Open
-
 ### Let typed search terms into Trending once they can't be faked — added 2026-11-01
 - Task: before switching `search_trending_terms` on, make typed terms safe: staff approval of each term, or count
   signed-in searches only.
@@ -129,15 +119,6 @@ with no need to dictate format, context, or reference each time.
 - Context: on the local stack every banner, picture, carousel or trending change posts the LOCAL service key to
   production's `site-config-snapshot` (refused there; a stray outbound call). Securityflags.md, Low, 2026-10-18.
 - Reference: 2026-10-18 trending searches session.
-- Status: Open
-
-### Apply the requirement deadline everywhere leads are counted or announced — added 2026-11-01
-- Task: leave requirements past `rfqs.expires_at` out of `overseas_lead_count()`, `my_lead_alerts()` and
-  `lead_digest_run()`, and show "Deadline passed" (not live) for them in Cosora-Admin's requirement pages.
-- Context: the 7-day deadline (migration 20261019100000) is enforced in `enforce_quote_rfq_open`,
-  `match_vendor_rfqs` and the app's lead list; those three functions and the admin pages weren't changed, so a count
-  or alert can include a requirement a seller can no longer quote on.
-- Reference: 2026-10-19 buyer audit second batch.
 - Status: Open
 
 ### Show a block to the other person straight away — added 2026-11-01
@@ -188,15 +169,6 @@ with no need to dictate format, context, or reference each time.
   `resume_ad_campaign`, `resubmit_ad_campaign` have no creating migration: add one from production's definitions.
 - Context: the live site isn't affected; a rebuild from the ledger or `db push` would miss or re-run these.
 - Reference: 2026-10-18 audit (migration hygiene) and the 2026-10-18/19/20 releases.
-- Status: Open
-
-### Remove the buyer-audit worktrees — added 2026-11-01
-- Task: `git worktree remove` buyer `.worktrees/first-fixes`, `.worktrees/audit-second`,
-  `.worktrees/audit-2026-10-18`, `.worktrees/todo-audit` and admin `.worktrees/chat-files`; delete branches
-  `fix/first-fixes-2026-10-18`, `fix/audit-second-2026-10-19`, `docs/todo-buyer-audit-leftovers` and admin
-  `fix/chat-files-review-2026-10-18`. Everything in them is on main.
-- Context: housekeeping after the 2026-10-18–20 releases.
-- Reference: 2026-11-01 todo request.
 - Status: Open
 
 ### Feed /search's trending list from Google Trends once there is access — added 2026-10-18
@@ -541,20 +513,16 @@ with no need to dictate format, context, or reference each time.
 - Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the Terms wording on refunds; add to todo.md").
 - Status: Open
 
-### Add a Privacy Policy page — added 2026-10-01
-- Task: counsel writes a Privacy Policy; the app gets a page for it, and every "Privacy Policy" link points there.
-- Context:
-  - No such page exists. Its links go to `/terms` (`MyStore.tsx`) or `#` (`Register.tsx`), found on 2026-09-30.
-  - Help & Support adds personal data the policy should cover: support chats, photos, voice notes and PDFs, callback
-    numbers, fraud reports with their evidence, and feedback. Retention: a fraud report is kept for a year, and a
-    confirmed fraud is kept as a lasting record of who did what and the action taken (D-16, revised 2026-10-01). A
-    deleted account's support messages and files are scrubbed.
-  - Also to cover: Microsoft Clarity's session replay once it's switched on (`securityflags.md`, 2026-09-28).
-  - Which law applies, and the wording, are for counsel.
-- Reference: 2026-10-01, the Help & Support owner answers (Counsel: "the missing Privacy Policy page. add to
-  todo.md").
+### Counsel: review the published Privacy Policy — added 2026-10-01, updated 2026-11-14
+- Task: counsel reads `/privacy` (`src/pages/PrivacyPolicy.tsx`) and corrects it; which law applies and the wording
+  are theirs.
+- Context: Mitra chose "Draft and publish now" (2026-11-05). It was drafted from what the app collects, shares and
+  keeps (support chats and files, callback numbers, fraud reports kept a year and confirmed fraud kept as a record,
+  the 14-day buyer deletion, the processors: Supabase, Vercel, Razorpay, OpenAI, Bunny, BigDataCloud, email and
+  WhatsApp providers), and went live with every "Privacy Policy" link pointing to it. Clarity's section shows only
+  while Clarity runs. Contact is hello@cosora.in until a Grievance Officer is named (entry above).
+- Reference: 2026-10-01 Help & Support owner answers; 2026-11-05 "complete them fully".
 - Status: Open
-
 ### Name Cosora's Grievance Officer and publish the grievance page — added 2026-09-30
 - Task: choose who is Cosora's Grievance Officer and record their name, designation and a contact email. Then switch
   on the `/grievance` page, which the Help build creates hidden (Help plan P6c). **Built 2026-10-01 (branch
@@ -675,26 +643,6 @@ with no need to dictate format, context, or reference each time.
 - Priority: Low today; High before a traffic launch
 - Status: Open
 
-### Show the reason label, not the code, on a vendor's campaign card — added 2026-09-28
-- Task: make the vendor's Advertise page show the reason an admin gave in words. Today
-  `advertisements.moderation_reason` stores `<code> <note>` (for example
-  `misleading_claims Please fix the headline`), and `runStateOf()` (`src/lib/campaignRunState.ts`)
-  prints it as is: "Not approved: misleading_claims Please fix the headline".
-- Context: admin completion Phase 3 made every admin pause, rejection and suspension pick one of
-  the 8 codes in `admin.ad_reason_codes`. The notification already reads the label (its body falls
-  back to the label when there's no note), but the card doesn't. Options:
-  - `ad_apply_decision()` stores the label instead of the code (the code stays in
-    `admin.ad_review_log.reason_code`), and Cosora-Admin's `describeModerationReason()` reads both
-    shapes;
-  - or a public `ad_reason_labels()` that the vendor's ads query maps through.
-  - Don't copy the list into the app as a constant (`claude.md`: one list).
-  - No live campaign carries a code yet (checked 2026-09-28: every `moderation_reason` is a seed
-    approval note), so no data needs fixing.
-- Reference: 2026-09-28, found while adding the Phase 3 notification texts to the i18n
-  catalogues during admin completion Phase 4a.
-- Priority: Medium (the first admin rejection will show it)
-- Status: Open
-
 ### Have a native speaker review the Hindi and Gujarati translations — added 2026-09-26
 - Task: a Hindi and a Gujarati speaker read `src/i18n/hi.json` and `gu.json` (7,056 entries each)
   in context, starting with the buyer home, sign-in, onboarding, subscription and ads pages, and
@@ -712,23 +660,6 @@ with no need to dictate format, context, or reference each time.
   signed.
 - Context: the clauses (`lib/supplierAgreement.ts`) are English in every language on purpose
   (`data-no-translate` in `Onboarding.tsx`); they are also marked "not legally reviewed" in English.
-- Reference: 2026-09-26, the language-translation fix.
-- Status: Open
-
-### Remove invented claims and real brand names still on live pages — added 2026-09-26
-- Task: decide what replaces each, under the "no invented endorsements" and "no mock data in
-  production" rules in `claude.md`.
-- Context: found while translating every page on 2026-09-26; none is dev-only:
-  - `/seller` (`VendorLanding.tsx`): a "Trusted by brands" logo wall of real Korean fashion brands
-    (Hotping, Style Nanda, Chuu …), "Trusted by over 1 million users", "Trusted by 95% of shopping
-    malls", named testimonials; its documents list asks for an Aadhaar card, which the app must not
-    collect; it says "0% commission" while the Supplier Agreement mentions Cosora's commission.
-  - `/cosora-studio/:id` (`PhotographerProfile.tsx`): invented studios with real brands as clients
-    (Levi's India, UCB, Allen Solly, Sabyasachi, FabIndia) and "Featured in Vogue India".
-  - `/dashboard` (`Index.tsx`): invented figures ("+18% vs last month", "$24.99/yard", vendors).
-  - `/advertisements`: the FAQ says an ad "goes live instantly. No approval delays", but ads are
-    reviewed first; invented "success stories" with names.
-  - The seller-registration FAQ (Andy's text, published verbatim) also lists an Aadhar card.
 - Reference: 2026-09-26, the language-translation fix.
 - Status: Open
 
@@ -754,7 +685,7 @@ with no need to dictate format, context, or reference each time.
 - [ ] Build a real trends data source for /home/trends — Added: 2026-09-11 — Context: The Trends page's category chips, featured images, curated looks and suggested searches are hand-picked editorial content; there is no trends job, no Google Trends integration and no search-volume log feeding it. Master Prompt 7 (buyer-trust thread, Phase 3) relabelled the page "Curated trend picks" and removed everything that posed as measured data (invented "↑ 800%" search-growth figures, a "Top Brands" list of invented names, USD prices). A real pipeline needs a source — the closest existing one is `engagement_events` rows with `event_type = 'search_impression'` and `query_text`, or an external trends API — plus a scheduled job and a table the page reads; only then should "trending" copy come back. The curated images are also still hotlinked from picsum.photos and need owned replacements. — Reference: 2026-09-11, Master Prompt 7 Phase 3.3, which asked for this to be logged as a future feature rather than built. — Update 2026-10-18: /search now has a measured trending list (`admin.search_trend_runs` / `_items`, refreshed nightly, migration `20261018120000_search_trends`, built, not live); /home/trends can read the same `trending_searches()` instead of its curated chips.
 
 - [ ] Create the test-credential secrets in GitHub so the E2E workflow can sign in — Added: 2026-09-11 — Priority: High — Context: Master Prompt 8, Phase 1 moved every test password out of source. `.github/workflows/e2e.yml` now maps seven repository secrets into the Playwright step: `DEMO_BUYER_PASSWORD`, `DEMO_VENDOR_PASSWORD`, `DEMO_ADMIN_PASSWORD`, `MP_VENDOR_PASSWORD`, `MP5_LINK_PASSWORD`, `TEST_VENDOR_PASSWORD`, `FIXTURE_PASSWORD`. None exists yet, so every spec that needs a login skips in CI. The values are in the local gitignored `.env` (never paste them anywhere else). Second half of the same gap: the specs also read `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` from `.env` with `readFileSync`, which CI does not have, so they need those as secrets too, and the specs need to read `process.env` first, as `scripts/lib/test-credentials.mjs` already does. Reference: Master Prompt 8 (2026-09-11), Phase 1 step 4.
-- [ ] Decide what listing cards show instead of the invented product ratings and review counts — Added: 2026-09-11, updated 2026-11-05 — Context: the "sold" half is done: since 2026-10-17 cards show real views ("N views", `product_view_daily`) and "Popularity" sorts by views. Ratings are still invented: `src/lib/listingProducts.ts` makes one up from a hash of the listing id (3.7–4.9) and `src/components/dashboard/ProductCard.tsx` defaults to "4.1"; `products.rating_avg` / `reviews_count` have no real source (real per-listing reviews exist since 2026-10-16 through `product_review_stats()`, used by Video Closeups). Example seed: Hand-Embroidered Kurta 480 reviews, with no real reviews behind them. The product page already stopped using them (Master Prompt 7). Options: remove them from the cards, or build per-product reviews and order tracking as real features. Related: vendors can also write these three columns on their own products (`products_update` has no column guard). Guard them once they are computed from something real. Logged in `securityflags.md` (Open, Low). Reference: Master Prompt 8 (2026-09-11), Phase 2; Mitra chose "keep for now". The vendor-level counts WERE fixed then.
+- [ ] Decide what listing cards show instead of the invented product ratings and review counts — Added: 2026-09-11, updated 2026-11-05 — Context: the "sold" half is done: since 2026-10-17 cards show real views ("N views", `product_view_daily`) and "Popularity" sorts by views. Ratings are still invented: `src/lib/listingProducts.ts` makes one up from a hash of the listing id (3.7–4.9), shown on `ListingProductCard` (For You, Following); `products.rating_avg` / `reviews_count` have no real source (real per-listing reviews exist since 2026-10-16 through `product_review_stats()`, used by Video Closeups). Example seed: Hand-Embroidered Kurta 480 reviews, with no real reviews behind them. The product page already stopped using them (Master Prompt 7). Options: remove them from the cards, or build per-product reviews and order tracking as real features. Related: vendors can also write these three columns on their own products (`products_update` has no column guard). Guard them once they are computed from something real. Logged in `securityflags.md` (Open, Low). Reference: Master Prompt 8 (2026-09-11), Phase 2; Mitra chose "keep for now". The vendor-level counts WERE fixed then.
 - [ ] Revisit the landing page's unbacked claims — only when Mitra asks — Added: 2026-09-11 — Context: `src/pages/Landing.tsx` still says "Every supplier is vetted" (KYC review exists, universal vetting does not) and "See who is viewing, enquiring, and ordering, in real time" (analytics are periodic, and there is no ordering feature). It also shows "₹500Cr+ sourced through Cosora" and a stats band reading "50K+ Products listed / 10K+ Verified brands / 5K+ Manufacturers / 28 States covered" against 26 live products and about 10 vendors. Mitra said "keep it as it is, dont change the landing/hearopage", so do NOT edit it on your own; raise it with him. Reference: Master Prompt 8 (2026-09-11), Phase 5, skipped on Mitra's instruction.
 - [ ] Make vendor-onboarding-write-path.spec.ts clean up its product-images uploads — Added: 2026-09-11 — Context: each run of the spec uploads office photos, an onboarding product image and a store logo into the PUBLIC `product-images` bucket under demo-buyer (`11111111-…/office/`, `/onboarding-product/`, `/store/`). Its teardown removes the `business-docs` KYC objects but never these, so each run strands 4–5 objects referenced by nothing. The 14 left by Master Prompt 8's runs were removed by hand as demo-buyer. Fix: record those paths as they upload (the way `uploadedKycPaths` already works) and `remove()` them in `cleanup()`. One run in that session also lost its signed-in session at step 6 and did not reproduce in two reruns; watch for it. Reference: Master Prompt 8 (2026-09-11), Phase 3 regression runs.
 - [ ] Configure a custom SMTP provider for Supabase Auth — Added: 2026-09-11 — Context: Supabase's built-in email sender rate-limits hard, and signup confirmation emails fail in bursts; the signup spec failed intermittently for that reason alone during Master Prompt 6. This is a Supabase dashboard setting (Authentication → Emails → SMTP: Resend, SES, Postmark, …), not a code change. Reference: raised in the Master Prompt 7 bug review; restated as a non-engineering item in Master Prompt 8.

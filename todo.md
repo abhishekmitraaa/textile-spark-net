@@ -3,7 +3,7 @@
 Durable record of everything explicitly **deferred rather than built**, so it
 does not get lost the way the previous "still open" ledger nearly did.
 
-Last reviewed: 2026-11-05 (every item checked against the code and changelog; all still open).
+Last reviewed: 2026-11-14 (the per-day ad types now say "/day").
 Longer-form engineering notes live in `documentation/ToDo.md`; this file is the
 short list of things someone has to *decide*.
 
@@ -39,33 +39,6 @@ short list of things someone has to *decide*.
   `/my-payments/receipt/:orderId` prints "PAYMENT RECEIPT" and says in its
   footer that it is not a tax invoice. Blocked on the Razorpay item above —
   build invoicing on a live payment path, not a simulated one.
-
-- **Eight ad types are advertised at a flat price but billed per day.** The
-  Advertise catalogue shows `period: ""` (no "/day") for these, and the billing
-  formula multiplies by campaign length anyway. Two were fixed on 2026-09-14;
-  **six remain**:
-
-  | Ad type | Shown | Billed, 7 days × 1 product | Billed, 30 days × 3 products |
-  |---|---|---|---|
-  | Wholesaler Pick | ₹59 | ₹413 | ₹5,310 |
-  | Brand Ad | ₹69 | ₹483 | ₹6,210 |
-  | Web & Mobile Combo | ₹129 | ₹903 | ₹11,610 |
-  | Facebook & Instagram Ad | ₹59 | ₹413 | ₹5,310 |
-  | Google Product Ad | ₹59 | ₹413 | ₹5,310 |
-  | Social Media Combo | ₹99 | ₹693 | ₹8,910 |
-
-  Fixed on 2026-09-14 (now genuinely flat, charged once per order):
-  Trusted Seal ₹44, Verified Certificate ₹199 — the latter had been billing
-  **₹72,635** on the 365-day campaigns the live certificate purchases actually
-  carry.
-
-  Repricing six live products is a business decision, not an engineering one,
-  so their behaviour is unchanged. Decide whether each is genuinely flat (fix
-  the billing) or genuinely per-day (fix the catalogue copy). `wholesalerPick`
-  is the sharpest case: it is now a real 72-hour product, so billing it per day
-  across a 30-day campaign is incoherent either way.
-  Code: `src/lib/adPricing.ts` + `supabase/functions/_shared/adPricing.ts`
-  (`VENDOR_LEVEL_TYPES`, `unitsFor`).
 
 - **5 unplaced ad types still purchasable with no delivery mechanism:**
   Direct Broadcast, Web & Mobile Combo, Facebook & Instagram Ad, Google Product
