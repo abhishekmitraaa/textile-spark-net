@@ -40,9 +40,21 @@ export function phoneDigitsFor(country?: Pick<CountryCode, "digits"> | null): nu
   return country?.digits ?? PHONE_DIGITS;
 }
 
-/** Keep only digits, capped at the country's length — what the phone field stores. */
-export function cleanPhoneDigits(raw: string, country?: Pick<CountryCode, "digits"> | null): string {
-  return raw.replace(/\D/g, "").slice(0, phoneDigitsFor(country));
+/**
+ * What the phone field stores: the national number, capped at the country's length (buyer sign-up audit item 9).
+ * People paste or type numbers as they write them: "+91 99113 11001", "991-131-1001", "09911311001". So: digits
+ * only; the country code dropped when it is exactly a full number with its code in front ("91" + 10 digits); leading
+ * zeros dropped (a trunk prefix, never part of the number); then capped. A 10-digit number that happens to start with
+ * "91" is left alone, and an accidental 11th digit is cut, not read as a country code.
+ */
+export function cleanPhoneDigits(raw: string, country?: (Pick<CountryCode, "digits"> & Partial<Pick<CountryCode, "code">>) | null): string {
+  const cap = phoneDigitsFor(country);
+  let digits = raw.replace(/\D/g, "");
+  const cc = (country?.code ?? "").replace(/\D/g, "");
+  if (cc && digits.length === cc.length + cap && digits.startsWith(cc)) digits = digits.slice(cc.length);
+  else if (cc && digits.length === cc.length + 1 + cap && digits.startsWith(cc + "0")) digits = digits.slice(cc.length);
+  digits = digits.replace(/^0+/, "");
+  return digits.slice(0, cap);
 }
 
 /** A whole number for this country: exactly its length. */

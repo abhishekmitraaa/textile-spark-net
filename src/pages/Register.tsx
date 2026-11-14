@@ -8,7 +8,7 @@ import { ArrowRight, Building2, ShoppingBag, Check, Loader2, AlertCircle } from 
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { signupMetadata } from "@/lib/queries/signupProfile";
-import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164 } from "@/lib/auth/phone";
+import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, toE164 } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 import { historyIndex, markAuthStart } from "@/lib/authHistory";
@@ -344,7 +344,6 @@ const Register = () => {
                         inputMode="numeric"
                         autoComplete="tel-national"
                         placeholder="Phone Number"
-                        maxLength={phoneDigitsFor(COUNTRY_CODES[countryIndex])}
                         value={form.phone}
                         onChange={handleChange}
                         required

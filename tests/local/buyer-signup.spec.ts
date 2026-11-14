@@ -744,3 +744,46 @@ test.describe("C2 · after sign-in or sign-up, back leaves the sign-in pages", (
     }
   });
 });
+
+test.describe("C3 · the phone field takes a number however it is written", () => {
+  test("+91, spaces, dashes and a leading 0 are cleaned to the 10 digits", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/login`);
+      const field = page.getByPlaceholder("Phone Number");
+      for (const typed of ["+91 99113 11001", "99113 11001", "991-131-1001", "+91-99113-11001"]) {
+        await field.fill(typed);
+        await expect(field, typed).toHaveValue("9911311001");
+      }
+      await field.fill("");
+      await field.pressSequentially("09911311001");
+      await expect(field).toHaveValue("9911311001");
+
+      await field.fill("991131100");
+      await expect(page.getByRole("button", { name: "Send Code" })).toBeDisabled();
+      // Ten digits that happen to start with 91 stay as they are.
+      await field.fill("9198765432");
+      await expect(field).toHaveValue("9198765432");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a UK number written with its leading 0", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/login`);
+      await page.getByRole("button", { name: /\+91/ }).click();
+      await page.getByRole("button", { name: /United Kingdom/ }).click();
+      const field = page.getByPlaceholder("Phone Number");
+      await field.fill("07700 900123");
+      await expect(field).toHaveValue("7700900123");
+      await field.fill("+44 7700 900123");
+      await expect(field).toHaveValue("7700900123");
+    } finally {
+      await ctx.close();
+    }
+  });
+});

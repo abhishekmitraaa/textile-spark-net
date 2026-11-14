@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
 import { useLang, LANG_OPTIONS, type Lang } from "@/lib/i18n";
 import { chooseLang } from "@/lib/languagePreference";
-import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164, type CountryCode } from "@/lib/auth/phone";
+import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, toE164, type CountryCode } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
 import { historyIndex, isFinishingAuth, markAuthStart } from "@/lib/authHistory";
@@ -244,7 +244,6 @@ const Login = () => {
                 inputMode="numeric"
                 autoComplete="tel-national"
                 placeholder="Phone Number"
-                maxLength={phoneDigitsFor(selectedCountry)}
                 value={phone}
                 onChange={handlePhoneChange}
                 autoFocus
