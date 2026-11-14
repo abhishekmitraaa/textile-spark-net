@@ -116,10 +116,14 @@ const CONTACT_BLOCK_COPY: Record<CallBlockReason, BlockCopy> = {
 };
 
 export async function callGate(meId: string | undefined, otherId: string): Promise<CallBlock> {
+  // A visitor reaches nobody: every way to contact someone asks them to sign in first, and the database decides then
+  // (call_vendor_contact). Nothing is read for them, because account_status is not visitor-readable once migration
+  // 20261114100500 is applied (buyer sign-up audit item 14a).
+  if (!meId) return null;
   // Both account statuses in one round trip. profiles_select is `true` and
-  // account_status is client-selectable, so the other party's status is
+  // account_status is readable to signed-in accounts, so the other party's status is
   // readable; their email and phone are not (MPF-3).
-  const ids = meId && meId !== otherId ? [meId, otherId] : [otherId];
+  const ids = meId !== otherId ? [meId, otherId] : [otherId];
   const { data: rows } = await supabase.from("profiles").select("id, account_status").in("id", ids);
   const statusOf = (id: string) => rows?.find((r) => r.id === id)?.account_status ?? "active";
 
