@@ -103,37 +103,38 @@ const GOAL_PLACEMENTS: Record<string, string[]> = {
   mixOfActions: ["featuredProduct", "searchListing"],
 };
 
+// Every line is something a vendor can check on Cosora (2026-11-14). It used to say every buyer is vetted, that
+// ads reach millions and that thousands of suppliers had joined: none of it was measured.
 const WHY_FEATURES = [
-  { title: "Verified B2B Buyers Only",    desc: "Every buyer is vetted. No resellers, no time-wasters.",                              bg: "bg-pink-50",   color: "text-pink-600"   },
+  { title: "Built for Business Buying",   desc: "Buyers post requirements and ask for quotes in bulk, by MOQ.",                         bg: "bg-pink-50",   color: "text-pink-600"   },
   { title: "Fashion & Sourcing Focus",    desc: "Built specifically for fashion, textiles, and related industries.",                   bg: "bg-orange-50", color: "text-orange-600" },
-  { title: "Built for Manufacturers",     desc: "Not resellers, not retailers—designed for those who make products.",                  bg: "bg-pink-50",   color: "text-pink-600"   },
-  { title: "India & Global Reach",        desc: "Connect with domestic and international buyers from one platform.",                   bg: "bg-blue-50",   color: "text-blue-600"   },
-  { title: "Convert Views to Enquiries",  desc: "Platform designed to turn visibility into real business leads.",                      bg: "bg-orange-50", color: "text-orange-600" },
-  { title: "No Wasted Traffic",           desc: "Every impression is a potential business opportunity.",                              bg: "bg-pink-50",   color: "text-pink-600"   },
+  { title: "Built for Suppliers",         desc: "Manufacturers, wholesalers, job workers and service providers sell here.",            bg: "bg-pink-50",   color: "text-pink-600"   },
+  { title: "India & Overseas Buyers",     desc: "Buyers in India and abroad post requirements on the same platform.",                  bg: "bg-blue-50",   color: "text-blue-600"   },
+  { title: "Reviewed Before It Runs",     desc: "Cosora checks every ad's picture, text and products before buyers see it.",           bg: "bg-orange-50", color: "text-orange-600" },
+  { title: "You See the Numbers",         desc: "Impressions, clicks and click-through rate for every campaign, on this page.",       bg: "bg-pink-50",   color: "text-pink-600"   },
 ];
 
 const MANUFACTURERS_CARDS = [
-  { title: "Made for Manufacturers", desc: "Not resellers or retailers" },
-  { title: "Export + Domestic",      desc: "Reach buyers worldwide"     },
-  { title: "Growing Ecosystem",      desc: "Join thousands of suppliers" },
-  { title: "Trusted Platform",       desc: "Secure & verified buyers"   },
+  { title: "For Suppliers",       desc: "Manufacturers to job workers"  },
+  { title: "Export + Domestic",   desc: "Buyers in India and abroad"    },
+  { title: "Reviewed Ads",        desc: "Checked before they run"       },
+  { title: "Pause Anytime",       desc: "Stop or resume a campaign"     },
 ];
 
-const SUCCESS_STORIES = [
-  { name: "Rajesh Chhabria", business: "Chhabria and Sons", type: "sanitaryware dealers",   years: 13 },
-  { name: "Varsha Mehta",    business: "V2 Modular",        type: "makeup artist",          years: 8  },
-  { name: "Amit Kumar",      business: "Fashion Hub",        type: "garment manufacturer",   years: 5  },
-  { name: "Priya Singh",     business: "Silk Route Exports", type: "fabric exporter",        years: 7  },
-  { name: "Deepak Sharma",   business: "Cotton King",        type: "textile wholesaler",     years: 11 },
-  { name: "Neha Gupta",      business: "Weave Masters",      type: "loom manufacturer",      years: 4  },
+// What happens after "Create": replaces the "Success Stories" carousel of six invented advertisers and
+// "5.9 Lakh+ Advertisers" (Mitra 2026-11-05: "Replace with honest copy"; claude.md exception lifted).
+const HOW_IT_WORKS = [
+  { title: "Pick the ad and products", desc: "Choose an ad type, the products it promotes, how long it runs and where it shows. You see the total before you pay." },
+  { title: "Cosora reviews it",        desc: "After you pay, Cosora checks the picture, text and products. If something needs changing, you're told why." },
+  { title: "It runs, you track it",    desc: "Once approved it runs for the days you chose. Your Campaigns shows its impressions, clicks and click-through rate." },
 ];
 
 const FAQS = [
-  { q: "How does advertising on Cosora work?",    a: "Cosora advertising helps you reach millions of potential customers searching for businesses like yours. You create targeted ads, set your budget, choose your audience, and track performance in real-time." },
-  { q: "What is the minimum budget required?",    a: "You can start advertising with as little as ₹22/day. You have complete control over your daily and total budget, and can adjust anytime." },
-  { q: "How long does it take for my ad to go live?", a: "Once you complete the ad creation and make payment, your ad goes live instantly. No approval delays." },
-  { q: "Can I target specific cities or regions?", a: "Yes! You can target ads to specific cities, states, or all of India. Our targeting helps you reach the right audience in the right location." },
-  { q: "How do I track my ad performance?",       a: "Our dashboard provides real-time analytics including impressions, clicks, calls, and conversions — accessible 24/7." },
+  { q: "How does advertising on Cosora work?",    a: "An ad puts your products or store in front of buyers on Cosora: in the open listings, search results, category pages and store promotions. You choose the ad type, the products, how long it runs and where it shows, and track its impressions and clicks." },
+  { q: "What is the minimum budget required?",    a: "The lowest rate is ₹22 a day (Open Listing Ad), and a campaign runs for at least 3 days. You see the total before you pay." },
+  { q: "How long does it take for my ad to go live?", a: "After you pay, Cosora reviews the ad's picture, text and products, and it runs once approved. Your Campaigns shows where it is." },
+  { q: "Can I target specific cities or regions?", a: "Yes, on a paid plan. How many locations an ad can target depends on your plan; the plan page lists each one's reach." },
+  { q: "How do I track my ad performance?",       a: "Your Campaigns, on this page, shows each campaign's impressions, clicks and click-through rate." },
   { q: "Can I pause or stop my ad campaign?",     a: "Absolutely. You can pause, resume, or stop your ads at any time. No long-term commitments or cancellation fees." },
 ];
 
@@ -178,7 +179,7 @@ function HeroSection() {
           <div className="hidden lg:flex items-center gap-6 mt-6">
             {[
               { k: "From ₹22", v: "per day" },
-              { k: "Instant", v: "go-live" },
+              { k: "Reviewed", v: "before it runs" },
               { k: "Anytime", v: "pause or stop" },
             ].map((m) => (
               <div key={m.k} className="flex flex-col">
@@ -489,7 +490,7 @@ function AdCreationSteps({
     <section id="adCreationSteps" className="bg-white rounded-xl p-4 md:p-6 border border-gray-200 lg:p-8 xl:scroll-mt-24">
       <div className="mb-6 lg:mb-8">
         <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-2 lg:text-2xl">Create Your Ad in 3 Steps</h3>
-        <p className="text-sm text-gray-600">Select products from your catalogue, choose targeting, and go live instantly</p>
+        <p className="text-sm text-gray-600">Select products from your catalogue, choose targeting, and send it for review</p>
       </div>
 
       <div className="space-y-12 lg:space-y-14">
@@ -1254,85 +1255,20 @@ function CostSummary({
   );
 }
 
-// ── SuccessStoriesCarousel ──
-function SuccessStoriesCarousel() {
-  const [idx, setIdx] = useState(0);
-  const [cardW, setCardW] = useState(85);
-
-  useEffect(() => {
-    const update = () => {
-      if (window.innerWidth < 768) setCardW(85);
-      else if (window.innerWidth < 1024) setCardW(46);
-      else setCardW(31);
-    };
-    update();
-    window.addEventListener("resize", update);
-    return () => window.removeEventListener("resize", update);
-  }, []);
-
-  const max = SUCCESS_STORIES.length - 1;
-
+// ── HowAdvertisingWorks ──
+function HowAdvertisingWorks() {
   return (
     <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-100 mt-10 lg:p-8">
-      <div className="mb-6 flex items-end justify-between lg:mb-8">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1 lg:text-3xl">Success Stories</h2>
-          <p className="text-gray-600 text-sm">5.9 Lakh+ Advertisers</p>
-        </div>
-        <div className="flex gap-2">
-          <button onClick={() => setIdx(p => p === 0 ? max : p - 1)}
-            className="w-10 h-10 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-all active:scale-90">
-            <ChevronLeft className="w-5 h-5 text-gray-700" />
-          </button>
-          <button onClick={() => setIdx(p => p === max ? 0 : p + 1)}
-            className="w-10 h-10 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center hover:bg-gray-50 transition-all active:scale-90">
-            <ChevronRight className="w-5 h-5 text-gray-700" />
-          </button>
-        </div>
-      </div>
-
-      <div className="overflow-hidden">
-        <div className="flex transition-transform duration-500 ease-in-out"
-          style={{ transform: `translateX(-${idx * cardW}%)` }}>
-          {SUCCESS_STORIES.map((s, i) => (
-            <div key={i} className="w-[85%] md:w-[46%] lg:w-[31%] shrink-0 px-2">
-              <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 h-full">
-                <div className="relative mb-6 rounded-xl">
-                  <div className="w-full h-48 bg-gray-100 rounded-xl flex items-center justify-center">
-                    <Building2 className="w-16 h-16 text-gray-300" />
-                  </div>
-                  <div className="absolute bottom-[-15px] left-3">
-                    <button className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg border-4 border-gray-100">
-                      <svg className="w-5 h-5 text-blue-600 ml-0.5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </button>
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <h3 className="text-lg font-bold text-gray-900 mb-1">{s.name}</h3>
-                  <p className="text-sm text-gray-600 mb-3 flex flex-col">
-                    <span className="font-semibold text-gray-700">{s.business}</span>
-                    <span className="text-gray-500 text-xs tracking-wider font-bold mt-0.5">{s.type}</span>
-                  </p>
-                  <p className="text-xs text-gray-500 font-bold italic mb-4">Customer since {s.years} years</p>
-                  <a href="#" className="inline-flex items-center gap-2 text-blue-600 font-bold text-sm hover:gap-3 transition-all">
-                    Visit Business <ChevronRight className="w-4 h-4" />
-                  </a>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex justify-center gap-2 mt-8">
-        {SUCCESS_STORIES.slice(0, Math.ceil(SUCCESS_STORIES.length - (100 / cardW) + 1)).map((_, i) => (
-          <button key={i} onClick={() => setIdx(i)}
-            className={cn("h-1.5 rounded-full transition-all duration-300",
-              idx === i ? "bg-purple-600 w-8" : "bg-gray-200 hover:bg-gray-300 w-2")} />
+      <h2 className="text-2xl font-bold text-gray-900 mb-6 lg:text-3xl lg:mb-8">How Advertising Works</h2>
+      <ol className="grid gap-4 md:grid-cols-3">
+        {HOW_IT_WORKS.map((h, i) => (
+          <li key={h.title} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-purple-100 text-sm font-bold text-purple-700">{i + 1}</span>
+            <h3 className="mt-3 text-base font-bold text-gray-900">{h.title}</h3>
+            <p className="mt-1 text-sm text-gray-600">{h.desc}</p>
+          </li>
         ))}
-      </div>
+      </ol>
     </div>
   );
 }
@@ -1374,7 +1310,7 @@ function WhyCosoraSection() {
     <div className="p-6 lg:px-0 lg:py-10">
       <div className="text-center mb-8 lg:mb-10">
         <div className="text-pink-600 text-sm font-bold mb-2 uppercase tracking-wide lg:text-xs lg:tracking-[0.18em]">WHY COSORA</div>
-        <h2 className="text-3xl font-bold text-gray-900 mb-3 lg:text-4xl lg:text-balance">The Platform That Gets You Orders</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-3 lg:text-4xl lg:text-balance">Why Advertise on Cosora</h2>
         <p className="text-gray-600 text-sm leading-relaxed max-w-2xl mx-auto">
           We understand what manufacturers need. That's why every feature is designed to connect you with serious buyers.
         </p>
@@ -1429,7 +1365,7 @@ function CTASection() {
         Advertise on Cosora
         <ChevronRight className="w-5 h-5" />
       </a>
-      <p className="text-gray-500 text-sm mt-6">Start with just ₹25/day • No long-term commitment • Cancel anytime</p>
+      <p className="text-gray-500 text-sm mt-6">From ₹22/day • No long-term commitment • Pause anytime</p>
     </div>
   );
 }
@@ -1690,7 +1626,7 @@ const Advertisements = () => {
               </div>
             </motion.div>
             <motion.div variants={section}>
-              <SuccessStoriesCarousel />
+              <HowAdvertisingWorks />
             </motion.div>
             <motion.div variants={section}>
               <FAQSection />

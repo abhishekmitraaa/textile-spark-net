@@ -37,15 +37,15 @@ const fadeIn = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
-// What registration actually asks for (documents step and product step, 2026-10-02). Until 2026-11-05 this
+// What registration actually asks for (submit_vendor_registration(), 2026-11-13). Until 2026-11-14 this
 // page's lists, logos, figures and testimonials were invented (ToDo "Remove invented claims", 2026-09-26);
 // everything below is something a seller can check in the app.
 const documents = [
   "PAN card",
   "A business registration: Udyam, GST or CIN",
   "Aadhaar card, with all but the last four digits masked",
-  "Your business details",
-  "At least one product with a photo",
+  "Your business details and at least one photo of your premises",
+  "Your first product, with a photo and a price",
 ];
 
 const valueProps = [
@@ -67,7 +67,7 @@ const valueProps = [
 ];
 
 const howItWorks = [
-  { step: "1", title: "Register and verify", desc: "Add your business details and documents. Cosora checks them and marks your store verified." },
+  { step: "1", title: "Register", desc: "Add your business details, documents and first product. Cosora reviews your registration before your store goes live." },
   { step: "2", title: "List your products", desc: "Upload products with photos, sizes and prices. Each listing goes live once Cosora has reviewed it." },
   { step: "3", title: "Get requirements and quote", desc: "Buyers post what they need. Matching requirements reach your leads, and you quote and chat directly." },
 ];
@@ -182,7 +182,7 @@ const VendorLanding = () => {
       <main className="mx-auto max-w-6xl space-y-6 px-4 pb-12 pt-4">
         <div className="flex justify-center">
           <span className="rounded-full border border-brand-border bg-[#f5f5f5] px-4 py-1 text-[11px] font-semibold uppercase tracking-wide text-brand-ink">
-            Sell for free on India&apos;s largest online B2B marketplace
+            Register and sell for free on Cosora, the B2B marketplace for fashion and textiles
           </span>
         </div>
 
@@ -194,8 +194,8 @@ const VendorLanding = () => {
         >
           <div className="rounded-2xl border border-brand-border bg-[#ffffff] p-4 shadow-sm">
             <h1 className="text-2xl font-bold leading-snug sm:text-3xl">
-              Sell online to Global customers at{" "}
-              <span className="text-brand-buyer">0% Commission</span>
+              Sell to fashion and textile buyers,{" "}
+              <span className="text-brand-buyer">directly</span>
             </h1>
 
             <div className="mt-4 overflow-hidden rounded-2xl border border-brand-border bg-[#f5f5f5]">
@@ -249,7 +249,7 @@ const VendorLanding = () => {
                 Get Seen by Serious Buyers. Get More Orders.
               </h2>
               <p className="mt-2 text-base text-brand-ink/70">
-                Cosora is built for manufacturers, wholesalers, and suppliers who need direct access to verified buyers.
+                Cosora is built for manufacturers, wholesalers, and suppliers who want to deal with buyers directly.
               </p>
             </div>
 
@@ -388,13 +388,13 @@ const VendorLanding = () => {
             <div className="mt-4 grid gap-3">
               <div className="rounded-2xl bg-[#ffffff] p-4 text-brand-ink">
                 <p className="text-sm font-semibold">Daily ads start at just</p>
-                <p className="mt-1 text-2xl font-bold text-brand-buyer">Rs 25/day</p>
+                <p className="mt-1 text-2xl font-bold text-brand-buyer">₹22/day</p>
                 <p className="mt-1 text-sm text-brand-ink/70">Start small and scale as you grow.</p>
               </div>
               <div className="rounded-2xl bg-[#ffffff] p-4 text-brand-ink">
                 <p className="text-sm font-semibold">Registration Fee</p>
                 <p className="mt-1 text-2xl font-bold text-brand-vendor">FREE</p>
-                <p className="mt-1 text-sm text-brand-ink/70">List products and get verified at no cost.</p>
+                <p className="mt-1 text-sm text-brand-ink/70">Register and list products on the Free plan at no cost.</p>
               </div>
             </div>
             <Link to={startTo} className="mt-4 block">

@@ -92,7 +92,7 @@ export function useMyAds(vendorId: string | undefined) {
   });
 }
 
-/** Cosora-Admin's ad reason codes and their labels (`ad_reason_labels()`, migration 20261105110000), so a campaign
+/** Cosora-Admin's ad reason codes and their labels (`ad_reason_labels()`, migration 20261114110100), so a campaign
  *  card says "Misleading or unverifiable claims" rather than the stored code. */
 export function useAdReasonLabels() {
   return useQuery({

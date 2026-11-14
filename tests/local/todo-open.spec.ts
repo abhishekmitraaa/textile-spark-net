@@ -80,3 +80,32 @@ test("Cosora-Admin's Leads says Deadline passed for a requirement past its deadl
     sql(`delete from public.rfqs where title = '${title}'`);
   }
 });
+
+test("the invented claims are gone from the seller landing page, Cosora Studio, /dashboard and Advertisements", async ({ browser, page }) => {
+  await page.goto(`${BUYER_URL}/seller`);
+  await expect(page.getByRole("heading", { name: "How it works" })).toBeVisible();
+  await expect(page.getByText("Buyers pay you directly")).toBeVisible();
+  for (const gone of ["Hotping", "1 million", "95% of shopping malls", "0% Commission", "0% commission", "Seller success stories", "largest online B2B"]) {
+    await expect(page.getByText(gone, { exact: false }), gone).toHaveCount(0);
+  }
+
+  await page.goto(`${BUYER_URL}/cosora-studio`);
+  await expect(page.getByRole("heading", { name: "Cosora Studio", level: 1 })).toBeVisible();
+  await expect(page.getByText("Coming soon")).toBeVisible();
+  for (const gone of ["Vogue", "Aarav Mehta", "98765 43210", "Chat & Book Now"]) {
+    await expect(page.getByText(gone, { exact: false }), gone).toHaveCount(0);
+  }
+  await page.goto(`${BUYER_URL}/cosora-studio/1`);
+  await expect(page).toHaveURL(/\/cosora-studio$/);
+
+  const ctx = await signedInContext(browser, "vendor", { width: 1440, height: 1000 });
+  const p2 = await ctx.newPage();
+  await p2.goto(`${BUYER_URL}/dashboard`);
+  await expect(p2).toHaveURL(/\/seller-home$/);
+  await p2.goto(`${BUYER_URL}/advertisements`);
+  await expect(p2.getByRole("heading", { name: "How Advertising Works" })).toBeVisible();
+  for (const gone of ["Success Stories", "5.9 Lakh", "goes live instantly", "Every buyer is vetted", "Join thousands of suppliers"]) {
+    await expect(p2.getByText(gone, { exact: false }), gone).toHaveCount(0);
+  }
+  await ctx.close();
+});
