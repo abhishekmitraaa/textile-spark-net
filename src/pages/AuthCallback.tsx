@@ -4,6 +4,7 @@ import { Loader2 } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
+import { clearAuthStart } from "@/lib/authHistory";
 
 // ─────────────────────────────────────────────────────────────
 // The landing page for BOTH redirect-based sign-ins:
@@ -37,6 +38,9 @@ export default function AuthCallback() {
   // it in dev. The write underneath is an upsert and safe to repeat, but there
   // is no reason to issue it twice.
   const appliedRef = useRef(false);
+  // A redirect sign-in (Google) didn't start on Login's phone form: an earlier, abandoned attempt's mark must not
+  // rewind this one (lib/authHistory.ts).
+  useEffect(() => { clearAuthStart(); }, []);
 
   useEffect(() => {
     if (loading) return;

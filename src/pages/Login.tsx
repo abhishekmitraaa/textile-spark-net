@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Globe, ChevronDown, X, Loader2, AlertCircle } from "lucide-react";
@@ -12,6 +12,7 @@ import { chooseLang } from "@/lib/languagePreference";
 import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164, type CountryCode } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
+import { historyIndex, isFinishingAuth, markAuthStart } from "@/lib/authHistory";
 
 // ─────────────────────────────────────────────────────────────
 // DATA
@@ -121,7 +122,20 @@ function CountryModal({
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, session, profile, loading } = useAuth();
+  // The history entry this sign-in started on: finishing it goes back here (lib/authHistory.ts, audit item 8).
+  const startIdx = useRef(historyIndex());
+  // Already signed in (a bookmark, or back into this page): go to the account's place instead, once, on arrival.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (arrived.current || loading) return;
+    if (!session) { arrived.current = true; return; }
+    if (!profile) return;
+    arrived.current = true;
+    if (isFinishingAuth()) return;
+    const home = profile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals";
+    navigate(profile.onboarded ? home : "/auth/role-selection", { replace: true });
+  }, [loading, session, profile, navigate]);
   const lang = useLang();
   const [googleLoading, setGoogleLoading] = useState(false);
   // Selecting a language here switches the whole app. Signed out, it is
@@ -182,6 +196,7 @@ const Login = () => {
     if (delivery.status === "error") { setError(delivery.message); return; }
 
     const state: OtpVerifyState = { phone, countryCode: selectedCountry.code, e164, delivery };
+    markAuthStart(startIdx.current);
     navigate("/auth/otp-verify", { state });
   };
 
@@ -282,7 +297,7 @@ const Login = () => {
 
           <p className="mt-5 text-center text-sm text-gray-500">
             New to Cosora?{" "}
-            <Link to="/register" className="font-semibold text-[#a4172c] hover:underline">
+            <Link to="/register" state={{ authStartIdx: startIdx.current }} className="font-semibold text-[#a4172c] hover:underline">
               Create an account
             </Link>
           </p>

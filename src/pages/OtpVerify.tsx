@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation, Navigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { AlertCircle, Loader2, MessageSquareOff } from "lucide-react";
@@ -9,6 +9,7 @@ import CosoraLogo from "@/components/CosoraLogo";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useAuth } from "@/contexts/AuthContext";
 import { readProfileRow } from "@/lib/auth/profileRead";
+import { clearAuthStart, finishAuthFlow } from "@/lib/authHistory";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
 import { maskPhone } from "@/lib/auth/phone";
 import { sendOtp, verifyOtp, OTP_LENGTH, type SendOtpResult } from "@/lib/auth/otp";
@@ -80,7 +81,17 @@ const OtpVerify = () => {
   const [error, setError] = useState<string | null>(null);
   // Signed in, but the profile couldn't be read even after retrying: where to go isn't known, so ask (audit item 6).
   const [landingFailed, setLandingFailed] = useState<string | null>(null);
-  const { signOut } = useAuth();
+  const { signOut, session, profile: signedInProfile, loading } = useAuth();
+  // Already signed in when this screen opens (back into it after signing in): go to the account's place, once.
+  const arrived = useRef(false);
+  useEffect(() => {
+    if (arrived.current || loading) return;
+    if (!session) { arrived.current = true; return; }
+    if (!signedInProfile) return;
+    arrived.current = true;
+    const home = signedInProfile.active_role === "seller" ? "/seller-home" : "/home/new-arrivals";
+    navigate(signedInProfile.onboarded ? home : "/auth/role-selection", { replace: true });
+  }, [loading, session, signedInProfile, navigate]);
   const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
@@ -153,14 +164,19 @@ const OtpVerify = () => {
     setRole(activeRole);
 
     if (!profile.onboarded) {
-      // From Register the role is already chosen (handle_new_user applied it
-      // from the signup metadata), so continue where Register used to send a
-      // signed-in user. From Login a new number picks its role first.
-      if (state.signup) navigate(activeRole === "seller" ? "/onboarding" : "/home/new-arrivals");
-      else navigate("/auth/role-selection");
+      // The next step replaces this screen, so back never returns to the code. From Register the role is already
+      // chosen (handle_new_user applied it from the signup metadata): a buyer goes on to Sub-role (D4; it used to go
+      // straight to Home, past the steps), a seller to the registration. From Login a new number picks its role first.
+      if (state.signup && activeRole === "seller") {
+        // The seller registration keeps its own history (Onboarding.tsx); no rewind is waiting for it.
+        clearAuthStart();
+        navigate("/onboarding", { replace: true });
+      } else if (state.signup) navigate("/auth/sub-role", { replace: true });
+      else navigate("/auth/role-selection", { replace: true });
       return;
     }
-    navigate(activeRole === "seller" ? "/seller-home" : "/home/new-arrivals");
+    // A returning account: back to where sign-in started, replaced by Home (audit item 8).
+    await finishAuthFlow(navigate, activeRole === "seller" ? "/seller-home" : "/home/new-arrivals");
   };
 
   const back = state.signup ? "/register" : "/auth/login";

@@ -512,6 +512,7 @@ test.describe("B7 · back controls and Register", () => {
       await page.getByRole("button", { name: /Continue/ }).click();
       await expect(page).toHaveURL(/\/register\?step=2$/);
       await page.getByLabel("Full Name").fill("Asha Rao");
+      await page.locator("input[name=brandName]").fill("Asha Textiles");
       await page.goBack();
       await expect(page).toHaveURL(/\/register$/);
       await expect(page.getByRole("button", { name: /Continue/ })).toBeVisible();
@@ -618,6 +619,126 @@ test.describe("C1 · a failed profile read never strands or misroutes", () => {
       down = false;
       await page.getByRole("button", { name: "Retry" }).click();
       await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 15_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+/** The buyer sign-up steps after role selection, filled in. */
+async function finishBuyerSteps(page: Page): Promise<void> {
+  await expect(page).toHaveURL(/\/auth\/sub-role$/, { timeout: 20_000 });
+  await page.getByRole("radio", { name: "Designer / Design Head" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page).toHaveURL(/\/auth\/account-info$/);
+  await page.getByPlaceholder("Enter your name").fill("Asha Rao");
+  await page.getByPlaceholder("Please enter a valid email address.").fill("asha@example.com");
+  await page.getByPlaceholder("Your company or brand name").fill("Asha Textiles");
+  await page.getByRole("button", { name: "NEXT" }).click();
+  await expect(page).toHaveURL(/\/auth\/interest-preference$/);
+  await page.locator("[data-interest-id]").first().click();
+  await page.getByRole("button", { name: /^Save/ }).click();
+  await expect(page).toHaveURL(/\/auth\/terms$/);
+  await page.getByRole("checkbox").check();
+  await page.getByRole("button", { name: "NEXT" }).click();
+  await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+}
+
+test.describe("C2 · after sign-in or sign-up, back leaves the sign-in pages", () => {
+  test("a new buyer: one back from Home returns to the page before sign-in", async ({ browser }) => {
+    test.setTimeout(150_000);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await routeDummyOtp(ctx);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/categories`);
+      await signInByPhone(page, freshPhone());
+      await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
+      await page.getByRole("button", { name: /^BUYER/ }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
+      await finishBuyerSteps(page);
+      await page.goBack();
+      await expect(page).toHaveURL(/\/categories$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a returning buyer: one back from Home returns to the page before sign-in", async ({ browser }) => {
+    test.setTimeout(120_000);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await routeDummyOtp(ctx);
+    const page = await ctx.newPage();
+    const digits = freshPhone();
+    try {
+      await signInByPhone(page, digits);
+      await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
+      const id = sql(`select id from auth.users where phone = '91${digits}'`);
+      sql(`update public.profiles set onboarded = true, terms_version = public.buyer_terms_version(), terms_accepted_at = now() where id = '${id}'`);
+      await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
+
+      await page.goto(`${BUYER_URL}/categories`);
+      await signInByPhone(page, digits);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 30_000 });
+      await page.goBack();
+      await expect(page).toHaveURL(/\/categories$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("signed in, the sign-in pages send you home", async ({ browser }) => {
+    const who = await freshAccount("c2-signedin");
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      for (const path of ["/auth/login", "/auth/otp-verify"]) {
+        await page.goto(`${BUYER_URL}${path}`);
+        await expect(page, path).toHaveURL(/\/home\/new-arrivals$/);
+      }
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a reload in the middle of sign-up still rewinds at the end", async ({ browser }) => {
+    test.setTimeout(150_000);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await routeDummyOtp(ctx);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/categories`);
+      await signInByPhone(page, freshPhone());
+      await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
+      await page.getByRole("button", { name: /^BUYER/ }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expect(page).toHaveURL(/\/auth\/sub-role$/);
+      await page.reload();
+      await finishBuyerSteps(page);
+      await page.goBack();
+      await expect(page).toHaveURL(/\/categories$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Register: a buyer goes on to the Sub-role step after the code", async ({ browser }) => {
+    test.setTimeout(120_000);
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await routeDummyOtp(ctx);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/register`);
+      await page.getByRole("button", { name: /Continue/ }).click();
+      await page.getByLabel("Full Name").fill("Asha Rao");
+      await page.locator("input[name=brandName]").fill("Asha Textiles");
+      await page.locator("input[name=phone]").fill(freshPhone());
+      await page.getByRole("button", { name: /Send Code/ }).click();
+      await expect(page).toHaveURL(/\/auth\/otp-verify$/, { timeout: 30_000 });
+      await page.getByLabel("One-time code").click();
+      await page.keyboard.type("123456");
+      await page.getByRole("button", { name: "Next" }).click();
+      await expect(page).toHaveURL(/\/auth\/sub-role$/, { timeout: 30_000 });
     } finally {
       await ctx.close();
     }

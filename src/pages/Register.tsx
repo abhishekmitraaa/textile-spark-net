@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { signupMetadata } from "@/lib/queries/signupProfile";
 import { COUNTRY_CODES, cleanPhoneDigits, isCompletePhone, phoneDigitsFor, toE164 } from "@/lib/auth/phone";
 import { sendOtp } from "@/lib/auth/otp";
 import type { OtpVerifyState } from "@/pages/OtpVerify";
+import { historyIndex, markAuthStart } from "@/lib/authHistory";
 
 type Role = "buyer" | "seller";
 
@@ -22,6 +23,8 @@ const Register = () => {
   const [params, setParams] = useSearchParams();
   const location = useLocation();
   const step: 1 | 2 = params.get("step") === "2" ? 2 : 1;
+  // Where this sign-up started (Login's entry when it came from there): finishing goes back to it (lib/authHistory.ts).
+  const startIdx = useRef<number | null>((location.state as { authStartIdx?: number } | null)?.authStartIdx ?? historyIndex());
   const toDetails = () => setParams({ step: "2" });
   const toRole = () => {
     if (location.key !== "default") navigate(-1);
@@ -86,6 +89,7 @@ const Register = () => {
       delivery,
       signup: { role: selectedRole, data },
     };
+    markAuthStart(startIdx.current);
     navigate("/auth/otp-verify", { state });
   };
 

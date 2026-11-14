@@ -11,6 +11,7 @@ import TermsClauses from "@/components/TermsClauses";
 import { useAuth } from "@/contexts/AuthContext";
 import { TERMS_EFFECTIVE_DATE, TERMS_INTRO } from "@/data/terms";
 import { acceptBuyerTerms, isStaleTerms } from "@/lib/buyerTerms";
+import { finishAuthFlow } from "@/lib/authHistory";
 
 const Terms = () => {
   const navigate = useNavigate();
@@ -20,8 +21,7 @@ const Terms = () => {
   const [saving, setSaving] = useState(false);
 
   // Accepting is the last sign-up step: the database records which Terms were accepted and when, and only then is the
-  // account onboarded (accept_buyer_terms; buyer sign-up audit item 5). Welcome replaces this entry, so back from Home
-  // never lands here.
+  // account onboarded (accept_buyer_terms; buyer sign-up audit item 5).
   const accept = async () => {
     if (!agreed || saving) return;
     setSaving(true);
@@ -34,7 +34,8 @@ const Terms = () => {
       else toast.error("Couldn't finish signing up", { description: errorMessage(e) });
       return;
     }
-    navigate("/auth/welcome", { replace: true });
+    // Back to where sign-in started, replaced by Welcome: one back from Home leaves sign-up behind (audit item 8).
+    await finishAuthFlow(navigate, "/auth/welcome");
   };
 
   return (
