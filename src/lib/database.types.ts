@@ -696,6 +696,7 @@ export type Database = {
         Row: {
           business_city: string | null
           business_type: string | null
+          buyer_role: string | null
           city: string | null
           company: string | null
           country: string | null
@@ -722,6 +723,7 @@ export type Database = {
         Insert: {
           business_city?: string | null
           business_type?: string | null
+          buyer_role?: string | null
           city?: string | null
           company?: string | null
           country?: string | null
@@ -748,6 +750,7 @@ export type Database = {
         Update: {
           business_city?: string | null
           business_type?: string | null
+          buyer_role?: string | null
           city?: string | null
           company?: string | null
           country?: string | null
@@ -2168,6 +2171,8 @@ export type Database = {
           id: string
           onboarded: boolean
           phone: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
         }
         Insert: {
           account_status?: Database["public"]["Enums"]["account_status_type"]
@@ -2179,6 +2184,8 @@ export type Database = {
           id: string
           onboarded?: boolean
           phone?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
         }
         Update: {
           account_status?: Database["public"]["Enums"]["account_status_type"]
@@ -2190,7 +2197,15 @@ export type Database = {
           id?: string
           onboarded?: boolean
           phone?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
         }
+        Relationships: []
+      }
+      terms_acceptances: {
+        Row: { accepted_at: string; id: number; profile_id: string; source: string; terms_version: string }
+        Insert: { accepted_at?: string; id?: number; profile_id: string; source: string; terms_version: string }
+        Update: { accepted_at?: string; id?: number; profile_id?: string; source?: string; terms_version?: string }
         Relationships: []
       }
       quotes: {
@@ -4607,6 +4622,8 @@ export type Database = {
       }
     }
     Functions: {
+      accept_buyer_terms: { Args: { p_version: string }; Returns: undefined }
+      buyer_terms_version: { Args: never; Returns: string }
       admin_attribute_save: {
         Args: { p_id: string | null; p_row: Json }
         Returns: string
