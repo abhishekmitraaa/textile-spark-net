@@ -67,6 +67,7 @@ export default function CategoryPickerGrid({
               key={cat.id}
               type="button"
               onClick={() => onToggle(cat.id)}
+              data-interest-id={cat.id}
               aria-pressed={active}
               className={tileButton}
             >

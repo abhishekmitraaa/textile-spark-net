@@ -310,3 +310,77 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
     }
   });
 });
+
+test.describe("B4 · interests are never lost or wiped", () => {
+  const SAVED = "{fabrics,kidswear}";
+
+  test("a refused save keeps the buyer on Interest Preference with a message, and nothing changes", async ({ browser }) => {
+    const who = await freshAccount("b4-save", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.route("**/rest/v1/buyer_profiles*", (route) =>
+        route.request().method() === "POST" ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
+      await page.goto(`${BUYER_URL}/auth/interest-preference`);
+      await page.locator("[data-interest-id]").first().click({ force: true });
+      await page.getByRole("button", { name: /^Save/ }).click();
+      await expect(page.getByText("Couldn't save your interests")).toBeVisible();
+      await expect(page).toHaveURL(/\/auth\/interest-preference$/);
+      expect(sql(`select coalesce(preferred_categories::text, 'none') from public.buyer_profiles where id = '${who.id}'
+                  union all select 'none' limit 1`)).toBe("none");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a failed read on For You shows an error with Retry, never the first-run screen, and writes nothing", async ({ browser }) => {
+    const who = await freshAccount("b4-read");
+    sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '${SAVED}')
+         on conflict (id) do update set preferred_categories = excluded.preferred_categories`);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    const writes = watchWrites(page);
+    let fail = true;
+    try {
+      await page.route("**/rest/v1/buyer_profiles*preferred_categories*", (route) =>
+        fail && route.request().method() === "GET" ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await expect(page.getByText("Couldn't load your interests")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Skip for now" })).toHaveCount(0);
+      expect(writes.filter((w) => /buyer_profiles/.test(w.url()))).toHaveLength(0);
+      expect(sql(`select preferred_categories::text from public.buyer_profiles where id = '${who.id}'`)).toBe(SAVED);
+
+      fail = false;
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(page.getByText("Couldn't load your interests")).toHaveCount(0);
+      await expect(page.getByRole("button", { name: "Skip for now" })).toHaveCount(0);
+      expect(sql(`select preferred_categories::text from public.buyer_profiles where id = '${who.id}'`)).toBe(SAVED);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("while the saved interests are loading: no first-run screen, and Save waits", async ({ browser }) => {
+    const who = await freshAccount("b4-slow");
+    sql(`insert into public.buyer_profiles (id, preferred_categories) values ('${who.id}', '${SAVED}')
+         on conflict (id) do update set preferred_categories = excluded.preferred_categories`);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.route("**/rest/v1/buyer_profiles*preferred_categories*", async (route) => {
+        await new Promise((r) => setTimeout(r, 3000));
+        await route.continue();
+      });
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await expect(page.getByText("Loading your interests")).toBeVisible();
+      await expect(page.getByRole("button", { name: "Skip for now" })).toHaveCount(0);
+
+      await page.goto(`${BUYER_URL}/profile/interest-preference`);
+      await page.locator("[data-interest-id]").first().click({ force: true });
+      await expect(page.getByRole("button", { name: /^Save/ })).toBeDisabled();
+      await expect(page.locator("[data-interest-id][aria-pressed='true']")).toHaveCount(2, { timeout: 10_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});

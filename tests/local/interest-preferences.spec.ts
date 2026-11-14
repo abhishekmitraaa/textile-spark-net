@@ -15,7 +15,7 @@ const saved = (id: string) =>
 test.describe("Interest Preference", () => {
   test("registration: picks and the Others words save to the account, then on to Terms", async ({ browser }) => {
     test.setTimeout(120_000);
-    const who = await freshAccount("interest-reg");
+    const who = await freshAccount("interest-reg", { onboarded: false });
     const ctx = await contextWithSession(browser, who.session);
     const page = await ctx.newPage();
     const errors = watchErrors(page);
@@ -56,7 +56,9 @@ test.describe("Interest Preference", () => {
     ]);
     const page = await ctx.newPage();
     try {
-      await page.goto(`${BUYER_URL}/auth/interest-preference`);
+      // Signed-out visitors no longer open the sign-up steps (buyer sign-up audit item 3); the same screen at its
+      // profile address still reads the browser's picks.
+      await page.goto(`${BUYER_URL}/profile/interest-preference`);
       for (const name of ["Men's Clothing", "Women's Clothing", "Unisex Clothing", "Kidswear"]) {
         await expect(tile(page, name)).toHaveAttribute("aria-pressed", "true");
       }

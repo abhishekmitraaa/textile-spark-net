@@ -4,7 +4,10 @@ import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
-import { usePreferences, setCategories } from "@/lib/preferencesStore";
+import { toast } from "sonner";
+import { usePreferences, usePreferencesSync, retryPreferences, setCategories } from "@/lib/preferencesStore";
+import { useAuth } from "@/contexts/AuthContext";
+import { errorMessage } from "@/lib/errorMessage";
 import { OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 
 // Buyer registration interests. These are the shared buyer categories used by
@@ -24,6 +27,11 @@ const InterestPreference = () => {
   // editing preferences isn't dropped back into the signup flow.
   const inProfile = useLocation().pathname.startsWith("/profile");
   const prefs = usePreferences();
+  const { user, loading: authLoading } = useAuth();
+  // Signed in, the saved interests must be known before anything is saved over them (preferencesStore: the sync rule).
+  const sync = usePreferencesSync(user?.id, authLoading);
+  const ready = sync === "ready" || sync === "local";
+  const [saving, setSaving] = useState(false);
   const [selected, setSelected] = useState<string[]>(prefs.categories);
   const [otherText, setOtherText] = useState(prefs.otherInterest);
   // Mirror store→local until the buyer starts editing, so a signed-in buyer who
@@ -48,12 +56,21 @@ const InterestPreference = () => {
   const otherOn = selected.includes(OTHER_INTEREST_ID);
   const otherMissing = otherOn && tidyOtherInterest(otherText) === "";
   const isValid = selected.length > 0 && !otherMissing;
+  const canSave = isValid && ready && !saving;
   const count = selected.length;
 
-  const handleSave = () => {
-    if (!isValid) return;
-    // Persist to the real account-tied store (DB when signed in, local otherwise).
-    setCategories(selected, otherOn ? tidyOtherInterest(otherText) : "");
+  const handleSave = async () => {
+    if (!canSave) return;
+    // Persist to the real account-tied store (DB when signed in, local otherwise), and move on only once it is saved.
+    setSaving(true);
+    try {
+      await setCategories(selected, otherOn ? tidyOtherInterest(otherText) : "");
+    } catch (e) {
+      setSaving(false);
+      toast.error("Couldn't save your interests", { description: errorMessage(e) });
+      return;
+    }
+    setSaving(false);
     // Registration → continue to terms; profile edit → back to the profile page.
     navigate(inProfile ? "/profile" : "/auth/terms");
   };
@@ -90,12 +107,24 @@ const InterestPreference = () => {
           {count > 0 && <span className="text-xs font-medium text-brand-buyer">{`${count} selected`}</span>}
         </div>
 
-        <CategoryPickerGrid
-          selected={selected}
-          onToggle={toggle}
-          otherText={otherText}
-          onOtherTextChange={editOther}
-        />
+        {sync === "loading" && <p className="mb-3 text-xs text-gray-500" role="status">Loading your interests…</p>}
+        {sync === "error" && (
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-gray-200 px-3 py-2.5" role="alert">
+            <p className="text-xs text-gray-700">Couldn't load your interests. Your saved picks are safe.</p>
+            <button type="button" onClick={() => void retryPreferences()} className="shrink-0 text-xs font-semibold text-brand-buyer">
+              Retry
+            </button>
+          </div>
+        )}
+        {/* Not tappable until the saved picks are known: a pick made over an unknown list would replace it. */}
+        <fieldset disabled={!ready} aria-busy={sync === "loading"} className={cn(!ready && "opacity-60")}>
+          <CategoryPickerGrid
+            selected={selected}
+            onToggle={toggle}
+            otherText={otherText}
+            onOtherTextChange={editOther}
+          />
+        </fieldset>
       </motion.main>
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-gray-100 bg-white/95 backdrop-blur">
@@ -106,15 +135,15 @@ const InterestPreference = () => {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!isValid}
+            disabled={!canSave}
             className={cn(
               "w-full py-3.5 text-sm font-bold rounded-xl transition-colors active:scale-[0.99]",
-              isValid
+              canSave
                 ? "bg-brand-buyer hover:bg-brand-buyer/90 text-white"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             )}
           >
-            Save
+            {saving ? "Saving…" : "Save"}
           </button>
         </div>
       </div>

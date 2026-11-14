@@ -8609,5 +8609,11 @@
  "What best describes you": "તમારું શ્રેષ્ઠ વર્ણન શું છે",
  "Your approximate location (about 1 km) is looked up by BigDataCloud.": "તમારું અંદાજિત સ્થાન (લગભગ 1 કિમી) BigDataCloud દ્વારા શોધવામાં આવે છે.",
  "Pincode lookup works for India only. Enter your pincode, or leave it empty.": "પિનકોડ શોધ ફક્ત ભારત માટે કામ કરે છે. તમારો પિનકોડ દાખલ કરો, અથવા તેને ખાલી છોડો.",
- "Detected {0}, but no pincode was found. Enter it below.": "{0} મળ્યું, પરંતુ કોઈ પિનકોડ મળ્યો નહીં. તેને નીચે દાખલ કરો."
+ "Detected {0}, but no pincode was found. Enter it below.": "{0} મળ્યું, પરંતુ કોઈ પિનકોડ મળ્યો નહીં. તેને નીચે દાખલ કરો.",
+ "Your saved interests haven't loaded yet. Try again in a moment.": "તમારી સાચવેલી રુચિઓ હજી લોડ થઈ નથી. થોડી વારમાં ફરી પ્રયાસ કરો.",
+ "Couldn't load your interests": "તમારી રુચિઓ લોડ થઈ શકી નહીં",
+ "Your saved picks are safe. Check your connection and try again.": "તમારી સાચવેલી પસંદગીઓ સુરક્ષિત છે. તમારું કનેક્શન તપાસો અને ફરી પ્રયાસ કરો.",
+ "Loading your interests…": "તમારી રુચિઓ લોડ થઈ રહી છે…",
+ "Couldn't save your interests": "તમારી રુચિઓ સાચવી શકાઈ નહીં",
+ "Couldn't load your interests. Your saved picks are safe.": "તમારી રુચિઓ લોડ થઈ શકી નહીં. તમારી સાચવેલી પસંદગીઓ સુરક્ષિત છે."
 }

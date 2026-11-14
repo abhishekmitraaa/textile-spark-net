@@ -8609,5 +8609,11 @@
  "What best describes you": "आपका सबसे अच्छा वर्णन क्या है",
  "Your approximate location (about 1 km) is looked up by BigDataCloud.": "आपकी अनुमानित लोकेशन (लगभग 1 किमी) BigDataCloud से देखी जाती है।",
  "Pincode lookup works for India only. Enter your pincode, or leave it empty.": "पिनकोड खोज केवल भारत के लिए काम करती है। अपना पिनकोड दर्ज करें, या इसे खाली छोड़ दें।",
- "Detected {0}, but no pincode was found. Enter it below.": "{0} मिला, लेकिन कोई पिनकोड नहीं मिला। इसे नीचे दर्ज करें।"
+ "Detected {0}, but no pincode was found. Enter it below.": "{0} मिला, लेकिन कोई पिनकोड नहीं मिला। इसे नीचे दर्ज करें।",
+ "Your saved interests haven't loaded yet. Try again in a moment.": "आपकी सहेजी गई रुचियाँ अभी लोड नहीं हुई हैं। थोड़ी देर में फिर कोशिश करें।",
+ "Couldn't load your interests": "आपकी रुचियाँ लोड नहीं हो सकीं",
+ "Your saved picks are safe. Check your connection and try again.": "आपके सहेजे गए चुनाव सुरक्षित हैं। अपना कनेक्शन जाँचें और फिर कोशिश करें।",
+ "Loading your interests…": "आपकी रुचियाँ लोड हो रही हैं…",
+ "Couldn't save your interests": "आपकी रुचियाँ सहेजी नहीं जा सकीं",
+ "Couldn't load your interests. Your saved picks are safe.": "आपकी रुचियाँ लोड नहीं हो सकीं। आपके सहेजे गए चुनाव सुरक्षित हैं।"
 }

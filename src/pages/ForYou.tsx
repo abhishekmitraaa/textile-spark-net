@@ -19,6 +19,8 @@ import { logEngagement, markNavSource } from "@/lib/queries/engagement";
 import { interestLabel, OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 import {
   usePreferences,
+  usePreferencesSync,
+  retryPreferences,
   toggleCategory,
   setOtherInterest,
   toggleLocation,
@@ -386,7 +388,9 @@ const ForYou = () => {
   // this actually personalised?" and is never inferred client-side.
   //
   // Ids only (at most 200); the cards come from feed_products (2026-10-14).
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  // Whether prefs are the account's yet (preferencesStore's sync rule): unknown is never "no interests".
+  const prefsSync = usePreferencesSync(user?.id, authLoading);
   const rankingQuery = useForYouRanking(user?.id);
   const ranking = rankingQuery.data;
   const rankingSettled = !user || rankingQuery.isFetched;
@@ -521,6 +525,35 @@ const ForYou = () => {
     // hand-attached IntersectionObserver on the same node fired normally —
     // which ruled out the observer and pointed at the attach step.
   }, [nextRest, visible.length, prefs.hasCompleted]);
+
+  // ─── SAVED INTERESTS NOT KNOWN ───
+  // A failed read used to look like "no interests": the first-run screen showed, and its "Skip for now" saved an
+  // empty list over the buyer's picks (buyer sign-up audit item 2).
+  if (prefsSync === "error") {
+    return (
+      <BuyerShell>
+        <div className="max-w-md mx-auto px-5 flex min-h-[60vh] flex-col items-center justify-center text-center" role="alert">
+          <h1 className="text-lg font-bold text-gray-900">Couldn't load your interests</h1>
+          <p className="mt-2 text-sm text-gray-500">Your saved picks are safe. Check your connection and try again.</p>
+          <button
+            onClick={() => void retryPreferences()}
+            className="mt-5 px-6 py-3 rounded-xl bg-brand-buyer hover:bg-brand-buyer/90 text-white text-sm font-bold transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </BuyerShell>
+    );
+  }
+  if (prefsSync === "loading" && !prefs.hasCompleted) {
+    return (
+      <BuyerShell>
+        <div className="max-w-md mx-auto px-5 flex min-h-[60vh] items-center justify-center" aria-busy="true">
+          <p className="text-sm text-gray-500" role="status">Loading your interests…</p>
+        </div>
+      </BuyerShell>
+    );
+  }
 
   // ─── ONBOARDING ───
   if (!prefs.hasCompleted) {

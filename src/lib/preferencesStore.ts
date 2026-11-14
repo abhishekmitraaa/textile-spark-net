@@ -17,6 +17,12 @@ import { clipOtherInterest, normaliseInterestIds, OTHER_INTEREST_ID, tidyOtherIn
 // (`buyer_profiles.preferred_interest_other`) travel with the categories and
 // exist only while "others" is one of them (the database enforces that too).
 // Locations + the onboarding-complete flag stay per-device in localStorage.
+//
+// THE SYNC RULE (buyer sign-up audit 2026-11-13, item 2). While signed in, nothing is written until the saved
+// interests have been read ("ready"). A failed or slow read used to look like "no interests": For You offered its
+// first-run screen, and "Skip for now" saved an empty list over the buyer's real picks. Now a write before "ready"
+// is refused without a request, a failed read is "error" (the screen offers Retry), and the Interest Preference
+// save waits for the database and reports a refusal instead of logging it.
 // ─────────────────────────────────────────────────────────────
 
 export interface BuyerPreferences {
@@ -25,6 +31,9 @@ export interface BuyerPreferences {
   locations: string[]; // location ids ("nopreference" is exclusive)
   hasCompleted: boolean; // onboarding finished (or skipped)
 }
+
+/** local: signed out (localStorage is the truth). loading / ready / error: the signed-in account's read. */
+export type PrefsSync = "local" | "loading" | "ready" | "error";
 
 const STORAGE_KEY = "cosora.buyerPrefs.v1";
 const EMPTY: BuyerPreferences = { categories: [], otherInterest: "", locations: [], hasCompleted: false };
@@ -56,8 +65,23 @@ function load(): BuyerPreferences {
 }
 
 let state: BuyerPreferences = load();
+let sync: { status: PrefsSync; userId: string | null } = { status: "local", userId: null };
 const listeners = new Set<() => void>();
 let userId: string | null = null;
+
+function notify() {
+  listeners.forEach((l) => l());
+}
+
+function setSync(status: PrefsSync) {
+  sync = { status, userId };
+  notify();
+}
+
+/** True while a signed-in account's saved interests aren't known: every write is refused then. */
+function writesBlocked(): boolean {
+  return userId !== null && sync.status !== "ready";
+}
 
 function writeLocal() {
   try {
@@ -81,7 +105,7 @@ function writeLocal() {
 function set(next: BuyerPreferences) {
   state = { ...next, otherInterest: cleanOther(next.categories, next.otherInterest) };
   writeLocal();
-  listeners.forEach((l) => l());
+  notify();
 }
 
 // Mirror the category preferences to the buyer's account. RLS restricts the
@@ -90,11 +114,12 @@ function set(next: BuyerPreferences) {
 // One save at a time, each sending the state as it is when its turn comes: two
 // saves fired together (For You saving the "Others" words, then a tile tap)
 // could otherwise reach the database in either order and leave the older one.
+// The returned promise rejects when this save is refused; the chain itself never does.
 let saveChain: Promise<void> = Promise.resolve();
-function dbSaveCategories() {
+function dbSaveCategories(): Promise<void> {
   const uid = userId;
-  if (!uid) return;
-  saveChain = saveChain.then(async () => {
+  if (!uid) return Promise.resolve();
+  const mine = saveChain.then(async () => {
     if (userId !== uid) return; // signed out or switched account meanwhile
     const other = tidyOtherInterest(state.otherInterest);
     const { error } = await supabase
@@ -103,8 +128,43 @@ function dbSaveCategories() {
         { id: uid, preferred_categories: state.categories, preferred_interest_other: other || null },
         { onConflict: "id" },
       );
-    if (error) console.warn("Saving interests failed:", error.message);
-  }).catch(() => {});
+    if (error) throw error;
+  });
+  saveChain = mine.catch(() => {});
+  return mine;
+}
+
+/** A background save (a tile tap on For You): a refusal is logged, the screen carries on. */
+function saveInBackground() {
+  dbSaveCategories().catch((e: { message?: string }) => console.warn("Saving interests failed:", e?.message));
+}
+
+async function readAccount(uid: string): Promise<void> {
+  setSync("loading");
+  const { data, error } = await supabase
+    .from("buyer_profiles")
+    .select("preferred_categories, preferred_interest_other")
+    .eq("id", uid)
+    .maybeSingle();
+  if (userId !== uid) return; // user changed again mid-fetch
+  if (error) {
+    // Unknown is not empty: keep what is on screen, write nothing, and let the screen offer Retry.
+    setSync("error");
+    return;
+  }
+  // Normalised: a browser still running the old app can save the old ids.
+  const cats = Array.isArray(data?.preferred_categories)
+    ? normaliseInterestIds(data!.preferred_categories as string[])
+    : [];
+  // DB is the source of truth for categories on sign-in; keep local
+  // locations, and treat existing saved categories as "already onboarded".
+  set({
+    categories: cats,
+    otherInterest: data?.preferred_interest_other ?? "",
+    locations: state.locations,
+    hasCompleted: state.hasCompleted || cats.length > 0,
+  });
+  setSync("ready");
 }
 
 /** Called by StoreSync on auth change: hydrate categories from the account (DB)
@@ -115,51 +175,56 @@ export async function setPreferencesUser(nextUserId: string | null) {
   if (!nextUserId) {
     // Revert to the local snapshot (categories fall back to the signed-out set).
     set(load());
+    setSync("local");
     return;
   }
   try {
-    const { data } = await supabase
-      .from("buyer_profiles")
-      .select("preferred_categories, preferred_interest_other")
-      .eq("id", nextUserId)
-      .maybeSingle();
-    if (userId !== nextUserId) return; // user changed again mid-fetch
-    // Normalised: a browser still running the old app can save the old ids.
-    const cats = Array.isArray(data?.preferred_categories)
-      ? normaliseInterestIds(data!.preferred_categories as string[])
-      : [];
-    // DB is the source of truth for categories on sign-in; keep local
-    // locations, and treat existing saved categories as "already onboarded".
-    set({
-      categories: cats,
-      otherInterest: data?.preferred_interest_other ?? "",
-      locations: state.locations,
-      hasCompleted: state.hasCompleted || cats.length > 0,
-    });
+    await readAccount(nextUserId);
   } catch {
-    /* keep current state on failure */
+    if (userId === nextUserId) setSync("error");
+  }
+}
+
+/** Reads the signed-in account's interests again (the Retry on a failed read). */
+export async function retryPreferences(): Promise<void> {
+  const uid = userId;
+  if (!uid) return;
+  try {
+    await readAccount(uid);
+  } catch {
+    if (userId === uid) setSync("error");
   }
 }
 
 export function toggleCategory(id: string) {
+  if (writesBlocked()) return;
   const has = state.categories.includes(id);
   set({ ...state, categories: has ? state.categories.filter((c) => c !== id) : [...state.categories, id] });
-  dbSaveCategories();
+  saveInBackground();
 }
 
-/** Bulk-set the category preferences and the "Others" words (the Interest
- *  Preference screen's Save). */
-export function setCategories(ids: string[], otherInterest = "") {
+/** Bulk-set the category preferences and the "Others" words (the Interest Preference screen's Save). Signed in, it
+ *  resolves once the database has them and rejects when it refuses (the screen stays and says so); nothing changes
+ *  on screen until then. */
+export async function setCategories(ids: string[], otherInterest = ""): Promise<void> {
+  if (writesBlocked()) throw new Error("Your saved interests haven't loaded yet. Try again in a moment.");
+  const previous = state;
   set({ ...state, categories: Array.from(new Set(ids)), otherInterest, hasCompleted: true });
-  dbSaveCategories();
+  try {
+    await dbSaveCategories();
+  } catch (e) {
+    set(previous);
+    throw e;
+  }
 }
 
 /** The "Others" words on their own (For You saves them as the buyer types).
  *  Dropped unless "others" is picked. */
 export function setOtherInterest(text: string) {
+  if (writesBlocked()) return;
   if (cleanOther(state.categories, text) === state.otherInterest) return;
   set({ ...state, otherInterest: text });
-  dbSaveCategories();
+  saveInBackground();
 }
 
 export function toggleLocation(id: string) {
@@ -175,8 +240,9 @@ export function toggleLocation(id: string) {
 }
 
 export function removeCategory(id: string) {
+  if (writesBlocked()) return;
   set({ ...state, categories: state.categories.filter((c) => c !== id) });
-  dbSaveCategories();
+  saveInBackground();
 }
 
 export function removeLocation(id: string) {
@@ -185,15 +251,17 @@ export function removeLocation(id: string) {
 
 /** Finish onboarding. skip=true completes with no filters (shows everything). */
 export function completeOnboarding(skip = false) {
+  if (writesBlocked()) return;
   if (skip) set({ categories: [], otherInterest: "", locations: [], hasCompleted: true });
   else set({ ...state, hasCompleted: true });
-  dbSaveCategories();
+  saveInBackground();
 }
 
 /** Clear filters but stay on the feed (the "Reset preferences" action -> show all). */
 export function resetFilters() {
+  if (writesBlocked()) return;
   set({ ...state, categories: [], locations: [], hasCompleted: true });
-  dbSaveCategories();
+  saveInBackground();
 }
 
 function subscribe(cb: () => void) {
@@ -203,7 +271,21 @@ function subscribe(cb: () => void) {
 function getSnapshot() {
   return state;
 }
+function getSync() {
+  return sync;
+}
 
 export function usePreferences(): BuyerPreferences {
   return useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
+}
+
+/**
+ * Whether the preferences on screen are the account's. `forUser` is the signed-in account (useAuth): until the store
+ * has been told about it (StoreSync runs after sign-in is known), it counts as "loading", never as "local".
+ */
+export function usePreferencesSync(forUser: string | null | undefined, authLoading = false): PrefsSync {
+  const s = useSyncExternalStore(subscribe, getSync, getSync);
+  if (authLoading) return "loading";
+  if (!forUser) return "local";
+  return s.userId === forUser ? s.status : "loading";
 }
