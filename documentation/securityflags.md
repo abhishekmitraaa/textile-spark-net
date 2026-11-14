@@ -130,6 +130,10 @@ in the next one.
 
 ## Log
 
+### 2026-11-15 — Ranking Standing (not live yet) — Severity: Low
+- **A seller's Standing is readable by anyone:** `public.vendor_standing(uuid)` (definer, granted to anon) returns the total rounded to 2 decimals, because two of the seller rankings run with the visitor's rights. The parts and the counts behind them (how many people viewed, followed or messaged a seller) stay in `admin.vendor_standing`, which clients can't read. The public lists already reveal the relative order.
+- **Inputs a seller could inflate:** listing views are already capped per visitor (2026-10-18); a seller's own signed-in views are left out; follows and messages need accounts. Reviews come only from buyers' own review rows. Interest is log-scaled with a fixed ceiling, so a burst of fake attention moves Standing by at most 0.30.
+
 ### 2026-11-01 — Ranking Fit reads the buyer's private state (live 2026-11-15) — Severity: Low
 - **Location oracle, fixed before release:** `match_vendor_rfqs` (definer) scores a lead on the buyer's `buyer_profiles.state_code`, which only the buyer and support can read, and returns `near` and the score. In the first version a seller could cycle "states I serve" and binary-search a posted lead's buyer state in about six edits (found by the automated security review). Location is now read as the seller's state and served states were when the lead was posted (`admin.vendor_location_history`, not readable by clients), so editing them can't change a posted lead.
 - **Residual (Low):** each lead tells a seller once whether the buyer is in their state or a state they serve — what "Near you" is for. Several seller accounts with different states could each learn one bit about a new lead.
