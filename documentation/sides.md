@@ -198,6 +198,21 @@ the demand side of India's fashion and textile supply chain.
   "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
   contact and business details were fixed on 2026-09-28 (below).
 
+### Changed 2026-11-14 (buyer sign-up audit; branch `buyer-signup/fixes`, not live)
+- Every sign-up answer is kept: "What best describes you?" (one choice, also on Edit Profile), Account Information
+  (shown again after a reload or Back; only changes are saved), interests (never wiped by a slow or failed read: For You
+  says it couldn't load them and offers Retry), and the Terms, recorded with the version the buyer saw. The Terms card
+  shows the same clauses as the Terms page, and its two links open it.
+- The steps ask a signed-out visitor to sign in, and close once sign-up is finished. Each step's arrow goes back; after
+  signing in or finishing sign-up, one back from Home is the page before signing in. Register keeps its step in history,
+  and a Register buyer continues to "What best describes you?". "Use current location" sends a position rounded to
+  about 1 km and works in India only; the pincode stays editable.
+- A sign-in whose profile can't be loaded shows Retry instead of spinning or sending a returning buyer to choose a role.
+  The phone field takes "+91 …", spaces, dashes and a leading 0. Register no longer claims "50,000+ manufacturers" or
+  "Trusted by 10,000+".
+- Staff (Cosora-Admin) see "not verified" beside an email nobody confirmed. A buyer who once ticked Seller on Register
+  can delete their account. Behind a switch (off): an account that hasn't finished sign-up is sent back to finish it.
+
 ### Changed 2026-10-19 (the rest of the buyer audit; live 2026-10-19)
 - Sign-up: a buyer who stops part-way is taken back through it at the next sign-in (only accepting the Terms finishes it); Account Info says what is wrong with a name, email or pincode. The phone field takes Hong Kong (8), Australian, Thai, Taiwanese and Vietnamese (9) and Chinese (11) numbers.
 - Signed out, My Saves is empty (no invented saves). The brand heart in search results follows the seller for real; Following's Report opens the report form.

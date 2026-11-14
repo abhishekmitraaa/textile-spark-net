@@ -255,6 +255,19 @@ Cosora-Admin (separate repo) additionally owns `chat-moderation-behaviour.mjs`.
 
 ## Test Run History
 
+### 2026-11-14 — Buyer sign-up fixes (local stack, branch `buyer-signup/fixes`)
+
+- Harnesses: `scripts/buyer-signup/record.sql` 19/19 (Terms record, version refusal, onboarded and Terms columns refused
+  to browsers, buyer_role check, grants, switch off), `checks.sql` 17/17 (field refusals by constraint name, legacy
+  values, the definer placeholder email), `real_seller.sql` 7/7, `staff_email.sql` 7/7, `signed_out.sql` (after
+  `100500`). `scripts/onboarding/registration.sql` still 113 PASS with the onboarded guard applied.
+- `tests/local/buyer-signup.spec.ts`: B1 steps need a session and close after sign-up (5), B2 Sub-role saved (3), B3
+  Account Information (4, BigDataCloud mocked), B4 interests never wiped (3), B5 Terms recorded (3), B6 gate (5), B7
+  back and Register (4), C1 failed profile read (3), C2 back after sign-in and sign-up through the dummy code (5,
+  `routeDummyOtp`), C3 phone cleaning (2), D1 "not verified" in Cosora-Admin (1). `signup-back` and
+  `interest-preferences` updated: the steps no longer open for a finished or signed-out account.
+- Every test was run before its fix and failed first; rulings are in the branch's ledger.
+
 ### 2026-10-18 — Trending searches: categories only (local stack, then production)
 
 - `trends.sql` 38/38: F3a (listed on `search_trending` only: categories, no term), F6 (on for everyone, terms off: no

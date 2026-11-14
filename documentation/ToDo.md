@@ -76,7 +76,8 @@ with no need to dictate format, context, or reference each time.
   1. no server-side length or rate limit on chat messages (`messages` insert);
   2. a buyer can write their own `country_code`, which stamps requirements as overseas (`rfqs_overseas_stamp`);
   3. support data isn't purged after an account is deleted (the `support-sweep` job is unscheduled, D-21);
-  4. buyer GSTIN, PAN and phone are saved without validation (onboarding / profile).
+  4. buyer GSTIN, PAN and phone are saved without validation (onboarding / profile). Answered 2026-11-14: it held;
+     fixed on branch `buyer-signup/fixes` (`20261114100100`: the database checks names, pincode, email, GSTIN and PAN).
   Fix what holds, or log it in securityflags.md.
 - Context: listed as "plausible, not verified" in the 2026-10-18 audit (SESSION-CONTEXT.md); the baseline Lovable
   tables (messages, conversations, products) aren't in migrations, so their constraints weren't visible then.
@@ -161,7 +162,8 @@ with no need to dictate format, context, or reference each time.
   sends a Register buyer straight to Home with `onboarded = false` (pre-existing route), so the next sign-in shows
   the role screen. Sign-in itself must not change (claude.md, mobile + OTP rule).
 - Reference: 2026-10-19 sign-up fix (onboarding finished at the Terms).
-- Status: Open
+- Status: Fixed on branch `buyer-signup/fixes` (2026-11-14), not released: a Register buyer goes on to Sub-role after
+  the code, and the `buyer_signup_required` gate sends an unfinished account back to sign-up. Remove once live.
 
 ### Fix Video Closeups' feed: paging and the copied end-of-feed cards — added 2026-11-01
 - Task: page the Video Closeups feed (it shows the 30 all-time most viewed, no more), and remove the "-fill" clone

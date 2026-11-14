@@ -4452,3 +4452,66 @@ and `20261018120100_search_trends_job.sql`; harness `scripts/search-trends/trend
 - **Requirement deadline.** `rfqs.expires_at` (null on direct requests). `trg_rfqs_deadline` (BEFORE INSERT OR UPDATE OF expires_at): insert sets now() + 7 days for an open requirement (the browser's value is ignored); an `authenticated`, non-admin update is reverted unless `cosora.rfq_extend` is on. `extend_rfq_deadline(rfq)` (authenticated): the buyer's own, active, not removed, open, a day or less left → now() + 7 days. `enforce_quote_rfq_open()` refuses a new quote past it (an existing quote's edits and status changes are unaffected); `match_vendor_rfqs()` leaves it out; the app's lead query filters `expires_at > now`. Partial index `rfqs_open_expires_idx`.
 - **`top_vendors(p_limit)`** (anon, authenticated; SECURITY INVOKER, so row policies and column grants apply): sellers with a brand name and a live listing, `plan_expires_at > now()` first, then rating, review count, id; the first live listing's (created_at, id) first picture; 1 to 12 rows.
 - **App.** `useChatThread`: `CHAT_PAGE_SIZE` 40, `hasOlder` / `loadingOlder` / `loadOlder()` (cursor `created_at.lt."…" or (created_at.eq."…" and id.lt.…)`, limit 41), `mergeMessages` (by id, ordered by created_at then id); subscribes first (waits up to 5 s for SUBSCRIBED), then reads the newest page; on the `system` "postgres_changes ok" event reads it again. ChatThread scrolls to the end only when the newest message changes, restores the offset after an older page (`useLayoutEffect` on the oldest id), loads at `scrollTop < 120`. `setQuoteStatusDb(id, "accepted", terms)` adds `eq`/`is` on currency, price_per_unit, moq, lead_time, sampling_cost, sample_timeline and `select("id")`; no row → `QuoteChangedError`. `StoreSync` calls `queryClient.resetQueries()` when the signed-in account changes away from a previous one.
+
+## Buyer sign-up: the record, the steps, the gate and the back button (2026-11-14; branch `buyer-signup/fixes`, not live)
+
+The buyer sign-up audit of 2026-11-13 (items 1–15). Plan and findings: `subscription-session/SESSION-CONTEXT.md`.
+
+- **Database** (local stack; production needs Mitra's yes, in this order):
+  - `20261114100000_buyer_signup_record.sql`: `buyer_profiles.buyer_role` (check: brand_owner, sourcing_manager,
+    merchandiser, designer, buying_house, retail_chain; `src/data/buyerRoles.ts` mirrors it); `profiles.terms_version` /
+    `terms_accepted_at` (SELECT to authenticated only); `public.terms_acceptances` (own-row SELECT, no browser writes);
+    `buyer_terms_version()` = `'2026-11-v1'`; `accept_buyer_terms(p_version)` (definer: refuses no caller, a deleted
+    account, `stale_terms`; inserts the acceptance, source `reaccept` when already onboarded, and sets the three profile
+    columns); `admin.profiles_signup_owned()` / `trg_profiles_signup_owned` (a browser insert gets no Terms record, a
+    browser update may not change it); switch `buyer_signup_required` (off).
+  - `20261114100100_buyer_field_checks.sql`: `trg_buyer_profiles_field_checks` and `trg_profiles_field_checks`, for
+    `current_user` anon/authenticated and new or changed values only, 23514 with the constraint names
+    `buyer_profiles_{display_name,company,postal_code,gstin,pan}_valid`, `buyer_profiles_gstin_matches_pan`,
+    `profiles_{full_name,email}_valid`. Names are trimmed and spaces-only becomes NULL; the pincode rule applies when
+    `coalesce(country_code, 'IN') = 'IN'` (the country trigger runs first, by name).
+  - `20261114100200_real_seller_rule.sql`: `admin.is_real_seller(p)` (no browser grant); `account_deletion_blocker`'s
+    vendor arm and `anonymize_account` (which now deletes a bare `vendor_profiles` row before scrubbing). Guards pin the
+    bodies of `20260923213225` and `20260923200739`.
+  - `20261114100300_staff_email_verified.sql`: `admin_email_verified(ids)` (super_admin, support, manager, vendor_ops);
+    `admin_support_get()` gains `requester.email_verified` and `has_store` = `is_real_seller`. Guard pins `20261016120000`.
+  - After the app is live: `20261114100600_profiles_signup_guard.sql` (the same trigger also refuses a browser's change of
+    `onboarded`, and a browser insert starts unfinished; guard pins the `100000` body). After both apps are live and the
+    bundles checked: `20261114100500_profiles_signed_out_columns.sql` (revokes SELECT on account_status, onboarded,
+    active_role, created_at, terms_version, terms_accepted_at from anon).
+- **Signed-out readers of those columns** (inventory 2026-11-14, buyer, Cosora-Admin and cosora-blogs): only `callGate()`
+  (`src/lib/queries/calls.ts`, account_status, via `useContactGate` on store and product pages) ran signed out; it now
+  returns no block for a visitor without reading. Signed in: `lib/auth/profileRead.ts` (AuthContext, the code screen),
+  `dataExport.ts`, `profile.ts` (created_at), `callGate` for members, Cosora-Admin's account and chat readers. No view
+  reads them; the one policy that does (`messages_insert`) only matters to a signed-in sender; no visitor-callable
+  invoker function reads them.
+- **App**:
+  - `SignupStep` decides once on arrival from `useAuth().profile` (now with `terms_version`): no session → `/auth/login`;
+    onboarded with a Terms record → Home (Seller Home for the seller side); onboarded without one → `/auth/terms` only.
+    `lib/signupDone.ts` (a per-tab note) is gone.
+  - Terms: `acceptBuyerTerms()` (`BUYER_TERMS_VERSION`), `refreshProfile()`, then `finishAuthFlow(navigate,
+    "/auth/welcome")`. The card renders `src/data/terms.ts` through `<TermsClauses compact>`; `/terms` renders the same.
+    `finishOnboarding()` is removed from AuthContext.
+  - Sub-role: a `radiogroup`, prefilled by `fetchBuyerRole()`, saved by `saveBuyerRole()` only when changed. Edit
+    Profile: `ProfileData.buyerRole` in `SAVED_FIELDS`.
+  - Account Information: `useProfileFull()` → `accountInfoFrom()` is the baseline; `saveAccountInfo(uid, before, after)`
+    writes `accountInfoChanges()` only (name also to `display_name`; postal_code, city and state together).
+    `lookupPincode()` (`lib/reverseGeocode.ts`) rounds to 2 decimals, checks `res.ok` and `countryCode === "IN"`.
+  - `preferencesStore`: `sync` {status, userId}; `writesBlocked()` while signed in and not ready; `readAccount()` checks
+    the read's error; `setCategories()` is async (reverts on a refusal); `usePreferencesSync(user, authLoading)` counts
+    "store not told about this account yet" as loading. For You: error → Retry screen; loading with no completed first run
+    → a loading screen. Interest Preference: the picker is a disabled fieldset until ready.
+  - `BuyerSignupGate` (inside `BuyerShell`): `useFeatureFlag("buyer_signup_required")`, then `useSellerRegistration()`;
+    exempt: seller side, registered/exempt/pending, read error, `/help*`, `/profile/help*`, `/report-fraud`, `/feedback`.
+  - `useStepBack(fallback)`: `navigate(-1)` unless `location.key === "default"`, then `navigate(fallback, { replace })`.
+    Register: `?step=2` via `useSearchParams` (push), Back = `navigate(-1)`.
+  - Sign-in files (Phase C): `readProfileRow()` (retries 0.5 s and 1 s, never for 503/520, which postgrest-js already
+    retries after 1, 2 and 4 s); AuthContext `profileError` (latest read wins, `readSeq`); AuthCallback and OtpVerify show
+    Retry / Sign out. `lib/authHistory.ts`: Login and Register read `history.state.idx` on arrival (Login passes it to
+    Register in link state) and `markAuthStart()` stores it in sessionStorage `cosora.authStart` when the code is sent;
+    `finishAuthFlow()` takes the mark (≤ 2 h old), `history.go(mark - now)`, waits for `popstate` (1.5 s cap), then
+    `navigate(dest, { replace: true })`; `cosora.authFinishing` (a timestamp, 3 s) stops Login's signed-in redirect from
+    racing it. OtpVerify: a new account's next step replaces the code screen (Register buyer → Sub-role, Register seller →
+    `/onboarding` with the mark cleared, Login → role selection); a returning one finishes the flow. Login and OtpVerify
+    send an account that is already signed in on arrival to its place. `cleanPhoneDigits()` drops a written country code
+    (exactly code + a full number, or code + 0 + number) and leading zeros; the phone inputs have no `maxLength`.
