@@ -88,8 +88,13 @@ export async function signedInContext(browser: Browser, key: string, viewport = 
  * A brand-new account for one spec run, so a flow that changes an account for good
  * (registering as a seller, buying a plan) starts clean every time. Local only.
  * `seller: true` also gives it a vendor profile, as a finished registration would.
+ * `onboarded: false` leaves sign-up unfinished. An onboarded account has accepted the current Terms too
+ * (accept_buyer_terms' record), unless `terms: false`: an account onboarded before Terms were recorded.
  */
-export async function freshAccount(prefix: string, { seller = false } = {}): Promise<{ id: string; email: string; session: Session }> {
+export async function freshAccount(
+  prefix: string,
+  { seller = false, onboarded = true, terms = true }: { seller?: boolean; onboarded?: boolean; terms?: boolean } = {},
+): Promise<{ id: string; email: string; session: Session }> {
   const s = stack();
   const email = `${prefix}-${Date.now().toString(36)}@cosora.test`;
   const { data, error } = await service().auth.admin.createUser({
@@ -98,7 +103,13 @@ export async function freshAccount(prefix: string, { seller = false } = {}): Pro
   });
   if (error || !data.user) throw new Error(`createUser: ${error?.message}`);
   const id = data.user.id;
-  sql(`update public.profiles set onboarded = true where id = '${id}';`);
+  if (onboarded) {
+    sql(`update public.profiles set onboarded = true where id = '${id}';`);
+    if (terms) {
+      sql(`update public.profiles set terms_version = public.buyer_terms_version(), terms_accepted_at = now() where id = '${id}';
+           insert into public.terms_acceptances (profile_id, terms_version, source) values ('${id}', public.buyer_terms_version(), 'signup');`);
+    }
+  }
   if (seller) {
     sql(`insert into public.vendor_profiles (id, brand_name, city, country, business_type, onboarding_complete)
          values ('${id}', '${prefix} Textiles', 'Surat', 'India', 'Manufacturer', true) on conflict (id) do nothing;`);
@@ -120,6 +131,31 @@ export function allowFeature(key: string, id: string): void {
 }
 export function disallowFeature(key: string, id: string): void {
   sql(`update public.feature_flags set allow_profile_ids = array_remove(allow_profile_ids, '${id}'::uuid) where key = '${key}';`);
+}
+
+/**
+ * The dummy sign-in code (otp-dev-verify) for a spec that signs in through the phone screens. The stack's own edge
+ * runtime has a fixed function list, so the function is served by `f3_edge_runtime` on :8099 (copy
+ * supabase/functions/otp-dev-verify into the stack's functions folder first: scripts/local-stack/README.md).
+ */
+export async function routeDummyOtp(ctx: BrowserContext): Promise<void> {
+  const target = process.env.LOCAL_OTP_URL ?? "http://localhost:8099/otp-dev-verify";
+  await ctx.route("**/functions/v1/otp-dev-verify", async (route) => {
+    const req = route.request();
+    if (req.method() === "OPTIONS") {
+      await route.fulfill({
+        status: 204,
+        headers: {
+          "access-control-allow-origin": "*",
+          "access-control-allow-headers": "authorization, x-client-info, apikey, content-type",
+          "access-control-allow-methods": "POST, OPTIONS",
+        },
+      });
+      return;
+    }
+    const res = await route.fetch({ url: target });
+    await route.fulfill({ response: res, headers: { ...res.headers(), "access-control-allow-origin": "*" } });
+  });
 }
 
 /** A browser context signed in with a session from freshAccount(). */

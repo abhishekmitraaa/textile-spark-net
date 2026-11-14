@@ -37,6 +37,9 @@ reads the same objects from `pg_catalog`.
    answers 404 until the stack restarts. On a stack other sessions share, run a second edge runtime instead, with
    the stack's container environment and `SUPABASE_INTERNAL_FUNCTIONS_CONFIG` extended by the new function, on
    another port, and point the spec at it (`LOCAL_INVOICE_RENDER_URL` in `subscriptions-p1.spec.ts`).
+   Specs that sign in through the phone screens (`buyer-signup.spec.ts`) need the dummy sign-in code: copy
+   `supabase/functions/otp-dev-verify` into the stack's functions folder, and `routeDummyOtp(ctx)` in
+   `tests/local/stack.ts` sends the app's calls to `f3_edge_runtime` on :8099 (`LOCAL_OTP_URL` to change it).
    Give that runtime a persistent Deno cache (`-v <name>:/root/.cache/deno`): a function with `npm:` imports
    (`invoice-render`'s pdf-lib) downloads them on its first request, and without the cache a later run needs the
    internet again. For delivery tests, `RESEND_API_URL` and `WHATSAPP_API_URL` can point the adapters at a local mock.

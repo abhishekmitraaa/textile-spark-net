@@ -10,7 +10,7 @@ import { BUYER_URL, contextWithSession, freshAccount } from "./stack";
 
 test.describe("Sign-up, then back", () => {
   test("back from Home does not reopen Terms or the steps before it", async ({ browser }) => {
-    const who = await freshAccount("signup-back");
+    const who = await freshAccount("signup-back", { onboarded: false });
     const ctx = await contextWithSession(browser, who.session);
     const page = await ctx.newPage();
     try {
@@ -35,7 +35,7 @@ test.describe("Sign-up, then back", () => {
   });
 
   test("an account that has not finished sign-up still gets the Terms screen", async ({ browser }) => {
-    const who = await freshAccount("signup-open");
+    const who = await freshAccount("signup-open", { onboarded: false });
     const ctx = await contextWithSession(browser, who.session);
     const page = await ctx.newPage();
     try {

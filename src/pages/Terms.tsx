@@ -6,11 +6,10 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { useAuth } from "@/contexts/AuthContext";
-import { markSignupDone } from "@/lib/signupDone";
 
 const Terms = () => {
   const navigate = useNavigate();
-  const { session, finishOnboarding } = useAuth();
+  const { finishOnboarding } = useAuth();
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -25,7 +24,6 @@ const Terms = () => {
       toast.error("Couldn't finish signing up", { description: errorMessage(e) });
       return;
     }
-    markSignupDone(session?.user.id);
     navigate("/auth/welcome");
   };
 

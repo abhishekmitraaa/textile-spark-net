@@ -25,6 +25,8 @@ export interface Profile {
   active_role: string;
   onboarded: boolean;
   avatar_url: string | null;
+  /** The Terms version this account last accepted (accept_buyer_terms); null when none is recorded. */
+  terms_version: string | null;
 }
 
 // Seeded in the DB (see migrations/seed). Dev-server only: the passwords come
@@ -80,7 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [{ data }, contact, { data: adminFlag, error: adminError }] = await Promise.all([
       supabase
         .from("profiles")
-        .select("id, full_name, active_role, onboarded, avatar_url")
+        .select("id, full_name, active_role, onboarded, avatar_url, terms_version")
         .eq("id", uid)
         .maybeSingle(),
       fetchMyContactInfo().catch(() => null),
