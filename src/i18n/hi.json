@@ -8598,5 +8598,10 @@
  "Leave your registration?": "अपना रजिस्ट्रेशन छोड़ें?",
  "Your answers are saved only when you submit on the last step. If you leave now, they're lost and you start again.": "आपके जवाब सिर्फ़ आख़िरी स्टेप पर सबमिट करने पर सेव होते हैं। अभी छोड़ने पर वे मिट जाएँगे और आपको फिर से शुरू करना होगा।",
  "Stay and continue": "रुकें और जारी रखें",
- "Leave": "छोड़ें"
+ "Leave": "छोड़ें",
+ "Keep the business name to 120 characters.": "व्यवसाय का नाम 120 अक्षरों तक रखें।",
+ "Keep the company name to 120 characters.": "कंपनी का नाम 120 अक्षरों तक रखें।",
+ "A pincode is 6 digits and doesn't start with 0.": "पिनकोड 6 अंकों का होता है और 0 से शुरू नहीं होता।",
+ "Keep your name to 120 characters.": "अपना नाम 120 अक्षरों तक रखें।",
+ "Enter an email address like name@example.com.": "name@example.com जैसा ईमेल पता दर्ज करें।"
 }
