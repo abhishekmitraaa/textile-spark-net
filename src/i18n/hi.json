@@ -8603,5 +8603,7 @@
  "Keep the company name to 120 characters.": "कंपनी का नाम 120 अक्षरों तक रखें।",
  "A pincode is 6 digits and doesn't start with 0.": "पिनकोड 6 अंकों का होता है और 0 से शुरू नहीं होता।",
  "Keep your name to 120 characters.": "अपना नाम 120 अक्षरों तक रखें।",
- "Enter an email address like name@example.com.": "name@example.com जैसा ईमेल पता दर्ज करें।"
+ "Enter an email address like name@example.com.": "name@example.com जैसा ईमेल पता दर्ज करें।",
+ "These Terms have changed. Reload the page to read the new version.": "ये शर्तें बदल गई हैं। नया संस्करण पढ़ने के लिए पेज फिर से लोड करें।",
+ "I agree to the Terms & Conditions and Privacy Policy": "मैं नियम और शर्तों तथा गोपनीयता नीति से सहमत हूँ"
 }

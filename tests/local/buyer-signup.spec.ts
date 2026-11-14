@@ -2,6 +2,7 @@
  * Buyer sign-up fixes (buyer sign-up audit 2026-11-13, items 1–15). Every answer is saved where it is used, nobody is
  * stranded, misrouted or locked to the wrong side, and back behaves. Local stack only.
  */
+import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Request } from "@playwright/test";
 import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
 
@@ -89,5 +90,56 @@ test.describe("B1 · the sign-up steps need a session and close once sign-up is 
     } finally {
       await ctx.close();
     }
+  });
+});
+
+test.describe("B5 · accepting the Terms is recorded", () => {
+  test("accept: one acceptance of the current version, the profile records it, and Home follows", async ({ browser }) => {
+    const who = await freshAccount("b5-accept", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/terms`);
+      await page.getByRole("checkbox").check();
+      await page.getByRole("button", { name: "NEXT" }).click();
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 20_000 });
+      expect(sql(`select count(*) || ':' || bool_and(terms_version = public.buyer_terms_version()) || ':' || max(source)
+                    from public.terms_acceptances where profile_id = '${who.id}'`)).toBe("1:true:signup");
+      expect(sql(`select onboarded || ':' || (terms_version = public.buyer_terms_version()) || ':' || (terms_accepted_at is not null)
+                    from public.profiles where id = '${who.id}'`)).toBe("true:true:true");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("the card shows the clauses of /terms, and both consent words open /terms", async ({ browser }) => {
+    const who = await freshAccount("b5-card", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/terms`);
+      const full = await page.locator("[data-terms-heading]").allInnerTexts();
+      expect(full.length).toBeGreaterThan(10);
+      await page.goto(`${BUYER_URL}/auth/terms`);
+      await expect(page.locator("[data-terms-heading]").first()).toBeVisible();
+      expect(await page.locator("[data-terms-heading]").allInnerTexts()).toEqual(full);
+      for (const name of ["Terms & Conditions", "Privacy Policy"]) {
+        await expect(page.getByRole("link", { name })).toHaveAttribute("href", "/terms");
+      }
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a browser can't mark itself onboarded", async () => {
+    const who = await freshAccount("b5-patch", { onboarded: false });
+    const s = JSON.parse(readFileSync(process.env.LOCAL_STACK_ENV ?? ".claude/tmp/local-stack-env.json", "utf8"));
+    const res = await fetch(`${s.API}/rest/v1/profiles?id=eq.${who.id}`, {
+      method: "PATCH",
+      headers: { apikey: s.ANON, authorization: `Bearer ${who.session.access_token}`, "content-type": "application/json", prefer: "return=minimal" },
+      body: JSON.stringify({ onboarded: true }),
+    });
+    expect(res.status).toBe(403);
+    expect(sql(`select onboarded from public.profiles where id = '${who.id}'`)).toBe("f");
   });
 });

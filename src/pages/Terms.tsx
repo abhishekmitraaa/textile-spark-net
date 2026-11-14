@@ -1,39 +1,46 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { errorMessage } from "@/lib/errorMessage";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
+import TermsClauses from "@/components/TermsClauses";
 import { useAuth } from "@/contexts/AuthContext";
+import { TERMS_EFFECTIVE_DATE, TERMS_INTRO } from "@/data/terms";
+import { acceptBuyerTerms, isStaleTerms } from "@/lib/buyerTerms";
 
 const Terms = () => {
   const navigate = useNavigate();
-  const { finishOnboarding } = useAuth();
+  const { refreshProfile } = useAuth();
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  // Accepting is the last sign-up step: only now is the account onboarded (2026-10-19).
+  // Accepting is the last sign-up step: the database records which Terms were accepted and when, and only then is the
+  // account onboarded (accept_buyer_terms; buyer sign-up audit item 5). Welcome replaces this entry, so back from Home
+  // never lands here.
   const accept = async () => {
     if (!agreed || saving) return;
     setSaving(true);
     try {
-      await finishOnboarding();
+      await acceptBuyerTerms();
+      await refreshProfile();
     } catch (e) {
       setSaving(false);
-      toast.error("Couldn't finish signing up", { description: errorMessage(e) });
+      if (isStaleTerms(e)) toast.error("These Terms have changed. Reload the page to read the new version.");
+      else toast.error("Couldn't finish signing up", { description: errorMessage(e) });
       return;
     }
-    navigate("/auth/welcome");
+    navigate("/auth/welcome", { replace: true });
   };
 
   return (
-    <div className="min-h-screen bg-[#a4172c] flex flex-col p-4">
+    <div className="h-[100dvh] bg-[#a4172c] flex flex-col p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
-        className="flex-1 flex flex-col max-w-sm mx-auto w-full"
+        className="flex-1 min-h-0 flex flex-col max-w-sm mx-auto w-full"
       >
         {/* COSORA wordmark */}
         <div className="flex justify-center mb-4">
@@ -41,59 +48,30 @@ const Terms = () => {
         </div>
 
         {/* T&C white card */}
-        <div className="flex-1 bg-white rounded-2xl p-5 overflow-y-auto mb-4">
-          <div className="space-y-4 text-sm text-gray-600 leading-relaxed">
-            <p className="font-bold text-gray-900 text-base">Terms of Service</p>
-            <p>
-              Welcome to Cosora. By accessing or using our platform, you agree to be bound by these
-              Terms of Service and our Privacy Policy. If you do not agree, please do not use the
-              platform.
-            </p>
-            <p className="font-semibold text-gray-900">1. Use of Service</p>
-            <p>
-              You must be at least 18 years old to use Cosora. You agree to provide accurate and
-              complete information during registration and to keep your account information updated.
-            </p>
-            <p className="font-semibold text-gray-900">2. User Conduct</p>
-            <p>
-              You agree not to use the platform for any unlawful purpose, to upload false or
-              misleading product information, or to infringe on the intellectual property rights of
-              others.
-            </p>
-            <p className="font-semibold text-gray-900">3. Privacy</p>
-            <p>
-              Your privacy is important to us. Our Privacy Policy explains how we collect, use, and
-              protect your personal information. By using Cosora, you consent to the collection and
-              use of your data as described.
-            </p>
-            <p className="font-semibold text-gray-900">4. Limitation of Liability</p>
-            <p>
-              Cosora is provided on an "as is" basis. We do not guarantee uninterrupted access or
-              error-free operation. We shall not be liable for any indirect, incidental, or
-              consequential damages arising from the use of our platform.
-            </p>
-            <p className="font-semibold text-gray-900">5. Changes</p>
-            <p>
-              We reserve the right to modify these terms at any time. Continued use of the platform
-              after changes constitutes acceptance of the updated terms.
-            </p>
-          </div>
+        <div className="flex-1 min-h-0 bg-white rounded-2xl p-5 overflow-y-auto mb-4">
+          <p className="font-bold text-gray-900 text-base">Terms &amp; Conditions</p>
+          <p className="mt-1 text-xs text-gray-400">Effective Date: {TERMS_EFFECTIVE_DATE}</p>
+          <p className="mt-3 text-xs leading-relaxed text-gray-600">{TERMS_INTRO}</p>
+          <TermsClauses compact className="mt-4" />
         </div>
 
         {/* Agree checkbox */}
-        <label className="flex items-center gap-2.5 mb-4 cursor-pointer">
+        <div className="flex items-center gap-2.5 mb-4">
           <input
+            id="terms-agree"
             type="checkbox"
             checked={agreed}
             onChange={e => setAgreed(e.target.checked)}
-            className="w-4 h-4 accent-white shrink-0"
+            aria-label="I agree to the Terms & Conditions and Privacy Policy"
+            className="w-4 h-4 accent-white shrink-0 cursor-pointer"
           />
           <span className="text-sm text-white">
-            I agree to{" "}
-            <span className="underline font-semibold">Terms &amp; Conditions</span> and{" "}
-            <span className="underline font-semibold">Privacy Policy</span>
+            <label htmlFor="terms-agree" className="cursor-pointer">I agree to</label>{" "}
+            {/* Both open the Terms page: Cosora has no separate Privacy Policy yet (ToDo, counsel). */}
+            <Link to="/terms" className="underline font-semibold">Terms &amp; Conditions</Link> and{" "}
+            <Link to="/terms" className="underline font-semibold">Privacy Policy</Link>
           </span>
-        </label>
+        </div>
 
         <button
           onClick={accept}

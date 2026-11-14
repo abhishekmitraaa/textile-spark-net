@@ -26,9 +26,9 @@ test.describe("Sign-up, then back", () => {
       await expect(page).toHaveURL(/\/home\/new-arrivals$/);
       await expect(page.getByRole("button", { name: "NEXT" })).toHaveCount(0);
 
-      // The step before Terms is closed too.
+      // Terms is replaced by Welcome and Home (2026-11-14), so one more back leaves the steps behind for good.
       await page.goBack();
-      await expect(page).toHaveURL(/\/home\/new-arrivals$/);
+      await expect(page).not.toHaveURL(/\/auth\//);
     } finally {
       await ctx.close();
     }
