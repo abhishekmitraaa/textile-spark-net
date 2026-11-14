@@ -16,7 +16,7 @@ import { RouteErrorBoundary } from "./components/AppErrorBoundary";
 import AuthCallback from "./pages/AuthCallback";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
-import Index from "./pages/Index";
+import RoleHomeRedirect from "./components/RoleHomeRedirect";
 import SellerHome from "./pages/SellerHome";
 import Products from "./pages/Products";
 import ProductDetail from "./pages/ProductDetail";
@@ -57,7 +57,6 @@ import FreelancerProfile from "./pages/FreelancerProfile";
 import Analytics from "./pages/Analytics";
 import Help from "./pages/Help";
 import CosoraStudio from "./pages/CosoraStudio";
-import PhotographerProfile from "./pages/PhotographerProfile";
 import NotFound from "./pages/NotFound";
 import Register from "./pages/Register";
 import OtpVerify from "./pages/OtpVerify";
@@ -269,7 +268,7 @@ const App = () => (
             {/* The canned "support chat" is gone (Help & Support P1); the real one is /help/chat (P3). */}
             <Route path="/profile/help/chat" element={<Navigate to="/help" replace />} />
             <Route path="/seller-home" element={<SellerHome />} />
-            <Route path="/dashboard" element={<Index />} />
+            <Route path="/dashboard" element={<RoleHomeRedirect />} />
             <Route path="/products" element={<Products />} />
             <Route path="/product/:id" element={<ProductDetail />} />
             <Route path="/for-you" element={<ForYou />} />
@@ -325,7 +324,8 @@ const App = () => (
             <Route path="/help/guides/:slug" element={<HelpGuide />} />
             <Route path="/feedback" element={<ClarityMask><AppFeedback /></ClarityMask>} />
             <Route path="/cosora-studio" element={<CosoraStudio />} />
-            <Route path="/cosora-studio/:id" element={<PhotographerProfile />} />
+            {/* The invented studios behind these links are gone (2026-11-05). */}
+            <Route path="/cosora-studio/:id" element={<Navigate to="/cosora-studio" replace />} />
             <Route path="/register" element={<ClarityMask><Register /></ClarityMask>} />
             <Route path="/seller" element={<VendorLanding />} />
             <Route path="/onboarding" element={<RegisteredVendorGate showPending><ClarityMask><Onboarding /></ClarityMask></RegisteredVendorGate>} />

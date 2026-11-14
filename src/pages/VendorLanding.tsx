@@ -23,34 +23,13 @@ import {
   Instagram,
   Mail,
   Menu,
-  Percent,
+  Handshake,
   Shield,
-  Star,
   Users,
 } from "lucide-react";
 import { faqText, useFaqs } from "@/lib/queries/faqs";
 import { useLang } from "@/lib/i18n";
-import hotpingLogo from "@/assets/brands/hotping.png";
-import mocoBlingLogo from "@/assets/brands/moco-bling.png";
-import merongShopLogo from "@/assets/brands/merong-shop.png";
-import styleNandaLogo from "@/assets/brands/style-nanda.png";
-import chuuFashionLogo from "@/assets/brands/chuu-fashion.png";
-import codibookLogo from "@/assets/brands/codibook.png";
-import gogosingLogo from "@/assets/brands/gogosing.png";
-import envylookLogo from "@/assets/brands/envylook.png";
-import styleonmeLogo from "@/assets/brands/styleonme.png";
-import secretLabelLogo from "@/assets/brands/secret-label.png";
-import imvelyLogo from "@/assets/brands/imvely.png";
-import cherrykokoLogo from "@/assets/brands/cherrykoko.png";
-import sappunLogo from "@/assets/brands/sappun.png";
-import brandiLogo from "@/assets/brands/brandi.png";
-import pastelLogo from "@/assets/brands/pastel.png";
-import nuguLogo from "@/assets/brands/nugu.png";
-import ohotoroLogo from "@/assets/brands/ohotoro.png";
-import naning9Logo from "@/assets/brands/naning9.png";
-import holicholicLogo from "@/assets/brands/holicholic.png";
-import uptownHolicLogo from "@/assets/brands/uptown-holic.png";
-import elevenAmLogo from "@/assets/brands/11am.png";
+import { PRIMARY_TYPES } from "@/data/vendorTypes";
 import { SUPPORT_INSTAGRAM } from "@/lib/supportContact";
 
 const fadeIn = {
@@ -58,12 +37,15 @@ const fadeIn = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.5 } },
 };
 
+// What registration actually asks for (documents step and product step, 2026-10-02). Until 2026-11-05 this
+// page's lists, logos, figures and testimonials were invented (ToDo "Remove invented claims", 2026-09-26);
+// everything below is something a seller can check in the app.
 const documents = [
-  "PAN Card",
-  "CIN details",
-  "Aadhaar card",
-  "GST number (if applicable)",
-  "Primary business information",
+  "PAN card",
+  "A business registration: Udyam, GST or CIN",
+  "Aadhaar card, with all but the last four digits masked",
+  "Your business details",
+  "At least one product with a photo",
 ];
 
 const valueProps = [
@@ -73,60 +55,21 @@ const valueProps = [
     desc: "Reach qualified buyers actively looking for verified manufacturers and suppliers.",
   },
   {
-    icon: Percent,
-    title: "0% commission fee",
-    desc: "Keep 100% of your earnings. No commission cuts or hidden deductions.",
+    icon: Handshake,
+    title: "Buyers pay you directly",
+    desc: "You agree the price and terms with each buyer. Plans and ads are optional extras that help more buyers find you.",
   },
   {
     icon: Shield,
-    title: "Trusted by brands",
-    desc: "Join a trusted network of fashion brands and sourcing teams across India.",
+    title: "Checked before it goes live",
+    desc: "Cosora reviews every listing and every buyer requirement before anyone sees it.",
   },
 ];
 
-const brandLogos = [
-  { name: "Hotping", src: hotpingLogo },
-  { name: "Moco Bling", src: mocoBlingLogo },
-  { name: "Merong Shop", src: merongShopLogo },
-  { name: "Style Nanda", src: styleNandaLogo },
-  { name: "Chuu Fashion", src: chuuFashionLogo },
-  { name: "Codibook", src: codibookLogo },
-  { name: "Gogosing", src: gogosingLogo },
-  { name: "Envylook", src: envylookLogo },
-  { name: "Styleonme", src: styleonmeLogo },
-  { name: "Secret Label", src: secretLabelLogo },
-  { name: "Imvely", src: imvelyLogo },
-  { name: "Cherrykoko", src: cherrykokoLogo },
-  { name: "Sappun", src: sappunLogo },
-  { name: "Brandi", src: brandiLogo },
-  { name: "Pastel", src: pastelLogo },
-  { name: "Nugu", src: nuguLogo },
-  { name: "Ohotoro", src: ohotoroLogo },
-  { name: "Naning9", src: naning9Logo },
-  { name: "Holicholic", src: holicholicLogo },
-  { name: "Uptown Holic", src: uptownHolicLogo },
-  { name: "11AM", src: elevenAmLogo },
-];
-
-const testimonials = [
-  {
-    name: "Arshad Khan",
-    business: "Surat Textile Co., Surat",
-    quote: "Cosora replaced brokers for us. We now speak directly to buyers and close faster.",
-    rating: 5,
-  },
-  {
-    name: "Neha Iyer",
-    business: "Delhi Fabric House, Delhi",
-    quote: "Our catalog is finally visible to serious brands. Lead quality is noticeably better.",
-    rating: 5,
-  },
-  {
-    name: "Amit Patel",
-    business: "Tiruppur Knitwear Hub, Tamil Nadu",
-    quote: "We started getting RFQs within days. The onboarding was quick and clear.",
-    rating: 5,
-  },
+const howItWorks = [
+  { step: "1", title: "Register and verify", desc: "Add your business details and documents. Cosora checks them and marks your store verified." },
+  { step: "2", title: "List your products", desc: "Upload products with photos, sizes and prices. Each listing goes live once Cosora has reviewed it." },
+  { step: "3", title: "Get requirements and quote", desc: "Buyers post what they need. Matching requirements reach your leads, and you quote and chat directly." },
 ];
 
 const menuLinks = [
@@ -137,7 +80,7 @@ const menuLinks = [
   { label: "Work with us!", href: "https://cosora.in/careers", external: true },
   { label: "Terms and conditions", href: "/terms" },
   { label: "Report Fraud", href: "/report-fraud" },
-  { label: "Success Stories", href: "#success-stories" },
+  { label: "How it works", href: "#how-it-works" },
 ];
 
 const VendorLanding = () => {
@@ -362,21 +305,6 @@ const VendorLanding = () => {
               </div>
             ))}
           </div>
-          <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory sm:gap-4 sm:pb-0">
-            {brandLogos.map((brand) => (
-              <div
-                key={brand.name}
-                className="flex h-20 w-32 flex-shrink-0 snap-start items-center justify-center rounded-2xl border border-brand-border bg-[#f5f5f5] sm:w-40 lg:w-44"
-              >
-                <img
-                  src={brand.src}
-                  alt={`${brand.name} logo`}
-                  className="h-9 w-auto object-contain sm:h-10"
-                  loading="lazy"
-                />
-              </div>
-            ))}
-          </div>
           <div className="flex justify-center">
             <Link to={startTo}>
               <Button className="rounded-full bg-brand-vendor px-6 py-3 text-sm font-semibold text-[#ffffff] hover:bg-brand-vendor/90">
@@ -391,21 +319,18 @@ const VendorLanding = () => {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          id="success-stories"
+          id="how-it-works"
           className="space-y-4"
         >
-          <h2 className="text-center text-2xl font-bold">Seller success stories</h2>
+          <h2 className="text-center text-2xl font-bold">How it works</h2>
           <div className="grid gap-4 sm:grid-cols-3">
-            {testimonials.map((t) => (
-              <div key={t.name} className="rounded-2xl border border-brand-border bg-[#ffffff] p-4 shadow-sm">
-                <div className="mb-2 flex gap-1">
-                  {Array.from({ length: t.rating }).map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-brand-buyer text-brand-buyer" />
-                  ))}
-                </div>
-                <p className="text-base text-brand-ink">"{t.quote}"</p>
-                <p className="mt-3 text-sm font-semibold">{t.name}</p>
-                <p className="text-sm text-brand-ink/70">{t.business}</p>
+            {howItWorks.map((h) => (
+              <div key={h.step} className="rounded-2xl border border-brand-border bg-[#ffffff] p-4 shadow-sm">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-vendor/10 text-sm font-bold text-brand-vendor">
+                  {h.step}
+                </span>
+                <p className="mt-3 text-sm font-semibold">{h.title}</p>
+                <p className="mt-1 text-sm text-brand-ink/70">{h.desc}</p>
               </div>
             ))}
           </div>
@@ -507,19 +432,14 @@ const VendorLanding = () => {
           className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]"
         >
           <div className="rounded-2xl border border-brand-border bg-[#ffffff] p-4 shadow-sm">
-            <h3 className="text-base font-semibold">Trusted by global brands</h3>
-            <div className="mt-4 grid grid-cols-3 gap-2 sm:grid-cols-4">
-              {brandLogos.slice(0, 12).map((brand) => (
+            <h3 className="text-base font-semibold">Who sells on Cosora</h3>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {PRIMARY_TYPES.map((t) => (
                 <div
-                  key={brand.name}
-                  className="flex h-20 items-center justify-center rounded-xl border border-brand-border bg-[#f5f5f5]"
+                  key={t.value}
+                  className="flex h-16 items-center justify-center rounded-xl border border-brand-border bg-[#f5f5f5] px-2 text-center text-sm font-medium text-brand-ink"
                 >
-                  <img
-                    src={brand.src}
-                    alt={`${brand.name} logo`}
-                    className="h-9 w-auto object-contain"
-                    loading="lazy"
-                  />
+                  {t.label}
                 </div>
               ))}
             </div>
@@ -531,16 +451,16 @@ const VendorLanding = () => {
           <div className="space-y-3">
             {[
               {
-                title: "Best fashion wholesale",
-                desc: "Trusted by over 1 million users worldwide. Seamless service for businesses globally.",
+                title: "Built for fashion and textile sourcing",
+                desc: "Apparel, fabrics, trims, labels, packaging and the services around them, in one marketplace.",
               },
               {
-                title: "A wide range of fashion items",
-                desc: "Women's, men's, and children's clothing. Over 60,000 items updated daily.",
+                title: "Requirements come to you",
+                desc: "Buyers post what they need, and the requirements that fit your products reach your leads first.",
               },
               {
-                title: "Trusted by 95% of shopping malls",
-                desc: "Preferred by retailers and buying teams across India.",
+                title: "In your language",
+                desc: "Use Cosora in English, Hindi or Gujarati.",
               },
             ].map((item) => (
               <div key={item.title} className="rounded-2xl border border-brand-border bg-[#ffffff] p-4 shadow-sm">
