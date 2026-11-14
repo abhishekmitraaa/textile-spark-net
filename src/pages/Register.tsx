@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,16 @@ type Role = "buyer" | "seller";
 const Register = () => {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState<Role>("buyer");
-  const [step, setStep] = useState<1 | 2>(1);
+  // The step is in the address (?step=2), one history entry each, so the device's back returns to the role step with
+  // what was typed still there (buyer sign-up audit item 11a: back used to leave Register altogether).
+  const [params, setParams] = useSearchParams();
+  const location = useLocation();
+  const step: 1 | 2 = params.get("step") === "2" ? 2 : 1;
+  const toDetails = () => setParams({ step: "2" });
+  const toRole = () => {
+    if (location.key !== "default") navigate(-1);
+    else setParams({}, { replace: true });
+  };
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [countryIndex, setCountryIndex] = useState(0);
@@ -48,7 +57,7 @@ const Register = () => {
    */
   const handleNext = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (step === 1) { setStep(2); return; }
+    if (step === 1) { toDetails(); return; }
     if (submitting || !isCompletePhone(form.phone, COUNTRY_CODES[countryIndex])) return;
 
     setSubmitting(true);
@@ -80,8 +89,10 @@ const Register = () => {
     navigate("/auth/otp-verify", { state });
   };
 
-  const buyerBenefits = ["Browse 50,000+ manufacturers", "Post unlimited RFQs", "Get quotes in 24 hours", "Verified supplier network"];
-  const sellerBenefits = ["List unlimited products", "Get matched with buyers", "Manage quotes & leads", "Analytics dashboard"];
+  // What Cosora does, with no invented numbers (D9, 2026-11-14): "50,000+ manufacturers", "quotes in 24 hours",
+  // "unlimited products" and "Trusted by 10,000+" weren't true.
+  const buyerBenefits = ["Post requirements and compare quotes", "Chat with suppliers on Cosora", "Save and follow suppliers you like"];
+  const sellerBenefits = ["List your products for buyers to find", "See buyers' requirements and send quotes", "Manage quotes and chats in one place"];
   const benefits = selectedRole === "buyer" ? buyerBenefits : sellerBenefits;
 
   return (
@@ -116,7 +127,7 @@ const Register = () => {
             <h2 className="text-4xl font-bold italic text-background leading-tight mb-3">
               {selectedRole === "buyer"
                 ? "Source smarter, scale faster."
-                : "Reach thousands of buyers."}
+                : "Get found by the brands sourcing on Cosora."}
             </h2>
             <p className="text-background/60 text-lg">
               {selectedRole === "buyer"
@@ -143,11 +154,6 @@ const Register = () => {
           </div>
         </div>
 
-        <div className="relative z-10">
-          <p className="text-background/40 text-xs">
-            Trusted by 10,000+ brands & manufacturers worldwide
-          </p>
-        </div>
       </div>
 
       {/* Right panel - form */}
@@ -346,9 +352,10 @@ const Register = () => {
 
                   <p className="text-xs text-muted-foreground">
                     By creating an account, you agree to our{" "}
-                    <a href="#" className="text-accent hover:underline">Terms of Service</a>
+                    {/* Both open the Terms page: there is no separate Privacy Policy yet (ToDo, counsel). */}
+                    <Link to="/terms" className="text-accent hover:underline">Terms of Service</Link>
                     {" "}and{" "}
-                    <a href="#" className="text-accent hover:underline">Privacy Policy</a>.
+                    <Link to="/terms" className="text-accent hover:underline">Privacy Policy</Link>.
                   </p>
 
                   {error && (
@@ -364,7 +371,7 @@ const Register = () => {
                       variant="outline"
                       className="flex-1"
                       disabled={submitting}
-                      onClick={() => setStep(1)}
+                      onClick={toRole}
                     >
                       Back
                     </Button>

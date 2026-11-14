@@ -467,3 +467,76 @@ test.describe("B6 · an unfinished sign-up is finished first, behind buyer_signu
     }
   });
 });
+
+test.describe("B7 · back controls and Register", () => {
+  test("the Interest Preference arrow goes back a step without adding an entry", async ({ browser }) => {
+    const who = await freshAccount("b7-arrow", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await expect(page.getByPlaceholder("Enter your name")).toBeVisible();
+      await page.evaluate(() => window.history.pushState(window.history.state, "", "/auth/interest-preference"));
+      await page.reload();
+      await expect(page.getByRole("heading", { name: "Interest Preference" })).toBeVisible();
+      const before = await page.evaluate(() => window.history.length);
+      await page.getByRole("button", { name: "Back" }).click();
+      await expect(page).toHaveURL(/\/auth\/account-info$/);
+      expect(await page.evaluate(() => window.history.length)).toBe(before);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Account Information and Terms have a Back control", async ({ browser }) => {
+    const who = await freshAccount("b7-back", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+      await page.getByRole("button", { name: "Back" }).click();
+      await expect(page).toHaveURL(/\/auth\/sub-role$/);
+      await page.goto(`${BUYER_URL}/auth/terms`);
+      await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Register: the details step is a history entry, and back keeps what was typed", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/register`);
+      await page.getByRole("button", { name: /Continue/ }).click();
+      await expect(page).toHaveURL(/\/register\?step=2$/);
+      await page.getByLabel("Full Name").fill("Asha Rao");
+      await page.goBack();
+      await expect(page).toHaveURL(/\/register$/);
+      await expect(page.getByRole("button", { name: /Continue/ })).toBeVisible();
+      await page.getByRole("button", { name: /Continue/ }).click();
+      await expect(page.getByLabel("Full Name")).toHaveValue("Asha Rao");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Register claims nothing invented, and its consent links open the Terms", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/register`);
+      await expect(page.getByRole("button", { name: /Continue/ })).toBeVisible();
+      const text = await page.locator("body").innerText();
+      expect(text).not.toContain("50,000+");
+      expect(text).not.toContain("10,000+");
+      await page.getByRole("button", { name: /Continue/ }).click();
+      for (const name of ["Terms of Service", "Privacy Policy"]) {
+        await expect(page.getByRole("link", { name })).toHaveAttribute("href", "/terms");
+      }
+    } finally {
+      await ctx.close();
+    }
+  });
+});

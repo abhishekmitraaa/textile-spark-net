@@ -9,11 +9,13 @@ import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/errorMessage";
 import { BUYER_ROLES, type BuyerRoleId } from "@/data/buyerRoles";
 import { fetchBuyerRole, saveBuyerRole } from "@/lib/queries/profile";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // Sign-up's "What best describes you?". One answer, saved to buyer_profiles.buyer_role before moving on (buyer sign-up
 // audit item 1: the pick used to be thrown away, and several could be ticked at once). A reload shows the saved pick.
 const SubRole = () => {
   const navigate = useNavigate();
+  const back = useStepBack("/auth/role-selection");
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const saved = useQuery({
@@ -49,7 +51,7 @@ const SubRole = () => {
   return (
     <div className="min-h-screen bg-white flex flex-col px-6 py-6">
       {/* Back arrow */}
-      <button onClick={() => navigate("/auth/role-selection")} aria-label="Back" className="mb-4 -ml-1 p-1.5 self-start">
+      <button onClick={back} aria-label="Back" className="mb-4 -ml-1 p-1.5 self-start">
         <ArrowLeft className="w-5 h-5 text-gray-700" />
       </button>
 

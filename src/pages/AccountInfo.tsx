@@ -2,7 +2,7 @@ import { errorMessage } from "@/lib/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { MapPin, Loader2 } from "lucide-react";
+import { ArrowLeft, MapPin, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
@@ -11,12 +11,14 @@ import {
   accountInfoFrom, EMPTY_PROFILE, saveAccountInfo, useProfileFull, type AccountInfoValues,
 } from "@/lib/queries/profile";
 import { lookupPincode } from "@/lib/reverseGeocode";
+import { useStepBack } from "@/hooks/useStepBack";
 
 // Something@something.tld, no spaces. Deliverability is the mail server's question, not this form's.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
 const AccountInfo = () => {
   const navigate = useNavigate();
+  const back = useStepBack("/auth/sub-role");
   const { session, refreshProfile } = useAuth();
   const saved = useProfileFull(session?.user.id);
   const [saving, setSaving] = useState(false);
@@ -145,8 +147,13 @@ const AccountInfo = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 flex flex-col max-w-sm mx-auto w-full"
       >
-        {/* COSORA wordmark */}
-        <CosoraLogo height={30} className="mb-6" />
+        <div className="mb-6 flex items-center gap-2">
+          <button type="button" onClick={back} aria-label="Back" className="-ml-1.5 p-1.5 rounded-full hover:bg-gray-100">
+            <ArrowLeft className="w-5 h-5 text-gray-700" />
+          </button>
+          {/* COSORA wordmark */}
+          <CosoraLogo height={30} />
+        </div>
         <div className="h-px bg-gray-200 mb-6" />
 
         <h2 className="text-lg font-bold text-gray-900 mb-3">Account Information</h2>

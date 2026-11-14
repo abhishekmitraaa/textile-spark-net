@@ -4,7 +4,9 @@ import { errorMessage } from "@/lib/errorMessage";
 import { Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ArrowLeft } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
+import { useStepBack } from "@/hooks/useStepBack";
 import TermsClauses from "@/components/TermsClauses";
 import { useAuth } from "@/contexts/AuthContext";
 import { TERMS_EFFECTIVE_DATE, TERMS_INTRO } from "@/data/terms";
@@ -12,6 +14,7 @@ import { acceptBuyerTerms, isStaleTerms } from "@/lib/buyerTerms";
 
 const Terms = () => {
   const navigate = useNavigate();
+  const back = useStepBack("/auth/interest-preference");
   const { refreshProfile } = useAuth();
   const [agreed, setAgreed] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -42,8 +45,11 @@ const Terms = () => {
         transition={{ duration: 0.4 }}
         className="flex-1 min-h-0 flex flex-col max-w-sm mx-auto w-full"
       >
-        {/* COSORA wordmark */}
-        <div className="flex justify-center mb-4">
+        {/* Back, and the COSORA wordmark */}
+        <div className="relative flex justify-center mb-4">
+          <button type="button" onClick={back} aria-label="Back" className="absolute left-0 top-1/2 -translate-y-1/2 -ml-1.5 p-1.5 rounded-full hover:bg-white/10">
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </button>
           <CosoraLogo height={30} variant="white" />
         </div>
 

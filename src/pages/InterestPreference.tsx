@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { usePreferences, usePreferencesSync, retryPreferences, setCategories } from "@/lib/preferencesStore";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/errorMessage";
+import { useStepBack } from "@/hooks/useStepBack";
 import { OTHER_INTEREST_ID, tidyOtherInterest } from "@/lib/buyerCategories";
 
 // Buyer registration interests. These are the shared buyer categories used by
@@ -26,6 +27,7 @@ const InterestPreference = () => {
   // later "edit my interests" flow (/profile/...). Branch navigation so a buyer
   // editing preferences isn't dropped back into the signup flow.
   const inProfile = useLocation().pathname.startsWith("/profile");
+  const back = useStepBack(inProfile ? "/profile" : "/auth/account-info");
   const prefs = usePreferences();
   const { user, loading: authLoading } = useAuth();
   // Signed in, the saved interests must be known before anything is saved over them (preferencesStore: the sync rule).
@@ -81,7 +83,7 @@ const InterestPreference = () => {
         <div className="mx-auto flex max-w-lg items-center gap-2 px-3 py-3">
           <button
             type="button"
-            onClick={() => navigate(inProfile ? "/profile" : "/auth/account-info")}
+            onClick={back}
             aria-label="Back"
             className="rounded-full p-1.5 text-gray-700 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-buyer"
           >
