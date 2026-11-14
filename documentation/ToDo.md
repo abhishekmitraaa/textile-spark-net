@@ -6,15 +6,6 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
-### Decide one layout for /register and the phone sign-up screens — added 2026-11-14
-- Task: choose whether `/register` keeps its desktop split-panel design (dark brand panel and a form) or takes the
-  phone screens' look (Login, the code screen and the sign-up steps), and build the choice.
-- Context: the buyer sign-up audit's Low item 3 ("three looks in one flow"). The colours are fixed: every sign-up screen
-  now uses theme tokens (`brand-buyer`, `brand-buyer-deep`), and Register already did. What's left is layout, a design
-  call. The rest of the audit's Low items are fixed on branch `buyer-signup/fixes` (changelog 2026-11-14).
-- Reference: 2026-11-14 buyer sign-up audit, Low item 3; Mitra: "fix the bugs we saved to todo.md".
-- Status: Open
-
 ### Turn on seller registration's two switches — added 2026-11-13
 - Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
   videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`
