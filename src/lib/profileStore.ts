@@ -25,6 +25,8 @@ export interface ProfileData {
   city: string;
   jobTitle: string;
   department: string;
+  /** What best describes the buyer (src/data/buyerRoles.ts id), or "". */
+  buyerRole: string;
   avatar: string;
   // Business
   businessName: string;

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase";
 import type { Database } from "@/lib/database.types";
 import { fetchMyContactInfo } from "@/lib/queries/myContact";
 import { countryCodeFor } from "@/data/countries";
+import { isBuyerRoleId, type BuyerRoleId } from "@/data/buyerRoles";
 
 type BuyerProfileInsert = Database["public"]["Tables"]["buyer_profiles"]["Insert"];
 type ProfileUpdate = Database["public"]["Tables"]["profiles"]["Update"];
@@ -20,7 +21,7 @@ import type { ProfileData, SocialLinks, NotificationSettings, RegionalSettings }
 // `country` is blank too. "India" is only the Country field's placeholder on
 // /profile/business-details: a default here was saved as data (MPF-9).
 export const EMPTY_PROFILE: ProfileData = {
-  fullName: "", email: "", emailVerified: false, phone: "", city: "", jobTitle: "", department: "", avatar: "",
+  fullName: "", email: "", emailVerified: false, phone: "", city: "", jobTitle: "", department: "", buyerRole: "", avatar: "",
   businessName: "", businessType: "", website: "", interest: "", industry: "", street: "", businessCity: "",
   state: "", postalCode: "", country: "", gstin: "", pan: "", location: "", memberSince: "",
 };
@@ -50,6 +51,7 @@ async function fetchProfileFull(userId: string): Promise<ProfileData> {
     city,
     jobTitle: bp?.job_title ?? "",
     department: bp?.department ?? "",
+    buyerRole: bp?.buyer_role ?? "",
     avatar: p?.avatar_url ?? "",
     businessName: bp?.company ?? "",
     businessType: bp?.business_type ?? "",
@@ -80,7 +82,7 @@ export function useProfileFull(userId: string | undefined) {
 // display-only (emailVerified, interest, location, memberSince).
 const SAVED_FIELDS = [
   "fullName", "email", "phone", "avatar",
-  "businessName", "city", "jobTitle", "department", "businessType", "website", "industry",
+  "businessName", "city", "jobTitle", "department", "buyerRole", "businessType", "website", "industry",
   "street", "businessCity", "state", "postalCode", "country", "gstin", "pan",
 ] as const;
 export type ProfileChanges = Partial<Pick<ProfileData, (typeof SAVED_FIELDS)[number]>>;
@@ -119,6 +121,7 @@ export async function saveProfileFull(userId: string, p: ProfileChanges): Promis
   if (p.city !== undefined) buyer.city = p.city || null;
   if (p.jobTitle !== undefined) buyer.job_title = p.jobTitle || null;
   if (p.department !== undefined) buyer.department = p.department || null;
+  if (p.buyerRole !== undefined) buyer.buyer_role = p.buyerRole || null;
   if (p.businessType !== undefined) buyer.business_type = p.businessType || null;
   if (p.website !== undefined) buyer.website = p.website || null;
   if (p.industry !== undefined) buyer.industry = p.industry || null;
@@ -139,6 +142,19 @@ export async function saveProfileFull(userId: string, p: ProfileChanges): Promis
     const { error } = await supabase.from("buyer_profiles").upsert(buyer, { onConflict: "id" });
     if (error) throw error;
   }
+}
+
+// The Sub-role answer (sign-up's "What best describes you?"), read to show the saved pick again after a reload.
+export async function fetchBuyerRole(userId: string): Promise<BuyerRoleId | null> {
+  const { data, error } = await supabase.from("buyer_profiles").select("buyer_role").eq("id", userId).maybeSingle();
+  if (error) throw error;
+  return isBuyerRoleId(data?.buyer_role) ? data.buyer_role : null;
+}
+
+/** Saves the Sub-role answer (buyer sign-up audit item 1: it used to be thrown away). */
+export async function saveBuyerRole(userId: string, role: BuyerRoleId): Promise<void> {
+  const { error } = await supabase.from("buyer_profiles").upsert({ id: userId, buyer_role: role }, { onConflict: "id" });
+  if (error) throw error;
 }
 
 // Upload a new avatar to the avatars bucket and return its public URL. Files

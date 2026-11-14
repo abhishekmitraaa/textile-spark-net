@@ -143,3 +143,62 @@ test.describe("B5 · accepting the Terms is recorded", () => {
     expect(sql(`select onboarded from public.profiles where id = '${who.id}'`)).toBe("f");
   });
 });
+
+test.describe("B2 · the Sub-role answer is saved", () => {
+  test("a pick is saved, one at a time, and shown again after a reload", async ({ browser }) => {
+    const who = await freshAccount("b2-pick", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/sub-role`);
+      const group = page.getByRole("radiogroup");
+      await expect(group).toBeVisible();
+      await group.getByRole("radio", { name: "Sourcing / Purchase Manager" }).click();
+      await group.getByRole("radio", { name: "Designer / Design Head" }).click();
+      await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expect(page).toHaveURL(/\/auth\/account-info$/);
+      expect(sql(`select buyer_role from public.buyer_profiles where id = '${who.id}'`)).toBe("designer");
+
+      await page.goto(`${BUYER_URL}/auth/sub-role`);
+      await expect(page.getByRole("radio", { name: "Designer / Design Head" })).toHaveAttribute("aria-checked", "true");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a refused save says so and stays on the step", async ({ browser }) => {
+    const who = await freshAccount("b2-refused", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.route("**/rest/v1/buyer_profiles*", (route) =>
+        route.request().method() === "GET" ? route.continue() : route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }));
+      await page.goto(`${BUYER_URL}/auth/sub-role`);
+      await page.getByRole("radio", { name: "Brand Owner / Founder" }).click();
+      await page.getByRole("button", { name: "Continue" }).click();
+      await expect(page.getByText("Couldn't save your answer")).toBeVisible();
+      await expect(page).toHaveURL(/\/auth\/sub-role$/);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Edit Profile shows the answer and changes it", async ({ browser }) => {
+    const who = await freshAccount("b2-edit");
+    sql(`insert into public.buyer_profiles (id, buyer_role) values ('${who.id}', 'merchandiser')
+         on conflict (id) do update set buyer_role = excluded.buyer_role`);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/profile/edit`);
+      const field = page.getByLabel("What best describes you");
+      await expect(field).toHaveValue("merchandiser");
+      await field.selectOption("buying_house");
+      await page.getByRole("button", { name: /^Save/ }).click();
+      await expect.poll(() => sql(`select buyer_role from public.buyer_profiles where id = '${who.id}'`)).toBe("buying_house");
+    } finally {
+      await ctx.close();
+    }
+  });
+});

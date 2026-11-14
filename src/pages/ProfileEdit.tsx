@@ -8,6 +8,7 @@ import {
 } from "@/components/buyer/ProfileEditKit";
 import { useEditableProfile } from "@/hooks/useEditableProfile";
 import { errorMessage } from "@/lib/errorMessage";
+import { BUYER_ROLES } from "@/data/buyerRoles";
 import noUserPicture from "@/assets/Buyer/profile section/No user Picture.jpg";
 
 // /profile/edit: photo + personal details. It was the Photo and Personal tabs of
@@ -110,6 +111,12 @@ const ProfileEdit = () => {
                     onChange={(e) => set({ city: e.target.value })}
                     autoFocus={params.get("focus") === "city"}
                   />
+                </Field>
+                <Field label="What best describes you" htmlFor="pe-role">
+                  <select id="pe-role" className={inputCls} value={form.buyerRole} onChange={(e) => set({ buyerRole: e.target.value })}>
+                    <option value="">Not set</option>
+                    {BUYER_ROLES.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+                  </select>
                 </Field>
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="Job Title" htmlFor="pe-job">
