@@ -1,6 +1,6 @@
 # Personalised ranking, Part 2: Standing — design
 
-**Status:** written 2026-11-15 under Mitra's "fix on your own" (2026-10-31) and "continue" (2026-11-15). It builds
+**Status:** LIVE 2026-11-15 (migration 20261115110000). Written 2026-11-15 under Mitra's "fix on your own" (2026-10-31) and "continue" (2026-11-15). It builds
 on the decisions in `documentation/ranking-foundations-design-2026-10-07.md` (Mitra, 2026-10-06/07) and the profile
 score rule (Mitra, 2026-10-22: "not above paid plan"). Every call made here without Mitra is marked **Call** and
 listed again at the end.

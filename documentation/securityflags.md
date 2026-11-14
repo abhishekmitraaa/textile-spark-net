@@ -130,7 +130,7 @@ in the next one.
 
 ## Log
 
-### 2026-11-15 — Ranking Standing (not live yet) — Severity: Low
+### 2026-11-15 — Ranking Standing (live 2026-11-15) — Severity: Low
 - **Fixed before release (automated security review of the first version):** (1) interest counted signed-out viewers, whose keys the browser makes, so a seller could mint "people": now only signed-in viewers, follows and messages count; (2) the new-seller floor keyed off the oldest live listing, so unlisting and relisting re-armed it: now the account's age; (3) `public.vendor_standing(uuid)` was open to anon, so anyone could watch a seller's number halve when staff record a fraud finding: now no client can call it, and `top_vendors` / `new_brand_suggestions` run as definer to read it.
 - **Residual (Low):** accounts are cheap while the test sign-in code accepts any 6 digits, so a seller could still make accounts to view, follow or message themselves. Interest is log-scaled with a fixed ceiling and weighs 0.30, and the public lists show only an order. Reviews come only from buyers' own review rows. The parts stay in `admin.vendor_standing`, which clients can't read.
 
