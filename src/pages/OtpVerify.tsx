@@ -7,7 +7,8 @@ import { useUserRole } from "@/contexts/UserRoleContext";
 import { cn } from "@/lib/utils";
 import CosoraLogo from "@/components/CosoraLogo";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
+import { readProfileRow } from "@/lib/auth/profileRead";
 import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
 import { maskPhone } from "@/lib/auth/phone";
 import { sendOtp, verifyOtp, OTP_LENGTH, type SendOtpResult } from "@/lib/auth/otp";
@@ -77,6 +78,9 @@ const OtpVerify = () => {
   const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Signed in, but the profile couldn't be read even after retrying: where to go isn't known, so ask (audit item 6).
+  const [landingFailed, setLandingFailed] = useState<string | null>(null);
+  const { signOut } = useAuth();
   const keyboardInset = useKeyboardInset();
 
   useEffect(() => {
@@ -129,18 +133,26 @@ const OtpVerify = () => {
     // users as well.
     await applyPendingSignupProfile(result.user);
 
-    // Route by the profile row, as every other sign-in path does.
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("active_role, onboarded")
-      .eq("id", result.user.id)
-      .maybeSingle();
-    setVerifying(false);
+    await land(result.user.id);
+  };
 
-    const activeRole = profile?.active_role === "seller" ? "seller" : "buyer";
+  // Route by the profile row, as every other sign-in path does. A read that fails (after its retries) used to count
+  // as "no profile" and sent a returning buyer to role selection; now it stops here with Retry, and the side is set
+  // only once the profile is known.
+  const land = async (uid: string) => {
+    setVerifying(true);
+    setLandingFailed(null);
+    const profile = await readProfileRow(uid);
+    setVerifying(false);
+    if (!profile) {
+      setLandingFailed(uid);
+      return;
+    }
+
+    const activeRole = profile.active_role === "seller" ? "seller" : "buyer";
     setRole(activeRole);
 
-    if (!profile?.onboarded) {
+    if (!profile.onboarded) {
       // From Register the role is already chosen (handle_new_user applied it
       // from the signup metadata), so continue where Register used to send a
       // signed-in user. From Login a new number picks its role first.
@@ -234,6 +246,23 @@ const OtpVerify = () => {
             ))}
           </InputOTPGroup>
         </InputOTP>
+
+        {landingFailed && (
+          <div className="mb-3 w-full rounded-lg border border-red-200 bg-red-50 p-3 text-left" role="alert">
+            <p className="text-sm font-semibold text-gray-900">We couldn't load your account</p>
+            <p className="mt-0.5 text-xs text-gray-600">You're signed in. Check your connection and try again.</p>
+            <div className="mt-2.5 flex gap-2">
+              <button type="button" onClick={() => void land(landingFailed)} disabled={verifying}
+                className="px-4 py-2 rounded-lg bg-[#a4172c] text-white text-xs font-bold disabled:opacity-60">
+                Retry
+              </button>
+              <button type="button" onClick={async () => { await signOut(); setLandingFailed(null); navigate("/auth/login", { replace: true }); }}
+                className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-semibold text-gray-700">
+                Sign out
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && (
           <div className="mb-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-2.5 text-left">

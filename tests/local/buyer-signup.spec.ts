@@ -4,7 +4,7 @@
  */
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type Request } from "@playwright/test";
-import { allowFeature, BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { allowFeature, BUYER_URL, contextWithSession, freshAccount, routeDummyOtp, sql } from "./stack";
 
 const STEPS = ["/auth/sub-role", "/auth/account-info", "/auth/interest-preference", "/auth/terms"];
 
@@ -535,6 +535,89 @@ test.describe("B7 · back controls and Register", () => {
       for (const name of ["Terms of Service", "Privacy Policy"]) {
         await expect(page.getByRole("link", { name })).toHaveAttribute("href", "/terms");
       }
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+/** A fresh 10-digit Indian mobile number for the dummy sign-in code. */
+function freshPhone(): string {
+  return `9${String(Date.now()).slice(-9)}`;
+}
+
+/** Signs in through Login and the code screen (any 6 digits: the dummy code). */
+async function signInByPhone(page: Page, digits: string): Promise<void> {
+  await page.goto(`${BUYER_URL}/auth/login`);
+  await page.getByPlaceholder("Phone Number").fill(digits);
+  await page.getByRole("button", { name: "Send Code" }).click();
+  await expect(page).toHaveURL(/\/auth\/otp-verify$/, { timeout: 30_000 });
+  await page.getByLabel("One-time code").click();
+  await page.keyboard.type("123456");
+  await page.getByRole("button", { name: "Next" }).click();
+}
+
+/** The profile reads AuthContext and the code screen make (they select `onboarded`). */
+const PROFILE_READ = /\/rest\/v1\/profiles\?.*select=[^&]*onboarded/;
+
+test.describe("C1 · a failed profile read never strands or misroutes", () => {
+  test("a read that fails once, then works, lands normally", async ({ browser }) => {
+    const who = await freshAccount("c1-once");
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    let failed = 0;
+    try {
+      await page.route(PROFILE_READ, (route) =>
+        failed++ === 0 ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
+      await page.goto(`${BUYER_URL}/auth/callback`);
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 15_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a read that keeps failing shows Retry on the callback page, and never role selection", async ({ browser }) => {
+    const who = await freshAccount("c1-down");
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    let down = true;
+    try {
+      await page.route(PROFILE_READ, (route) =>
+        down ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
+      await page.goto(`${BUYER_URL}/auth/callback`);
+      await expect(page.getByText("We couldn't load your account")).toBeVisible({ timeout: 10_000 });
+      await expect(page).not.toHaveURL(/role-selection/);
+      down = false;
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 15_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("on the code screen: a returning account with a failing read gets Retry, not role selection", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    await routeDummyOtp(ctx);
+    const page = await ctx.newPage();
+    const digits = freshPhone();
+    try {
+      // First sign-in creates the account; finish it as an onboarded buyer.
+      await signInByPhone(page, digits);
+      await expect(page).toHaveURL(/\/auth\/role-selection$/, { timeout: 30_000 });
+      const id = sql(`select id from auth.users where phone = '91${digits}'`);
+      sql(`update public.profiles set onboarded = true, terms_version = public.buyer_terms_version(), terms_accepted_at = now() where id = '${id}'`);
+      await page.evaluate(() => localStorage.clear());
+      await ctx.clearCookies();
+
+      let down = true;
+      await page.route(PROFILE_READ, (route) =>
+        down ? route.fulfill({ status: 503, body: '{"message":"Service unavailable"}' }) : route.continue());
+      await signInByPhone(page, digits);
+      await expect(page.getByText("We couldn't load your account")).toBeVisible({ timeout: 15_000 });
+      await expect(page).not.toHaveURL(/role-selection/);
+      down = false;
+      await page.getByRole("button", { name: "Retry" }).click();
+      await expect(page).toHaveURL(/\/home\/new-arrivals$/, { timeout: 15_000 });
     } finally {
       await ctx.close();
     }

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import CosoraLogo from "@/components/CosoraLogo";
@@ -30,7 +30,8 @@ import { applyPendingSignupProfile } from "@/lib/queries/signupProfile";
 // ─────────────────────────────────────────────────────────────
 
 export default function AuthCallback() {
-  const { loading, session, profile } = useAuth();
+  const { loading, session, profile, profileError, refreshProfile, signOut } = useAuth();
+  const [retrying, setRetrying] = useState(false);
   const navigate = useNavigate();
   // The effect re-fires when `profile` arrives, and StrictMode double-invokes
   // it in dev. The write underneath is an upsert and safe to repeat, but there
@@ -40,7 +41,7 @@ export default function AuthCallback() {
   useEffect(() => {
     if (loading) return;
     if (!session) { navigate("/login", { replace: true }); return; }
-    if (!profile) return; // wait for the profile row to load
+    if (!profile) return; // wait for the profile row to load (a read that keeps failing shows Retry below)
 
     let cancelled = false;
     void (async () => {
@@ -61,6 +62,36 @@ export default function AuthCallback() {
     })();
     return () => { cancelled = true; };
   }, [loading, session, profile, navigate]);
+
+  // The profile couldn't be read even after retrying (audit item 6): this page used to spin forever.
+  if (session && !profile && profileError) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-white px-6">
+        <div className="text-center max-w-xs" role="alert">
+          <CosoraLogo height={34} />
+          <p className="mt-5 text-base font-semibold text-gray-900">We couldn't load your account</p>
+          <p className="mt-1 text-sm text-gray-500">Check your connection and try again.</p>
+          <div className="mt-5 flex justify-center gap-3">
+            <button
+              type="button"
+              disabled={retrying}
+              onClick={async () => { setRetrying(true); await refreshProfile(); setRetrying(false); }}
+              className="px-5 py-2.5 rounded-xl bg-brand-buyer text-white text-sm font-bold disabled:opacity-60"
+            >
+              {retrying ? "Trying…" : "Retry"}
+            </button>
+            <button
+              type="button"
+              onClick={async () => { await signOut(); navigate("/login", { replace: true }); }}
+              className="px-5 py-2.5 rounded-xl border border-gray-300 text-sm font-semibold text-gray-700"
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen grid place-items-center bg-white">

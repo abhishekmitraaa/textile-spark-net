@@ -1,7 +1,8 @@
-import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode, useCallback } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase";
 import { fetchMyContactInfo } from "@/lib/queries/myContact";
+import { readProfileRow } from "@/lib/auth/profileRead";
 
 // ─────────────────────────────────────────────────────────────
 // Auth context — the real session + profile for the signed-in user.
@@ -50,6 +51,8 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  /** The signed-in account's profile couldn't be read, even after retrying: show Retry (refreshProfile), never guess. */
+  profileError: boolean;
   loading: boolean;
   isAdmin: boolean;
   signInAsDemo: (role: DemoRole) => Promise<void>;
@@ -64,6 +67,9 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState(false);
+  // Only the latest read may set the profile: a sign-out or a second sign-in can overtake a retrying one.
+  const readSeq = useRef(0);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -77,17 +83,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // `email` is not selectable on profiles (MPF-3): it comes from
   // my_contact_info(). A failure there leaves email null rather than dropping
   // the whole profile, because the rest of the app routes on active_role.
+  //
+  // The profile row is read again a few times when it fails (lib/auth/profileRead.ts); if it still fails,
+  // profileError says so, and the pages that route on it offer Retry instead of guessing (audit item 6).
   const loadProfile = useCallback(async (uid: string) => {
-    const [{ data }, contact, { data: adminFlag, error: adminError }] = await Promise.all([
-      supabase
-        .from("profiles")
-        .select("id, full_name, active_role, onboarded, avatar_url, terms_version")
-        .eq("id", uid)
-        .maybeSingle(),
+    const seq = ++readSeq.current;
+    const [data, contact, { data: adminFlag, error: adminError }] = await Promise.all([
+      readProfileRow(uid),
       fetchMyContactInfo().catch(() => null),
       supabase.rpc("is_admin"),
     ]);
+    if (seq !== readSeq.current) return;
     setProfile(data ? ({ ...data, email: contact?.email ?? null } as Profile) : null);
+    setProfileError(!data);
     setIsAdmin(!adminError && adminFlag === true);
   }, []);
 
@@ -105,7 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(next);
       // Never call other Supabase methods synchronously inside this callback.
       if (next?.user) void loadProfile(next.user.id);
-      else { setProfile(null); setIsAdmin(false); }
+      else { readSeq.current++; setProfile(null); setProfileError(false); setIsAdmin(false); }
     });
 
     return () => { active = false; sub.subscription.unsubscribe(); };
@@ -156,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         user: session?.user ?? null,
         profile,
+        profileError,
         loading,
         isAdmin,
         signInAsDemo,
