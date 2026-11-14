@@ -202,3 +202,111 @@ test.describe("B2 · the Sub-role answer is saved", () => {
     }
   });
 });
+
+test.describe("B3 · Account Information prefills, saves only what changed, and its location works", () => {
+  const DELHI = { latitude: 28.6139391, longitude: 77.2090212 };
+  async function mockLookup(page: Page, answer: Record<string, unknown>, seen: string[] = []) {
+    await page.route("https://api.bigdatacloud.net/**", (route) => {
+      seen.push(route.request().url());
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(answer) });
+    });
+    return seen;
+  }
+
+  test("locate, Next, back: every answer is shown again, and the lookup gets a rounded position", async ({ browser }) => {
+    const who = await freshAccount("b3-locate", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    await ctx.grantPermissions(["geolocation"]);
+    await ctx.setGeolocation(DELHI);
+    const page = await ctx.newPage();
+    try {
+      const seen = await mockLookup(page, { postcode: "110001", city: "New Delhi", principalSubdivision: "Delhi", countryCode: "IN" });
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await expect(page.getByText("Your approximate location (about 1 km) is looked up by BigDataCloud.")).toBeVisible();
+      await page.getByPlaceholder("Enter your name").fill("Asha Rao");
+      await page.getByPlaceholder("Please enter a valid email address.").fill("asha@example.com");
+      await page.getByPlaceholder("Your company or brand name").fill("Asha Textiles");
+      await page.getByRole("button", { name: "Use current location" }).click();
+      const pin = page.getByPlaceholder("Enter Pincode");
+      await expect(pin).toHaveValue("110001");
+      await expect(pin).toBeEnabled();
+      expect(seen).toHaveLength(1);
+      const q = new URL(seen[0]).searchParams;
+      for (const k of ["latitude", "longitude"]) expect((q.get(k) ?? "").split(".")[1]?.length ?? 0, k).toBeLessThanOrEqual(2);
+
+      await page.getByRole("button", { name: "NEXT" }).click();
+      await expect(page).toHaveURL(/\/auth\/interest-preference$/);
+      expect(sql(`select concat_ws('|', company, postal_code, city, state) from public.buyer_profiles where id = '${who.id}'`))
+        .toBe("Asha Textiles|110001|New Delhi|Delhi");
+      expect(sql(`select full_name from public.profiles where id = '${who.id}'`)).toBe("Asha Rao");
+
+      await page.goBack();
+      await expect(page).toHaveURL(/\/auth\/account-info$/);
+      await expect(page.getByPlaceholder("Enter your name")).toHaveValue("Asha Rao");
+      await expect(page.getByPlaceholder("Please enter a valid email address.")).toHaveValue("asha@example.com");
+      await expect(page.getByPlaceholder("Your company or brand name")).toHaveValue("Asha Textiles");
+      await expect(page.getByPlaceholder("Enter Pincode")).toHaveValue("110001");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a typed pincode replaces the located place: city and state are cleared", async ({ browser }) => {
+    const who = await freshAccount("b3-typed", { onboarded: false });
+    sql(`update public.profiles set full_name = 'Asha Rao', email = 'asha@example.com' where id = '${who.id}';
+         insert into public.buyer_profiles (id, company, postal_code, city, state) values ('${who.id}', 'Asha Textiles', '560001', 'Bengaluru', 'Karnataka')
+         on conflict (id) do update set company = excluded.company, postal_code = excluded.postal_code, city = excluded.city, state = excluded.state;`);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      const pin = page.getByPlaceholder("Enter Pincode");
+      await expect(pin).toHaveValue("560001");
+      await pin.fill("110001");
+      await page.getByRole("button", { name: "NEXT" }).click();
+      await expect(page).toHaveURL(/\/auth\/interest-preference$/);
+      expect(sql(`select concat_ws('|', postal_code, coalesce(city, 'NULL'), coalesce(state, 'NULL')) from public.buyer_profiles where id = '${who.id}'`))
+        .toBe("110001|NULL|NULL");
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("Next with nothing changed writes nothing", async ({ browser }) => {
+    const who = await freshAccount("b3-same", { onboarded: false });
+    sql(`update public.profiles set full_name = 'Asha Rao', email = 'asha@example.com' where id = '${who.id}';
+         insert into public.buyer_profiles (id, display_name, company, postal_code) values ('${who.id}', 'Asha Rao', 'Asha Textiles', '110001')
+         on conflict (id) do update set company = excluded.company, postal_code = excluded.postal_code;`);
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await expect(page.getByPlaceholder("Your company or brand name")).toHaveValue("Asha Textiles");
+      const writes = watchWrites(page);
+      await page.getByRole("button", { name: "NEXT" }).click();
+      await expect(page).toHaveURL(/\/auth\/interest-preference$/);
+      expect(writes.filter((w) => /\/rest\/v1\/(profiles|buyer_profiles)/.test(w.url())).map((w) => w.url())).toEqual([]);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("a position outside India says the lookup is for India and leaves the pincode to type", async ({ browser }) => {
+    const who = await freshAccount("b3-uk", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    await ctx.grantPermissions(["geolocation"]);
+    await ctx.setGeolocation({ latitude: 51.5074, longitude: -0.1278 });
+    const page = await ctx.newPage();
+    try {
+      await mockLookup(page, { postcode: "SW1A 1AA", city: "London", principalSubdivision: "England", countryCode: "GB" });
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await page.getByRole("button", { name: "Use current location" }).click();
+      await expect(page.getByText("Pincode lookup works for India only")).toBeVisible();
+      const pin = page.getByPlaceholder("Enter Pincode");
+      await expect(pin).toBeEnabled();
+      await expect(pin).toHaveValue("");
+    } finally {
+      await ctx.close();
+    }
+  });
+});

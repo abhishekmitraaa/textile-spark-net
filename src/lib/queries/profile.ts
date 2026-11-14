@@ -220,55 +220,64 @@ export async function saveSetting(
   if (error) throw error;
 }
 
-// Lighter save for the signup Account-Information step (name/email/business only).
-export async function saveAccountInfo(
-  userId: string,
-  input: {
-    name?: string; email?: string; businessName?: string;
-    /** Six-digit pincode, typed or reverse-geocoded. */
-    postalCode?: string | null;
-    /** Only ever set on the geolocation path — see the note below. */
-    city?: string | null;
-    state?: string | null;
+// Sign-up's Account Information step: the six values it shows, as the form holds them ("" for none).
+export interface AccountInfoValues {
+  name: string;
+  email: string;
+  businessName: string;
+  postalCode: string;
+  /** Only ever set by "Use current location": a bare typed pincode is not a city (no gazetteer, no guessing). */
+  city: string;
+  state: string;
+}
+
+/** What Account Information shows on arrival: the saved values, so a reload or Back shows every answer again. */
+export function accountInfoFrom(p: ProfileData): AccountInfoValues {
+  return {
+    name: p.fullName,
+    // A phone sign-in's address is a placeholder nobody can receive mail at (p<digits>@phone.cosora.invalid).
+    email: p.email.toLowerCase().endsWith(".invalid") ? "" : p.email,
+    businessName: p.businessName,
+    postalCode: p.postalCode,
+    city: p.city,
+    state: p.state,
+  };
+}
+
+/**
+ * Only what changed (MPF-9; buyer sign-up audit item 10: it wrote the name and business on every Next). An emptied
+ * field is a change, saved as NULL. The location travels together: a new pincode with no located place clears the
+ * old city and state, which described the pincode before it.
+ */
+export function accountInfoChanges(before: AccountInfoValues, after: AccountInfoValues): { profile: ProfileUpdate; buyer: Omit<BuyerProfileInsert, "id"> } {
+  const profile: ProfileUpdate = {};
+  const buyer: Omit<BuyerProfileInsert, "id"> = {};
+  if (after.name !== before.name) {
+    profile.full_name = after.name || null;
+    buyer.display_name = after.name || null;
   }
-): Promise<void> {
-  const profilePatch: ProfileUpdate = {};
-  if (input.name) profilePatch.full_name = input.name;
-  if (input.email) profilePatch.email = input.email;
-  if (Object.keys(profilePatch).length) {
-    const { error } = await supabase.from("profiles").update(profilePatch).eq("id", userId);
+  if (after.email !== before.email) profile.email = after.email || null;
+  if (after.businessName !== before.businessName) buyer.company = after.businessName || null;
+  if (after.postalCode !== before.postalCode || after.city !== before.city || after.state !== before.state) {
+    buyer.postal_code = after.postalCode || null;
+    buyer.city = after.city || null;
+    buyer.state = after.state || null;
+  }
+  return { profile, buyer };
+}
+
+// Location is written here because it was once collected and dropped (2026-09-09): `city` is where the person is,
+// never `business_city` (the company's address, which the full profile form owns).
+export async function saveAccountInfo(userId: string, before: AccountInfoValues, after: AccountInfoValues): Promise<void> {
+  const { profile, buyer } = accountInfoChanges(before, after);
+  if (Object.keys(profile).length) {
+    const { error } = await supabase.from("profiles").update(profile).eq("id", userId);
     if (error) throw error;
   }
-
-  // Location is written here because it was previously COLLECTED AND DROPPED.
-  // AccountInfo.tsx asks for a pincode, and on the "use my location" path it
-  // reverse-geocodes a city and state out of BigDataCloud too — then used them
-  // for a toast message and threw them away, so `buyer_profiles.city/state/
-  // postal_code` stayed null for every account created through onboarding.
-  // That is what made vendor buyer-geography unbuildable.
-  //
-  // Column choice mirrors saveProfileFull: `city` is the person's own city,
-  // `business_city` is their company's address and is NOT touched here — the
-  // geolocation reading is where the human is standing, not where their firm is
-  // registered, and conflating the two would corrupt a field the full profile
-  // form owns.
-  //
-  // ASYMMETRY IS DELIBERATE. city/state are written ONLY when the geolocation
-  // path resolved them. A bare typed pincode persists postal_code alone: there
-  // is no pincode→city table in this project, and guessing one would put a
-  // fabricated city on a vendor's map, which is the exact failure mode the rest
-  // of this page's analytics work exists to remove.
-  const buyerPatch: BuyerProfileInsert = {
-    id: userId,
-    display_name: input.name ?? null,
-    company: input.businessName ?? null,
-  };
-  if (input.postalCode) buyerPatch.postal_code = input.postalCode;
-  if (input.city) buyerPatch.city = input.city;
-  if (input.state) buyerPatch.state = input.state;
-
-  const { error } = await supabase.from("buyer_profiles").upsert(buyerPatch, { onConflict: "id" });
-  if (error) throw error;
+  if (Object.keys(buyer).length) {
+    const { error } = await supabase.from("buyer_profiles").upsert({ id: userId, ...buyer }, { onConflict: "id" });
+    if (error) throw error;
+  }
 }
 
 // Real profile stats: the user's OWN quotes and chats, each filtered on the

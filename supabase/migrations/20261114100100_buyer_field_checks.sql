@@ -3,7 +3,7 @@
 -- Sign-up's Account Info and the buyer's Edit Profile check these in the browser; the API reaches the tables directly,
 -- so the database checks them too, for a browser's write of a new or changed value (the rule of
 -- trg_vendor_profiles_tax_ids, 20261013100000):
---   buyer_profiles  display_name, company   trimmed, at most 120 characters; spaces only is saved as empty (NULL)
+--   buyer_profiles  display_name (the person's name), company   trimmed, at most 120 characters; spaces only is saved as empty (NULL)
 --                   postal_code             six digits not starting with 0, when the buyer's country is India (or unset)
 --                   gstin, pan              upper-cased with spaces removed; gstin_is_valid() / pan_is_valid(); a GSTIN
 --                                           must contain the PAN
@@ -28,7 +28,7 @@ begin
   if v_insert or new.display_name is distinct from old.display_name then
     new.display_name := nullif(btrim(new.display_name), '');
     if char_length(new.display_name) > 120 then
-      raise exception 'Keep the business name to 120 characters.'
+      raise exception 'Keep your name to 120 characters.'
         using errcode = '23514', constraint = 'buyer_profiles_display_name_valid';
     end if;
   end if;

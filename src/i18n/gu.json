@@ -8599,7 +8599,6 @@
  "Your answers are saved only when you submit on the last step. If you leave now, they're lost and you start again.": "તમારા જવાબ ફક્ત છેલ્લા સ્ટેપ પર સબમિટ કરો ત્યારે જ સેવ થાય છે. અત્યારે છોડશો તો તે ભૂંસાઈ જશે અને તમારે ફરીથી શરૂ કરવું પડશે.",
  "Stay and continue": "રોકાઓ અને આગળ વધો",
  "Leave": "છોડો",
- "Keep the business name to 120 characters.": "વ્યવસાયનું નામ 120 અક્ષરો સુધી રાખો.",
  "Keep the company name to 120 characters.": "કંપનીનું નામ 120 અક્ષરો સુધી રાખો.",
  "A pincode is 6 digits and doesn't start with 0.": "પિનકોડ 6 અંકોનો હોય છે અને 0 થી શરૂ થતો નથી.",
  "Keep your name to 120 characters.": "તમારું નામ 120 અક્ષરો સુધી રાખો.",
@@ -8607,5 +8606,8 @@
  "These Terms have changed. Reload the page to read the new version.": "આ શરતો બદલાઈ ગઈ છે. નવું સંસ્કરણ વાંચવા માટે પેજ ફરીથી લોડ કરો.",
  "I agree to the Terms & Conditions and Privacy Policy": "હું નિયમો અને શરતો તથા ગોપનીયતા નીતિ સાથે સંમત છું",
  "Couldn't save your answer": "તમારો જવાબ સાચવી શકાયો નહીં",
- "What best describes you": "તમારું શ્રેષ્ઠ વર્ણન શું છે"
+ "What best describes you": "તમારું શ્રેષ્ઠ વર્ણન શું છે",
+ "Your approximate location (about 1 km) is looked up by BigDataCloud.": "તમારું અંદાજિત સ્થાન (લગભગ 1 કિમી) BigDataCloud દ્વારા શોધવામાં આવે છે.",
+ "Pincode lookup works for India only. Enter your pincode, or leave it empty.": "પિનકોડ શોધ ફક્ત ભારત માટે કામ કરે છે. તમારો પિનકોડ દાખલ કરો, અથવા તેને ખાલી છોડો.",
+ "Detected {0}, but no pincode was found. Enter it below.": "{0} મળ્યું, પરંતુ કોઈ પિનકોડ મળ્યો નહીં. તેને નીચે દાખલ કરો."
 }

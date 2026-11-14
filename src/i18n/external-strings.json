@@ -533,7 +533,6 @@
   "The GSTIN doesn't match the PAN above. A GSTIN contains the PAN it was issued for.",
   "That PAN isn't valid. A PAN is 5 letters, 4 digits, then 1 letter.",
   "The GSTIN doesn't match the PAN. A GSTIN contains the PAN it was issued for.",
-  "Keep the business name to 120 characters.",
   "Keep the company name to 120 characters.",
   "A pincode is 6 digits and doesn't start with 0.",
   "Keep your name to 120 characters.",
@@ -544,6 +543,8 @@
   "Designer / Design Head",
   "Buying House / Buying Agent",
   "Retail Chain / Institutional Buyer",
-  "Not set"
+  "Not set",
+  "Pincode lookup works for India only. Enter your pincode, or leave it empty.",
+  "Detected {0}, but no pincode was found. Enter it below."
  ]
 }
