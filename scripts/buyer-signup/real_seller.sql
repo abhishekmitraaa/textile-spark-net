@@ -75,6 +75,23 @@ rollback to savepoint c;
 
 savepoint c;
 do $c$
+declare u uuid := pg_temp.new_user('scrub'); r record;
+begin
+  insert into public.buyer_profiles (id, buyer_role, preferred_categories, preferred_interest_other, preferred_locations)
+  values (u, 'designer', '{others}', 'Handmade leather bags', '{surat}')
+  on conflict (id) do update set buyer_role = excluded.buyer_role, preferred_categories = excluded.preferred_categories,
+    preferred_interest_other = excluded.preferred_interest_other, preferred_locations = excluded.preferred_locations;
+  perform public.anonymize_account(u);
+  select buyer_role, preferred_interest_other, preferred_locations, preferred_categories into r from public.buyer_profiles where id = u;
+  perform pg_temp.ok('anonymize_account clears the sign-up answers (role, interest words, locations)',
+    r.buyer_role is null and r.preferred_interest_other is null and r.preferred_locations = '{}' and r.preferred_categories = '{}',
+    format('role=%s other=%s locs=%s', r.buyer_role, r.preferred_interest_other, r.preferred_locations));
+exception when others then perform pg_temp.ok('anonymize_account clears the sign-up answers', false, sqlstate || ' ' || sqlerrm);
+end $c$;
+rollback to savepoint c;
+
+savepoint c;
+do $c$
 declare u uuid := pg_temp.new_user('anonreg'); st text;
 begin
   insert into public.vendor_profiles (id, brand_name, onboarding_complete) values (u, 'Registered', true);

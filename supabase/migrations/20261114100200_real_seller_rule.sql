@@ -9,7 +9,8 @@
 --                                 Not seller_registered(): that answers true for everyone while its switch is off.
 --   account_deletion_blocker()    its 'vendor' arm uses it.
 --   anonymize_account()           refuses a real seller as before; a bare row is removed before the identity is
---                                 scrubbed (it holds a brand name).
+--                                 scrubbed (it holds a brand name); the scrub also clears the sign-up answers
+--                                 (buyer_role, preferred_interest_other, preferred_locations: 20261114100150 adds the last).
 -- Support's "has a store" label moves to the same rule in 20261114100300.
 
 create or replace function admin.is_real_seller(p uuid)
@@ -113,7 +114,9 @@ begin
          department = null, business_type = null, website = null, industry = null,
          street = null, business_city = null, state = null, postal_code = null,
          country = null, gstin = null, pan = null,
-         social = '{}'::jsonb, preferred_categories = '{}'
+         social = '{}'::jsonb, preferred_categories = '{}',
+         -- What sign-up and For You asked (2026-11-14): the typed "Others" words were never scrubbed.
+         preferred_interest_other = null, buyer_role = null, preferred_locations = '{}'
    where id = p_user;
 
   -- Copies of the name on the review rows themselves.

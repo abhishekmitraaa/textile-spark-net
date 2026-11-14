@@ -1,4 +1,4 @@
-- 2026-11-14 (branch `buyer-signup/fixes`, after the High and Medium fixes; migration `20261114100700`; not released) The buyer sign-up audit's Low items (16–23, the ToDo entry "Buyer sign-up audit 2026-11-13: the low-priority UI and polish items").
+- 2026-11-14 (branch `buyer-signup/fixes`, after the High and Medium fixes; migration `20261114100150`; not released) The buyer sign-up audit's Low items (16–23, the ToDo entry "Buyer sign-up audit 2026-11-13: the low-priority UI and polish items").
   - Why: Mitra, 2026-11-14: "after fixing all the bugs which you planned on doing, move on to fix the bugs we saved to todo.md".
   - Wording: "I am a…"; Account Information says what the details are for and what sellers see; the email placeholder is an example (name@company.com); Interest Preference asks for "the categories you source".
   - Role selection and Sub-role no longer offer "Already have an account? Sign in" (only signed-in accounts reach them).
