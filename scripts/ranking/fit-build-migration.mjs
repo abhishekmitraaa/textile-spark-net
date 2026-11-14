@@ -1,4 +1,4 @@
-// Builds supabase/migrations/20261101100000_ranking_fit.sql from scripts/ranking/fit-migration.sql (Ranking Fit,
+// Builds supabase/migrations/20261115100000_ranking_fit.sql from scripts/ranking/fit-migration.sql (Ranking Fit,
 // 2026-11-01): the "-- @@ROOTS@@" lines become one VALUES row per top-level seller category (id, name, the unit its
 // capacity is compared in), read from src/data/sellerCategories.ts so the families never drift from the forms.
 // Run: node scripts/ranking/fit-build-migration.mjs
@@ -19,5 +19,5 @@ const { seller } = await loadVocabularies();
 const rows = seller.sellerCategories.map((c) => `      (${q(c.id)}, ${q(c.name)}, ${q(unitOf(c))})`).join(",\n");
 const sql = readFileSync(join(here, "fit-migration.sql"), "utf8").replace(/-- @@ROOTS@@/g, () => rows);
 if (sql.includes("@@ROOTS@@")) throw new Error("placeholder left");
-writeFileSync(join(root, "supabase", "migrations", "20261101100000_ranking_fit.sql"), sql);
+writeFileSync(join(root, "supabase", "migrations", "20261115100000_ranking_fit.sql"), sql);
 console.log(`roots: ${seller.sellerCategories.length}`);

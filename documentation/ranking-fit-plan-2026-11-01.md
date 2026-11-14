@@ -35,7 +35,7 @@
 **Files:**
 - Create: `scripts/ranking/fit-build-migration.mjs` (writes the roots VALUES list from `sellerCategories`)
 - Create: `scripts/ranking/fit-migration.sql` (template, `-- @@ROOTS@@` placeholder)
-- Create: `supabase/migrations/20261101100000_ranking_fit.sql` (generated)
+- Create: `supabase/migrations/20261115100000_ranking_fit.sql` (generated)
 - Test: `scripts/ranking/fit_match.sql`
 
 **Interfaces:**
