@@ -3395,7 +3395,7 @@ as invariants must not be "tidied" away** — each one records a bug that alread
 
 ### R2: the same leads on every plan
 - `leads_per_month = -1` on every plan; `enforce_lead_cap()` returns early for a negative cap (see "Plan caps"). Migration `20261002200900_leads_same_on_every_plan.sql`.
-- `fetchOpenRfqs()` scores every vendor through `match_vendor_rfqs(p_vendor_id, 200)`: 0.7 × cosine similarity to the vendor's catalogue embedding + 0.3 × category match. With no embedding on either side the score is the category term alone, and a failed call leaves the chronological order.
+- `fetchOpenRfqs()` scores every vendor through `match_vendor_rfqs(p_vendor_id, 200)`. Since Ranking Fit (2026-11-15) the score is 0.45 × catalogue similarity + 0.20 × category match + 0.15 × category answers + 0.12 × location + 0.08 × scale (`documentation/ranking.md` §6); before it was 0.7 × similarity + 0.3 × category. A failed call leaves the chronological order.
 - Nothing in the vendor app shows a lead count or limit. `get_vendor_plan().usage.leads_used` is still returned.
 - Tests: `scripts/rfq-leads/r2_same_leads.sql`, `tests/local/rfq-leads.spec.ts` (R2 block).
 
@@ -3431,6 +3431,32 @@ Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (ven
 - UI: one `StateSelect` in onboarding, the vendor's contact details and the buyer's business details. The business profile's Business Type row opens `BusinessTypeSheet`; two new rows, States You Serve and Monthly Capacity, open `ServedStatesSheet` and `CapacitySheet` (`src/components/vendor/BusinessReachSheets.tsx`, sharing `EditSheet`). Capacity units default by category (`defaultCapacityUnit()`).
 - The buyer location nudge moved to Part 3: nothing reads buyer location until Fit ranks leads.
 - Tests: `scripts/ranking/f2_vendor_profile.sql` (18 cases), `tests/local/ranking-f2.spec.ts` (state required and coded; buyer state code; type, served states and capacity end to end).
+
+### Part 1, F3: one vocabulary, editable by admins (live 2026-11-01)
+- `public.attribute_definitions` holds every category question of the listing form (773) and the requirement form
+  (188), seeded from the code; Cosora-Admin › Form questions edits them (super admin), never deletes. Requirement
+  questions carry `match_key` (the listing question they mean) and `match_weight`, which Fit reads.
+- `attributes_problem()` + `admin.attributes_guard` refuse unknown keys and wrong shapes from a browser. Migration
+  `20261031100000`; tests `scripts/ranking/f3_attribute_definitions.sql` (21), `tests/local/ranking-f3.spec.ts`.
+
+### Part 3: Fit (live 2026-11-15)
+- `match_vendor_rfqs` orders each seller's lead feed by Fit and returns `near`; `admin.rfq_fit` computes the
+  answers, location and scale parts; `public.category_root_of` maps a category to its seller family; location is read
+  from `admin.vendor_location_history` as it was when the lead was posted (trigger on every `vendor_profiles` update).
+- App: "Near you" on the lead card; `BuyerStateNudge` on Profile and My Quotes; `?focus=state` on Business details.
+- Migration `20261115100000`; tests `scripts/ranking/fit_match.sql` (21), `tests/local/ranking-fit.spec.ts`. Detail:
+  `documentation/ranking.md` §6.
+
+### Part 2: Standing (live 2026-11-15)
+- `admin.vendor_standing` (one row per seller, not client-readable) is filled by `admin.refresh_vendor_standing()`
+  every hour (pg_cron `vendor-standing-refresh`) from `admin.vendor_standing_parts()`: 0.30 interest + 0.25 reviews
+  + 0.15 activity + 0.15 trust + 0.15 profile score.
+- `public.vendor_standing(uuid)` (rounded, no client grant) is read by `top_vendors` and `new_brand_suggestions` (now
+  SECURITY DEFINER), `search_suggestions`, `match_rfq_vendors` and `admin.lead_alert_fanout`, in place of
+  `profile_score`; paid plan stays first. `quote_order_for_rfq()` orders a buyer's own quotes (My Quotes ›
+  Recommended, `useQuoteOrder`).
+- Migration `20261115110000`; tests `scripts/ranking/standing.sql` (18), `tests/local/ranking-standing.spec.ts`; a test
+  that sets ranking inputs calls `admin.refresh_vendor_standing()`. Detail: `documentation/ranking.md` §5.
 
 ## Subscriptions P0: foundations and safety (2026-10-08)
 

@@ -193,10 +193,18 @@ the demand side of India's fashion and textile supply chain.
   to a thread — including a test message — can only be removed with service_role. Found while
   verifying the quote chat on 2026-09-16; two clearly-labelled test rows are still in the demo
   buyer's thread for that reason.
-- **A vendor's public page still shows placeholder content in two places** (the category tiles became the seller's
-  own on 2026-10-17): the office pictures (stock photos, though vendors can now upload their own) and the
-  "Sells" chips are the same for every vendor (`ToDo.md`). The demo catalogues went on 2026-10-14. The identity,
-  contact and business details were fixed on 2026-09-28 (below).
+### Changed 2026-11-15 (ranking Fit and Standing; live 2026-11-15)
+- Sellers are ordered for buyers by **Standing** (interest, reviews, activity, trust, profile score) after paid plan, in
+  Recommended Premium Brands, brand suggestions and sellers in search suggestions. My Quotes opens on **Recommended**:
+  the best-standing seller's quote first, with no paid tier. How every ranking works: `documentation/ranking.md`.
+- A buyer with no state is asked for one on Profile (before the city nudge) and My Quotes, so suppliers near them see
+  their requirements sooner. Never on the requirement form.
+
+### Changed 2026-11-14 (six ToDo items; live 2026-11-14)
+- A Privacy Policy page (`/privacy`) in English, Hindi and Gujarati, linked from Register, sign-up, Profile and My Store.
+- Cosora Studio says "Coming soon" with two emails to Cosora (its studios, packages, phone number and chat were
+  invented). `/dashboard` (invented figures) sends you home. A vendor's public page shows only its own approved
+  premises photos and registered categories (since 2026-11-13).
 
 ### Changed 2026-11-14 (buyer sign-up audit; branch `buyer-signup/fixes`, not live)
 - Every sign-up answer is kept: "What best describes you?" (one choice, also on Edit Profile), Account Information
@@ -479,6 +487,17 @@ the demand side of India's fashion and textile supply chain.
 **Primary colour:** vendor blue `#256fef`. Note that `--accent` and `--primary` in
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
+
+### Changed 2026-11-15 (ranking Fit; live 2026-11-15)
+- The lead feed is ordered by **Fit**: how well each requirement suits the seller (meaning, category, the buyer's
+  answers against the seller's listings, location, capacity). Every seller still sees every lead. A lead from a buyer
+  in the seller's state, or a state they serve, says **Near you**.
+- Requirements past their deadline leave lead counts, alerts and the digest (2026-11-14).
+
+### Changed 2026-11-14 (six ToDo items; live 2026-11-14)
+- Advertisements: a rejected campaign gives Cosora's reason in words; the six ad types billed per day say "/day"; the
+  page's invented claims and the Success Stories carousel are replaced by how advertising works. The seller landing
+  page's brand logos, figures and testimonials are replaced with what registration asks and how Cosora works.
 
 ### Changed 2026-10-16 (live 2026-10-16)
 - **Report fraud and App feedback** save in the app for every signed-in seller (they opened an email).

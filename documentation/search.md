@@ -116,7 +116,7 @@ up to 5 of each, matched with `ILIKE '%q%'`:
 |---|---|---|---|
 | Category | live listings' `category_name` | most live listings | live listings in it |
 | Listing | live listings' `name` | recent demand (`product_trend`) | its enquiries |
-| Seller | `vendor_profiles.brand_name` | paid plan, then profile score, then followers | followers |
+| Seller | `vendor_profiles.brand_name` | paid plan, then Standing (`documentation/ranking.md` §5), then followers | followers |
 
 A listing suggestion opens the product; a category runs that search; a seller opens the storefront. Every number is
 counted from real rows (the old invented search volumes and celebrity brands are gone: claude.md, "No fabricated data
@@ -381,3 +381,4 @@ To watch as the catalogue grows (none is a problem at 27 live listings):
 | 2026-10-17 | Recent demand (`product_trend`) breaks ties in search and orders listing suggestions |
 | 2026-10-18 | Trending searches (own searches; categories only); greeting by name or "Guest"; search capped at 200 for signed-out callers (2026-10-19) |
 | 2026-10-22 | Seller suggestions ordered by plan, then profile score |
+| 2026-11-15 | Seller suggestions ordered by plan, then Standing (profile score is one of its parts); every ranking on Cosora is described in `documentation/ranking.md` |

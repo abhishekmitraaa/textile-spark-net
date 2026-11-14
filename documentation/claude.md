@@ -1265,15 +1265,19 @@ undocumented. Deep technical rationale for each lives in
   silently lost the name. `applyPendingSignupProfile` now has three call sites
   (Register, Login, AuthCallback) and is awaited before the redirect. **A signup fix is
   proved by the column, not by where the page redirected to.**
-- **One profile score: one formula, one input shaper, one writer.**
-  `calculateProfileScore()` is the formula; `profileScoreInputFrom()` is the only
-  snake_case→camelCase mapping; `PROFILE_SCORE_COLUMNS` is the only select list; and
-  `syncProfileScore(vendorId)` is the only thing outside the dashboard that writes the
-  column. `saveVendorOnboarding()` used to carry a SECOND formula (nine unweighted checks
-  against the in-memory payload, versus fifteen weighted signals against the rows) — same
-  column, two authors, whichever ran last won, so a vendor finished onboarding on one
-  number and watched it change on their first dashboard load. `syncProfileScore` must be
-  called AFTER every other write in a flow: it scores rows, not intentions.
+- **One profile score: one formula, written only by the database (since 2026-10-22).**
+  `vendor_profile_score_of()` computes `vendor_profiles.profile_score` and the trigger
+  `trg_vendor_profiles_zz_profile_score` replaces any value a client sends; listings and quotes rescore
+  through `admin.vendor_score_refresh()`. `calculateProfileScore()` (with `profileScoreInputFrom()` and
+  `PROFILE_SCORE_COLUMNS`) is the dashboard's display of the same fifteen checks (`PROFILE_SCORE_WEIGHTS`), and must
+  stay point-for-point equal to the SQL. Before 2026-10-22 the browser wrote it (`syncProfileScore`, removed), and
+  before that onboarding carried a second formula: same column, two authors, whichever ran last won.
+- **Every ranking is described in `documentation/ranking.md`; change it in the same commit as the ranking (2026-11-15).**
+  Rules that hold across them: only live listings are ranked, and definer functions filter on that themselves; paid
+  plan goes first in seller lists and lead alerts, never in a buyer's own quotes or a seller's lead feed; Standing is
+  never handed to a client (a fraud finding halves it); Fit reads a seller's location as it was when the lead was
+  posted (a buyer's state is private); seeded `rating_avg` and `sold_count` never rank a seller; a test that changes a
+  ranking input calls `admin.refresh_vendor_standing()` (Standing is kept by an hourly job).
 - **Superseded 2026-10-02: the owner's masked Aadhaar IS collected** (Seller Registration FAQ; see "Aadhaar" under
   Legal & compliance). The 2026-09-09 rule is kept for the record:
 - **Aadhaar is deliberately NOT collected, and the app must not ask for it (2026-09-09).**
@@ -1375,8 +1379,8 @@ undocumented. Deep technical rationale for each lives in
   the type also writes its English label to `business_type`, which the header and review cards read. `served_states`
   holds codes beyond the vendor's own. `vendor_capacity` (monthly number and unit per top-level category) is private
   to the vendor and admins; ranking will read it through a definer function. It is not the buyer-facing capacity
-  bands (`vendor_profiles.capacity`), which stay. Nothing ranks on any of this until Part 3 (Fit); the buyer
-  location nudge waits for Fit too, so it never promises nearby suppliers before location counts. Migration
+  bands (`vendor_profiles.capacity`), which stay. Since 2026-11-15 Fit ranks each seller's leads on location, served
+  states, capacity and category answers, and buyers without a state are nudged to add one (`documentation/ranking.md`). Migration
   `20261007052605_vendor_type_location_capacity.sql`
   (applied 2026-10-07); harness `scripts/ranking/f2_vendor_profile.sql`.
 - **A requirement waits for an admin before sellers see it (Mitra, 2026-10-17; reverses 2026-10-02).** A posted
@@ -2063,7 +2067,9 @@ The verified-code → session step can only run once an SMS provider or the cust
 | **TradeSEAL** | Cosora's paid vendor verification badge, purchased via the ad system |
 | **Pan India** | Nationwide ad targeting across all of India |
 | **UPI AutoPay** | Subscription payment method via India's UPI system |
-| **Profile Score** | Vendor's profile completeness % — higher = better visibility |
+| **Profile Score** | Vendor's profile completeness % (15 checks). Since 2026-11-15 one of Standing's five parts (15%) |
+| **Standing** | A seller's 0–1 score for buyers (interest, reviews, activity, trust, profile score); orders every seller list after paid plan, and a buyer's own quotes. Never shown or handed to clients (`documentation/ranking.md` §5) |
+| **Fit** | How well a requirement suits one seller (meaning, category, answers, location, scale); orders each seller's lead feed (`documentation/ranking.md` §6) |
 | **Total Order Value** | Cumulative orders won through Cosora — strongest vendor retention metric |
 | **Video Closeup** | A product video in the buyer feed. Never called a "Reel" |
 
