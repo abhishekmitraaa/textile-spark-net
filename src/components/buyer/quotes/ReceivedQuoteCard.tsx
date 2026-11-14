@@ -43,7 +43,7 @@ export default function ReceivedQuoteCard({
   const status = STATUS_STYLES[q.status];
 
   return (
-    <div className={cn(
+    <div data-testid="received-quote" className={cn(
       "rounded-2xl border bg-white p-4 transition-colors",
       compareMode && selected ? "border-brand-buyer ring-1 ring-brand-buyer" : "border-gray-200"
     )}>

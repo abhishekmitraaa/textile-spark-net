@@ -199,6 +199,20 @@ export function useBuyerQuotes(buyerId: string | undefined) {
   });
 }
 
+/** A buyer's own requirement: each quote's place, best-standing seller first (Ranking Standing,
+ *  quote_order_for_rfq(); documentation/ranking-standing-design-2026-11-15.md). Ids and positions only. */
+export function useQuoteOrder(rfqId: string | null) {
+  return useQuery({
+    queryKey: ["quote_order", rfqId],
+    enabled: Boolean(rfqId),
+    queryFn: async (): Promise<Map<string, number>> => {
+      const { data, error } = await supabase.rpc("quote_order_for_rfq", { p_rfq: rfqId as string });
+      if (error) throw error;
+      return new Map(((data ?? []) as { quote_id: string; position: number }[]).map((r) => [r.quote_id, r.position]));
+    },
+  });
+}
+
 // ── Buyer: create an RFQ ──
 export interface NewRfq {
   title: string; productName?: string; quantity?: number | null;

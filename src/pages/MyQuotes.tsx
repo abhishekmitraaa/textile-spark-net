@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { quotesForRfq, rfqStats, bestPrice, topRated } from "@/lib/quotesStore";
 import { fmtMoney, type QuoteStatus, type VendorQuote } from "@/lib/quotesData";
-import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb, QuoteChangedError, extendRfqDeadline, canExtendDeadline } from "@/lib/queries/rfqs";
+import { useBuyerQuotes, useMyRfqSubmissions, setQuoteStatusDb, QuoteChangedError, extendRfqDeadline, canExtendDeadline, useQuoteOrder } from "@/lib/queries/rfqs";
 import { useCallVendor } from "@/lib/queries/calls";
 import { useAuth } from "@/contexts/AuthContext";
 import ReceivedQuoteCard from "@/components/buyer/quotes/ReceivedQuoteCard";
@@ -37,15 +37,16 @@ type View = "list" | "received" | "direct";
 
 const BLUE = brand("vendor");
 type StatusFilter = "all" | QuoteStatus;
-type SortKey = "recent" | "price" | "rating";
+type SortKey = "recommended" | "recent" | "price" | "rating";
 
 const STATUS_FILTERS: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "All Status" }, { key: "pending", label: "Pending" },
   { key: "shortlisted", label: "Shortlisted" }, { key: "accepted", label: "Accepted" },
   { key: "rejected", label: "Rejected" },
 ];
+// Recommended: the sellers' Standing (Ranking Part 2), with no paid tier: the buyer asked these sellers for offers.
 const SORTS: { key: SortKey; label: string }[] = [
-  { key: "recent", label: "Most Recent" }, { key: "price", label: "Lowest Price" }, { key: "rating", label: "Highest Rating" },
+  { key: "recommended", label: "Recommended" }, { key: "recent", label: "Most Recent" }, { key: "price", label: "Lowest Price" }, { key: "rating", label: "Highest Rating" },
 ];
 
 /** An open requirement past its 7-day deadline (2026-10-19). */
@@ -100,7 +101,7 @@ const MyQuotes = () => {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [sort, setSort] = useState<SortKey>("recent");
+  const [sort, setSort] = useState<SortKey>("recommended");
 
   const [compareMode, setCompareMode] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
@@ -115,23 +116,26 @@ const MyQuotes = () => {
   const stats = useMemo(() => rfqStats(rfqQuotes), [rfqQuotes]);
   const best = useMemo(() => bestPrice(rfqQuotes), [rfqQuotes]);
   const top = useMemo(() => topRated(rfqQuotes), [rfqQuotes]);
+  const { data: quoteOrder } = useQuoteOrder(rfqId);
 
   const filtered = useMemo(() => {
     let list = [...rfqQuotes];
     const q = search.trim().toLowerCase();
     if (q) list = list.filter((x) => x.vendorName.toLowerCase().includes(q) || (rfq?.productName ?? "").toLowerCase().includes(q));
     if (status !== "all") list = list.filter((x) => x.status === status);
-    if (sort === "price") list.sort((a, b) => a.pricePerUnit - b.pricePerUnit);
+    // Until the order loads (or if it fails), Recommended keeps the list as it came.
+    if (sort === "recommended" && quoteOrder) list.sort((a, b) => (quoteOrder.get(a.id) ?? Infinity) - (quoteOrder.get(b.id) ?? Infinity));
+    else if (sort === "price") list.sort((a, b) => a.pricePerUnit - b.pricePerUnit);
     else if (sort === "rating") list.sort((a, b) => b.rating - a.rating);
     return list;
-  }, [rfqQuotes, search, status, sort, rfq]);
+  }, [rfqQuotes, search, status, sort, rfq, quoteOrder]);
 
   // A targeted request has exactly one vendor in it, so it opens the
   // single-vendor thread; everything else keeps the comparison screen.
   const openReceived = (id: string) => {
     const target = rfqs.find((r) => r.id === id);
     setRfqId(id); setView(target?.targetVendorId ? "direct" : "received");
-    setSearch(""); setStatus("all"); setSort("recent");
+    setSearch(""); setStatus("all"); setSort("recommended");
     setCompareMode(false); setSelected([]); setBanner(null);
   };
 

@@ -6371,6 +6371,13 @@ export type Database = {
         Args: { p_archived?: boolean | null; p_clear?: boolean; p_conversation_id: string; p_starred?: boolean | null }
         Returns: Json
       }
+      quote_order_for_rfq: {
+        Args: { p_rfq: string }
+        Returns: {
+          position: number
+          quote_id: string
+        }[]
+      }
       seller_registered: { Args: { p_vendor: string }; Returns: boolean }
       share_chat_contact: { Args: { p_conversation_id: string }; Returns: string }
       extend_rfq_deadline: { Args: { p_rfq_id: string }; Returns: string }
@@ -6897,6 +6904,7 @@ export type Database = {
       vendor_keep_products: { Args: { p_ids: string[] }; Returns: Json }
       vendor_quoted_rfq: { Args: { p_rfq: string }; Returns: boolean }
       vendor_set_live_products: { Args: { p_ids: string[] }; Returns: Json }
+      vendor_standing: { Args: { p_vendor: string }; Returns: number }
       vendor_type_from_labels: {
         Args: { p_business_type: string; p_labels: string[] }
         Returns: {
