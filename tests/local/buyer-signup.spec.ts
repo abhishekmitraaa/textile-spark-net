@@ -112,7 +112,7 @@ test.describe("B5 · accepting the Terms is recorded", () => {
     }
   });
 
-  test("the card shows the clauses of /terms, and both consent words open /terms", async ({ browser }) => {
+  test("the card shows the clauses of /terms, and the consent words open /terms and /privacy", async ({ browser }) => {
     const who = await freshAccount("b5-card", { onboarded: false });
     const ctx = await contextWithSession(browser, who.session);
     const page = await ctx.newPage();
@@ -123,9 +123,9 @@ test.describe("B5 · accepting the Terms is recorded", () => {
       await page.goto(`${BUYER_URL}/auth/terms`);
       await expect(page.locator("[data-terms-heading]").first()).toBeVisible();
       expect(await page.locator("[data-terms-heading]").allInnerTexts()).toEqual(full);
-      for (const name of ["Terms & Conditions", "Privacy Policy"]) {
-        await expect(page.getByRole("link", { name })).toHaveAttribute("href", "/terms");
-      }
+      // The Privacy Policy has its own page since 2026-11-14.
+      await expect(page.getByRole("link", { name: "Terms & Conditions" })).toHaveAttribute("href", "/terms");
+      await expect(page.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/privacy");
     } finally {
       await ctx.close();
     }
@@ -523,7 +523,7 @@ test.describe("B7 · back controls and Register", () => {
     }
   });
 
-  test("Register claims nothing invented, and its consent links open the Terms", async ({ browser }) => {
+  test("Register claims nothing invented, and its consent links open the Terms and the Privacy Policy", async ({ browser }) => {
     const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
     const page = await ctx.newPage();
     try {
@@ -533,9 +533,8 @@ test.describe("B7 · back controls and Register", () => {
       expect(text).not.toContain("50,000+");
       expect(text).not.toContain("10,000+");
       await page.getByRole("button", { name: /Continue/ }).click();
-      for (const name of ["Terms of Service", "Privacy Policy"]) {
-        await expect(page.getByRole("link", { name })).toHaveAttribute("href", "/terms");
-      }
+      await expect(page.getByRole("link", { name: "Terms of Service" })).toHaveAttribute("href", "/terms");
+      await expect(page.getByRole("link", { name: "Privacy Policy" })).toHaveAttribute("href", "/privacy");
     } finally {
       await ctx.close();
     }
