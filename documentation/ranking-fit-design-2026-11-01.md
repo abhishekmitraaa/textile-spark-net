@@ -1,6 +1,6 @@
 # Personalised ranking, Part 3: Fit — design
 
-**Status:** written 2026-11-01 under Mitra's "fix on your own" (2026-10-31). It builds on the decisions in
+**Status:** LIVE 2026-11-15 (migration 20261115100000). Written 2026-11-01 under Mitra's "fix on your own" (2026-10-31). It builds on the decisions in
 `documentation/ranking-foundations-design-2026-10-07.md` (Mitra, 2026-10-06/07). Every call this document makes on
 its own is marked **Call** and listed again at the end for review.
 
