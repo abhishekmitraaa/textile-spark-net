@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
@@ -78,9 +78,9 @@ const SubRole = () => {
               >
                 <span className={cn(
                   "w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                  isSelected ? "border-[#a4172c]" : "border-gray-300"
+                  isSelected ? "border-brand-buyer-deep" : "border-gray-300"
                 )}>
-                  {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-[#a4172c]" />}
+                  {isSelected && <span className="w-2.5 h-2.5 rounded-full bg-brand-buyer-deep" />}
                 </span>
                 <span className="text-sm text-gray-800">{role.label}</span>
               </button>
@@ -94,19 +94,13 @@ const SubRole = () => {
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",
             selected && !saving
-              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              ? "bg-brand-buyer-deep hover:bg-brand-buyer-deeper text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >
           {saving ? "Saving…" : "Continue"}
         </button>
 
-        <p className="text-sm text-gray-500 text-center mt-5">
-          Already have an account?{" "}
-          <Link to="/auth/login" className="text-[#a4172c] font-semibold hover:underline">
-            Login
-          </Link>
-        </p>
       </motion.div>
     </div>
   );

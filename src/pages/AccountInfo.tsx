@@ -161,7 +161,8 @@ const AccountInfo = () => {
         {/* Internal use notice */}
         <div className="bg-gray-50 border border-gray-100 rounded-lg px-3 py-2.5 mb-6">
           <p className="text-xs text-gray-500 leading-relaxed">
-            This data is being collected solely for internal use and will not be utilised for any commercial purposes.
+            These details set up your Cosora account. Sellers never see your name, email or business name here; they only
+            see how many interested buyers are in each city.
           </p>
         </div>
 
@@ -177,7 +178,7 @@ const AccountInfo = () => {
               maxLength={120}
               onChange={e => update("name", e.target.value)}
               onBlur={() => touch("name")}
-              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
+              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer-deep transition-colors"
             />
             {errorFor("name")}
           </div>
@@ -188,13 +189,13 @@ const AccountInfo = () => {
             <input
               id="ai-email"
               type="email"
-              placeholder="Please enter a valid email address."
+              placeholder="name@company.com"
               value={form.email}
               maxLength={254}
               autoComplete="email"
               onChange={e => update("email", e.target.value)}
               onBlur={() => touch("email")}
-              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
+              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer-deep transition-colors"
             />
             {errorFor("email")}
           </div>
@@ -219,8 +220,8 @@ const AccountInfo = () => {
                 className={cn(
                   "flex items-center gap-1.5 px-3.5 py-3 rounded-xl border text-sm font-medium shrink-0 transition-colors disabled:opacity-70",
                   located
-                    ? "border-[#a4172c] bg-[#fdf0f1] text-[#a4172c]"
-                    : "border-[#a4172c]/40 text-[#a4172c] hover:bg-[#fdf0f1]"
+                    ? "border-brand-buyer-deep bg-brand-buyer/10 text-brand-buyer-deep"
+                    : "border-brand-buyer/40 text-brand-buyer-deep hover:bg-brand-buyer/10"
                 )}
               >
                 {locLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
@@ -240,7 +241,7 @@ const AccountInfo = () => {
                   update("pincode", e.target.value.replace(/\D/g, "").slice(0, 6));
                 }}
                 onBlur={() => touch("pincode")}
-                className="flex-1 min-w-0 px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
+                className="flex-1 min-w-0 px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer-deep transition-colors"
               />
             </div>
             {locNote && <p className="mt-1 text-xs text-gray-600" role="status">{locNote}</p>}
@@ -258,7 +259,7 @@ const AccountInfo = () => {
               maxLength={120}
               onChange={e => update("businessName", e.target.value)}
               onBlur={() => touch("businessName")}
-              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#a4172c] transition-colors"
+              className="w-full px-3.5 py-3 border border-gray-300 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-brand-buyer-deep transition-colors"
             />
             {errorFor("businessName")}
           </div>
@@ -270,7 +271,7 @@ const AccountInfo = () => {
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors mt-auto",
             isValid && !saving
-              ? "bg-[#a4172c] hover:bg-[#8c1325] text-white"
+              ? "bg-brand-buyer-deep hover:bg-brand-buyer-deeper text-white"
               : "bg-gray-200 text-gray-400 cursor-not-allowed"
           )}
         >

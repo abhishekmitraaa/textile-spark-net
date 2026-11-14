@@ -39,7 +39,7 @@ const Terms = () => {
   };
 
   return (
-    <div className="h-[100dvh] bg-[#a4172c] flex flex-col p-4">
+    <div className="h-[100dvh] bg-brand-buyer-deep flex flex-col p-4">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -86,7 +86,7 @@ const Terms = () => {
           className={cn(
             "w-full py-3.5 text-sm font-bold rounded-xl transition-colors",
             agreed && !saving
-              ? "bg-white text-[#a4172c] hover:bg-white/90"
+              ? "bg-white text-brand-buyer-deep hover:bg-white/90"
               : "bg-white/30 text-white/50 cursor-not-allowed"
           )}
         >

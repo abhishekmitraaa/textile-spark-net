@@ -28,6 +28,11 @@ export default {
         brand: {
           vendor: "rgb(var(--brand-vendor) / <alpha-value>)",
           buyer: "rgb(var(--brand-buyer) / <alpha-value>)",
+          // The buyer colour, deepened: the sign-up screens' background and buttons (buyer sign-up audit, Low item 3;
+          // they were a fixed maroon hex). Derived from the theme, so they follow the colour set in Cosora-Admin, and
+          // white text on them keeps about 7:1 contrast. No opacity modifier: use bg-brand-buyer/10 for tints.
+          "buyer-deep": "color-mix(in srgb, rgb(var(--brand-buyer)) 68%, black)",
+          "buyer-deeper": "color-mix(in srgb, rgb(var(--brand-buyer)) 58%, black)",
           success: "rgb(var(--brand-success) / <alpha-value>)",
           border: "rgb(var(--brand-border) / <alpha-value>)",
           ink: "rgb(var(--brand-ink) / <alpha-value>)",

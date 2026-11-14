@@ -21,7 +21,7 @@ Buyer pages render inside `BuyerShell` (BuyerTopBar + content + `MobileBottomNav
 | `/browse` | `Navigate` | Redirect into the feed |
 | `/home/new-arrivals` | `NewArrivals` | Buyer home; carries the role toggle |
 | `/home/for-you` | `ForYou` | Personalised feed |
-| `/home/for-you/onboarding` **(shell)** | — | First-time preference setup before the feed |
+| `/home/for-you/onboarding` | → `/home/for-you` | Redirect: For You's first run is part of the feed (the scaffold card is gone, 2026-11-14) |
 | `/home/trends` | `Trends` | |
 | `/home/sale` **(shell)** | — | Discounted / sale-priced inventory |
 | `/home/followings` | `Following` | Followed brands |

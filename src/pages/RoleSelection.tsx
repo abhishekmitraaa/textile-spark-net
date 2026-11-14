@@ -1,6 +1,6 @@
 import { errorMessage } from "@/lib/errorMessage";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ShoppingCart, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -85,16 +85,19 @@ const RoleSelection = () => {
         </div>
         <p className="text-center text-xs text-gray-400 mb-10">Business Made Easy &amp; Enjoyable</p>
 
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-1">I am a..</h2>
+        <h2 id="role-title" className="text-2xl font-bold text-gray-900 text-center mb-1">I am a…</h2>
         <p className="text-sm text-gray-500 text-center mb-8">Select your role and get started</p>
 
         {/* Role cards */}
-        <div className="grid grid-cols-2 gap-4 mb-8">
+        <div role="radiogroup" aria-labelledby="role-title" className="grid grid-cols-2 gap-4 mb-8">
           {roles.map(role => {
             const isSelected = selected === role.id;
             return (
               <button
                 key={role.id}
+                type="button"
+                role="radio"
+                aria-checked={isSelected}
                 onClick={() => setSelected(role.id)}
                 className={cn(
                   "relative flex flex-col items-center gap-3 rounded-xl border-2 bg-white p-3 text-left transition-colors",
@@ -104,7 +107,7 @@ const RoleSelection = () => {
                 {/* Sits on the gradient, so it needs the white ring to read
                     against both the deep red and the near-black. */}
                 {isSelected && (
-                  <div className="absolute top-5 right-5 z-10 w-5 h-5 bg-green-500 ring-2 ring-white rounded-full flex items-center justify-center text-white text-xs">
+                  <div aria-hidden="true" className="absolute top-5 right-5 z-10 w-5 h-5 bg-green-500 ring-2 ring-white rounded-full flex items-center justify-center text-white text-xs">
                     ✓
                   </div>
                 )}
@@ -133,12 +136,6 @@ const RoleSelection = () => {
           {saving ? "Saving…" : "Continue"}
         </button>
 
-        <p className="text-sm text-gray-500 text-center mt-5">
-          Already have an account?{" "}
-          <Link to="/auth/login" className="text-[#a4172c] font-semibold hover:underline">
-            Sign In
-          </Link>
-        </p>
       </motion.div>
     </div>
   );

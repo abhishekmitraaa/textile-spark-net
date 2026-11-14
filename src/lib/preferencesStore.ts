@@ -16,7 +16,8 @@ import { clipOtherInterest, normaliseInterestIds, OTHER_INTEREST_ID, tidyOtherIn
 // sign-in. Signed out, it falls back to localStorage. The "Others" words
 // (`buyer_profiles.preferred_interest_other`) travel with the categories and
 // exist only while "others" is one of them (the database enforces that too).
-// Locations + the onboarding-complete flag stay per-device in localStorage.
+// The sourcing locations are account-tied the same way (`buyer_profiles.preferred_locations`, since 2026-11-14:
+// they lived only in the browser). The onboarding-complete flag stays per-device in localStorage.
 //
 // THE SYNC RULE (buyer sign-up audit 2026-11-13, item 2). While signed in, nothing is written until the saved
 // interests have been read ("ready"). A failed or slow read used to look like "no interests": For You offered its
@@ -85,15 +86,15 @@ function writesBlocked(): boolean {
 
 function writeLocal() {
   try {
-    // Locations + hasCompleted stay per-device always. Categories are only the
+    // hasCompleted stays per-device always. Categories and locations are only the
     // localStorage source of truth when signed OUT — when signed in the DB owns
-    // them, so leave the previously stored (signed-out) categories untouched, to
+    // them, so leave the previously stored (signed-out) ones untouched, to
     // avoid one account's picks leaking into the next signed-out session.
     const stored = load();
     const toSave: BuyerPreferences = {
       categories: userId ? stored.categories : state.categories,
       otherInterest: userId ? stored.otherInterest : state.otherInterest,
-      locations: state.locations,
+      locations: userId ? stored.locations : state.locations,
       hasCompleted: state.hasCompleted,
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
@@ -125,7 +126,7 @@ function dbSaveCategories(): Promise<void> {
     const { error } = await supabase
       .from("buyer_profiles")
       .upsert(
-        { id: uid, preferred_categories: state.categories, preferred_interest_other: other || null },
+        { id: uid, preferred_categories: state.categories, preferred_interest_other: other || null, preferred_locations: state.locations },
         { onConflict: "id" },
       );
     if (error) throw error;
@@ -143,7 +144,7 @@ async function readAccount(uid: string): Promise<void> {
   setSync("loading");
   const { data, error } = await supabase
     .from("buyer_profiles")
-    .select("preferred_categories, preferred_interest_other")
+    .select("preferred_categories, preferred_interest_other, preferred_locations")
     .eq("id", uid)
     .maybeSingle();
   if (userId !== uid) return; // user changed again mid-fetch
@@ -156,15 +157,20 @@ async function readAccount(uid: string): Promise<void> {
   const cats = Array.isArray(data?.preferred_categories)
     ? normaliseInterestIds(data!.preferred_categories as string[])
     : [];
-  // DB is the source of truth for categories on sign-in; keep local
-  // locations, and treat existing saved categories as "already onboarded".
+  // DB is the source of truth on sign-in, and existing saved picks count as "already onboarded". Locations saved only
+  // in this browser before they were kept on the account are carried up once, when the account has none.
+  const savedLocs = Array.isArray(data?.preferred_locations) ? (data!.preferred_locations as string[]) : [];
+  const browserLocs = load().locations;
+  const carryUp = savedLocs.length === 0 && browserLocs.length > 0;
+  const locs = carryUp ? browserLocs : savedLocs;
   set({
     categories: cats,
     otherInterest: data?.preferred_interest_other ?? "",
-    locations: state.locations,
-    hasCompleted: state.hasCompleted || cats.length > 0,
+    locations: locs,
+    hasCompleted: state.hasCompleted || cats.length > 0 || locs.length > 0,
   });
   setSync("ready");
+  if (carryUp) saveInBackground();
 }
 
 /** Called by StoreSync on auth change: hydrate categories from the account (DB)
@@ -228,15 +234,18 @@ export function setOtherInterest(text: string) {
 }
 
 export function toggleLocation(id: string) {
+  if (writesBlocked()) return;
   if (id === "nopreference") {
     // "No preference" is exclusive: selecting it clears everything else.
     const has = state.locations.includes("nopreference");
     set({ ...state, locations: has ? [] : ["nopreference"] });
+    saveInBackground();
     return;
   }
   const without = state.locations.filter((l) => l !== "nopreference");
   const has = without.includes(id);
   set({ ...state, locations: has ? without.filter((l) => l !== id) : [...without, id] });
+  saveInBackground();
 }
 
 export function removeCategory(id: string) {
@@ -246,7 +255,9 @@ export function removeCategory(id: string) {
 }
 
 export function removeLocation(id: string) {
+  if (writesBlocked()) return;
   set({ ...state, locations: state.locations.filter((l) => l !== id) });
+  saveInBackground();
 }
 
 /** Finish onboarding. skip=true completes with no filters (shows everything). */

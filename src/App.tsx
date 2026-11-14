@@ -162,13 +162,6 @@ const buyerShellRoutes: BuyerShellRoute[] = [
     relatedLabel: "Open New Arrivals",
   },
   {
-    path: "/home/for-you/onboarding",
-    title: "For You Onboarding",
-    description: "First-time preference setup flow before the personalized feed.",
-    relatedHref: "/home/for-you",
-    relatedLabel: "Open For You",
-  },
-  {
     path: "/requirement",
     title: "Requirement Hub",
     description: "Central landing page for Quick RFQ, detailed RFQ, and My Quotes.",
@@ -346,6 +339,8 @@ const App = () => (
             <Route path="/go/post-rfq" element={<GoPostRfq />} />
             <Route path="/seller/blogs" element={<VendorBlogs />} />
             <Route path="/seller/blogs/:blogId" element={<VendorBlogArticle />} />
+            {/* For You's first run is part of /home/for-you itself; this address showed a developer scaffold card. */}
+            <Route path="/home/for-you/onboarding" element={<Navigate to="/home/for-you" replace />} />
             {buyerShellRoutes.map((route) => (
               <Route
                 key={route.path}

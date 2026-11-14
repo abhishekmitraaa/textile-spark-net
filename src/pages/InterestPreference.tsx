@@ -100,7 +100,7 @@ const InterestPreference = () => {
         className="mx-auto w-full max-w-lg flex-1 px-4 pt-4 pb-28"
       >
         <div className="rounded-xl bg-gray-50 px-4 py-3.5">
-          <p className="text-sm font-semibold text-gray-900">Select your preferred brands or product information.</p>
+          <p className="text-sm font-semibold text-gray-900">Choose the categories you source.</p>
           <p className="mt-1 text-xs text-gray-500">We will recommend brands and products based on your selections.</p>
         </div>
 

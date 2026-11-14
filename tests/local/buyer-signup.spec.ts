@@ -224,7 +224,7 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
       await page.goto(`${BUYER_URL}/auth/account-info`);
       await expect(page.getByText("Your approximate location (about 1 km) is looked up by BigDataCloud.")).toBeVisible();
       await page.getByPlaceholder("Enter your name").fill("Asha Rao");
-      await page.getByPlaceholder("Please enter a valid email address.").fill("asha@example.com");
+      await page.getByPlaceholder("name@company.com").fill("asha@example.com");
       await page.getByPlaceholder("Your company or brand name").fill("Asha Textiles");
       await page.getByRole("button", { name: "Use current location" }).click();
       const pin = page.getByPlaceholder("Enter Pincode");
@@ -243,7 +243,7 @@ test.describe("B3 · Account Information prefills, saves only what changed, and 
       await page.goBack();
       await expect(page).toHaveURL(/\/auth\/account-info$/);
       await expect(page.getByPlaceholder("Enter your name")).toHaveValue("Asha Rao");
-      await expect(page.getByPlaceholder("Please enter a valid email address.")).toHaveValue("asha@example.com");
+      await expect(page.getByPlaceholder("name@company.com")).toHaveValue("asha@example.com");
       await expect(page.getByPlaceholder("Your company or brand name")).toHaveValue("Asha Textiles");
       await expect(page.getByPlaceholder("Enter Pincode")).toHaveValue("110001");
     } finally {
@@ -632,7 +632,7 @@ async function finishBuyerSteps(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Continue" }).click();
   await expect(page).toHaveURL(/\/auth\/account-info$/);
   await page.getByPlaceholder("Enter your name").fill("Asha Rao");
-  await page.getByPlaceholder("Please enter a valid email address.").fill("asha@example.com");
+  await page.getByPlaceholder("name@company.com").fill("asha@example.com");
   await page.getByPlaceholder("Your company or brand name").fill("Asha Textiles");
   await page.getByRole("button", { name: "NEXT" }).click();
   await expect(page).toHaveURL(/\/auth\/interest-preference$/);
@@ -852,6 +852,113 @@ test.describe("C2 · a rewind that lands on a fresh page load", () => {
     try {
       await page.goto(`${BUYER_URL}/auth/login`);
       await expect(page).toHaveURL(/\/(auth\/welcome|home\/new-arrivals)$/, { timeout: 10_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("Low 4 · For You's first-run screen", () => {
+  test("shows no hotlinked stock picture", async ({ browser }) => {
+    const who = await freshAccount("l4-pic");
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    const hotlinked: string[] = [];
+    page.on("request", (r) => { if (/picsum\.photos/.test(r.url())) hotlinked.push(r.url()); });
+    try {
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await expect(page.getByRole("heading", { name: /Welcome to Cosora/ })).toBeVisible({ timeout: 15_000 });
+      await page.waitForTimeout(1000);
+      expect(hotlinked).toEqual([]);
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("the sourcing-location answer is kept on the account and follows the buyer", async ({ browser }) => {
+    const who = await freshAccount("l4-loc");
+    let ctx = await contextWithSession(browser, who.session);
+    let page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await page.getByRole("button", { name: "Start" }).click();
+      await page.locator("[data-interest-id]").first().click();
+      await page.getByRole("button", { name: "Next" }).click();
+      await page.getByRole("button", { name: "Surat", exact: true }).click();
+      await page.getByRole("button", { name: "Next" }).click();
+      await expect.poll(() => sql(`select coalesce(array_to_string(preferred_locations, ','), '') from public.buyer_profiles where id = '${who.id}'`))
+        .toBe("surat");
+    } finally {
+      await ctx.close();
+    }
+    // Another device: nothing in its browser.
+    ctx = await contextWithSession(browser, who.session);
+    page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/home/for-you`);
+      await expect(page.getByRole("button", { name: "Remove Surat" })).toBeVisible({ timeout: 15_000 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("Low 7 · the profile is read once per page load", () => {
+  test("Home reads the profile, is_admin and the contact details once each", async ({ browser }) => {
+    const who = await freshAccount("l7-once");
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    const counts = { profile: 0, isAdmin: 0, contact: 0 };
+    page.on("request", (r) => {
+      const u = r.url();
+      if (PROFILE_READ.test(u)) counts.profile++;
+      if (/\/rpc\/is_admin\b/.test(u)) counts.isAdmin++;
+      if (/\/rpc\/my_contact_info\b/.test(u)) counts.contact++;
+    });
+    try {
+      await page.goto(`${BUYER_URL}/home/new-arrivals`);
+      await page.waitForTimeout(5000);
+      expect(counts).toEqual({ profile: 1, isAdmin: 1, contact: 1 });
+    } finally {
+      await ctx.close();
+    }
+  });
+});
+
+test.describe("Low 1, 2, 6, 8 · wording, signed-in steps, selected state, country picker", () => {
+  test("role selection and Sub-role: no sign-in link, the picked card is a checked radio, plain wording", async ({ browser }) => {
+    const who = await freshAccount("l126", { onboarded: false });
+    const ctx = await contextWithSession(browser, who.session);
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/role-selection`);
+      await expect(page.getByRole("heading", { name: "I am a…" })).toBeVisible();
+      const group = page.getByRole("radiogroup");
+      await group.getByRole("radio", { name: /^BUYER/ }).click();
+      await expect(group.getByRole("radio", { name: /^BUYER/ })).toHaveAttribute("aria-checked", "true");
+      await expect(group.getByRole("radio", { name: /^SELLER/ })).toHaveAttribute("aria-checked", "false");
+      await expect(page.getByText("Already have an account?")).toHaveCount(0);
+      await page.goto(`${BUYER_URL}/auth/sub-role`);
+      await expect(page.getByRole("radiogroup")).toBeVisible();
+      await expect(page.getByText("Already have an account?")).toHaveCount(0);
+      await page.goto(`${BUYER_URL}/auth/account-info`);
+      await expect(page.getByText("solely for internal use")).toHaveCount(0);
+      await expect(page.getByPlaceholder("name@company.com")).toBeVisible();
+      await page.goto(`${BUYER_URL}/auth/interest-preference`);
+      await expect(page.getByText("Choose the categories you source.")).toBeVisible();
+    } finally {
+      await ctx.close();
+    }
+  });
+
+  test("the country picker names the country and shows no flag letters", async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 900 } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(`${BUYER_URL}/auth/login`);
+      const picker = page.getByRole("button", { name: "Country code +91, India. Change" });
+      await expect(picker).toBeVisible();
+      expect(await picker.innerText()).not.toMatch(/[\u{1F1E6}-\u{1F1FF}]/u);
     } finally {
       await ctx.close();
     }

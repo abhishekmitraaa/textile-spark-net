@@ -57,11 +57,11 @@ function LanguageModal({
                   className="w-full flex items-center justify-between px-5 py-3 hover:bg-gray-50 transition-colors text-left"
                 >
                   {/* Language names stay as written, in every UI language. */}
-                  <span data-no-translate className={cn("text-sm", selected === lang.code ? "text-[#a4172c] font-semibold" : "text-gray-700")}>
+                  <span data-no-translate className={cn("text-sm", selected === lang.code ? "text-brand-buyer-deep font-semibold" : "text-gray-700")}>
                     {lang.label}
                     {lang.native !== lang.label && <span className="ml-2 text-gray-400">{lang.native}</span>}
                   </span>
-                  {selected === lang.code && <span className="text-[#a4172c]">✓</span>}
+                  {selected === lang.code && <span className="text-brand-buyer-deep">✓</span>}
                 </button>
               ))}
             </div>
@@ -103,7 +103,6 @@ function CountryModal({
                   onClick={() => { onSelect(c); onClose(); }}
                   className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left"
                 >
-                  <span className="text-lg">{c.flag}</span>
                   <span className="text-sm text-gray-700 flex-1">{c.name}</span>
                   <span className="text-sm text-gray-400">({c.code})</span>
                 </button>
@@ -232,13 +231,14 @@ const Login = () => {
 
           <form onSubmit={handleSendCode} className="space-y-4">
             {/* Phone input row */}
-            <div className="flex items-center gap-2 border border-gray-300 rounded-xl px-2 py-1 focus-within:border-[#a4172c] transition-colors">
+            <div className="flex items-center gap-2 border border-gray-300 rounded-xl px-2 py-1 focus-within:border-brand-buyer-deep transition-colors">
               <button
                 type="button"
                 onClick={() => setCountryModalOpen(true)}
+                aria-label={`Country code ${selectedCountry.code}, ${selectedCountry.name}. Change`}
                 className="flex items-center gap-1 px-2 py-2.5 shrink-0 border-r border-gray-200"
               >
-                <span className="text-base">{selectedCountry.flag}</span>
+                {/* No flag emoji: Windows shows its two letters ("IN") instead of a flag. */}
                 <span className="text-sm text-gray-700">{selectedCountry.code}</span>
                 <ChevronDown className="w-3 h-3 text-gray-400" />
               </button>
@@ -265,7 +265,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={!isCompletePhone(phone, selectedCountry) || sending}
-              className="w-full py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3.5 bg-brand-buyer-deep hover:bg-brand-buyer-deeper disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
             >
               {sending && <Loader2 className="h-4 w-4 animate-spin" />}
               {sending ? "Sending…" : "Send Code"}
@@ -299,7 +299,7 @@ const Login = () => {
 
           <p className="mt-5 text-center text-sm text-gray-500">
             New to Cosora?{" "}
-            <Link to="/register" state={{ authStartIdx: startIdx.current }} className="font-semibold text-[#a4172c] hover:underline">
+            <Link to="/register" state={{ authStartIdx: startIdx.current }} className="font-semibold text-brand-buyer-deep hover:underline">
               Create an account
             </Link>
           </p>

@@ -339,7 +339,7 @@ const Register = () => {
                         className="h-10 shrink-0 rounded-md border border-input bg-background px-2 text-sm"
                       >
                         {COUNTRY_CODES.map((c, i) => (
-                          <option key={c.name + i} value={i}>{c.flag} {c.code}</option>
+                          <option key={c.name + i} value={i}>{c.code} {c.name}</option>
                         ))}
                       </select>
                       <Input

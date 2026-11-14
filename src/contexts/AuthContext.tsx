@@ -70,6 +70,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profileError, setProfileError] = useState(false);
   // Only the latest read may set the profile: a sign-out or a second sign-in can overtake a retrying one.
   const readSeq = useRef(0);
+  // The account whose profile is loaded (or loading) and whether that load worked. Auth events repeat the session
+  // (INITIAL_SESSION right after getSession(), TOKEN_REFRESHED every hour, SIGNED_IN when a tab regains focus); each one
+  // used to read the profile, is_admin and the contact details again: 29 calls on Home, twice the sign-in reads at
+  // scale (buyer sign-up audit, Low item 7). A new account, a signed-out session, a failed load or USER_UPDATED reads.
+  const loadedFor = useRef<string | null>(null);
+  const loadFailed = useRef(false);
+  const inflight = useRef<Promise<void> | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -86,7 +93,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   //
   // The profile row is read again a few times when it fails (lib/auth/profileRead.ts); if it still fails,
   // profileError says so, and the pages that route on it offer Retry instead of guessing (audit item 6).
-  const loadProfile = useCallback(async (uid: string) => {
+  const loadProfile = useCallback((uid: string): Promise<void> => {
+    loadedFor.current = uid;
+    const p = readAccountProfile(uid);
+    inflight.current = p;
+    return p;
+  }, []);
+
+  const readAccountProfile = async (uid: string) => {
     const seq = ++readSeq.current;
     const [data, contact, { data: adminFlag, error: adminError }] = await Promise.all([
       readProfileRow(uid),
@@ -96,8 +110,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (seq !== readSeq.current) return;
     setProfile(data ? ({ ...data, email: contact?.email ?? null } as Profile) : null);
     setProfileError(!data);
+    loadFailed.current = !data;
     setIsAdmin(!adminError && adminFlag === true);
-  }, []);
+  };
 
   useEffect(() => {
     let active = true;
@@ -105,15 +120,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       if (!active) return;
       setSession(data.session);
-      if (data.session?.user) loadProfile(data.session.user.id).finally(() => setLoading(false));
-      else setLoading(false);
+      const uid = data.session?.user?.id;
+      if (!uid) { setLoading(false); return; }
+      // The INITIAL_SESSION event may have started this account's load already: wait for that one.
+      const load = loadedFor.current === uid && inflight.current ? inflight.current : loadProfile(uid);
+      load.finally(() => setLoading(false));
     });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, next) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
       // Never call other Supabase methods synchronously inside this callback.
-      if (next?.user) void loadProfile(next.user.id);
-      else { readSeq.current++; setProfile(null); setProfileError(false); setIsAdmin(false); }
+      if (next?.user) {
+        const same = loadedFor.current === next.user.id && !loadFailed.current;
+        if (!same || event === "USER_UPDATED") void loadProfile(next.user.id);
+      } else {
+        readSeq.current++;
+        loadedFor.current = null;
+        loadFailed.current = false;
+        setProfile(null); setProfileError(false); setIsAdmin(false);
+      }
     });
 
     return () => { active = false; sub.subscription.unsubscribe(); };

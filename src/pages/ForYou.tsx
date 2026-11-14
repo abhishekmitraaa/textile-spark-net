@@ -9,7 +9,7 @@ import ListingProductCard from "@/components/buyer/ListingProductCard";
 import SubmitRequirementCard from "@/components/buyer/SubmitRequirementCard";
 import CategoryPickerGrid from "@/components/buyer/CategoryPickerGrid";
 import SponsoredNote from "@/components/buyer/SponsoredNote";
-import { makeListingProduct, img, type ListingProduct, type Gender } from "@/lib/listingProducts";
+import { makeListingProduct, type ListingProduct, type Gender } from "@/lib/listingProducts";
 import { type ProductCardData } from "@/lib/queries/products";
 import { useFeed, useFeedSlice } from "@/lib/queries/feed";
 import { useAuth } from "@/contexts/AuthContext";
@@ -570,7 +570,8 @@ const ForYou = () => {
                 className="w-full text-center"
               >
                 <div className="mx-auto mb-5 w-44 h-44 rounded-full bg-brand-buyer/5 flex items-center justify-center overflow-hidden">
-                  <img src={img("foryou-welcome", 360, 360)} alt="Welcome to Cosora" className="w-full h-full object-cover" />
+                  {/* Was a random picsum.photos picture: nothing is hotlinked from a placeholder service. */}
+                  <Sparkles className="w-16 h-16 text-brand-buyer" aria-hidden="true" />
                 </div>
                 <h1 className="text-2xl font-bold text-gray-900">Welcome to Cosora 👋</h1>
                 <p className="mt-3 text-sm text-gray-500 leading-relaxed">

@@ -81,7 +81,7 @@ test("sign-up is finished at the Terms, not at the role; Account Info checks the
 
   await page.goto(`${BUYER_URL}/auth/account-info`);
   await page.getByPlaceholder("Enter your name").fill("  Asha  ");
-  const mail = page.getByPlaceholder("Please enter a valid email address.");
+  const mail = page.getByPlaceholder("name@company.com");
   await mail.fill("asha@nowhere");
   await mail.blur();
   await expect(page.getByText("Enter a valid email address, like name@company.com.")).toBeVisible();

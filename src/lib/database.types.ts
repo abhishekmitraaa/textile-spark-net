@@ -713,6 +713,7 @@ export type Database = {
           postal_code: string | null
           preferred_categories: string[]
           preferred_interest_other: string | null
+          preferred_locations: string[]
           regional: Json | null
           social: Json | null
           state: string | null
@@ -740,6 +741,7 @@ export type Database = {
           postal_code?: string | null
           preferred_categories?: string[]
           preferred_interest_other?: string | null
+          preferred_locations?: string[]
           regional?: Json | null
           social?: Json | null
           state?: string | null
@@ -767,6 +769,7 @@ export type Database = {
           postal_code?: string | null
           preferred_categories?: string[]
           preferred_interest_other?: string | null
+          preferred_locations?: string[]
           regional?: Json | null
           social?: Json | null
           state?: string | null

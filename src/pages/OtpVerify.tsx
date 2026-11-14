@@ -203,7 +203,7 @@ const OtpVerify = () => {
         )}
         <div className="flex items-center justify-center gap-2 mt-2 mb-6">
           <span className="text-sm font-bold text-gray-900">{maskPhone(state.phone, state.countryCode)}</span>
-          <button onClick={() => navigate(back)} className="text-sm font-semibold text-[#a4172c] hover:underline">
+          <button onClick={() => navigate(back)} className="text-sm font-semibold text-brand-buyer-deep hover:underline">
             Not You?
           </button>
         </div>
@@ -256,7 +256,7 @@ const OtpVerify = () => {
                 index={i}
                 className={cn(
                   "w-9 h-11 text-lg font-bold rounded-lg border-0 border-b-2 first:border-l-0 first:rounded-l-lg last:rounded-r-lg",
-                  otp[i] ? "border-[#a4172c] text-gray-900" : "border-gray-300 text-gray-400",
+                  otp[i] ? "border-brand-buyer-deep text-gray-900" : "border-gray-300 text-gray-400",
                 )}
               />
             ))}
@@ -269,7 +269,7 @@ const OtpVerify = () => {
             <p className="mt-0.5 text-xs text-gray-600">You're signed in. Check your connection and try again.</p>
             <div className="mt-2.5 flex gap-2">
               <button type="button" onClick={() => void land(landingFailed)} disabled={verifying}
-                className="px-4 py-2 rounded-lg bg-[#a4172c] text-white text-xs font-bold disabled:opacity-60">
+                className="px-4 py-2 rounded-lg bg-brand-buyer-deep text-white text-xs font-bold disabled:opacity-60">
                 Retry
               </button>
               <button type="button" onClick={async () => { await signOut(); setLandingFailed(null); navigate("/auth/login", { replace: true }); }}
@@ -293,7 +293,7 @@ const OtpVerify = () => {
           {sent && timer > 0
             ? <>The OTP will expire in <span className="font-semibold text-gray-600">{timer} seconds</span></>
             : (
-              <button onClick={handleResend} disabled={resending} className="font-semibold text-[#a4172c] hover:underline disabled:opacity-60">
+              <button onClick={handleResend} disabled={resending} className="font-semibold text-brand-buyer-deep hover:underline disabled:opacity-60">
                 {resending ? "Sending…" : sent ? "Resend OTP" : "Try sending the code again"}
               </button>
             )}
@@ -316,7 +316,7 @@ const OtpVerify = () => {
           <button
             onClick={handleNext}
             disabled={!isComplete || verifying}
-            className="flex-1 py-3.5 bg-[#a4172c] hover:bg-[#8c1325] disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
+            className="flex-1 py-3.5 bg-brand-buyer-deep hover:bg-brand-buyer-deeper disabled:bg-gray-200 disabled:text-gray-400 text-white text-sm font-bold rounded-xl transition-colors flex items-center justify-center gap-2"
           >
             {verifying && <Loader2 className="h-4 w-4 animate-spin" />}
             {verifying ? "Verifying…" : "Next"}

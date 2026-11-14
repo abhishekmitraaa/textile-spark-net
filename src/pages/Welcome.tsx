@@ -12,7 +12,7 @@ const Welcome = () => {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#a4172c] to-[#7e1120] flex flex-col items-center justify-center px-4">
+    <div className="min-h-screen bg-gradient-to-b from-brand-buyer-deep to-[#7e1120] flex flex-col items-center justify-center px-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
