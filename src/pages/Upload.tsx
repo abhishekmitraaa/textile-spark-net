@@ -659,7 +659,7 @@ const Upload = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show">
       {/* Page header */}
       <motion.div

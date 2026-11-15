@@ -511,7 +511,7 @@ const UploadVideo = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-4xl mx-auto pb-12 space-y-5">
 
         {/* ── Header ── */}

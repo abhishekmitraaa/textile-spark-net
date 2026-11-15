@@ -16,9 +16,11 @@ interface DashboardLayoutProps {
    * thread, whose composer bar is pinned there). Everything else uses "default".
    */
   variant?: "default" | "full-screen";
+  /** The publishing pages (upload, video, catalogue, ads, leads, quotes) show why a seller can't publish yet (SH-002). */
+  registrationBanner?: boolean;
 }
 
-export const DashboardLayout = ({ children, variant = "default" }: DashboardLayoutProps) => {
+export const DashboardLayout = ({ children, variant = "default", registrationBanner = false }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const fullScreen = variant === "full-screen";
   const { pathname } = useLocation();
@@ -52,8 +54,8 @@ export const DashboardLayout = ({ children, variant = "default" }: DashboardLayo
               : "min-h-[calc(100vh-3.5rem)] pb-20 lg:pb-0 p-4 lg:min-h-[calc(100vh-4rem)] lg:p-6"
           }
         >
-          {/* Why an unregistered seller can't publish yet (seller_registration_required). */}
-          {!fullScreen && <RegistrationBanner />}
+          {/* Why this seller can't publish yet: on the publishing pages only; Seller Home has Getting started. */}
+          {!fullScreen && registrationBanner && <RegistrationBanner />}
           {children}
         </main>
       </div>

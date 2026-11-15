@@ -6,6 +6,7 @@
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { register } from "./registrationForm";
 
 const made: string[] = [];
 const rfqsMade: string[] = [];
@@ -19,6 +20,10 @@ test.afterEach(() => {
          delete from public.conversations where user_a = '${id}' or user_b = '${id}';
          delete from public.notifications where profile_id = '${id}';
          delete from public.products where vendor_id = '${id}';
+         delete from public.vendor_premises_photos where vendor_id = '${id}';
+         delete from public.vendor_documents where vendor_id = '${id}';
+         delete from public.vendor_registrations where vendor_id = '${id}';
+         delete from public.vendor_contracts where vendor_id = '${id}';
          delete from public.vendor_profiles where id = '${id}';
          delete from public.profiles where id = '${id}';
          delete from auth.users where id = '${id}';`);
@@ -342,5 +347,90 @@ test("help keeps the side you came from", async ({ browser }) => {
   await clientGo(page, "/help");
   await expect(page).toHaveURL(/\/help$/);
   await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await page.context().close();
+});
+
+// ─────────────────────────── Task 8: the first minutes after registering ───────────────────────────
+
+test("welcome screen has a button and next steps", async ({ browser }) => {
+  test.setTimeout(180_000);
+  const who = await freshAccount("sh-welcome");
+  made.push(who.id);
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/onboarding`);
+  await register(page);
+  await expect(page.getByText("Welcome to Cosora")).toBeVisible({ timeout: 30_000 });
+  for (const line of [
+    "Your documents are checked in 3–5 days",
+    "Your first listing goes live after review (24–48 hours)",
+    "Your premises photo is reviewed before buyers see it",
+  ]) await expect(page.getByText(line, { exact: true })).toBeVisible();
+  const go = page.getByRole("button", { name: "Go to Seller Home" });
+  await expect(go).toBeVisible();
+  await go.click();
+  await expect(page).toHaveURL(new RegExp("/seller-home$"), { timeout: 15_000 });
+  await ctx.close();
+});
+
+test("getting started lists what is waiting", async ({ browser }) => {
+  const who = await seller("sh-start");
+  sql(`insert into public.vendor_contracts (vendor_id, signed_name, agreement_version) values ('${who.id}', 'Spec Owner', '2026-09-v1');
+       insert into public.vendor_documents (vendor_id, doc_type, file_url) values ('${who.id}', 'pan', '${who.id}/kyc/pan.png');
+       insert into public.products (vendor_id, name, status) values ('${who.id}', 'Waiting kurta', 'under_review');
+       insert into public.vendor_premises_photos (vendor_id, url) values ('${who.id}', 'http://127.0.0.1:54321/storage/v1/object/public/product-images/${who.id}/premises/front.png');`);
+  const page = await openHome(browser, who.session);
+  const card = page.getByTestId("getting-started");
+  await expect(card).toBeVisible({ timeout: 20_000 });
+  await expect(card.getByRole("link", { name: "Your documents are being checked (usually 3–5 days)" })).toHaveAttribute("href", "/kyc");
+  await expect(card.getByRole("link", { name: "1 listing waiting for review (24–48 hours)" })).toHaveAttribute("href", "/products");
+  await expect(card.getByRole("link", { name: "Premises photos waiting for review" })).toHaveAttribute("href", "/business-profile?focus=office-pictures");
+  await expect(card.getByText("Sign the Supplier Agreement")).toHaveCount(0);
+  await page.context().close();
+
+  // Nothing waiting: no card.
+  const done = await seller("sh-start-done");
+  sql(`insert into public.vendor_contracts (vendor_id, signed_name, agreement_version) values ('${done.id}', 'Spec Owner', '2026-09-v1');`);
+  const p2 = await openHome(browser, done.session);
+  await expect(p2.getByTestId("analysis-panel")).toBeVisible({ timeout: 20_000 });
+  await expect(p2.getByTestId("getting-started")).toHaveCount(0);
+  await p2.context().close();
+});
+
+test("a registration notice is written", async ({ browser }) => {
+  const who = await seller("sh-notice");
+  sql(`insert into public.vendor_registrations (id, vendor_id, country_code, status) values (gen_random_uuid(), '${who.id}', 'IN', 'registered');`);
+  const page = await openHome(browser, who.session);
+  await expect(page.getByRole("button", { name: "Notifications, 1 unread" })).toBeVisible({ timeout: 20_000 });
+  await page.goto(`${BUYER_URL}/notifications`);
+  const row = page.getByRole("button", { name: "Open notification: Your registration is in" });
+  await expect(row).toBeVisible({ timeout: 20_000 });
+  await row.click();
+  await expect(page).toHaveURL(new RegExp("/kyc$"), { timeout: 10_000 });
+  await page.context().close();
+});
+
+test("unsigned agreement prompt on home and publishing pages only", async ({ browser }) => {
+  const who = await seller("sh-unsigned"); // registered, no contract; seller_registration_required is off
+  const page = await openHome(browser, who.session);
+  const row = page.getByTestId("getting-started").getByRole("link", { name: "Sign the Supplier Agreement" });
+  await expect(row).toBeVisible({ timeout: 20_000 });
+  await expect(row).toHaveAttribute("href", "/kyc");
+  await expect(page.getByRole("status").filter({ hasText: "Supplier Agreement" })).toHaveCount(0);
+  await page.goto(`${BUYER_URL}/upload`);
+  const banner = page.getByRole("status").filter({ hasText: "Supplier Agreement" });
+  await expect(banner).toBeVisible({ timeout: 20_000 });
+  await expect(banner.getByRole("link", { name: "Sign the agreement" })).toHaveAttribute("href", "/kyc");
+  await page.goto(`${BUYER_URL}/analytics`);
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("status").filter({ hasText: "Supplier Agreement" })).toHaveCount(0);
+  await page.context().close();
+});
+
+test("menu has Documents (KYC)", async ({ browser }) => {
+  const who = await seller("sh-kyc-menu");
+  const page = await openHome(browser, who.session);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(page.locator("aside").getByRole("link", { name: "Documents (KYC)" })).toHaveAttribute("href", "/kyc", { timeout: 20_000 });
   await page.context().close();
 });

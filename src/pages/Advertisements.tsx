@@ -1562,7 +1562,7 @@ const Advertisements = () => {
   const hasAds = myAds.length > 0;
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
         <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="pb-20 lg:pb-4">
           <AdvHeader />
           {/* Mobile keeps the 4xl reading column; desktop opens up to a real

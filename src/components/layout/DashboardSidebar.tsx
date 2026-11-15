@@ -33,6 +33,7 @@ import {
   KanbanSquare,
   Headset,
   Eye,
+  ShieldCheck,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -125,6 +126,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
         ]
       : [
           { name: "My Store", href: "/my-store", icon: Building2 },
+          // Documents, the Supplier Agreement and their review (SH-001): nothing on the seller side linked here.
+          { name: "Documents (KYC)", href: "/kyc", icon: ShieldCheck },
           { name: "Settings", href: "/settings", icon: Settings },
           { name: "Help & Support", href: "/help", icon: HelpCircle },
         ];

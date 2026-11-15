@@ -38,7 +38,7 @@ const Leads = () => {
   const overseasTeaser = Boolean(overseas?.available && overseas.tier === "none" && overseas.thisMonth > 0);
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="space-y-4 pb-8">
         <motion.div variants={section}>
           <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Leads</h1>

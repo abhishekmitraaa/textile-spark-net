@@ -200,7 +200,7 @@ test("after registering, Seller Home's back goes to the page before the registra
   await page.locator("#supplier-agreement").click();
   await page.getByRole("button", { name: "Submit", exact: true }).click();
   await expect(page.getByText("Welcome to Cosora")).toBeVisible({ timeout: 30_000 });
-  await page.getByText("Welcome to Cosora").click();
+  await page.getByRole("button", { name: "Go to Seller Home" }).click();
   await expect(page).toHaveURL(/\/seller-home$/, { timeout: 15_000 });
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible({ timeout: 15_000 });
 

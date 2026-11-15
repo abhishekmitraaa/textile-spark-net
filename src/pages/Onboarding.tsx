@@ -1077,21 +1077,20 @@ export default function Onboarding() {
   if (showPendingResult) return <RegistrationPending />;
 
   if (showWelcome) {
+    // A screen with no button and no hint used to stand here until tapped anywhere (SH-001): now it says what happens
+    // next and has one way on.
+    const nextSteps = [
+      { Icon: FileText, text: "Your documents are checked in 3–5 days" },
+      { Icon: Package, text: "Your first listing goes live after review (24–48 hours)" },
+      { Icon: Building2, text: "Your premises photo is reviewed before buyers see it" },
+    ];
     return (
-      <div
-        className="vendor-shell fixed inset-0 z-50 flex items-center justify-center bg-[#f0fdf4] px-6 text-center"
-        role="button"
-        tabIndex={0}
-        onClick={goToSellerHome}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") goToSellerHome();
-        }}
-      >
+      <div className="vendor-shell fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#f0fdf4] px-6 py-10 text-center">
         <motion.div
           initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.25 }}
-          className="flex flex-col items-center gap-4"
+          className="flex w-full max-w-sm flex-col items-center gap-4"
         >
           <div className="flex h-24 w-24 items-center justify-center rounded-full bg-brand-success shadow-lg shadow-brand-success/25">
             <Check className="h-12 w-12 text-white" />
@@ -1100,6 +1099,25 @@ export default function Onboarding() {
             <p className="text-xl font-semibold text-brand-ink">The Good Times Start Now.</p>
             <p className="text-xl font-semibold text-brand-ink">Welcome to Cosora</p>
           </div>
+          <div className="w-full rounded-2xl border border-brand-border bg-white p-4 text-left">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">What happens next</p>
+            <ul className="mt-2 space-y-2.5">
+              {nextSteps.map(({ Icon, text }) => (
+                <li key={text} className="flex items-start gap-2.5 text-sm text-brand-ink">
+                  <Icon className="mt-0.5 h-4 w-4 shrink-0 text-brand-vendor" />
+                  <span>{text}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <Button
+            type="button"
+            onClick={goToSellerHome}
+            autoFocus
+            className="h-11 w-full rounded-full bg-brand-vendor text-white hover:bg-brand-vendor/90"
+          >
+            Go to Seller Home <ArrowRight className="ml-1 h-4 w-4" />
+          </Button>
         </motion.div>
       </div>
     );

@@ -321,7 +321,7 @@ const UploadCatalogue = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
       <motion.div variants={reduced ? {} : page} initial="hidden" animate="show" className="max-w-2xl mx-auto pb-12 space-y-5">
 
         {/* ── Header ── */}

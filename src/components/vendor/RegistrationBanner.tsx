@@ -4,19 +4,30 @@ import { useAuth } from "@/contexts/AuthContext";
 import { canPublish, useSellerRegistration } from "@/lib/queries/sellerRegistration";
 
 /**
- * On every seller page: why this seller can't publish yet, and the one step that fixes it (2026-11-13).
+ * On the publishing pages (DashboardLayout `registrationBanner`): what stands between this seller and publishing, and
+ * the one step that fixes it (2026-11-13; SH-002, 2026-11-16).
  *
- * Shown only while the seller_registration_required switch is on for the account and the database's rule
- * (seller_registered) says no. The database refuses the write either way; this is the explanation.
+ * An unsigned agreement, a registration sent back and one waiting for approval show whatever the
+ * seller_registration_required switch says; only the "can't publish" wording depends on it (while it is on, the
+ * database refuses the write and this is the explanation). A registration never finished shows only while it is on.
  */
 export function RegistrationBanner() {
   const { user } = useAuth();
   const { data: reg } = useSellerRegistration(user?.id);
-  if (!reg || canPublish(reg)) return null;
+  if (!reg || reg.status === "exempt") return null;
 
   const pending = reg.status === "pending";
   const unsigned = reg.status === "registered" && !reg.contractSigned;
-  const text = pending
+  const rejected = reg.status === "rejected";
+  if (!pending && !unsigned && !rejected && (!reg.gateOn || canPublish(reg))) return null;
+  // Switch off: they can publish, so say what is outstanding without saying it blocks anything.
+  const text = !reg.gateOn
+    ? pending
+      ? "Your seller registration is waiting for Cosora's approval."
+      : unsigned
+        ? "Your Supplier Agreement isn't signed yet."
+        : "Your seller registration needs changes."
+    : pending
     ? "Your seller registration is waiting for Cosora's approval. You can add listings, videos and catalogues once it's approved."
     : unsigned
       ? "Sign the Supplier Agreement to add listings, videos, catalogues, ads and quotes."
@@ -27,7 +38,9 @@ export function RegistrationBanner() {
     ? { to: "/kyc", label: "View your documents" }
     : unsigned
       ? { to: "/kyc", label: "Sign the agreement" }
-      : { to: "/onboarding", label: "Finish registration" };
+      : rejected
+        ? { to: "/onboarding", label: "Update your registration" }
+        : { to: "/onboarding", label: "Finish registration" };
 
   return (
     <div

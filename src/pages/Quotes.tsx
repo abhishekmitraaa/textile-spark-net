@@ -411,7 +411,7 @@ const Quotes = () => {
   };
 
   return (
-    <DashboardLayout>
+    <DashboardLayout registrationBanner>
       <div className="min-h-screen bg-gray-50 -m-4 lg:-m-6">
         <motion.div variants={reduced ? {} : page} initial="hidden" animate="show"
           className="max-w-2xl mx-auto px-4 py-4 space-y-4 pb-12 lg:max-w-[1400px] lg:px-6 lg:py-6 lg:space-y-6 lg:pb-16">

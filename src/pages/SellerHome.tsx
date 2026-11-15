@@ -13,6 +13,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { profileScoreSignals, useVendorDashboard } from "@/lib/queries/vendorDashboard";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { NextStepCard } from "@/components/dashboard/NextStepCard";
+import { GettingStartedCard } from "@/components/dashboard/GettingStartedCard";
 import { priceText } from "@/lib/currency";
 import { SellerHomeState } from "@/components/dashboard/SellerHomeState";
 
@@ -117,6 +118,13 @@ const SellerHome = () => {
           <h1 className="text-xl font-semibold text-foreground lg:text-2xl">Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Here's an overview of your business.</p>
         </motion.div>
+
+        {/* 1b. GETTING STARTED: what is waiting on the seller or on Cosora's review (SH-001, SH-002). */}
+        {home?.review && (
+          <motion.div variants={section} className="lg:col-span-12">
+            <GettingStartedCard review={home.review} />
+          </motion.div>
+        )}
 
         {/* 2. PROMO BANNER CAROUSEL */}
         <motion.div variants={section} className="relative h-48 rounded-xl overflow-hidden lg:col-span-7 lg:h-64">
