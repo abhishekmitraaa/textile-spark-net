@@ -389,3 +389,91 @@ After a quote, an upload or edit, or a catalogue upload: `invalidateQueries(["ve
 - [ ] Push `seller-home/fixes`, merge to main, confirm the Vercel deploy and the live bundle.
 - [ ] Turn on `live_updates_hub` for a test seller, then for everyone, on Mitra's word.
 - [ ] Remove the released items from `todo.md` and the audit's open list.
+
+---
+
+## Record of the build (2026-11-16)
+
+Copied from the execution ledger when the branch was finished; the ledger itself was scratch.
+
+### Final whole-branch review
+
+- Final review: fresh reviewer (opus, read-only) on 4c5a845..c96ef39: 0 Critical, 4 Important, 14 Minor; "With fixes"
+- Final: fixed Important 1 (BuyerShell moved unregistered sellers to the buyer side for good) — "an unregistered seller keeps the seller menu after a buyer page" RED→GREEN, suite 43/43
+- Final: fixed Important 2 (sidebar z-[60] above every laptop dialog) — "laptop dialogs cover the sidebar" (pixel test; the hit test couldn't see it) RED→GREEN, suite 43/43
+- Final: fixed Important 3 (one held Free seller aborted the resume migration) — harness free_resume_skips_held RED→GREEN, harnesses all pass
+- Final: fixed Important 4 (hub cost 2 subtransactions per seller in a fan-out; overflow past 32) — harness fanout_one_subtransaction RED (64, overflowed) → GREEN (≤1), suite 43/43
+
+### Rulings made while building, in order (what was decided, why, what it costs if wrong)
+
+- T9 produces live_updates_hub + hub; independent of T4 except invalidating ["vendor_dashboard"] on chat events — Ruling: hub `chat` events also invalidate ["vendor_dashboard", uid] so Recent Messages refresh — cheap, and stale chats otherwise — cost if wrong: one extra summary call per chat event.
+- Ruling: T0 already committed (eaa8c9f) together with the plan.
+- Task 1: Ruling: harness compares the live policy with the previous rule inline in one run (not before/after snapshots across the migration) - same proof, no second state to restore - cost if wrong: none, the old rule text is quoted verbatim
+- Task 1: Ruling: = any needs ((select fn()))::uuid[] - a bare subquery is read as a row set - cost if wrong: none, harness proves equivalence
+- Task 2: Ruling: 'a seller with 0 rows gets [] everywhere' applies to own products and chats; recent_leads come from the marketplace and are only checked as an array of <=3 - cost if wrong: none
+- Task 2: Ruling: harness disables product_images triggers for its seed rows (photo-origin guard), rolled back - cost if wrong: none
+- Task 2: Ruling: recent_chats leave out chats with no message (opened but empty) as well as archived/cleared - matches 'Recent Messages' - cost if wrong: an empty chat isn't listed on the home
+- Task 3: Ruling: the Free resume is a named function admin.resume_free_plan_listings() (called by the migration) so the harness can exercise it on seeded rows - cost if wrong: one extra admin function
+- Task 3: Ruling: notice tone 'neutral' and action 'View KYC' (existing translated label) - cost if wrong: copy only
+- Task 4: Ruling: summary counts gain 'total' (all statuses) for the tenProducts signal; migration 100100 edited before it leaves the branch - cost if wrong: none
+- Task 4: Ruling: the call-count test excludes app-wide start-up reads (session profile, saved items, recently viewed, preferences: 10 calls on every page, out of scope) and also asserts none of the old per-list reads remain - cost if wrong: the start-up reads stay unmeasured here
+- Task 4: Ruling: VendorDashboard.openLeads keeps meaning open-marketplace; directRequests added; the home shows the sum - Analytics unchanged - cost if wrong: none
+- Task 4: Ruling: summary harness count checks use 'is distinct from' (a missing key compared with <> is null and skipped) - found when the total check didn't go red
+- Task 5: Ruling: benchmark card gradient set to vendor blue here (plan put it in Task 6) - it was being rewritten anyway - cost if wrong: none
+- Task 5: Ruling: banner buttons became styled links in Task 5 (plan's banner work is Task 10) because the 'no button inside a link' test owns them - cost if wrong: none
+- Task 5: Ruling: laptop right column uses one 'contents' wrapper (flex column on lg, row-span-3) with order-N for phone reading order - cost if wrong: phone order depends on order classes
+- Task 6: Ruling: theme-codemod --check exits 1 on main already (25 pre-existing findings, none in files touched) - checked that this branch adds none - cost if wrong: none
+- Task 7: Ruling: /chat and /chats themselves are shared too (the brief lists /chats/* only) - Chat picks its frame by side for both addresses - cost if wrong: none, a shared page never changes the side
+- Task 7: Ruling: routeSide classifies by explicit seller and shared lists, buyer otherwise - a page missing from the seller list just keeps today's behaviour (no flip), never a wrong flip, because each shell only acts on its own side - cost if wrong: a new seller page needs its path added (noted in the file)
+- Task 7: Ruling: 5 failures in buyer-signup/registration-fixes are Cosora-Admin pages (ADMIN_URL pointed at the buyer app, admin app not running); 62 others passed - they don't render either shell - cost if wrong: an admin-panel regression unseen until the final run with the admin app
+- Task 8: Ruling: Getting started also lists registration none ("Finish your seller registration" -> /onboarding), rejected and pending - the home no longer shows the banner, so without these an unregistered seller's home said nothing - cost if wrong: one extra row Mitra may not want
+- Task 8: Ruling: banner placement via DashboardLayout's opt-in `registrationBanner` prop set by the six pages, not markup in each page - same result, one place - cost if wrong: none
+- Task 8: Ruling: the welcome screen no longer navigates on any tap (only its button); onboarding-back.spec presses the button - a whole-screen role=button can't hold a real button - cost if wrong: none
+- Task 8: Ruling: "a registration notice is written" passed before Task 8 code (Task 3 shipped the trigger and the KIND_META link); kept as Task 3's end-to-end check - cost if wrong: none
+- Task 8: Ruling: register() moved from registration-fixes.spec.ts to tests/local/registrationForm.ts to drive the real form from the new spec - cost if wrong: none (registration-fixes 24 passed; its 4 failures are Cosora-Admin pages, admin app not running)
+- Task 8: Ruling: task-done runs the spec without the Task 9 tests already appended to the file (--grep-invert) - they belong to Task 9 - cost if wrong: none
+- Task 9: Ruling: hub_user_topic is SELECT only (plan said select and insert) - clients never send on their topic; every event comes from the triggers - cost if wrong: none (an insert policy can be added if a client ever needs to send)
+- Task 9: Ruling: the policy also requires realtime.messages.topic = realtime.topic() - the harness showed the documented form lets an account read other topics' rows once its session topic is its own; joins still work locally - cost if wrong: if hosted Realtime's join check used a row with another topic, joins would fail and the app falls back to postgres_changes (CHANNEL_ERROR -> live false)
+- Task 9: Ruling: notifications DELETE (dismiss) and conversation_member_state insert/update (archive, clear) also send - both change a count the badge shows - cost if wrong: a few extra events
+- Task 9: Ruling: switch off keeps useUnreadCount on the page's list exactly as before; the count-only query runs only while the hub is live - the plan's "off = unchanged" - cost if wrong: SH-037 (unread stops at 100) stays until the switch is on
+- Task 9: Ruling: the seller header's bell shows the real count for the buyer side too (it was a dot always shown) - the design says the buyer header shares the hub - cost if wrong: none
+- Task 9: Ruling: specs read the app's own client through the dev server (import("/src/lib/supabase.ts")) and count websocket phx_join frames, rather than a window global in production code - cost if wrong: the specs need the Vite dev server (they already do)
+- Task 9: Ruling: rfq-review.spec failed only at its Cosora-Admin step (ADMIN_URL, admin app not running); chat-unread passed - cost if wrong: an admin regression unseen until the final run
+- Task 10: Ruling: the built-in slides are whole links to their pages (advertising, upload) instead of an overlay headline plus a pill - the pictures carry their own headline; alt text says where each goes - cost if wrong: a slightly less explicit call to action
+- Task 10: Ruling: built-in pictures shown with object-contain over a blurred copy of themselves, not cropped or scaled - no hex fill colours needed and nothing cut off - cost if wrong: none
+- Task 10: Ruling: rotation every 6 s, held while pointed at or focused, stopped by Pause or reduced motion - WCAG 2.2.2 - cost if wrong: none
+- Task 10: Ruling: spec cleanup deletes chat messages that point at a test requirement before the requirement (a direct quote is echoed into the chat) - cost if wrong: none
+- Task 10: Ruling: "quote count updates on return" verified to fail with the vendor_dashboard invalidation removed from DirectQuoteRequests - cost if wrong: none
+- Task 11: Ruling: the header search goes to My Products only (not leads and chats) - the plan's scope; leads have their own page - cost if wrong: a seller looking for a lead from the header lands on products
+- Task 11: Ruling: added aria-labels "Open menu" and "Sign out" (both had none) - needed to reach them by role; real a11y gap - cost if wrong: none
+- Task 11: Ruling: "phone menu sign out is tappable" polls until the sliding menu settles; verified it fails with the old z-50/z-40 and passes with z-[60]/z-[55] - cost if wrong: none
+- Task 12: Ruling: rfq-leads R1 updated to the home's signed-out state ("Sign in to see your business" + Sign in link) - Task 4 replaced the leads card's prompt with the whole-home state on purpose; R1's intent (asked to sign in, never told there are no requirements) holds - cost if wrong: none
+- Task 12: Ruling: feeds.spec "every listing once" left failing - its own checks pass; the end-of-feed message is out of reach because the local DB holds 47 leftover interest-seller listings (1 each, pre-existing, not resumed by 100200); feed code untouched - cost if wrong: a real feed regression hidden (the same spec on a clean stack would show it)
+- Task 12: Ruling: 5 Cosora-Admin steps (registration queue x2, premises photos, KYC panel, rfq-leads admin remove) fail because LOCAL_ADMIN_URL is the buyer app; their buyer-side steps passed - cost if wrong: an admin regression unseen until run against the admin app
+- Final: Ruling: Free = Basic on listings — Mitra's decision ("Free 10, others unchanged"); flagged in ToDo and to Mitra — cost if wrong: Basic loses its listing advantage
+- Final: Ruling: SH-023 switch on every seller page, SH-003 forward entries — accepted by Mitra / the design — cost if wrong: none
+- Final: Ruling: Recent Leads newest first (direct first), not by Fit — the approved design's call — cost if wrong: home order differs from /leads
+- Final: Ruling: archived chats stay silent when a new message arrives — SH-033 asked the badge to match the chat list's All; unarchiving on a new message is a product question for Mitra — cost if wrong: a seller misses a reply in an archived chat
+- Final: Ruling: Top Performing Products ranks by lifetime views and enquiries — the seller's own list, existing behaviour moved server-side, not a buyer-facing ranking — cost if wrong: a stale bestseller stays top
+- Final: Ruling: welcome/notice copy assumes a first listing and a premises photo — the plan's exact copy; a catalogue-only seller still reads true lines about review — cost if wrong: one line slightly off for some sellers
+- Final: Ruling: with the switch off, SH-031/036/037 stay as before — the approved "off = unchanged"; they close when the hub is on — cost if wrong: the reload storm continues until switch-on
+- Final: Ruling: admin accounts that are also sellers count overseas and blocked rows — same as /leads (the is_admin arm) — cost if wrong: none for real sellers
+- Final: Ruling: PostgREST's 1,000-row cap on /leads vs exact counts on the home — existing /leads limit, out of scope — cost if wrong: counts differ above 1,000 open requirements
+- Final: Ruling: production data and hosted Realtime not inspected — read-only review; release steps check them with Mitra — cost if wrong: caught at release
+
+### Deferred minors (the final review's Minor findings, not fixed)
+
+- Final: minor (deferred): token-refresh spec can't fail on the bug it guards (old token stays valid; supabase-js also re-auths) — assert the new JWT frame or use a short-lived token
+- Final: minor (deferred): blocked-buyer spec covers the home and one direction only (harness covers both directions at SQL level)
+- Final: minor (deferred): my_block_peers() is callable as an RPC, so a blocked account can list who blocked it — move to a non-exposed schema with USAGE+EXECUTE
+- Final: minor (deferred): bell shows 0 for a moment when the hub joins (count query not landed yet) — fall back to the list count while undefined
+- Final: minor (deferred): a failed background refetch replaces a working Seller Home with the error screen — use isError && !data
+- Final: minor (deferred): a failed send looks like "no events" (warning only) — keep "one test seller first" as the smoke test when switching on
+- Final: minor (deferred): on CHANNEL_ERROR/TIMED_OUT every hook falls back at once, which can amplify a reconnect storm — fall back after a grace period
+- Final: minor (deferred): a direct request about a listing shows the package icon on the home, not the listing's picture as /leads does
+- Final: minor (deferred): seller_home_summary calls chat_unread_counts() for all chats to label 3, and my_vendor_private() twice
+- Final: minor (deferred): vendor blue is a fixed HSL, not the admin theme's vendor colour (design asked for it to follow; recorded in claude.md)
+- Final: minor (deferred): the Free-plan harness's realistic paused row (paused_from) is now covered only for the held case
+- Final: minor (deferred): confirm feeds.spec "every listing once" fails the same on 4c5a845 with this local DB before merge
+- Final: minor (deferred): the role flip paints the other side's menu for one frame (useEffect) — useLayoutEffect would avoid it
+- Final: minor (deferred): Upload.tsx's mis-indented invalidateQueries line (one fixed, nit)
