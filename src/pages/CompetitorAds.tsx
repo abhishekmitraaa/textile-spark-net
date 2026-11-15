@@ -45,7 +45,7 @@ function BenchmarkBar({ label, yours, peer, unit = "" }: { label: string; yours:
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
       <p className="text-sm font-bold text-gray-900 mb-3">{label}</p>
       <div className="space-y-3">
-        <Row who="You" val={yours} color="bg-brand-buyer" />
+        <Row who="You" val={yours} color="bg-brand-vendor" />
         <Row who="Category average" val={peer} color="bg-gray-300" />
       </div>
     </div>
@@ -89,7 +89,7 @@ const CompetitorAds = () => {
               <Package className="w-10 h-10 text-gray-300 mx-auto mb-3" />
               <p className="text-sm font-bold text-gray-900">No benchmarks yet</p>
               <p className="text-xs text-gray-500 mt-1 mb-4">Add products with a category so we can compare you to peers in those categories.</p>
-              <Link to="/upload" className="inline-flex items-center gap-1.5 rounded-xl bg-[#f75f71] px-4 py-2 text-xs font-bold text-white hover:bg-[#ff2160] transition-colors">
+              <Link to="/upload" className="inline-flex items-center gap-1.5 rounded-xl bg-brand-vendor px-4 py-2 text-xs font-bold text-white hover:bg-brand-vendor/90 transition-colors">
                 Add a product
               </Link>
             </motion.div>
@@ -118,7 +118,7 @@ const CompetitorAds = () => {
                     <motion.div key={c.category_id} variants={listItem} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
                       <div className="flex items-start justify-between gap-2">
                         <p className="text-sm font-bold text-gray-900">{c.category_name}</p>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-buyer/10 text-brand-buyer text-[10px] font-bold px-2 py-0.5">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-vendor/10 text-brand-vendor text-[10px] font-bold px-2 py-0.5">
                           You: {c.your_products} product{c.your_products === 1 ? "" : "s"}
                         </span>
                       </div>
@@ -150,7 +150,7 @@ const CompetitorAds = () => {
                     {/* Additive: the link still does exactly what it did. */}
                     <motion.button whileTap={TAP} transition={TAP_T}
                       onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "ask_more_reviews", vendorId: user?.id })}
-                      className="shrink-0 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-lg hover:bg-brand-buyer/90 transition-colors">Ask for Reviews</motion.button>
+                      className="shrink-0 px-4 py-2 bg-brand-vendor text-white text-xs font-bold rounded-lg hover:bg-brand-vendor/90 transition-colors">Ask for Reviews</motion.button>
                   </Link>
                 </div>
 
@@ -160,7 +160,7 @@ const CompetitorAds = () => {
                   <Link to="/products">
                     <motion.button whileTap={TAP} transition={TAP_T}
                       onClick={() => void logEngagement({ eventType: "cta_click", ctaName: "upload_more_photos", vendorId: user?.id })}
-                      className="shrink-0 px-4 py-2 bg-brand-buyer text-white text-xs font-bold rounded-lg hover:bg-brand-buyer/90 transition-colors">Add Photos</motion.button>
+                      className="shrink-0 px-4 py-2 bg-brand-vendor text-white text-xs font-bold rounded-lg hover:bg-brand-vendor/90 transition-colors">Add Photos</motion.button>
                   </Link>
                 </div>
               </motion.div>

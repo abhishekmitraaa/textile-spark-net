@@ -178,6 +178,16 @@
   .vendor-shell {
     font-family: var(--font-body);
   }
+
+  /* Seller pages are vendor blue, #256fef (sides.md; Seller Home audit SH-005). The buyer coral above stays the
+     default; DashboardLayout puts vendor-theme on <body> while a seller page shows, so dialogs and sheets, which
+     render in a portal outside the shell, are blue too. */
+  .vendor-shell,
+  body.vendor-theme {
+    --primary: 218 86% 54%;
+    --accent: 218 86% 54%;
+    --ring: 218 86% 54%;
+  }
 }
 
 @layer utilities {

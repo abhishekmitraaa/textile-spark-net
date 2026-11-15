@@ -256,3 +256,26 @@ test("analysis subtitles are neutral and Inquiries says Lifetime", async ({ brow
   await expect(analysis.getByTestId("stat-Inquiries")).toContainText("Lifetime");
   await page.context().close();
 });
+
+// ─────────────────────────── Task 6: vendor blue ───────────────────────────
+
+test("seller pages are vendor blue", async ({ browser }) => {
+  const who = await seller("sh-blue");
+  const page = await openHome(browser, who.session);
+  const bodyPrimary = () => page.evaluate(() => getComputedStyle(document.body).getPropertyValue("--primary").trim());
+  const btn = page.getByRole("button", { name: "INCREASE SCORE" });
+  await expect(btn).toBeVisible({ timeout: 20_000 });
+  expect(await btn.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(37, 111, 239)");
+  for (const path of ["/leads", "/products"]) {
+    await page.goto(`${BUYER_URL}${path}`);
+    await page.waitForLoadState("networkidle");
+    const active = page.locator(`aside a[href="${path}"]`).first();
+    expect(await active.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe("rgb(37, 111, 239)");
+    // Dialogs and sheets render in a portal on <body>, outside the seller shell: body carries the vendor colours too.
+    expect(await bodyPrimary()).toBe("218 86% 54%");
+  }
+  await page.goto(`${BUYER_URL}/home/new-arrivals`);
+  await page.waitForLoadState("networkidle");
+  expect(await bodyPrimary()).toBe("352 85% 62%");
+  await page.context().close();
+});

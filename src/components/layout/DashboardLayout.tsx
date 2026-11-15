@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -18,6 +18,12 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children, variant = "default" }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const fullScreen = variant === "full-screen";
+
+  // Portalled dialogs live on <body>, outside this shell: give them the vendor colours too (SH-005).
+  useEffect(() => {
+    document.body.classList.add("vendor-theme");
+    return () => document.body.classList.remove("vendor-theme");
+  }, []);
 
   return (
     <div className="vendor-shell min-h-screen bg-background">
