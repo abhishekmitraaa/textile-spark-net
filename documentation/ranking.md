@@ -654,9 +654,9 @@ doesn't depend on seller ids.
 
 ## 10. Known gaps
 
-1. **Standing's interest is still filling up.** Its 90-day viewer ledger started on 2026-11-15 with the two days
-   the view counter held, so until mid-February 2027 the view part covers fewer than 90 days. Follows and messages
-   already cover 90.
+1. **Standing's interest is still filling up.** Its 90-day viewer ledger started on 2026-11-15 with what the view
+   counter still held (its old days go only now and then: production had views back to 2026-10-20, 25 rows for 7
+   sellers), so until mid-January 2027 the view part covers fewer than 90 days. Follows and messages already cover 90.
 2. **Seeded listing ratings.**
    - **The problem:** 22 of 27 live listings carry a `rating_avg` with no review behind it.
    - **Where they reach:** the feed's "rating" sort and its trending tie-break, `related_products`' fallback, For
