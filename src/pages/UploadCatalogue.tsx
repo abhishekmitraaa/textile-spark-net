@@ -296,6 +296,7 @@ const UploadCatalogue = () => {
         file: selectedFile,
       });
       qc.invalidateQueries({ queryKey: ["catalogues"] });
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's profile score (SH-015)
       setSelectedFile(null);
       setCatalogueName("");
       setDescription("");
@@ -314,6 +315,7 @@ const UploadCatalogue = () => {
     try {
       await deleteCatalogue(id);
       qc.invalidateQueries({ queryKey: ["catalogues"] });
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's profile score (SH-015)
       toast.success("Catalogue removed");
     } catch (err) {
       toast.error("Couldn't remove", { description: errorMessage(err) });

@@ -523,6 +523,7 @@ const Upload = () => {
         await saveEditedImages(editId);
         await uploadMedia(editId, subNameForMedia());
         queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's counts (SH-015)
         toast.success("Product updated", {
           description: pausedEdit
             ? "This listing is paused. It goes through review when your plan has room for it again."
@@ -589,6 +590,7 @@ const Upload = () => {
       // Refresh any cached product lists so the vendor's Products page and the
       // buyer feed reflect the new row immediately.
       queryClient.invalidateQueries({ queryKey: ["products"] });
+        queryClient.invalidateQueries({ queryKey: ["vendor_dashboard"] }); // Seller Home's counts (SH-015)
 
       toast.success(nextStatus === "draft" ? "Saved as draft" : "Product submitted for review", {
         description: nextStatus === "draft"

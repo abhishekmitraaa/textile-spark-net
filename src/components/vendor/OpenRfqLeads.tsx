@@ -13,6 +13,7 @@ import { useLang } from "@/lib/i18n";
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { trackRequirement, useTrackedRfqIds } from "@/lib/queries/crm";
 import RfqThumb from "@/components/RfqThumb";
+import { useFocusLead } from "@/lib/useFocusLead";
 import { priceText } from "@/lib/currency";
 
 // ─────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ function OverseasBadge({ code, vipUntil }: { code: string | null; vipUntil: stri
   );
 }
 
-export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: boolean }) {
+export default function OpenRfqLeads({ overseasOnly = false, focusRfqId = null }: { overseasOnly?: boolean; focusRfqId?: string | null }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: all = [], isLoading } = useOpenRfqs(user?.id);
@@ -112,6 +113,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
     setOpenId(id);
   };
   const [busy, setBusy] = useState(false);
+  useFocusLead(focusRfqId, rfqs, openQuote);
 
   if (!user || isLoading || rfqs.length === 0) return null;
 
@@ -128,6 +130,9 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
       });
       qc.invalidateQueries({ queryKey: ["rfqs"] });
       qc.invalidateQueries({ queryKey: ["crm"] });   // a quote tracks the lead (P8)
+      // Seller Home's counts and the seller's quote list read these (SH-015).
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard"] });
+      qc.invalidateQueries({ queryKey: ["quotes", "mine"] });
       toast.success("Quote submitted", { description: "The buyer will see it in My Quotes." });
       setOpenId(null);
       setForm({ price: "", moq: "", leadTime: "", comment: "" });
@@ -152,7 +157,7 @@ export default function OpenRfqLeads({ overseasOnly = false }: { overseasOnly?: 
       {/* One column on mobile; two across once there is real width to spend. */}
       <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {rfqs.map((r) => (
-          <div key={r.id} className={`rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched || r.strongMatch ? "border-brand-vendor/40 bg-brand-vendor/[0.03] lg:hover:border-brand-vendor/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
+          <div key={r.id} id={`lead-${r.id}`} className={`scroll-mt-20 rounded-xl border p-3 lg:p-3.5 lg:transition-colors ${r.matched || r.strongMatch ? "border-brand-vendor/40 bg-brand-vendor/[0.03] lg:hover:border-brand-vendor/60" : "border-gray-200 lg:hover:border-gray-300"}`}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {/* Two distinct claims, deliberately not merged into one badge.

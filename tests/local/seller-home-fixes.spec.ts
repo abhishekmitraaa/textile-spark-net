@@ -12,7 +12,12 @@ const made: string[] = [];
 const rfqsMade: string[] = [];
 
 test.afterEach(() => {
-  while (rfqsMade.length) sql(`delete from public.rfqs where id = '${rfqsMade.pop()}';`);
+  while (rfqsMade.length) {
+    const id = rfqsMade.pop();
+    // A quote on a direct request is echoed into the chat, and that message points at the request.
+    sql(`delete from public.messages where rfq_id = '${id}';
+         delete from public.rfqs where id = '${id}';`);
+  }
   while (made.length) {
     const id = made.pop()!;
     sql(`delete from public.chat_blocks where blocker_id = '${id}' or blocked_id = '${id}';
@@ -543,4 +548,95 @@ test("switch off keeps today's behaviour", async ({ browser }) => {
   send("no hub");
   await expect(page.getByTestId("nav-badge-chats")).toHaveText("1", { timeout: 10_000 });
   await page.context().close();
+});
+
+// ─────────────────────────── Task 10: lead deep link, fresh counts, the banner ───────────────────────────
+
+/** A request addressed to this seller, so it is first in Recent Leads and on Leads' Direct Quote Requests. */
+function directRequest(sellerId: string, title: string): string {
+  const buyerId = sql(`select id from public.profiles where id <> '${sellerId}' and full_name is not null order by id limit 1;`);
+  const id = sql(
+    `insert into public.rfqs (buyer_id, vendor_id, title, product_name, quantity, status)
+     values ('${buyerId}', '${sellerId}', '${title}', '${title}', 40, 'active') returning id;`,
+  ).split("\n")[0];
+  rfqsMade.push(id);
+  return id;
+}
+
+test("a recent lead opens itself on Leads", async ({ browser }) => {
+  const who = await seller("sh-deeplink");
+  const rfq = directRequest(who.id, "Deep link request");
+  const page = await openHome(browser, who.session);
+  await page.locator(`[data-lead-id="${rfq}"]`).click({ timeout: 20_000 });
+  await expect(page).toHaveURL(new RegExp(`/leads\\?rfq=${rfq}$`));
+  const card = page.locator(`#lead-${rfq}`);
+  await expect(card.getByPlaceholder("Price / unit (₹)")).toBeVisible({ timeout: 20_000 });
+  await expect(card).toBeInViewport();
+
+  // An open-marketplace lead opens the same way from its address.
+  const open = sql(`select id from public.rfqs where status = 'active' and vendor_id is null and expires_at > now()
+                      and not overseas and buyer_id <> '${who.id}' order by created_at desc limit 1;`);
+  await page.goto(`${BUYER_URL}/leads?rfq=${open}`);
+  await expect(page.locator(`#lead-${open}`).getByPlaceholder("Price / unit (₹)")).toBeVisible({ timeout: 20_000 });
+  await page.context().close();
+});
+
+test("quote count updates on return", async ({ browser }) => {
+  const who = await seller("sh-quotecount");
+  const rfq = directRequest(who.id, "Quote count request");
+  const page = await openHome(browser, who.session);
+  await expect(page.getByTestId("stat-Your Quotes")).toContainText("0", { timeout: 20_000 });
+  await page.locator(`[data-lead-id="${rfq}"]`).click();
+  const card = page.locator(`#lead-${rfq}`);
+  await card.getByPlaceholder("Price / unit (₹)").fill("120");
+  await card.getByRole("button", { name: "Send Quote" }).click();
+  await expect(card.getByText("Quote sent")).toBeVisible({ timeout: 15_000 });
+  await page.goBack();
+  await expect(page).toHaveURL(/\/seller-home$/);
+  await expect(page.getByTestId("stat-Your Quotes")).toContainText("1", { timeout: 10_000 });
+  await page.context().close();
+});
+
+const bannersMade: string[] = [];
+test.afterEach(() => {
+  while (bannersMade.length) sql(`delete from public.site_banners where id = '${bannersMade.pop()}';`);
+});
+
+test("banner uses admin banners when scheduled", async ({ browser }) => {
+  const who = await seller("sh-adminbanner");
+  const id = sql(`insert into public.site_banners (id, placement, title, subtitle, position, active, starts_at)
+                  values (gen_random_uuid(), 'vendor_dashboard', 'Spec scheduled banner', 'From Cosora-Admin', 0, true, now() - interval '1 hour')
+                  returning id;`).split("\n")[0];
+  bannersMade.push(id);
+  const ctx = await contextWithSession(browser, who.session);
+  // Read the tables, not a snapshot built before this row.
+  await ctx.route("**/storage/v1/object/public/site-config/site.json*", (r) => r.fulfill({ status: 404, body: "" }));
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await expect(page.getByText("Spec scheduled banner")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByTestId("builtin-banner")).toHaveCount(0);
+  await ctx.close();
+});
+
+test("built-in banner is calm", async ({ browser }) => {
+  const who = await seller("sh-calmbanner");
+  const c2 = await contextWithSession(browser, who.session);
+  const page = await c2.newPage();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${BUYER_URL}/seller-home`);
+  const banner = page.getByTestId("builtin-banner");
+  await expect(banner).toBeVisible({ timeout: 20_000 });
+  // The pictures carry their own headlines: no second headline laid over them.
+  await expect(banner.getByText("Get Prime Placement Above Competitors")).toHaveCount(0);
+  await expect(banner.getByText("Upload Products & Get More Leads")).toHaveCount(0);
+  await expect(banner.getByRole("button", { name: "Show slide 1" })).toBeVisible();
+  await expect(banner.getByRole("button", { name: "Show slide 2" })).toBeVisible();
+  // Only the slide on screen can be reached.
+  await expect(banner.locator("[data-slide][inert]")).toHaveCount(1);
+  const first = await banner.getAttribute("data-active-slide");
+  await page.waitForTimeout(7_000);
+  expect(await banner.getAttribute("data-active-slide")).toBe(first);
+  await banner.getByRole("button", { name: "Show slide 2" }).click();
+  await expect(banner).toHaveAttribute("data-active-slide", "1");
+  await c2.close();
 });

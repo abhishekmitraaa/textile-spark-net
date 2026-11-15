@@ -1,6 +1,4 @@
-import { useState, useEffect } from "react";
-import homeBanner1 from "@/assets/vendorhome/homebanner1.jpg";
-import homeBanner from "@/assets/vendorhome/homebanner2.jpg";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import {
@@ -14,6 +12,7 @@ import { profileScoreSignals, useVendorDashboard } from "@/lib/queries/vendorDas
 import { useVendorEntitlements } from "@/lib/queries/entitlements";
 import { NextStepCard } from "@/components/dashboard/NextStepCard";
 import { GettingStartedCard } from "@/components/dashboard/GettingStartedCard";
+import { SellerPromoBanner } from "@/components/dashboard/SellerPromoBanner";
 import { priceText } from "@/lib/currency";
 import { SellerHomeState } from "@/components/dashboard/SellerHomeState";
 
@@ -53,7 +52,6 @@ const SellerHome = () => {
   const listsLoading = Boolean(user) && dashQuery.isPending;
   const { data: entitlements } = useVendorEntitlements(user?.id);
   const alertsEntitled = Boolean(entitlements?.features.lead_alerts);
-  const [currentSlide, setCurrentSlide] = useState(0);
   const reduced = useReducedMotion();
 
   const topProducts = home?.topProducts ?? [];
@@ -73,11 +71,6 @@ const SellerHome = () => {
     { label: "Inquiries",     value: String(dash?.enquiries ?? 0),     change: "Lifetime · from interested buyers",             Icon: TrendingUp },
     { label: "Your Quotes",   value: String(dash?.quotesSent ?? 0),    change: `${dash?.quotesAccepted ?? 0} accepted`,         Icon: FileText },
   ];
-
-  useEffect(() => {
-    const t = setInterval(() => setCurrentSlide((s) => (s === 0 ? 1 : 0)), 3500);
-    return () => clearInterval(t);
-  }, []);
 
   const blocked = loading
     ? "loading"
@@ -126,81 +119,9 @@ const SellerHome = () => {
           </motion.div>
         )}
 
-        {/* 2. PROMO BANNER CAROUSEL */}
-        <motion.div variants={section} className="relative h-48 rounded-xl overflow-hidden lg:col-span-7 lg:h-64">
-          {/* Slide 1 */}
-          <div
-            className="absolute inset-0"
-            style={{
-              opacity: currentSlide === 0 ? 1 : 0,
-              transform: `translateX(${currentSlide === 0 ? 0 : 100}%)`,
-              transition: "opacity 480ms cubic-bezier(0.23,1,0.32,1), transform 480ms cubic-bezier(0.23,1,0.32,1)",
-            }}
-          >
-            <img
-              src={homeBanner}
-              alt="Advertise on Cosora"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center 30%",
-                transform: "scale(0.85)",
-                transformOrigin: "center",
-              }}
-            />
-            <div className="absolute inset-0 bg-black/30" />
-            <div className="absolute inset-0 p-4 flex flex-col justify-between">
-              <p className="text-base font-semibold text-white relative z-10">
-                Get Prime Placement Above Competitors
-              </p>
-              <Link
-                to="/advertisement-slideshow"
-                className="relative z-10 inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-xs font-medium text-accent hover:bg-white/90"
-              >
-                Advertise Now →
-              </Link>
-            </div>
-          </div>
-
-          {/* Slide 2 */}
-          <div
-            className="absolute inset-0"
-            style={{
-              opacity: currentSlide === 1 ? 1 : 0,
-              transform: `translateX(${currentSlide === 1 ? 0 : -100}%)`,
-              transition: "opacity 480ms cubic-bezier(0.23,1,0.32,1), transform 480ms cubic-bezier(0.23,1,0.32,1)",
-            }}
-          >
-            <img
-              src={homeBanner1}
-              alt="Upload Products"
-              style={{
-                position: "absolute",
-                inset: 0,
-                width: "100%",
-                height: "100%",
-                objectFit: "cover",
-                objectPosition: "center 30%",
-                transform: "scale(0.85)",
-                transformOrigin: "center",
-              }}
-            />
-            <div className="absolute inset-0 bg-black/30" />
-            <div className="absolute inset-0 p-4 flex flex-col justify-between">
-              <p className="text-base font-semibold text-white relative z-10">
-                Upload Products & Get More Leads
-              </p>
-              <Link
-                to="/upload"
-                className="relative z-10 inline-flex h-7 w-fit items-center rounded-full bg-white px-3 text-xs font-medium text-accent hover:bg-white/90"
-              >
-                Add Products →
-              </Link>
-            </div>
-          </div>
+        {/* 2. BANNER: Cosora-Admin's scheduled banners, else the two built-in slides (SH-009, SH-087). */}
+        <motion.div variants={section} className="lg:col-span-7">
+          <SellerPromoBanner />
         </motion.div>
 
         {/* 3. BUSINESS PROFILE SCORE — sits beside the banner and matches its
@@ -372,7 +293,7 @@ const SellerHome = () => {
                 <motion.div
                   key={lead.id}
                   variants={listItem}
-                  onClick={() => navigate("/leads")}
+                  onClick={() => navigate(`/leads?rfq=${lead.id}`)}
                   data-lead-id={lead.id}
                   className="border border-gray-100 rounded-xl p-3 cursor-pointer hover:border-accent/40 transition-colors"
                 >
@@ -403,7 +324,7 @@ const SellerHome = () => {
                   <motion.button
                     whileTap={TAP}
                     transition={TAP_T}
-                    onClick={(e) => { e.stopPropagation(); navigate("/leads"); }}
+                    onClick={(e) => { e.stopPropagation(); navigate(`/leads?rfq=${lead.id}`); }}
                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
                   >
                     {lead.quoted ? "View quote" : "Send a quote"}

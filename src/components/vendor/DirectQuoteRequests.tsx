@@ -7,6 +7,7 @@ import { Check, Loader2, Send, UserRound } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDirectQuoteRequests, submitQuote, echoQuoteReplyToChat } from "@/lib/queries/rfqs";
 import RfqThumb from "@/components/RfqThumb";
+import { useFocusLead } from "@/lib/useFocusLead";
 
 // ─────────────────────────────────────────────────────────────
 // Direct Quote Requests: RFQs a buyer addressed to THIS vendor from a product
@@ -20,7 +21,7 @@ import RfqThumb from "@/components/RfqThumb";
 
 const BLUE = brand("vendor");
 
-export default function DirectQuoteRequests() {
+export default function DirectQuoteRequests({ focusRfqId = null }: { focusRfqId?: string | null }) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const { data: requests = [], isLoading } = useDirectQuoteRequests(user?.id);
@@ -34,6 +35,7 @@ export default function DirectQuoteRequests() {
     setOpenId(id);
   };
   const [busy, setBusy] = useState(false);
+  useFocusLead(focusRfqId, requests, openQuote);
 
   if (!user || isLoading || requests.length === 0) return null;
 
@@ -51,6 +53,9 @@ export default function DirectQuoteRequests() {
       await echoQuoteReplyToChat(user.id, rfqId, { pricePerUnit: price, moq, leadTime });
 
       qc.invalidateQueries({ queryKey: ["rfqs"] });
+      // Seller Home's counts and the seller's quote list read these (SH-015).
+      qc.invalidateQueries({ queryKey: ["vendor_dashboard"] });
+      qc.invalidateQueries({ queryKey: ["quotes", "mine"] });
       toast.success("Quote sent", { description: "The buyer sees it in My Quotes and in your chat." });
       setOpenId(null);
       setForm({ price: "", moq: "", leadTime: "", comment: "" });
@@ -75,7 +80,7 @@ export default function DirectQuoteRequests() {
 
       <div className="flex flex-col gap-3 min-[1700px]:grid min-[1700px]:grid-cols-2 min-[1700px]:items-start">
         {requests.map((r) => (
-          <div key={r.id} className="rounded-xl border border-brand-vendor/40 bg-brand-vendor/[0.03] p-3 lg:p-3.5">
+          <div key={r.id} id={`lead-${r.id}`} className="scroll-mt-20 rounded-xl border border-brand-vendor/40 bg-brand-vendor/[0.03] p-3 lg:p-3.5">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="truncate text-sm font-bold text-gray-900 lg:text-[15px]">{r.productName}</p>

@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Inbox, Package, Megaphone, ArrowRight, Globe2 } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -25,6 +25,9 @@ const section = { hidden: { opacity: 0, y: 18 }, show: { opacity: 1, y: 0, trans
 const Leads = () => {
   const reduced = useReducedMotion();
   const { user, loading } = useAuth();
+  // /leads?rfq=<id>: Seller Home's lead taps open that lead here (SH-019).
+  const [params] = useSearchParams();
+  const focusRfqId = params.get("rfq");
   const { data: rfqs = [], isLoading } = useOpenRfqs(user?.id);
   const { data: direct = [] } = useDirectQuoteRequests(user?.id);
   // Direct requests count as leads: without this the page would claim there is
@@ -84,8 +87,8 @@ const Leads = () => {
                   </Link>
                 </div>
               )}
-              <DirectQuoteRequests />
-              <OpenRfqLeads />
+              <DirectQuoteRequests focusRfqId={focusRfqId} />
+              <OpenRfqLeads focusRfqId={focusRfqId} />
 
               {!isLoading && !hasLeads && (
                 <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
