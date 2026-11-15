@@ -13,6 +13,7 @@ $$ select case when x is null then '-' else rtrim(rtrim(round(x::numeric, 3)::te
 create or replace function pg_temp.clean(v uuid) returns void language plpgsql as $$
 begin
   delete from public.product_view_daily d using public.products p where p.id = d.product_id and p.vendor_id = v;
+  delete from admin.seller_viewer_daily where vendor_id = v;
   delete from public.follows where vendor_id = v;
   delete from public.messages m using public.conversations c where c.id = m.conversation_id and v in (c.user_a, c.user_b);
   delete from public.quotes where vendor_id = v;
@@ -49,7 +50,11 @@ declare
     'the requirement match, lead alerts and brand suggestions read Standing, not profile score',
     'a buyer''s quotes in Standing order, for their own requirement only',
     'browser-only viewers add no interest, however many',
-    'the two seller lists run as definer and visitors can still call them'];
+    'the two seller lists run as definer and visitors can still call them',
+    'a signed-in view reaches the seller''s 90-day viewer ledger; the seller''s own view doesn''t',
+    'interest reaches back 90 days: a viewer from 60 days ago counts, one from 100 days ago doesn''t',
+    'the hourly refresh drops viewer ledger rows older than 90 days',
+    'deleting a buyer''s account deletes their rows in the viewer ledger'];
   wants text[] := array[
     '0|neutral|0|0|0',
     '0.392',
@@ -68,7 +73,11 @@ declare
     '3 of 3',
     'q2,q1|42501',
     '0',
-    't|t|t'];
+    't|t|t',
+    'kept|0',
+    '0.131',
+    'pruned',
+    '0'];
   got text; i int; acc text; b text;
   out text := '';
   r1 uuid := gen_random_uuid(); r2 uuid := gen_random_uuid(); r3 uuid := gen_random_uuid();
@@ -93,19 +102,21 @@ begin
           got := pg_temp.n(s.i) || '|' || case when abs(s.r - (m - 1) / 4) < 0.001 then 'neutral' else pg_temp.n(s.r) end
               || '|' || pg_temp.n(s.a) || '|' || pg_temp.n(s.t) || '|' || pg_temp.n(s.p);
         elsif i = 2 then
-          insert into public.product_view_daily (product_id, viewer_key, day) values
-            (p1, 'u:00000000-0000-0000-0000-0000000000a1', current_date), (p1, 'u:00000000-0000-0000-0000-0000000000a2', current_date),
-            (p1, 'u:00000000-0000-0000-0000-0000000000a3', current_date),
-            (p1, 'u:00000000-0000-0000-0000-0000000000a4', current_date), (p1, 'u:00000000-0000-0000-0000-0000000000a4', current_date - 1),
-            (p1, 'u:' || vendor, current_date), (p1, 'b:someone-signed-out', current_date);
+          -- Signed-in viewers over 90 days come from the seller's viewer ledger; a4 came back a month later.
+          insert into admin.seller_viewer_daily (vendor_id, viewer_id, day) values
+            (vendor, '00000000-0000-0000-0000-0000000000a1', current_date), (vendor, '00000000-0000-0000-0000-0000000000a2', current_date),
+            (vendor, '00000000-0000-0000-0000-0000000000a3', current_date),
+            (vendor, '00000000-0000-0000-0000-0000000000a4', current_date), (vendor, '00000000-0000-0000-0000-0000000000a4', current_date - 30);
+          -- A signed-out view is never counted.
+          insert into public.product_view_daily (product_id, viewer_key, day) values (p1, 'b:someone-signed-out', current_date);
           insert into public.follows (follower_id, vendor_id, created_at) values (buyer, vendor, now());
           insert into public.conversations (id, user_a, user_b, created_at) values (conv, least(admn, vendor), greatest(admn, vendor), now());
           insert into public.messages (conversation_id, sender_id, body, created_at) values (conv, admn, 'hi', now());
           -- 3 one-day viewers + 1 two-day viewer + 1 follower + 1 messenger = 6 people, 1 repeat: log2(8)/log2(201).
           select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
         elsif i = 3 then
-          insert into public.product_view_daily (product_id, viewer_key, day)
-            select p1, 'u:' || gen_random_uuid(), current_date from generate_series(1, 250) g;
+          insert into admin.seller_viewer_daily (vendor_id, viewer_id, day)
+            select vendor, gen_random_uuid(), current_date from generate_series(1, 250) g;
           select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
         elsif i = 4 then
           insert into public.reviews (vendor_id, buyer_id, rating, body) values (vendor, buyer, 5, 'a'), (vendor, admn, 5, 'b');
@@ -239,6 +250,34 @@ begin
             from pg_proc p join pg_namespace n on n.oid = p.pronamespace
            where n.nspname = 'public' and p.proname in ('top_vendors', 'new_brand_suggestions');
           got := acc || '|' || left(has_function_privilege('anon', 'public.top_vendors(integer)', 'execute')::text, 1);
+        elsif i = 19 then
+          set local session_replication_role = origin;
+          perform set_config('request.jwt.claims', json_build_object('sub', buyer, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          perform public.increment_product_view(p1);
+          execute 'reset role';
+          perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+          execute 'set local role authenticated';
+          perform public.increment_product_view(p1);
+          execute 'reset role';
+          got := case when exists (select 1 from admin.seller_viewer_daily w where w.vendor_id = vendor and w.viewer_id = buyer)
+                      then 'kept' else 'missing' end
+              || '|' || (select count(*) from admin.seller_viewer_daily w where w.vendor_id = vendor and w.viewer_id = vendor);
+        elsif i = 20 then
+          insert into admin.seller_viewer_daily (vendor_id, viewer_id, day) values
+            (vendor, '00000000-0000-0000-0000-0000000000b1', current_date - 60),
+            (vendor, '00000000-0000-0000-0000-0000000000b2', current_date - 100);
+          select pg_temp.n(x.i) into got from admin.vendor_standing_parts(vendor) x;
+        elsif i = 21 then
+          insert into admin.seller_viewer_daily (vendor_id, viewer_id, day) values
+            (vendor, '00000000-0000-0000-0000-0000000000c1', current_date - 120);
+          perform admin.refresh_vendor_standing();
+          got := case when exists (select 1 from admin.seller_viewer_daily w where w.vendor_id = vendor and w.day < current_date - 91)
+                      then 'kept' else 'pruned' end;
+        elsif i = 22 then
+          insert into admin.seller_viewer_daily (vendor_id, viewer_id, day) values (vendor, buyer, current_date);
+          perform public.anonymize_account(buyer);
+          got := (select count(*) from admin.seller_viewer_daily w where w.viewer_id = buyer)::text;
         end if;
       exception when others then
         got := sqlstate || ' ' || sqlerrm;
