@@ -65,6 +65,7 @@ begin
   )
   select jsonb_build_object(
     'counts', jsonb_build_object(
+      'total',           (select count(*) from own_products),
       'live',            (select count(*) from own_products where status = 'live'),
       'under_review',    (select count(*) from own_products where status = 'under_review'),
       'open_leads',      (select count(*) from open_leads),

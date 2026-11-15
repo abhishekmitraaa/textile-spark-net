@@ -133,7 +133,9 @@ const BusinessProfileScorePage = () => {
 
   // Rating label + colours track the score so the header never contradicts it.
   const rating =
-    score < 40
+    score == null
+      ? { label: "–", text: "text-muted-foreground", bar: "bg-muted" }
+      : score < 40
       ? { label: "Poor", text: "text-red-500", bar: "bg-red-500" }
       : score < 70
       ? { label: "Average", text: "text-amber-500", bar: "bg-amber-500" }
@@ -185,7 +187,7 @@ const BusinessProfileScorePage = () => {
             ) : (
               <>
                 <span className={`text-sm font-semibold ${rating.text} lg:text-base`}>{rating.label}</span>
-                <span className="text-sm font-bold text-foreground lg:text-5xl lg:leading-none lg:tracking-tight">{score}%</span>
+                <span className="text-sm font-bold text-foreground lg:text-5xl lg:leading-none lg:tracking-tight">{score == null ? "–" : `${score}%`}</span>
               </>
             )}
           </div>
@@ -198,7 +200,7 @@ const BusinessProfileScorePage = () => {
               <motion.div
                 className={`h-full rounded-full ${rating.bar}`}
                 initial={{ width: 0 }}
-                animate={{ width: `${score}%` }}
+                animate={{ width: `${score ?? 0}%` }}
                 transition={{ duration: 0.8, delay: 0.1 }}
               />
             </div>

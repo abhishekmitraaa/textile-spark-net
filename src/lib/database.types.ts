@@ -6111,6 +6111,8 @@ export type Database = {
         Returns: string
       }
       my_seller_registration: { Args: never; Returns: Json }
+      my_block_peers: { Args: never; Returns: string[] }
+      seller_home_summary: { Args: never; Returns: Json }
       product_review_stats: {
         Args: { p_product_ids: string[] }
         Returns: { product_id: string; reviews_count: number; rating_avg: number }[]

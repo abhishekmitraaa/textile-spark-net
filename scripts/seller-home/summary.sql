@@ -106,22 +106,24 @@ begin
     -- summary_counts_match (asked directly as the seller)
     perform set_config('request.jwt.claims', json_build_object('sub', s.id, 'role', 'authenticated')::text, true);
     execute 'set local role authenticated';
+    select count(*) into n from public.products where vendor_id = s.id;
+    if n is distinct from (j #>> '{counts,total}')::bigint then raise exception 'summary_counts_match: total % vs %', j #>> '{counts,total}', n; end if;
     select count(*) into n from public.products where vendor_id = s.id and status = 'live';
-    if n <> (j #>> '{counts,live}')::bigint then raise exception 'summary_counts_match: live % vs %', j #>> '{counts,live}', n; end if;
+    if n is distinct from (j #>> '{counts,live}')::bigint then raise exception 'summary_counts_match: live % vs %', j #>> '{counts,live}', n; end if;
     select count(*) into n from public.products where vendor_id = s.id and status = 'under_review';
-    if n <> (j #>> '{counts,under_review}')::bigint then raise exception 'summary_counts_match: under_review'; end if;
+    if n is distinct from (j #>> '{counts,under_review}')::bigint then raise exception 'summary_counts_match: under_review'; end if;
     select count(*) into n from public.quotes where vendor_id = s.id;
-    if n <> (j #>> '{counts,quotes_sent}')::bigint then raise exception 'summary_counts_match: quotes_sent'; end if;
+    if n is distinct from (j #>> '{counts,quotes_sent}')::bigint then raise exception 'summary_counts_match: quotes_sent'; end if;
     select count(*) into n from public.quotes where vendor_id = s.id and status = 'accepted';
-    if n <> (j #>> '{counts,quotes_accepted}')::bigint then raise exception 'summary_counts_match: quotes_accepted'; end if;
+    if n is distinct from (j #>> '{counts,quotes_accepted}')::bigint then raise exception 'summary_counts_match: quotes_accepted'; end if;
     select coalesce(sum(enquiries_count), 0) into n from public.products where vendor_id = s.id;
-    if n <> (j #>> '{counts,enquiries}')::bigint then raise exception 'summary_counts_match: enquiries'; end if;
+    if n is distinct from (j #>> '{counts,enquiries}')::bigint then raise exception 'summary_counts_match: enquiries'; end if;
     select count(*) into n from public.rfqs where status = 'active' and vendor_id = s.id;
-    if n <> (j #>> '{counts,direct_requests}')::bigint then raise exception 'summary_counts_match: direct_requests'; end if;
+    if n is distinct from (j #>> '{counts,direct_requests}')::bigint then raise exception 'summary_counts_match: direct_requests'; end if;
     -- summary_overseas_counts
     select count(*) into n from public.rfqs
      where status = 'active' and vendor_id is null and expires_at > now() and buyer_id <> s.id;
-    if n <> (j #>> '{counts,open_leads}')::bigint then
+    if n is distinct from (j #>> '{counts,open_leads}')::bigint then
       raise exception 'summary_overseas_counts: % open_leads % vs readable %', s.label, j #>> '{counts,open_leads}', n;
     end if;
     execute 'set local role postgres';

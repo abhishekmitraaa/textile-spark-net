@@ -13,10 +13,7 @@ import { SellerQuickActionsGrid } from "@/components/dashboard/SellerQuickAction
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { useVendorDashboard } from "@/lib/queries/vendorDashboard";
-import { useMyProducts } from "@/lib/queries/products";
-import { useOpenRfqs } from "@/lib/queries/rfqs";
-import SignInForLeads from "@/components/vendor/SignInForLeads";
-import { useConversations } from "@/lib/queries/chat";
+import { SellerHomeState } from "@/components/dashboard/SellerHomeState";
 import { NOTIFICATION_DELIVERY_LIVE } from "@/lib/notificationDelivery";
 
 // Strong ease-out: starts fast, gives instant perceived feedback
@@ -48,25 +45,28 @@ const TAP_T = { duration: 0.13, ease: E };
 const SellerHome = () => {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const { data: dash } = useVendorDashboard(user?.id);
-  const { data: myProducts = [] } = useMyProducts(user?.id);
-  const { data: openRfqs = [] } = useOpenRfqs(user?.id);
-  const { data: conversations = [] } = useConversations();
+  // One call (seller_home_summary) for the counts, the score and the three lists (SH-006).
+  const dashQuery = useVendorDashboard(user?.id);
+  const dash = dashQuery.data ?? undefined;
+  const home = dash?.home;
+  const listsLoading = Boolean(user) && dashQuery.isPending;
   const [currentSlide, setCurrentSlide] = useState(0);
   const reduced = useReducedMotion();
 
-  // Real dashboard lists (were hardcoded fixtures).
-  const topProducts = [...myProducts]
-    .filter((p) => p.status === "active")
-    .sort((a, b) => b.inquiries - a.inquiries)
-    .slice(0, 3);
-  const recentLeads = openRfqs.slice(0, 3);
-  const recentMessages = conversations.slice(0, 3);
+  const topProducts = home?.topProducts ?? [];
+  const recentLeads = home?.recentLeads ?? [];
+  const recentMessages = home?.recentChats ?? [];
+  const when = (iso: string) => {
+    const d = new Date(iso);
+    return d.toDateString() === new Date().toDateString()
+      ? d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" })
+      : d.toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  };
   const initialsOf = (name: string) => name.split(/\s+/).map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 
   const analysisStats = [
     { label: "Live Products", value: String(dash?.productsLive ?? 0),  change: `${dash?.productsUnderReview ?? 0} under review`, up: true,  Icon: Package },
-    { label: "Open Leads",    value: String(dash?.openLeads ?? 0),     change: "Active buyer RFQs",                             up: true,  Icon: Eye },
+    { label: "Open Leads",    value: String((dash?.openLeads ?? 0) + (dash?.directRequests ?? 0)),     change: "Active buyer RFQs",                             up: true,  Icon: Eye },
     { label: "Inquiries",     value: String(dash?.enquiries ?? 0),     change: "From interested buyers",                        up: true,  Icon: TrendingUp },
     { label: "Your Quotes",   value: String(dash?.quotesSent ?? 0),    change: `${dash?.quotesAccepted ?? 0} accepted`,         up: true,  Icon: FileText },
   ];
@@ -75,6 +75,23 @@ const SellerHome = () => {
     const t = setInterval(() => setCurrentSlide((s) => (s === 0 ? 1 : 0)), 3500);
     return () => clearInterval(t);
   }, []);
+
+  const blocked = loading
+    ? "loading"
+    : !user
+      ? "signed-out"
+      : dashQuery.isError
+        ? "error"
+        : dashQuery.isSuccess && dashQuery.data === null
+          ? "not-a-seller"
+          : null;
+  if (blocked) {
+    return (
+      <DashboardLayout>
+        <SellerHomeState state={blocked} onRetry={() => void dashQuery.refetch()} />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -271,20 +288,24 @@ const SellerHome = () => {
                   key={p.id}
                   variants={listItem}
                   onClick={() => navigate(`/upload?id=${p.id}`)}
+                  data-product-id={p.id}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                 >
-                  <img src={p.image} alt={p.name} className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                  {p.image
+                    ? <img src={p.image} alt={p.name} className="w-11 h-11 rounded-lg object-cover shrink-0" />
+                    : <div className="w-11 h-11 rounded-lg bg-muted shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{p.name}</p>
                     <p className="text-xs text-gray-500">{p.inquiries} inquiries</p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="text-sm font-bold text-gray-900">₹{p.price}</p>
+                    <p className="text-sm font-bold text-gray-900">₹{p.priceValue != null ? Math.round(p.priceValue) : 0}</p>
                     <p className="text-xs text-gray-400">{p.views.toLocaleString("en-IN")} views</p>
                   </div>
                 </motion.div>
               ))}
-              {topProducts.length === 0 && (
+              {listsLoading && <div className="h-14 animate-pulse rounded-lg bg-muted" />}
+              {!listsLoading && topProducts.length === 0 && (
                 <p className="py-6 text-center text-sm text-gray-400">
                   No live products yet. <Link to="/upload" className="font-semibold text-accent">Add a product</Link> to start getting inquiries.
                 </p>
@@ -359,6 +380,7 @@ const SellerHome = () => {
                   key={lead.id}
                   variants={listItem}
                   onClick={() => navigate("/leads")}
+                  data-lead-id={lead.id}
                   className="border border-gray-100 rounded-xl p-3 cursor-pointer hover:border-accent/40 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -373,8 +395,8 @@ const SellerHome = () => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-semibold text-gray-900 truncate">{lead.productName}</p>
-                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${lead.alreadyQuoted ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
-                            {lead.alreadyQuoted ? "Quoted" : "New"}
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${lead.quoted ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                            {lead.quoted ? "Quoted" : lead.direct ? "For you" : "New"}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 truncate">{lead.title}</p>
@@ -383,9 +405,9 @@ const SellerHome = () => {
                     <ArrowRight className="w-4 h-4 text-gray-300 shrink-0 mt-1" />
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-gray-600 mb-3">
-                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {lead.units.toLocaleString("en-IN")} pcs</span>
-                    {lead.priceMax > 0 && <span className="bg-gray-100 px-2 py-0.5 rounded-full">₹{lead.priceMin}–{lead.priceMax}</span>}
-                    <span className="text-gray-400">🕐 {lead.date}</span>
+                    <span className="bg-gray-100 px-2 py-0.5 rounded-full">📦 {(lead.quantity ?? 0).toLocaleString("en-IN")} pcs</span>
+                    {(lead.budgetMax ?? 0) > 0 && <span className="bg-gray-100 px-2 py-0.5 rounded-full">₹{lead.budgetMin ?? 0}–{lead.budgetMax}</span>}
+                    <span className="text-gray-400">🕐 {new Date(lead.createdAt).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })}</span>
                   </div>
                   <motion.button
                     whileTap={TAP}
@@ -393,15 +415,13 @@ const SellerHome = () => {
                     onClick={(e) => { e.stopPropagation(); navigate("/leads"); }}
                     className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent/90 transition-colors"
                   >
-                    {lead.alreadyQuoted ? "View quote" : "Send a quote"}
+                    {lead.quoted ? "View quote" : "Send a quote"}
                   </motion.button>
                 </motion.div>
               ))}
-              {recentLeads.length === 0 && (
-                // Signed out, there's nothing to read (RFQ/leads R1): ask, don't claim "none".
-                !loading && !user
-                  ? <SignInForLeads compact />
-                  : <p className="py-6 text-center text-sm text-gray-400">No open buyer requirements right now. Check back soon.</p>
+              {listsLoading && <div className="h-24 animate-pulse rounded-xl bg-muted" />}
+              {!listsLoading && recentLeads.length === 0 && (
+                <p className="py-6 text-center text-sm text-gray-400">No open buyer requirements right now. Check back soon.</p>
               )}
             </motion.div>
           </div>
@@ -438,9 +458,10 @@ const SellerHome = () => {
             <motion.div variants={listContainer} initial="hidden" animate="show" className="space-y-0">
               {recentMessages.map((msg) => (
                 <motion.div
-                  key={msg.id}
+                  key={msg.otherId}
                   variants={listItem}
-                  onClick={() => navigate(`/chats/${msg.id}`)}
+                  onClick={() => navigate(`/chats/${msg.otherId}`)}
+                  data-chat-id={msg.otherId}
                   className="flex items-center gap-3 py-3 border-b border-gray-100 last:border-0 cursor-pointer hover:bg-gray-50 rounded-lg px-2 -mx-2 transition-colors"
                 >
                   <div className="relative shrink-0">
@@ -455,11 +476,12 @@ const SellerHome = () => {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{msg.name}</p>
                     <p className="text-xs text-gray-500 truncate">{msg.lastMessage}</p>
-                    {msg.timestamp && <p className="text-xs text-gray-400 mt-0.5">{msg.timestamp}</p>}
+                    <p className="text-xs text-gray-400 mt-0.5">{when(msg.lastMessageAt)}</p>
                   </div>
                 </motion.div>
               ))}
-              {recentMessages.length === 0 && (
+              {listsLoading && <div className="h-14 animate-pulse rounded-lg bg-muted" />}
+              {!listsLoading && recentMessages.length === 0 && (
                 <p className="py-6 text-center text-sm text-gray-400">No messages yet. Buyer conversations will show up here.</p>
               )}
             </motion.div>

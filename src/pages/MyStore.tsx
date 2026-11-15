@@ -251,7 +251,7 @@ const MyStore = () => {
   };
 
   const brandName = store?.brandName?.trim() ?? "";
-  const scoreTone = score < 40 ? "text-red-500" : score < 70 ? "text-amber-500" : "text-green-600";
+  const scoreTone = score == null ? "text-muted-foreground" : score < 40 ? "text-red-500" : score < 70 ? "text-amber-500" : "text-green-600";
 
   return (
     <DashboardLayout>
@@ -373,13 +373,13 @@ const MyStore = () => {
                     <span className="text-sm font-semibold text-gray-900">{t("Profile Completion")}</span>
                     {scoreLoading
                       ? <span className="h-4 w-9 animate-pulse rounded bg-gray-200" />
-                      : <span className={cn("text-sm font-bold", scoreTone)}>{score}%</span>}
+                      : <span className={cn("text-sm font-bold", scoreTone)}>{score == null ? "–" : `${score}%`}</span>}
                   </div>
                   <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-100">
                     <motion.div
                       className="h-full rounded-full bg-brand-vendor"
                       initial={{ width: 0 }}
-                      animate={{ width: `${score}%` }}
+                      animate={{ width: `${score ?? 0}%` }}
                       transition={reduced ? { duration: 0 } : { duration: 0.8, delay: 0.1 }}
                     />
                   </div>

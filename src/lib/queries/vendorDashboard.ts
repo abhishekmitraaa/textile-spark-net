@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
-import { errorMessage } from "@/lib/errorMessage";
-import { fetchMyVendorPrivate } from "@/lib/queries/vendorStore";
+import { fetchSellerHome, type SellerHome } from "@/lib/queries/sellerHome";
 
 // ─────────────────────────────────────────────────────────────
 // Real vendor dashboard metrics, derived from the vendor's own rows (RLS lets
@@ -14,21 +12,21 @@ export interface VendorDashboard {
   productsTotal: number;
   productsLive: number;
   productsUnderReview: number;
-  videos: number;
-  openLeads: number;      // active buyer RFQs the vendor can quote on
+  openLeads: number;      // open-marketplace requirements the vendor can quote on
+  directRequests: number; // active requirements addressed to this vendor
   quotesSent: number;
   quotesAccepted: number;
-  enquiries: number;      // sum of enquiries across the vendor's products
-  followers: number;
+  enquiries: number;      // sum of enquiries across the vendor's products (lifetime)
   profileScore: number;
   /** Per-signal breakdown behind `profileScore`. */
   profileChecks: ProfileScoreChecks;
-  /** False when this account has no vendor_profiles row at all — the only
-   *  case a placeholder score may stand in for a real one. */
+  /** Always true: an account with no vendor_profiles row gets `null` instead of a dashboard. */
   hasVendorRow: boolean;
   /** The exact input the score was computed from, so a "what's missing" panel
    *  can call profileScoreSignals() on it instead of re-reading the profile. */
   scoreInput: ProfileScoreInput;
+  /** Everything Seller Home shows, from the same single call. */
+  home: SellerHome;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -223,144 +221,58 @@ export function profileScoreInputFrom(
 }
 
 /**
- * Head-only `count(*)` against one table with some filters applied.
- *
- * `table` is a union of the real table names rather than `string`, and the
- * builder is generic in it. With a bare `string`, `supabase.from(table)` had to
- * describe EVERY table at once, so the filter columns intersected to `never`
- * and each `.eq("vendor_id", …)` was a type error — eleven of them, which was
- * roughly half the repo's entire typecheck baseline. Narrowing the parameter
- * makes the calls below check properly instead of being silenced.
+ * Seller Home and the profile score from one call: public.seller_home_summary() (fetchSellerHome).
+ * It replaced seven counts, a full read of the vendor's products and the profile row (2026-11-16).
+ * null when the account has no vendor_profiles row. A failed call throws, so it is never shown as zeros.
  */
-type CountableTable = "products" | "product_videos" | "rfqs" | "quotes";
-
-function buildBase<T extends CountableTable>(table: T) {
-  return supabase.from(table).select("*", { count: "exact", head: true });
-}
-
-async function count<T extends CountableTable>(
-  table: T,
-  apply: (q: ReturnType<typeof buildBase<T>>) => PromiseLike<{ count: number | null }>,
-): Promise<number> {
-  const { count: n } = await apply(buildBase(table));
-  return n ?? 0;
-}
-
-/**
- * The vendor's OWN row, shaped for the scorer: the public columns in `extra` and
- * PROFILE_SCORE_COLUMNS, plus phone and owner_email from my_vendor_private(),
- * which only ever returns the caller's own. Throws if either read fails, so a
- * failed read is never scored (and written back) as an empty profile.
- */
-async function fetchProfileScoreRow<Extra extends object = object>(
-  vendorId: string,
-  extra?: string,
-): Promise<(ProfileScoreRow & Extra) | null> {
-  const [row, priv] = await Promise.all([
-    supabase
-      .from("vendor_profiles")
-      .select(extra ? `${extra}, ${PROFILE_SCORE_COLUMNS}` : PROFILE_SCORE_COLUMNS)
-      .eq("id", vendorId)
-      .maybeSingle(),
-    fetchMyVendorPrivate(vendorId),
-  ]);
-  if (row.error) throw row.error;
-  if (!row.data) return null;
-  return {
-    ...(row.data as unknown as object),
-    phone: priv?.phone ?? null,
-    owner_email: priv?.owner_email ?? null,
-  } as ProfileScoreRow & Extra;
-}
-
-async function fetchVendorDashboard(vendorId: string): Promise<VendorDashboard> {
-  const [
-    productsTotal,
-    productsLive,
-    productsUnderReview,
-    videos,
-    openLeads,
-    quotesSent,
-    quotesAccepted,
-  ] = await Promise.all([
-    count("products", (q) => q.eq("vendor_id", vendorId)),
-    count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "live")),
-    count("products", (q) => q.eq("vendor_id", vendorId).eq("status", "under_review")),
-    count("product_videos", (q) => q.eq("vendor_id", vendorId)),
-    // What Leads lists (fetchOpenRfqs), 2026-10-21: rfqs_select also shows the seller their own requirements
-    // (as a buyer) and every expired one still marked active.
-    count("rfqs", (q) => q.eq("status", "active").is("vendor_id", null)
-      .gt("expires_at", new Date().toISOString()).neq("buyer_id", vendorId)),
-    count("quotes", (q) => q.eq("vendor_id", vendorId)),
-    count("quotes", (q) => q.eq("vendor_id", vendorId).eq("status", "accepted")),
-  ]);
-
-  // Enquiries sum + profile signals from the vendor's own rows.
-  const { data: prodRows } = await supabase.from("products").select("enquiries_count").eq("vendor_id", vendorId);
-  const enquiries = (prodRows ?? []).reduce((s, r) => s + (r.enquiries_count ?? 0), 0);
-
-  // A failed read scores as empty for display, and the write-back below is
-  // skipped, as before: it only runs when the row was read.
-  const vp = await fetchProfileScoreRow<{ followers_count: number; profile_score: number }>(
-    vendorId,
-    "followers_count, profile_score",
-  ).catch((e) => {
-    console.warn("[vendorDashboard] profile read failed:", errorMessage(e));
-    return null;
-  });
-
-  const scoreInput = profileScoreInputFrom(vp, {
-    productsTotal,
-    productsLive,
-    quotesSent,
+async function fetchVendorDashboard(): Promise<VendorDashboard | null> {
+  const home = await fetchSellerHome();
+  if (!home) return null;
+  const c = home.counts;
+  const scoreInput = profileScoreInputFrom(home.profile, {
+    productsTotal: c.total,
+    productsLive: c.live,
+    quotesSent: c.quotesSent,
   });
   const { score: profileScore, checks: profileChecks } = calculateProfileScore(scoreInput);
-
-  // The stored column is the database's own (vendor_profile_score_of(), migration 20261022100000, the same
-  // formula); it ranks sellers for buyers, so the browser no longer writes it.
-
-
+  // The stored column is the database's own (vendor_profile_score_of(), the same formula); it ranks sellers.
   return {
-    productsTotal,
-    productsLive,
-    productsUnderReview,
-    videos,
-    openLeads,
-    quotesSent,
-    quotesAccepted,
-    enquiries,
-    followers: vp?.followers_count ?? 0,
+    productsTotal: c.total,
+    productsLive: c.live,
+    productsUnderReview: c.underReview,
+    openLeads: c.openLeads,
+    directRequests: c.directRequests,
+    quotesSent: c.quotesSent,
+    quotesAccepted: c.quotesAccepted,
+    enquiries: c.enquiries,
     profileScore,
     profileChecks,
-    hasVendorRow: Boolean(vp),
+    hasVendorRow: true,
     scoreInput,
+    home,
   };
 }
 
 export function useVendorDashboard(vendorId: string | undefined) {
   return useQuery({
     queryKey: ["vendor_dashboard", vendorId],
-    queryFn: () => fetchVendorDashboard(vendorId as string),
+    queryFn: fetchVendorDashboard,
     enabled: Boolean(vendorId),
   });
 }
-
-// Placeholder for a session with NO vendor row — signed out, or a buyer-only
-// account previewing the seller side. It is a demo number and must never stand
-// in for a signed-in vendor's real score: a vendor whose profile scores 12
-// seeing 45 is being told their profile is half-built when it is not.
-export const DEFAULT_PROFILE_SCORE = 45;
 
 const EMPTY_CHECKS: ProfileScoreChecks = Object.fromEntries(
   Object.keys(PROFILE_SCORE_WEIGHTS).map((k) => [k, false])
 ) as ProfileScoreChecks;
 
 export interface ProfileScoreState {
-  score: number;
+  /** null while loading, on an error, signed out, or without a seller row: there is no real number to show. */
+  score: number | null;
   checks: ProfileScoreChecks;
-  /** True while this vendor's own rows are still in flight — show a skeleton,
-   *  not a number, because any number shown here would be made up. */
+  /** True while this vendor's own rows are still in flight — show a skeleton. */
   isLoading: boolean;
+  /** The read failed: show an error, never a low score. */
+  isError: boolean;
   /** False for a signed-out session or an account with no vendor_profiles row. */
   hasVendorRow: boolean;
 }
@@ -369,32 +281,20 @@ export interface ProfileScoreState {
  * Single source of truth for the "Business Profile Score" — the dashboard card,
  * the /my-store completion bar and the /business-profile-score checklist all
  * read this, so they can never disagree about the number or about which tasks
- * are still outstanding.
+ * are still outstanding. There is no placeholder number: the 45% shown signed out
+ * (DEFAULT_PROFILE_SCORE) was invented and is gone (SH-007).
  */
 export function useProfileScoreState(): ProfileScoreState {
   const { user } = useAuth();
-  const { data, isLoading } = useVendorDashboard(user?.id);
+  const { data, isLoading, isError } = useVendorDashboard(user?.id);
 
-  // Signed out: nothing to compute from, so the placeholder is the honest
-  // answer (there is no real score to get wrong).
-  if (!user) {
-    return { score: DEFAULT_PROFILE_SCORE, checks: EMPTY_CHECKS, isLoading: false, hasVendorRow: false };
+  if (!user || isError || !data) {
+    return { score: null, checks: EMPTY_CHECKS, isLoading: Boolean(user) && isLoading, isError: Boolean(user) && isError, hasVendorRow: false };
   }
-  // Signed in but still loading: 0 with isLoading set, so a caller renders a
-  // skeleton. Returning DEFAULT_PROFILE_SCORE here is what made a real vendor
-  // briefly see 45% on every page load.
-  if (!data) {
-    return { score: 0, checks: EMPTY_CHECKS, isLoading, hasVendorRow: false };
-  }
-  return {
-    score: data.profileScore,
-    checks: data.profileChecks,
-    isLoading: false,
-    hasVendorRow: data.hasVendorRow,
-  };
+  return { score: data.profileScore, checks: data.profileChecks, isLoading: false, isError: false, hasVendorRow: true };
 }
 
-/** Convenience wrapper for callers that only need the number. */
-export function useProfileScore(): number {
+/** Convenience wrapper for callers that only need the number (null when there is none). */
+export function useProfileScore(): number | null {
   return useProfileScoreState().score;
 }
