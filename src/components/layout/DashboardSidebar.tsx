@@ -183,13 +183,14 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       {/* Sidebar */}
       <aside
         className={cn(
-          // Above the phone's bottom bar (z-50), so Sign Out and the plan chip can be tapped (SH-029).
-          "fixed left-0 top-0 z-[60] flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
+          "fixed left-0 top-0 flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
+          // On a phone the open menu sits above the bottom bar (z-50), so Sign Out and the plan chip can be tapped (SH-029).
+          // On a laptop it stays at z-50, under dialogs and sheets, which portal in later and cover it.
           isMobile
             ? isOpen
-              ? "translate-x-0"
-              : "-translate-x-full"
-            : "translate-x-0"
+              ? "z-[60] translate-x-0"
+              : "z-[60] -translate-x-full"
+            : "z-50 translate-x-0"
         )}
       >
         {/* Logo */}

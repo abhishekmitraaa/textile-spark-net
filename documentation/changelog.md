@@ -7,13 +7,13 @@
   - Database: `my_block_peers()` and `rfqs_select` reading it once (same rows for 6 callers); `seller_home_summary()`
     (invoker, 24 ms cold / 5.5 ms warm); Free cap 10 and paused Free listings resumed; `chat_unread_counts()` skips
     archived chats; the `registration_received` notice; the live-update hub (switch `live_updates_hub`, off; policy
-    `hub_user_topic`; definer `admin.hub_send()` and statement triggers on notifications, messages, read lines, member
-    state and chat status).
+    `hub_user_topic`; statement triggers queue who changed (`admin.hub_send()`) on notifications, messages, read lines,
+    member state and chat status, and a deferred `admin.hub_flush()` sends them once at commit).
   - App: one summary query and four states on Seller Home; Next step and Getting started cards; alerts card by plan;
     vendor blue; `routeSide()`; welcome screen with next steps; banner on six publishing pages; Documents (KYC) in the
     menu; `/leads?rfq=`; counts refreshed after a quote or upload; calmer banner and Cosora-Admin's banners; header
     search to My Products; phone menu above the bottom bar; TierGate Retry; the hub provider.
-  - Tests: `tests/local/seller-home-fixes.spec.ts` 34/34; harnesses `scripts/seller-home/*.sql` all pass; i18n,
+  - Tests: `tests/local/seller-home-fixes.spec.ts` 36/36; harnesses `scripts/seller-home/*.sql` all pass; i18n,
     rls:check and the typecheck clean. `register()` moved to `tests/local/registrationForm.ts`.
   - Not changed: the Buyer/Seller switch (SH-023, Mitra). Free and Basic now both allow 10 listings (ToDo for Andy's FAQ).
 - 2026-11-15 (branch `ranking/standing-views`; migration `20261115120000_standing_viewer_history.sql`; **RELEASED 2026-11-15**: applied with the CLI behind a pin check (not in the ledger); production = the local rehearsal, all 4 functions; the ledger started with 25 rows for 7 sellers, views back to 2026-10-20) **Standing's buyer interest reaches back 90 days.** Mitra: "fix" (the gap found while writing ranking.md).

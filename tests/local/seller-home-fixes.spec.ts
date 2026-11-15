@@ -694,3 +694,46 @@ test("plan check error shows retry", async ({ browser }) => {
   await expect(page).toHaveURL(/\/crm$/);
   await ctx.close();
 });
+
+// ─────────────────────────── Final review fixes ───────────────────────────
+
+test("an unregistered seller keeps the seller menu after a buyer page", async ({ browser }) => {
+  // A seller-side account that never finished registering (Register's Seller tick): the switch's rule keeps it off
+  // the buyer side, so a buyer page it opens mustn't move it there either.
+  const who = await freshAccount("sh-unreg", { seller: true });
+  made.push(who.id);
+  sql(`update public.vendor_profiles set onboarding_complete = false where id = '${who.id}';`);
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.setViewportSize(LAPTOP);
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 20_000 });
+  await clientGo(page, "/categories");
+  await expect(page).toHaveURL(/\/categories$/);
+  await page.waitForLoadState("networkidle");
+  await clientGo(page, "/seller-home");
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("aside").getByText("Buyer Menu")).toHaveCount(0);
+  await ctx.close();
+});
+
+test("laptop dialogs cover the sidebar", async ({ browser }) => {
+  const who = await seller("sh-dialog");
+  const ctx = await contextWithSession(browser, who.session, LAPTOP);
+  const page = await ctx.newPage();
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto(`${BUYER_URL}/my-store`);
+  const logout = page.getByRole("button", { name: "Logout" });
+  await expect(logout).toBeVisible({ timeout: 20_000 });
+  // A dialog's overlay (80% black) must dim the sidebar like the rest of the page. (A hit test can't tell: an open
+  // dialog makes the page ignore the pointer.)
+  const navLink = (await page.locator('aside a[href="/products"]').first().boundingBox())!;
+  const spot = { x: Math.round(navLink.x + 4), y: Math.round(navLink.y + navLink.height / 2), width: 2, height: 2 };
+  const before = await page.screenshot({ clip: spot });
+  await logout.click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.waitForTimeout(400);
+  const after = await page.screenshot({ clip: spot });
+  expect(after.equals(before)).toBe(false);
+  await ctx.close();
+});

@@ -32,8 +32,15 @@ create policy hub_user_topic on realtime.messages
     and realtime.messages.topic = (select realtime.topic())
   );
 
--- 3. Sending. Definer: the write that fires it is usually someone else's (a buyer's message reaches the seller's
--- topic), and realtime.send runs with the caller's rights and swallows a refusal. Never fails the write.
+-- 3. Sending, at commit. During the transaction the triggers below only queue who changed (a transaction-local setting:
+-- no write, no subtransaction); one deferred trigger per source row runs hub_flush() at commit, and the first one sends
+-- every queued event in one insert, inside one guarded block. So a lead alert fan-out (notify() once per seller) costs
+-- one subtransaction however many sellers it reaches; sending as each row was written cost two per seller and
+-- overflowed Postgres's subxid cache past 32 (final review, 2026-11-16). A write rolled back never sends: its queued
+-- names roll back with it. (Queued names are written by the statement-level triggers, which run after row triggers:
+-- a transaction that sets constraints immediate would send a statement's names only at its next hub write. Nothing on
+-- Cosora sets constraints immediate.) Definer: the write that fires it is usually someone else's (a buyer's message reaches the
+-- seller's topic). Never fails the write.
 create or replace function admin.hub_send(p_profiles uuid[], p_event text)
 returns void
 language plpgsql
@@ -41,30 +48,51 @@ security definer
 set search_path = ''
 as $$
 declare
-  f record;
-  v uuid;
+  more text;
 begin
-  select ff.enabled, ff.allow_profile_ids into f from public.feature_flags ff where ff.key = 'live_updates_hub';
-  if not found then
+  select string_agg(distinct u::text || ':' || p_event, ',') into more from unnest(p_profiles) u where u is not null;
+  if more is null then
     return;
   end if;
-  for v in
-    select distinct u from unnest(p_profiles) u
-     where u is not null and (f.enabled or u = any (f.allow_profile_ids))
-  loop
-    perform realtime.send('{}'::jsonb, p_event, 'user:' || v::text, true);
-  end loop;
-  -- realtime.send sets realtime.topic for the rest of the transaction; leave it as it was found.
-  perform set_config('realtime.topic', '', true);
-exception when others then
-  raise warning 'hub_send: %', sqlerrm;
+  perform set_config('cosora.hub_pending', coalesce(nullif(current_setting('cosora.hub_pending', true), ''), '') || more || ',', true);
+end;
+$$;
+
+create or replace function admin.hub_flush()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  pending text := nullif(current_setting('cosora.hub_pending', true), '');
+begin
+  if pending is null then
+    return null;  -- sent already this transaction, or nothing queued
+  end if;
+  perform set_config('cosora.hub_pending', '', true);
+  begin
+    -- realtime.send's shape (payload carries the message id), one row per person and event, for accounts the switch
+    -- allows. Written directly: as the definer it needs no topic setting, and realtime.send would open a subtransaction
+    -- per row.
+    insert into realtime.messages (id, payload, event, topic, private, extension)
+    select q.id, jsonb_build_object('id', q.id), q.event, 'user:' || q.profile, true, 'broadcast'
+      from (select gen_random_uuid() as id, split_part(x, ':', 1) as profile, split_part(x, ':', 2) as event
+              from (select distinct x from unnest(string_to_array(pending, ',')) x where x <> '') d) q
+      join public.feature_flags ff on ff.key = 'live_updates_hub'
+     where ff.enabled or q.profile::uuid = any (ff.allow_profile_ids);
+  exception when others then
+    raise warning 'hub_flush: %', sqlerrm;
+  end;
+  return null;
 end;
 $$;
 
 revoke all on function admin.hub_send(uuid[], text) from public, anon, authenticated;
+revoke all on function admin.hub_flush() from public, anon, authenticated;
 
--- 4. What sends. Statement-level triggers with transition tables: one event per person per statement, however many
--- rows changed. (A transition table needs one trigger per operation.)
+-- 4. What queues. Statement-level triggers with transition tables: each person once per statement, however many rows
+-- changed. (A transition table needs one trigger per operation.) Then the deferred triggers that send at commit.
 create or replace function admin.hub_notifications_changed()
 returns trigger
 language plpgsql
@@ -161,6 +189,23 @@ drop trigger if exists trg_conversations_hub_status on public.conversations;
 create trigger trg_conversations_hub_status after update on public.conversations
   referencing new table as new_rows old table as old_rows for each statement execute function admin.hub_conversations_status();
 
+-- Deferred senders: queued events go out at commit (or at SET CONSTRAINTS ALL IMMEDIATE).
+drop trigger if exists trg_notifications_hub_flush on public.notifications;
+create constraint trigger trg_notifications_hub_flush after insert or update or delete on public.notifications
+  deferrable initially deferred for each row execute function admin.hub_flush();
+drop trigger if exists trg_messages_hub_flush on public.messages;
+create constraint trigger trg_messages_hub_flush after insert on public.messages
+  deferrable initially deferred for each row execute function admin.hub_flush();
+drop trigger if exists trg_conversation_reads_hub_flush on public.conversation_reads;
+create constraint trigger trg_conversation_reads_hub_flush after insert or update on public.conversation_reads
+  deferrable initially deferred for each row execute function admin.hub_flush();
+drop trigger if exists trg_conversation_member_state_hub_flush on public.conversation_member_state;
+create constraint trigger trg_conversation_member_state_hub_flush after insert or update on public.conversation_member_state
+  deferrable initially deferred for each row execute function admin.hub_flush();
+drop trigger if exists trg_conversations_hub_flush on public.conversations;
+create constraint trigger trg_conversations_hub_flush after update on public.conversations
+  deferrable initially deferred for each row execute function admin.hub_flush();
+
 -- 5. Self-check.
 do $$
 begin
@@ -170,6 +215,10 @@ begin
   if not exists (select 1 from pg_policy where polrelid = 'realtime.messages'::regclass and polname = 'hub_user_topic'
                    and polcmd = 'r') then
     raise exception 'hub_user_topic must be a select policy';
+  end if;
+  if (select count(*) from information_schema.columns where table_schema = 'realtime' and table_name = 'messages'
+        and column_name in ('id', 'payload', 'event', 'topic', 'private', 'extension')) <> 6 then
+    raise exception 'realtime.messages no longer has the columns admin.hub_flush() writes';
   end if;
   if exists (select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
               where n.nspname = 'admin' and p.proname like 'hub\_%' and not p.prosecdef) then

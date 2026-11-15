@@ -3,6 +3,8 @@
 --   free_paused_resumed     admin.resume_free_plan_listings() resumes a Free seller's paused listings up to 10
 --   unread_skips_archived   chat_unread_counts() leaves out a chat the caller archived
 --   registration_notice     a new registration writes the right notice for its status
+--   free_resume_skips_held  a Free seller whose registration waits (or was sent back) doesn't stop the resume, and
+--                           its paused listings stay paused (nothing may go live while it's held)
 -- Runs in one transaction and rolls back.
 --
 --   docker exec -i supabase_db_localstack psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f - < scripts/seller-home/plan_and_small_fixes.sql
@@ -16,6 +18,7 @@ declare
   conv uuid;
   me uuid;
   other uuid;
+  held uuid;
 begin
   -- free_cap_is_10
   if (select limits ->> 'product_cap' from public.subscription_plans where id = 'free') is distinct from '10'
@@ -63,6 +66,28 @@ begin
   if not exists (select 1 from public.notifications where profile_id = v and kind = 'registration_received'
                   and title = 'Waiting for Cosora''s approval') then
     raise exception 'registration_notice: no "Waiting for Cosora''s approval" notice';
+  end if;
+
+  -- free_resume_skips_held: a Free seller registered only as far as a pending registration, with a listing the old
+  -- cap paused from live. Going live would be refused (trg_hold_until_registered), which aborted the whole resume.
+  select vp.id into held from public.vendor_profiles vp
+   where vp.id <> v and vp.onboarding_complete
+     and not exists (select 1 from public.vendor_subscriptions s where s.vendor_id = vp.id)
+     and not exists (select 1 from public.products p where p.vendor_id = vp.id)
+     and not exists (select 1 from admin.registration_exempt e where e.vendor_id = vp.id)
+   order by vp.id limit 1;
+  update public.vendor_profiles set onboarding_complete = false where id = held;
+  insert into public.vendor_registrations (id, vendor_id, status, country_code) values (gen_random_uuid(), held, 'pending_review', 'AE');
+  if not public.registration_held(held) then raise exception 'free_resume_skips_held: setup, the seller should be held'; end if;
+  insert into public.products (vendor_id, name, price_value, status, paused_at, paused_from)
+  values (held, 'Held paused listing', 100, 'paused', now(), 'live');
+  begin
+    perform admin.resume_free_plan_listings();
+  exception when others then
+    raise exception 'free_resume_skips_held: the resume failed (%): one held seller stops the release', sqlerrm;
+  end;
+  if exists (select 1 from public.products where vendor_id = held and status = 'live') then
+    raise exception 'free_resume_skips_held: a held seller''s listing went live';
   end if;
 
   raise notice 'plan and small fixes ok';

@@ -1294,9 +1294,11 @@ undocumented. Deep technical rationale for each lives in
   `src/lib/realtimeHub.tsx`). Statement-level triggers send `notifications` or `chat` with no content, once per person
   per statement ("Read all" is one event), and listeners re-read (`useHubEvent()`, 300 ms debounce). A new live badge
   listens with `useHubEvent()`, never a postgres_changes channel of its own; a new table whose changes a badge shows
-  gets a trigger calling `admin.hub_send()`. Senders are SECURITY DEFINER: `realtime.send` runs with the caller's rights
-  and swallows a refusal, so a buyer's message would never reach the seller's topic. `hub_user_topic` lets an account
-  read only its own topic. Off (or while the channel is down) the bell and chat badge keep their old subscriptions.
+  gets a statement trigger calling `admin.hub_send()` (which only queues, in a transaction-local setting) and a deferred
+  constraint trigger running `admin.hub_flush()` (which sends everything queued, once, at commit). Never send per row or
+  through `realtime.send` in a hot path: each is a subtransaction, and a lead alert fan-out (`notify()` per seller)
+  overflowed Postgres's subxid cache past 32 sellers. Both are SECURITY DEFINER (the write is usually someone else's:
+  a buyer's message reaches the seller's topic). `hub_user_topic` lets an account read only its own topic. Off (or while the channel is down) the bell and chat badge keep their old subscriptions.
 - **The address decides the shell** (2026-11-16, SH-004). `routeSide()` (`src/lib/sellerRoutes.ts`) names a path seller,
   buyer or shared. `DashboardLayout` puts a registered seller on the seller side on a seller page, `BuyerShell` puts
   anyone on the buyer side on a buyer page, and shared pages (Help, feedback, fraud reports, Cosora Studio,

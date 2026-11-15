@@ -14,6 +14,9 @@ update public.subscription_plans
  where id = 'free';
 
 -- Resumes paused listings for every seller whose plan in force is Free. Returns how many sellers it touched.
+-- A seller whose registration waits for approval or was sent back is skipped: nothing of theirs may go live
+-- (trg_hold_until_registered), and that refusal used to abort the whole resume, and the migration with it (final
+-- review, 2026-11-16). Their listings stay paused, as before.
 create or replace function admin.resume_free_plan_listings()
 returns integer
 language plpgsql
@@ -29,6 +32,7 @@ begin
       from public.products p
      where p.status = 'paused'
        and (select e.plan_id from admin.vendor_effective_plan(p.vendor_id, now()) e) = 'free'
+       and not public.registration_held(p.vendor_id)
   loop
     perform admin.apply_product_cap(v, false);
     touched := touched + 1;

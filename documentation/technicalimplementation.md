@@ -4570,7 +4570,9 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
     Gold and VIP. 24 ms cold, 5.5 ms warm on the local copy.
   - `20261116100200_free_plan_ten_listings.sql`: the Free plan's `limits.product_cap` and `display.products` are 10;
     `admin.resume_free_plan_listings()` runs `admin.apply_product_cap(v, false)` for every seller whose effective plan is
-    Free and has paused listings (47 locally).
+    Free and has paused listings (47 locally), except a seller whose registration is held (pending or sent back: nothing
+    of theirs may go live, and that refusal aborted the whole migration in the first version; harness
+    `free_resume_skips_held`).
   - `20261116100300_small_fixes.sql`: `chat_unread_counts()` leaves out chats the caller archived
     (`conversation_member_state.archived_at`); `trg_vendor_registrations_notice` (AFTER INSERT on
     `vendor_registrations`) writes `registration_received`: "Your registration is in" for registered, "Waiting for
@@ -4579,8 +4581,14 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
     `realtime.messages`, SELECT for authenticated, `extension = 'broadcast'` and `(select realtime.topic()) = 'user:' ||
     (select auth.uid())` and the row's own `topic = (select realtime.topic())` (the documented form lets an account read
     other topics' rows once its session topic is its own; the harness showed it). `admin.hub_send(uuid[], text)`
-    (definer; reads the switch once; `realtime.send('{}', event, 'user:'||id, true)` per allowed person; resets
-    `realtime.topic`; never raises). Statement-level AFTER triggers with transition tables (one per operation, which
+    (definer) only appends `<profile>:<event>` to the transaction-local setting `cosora.hub_pending`: no write, no
+    subtransaction. `admin.hub_flush()` (definer), run by deferred constraint triggers on the same five tables, empties
+    it at commit and writes every event in one `insert … select` into `realtime.messages` (realtime.send's shape:
+    payload `{id}`, `private`, `extension = 'broadcast'`), for accounts the switch allows, inside one guarded block (a
+    warning, never a failed write). One subtransaction per transaction however many sellers a fan-out reaches: the
+    first version (`realtime.send` per person inside `hub_send`'s own handler) cost two per seller and overflowed the
+    subxid cache (final review). A rolled-back write sends nothing. Nothing on Cosora sets constraints immediate (a
+    transaction that did would send a statement's events at its next hub write). Statement-level AFTER triggers with transition tables (one per operation, which
     transition tables require): notifications insert/update/delete → `notifications`; messages insert → `chat` to both
     people; conversation_reads and conversation_member_state insert/update → `chat` to that person; conversations
     update where `status` changed → `chat` to both. All `admin.hub_*` are definer and closed to browser roles (the
@@ -4605,6 +4613,6 @@ plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the ca
     an upload and a catalogue invalidate `["vendor_dashboard"]` (a quote also `["quotes","mine"]`).
   - Header search → `/products?q=` (Products reads `q`, focuses its box); sidebar `z-[60]`, overlay `z-[55]`; `TierGate`
     shows "We couldn't check your plan" with Retry on an error.
-- **Tests**: `tests/local/seller-home-fixes.spec.ts` (34; the hub tests read the app's own client through the dev
+- **Tests**: `tests/local/seller-home-fixes.spec.ts` (36; the hub tests read the app's own client through the dev
   server, `import("/src/lib/supabase.ts")`, and count websocket `phx_join` frames); `tests/local/registrationForm.ts`
   (the form walker, moved out of `registration-fixes.spec.ts`).

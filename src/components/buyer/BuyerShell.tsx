@@ -34,12 +34,14 @@ interface BuyerShellProps {
  */
 export default function BuyerShell({ children }: BuyerShellProps) {
   const { pathname } = useLocation();
-  const { role, setRole } = useUserRole();
+  const { role, setRole, vendorRegistered } = useUserRole();
 
   // The address decides the side (SH-004): a buyer page shows the buyer menu, also after Forward from a seller page.
+  // Only for a registered seller, as the switch itself (MPF-22): anyone else would be moved to the buyer side and never
+  // moved back, since DashboardLayout claims the seller side for registered sellers only.
   useEffect(() => {
-    if (routeSide(pathname) === "buyer" && role === "seller") setRole("buyer");
-  }, [pathname, role, setRole]);
+    if (routeSide(pathname) === "buyer" && role === "seller" && vendorRegistered) setRole("buyer");
+  }, [pathname, role, vendorRegistered, setRole]);
 
   return (
     <BuyerSignupGate>
