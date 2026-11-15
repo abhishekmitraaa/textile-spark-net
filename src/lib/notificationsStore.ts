@@ -291,6 +291,8 @@ const KIND_META: Record<string, {
   // vendor has to act on, so it is a warning that links to the document list;
   // an approval is positive and goes to the same place to show the new status.
   kyc_approved:        { type: "system",  tone: "positive", group: "updates", actionLabel: "View KYC",   href: "/kyc" },
+  // Written when a registration is submitted (admin.registration_received_notice, 2026-11-16).
+  registration_received: { type: "system", tone: "neutral", group: "updates", actionLabel: "View KYC", href: "/kyc" },
   kyc_rejected:        { type: "system",  tone: "warning",  group: "updates", actionLabel: "Re-check KYC", href: "/kyc" },
   // A review of the reader's that Cosora removed (admin_review_report_decide, 2026-10-13).
   review_removed:      { type: "system",  tone: "warning",  group: "updates", actionLabel: "My reviews", href: "/profile/reviews" },
