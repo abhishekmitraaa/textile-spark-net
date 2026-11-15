@@ -3455,7 +3455,10 @@ Three parts: Foundations, then Fit (each vendor's lead feed), then Standing (ven
   SECURITY DEFINER), `search_suggestions`, `match_rfq_vendors` and `admin.lead_alert_fanout`, in place of
   `profile_score`; paid plan stays first. `quote_order_for_rfq()` orders a buyer's own quotes (My Quotes ›
   Recommended, `useQuoteOrder`).
-- Migration `20261115110000`; tests `scripts/ranking/standing.sql` (18), `tests/local/ranking-standing.spec.ts`; a test
+- Interest reads `admin.seller_viewer_daily` (seller, signed-in viewer, IST day; not client-readable): written by
+  `increment_product_view`, pruned past 90 days by the refresh, cleared by `anonymize_account`. Migration
+  `20261115120000` (`product_view_daily` is the counter's two-day dedupe ledger).
+- Migration `20261115110000`; tests `scripts/ranking/standing.sql` (22), `tests/local/ranking-standing.spec.ts`; a test
   that sets ranking inputs calls `admin.refresh_vendor_standing()`. Detail: `documentation/ranking.md` §5.
 
 ## Subscriptions P0: foundations and safety (2026-10-08)

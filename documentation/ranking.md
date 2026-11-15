@@ -145,7 +145,8 @@ B ranks above A on trending, although A had more events.
 
 Signed-in viewers are keyed `u:<account>`. Signed-out viewers are keyed `b:<browser id>`, an id the browser makes up,
 which is why they weigh a quarter and are capped. `product_view_daily` is only this day-by-day dedupe ledger: days
-before yesterday are deleted as calls come in (see section 10).
+before yesterday are deleted as calls come in. A counted signed-in view is also written to
+`admin.seller_viewer_daily` (seller, viewer, day), which keeps 90 days for Standing (section 5.3).
 
 ### 3.3 Meaning: embeddings and similarity
 
@@ -352,8 +353,10 @@ Buyer interest weighs most, and more than activity (Mitra's decision, 2026-10-07
 - `I = min(1, ln(1 + people + repeat) / ln(201))`, so 200 interested people is the top.
 - **Why signed-in only:** a signed-out viewer's key is made by the browser, so anyone could mint "people". The
   automated security review caught this before release.
-- **Limit today:** the view ledger keeps only today and yesterday (section 10), so in practice the view part sees about
-  two days. Follows and messages do reach back 90 days.
+- **Where viewers come from:** `admin.seller_viewer_daily`, one row per seller, signed-in viewer and day (IST).
+  `increment_product_view` writes it whenever it counts a signed-in view, the hourly refresh drops rows older than
+  90 days, and deleting a buyer's account deletes their rows. It isn't readable by clients. Until 2026-11-15
+  (migration `20261115120000`) the view part read the counter's two-day dedupe ledger and saw about two days.
 
 | People + repeat | I |
 |---|---|
@@ -641,6 +644,7 @@ doesn't depend on seller ids.
 | Ratings | on every review change | `sync_vendor_rating`, `sync_product_rating` |
 | Profile score | on every profile change and listing or quote change | trigger, `admin.vendor_score_refresh()` |
 | Standing | hourly at :07 | `vendor-standing-refresh` |
+| Standing's viewer ledger | on every counted signed-in view; pruned past 90 days hourly | `increment_product_view`, `admin.refresh_vendor_standing()` |
 | Fit | live, every time Leads loads | `match_vendor_rfqs` |
 | Seller location history | on every profile update | `trg_vendor_profiles_location_history` |
 | Trending searches | daily | `search-trends-refresh` |
@@ -650,12 +654,9 @@ doesn't depend on seller ids.
 
 ## 10. Known gaps
 
-1. **Standing's view part sees about two days, not 90.**
-   - **Cause:** `product_view_daily` is the view counter's dedupe ledger, and `increment_product_view` deletes days
-     before yesterday as it goes. Standing's interest therefore counts signed-in viewers of today and yesterday, and a
-     "repeat viewer" can only be today-and-yesterday. Follows and messages do cover 90 days.
-   - **Fix:** keep a separate 90-day ledger of signed-in viewers per seller, written by the same function. This is in
-     ToDo.md.
+1. **Standing's interest is still filling up.** Its 90-day viewer ledger started on 2026-11-15 with the two days
+   the view counter held, so until mid-February 2027 the view part covers fewer than 90 days. Follows and messages
+   already cover 90.
 2. **Seeded listing ratings.**
    - **The problem:** 22 of 27 live listings carry a `rating_avg` with no review behind it.
    - **Where they reach:** the feed's "rating" sort and its trending tie-break, `related_products`' fallback, For
@@ -686,7 +687,7 @@ doesn't depend on seller ids.
 | For You | `for_you_products`, `buyer_taste_embedding`, `buyer_cold_start_embedding` | For You specs |
 | Search | `search_products`, `match_products`, `search_suggestions`; edge `embed-query` | see search.md §12 |
 | Ads | `search_ads`, `admin.search_ads_ranked`, `is_ad_eligible` | `scripts/todo-batch/search_ads.sql` |
-| Standing | `admin.vendor_standing_parts`, `admin.refresh_vendor_standing`, `public.vendor_standing`, `quote_order_for_rfq`, `top_vendors`, `new_brand_suggestions`; app `src/pages/MyQuotes.tsx`, `useQuoteOrder` | `scripts/ranking/standing.sql` (18), `tests/local/ranking-standing.spec.ts`, `profile-score-ranking.spec.ts` |
+| Standing | `admin.vendor_standing_parts`, `admin.refresh_vendor_standing`, `public.vendor_standing`, `quote_order_for_rfq`, `top_vendors`, `new_brand_suggestions`; app `src/pages/MyQuotes.tsx`, `useQuoteOrder` | `scripts/ranking/standing.sql` (22), `tests/local/ranking-standing.spec.ts`, `profile-score-ranking.spec.ts` |
 | Fit | `match_vendor_rfqs`, `admin.rfq_fit`, `admin.fit_values`, `public.category_root_of`, `admin.vendor_location_history`; app `src/lib/queries/rfqs.ts`, `OpenRfqLeads.tsx`, `BuyerStateNudge.tsx` | `scripts/ranking/fit_match.sql` (21), `tests/local/ranking-fit.spec.ts` |
 | Attributes (F1/F3) | `attribute_definitions`, `attributes_problem`, `match_key` / `match_weight` | `scripts/ranking/f1_attributes.sql`, `f3_attribute_definitions.sql`, `tests/local/ranking-f3.spec.ts` |
 | Location, type, capacity (F2) | `india_states`, `vendor_capacity`, `state_code_for` | `scripts/ranking/f2_vendor_profile.sql` |
@@ -715,3 +716,4 @@ Design documents:
 | 2026-11-14 | Requirements past their deadline leave counts, alerts and the digest; Leads shows "Deadline passed" |
 | 2026-11-15 | **Fit** orders each seller's lead feed; "Near you"; buyers asked for their state |
 | 2026-11-15 | **Standing** replaces profile score in every seller list; My Quotes opens on Recommended |
+| 2026-11-15 | Standing's buyer interest reaches back 90 days (`admin.seller_viewer_daily`) |

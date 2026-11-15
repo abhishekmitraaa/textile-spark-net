@@ -6,16 +6,6 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
-### Give Standing 90 days of signed-in viewers, not two — added 2026-11-15
-- Task: keep a 90-day record of signed-in viewers per seller (vendor, viewer, day), written by
-  `increment_product_view`, and have `admin.vendor_standing_parts` count it instead of `product_view_daily`.
-- Context: `product_view_daily` is the view counter's dedupe ledger; `increment_product_view` deletes days before
-  yesterday as it goes. So Standing's interest counts signed-in viewers of today and yesterday only, and a "repeat
-  viewer" can only be today-and-yesterday; follows and messages do cover 90 days. Found while writing
-  `documentation/ranking.md` (§10). The harness missed it because it inserts rows directly.
-- Reference: Ranking Standing (2026-11-15), migration `20261115110000`.
-- Status: Open
-
 ### Turn on seller registration's two switches — added 2026-11-13
 - Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
   videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`

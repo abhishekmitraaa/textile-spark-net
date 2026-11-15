@@ -42,7 +42,9 @@ three sorts stay.
 Buyer interest weighs most and more than activity (decision, 2026-10-07: "buyer interest weighted more").
 
 ### I — buyer interest
-- **Unique people:** the distinct signed-in viewers of the seller's listings in the last 90 days (never the seller),
+- **Unique people:** the distinct signed-in viewers of the seller's listings in the last 90 days (never the seller;
+  from `admin.seller_viewer_daily`, kept 90 days, since migration `20261115120000`: the view counter's own ledger
+  keeps two),
   plus followers who followed in that window, plus people who messaged the seller in that window; a person counts
   once across the three. A signed-out viewer's key is made by the browser, so anyone could mint them: those views
   don't count (found by the automated security review).
