@@ -125,23 +125,16 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
           {/* Notifications bell (single) */}
           <button
-            onClick={() => role === "seller" && navigate("/notifications")}
-            aria-label={
-              role === "seller"
-                ? `Notifications${unread > 0 ? `, ${unread} unread` : ""}`
-                : "Notifications"
-            }
+            onClick={() => navigate("/notifications")}
+            aria-label={`Notifications${unread > 0 ? `, ${unread} unread` : ""}`}
             className="relative rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
             <Bell size={20} />
-            {role === "seller" ? (
-              unread > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
-                  {unread > 9 ? "9+" : unread}
-                </span>
-              )
-            ) : (
-              <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-accent" />
+            {/* The real unread count on either side; the buyer side used to show a dot that was always there. */}
+            {unread > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-bold leading-none text-white">
+                {unread > 9 ? "9+" : unread}
+              </span>
             )}
           </button>
         </div>

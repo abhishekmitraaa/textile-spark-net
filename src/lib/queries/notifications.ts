@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHubEvent, useHubLive } from "@/lib/realtimeHub";
 
 // ─────────────────────────────────────────────────────────────
 // Real notifications, from the `notifications` table (migration 20260802130000).
@@ -67,19 +68,30 @@ async function fetchNotifications(userId: string): Promise<NotificationRow[]> {
   return (data ?? []) as NotificationRow[];
 }
 
-export function useNotifications() {
+export const notificationUnreadKey = (userId: string | undefined) => ["notification_unread", userId] as const;
+
+export function useNotifications({ enabled = true }: { enabled?: boolean } = {}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const userId = user?.id;
+  const live = useHubLive();
 
   const query = useQuery({
     queryKey: ["notifications", userId],
     queryFn: () => fetchNotifications(userId!),
-    enabled: Boolean(userId),
+    enabled: Boolean(userId) && enabled,
     // A suspension notice arriving a minute ago has to be visible now. Same
     // reasoning as useContactGate's staleTime: moderation state must not be
-    // served from a previous mount's cache.
-    staleTime: 0,
+    // served from a previous mount's cache. With the live-update hub on, every change is pushed, so a minute's
+    // cache is safe (SH-031).
+    staleTime: live ? 60_000 : 0,
+  });
+
+  // Live-update hub (switch live_updates_hub): one event per change of this account's notifications, however many
+  // rows it touched, so "Read all" is one re-read (SH-036).
+  useHubEvent("notifications", () => {
+    if (!userId || !enabled) return;
+    void qc.invalidateQueries({ queryKey: ["notifications", userId] });
   });
 
   // Realtime. `notifications` joined supabase_realtime in 20260802130000, so a
@@ -108,7 +120,8 @@ export function useNotifications() {
   const topic = useRef(`notifications:${Math.random().toString(36).slice(2)}`);
 
   useEffect(() => {
-    if (!userId) return;
+    // With the hub carrying this account's updates, no table subscription of its own (SH-030).
+    if (!userId || !enabled || live) return;
     const channel = supabase
       .channel(topic.current)
       .on(
@@ -131,7 +144,7 @@ export function useNotifications() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [userId, qc]);
+  }, [userId, qc, enabled, live]);
 
   return query;
 }
@@ -149,7 +162,31 @@ export function useNotifications() {
  * un-populated one.
  */
 export function useUnreadCount(): number {
-  const { data } = useNotifications();
+  const { user } = useAuth();
+  const userId = user?.id;
+  const qc = useQueryClient();
+  const live = useHubLive();
+  // Switch off: the count rides on the page's list, as before. Switch on: a count of its own (every unread one, not
+  // the newest 100; notifications_unread_idx), cached for a minute and refreshed by hub events only (SH-031, SH-037).
+  const { data } = useNotifications({ enabled: !live });
+  const count = useQuery({
+    queryKey: notificationUnreadKey(userId),
+    queryFn: async () => {
+      const { count: n, error } = await supabase
+        .from("notifications")
+        .select("id", { count: "exact", head: true })
+        .eq("profile_id", userId!)
+        .eq("read", false);
+      if (error) throw error;
+      return n ?? 0;
+    },
+    enabled: Boolean(userId) && live,
+    staleTime: 60_000,
+  });
+  useHubEvent("notifications", () => {
+    if (userId) void qc.invalidateQueries({ queryKey: notificationUnreadKey(userId) });
+  });
+  if (live) return count.data ?? 0;
   return (data ?? []).reduce((n, row) => (row.read ? n : n + 1), 0);
 }
 

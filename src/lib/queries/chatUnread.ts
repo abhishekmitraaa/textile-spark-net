@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { useHubEvent } from "@/lib/realtimeHub";
 
 // ─────────────────────────────────────────────────────────────
 // UNREAD CHAT MESSAGES (2026-10-14; migration 20261014170000_chat_unread.sql).
@@ -49,11 +50,18 @@ export function useChatUnread(): ChatUnread {
     staleTime: 30_000,
   });
 
+  // Live-update hub (switch live_updates_hub): a chat event re-reads the counts, and Seller Home's recent chats.
+  const live = useHubEvent("chat", () => {
+    if (!userId) return;
+    void qc.invalidateQueries({ queryKey: chatUnreadKey(userId) });
+    void qc.invalidateQueries({ queryKey: ["vendor_dashboard", userId] });
+  });
+
   // A unique topic per mount: supabase.channel(name) hands back an already-subscribed channel for a name
-  // in use, and adding listeners to it throws (see useNotifications).
+  // in use, and adding listeners to it throws (see useNotifications). Not needed while the hub is live (SH-030).
   const topic = useRef(`chat-unread:${Math.random().toString(36).slice(2)}`);
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || live) return;
     const refresh = () => void qc.invalidateQueries({ queryKey: chatUnreadKey(userId) });
     const channel = supabase
       .channel(topic.current)
@@ -65,7 +73,7 @@ export function useChatUnread(): ChatUnread {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [userId, qc]);
+  }, [userId, qc, live]);
 
   return useMemo(() => (userId ? query.data ?? EMPTY : EMPTY), [userId, query.data]);
 }

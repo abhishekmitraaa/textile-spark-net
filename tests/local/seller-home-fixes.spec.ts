@@ -5,7 +5,7 @@
  *   LOCAL_ADMIN_URL=http://localhost:8097 npx playwright test -c playwright.local.config.ts tests/local/seller-home-fixes.spec.ts
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { BUYER_URL, contextWithSession, freshAccount, sql } from "./stack";
+import { BUYER_URL, allowFeature, contextWithSession, disallowFeature, freshAccount, sql } from "./stack";
 import { register } from "./registrationForm";
 
 const made: string[] = [];
@@ -432,5 +432,115 @@ test("menu has Documents (KYC)", async ({ browser }) => {
   const page = await openHome(browser, who.session);
   await page.setViewportSize({ width: 1280, height: 900 });
   await expect(page.locator("aside").getByRole("link", { name: "Documents (KYC)" })).toHaveAttribute("href", "/kyc", { timeout: 20_000 });
+  await page.context().close();
+});
+
+// ─────────────────────────── Task 9: the live-update hub ───────────────────────────
+
+const HUB = "live_updates_hub";
+const hubAllowed: string[] = [];
+test.afterEach(() => {
+  while (hubAllowed.length) disallowFeature(HUB, hubAllowed.pop()!);
+});
+function hubOn(id: string) {
+  allowFeature(HUB, id);
+  hubAllowed.push(id);
+}
+
+/** A registered seller on Seller Home (phone) with a buyer in one chat; `send()` writes a message from the buyer. */
+async function sellerWithChat(browser: Browser, prefix: string, hub: boolean) {
+  const who = await seller(prefix);
+  const buyer = await freshAccount(`${prefix}-b`);
+  made.push(buyer.id);
+  if (hub) hubOn(who.id);
+  const conv = sql(`insert into public.conversations (user_a, user_b)
+                    values (least('${who.id}'::uuid, '${buyer.id}'::uuid), greatest('${who.id}'::uuid, '${buyer.id}'::uuid))
+                    returning id`).split("\n")[0];
+  const send = (body: string) =>
+    sql(`insert into public.messages (conversation_id, sender_id, body) values ('${conv}', '${buyer.id}', '${body}');`);
+  const ctx = await contextWithSession(browser, who.session, { width: 390, height: 844 }, true);
+  const page = await ctx.newPage();
+  const joins: string[] = [];
+  page.on("websocket", (ws) => ws.on("framesent", (f) => {
+    const text = typeof f.payload === "string" ? f.payload : f.payload.toString();
+    if (!text.includes("phx_join")) return;
+    try {
+      // Realtime's serializer: [join_ref, ref, topic, event, payload] (v2), or an object (v1).
+      const msg = JSON.parse(text);
+      const topic = Array.isArray(msg) ? msg[2] : msg.topic;
+      const event = Array.isArray(msg) ? msg[3] : msg.event;
+      if (event === "phx_join" && typeof topic === "string") joins.push(topic.replace(/^realtime:/, ""));
+    } catch { /* not JSON */ }
+  }));
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await expect(page.getByTestId("analysis-panel")).toBeVisible({ timeout: 20_000 });
+  return { who, page, send, joins };
+}
+
+/** The app's own Supabase client, from the dev server's module graph (same URL, same instance). */
+const clientTopics = (page: Page) =>
+  page.evaluate(async () => {
+    const m = await import("/src/lib/supabase.ts" as string);
+    return (m.supabase.getChannels() as { topic: string }[]).map((c) => c.topic.replace(/^realtime:/, ""));
+  });
+
+async function hubJoined(page: Page, userId: string) {
+  await expect.poll(() => clientTopics(page), { timeout: 15_000 }).toContain(`user:${userId}`);
+}
+
+test("badge updates without reload", async ({ browser }) => {
+  const { who, page, send } = await sellerWithChat(browser, "sh-hub-badge", true);
+  await hubJoined(page, who.id);
+  // The hub carries it: the per-hook table subscriptions are gone.
+  await expect.poll(async () => (await clientTopics(page)).filter((t) => /^(chat-unread|notifications):/.test(t)), { timeout: 10_000 }).toEqual([]);
+  send("hub badge 1");
+  await expect(page.getByTestId("nav-badge-chats")).toHaveText("1", { timeout: 3_000 });
+  await page.context().close();
+});
+
+test("bell updates without reload", async ({ browser }) => {
+  const { who, page } = await sellerWithChat(browser, "sh-hub-bell", true);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await hubJoined(page, who.id);
+  await expect(page.getByRole("button", { name: "Notifications", exact: true })).toBeVisible();
+  sql(`insert into public.notifications (profile_id, kind, title) values ('${who.id}', 'registration_received', 'Hub bell check');`);
+  await expect(page.getByRole("button", { name: "Notifications, 1 unread" })).toBeVisible({ timeout: 3_000 });
+  await page.context().close();
+});
+
+test("badge updates after token refresh", async ({ browser }) => {
+  const { who, page, send } = await sellerWithChat(browser, "sh-hub-refresh", true);
+  await hubJoined(page, who.id);
+  const refreshed = await page.evaluate(async () => {
+    const m = await import("/src/lib/supabase.ts" as string);
+    const { data, error } = await m.supabase.auth.refreshSession();
+    return !error && Boolean(data.session);
+  });
+  expect(refreshed).toBe(true);
+  send("hub after refresh");
+  await expect(page.getByTestId("nav-badge-chats")).toHaveText("1", { timeout: 5_000 });
+  await page.context().close();
+});
+
+test("one channel across page changes", async ({ browser }) => {
+  const { who, page, joins } = await sellerWithChat(browser, "sh-hub-one", true);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await hubJoined(page, who.id);
+  for (const href of ["/products", "/leads", "/seller-home"]) {
+    await page.locator(`aside a[href="${href}"]`).first().click();
+    await expect(page).toHaveURL(new RegExp(`${href}$`));
+    await page.waitForLoadState("networkidle");
+  }
+  expect((await clientTopics(page)).filter((t) => t === `user:${who.id}`)).toHaveLength(1);
+  expect(joins.filter((t) => t === `user:${who.id}`), joins.join("\n")).toHaveLength(1);
+  await page.context().close();
+});
+
+test("switch off keeps today's behaviour", async ({ browser }) => {
+  const { who, page, send } = await sellerWithChat(browser, "sh-hub-off", false);
+  await expect.poll(async () => (await clientTopics(page)).some((t) => t.startsWith("chat-unread:")), { timeout: 15_000 }).toBe(true);
+  expect(await clientTopics(page)).not.toContain(`user:${who.id}`);
+  send("no hub");
+  await expect(page.getByTestId("nav-badge-chats")).toHaveText("1", { timeout: 10_000 });
   await page.context().close();
 });

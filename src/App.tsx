@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserRoleProvider } from "./contexts/UserRoleContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { RealtimeHubProvider } from "./lib/realtimeHub";
 import { DisplayCurrencyProvider } from "./contexts/DisplayCurrencyContext";
 import DevAccountSwitcher from "./components/dev/DevAccountSwitcher";
 import ClarityMask from "./components/analytics/ClarityMask";
@@ -213,6 +214,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <RealtimeHubProvider>
         <BrowserRouter>
           <AutoTranslate />
           <LanguageSync />
@@ -377,6 +379,7 @@ const App = () => (
           {/* Dev-only: sign in as a seeded buyer/vendor/admin (no-op in prod) */}
           <DevAccountSwitcher />
         </BrowserRouter>
+        </RealtimeHubProvider>
       </TooltipProvider>
     </DisplayCurrencyProvider>
     </UserRoleProvider>
