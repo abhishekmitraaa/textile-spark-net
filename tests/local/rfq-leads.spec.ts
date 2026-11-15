@@ -18,7 +18,9 @@ test.describe("R1: signed-out visitors", () => {
 
   test("/seller-home asks a signed-out visitor to sign in", async ({ page }) => {
     await page.goto(`${BUYER_URL}/seller-home`);
-    await expect(page.getByText("Sign in to see buyer requirements")).toBeVisible();
+    // Since the Seller Home fixes (2026-11-16) the whole home is the signed-out state, not just the leads card.
+    await expect(page.getByText("Sign in to see your business")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Sign in/ })).toHaveAttribute("href", "/login");
     await expect(page.getByText("No open buyer requirements right now. Check back soon.")).toHaveCount(0);
   });
 

@@ -6,6 +6,24 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
+- Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
+- Context: Mitra raised Free to 10 ("allow 10 lisitng for free plan", other plans unchanged; migration
+  `20261116100200`). The answer still reads "Our Free plan costs nothing and gives you 2 listings", and it calls Basic
+  the plan "with 10 product listings": Free and Basic now allow the same number, so the answer (and perhaps Basic's
+  offer) is Mitra's and Andy's to settle. FAQ text is Andy's wording, published verbatim; don't change it in code.
+- Reference: Seller Home fixes, 2026-11-16 (SH-011).
+- Status: Open
+
+### Turn on the live-update hub — added 2026-11-16
+- Task: after the Seller Home fixes are released, Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches,
+  with a reason), first for a few accounts, then everyone.
+- Context: one private Broadcast channel per account replaces each tab's per-page table subscriptions (SH-030,
+  SH-031, SH-036). Off, nothing changes. Watch Realtime's connection count and the `realtime.messages` partitions
+  after switching on; if hosted Realtime refuses the join, the app falls back to the old subscriptions by itself.
+- Reference: migration `20261116100400_live_updates_hub.sql`; `src/lib/realtimeHub.tsx`.
+- Status: Open
+
 ### Turn on seller registration's two switches — added 2026-11-13
 - Task: after the release, Mitra turns on `seller_registration_required` (unregistered sellers can't add listings,
   videos, catalogues, ads or quotes) and, when ready for sellers outside India, `overseas_seller_registration`

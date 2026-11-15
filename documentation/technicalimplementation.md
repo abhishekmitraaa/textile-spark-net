@@ -4545,3 +4545,66 @@ The buyer sign-up audit of 2026-11-13 (items 1–15). Plan and findings: `subscr
     `/onboarding` with the mark cleared, Login → role selection); a returning one finishes the flow. Login and OtpVerify
     send an account that is already signed in on arrival to its place. `cleanPhoneDigits()` drops a written country code
     (exactly code + a full number, or code + 0 + number) and leading zeros; the phone inputs have no `maxLength`.
+
+## Seller Home fixes (2026-11-16; branch `seller-home/fixes`, not live)
+
+The Seller Home audit of 2026-11-15, sections A–C (SH-001…SH-033). Audit `documentation/seller-home-audit-2026-11-15.md`;
+plan and every task `documentation/seller-home-fixes-plan-2026-11-16.md`; the calls made while building are the
+`Ruling:` lines in the plan's ledger (summarised in `subscription-session/SESSION-CONTEXT.md`).
+
+- **Database** (local stack; production needs Mitra's yes, in this order):
+  - `20261116100000_rfqs_select_block_peers.sql`: `public.my_block_peers() returns uuid[]` (definer, stable, empty
+    search path; the other side of every open block, either direction; `'{}'` signed out). `rfqs_select`'s block arm
+    becomes `not coalesce(buyer_id = any (((select public.my_block_peers()))::uuid[]), false)`: one call per query
+    instead of `blocked_with_me()` per row. The `::uuid[]` cast is needed (`uuid = uuid[]` otherwise).
+    `scripts/seller-home/rfqs_select_equivalence.sql` compares the live policy with the old rule for six callers (Free,
+    Gold, VIP, a seller who blocked a buyer, a seller a buyer blocked, a plain buyer): the same rows.
+  - `20261116100100_seller_home_summary.sql`: `public.seller_home_summary() returns jsonb`, SECURITY INVOKER (so
+    `rfqs_select` decides which requirements count), authenticated only. Keys: `counts` (total, live, under_review,
+    open_leads, direct_requests, enquiries, quotes_sent, quotes_accepted), `profile` (the score's inputs, private phone
+    and email through `my_vendor_private()`), `review` (registration_status, contract_signed, documents_pending /
+    rejected, products_in_review, premises_in_review), `top_products` (≤ 3 live, by enquiries), `recent_leads` (≤ 3,
+    direct first, `quoted`), `recent_chats` (≤ 3; no archived, no cleared-without-newer, no empty; unread from
+    `chat_unread_counts()`). Arrays are never null. `scripts/seller-home/summary.sql` checks anon is refused, another
+    seller's data isn't returned, the shapes, every count against its own query and the overseas counts for Free,
+    Gold and VIP. 24 ms cold, 5.5 ms warm on the local copy.
+  - `20261116100200_free_plan_ten_listings.sql`: the Free plan's `limits.product_cap` and `display.products` are 10;
+    `admin.resume_free_plan_listings()` runs `admin.apply_product_cap(v, false)` for every seller whose effective plan is
+    Free and has paused listings (47 locally).
+  - `20261116100300_small_fixes.sql`: `chat_unread_counts()` leaves out chats the caller archived
+    (`conversation_member_state.archived_at`); `trg_vendor_registrations_notice` (AFTER INSERT on
+    `vendor_registrations`) writes `registration_received`: "Your registration is in" for registered, "Waiting for
+    Cosora's approval" for pending_review; an error is only a warning. `scripts/seller-home/plan_and_small_fixes.sql`.
+  - `20261116100400_live_updates_hub.sql`: switch `live_updates_hub` (off); policy `hub_user_topic` on
+    `realtime.messages`, SELECT for authenticated, `extension = 'broadcast'` and `(select realtime.topic()) = 'user:' ||
+    (select auth.uid())` and the row's own `topic = (select realtime.topic())` (the documented form lets an account read
+    other topics' rows once its session topic is its own; the harness showed it). `admin.hub_send(uuid[], text)`
+    (definer; reads the switch once; `realtime.send('{}', event, 'user:'||id, true)` per allowed person; resets
+    `realtime.topic`; never raises). Statement-level AFTER triggers with transition tables (one per operation, which
+    transition tables require): notifications insert/update/delete → `notifications`; messages insert → `chat` to both
+    people; conversation_reads and conversation_member_state insert/update → `chat` to that person; conversations
+    update where `status` changed → `chat` to both. All `admin.hub_*` are definer and closed to browser roles (the
+    migration's self-check). `scripts/seller-home/hub.sql`: own topic only, one event for 50 rows marked read, a message
+    reaches both people, nothing with the switch off.
+- **App**:
+  - `src/lib/queries/sellerHome.ts` (`fetchSellerHome()`, types, `sellerHomeFrom()`), read by `useVendorDashboard()`;
+    `SellerHomeState` (signed out, not a seller, error with Retry, loading); the score has no 0% default.
+  - `NextStepCard` (first unmet `profileScoreSignals()`), `GettingStartedCard` (`gettingStartedRows(review)`), alerts card
+    by `vendor_entitlements().features.lead_alerts`, `SellerPromoBanner` (`VendorDashboardBanners` when a banner is
+    live, else the built-in slides: object-contain over a blurred copy, dots, pause, 6 s, held on hover/focus, none under
+    reduced motion, `inert` off screen).
+  - `src/lib/sellerRoutes.ts` (`routeSide()`); `DashboardLayout` and `BuyerShell` set the side from it.
+    `DashboardLayout` also puts `vendor-theme` on `<body>` and takes `registrationBanner`.
+  - `src/lib/realtimeHub.tsx`: `RealtimeHubProvider` (inside the auth and query providers, above the router;
+    `supabase.realtime.setAuth()` before joining and on `TOKEN_REFRESHED` / `SIGNED_IN`; `live` false on
+    `CHANNEL_ERROR` / `TIMED_OUT` / `CLOSED`), `useHubEvent()`, `useHubLive()`. While live: `useUnreadCount()` is a
+    head count (`notifications_unread_idx`, key `["notification_unread", uid]`, 60 s), `useNotifications()` 60 s, and
+    `useChatUnread()` re-reads on `chat` (and Seller Home's `["vendor_dashboard", uid]`); their postgres_changes
+    channels close.
+  - `useFocusLead()` (`/leads?rfq=<id>`: card `id="lead-<id>"`, scrolled into view, form opened unless quoted). A quote,
+    an upload and a catalogue invalidate `["vendor_dashboard"]` (a quote also `["quotes","mine"]`).
+  - Header search → `/products?q=` (Products reads `q`, focuses its box); sidebar `z-[60]`, overlay `z-[55]`; `TierGate`
+    shows "We couldn't check your plan" with Retry on an error.
+- **Tests**: `tests/local/seller-home-fixes.spec.ts` (34; the hub tests read the app's own client through the dev
+  server, `import("/src/lib/supabase.ts")`, and count websocket `phx_join` frames); `tests/local/registrationForm.ts`
+  (the form walker, moved out of `registration-fixes.spec.ts`).

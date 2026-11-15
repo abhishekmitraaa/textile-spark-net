@@ -1,3 +1,21 @@
+- 2026-11-16 (branch `seller-home/fixes`; migrations `20261116100000`–`100400`; **not live**: production migrations, the
+  merge and the switch each need Mitra's yes) **Seller Home fixes, audit sections A–C (SH-001…SH-033).**
+  - Why: Mitra, 2026-11-15, "formulate a plan and fix this above issues"; decisions: vendor blue on all seller pages,
+    Free plan 10 listings, leave the Buyer/Seller switch as is, everything now as an app-wide live-update hub, the
+    unsigned-agreement prompt on Home + publishing pages, native execution. Audit
+    `documentation/seller-home-audit-2026-11-15.md`; plan `documentation/seller-home-fixes-plan-2026-11-16.md`.
+  - Database: `my_block_peers()` and `rfqs_select` reading it once (same rows for 6 callers); `seller_home_summary()`
+    (invoker, 24 ms cold / 5.5 ms warm); Free cap 10 and paused Free listings resumed; `chat_unread_counts()` skips
+    archived chats; the `registration_received` notice; the live-update hub (switch `live_updates_hub`, off; policy
+    `hub_user_topic`; definer `admin.hub_send()` and statement triggers on notifications, messages, read lines, member
+    state and chat status).
+  - App: one summary query and four states on Seller Home; Next step and Getting started cards; alerts card by plan;
+    vendor blue; `routeSide()`; welcome screen with next steps; banner on six publishing pages; Documents (KYC) in the
+    menu; `/leads?rfq=`; counts refreshed after a quote or upload; calmer banner and Cosora-Admin's banners; header
+    search to My Products; phone menu above the bottom bar; TierGate Retry; the hub provider.
+  - Tests: `tests/local/seller-home-fixes.spec.ts` 34/34; harnesses `scripts/seller-home/*.sql` all pass; i18n,
+    rls:check and the typecheck clean. `register()` moved to `tests/local/registrationForm.ts`.
+  - Not changed: the Buyer/Seller switch (SH-023, Mitra). Free and Basic now both allow 10 listings (ToDo for Andy's FAQ).
 - 2026-11-15 (branch `ranking/standing-views`; migration `20261115120000_standing_viewer_history.sql`; **RELEASED 2026-11-15**: applied with the CLI behind a pin check (not in the ledger); production = the local rehearsal, all 4 functions; the ledger started with 25 rows for 7 sellers, views back to 2026-10-20) **Standing's buyer interest reaches back 90 days.** Mitra: "fix" (the gap found while writing ranking.md).
   - `product_view_daily` is the view counter's dedupe ledger and keeps two days, so Standing's view part saw two days and a repeat viewer could only be today-and-yesterday. `admin.seller_viewer_daily` (seller, signed-in viewer, IST day; not client-readable) now keeps 90: written by `increment_product_view` when it counts a signed-in view, read by `admin.vendor_standing_parts`, pruned past 90 days by `admin.refresh_vendor_standing()`, and cleared by `anonymize_account` with the rest of a deleted buyer's activity. What the view counter still held was carried over (it prunes old days only now and then: views back to 2026-10-20). Bodies are production's with only those lines changed.
   - Tests: `scripts/ranking/standing.sql` 22/22 (cases 2–3 reworked, 19–22 new, all RED first).

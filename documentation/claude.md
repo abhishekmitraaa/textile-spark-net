@@ -35,6 +35,8 @@ Rules decided before or outside of Claude Code sessions.
 ### Product / UX rules
 - **Role toggle placement** — the "Switch to Buyer/Seller" toggle appears **only** on the
   Vendor Dashboard Home and the Buyer Homepage. Nowhere else.
+  > The seller header and sidebar still carry it on every seller page: Mitra chose to leave the switch as it is
+  > (2026-11-15, Seller Home audit SH-023). Don't move it without asking.
 - **Authentication is OTP-only** — phone number + one-time password, no passwords. Google
   OAuth is a secondary option. A vendor-first user lands on the vendor dashboard after
   login; a buyer-first user lands on the buyer homepage. Vendor → Buyer is a direct toggle
@@ -61,7 +63,8 @@ Rules decided before or outside of Claude Code sessions.
   account manager, overseas requirements and bulk import: `subscription_plans.limits`, read
   through `vendor_entitlements()` (subscriptions P0-P12). The plans page's copy
   (`subscription_plans.display`) must say what the limits give; `scripts/subscriptions/p13_truth_pass.sql`
-  checks it. **Leads are the same on every plan** (Mitra, 2026-10-02): the same ranked feed and
+  checks it. **The Free plan allows 10 listings** (Mitra, 2026-11-16, "allow 10 lisitng for free plan"; the other
+  plans unchanged; `20261116100200`, which also resumed Free sellers' paused listings up to 10). **Leads are the same on every plan** (Mitra, 2026-10-02): the same ranked feed and
   no cap on how many a vendor quotes on (RFQ/leads R2), except requirements from overseas buyers,
   which only Gold and VIP see, VIP 24 hours first (Mitra, 2026-10-08; subscriptions P7).
 - **Seller registration documents** (Seller Registration FAQ, Andy 2026-10-02): PAN card;
@@ -174,7 +177,7 @@ undocumented. Deep technical rationale for each lives in
 
 - **Chat files, blocks and contact cards are real** (Mitra, 2026-10-18, "Build everything"; migration `20261018160000_chat_real_actions.sql`).
   - Photos, PDFs and voice notes live in the private `chat-attachments` bucket at `{conversation}/{sender}/{uuid}.{ext}`; only the two people in the chat and support / super admins read them. A message of kind image / file / audio must point at its file in that chat's folder (`guard_message_insert()`); type and size come from Storage. A new kind of chat file widens the bucket's allowlist, `chat_attachment_path_ok()` and the guard together.
-  - A block either way stops every way of reaching the other person until the blocker lifts it (Mitra, 2026-10-18: "A block should not let the person contact in any ways possible"; `20261018160200`): messages, files, contact cards, phone / WhatsApp / e-mail reveals, call logs, direct requests, quotes (the buyer may still reject one), review replies, lead matching and alerts, and the seller's view of the buyer's requirements. Reviews are not blocked. A NEW way for one account to reach another must check `chat_blocked_between()` (in a SECURITY DEFINER function) or `blocked_with_me()` (in a policy). Blocks are kept (`unblocked_at`), never deleted. "Delete chat" is for the person deleting only: messages stay on Cosora (chats are monitored and a review needs the record).
+  - A block either way stops every way of reaching the other person until the blocker lifts it (Mitra, 2026-10-18: "A block should not let the person contact in any ways possible"; `20261018160200`): messages, files, contact cards, phone / WhatsApp / e-mail reveals, call logs, direct requests, quotes (the buyer may still reject one), review replies, lead matching and alerts, and the seller's view of the buyer's requirements. Reviews are not blocked. A NEW way for one account to reach another must check `chat_blocked_between()` (in a SECURITY DEFINER function) or, in a policy, the caller's blocks read once: `not coalesce(<other id> = any (((select public.my_block_peers()))::uuid[]), false)` (2026-11-16, `20261116100000`; `blocked_with_me()` in a policy is a call per row, and `rfqs_select` paid it on every requirement). Blocks are kept (`unblocked_at`), never deleted. "Delete chat" is for the person deleting only: messages stay on Cosora (chats are monitored and a review needs the record).
   - A contact card never carries the number: the chat's flag patterns lock a conversation on any message holding a mobile number. `chat_contact_number()` reveals the sender's sign-in number to the other participant, never while the chat is reviewed or blocked. Contact cards are written only by `share_chat_contact()`.
   - The monitoring notice (`CHAT_MONITORING_NOTICE`) is on every chat surface: the thread, My Quotes' chat modal, Support.
   - Cosora-Admin reads the whole chat (support, super admins): every message, files inline, contact numbers through `admin_chat_contact_number()` (Admin Log), blocks and each person's delete-for-me (`admin_conversation_state()`). "Delete chat" hides messages from that person only, never from staff.
@@ -568,8 +571,9 @@ undocumented. Deep technical rationale for each lives in
   - Nothing reads `buyer_profiles.notifications` or `vendor_profiles.notifications` to send
     anything. There is no push infrastructure. The only sender (`account-deletion`: email, or
     WhatsApp for an account with no email) is transactional.
-  - `notify()` fills the in-app bell only from ad, certificate, account, deletion, KYC and
-    chat-moderation events. **No quote, message or RFQ event notifies anyone.**
+  - `notify()` fills the in-app bell only from ad, certificate, account, deletion, KYC,
+    chat-moderation and seller-registration events (`registration_received`, written when a registration is
+    submitted, 2026-11-16). **No quote, message or RFQ event notifies anyone.**
   - Every surface that shows the switches, or a summary of them, says so:
     `/profile/notifications`, Vendor Settings, the `/profile` row ("Not live yet") and the
     seller home's RFQ card. They all read `NOTIFICATION_DELIVERY_LIVE` in
@@ -1278,6 +1282,35 @@ undocumented. Deep technical rationale for each lives in
   never handed to a client (a fraud finding halves it); Fit reads a seller's location as it was when the lead was
   posted (a buyer's state is private); seeded `rating_avg` and `sold_count` never rank a seller; a test that changes a
   ranking input calls `admin.refresh_vendor_standing()` (Standing is kept by an hourly job).
+- **Seller Home reads one function, `seller_home_summary()`** (2026-11-16, Seller Home fixes; `20261116100100`). Counts,
+  the profile score's inputs, the review states (registration, agreement, documents, listings, premises photos), the
+  top 3 live products, the newest 3 leads (direct requests first) and the newest 3 chats (none archived, cleared or
+  empty) in one call. SECURITY INVOKER on purpose: every requirement it counts or lists passes `rfqs_select` as on
+  /leads, so there is no second copy of who sees what; the private phone and email come from `my_vendor_private()`.
+  `useVendorDashboard()` maps it. A new home card adds a key to the function, never a query of its own. Seller Home's
+  four states stay distinct (`SellerHomeState`: signed out, not a seller, error with Retry, loading).
+- **Live updates go through the hub when `live_updates_hub` is on** (2026-11-16; `20261116100400`; the switch ships off).
+  One private Broadcast channel per account, `user:<id>`, opened once above the router (`RealtimeHubProvider`,
+  `src/lib/realtimeHub.tsx`). Statement-level triggers send `notifications` or `chat` with no content, once per person
+  per statement ("Read all" is one event), and listeners re-read (`useHubEvent()`, 300 ms debounce). A new live badge
+  listens with `useHubEvent()`, never a postgres_changes channel of its own; a new table whose changes a badge shows
+  gets a trigger calling `admin.hub_send()`. Senders are SECURITY DEFINER: `realtime.send` runs with the caller's rights
+  and swallows a refusal, so a buyer's message would never reach the seller's topic. `hub_user_topic` lets an account
+  read only its own topic. Off (or while the channel is down) the bell and chat badge keep their old subscriptions.
+- **The address decides the shell** (2026-11-16, SH-004). `routeSide()` (`src/lib/sellerRoutes.ts`) names a path seller,
+  buyer or shared. `DashboardLayout` puts a registered seller on the seller side on a seller page, `BuyerShell` puts
+  anyone on the buyer side on a buyer page, and shared pages (Help, feedback, fraud reports, Cosora Studio,
+  notifications, chats, the legal pages) keep the side the person came from. So Back after Buyer/Seller shows a
+  whole page. A new seller page adds its path to `SELLER_PATHS`; a page that picks its frame by side goes in
+  `SHARED_PATHS`.
+- **Seller pages are vendor blue** (Mitra, 2026-11-15, "all seller pages"). `.vendor-shell` and `body.vendor-theme`
+  (set by `DashboardLayout`, so portalled dialogs follow) make `--primary`, `--accent` and `--ring` `218 86% 54%`
+  (#256fef). It is a fixed value: it doesn't follow a theme colour changed in Cosora-Admin yet (ToDo, shadcn tokens).
+- **Where a seller is told what's missing** (Mitra, 2026-11-15, "Home + publishing pages"). Seller Home's Getting
+  started card (finish or update the registration, sign the Supplier Agreement, replace a document, and what is in
+  review) and the registration banner on the six publishing pages only (`<DashboardLayout registrationBanner>`:
+  Upload, UploadVideo, UploadCatalogue, Advertisements, Leads, Quotes). An unsigned agreement, a registration sent
+  back and one waiting show whatever `seller_registration_required` says; only the "can't publish" wording follows it.
 - **Superseded 2026-10-02: the owner's masked Aadhaar IS collected** (Seller Registration FAQ; see "Aadhaar" under
   Legal & compliance). The 2026-09-09 rule is kept for the record:
 - **Aadhaar is deliberately NOT collected, and the app must not ask for it (2026-09-09).**

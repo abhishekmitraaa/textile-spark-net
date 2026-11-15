@@ -488,6 +488,23 @@ the demand side of India's fashion and textile supply chain.
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
 
+### Changed 2026-11-16 (Seller Home fixes, audit SH-001…SH-033; branch `seller-home/fixes`, not live)
+- After registering, the welcome screen says what happens next and has a "Go to Seller Home" button; a notice
+  "Your registration is in" lands in the bell. Seller Home opens with **Getting started**: what the seller still has to
+  do (sign the Supplier Agreement, replace a document, finish the registration) and what Cosora is reviewing.
+- The registration banner shows on the six publishing pages only; the menu links **Documents (KYC)**.
+- Every seller page is vendor blue (it was buyer coral).
+- Back after switching to Buyer shows Seller Home with the seller menu (it showed it inside the buyer menu).
+- The home is one request (`seller_home_summary()`): real counts that agree with /leads, a score that shows a
+  skeleton while loading (never 0%), four distinct states, no invented claims, prices with their paise. A blocked
+  buyer's requirement never shows. Recent Leads put requests for the seller first and open the lead itself on /leads.
+  "Next step" names the first thing that would raise the profile score.
+- The Free plan allows 10 listings (was 2); paused Free listings were resumed up to 10.
+- The banner shows Cosora-Admin's scheduled banners when there are any, else the two built-in pictures, calmly.
+- The header search opens My Products; Sign Out in the phone menu can be tapped; a failed plan check offers Retry.
+- Badges can update through one live channel per account (switch `live_updates_hub`, off until Mitra turns it on).
+- Not changed, by Mitra's decision: the Buyer/Seller switch stays in the header and sidebar (SH-023).
+
 ### Changed 2026-11-15 (ranking Fit; live 2026-11-15)
 - The lead feed is ordered by **Fit**: how well each requirement suits the seller (meaning, category, the buyer's
   answers against the seller's listings, location, capacity). Every seller still sees every lead. A lead from a buyer
