@@ -640,3 +640,57 @@ test("built-in banner is calm", async ({ browser }) => {
   await expect(banner).toHaveAttribute("data-active-slide", "1");
   await c2.close();
 });
+
+// ─────────────────────────── Task 11: header search, phone menu, plan check errors ───────────────────────────
+
+test("header search opens my products", async ({ browser }) => {
+  const who = await seller("sh-search");
+  // Phone: the header's search icon.
+  const page = await openHome(browser, who.session);
+  await expect(page.getByTestId("analysis-panel")).toBeVisible({ timeout: 20_000 });
+  await page.locator("header").getByRole("button", { name: "Search your products" }).click();
+  await expect(page).toHaveURL(new RegExp("/products\\?q=$"));
+  await expect(page.getByPlaceholder("Search products...")).toBeFocused({ timeout: 10_000 });
+  // Laptop: the header's search box.
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.goto(`${BUYER_URL}/seller-home`);
+  const box = page.locator("header").getByPlaceholder("Search your products");
+  await expect(box).toBeVisible({ timeout: 20_000 });
+  await box.click();
+  await expect(page).toHaveURL(new RegExp("/products\\?q=$"));
+  await expect(page.getByPlaceholder("Search products...")).toBeFocused({ timeout: 10_000 });
+  await page.context().close();
+});
+
+test("phone menu sign out is tappable", async ({ browser }) => {
+  const who = await seller("sh-signout");
+  const ctx = await contextWithSession(browser, who.session, { width: 390, height: 844 }, true);
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await page.locator("header").getByRole("button", { name: "Open menu" }).click();
+  const signOut = page.getByRole("button", { name: /sign out/i });
+  await expect(signOut).toBeVisible({ timeout: 10_000 });
+  // The menu slides in: measure once it has settled. The element at the button's centre must be the button.
+  await expect.poll(async () => {
+    const box = (await signOut.boundingBox())!;
+    return page.evaluate(([x, y]) => {
+      const el = document.elementFromPoint(x, y);
+      return Boolean(el?.closest("button")?.getAttribute("aria-label")?.match(/sign out/i));
+    }, [box.x + box.width / 2, box.y + box.height / 2] as const);
+  }, { timeout: 5_000 }).toBe(true);
+  await ctx.close();
+});
+
+test("plan check error shows retry", async ({ browser }) => {
+  const who = await seller("sh-tiergate");
+  const ctx = await contextWithSession(browser, who.session, { width: 1280, height: 900 });
+  await ctx.route("**/rest/v1/rpc/vendor_entitlements*", (r) => r.fulfill({
+    status: 500, contentType: "application/json", body: JSON.stringify({ code: "XX000", message: "boom", details: null, hint: null }),
+  }));
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/crm`);
+  await expect(page.getByText("We couldn't check your plan")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("button", { name: "Retry" })).toBeVisible();
+  await expect(page).toHaveURL(/\/crm$/);
+  await ctx.close();
+});

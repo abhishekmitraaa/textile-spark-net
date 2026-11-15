@@ -1,5 +1,5 @@
 import { errorMessage } from "@/lib/errorMessage";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useQueryClient } from "@tanstack/react-query";
@@ -353,10 +353,18 @@ const Products = () => {
   const queryClient = useQueryClient();
   const { data: products = [], isLoading } = useMyProducts(user?.id);
   const [search, setSearch] = useState("");
+  const searchBox = useRef<HTMLInputElement>(null);
   const [categoryFilter, setCategoryFilter] = useState("all");
   // /products?status=paused is where the "listings paused" notice sends the vendor.
   const [params] = useSearchParams();
   const [statusFilter, setStatusFilter] = useState(params.get("status") === "paused" ? "paused" : "all");
+  // The header's search sends the seller here with ?q= (SH-028): start from it and put the cursor in the box.
+  const q = params.get("q");
+  useEffect(() => {
+    if (q === null) return;
+    setSearch(q);
+    searchBox.current?.focus();
+  }, [q]);
 
   // Listings and the plan's limit (subscriptions P4): what is paused, and a smaller limit
   // that is coming. The picker saves picks (keep) or swaps which are live (swap).
@@ -528,6 +536,7 @@ const Products = () => {
             <div className="flex items-center gap-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-200 lg:flex-1">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
               <input
+                ref={searchBox}
                 type="text"
                 placeholder="Search products..."
                 value={search}

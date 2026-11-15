@@ -1,6 +1,7 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { Navigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { useAuth } from "@/contexts/AuthContext";
@@ -48,7 +49,7 @@ const NOT_YOURS: Record<EntitlementFeature, { title: string; description: string
  */
 export function TierGate({ feature, children }: { feature: EntitlementFeature; children: ReactNode }) {
   const { user, loading } = useAuth();
-  const { data, isLoading, isError } = useVendorEntitlements(user?.id);
+  const { data, isLoading, isError, refetch, isFetching } = useVendorEntitlements(user?.id);
   const allowed = Boolean(data?.features?.[feature]);
   const settled = !loading && Boolean(user) && !isLoading;
   const told = useRef(false);
@@ -69,6 +70,23 @@ export function TierGate({ feature, children }: { feature: EntitlementFeature; c
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  // A failed check is not "not on your plan": a Gold seller's /crm used to become the plans page whenever the read
+  // failed under load (SH-032). Say so, and offer the read again.
+  if (isError && !data) {
+    return (
+      <DashboardLayout>
+        <div role="alert" className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
+          <AlertCircle className="h-8 w-8 text-muted-foreground" />
+          <p className="text-base font-semibold text-foreground">We couldn't check your plan</p>
+          <p className="text-sm text-muted-foreground">This page depends on your plan. Check your connection and try again.</p>
+          <Button onClick={() => void refetch()} disabled={isFetching}>
+            {isFetching && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            Retry
+          </Button>
+        </div>
+      </DashboardLayout>
+    );
+  }
   if (!allowed) return <Navigate to="/subscription#plans" replace />;
   return <>{children}</>;
 }

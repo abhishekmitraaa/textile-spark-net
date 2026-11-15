@@ -174,7 +174,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-foreground/50 backdrop-blur-sm"
+            className="fixed inset-0 z-[55] bg-foreground/50 backdrop-blur-sm"
             onClick={onClose}
           />
         )}
@@ -183,7 +183,8 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
+          // Above the phone's bottom bar (z-50), so Sign Out and the plan chip can be tapped (SH-029).
+          "fixed left-0 top-0 z-[60] flex h-screen w-72 flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:w-64",
           isMobile
             ? isOpen
               ? "translate-x-0"
@@ -347,6 +348,7 @@ export const DashboardSidebar = ({ isOpen, onClose }: DashboardSidebarProps) => 
                 <button
                   onClick={handleSignOut}
                   title="Sign Out"
+                  aria-label="Sign out"
                   className="rounded-lg p-2 text-sidebar-foreground/60 transition-colors hover:bg-accent/20 hover:text-accent"
                 >
                   <LogOut size={18} />

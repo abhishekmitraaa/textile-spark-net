@@ -28,6 +28,8 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const unread = useUnreadCount();
+  // A seller searches their own products (Products reads ?q= and focuses its box); the buyer side keeps /search.
+  const openSearch = () => navigate(role === "buyer" ? "/search" : "/products?q=");
   const { user } = useAuth();
   const store = useMyStoreName(role === "seller" ? user?.id : undefined).data;
   const homeHref = role === "buyer" ? "/home/new-arrivals" : "/seller-home";
@@ -40,6 +42,7 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
           {/* Mobile menu button */}
           <button
             onClick={onMenuClick}
+            aria-label="Open menu"
             className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
           >
             <Menu size={22} />
@@ -81,10 +84,11 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               type="search"
-              placeholder={role === "buyer" ? "Search for items or brands..." : "Search products, leads..."}
+              placeholder={role === "buyer" ? "Search for items or brands..." : "Search your products"}
               readOnly
-              onClick={() => navigate("/search")}
-              aria-label={role === "buyer" ? "Search for items or brands" : "Search products or leads"}
+              onClick={openSearch}
+              onKeyDown={(e) => { if (e.key === "Enter") openSearch(); }}
+              aria-label={role === "buyer" ? "Search for items or brands" : "Search your products"}
               className="w-48 cursor-pointer pl-10 md:w-64"
             />
           </div>
@@ -92,7 +96,11 @@ export const DashboardHeader = ({ onMenuClick }: DashboardHeaderProps) => {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Mobile search */}
-          <button className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:hidden">
+          <button
+            onClick={openSearch}
+            aria-label={role === "buyer" ? "Search for items or brands" : "Search your products"}
+            className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground sm:hidden"
+          >
             <Search size={20} />
           </button>
 
