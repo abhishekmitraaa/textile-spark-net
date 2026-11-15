@@ -158,3 +158,101 @@ test("recent leads put direct requests first and leave out archived chats", asyn
   await expect(page.locator(`[data-chat-id="${archived}"]`)).toHaveCount(0);
   await page.context().close();
 });
+
+// ─────────────────────────── Task 5: content and copy ───────────────────────────
+
+test("no invented claims on the home", async ({ browser }) => {
+  const who = await seller("sh-claims");
+  const page = await openHome(browser, who.session);
+  await expect(page.getByRole("heading", { name: "Recent Leads" })).toBeVisible({ timeout: 20_000 });
+  const text = await page.locator("main").innerText();
+  for (const phrase of ["40%", "3 more products", "Competitor's Advertisements", "Welcome back"]) expect(text).not.toContain(phrase);
+  await expect(page.getByText("Here's an overview of your business.")).toBeVisible();
+  await page.context().close();
+});
+
+test("next step card names the first missing signal", async ({ browser }) => {
+  const who = await seller("sh-next");
+  const page = await openHome(browser, who.session);
+  const card = page.getByTestId("next-step-card");
+  await expect(card).toContainText("Next step", { timeout: 20_000 });
+  await expect(card).toContainText("Add a contact phone number");
+  await expect(card).toContainText("+8 points");
+  await expect(card.getByRole("link")).toHaveAttribute("href", "/business-profile");
+  await page.context().close();
+});
+
+test("alerts card follows entitlement", async ({ browser }) => {
+  const plain = await seller("sh-alerts-a");
+  const p1 = await openHome(browser, plain.session);
+  await expect(p1.getByText("New requirements appear on your Leads page")).toBeVisible({ timeout: 20_000 });
+  await expect(p1.getByTestId("alerts-card").getByRole("link")).toHaveAttribute("href", "/leads");
+  await p1.context().close();
+
+  const gold = await seller("sh-alerts-b");
+  sql(`insert into public.vendor_subscriptions (vendor_id, plan_id, billing_cycle, status, current_period_start, current_period_end)
+       values ('${gold.id}', 'gold', 'monthly', 'active', now(), now() + interval '30 days');
+       update public.feature_flags set allow_profile_ids = array_append(allow_profile_ids, '${gold.id}'::uuid) where key = 'lead_alerts';`);
+  try {
+    const p2 = await openHome(browser, gold.session);
+    await expect(p2.getByText("Set up lead alerts")).toBeVisible({ timeout: 20_000 });
+    await expect(p2.getByTestId("alerts-card").getByRole("link")).toHaveAttribute("href", "/lead-alerts");
+    await p2.context().close();
+  } finally {
+    sql(`update public.feature_flags set allow_profile_ids = array_remove(allow_profile_ids, '${gold.id}'::uuid) where key = 'lead_alerts';
+         delete from public.vendor_subscriptions where vendor_id = '${gold.id}';`);
+  }
+});
+
+test("prices keep their paise", async ({ browser }) => {
+  const who = await seller("sh-paise");
+  sql(`insert into public.products (vendor_id, name, price_value, status, enquiries_count) values ('${who.id}', 'Paise shirt', 799.50, 'live', 3);`);
+  const page = await openHome(browser, who.session);
+  await expect(page.getByText("₹799.50")).toBeVisible({ timeout: 20_000 });
+  await page.context().close();
+});
+
+test("no button inside a link", async ({ browser }) => {
+  const who = await seller("sh-nest");
+  const page = await openHome(browser, who.session);
+  await expect(page.getByRole("heading", { name: "Recent Leads" })).toBeVisible({ timeout: 20_000 });
+  expect(await page.evaluate(() => document.querySelectorAll("main a button, main a [role=button]").length)).toBe(0);
+  await page.context().close();
+});
+
+test("quick actions: one catalogue entry, Browse Leads, ticks when done", async ({ browser }) => {
+  const who = await seller("sh-tiles");
+  sql(`update public.vendor_profiles set website = 'https://tiles.example' where id = '${who.id}';`);
+  const page = await openHome(browser, who.session);
+  await expect(page.getByRole("heading", { name: "Recent Leads" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator('main a[href="/upload-catalogue"]')).toHaveCount(1);
+  await expect(page.getByRole("link", { name: /Browse Leads/ })).toHaveAttribute("href", "/leads");
+  await expect(page.locator('main a:has-text("Add Website")')).toHaveAttribute("data-done", "true");
+  await expect(page.locator('main a:has-text("Add Email")')).toHaveAttribute("data-done", "false");
+  await page.context().close();
+});
+
+test("laptop right column has no gap over 48 px", async ({ browser }) => {
+  const who = await seller("sh-layout");
+  const ctx = await contextWithSession(browser, who.session, { width: 1440, height: 900 });
+  const page = await ctx.newPage();
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await expect(page.getByRole("heading", { name: "Recent Leads" })).toBeVisible({ timeout: 20_000 });
+  await page.waitForTimeout(800);
+  const boxes = await page.locator("[data-right-card]").evaluateAll((els) =>
+    els.filter((e) => (e as HTMLElement).offsetParent).map((e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom }; })
+      .sort((a, b) => a.top - b.top));
+  expect(boxes.length).toBeGreaterThanOrEqual(3);
+  for (let i = 1; i < boxes.length; i++) expect(boxes[i].top - boxes[i - 1].bottom).toBeLessThanOrEqual(48);
+  await ctx.close();
+});
+
+test("analysis subtitles are neutral and Inquiries says Lifetime", async ({ browser }) => {
+  const who = await seller("sh-analysis");
+  const page = await openHome(browser, who.session);
+  const analysis = page.getByTestId("analysis-panel");
+  await expect(analysis).toBeVisible({ timeout: 20_000 });
+  expect(await analysis.locator(".text-green-600, .text-red-500").count()).toBe(0);
+  await expect(analysis.getByTestId("stat-Inquiries")).toContainText("Lifetime");
+  await page.context().close();
+});

@@ -15,7 +15,7 @@ import {
   Mail,
   Video,
   Upload,
-  BookOpen,
+  Check,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -27,6 +27,8 @@ interface QuickActionItem {
   bgColor: string;
   badge?: string;
   badgeVariant?: "default" | "secondary" | "destructive" | "outline";
+  /** A profile-score task this tile completes: it shows a tick once done (SH-024). */
+  doneKey?: "website" | "email";
 }
 
 const primaryActions: QuickActionItem[] = [
@@ -41,7 +43,7 @@ const secondaryActions: QuickActionItem[] = [
   // Website and email are both fields of Business Profile's Contact Details
   // section, not My Store — `?focus=` scrolls to and highlights it, the same
   // deep link the Profile Score checklist uses for these two tasks.
-  { name: "Add Website", icon: Globe, href: "/business-profile?focus=contact-details", color: "text-cyan-600", bgColor: "bg-cyan-100" },
+  { name: "Add Website", icon: Globe, href: "/business-profile?focus=contact-details", color: "text-cyan-600", bgColor: "bg-cyan-100", doneKey: "website" },
   { name: "Add Social Links", icon: Share2, href: "/add-social-links", color: "text-orange-600", bgColor: "bg-orange-100" },
   { name: "Upload Catalogue", icon: Upload, href: "/upload-catalogue", color: "text-green-600", bgColor: "bg-green-100", badge: "FREE", badgeVariant: "secondary" },
 ];
@@ -49,7 +51,7 @@ const secondaryActions: QuickActionItem[] = [
 const tertiaryActions: QuickActionItem[] = [
   { name: "Help/Connect", icon: HelpCircle, href: "/help", color: "text-indigo-600", bgColor: "bg-indigo-100" },
   { name: "Photo Studio", icon: Camera, href: "/cosora-studio", color: "text-pink-600", bgColor: "bg-pink-100" },
-  { name: "Add Email", icon: Mail, href: "/business-profile?focus=contact-details", color: "text-teal-600", bgColor: "bg-teal-100" },
+  { name: "Add Email", icon: Mail, href: "/business-profile?focus=contact-details", color: "text-teal-600", bgColor: "bg-teal-100", doneKey: "email" },
   { name: "Video Closeup", icon: Video, href: "/upload-video", color: "text-red-600", bgColor: "bg-red-100" },
 ];
 
@@ -59,7 +61,10 @@ const TRACKED_ACTIONS: Record<string, CtaName> = {
   "Add Products": "add_product",
 };
 
-const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: number }) => {
+type DoneMap = Partial<Record<NonNullable<QuickActionItem["doneKey"]>, boolean>>;
+
+const QuickActionButton = ({ item, index, done }: { item: QuickActionItem; index: number; done: DoneMap }) => {
+  const isDone = item.doneKey ? Boolean(done[item.doneKey]) : undefined;
   const Icon = item.icon;
   const { user } = useAuth();
   const cta = TRACKED_ACTIONS[item.name];
@@ -73,6 +78,7 @@ const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: numb
       <Link
         to={item.href}
         onClick={cta ? () => void logEngagement({ eventType: "cta_click", ctaName: cta, vendorId: user?.id }) : undefined}
+        data-done={isDone === undefined ? undefined : isDone ? "true" : "false"}
         className="group flex flex-col items-center gap-2 rounded-xl p-3 transition-all hover:bg-muted/50 sm:p-4"
       >
         <div className="relative">
@@ -81,6 +87,11 @@ const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: numb
           >
             <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${item.color}`} />
           </div>
+          {isDone && (
+            <span aria-label="Done" className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-success text-white">
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </span>
+          )}
           {item.badge && (
             <Badge
               variant={item.badgeVariant}
@@ -98,7 +109,7 @@ const QuickActionButton = ({ item, index }: { item: QuickActionItem; index: numb
   );
 };
 
-export const SellerQuickActionsGrid = () => {
+export const SellerQuickActionsGrid = ({ done = {} }: { done?: DoneMap }) => {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -119,44 +130,22 @@ export const SellerQuickActionsGrid = () => {
           there — wider than the six-across tile would be even at 1280. */}
       <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {primaryActions.map((item, index) => (
-          <QuickActionButton key={item.name} item={item} index={index} />
+          <QuickActionButton key={item.name} item={item} index={index} done={done} />
         ))}
       </div>
       <div className="h-px bg-border xl:hidden" />
       <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {secondaryActions.map((item, index) => (
-          <QuickActionButton key={item.name} item={item} index={index + 4} />
+          <QuickActionButton key={item.name} item={item} index={index + 4} done={done} />
         ))}
       </div>
       <div className="h-px bg-border xl:hidden" />
       <div className="grid grid-cols-4 gap-2 sm:gap-4 xl:contents">
         {tertiaryActions.map((item, index) => (
-          <QuickActionButton key={item.name} item={item} index={index + 8} />
+          <QuickActionButton key={item.name} item={item} index={index + 8} done={done} />
         ))}
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="xl:col-span-6"
-      >
-        <Link
-          to="/upload-catalogue"
-          className="flex items-center justify-between rounded-xl border-2 border-dashed border-brand-vendor/40 bg-brand-vendor/5 p-4 transition-all hover:border-brand-vendor hover:bg-brand-vendor/10"
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-vendor/20">
-              <Upload className="h-5 w-5 text-brand-vendor" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-foreground">Upload Catalogue</h4>
-              <p className="text-xs text-muted-foreground">Share your full product range as a PDF</p>
-            </div>
-          </div>
-          <BookOpen className="h-5 w-5 text-brand-vendor" />
-        </Link>
-      </motion.div>
     </motion.div>
   );
 };
