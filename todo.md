@@ -3,7 +3,7 @@
 Durable record of everything explicitly **deferred rather than built**, so it
 does not get lost the way the previous "still open" ledger nearly did.
 
-Last reviewed: 2026-11-14 (the per-day ad types now say "/day").
+Last reviewed: 2026-11-15 (Seller Home audit added).
 Longer-form engineering notes live in `documentation/ToDo.md`; this file is the
 short list of things someone has to *decide*.
 
@@ -56,6 +56,85 @@ short list of things someone has to *decide*.
   delivery address before the certificate can be added to an order, or let the
   vendor supply one against an existing order. Demonstrable live: demo order
   `CERT-2609-003` is stuck at `printed` for exactly this reason.
+
+## Seller Home audit (2026-11-15) — open, nothing fixed yet
+
+Read-only review of `/seller-home` and what it links to, on main `4c5a845`, tested in a browser against the local
+stack with a seller registered through the real form. "Seen" = reproduced in the browser; "code" = found by reading
+the code. Screenshots: `cosora testing/.playwright-mcp/home-review/`. The full list with context (113 items, SH-001
+to SH-113, including the ones below) is `documentation/seller-home-audit-2026-11-15.md`.
+
+### High
+- **Back after switching to Buyer shows a broken page (seen).** Seller Home → Buyer → Back renders the seller
+  dashboard inside the buyer menu, buyer header search and buyer bell. `useSwitchRole()` changes the side but the
+  page you go back to doesn't change it back (`src/hooks/useSwitchRole.ts`).
+- **"Advertise" traps the Back button (seen).** `/advertisement-slideshow` pushes `/advertisements` (its timer and
+  Skip both use `navigate()` without `replace`), so Back lands on the slideshow, which moves forward again ~10 s
+  later. Reached from the banner's "Advertise Now" and the "Advertise" tile (`src/pages/AdvertisementSlideshow.tsx`).
+- **`site_banners` is an abandoned table (code).** Super admins still edit vendor banners in Cosora-Admin › Content,
+  but `VendorDashboardBanners` is mounted nowhere since `/dashboard` became a redirect (2026-11-14). Seller Home shows
+  two hardcoded images instead (`homebanner1.jpg`, `homebanner2.jpg`). Either mount it on Seller Home or retire the
+  admin page, the table and its snapshot.
+- **Seller Home is buyer coral, not vendor blue (seen).** `--accent` is the buyer colour, and the home uses it for
+  "INCREASE SCORE", the score ring, "Send a quote", "View Leads", the active menu item and the bottom bar. `sides.md`
+  says vendor pages use `#256fef`. The Competitor card and `/competitor-ads` also use buyer colours (and hex `#f75f71`).
+- **Seller Home won't hold up at 10,000 concurrent users (measured).**
+  - One load makes 23 API calls; `fetchVendorDashboard()` runs in three sequential rounds.
+  - To show 3 rows each it downloads every open requirement (plus all the seller's quotes and `match_vendor_rfqs`
+    200 rows), every own product with images, and every chat. Past 1,000 open requirements the list is cut off
+    silently (breaks "a list the browser filters is never every row").
+  - The `rfqs_select` policy calls `blocked_with_me(buyer_id)` per row; it is SECURITY DEFINER with a `search_path`,
+    so it is never inlined. 120 open requirements: 12 ms count, 22 ms with the call; it grows with every requirement
+    and runs for the count, again for the list, and again on Leads.
+  - Fix: one `seller_home_summary()` function that returns the counts and the top 3 of each list, and an inline
+    (set-based) block check in the policy.
+
+### Medium
+- **Profile score and "Boost Your Profile" ask Free sellers for what the plan forbids (code).** Free allows 2
+  products (`subscription_plans.limits.product_cap`), but the score asks for "List 10 products" (10 points) and the
+  card for "Add 3 more products". A Free seller can't pass 90%. Make the signals plan-aware or reword them.
+- **"Boost Your Profile" carries an invented claim.** "Increase your visibility by 40%" breaks the 2026-11-14 rule;
+  its button says "advertise" in lower case and opens `/advertisements`, not `/upload`.
+- **Nothing tells a new seller what happens next (seen).** The welcome screen has no button or hint and doesn't move
+  on; the home then says "Welcome back!" to a first-time seller; nothing mentions that documents (3–5 days), the first
+  product and the premises photo are under review; no notification is written at registration; no link to `/kyc` from
+  the home or the menu.
+- **The registration banner is hidden in production (code).** `RegistrationBanner` shows only while
+  `seller_registration_required` is on (off today), so a seller with an unsigned agreement ("Abc" above) or a rejected
+  registration gets no prompt on the home.
+- **Header search is broken (seen).** The phone's search icon has no handler. On a laptop, "Search products,
+  leads…" opens the buyer marketplace `/search`, not the seller's own products or leads.
+- **Phone menu hides Sign Out (seen).** In the sidebar at 390 px, Sign Out and the plan chip sit under the bottom bar
+  (both `z-50`) and a tap hits the bar.
+- **Anyone can open Seller Home (seen).** Signed out it shows "Welcome back! Here's an overview of your business", an
+  invented 45% score (`DEFAULT_PROFILE_SCORE`) and "0 Open Leads". Buyer-only accounts get a seller dashboard with no
+  prompt to register.
+- **The score ring shows 0% for ~200 ms on every load (seen):** `BusinessProfileScore` ignores `isLoading`.
+- **Uploads waiting for review count as missing.** A premises photo under review shows "Missing", with no "waiting for
+  review" state; the "Complete product details" tile really means "get a listing approved".
+- **The alerts card contradicts Lead alerts.** It says "Email and push alerts aren't live yet"
+  (`NOTIFICATION_DELIVERY_LIVE = false`), but lead alerts are a live plan feature with `/lead-alerts`. Read
+  `my_lead_alerts().live_channels` / entitlements and link there.
+- **"Competitor's Advertisements" is mislabelled.** The card promises competitors' ads; it opens Category Benchmarks.
+- **The promo banner is broken visually (seen).** The text on top repeats the headline already in the image (cropped
+  "et Prime Placement"); `scale(0.85)` leaves a grey frame; it rotates every 3.5 s with no pause control (WCAG 2.2.2)
+  and ignores reduced motion.
+
+### Low
+- Top Performing Products rounds prices (`Math.round` in `fetchMyProducts`: ₹450.75 shows ₹451) and shows ₹0 with
+  no price; use `priceText()`.
+- "Recent Leads" are ordered by fit, not date; a failed lead picture spills its alt text over the card (seen).
+- Analysis subtitles are always green (`up: true`), even "1 under review" and "0 accepted"; "Inquiries" is a lifetime
+  counter with no "Lifetime" label.
+- Lead titles, buyer names, last messages and product names on the home lack `data-no-translate`.
+- 10 buttons sit inside links (`<Link><motion.button>`): invalid HTML, two keyboard stops per item.
+- The Buyer/Seller switch is on every seller page, twice (header and menu); `claude.md` puts it only on the two homes.
+- "Upload Catalogue" appears twice; "Add Website" / "Add Email" stay after they're filled; "Browse Quotes — Find new
+  business opportunities" opens your own Quotation Requests (new opportunities are on `/leads`).
+- `/business-profile-score`'s back arrow (`navigate(-1)`) leaves the app when the page was opened from a link (seen).
+- After registering, Forward walks into 12 leftover registration history entries.
+- Large empty gaps in the right column on a laptop.
+- `VendorDashboard.followers` and `videos` are computed and never shown.
 
 ## Medium priority
 
