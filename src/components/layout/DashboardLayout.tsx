@@ -1,4 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import { routeSide } from "@/lib/sellerRoutes";
 import { DashboardSidebar } from "./DashboardSidebar";
 import { DashboardHeader } from "./DashboardHeader";
 import { MobileBottomNav } from "./MobileBottomNav";
@@ -18,6 +21,14 @@ interface DashboardLayoutProps {
 export const DashboardLayout = ({ children, variant = "default" }: DashboardLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const fullScreen = variant === "full-screen";
+  const { pathname } = useLocation();
+  const { role, setRole, vendorRegistered } = useUserRole();
+
+  // The address decides the side (SH-004): Back to a seller page after switching to Buyer shows the seller menu, not
+  // this page inside the buyer's. Only for a registered seller (the switch's own rule); shared pages keep the side.
+  useEffect(() => {
+    if (routeSide(pathname) === "seller" && role === "buyer" && vendorRegistered) setRole("seller");
+  }, [pathname, role, vendorRegistered, setRole]);
 
   // Portalled dialogs live on <body>, outside this shell: give them the vendor colours too (SH-005).
   useEffect(() => {

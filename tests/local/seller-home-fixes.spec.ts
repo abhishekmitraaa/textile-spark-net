@@ -279,3 +279,68 @@ test("seller pages are vendor blue", async ({ browser }) => {
   expect(await bodyPrimary()).toBe("352 85% 62%");
   await page.context().close();
 });
+
+// ─────────────────────────── Task 7: the address decides the shell ───────────────────────────
+
+const LAPTOP = { width: 1280, height: 900 };
+const PHONE = { width: 390, height: 844 };
+
+/** A registered seller on Seller Home who has just switched to Buyer (laptop). */
+async function switchedToBuyer(browser: Browser, prefix: string): Promise<Page> {
+  const who = await seller(prefix);
+  const ctx = await contextWithSession(browser, who.session);
+  const page = await ctx.newPage();
+  await page.setViewportSize(LAPTOP);
+  await page.goto(`${BUYER_URL}/seller-home`);
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 20_000 });
+  await page.locator("header").getByRole("button", { name: "Buyer" }).click();
+  await expect(page).toHaveURL(/\/home\/new-arrivals$/);
+  return page;
+}
+
+/** Client-side navigation (no reload, so the side isn't re-read from the account). */
+async function clientGo(page: Page, path: string) {
+  await page.evaluate((p) => {
+    window.history.pushState({}, "", p);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }, path);
+}
+
+test("back after switching shows the seller menu", async ({ browser }) => {
+  const page = await switchedToBuyer(browser, "sh-back");
+  await page.goBack();
+  await expect(page).toHaveURL(/\/seller-home$/);
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator("aside").getByText("Buyer Menu")).toHaveCount(0);
+  await expect(page.locator('header input[type="search"]')).not.toHaveAttribute("placeholder", "Search for items or brands...");
+  await page.context().close();
+});
+
+test("forward after that shows the buyer menu", async ({ browser }) => {
+  const page = await switchedToBuyer(browser, "sh-forward");
+  await page.goBack();
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await page.setViewportSize(PHONE);
+  await page.goForward();
+  await expect(page).toHaveURL(/\/home\/new-arrivals$/);
+  const tabs = page.locator("nav").filter({ has: page.locator('a[href="/categories"]') });
+  await expect(tabs.locator('a[href="/categories"]')).toBeVisible({ timeout: 10_000 });
+  await expect(page.locator('nav a[href="/upload"]')).toHaveCount(0);
+  await page.context().close();
+});
+
+test("help keeps the side you came from", async ({ browser }) => {
+  // From the buyer side: Help is the buyer's.
+  const page = await switchedToBuyer(browser, "sh-help");
+  await clientGo(page, "/help");
+  await expect(page).toHaveURL(/\/help$/);
+  await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Seller Menu")).toHaveCount(0);
+  // Back on a seller page the side is the seller's again, and Help then stays the seller's.
+  await clientGo(page, "/seller-home");
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await clientGo(page, "/help");
+  await expect(page).toHaveURL(/\/help$/);
+  await expect(page.locator("aside").getByText("Seller Menu")).toBeVisible({ timeout: 10_000 });
+  await page.context().close();
+});

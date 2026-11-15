@@ -1,4 +1,7 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { useUserRole } from "@/contexts/UserRoleContext";
+import { routeSide } from "@/lib/sellerRoutes";
 import BuyerTopBar from "./BuyerTopBar";
 import ToTopButton from "./ToTopButton";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -30,6 +33,14 @@ interface BuyerShellProps {
  * gets the full viewport width up to its own max-w containers.
  */
 export default function BuyerShell({ children }: BuyerShellProps) {
+  const { pathname } = useLocation();
+  const { role, setRole } = useUserRole();
+
+  // The address decides the side (SH-004): a buyer page shows the buyer menu, also after Forward from a seller page.
+  useEffect(() => {
+    if (routeSide(pathname) === "buyer" && role === "seller") setRole("buyer");
+  }, [pathname, role, setRole]);
+
   return (
     <BuyerSignupGate>
       <div className="min-h-screen bg-white">
