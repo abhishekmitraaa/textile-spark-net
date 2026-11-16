@@ -119,3 +119,16 @@ test("a corrupt cover is refused cleanly", async ({ browser }) => {
   expect(sql(`select count(*) from public.product_videos where vendor_id = '${who.id}'`)).toBe("0");
   await page.context().close();
 });
+
+// ─────────────────────────── Task 3: catalogues have no visibility choice (SH-071) ───────────────────────────
+
+test("the catalogue form has no visibility question", async ({ browser }) => {
+  const who = await seller("hi-cat");
+  sql(`insert into public.catalogues (vendor_id, title, status) values ('${who.id}', 'Hi Fixes Catalogue', 'under_review');`);
+  const page = await open(browser, who.session, "/upload-catalogue");
+  await expect(page.getByText("Hi Fixes Catalogue")).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByText("Who can view this catalogue?")).toHaveCount(0);
+  await expect(page.getByText("All Buyers")).toHaveCount(0);
+  await expect(page.getByText("Verified Only")).toHaveCount(0);
+  await page.context().close();
+});

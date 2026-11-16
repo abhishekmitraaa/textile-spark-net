@@ -11,7 +11,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft, FileText, Upload, X, CheckCircle2,
-  Eye, Trash2, Download, Clock, Lock, Globe, Users,
+  Eye, Trash2, Download, Clock,
   AlertCircle, BookOpen, Plus,
 } from "lucide-react";
 
@@ -46,7 +46,6 @@ interface CatalogueFile {
   pages: number;
   uploadedAt: string;
   status: "live" | "under_review" | "rejected";
-  visibility: "all" | "verified" | "private";
   downloads: number;
   views: number;
   rejectionReason: string | null;
@@ -80,12 +79,6 @@ const statusConfig = {
   },
 };
 
-const visibilityConfig = {
-  all: { label: "All Buyers", icon: Globe },
-  verified: { label: "Verified Buyers", icon: Users },
-  private: { label: "Private", icon: Lock },
-};
-
 // ─────────────────────────────────────────────────────────────
 // EXISTING CATALOGUE CARD
 // ─────────────────────────────────────────────────────────────
@@ -98,9 +91,7 @@ function CatalogueCard({
   onDelete: (id: string) => void;
 }) {
   const status = statusConfig[catalogue.status];
-  const visibility = visibilityConfig[catalogue.visibility];
   const StatusIcon = status.icon;
-  const VisibilityIcon = visibility.icon;
 
   return (
     <motion.div
@@ -138,10 +129,6 @@ function CatalogueCard({
             >
               <StatusIcon className="w-2.5 h-2.5" />
               {status.label}
-            </span>
-            <span className="inline-flex items-center gap-1 text-[10px] text-gray-500">
-              <VisibilityIcon className="w-3 h-3" />
-              {visibility.label}
             </span>
           </div>
 
@@ -208,7 +195,6 @@ const UploadCatalogue = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [catalogueName, setCatalogueName] = useState("");
   const [description, setDescription] = useState("");
-  const [visibility, setVisibility] = useState<"all" | "verified" | "private">("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Vendor's own catalogues (any status) mapped into the card shape.
@@ -219,7 +205,6 @@ const UploadCatalogue = () => {
     pages: c.pageCount ?? 0,
     uploadedAt: c.createdAt,
     status: c.status === "draft" ? "under_review" : c.status,
-    visibility: "all",
     downloads: 0,
     views: 0,
     rejectionReason: c.rejectionReason ?? null,
@@ -300,7 +285,6 @@ const UploadCatalogue = () => {
       setSelectedFile(null);
       setCatalogueName("");
       setDescription("");
-      setVisibility("all");
       toast.success("Catalogue uploaded!", {
         description: "It'll go live after review (24–48 hours).",
       });
@@ -477,45 +461,6 @@ const UploadCatalogue = () => {
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-vendor/30 focus:border-brand-vendor/50 resize-none transition-all"
             />
-          </div>
-
-          {/* Visibility */}
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-2">
-              Who can view this catalogue?
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  { value: "all", label: "All Buyers", icon: Globe, desc: "Anyone on Cosora" },
-                  { value: "verified", label: "Verified Only", icon: Users, desc: "TradeSEAL buyers" },
-                  { value: "private", label: "Private", icon: Lock, desc: "Only you" },
-                ] as const
-              ).map((opt) => {
-                const Icon = opt.icon;
-                const isSelected = visibility === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    onClick={() => setVisibility(opt.value)}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 p-3 rounded-xl border text-center transition-all",
-                      isSelected
-                        ? "border-brand-vendor bg-brand-vendor/5 text-brand-vendor"
-                        : "border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-50"
-                    )}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-xs font-semibold leading-tight">
-                      {opt.label}
-                    </span>
-                    <span className="text-[10px] text-gray-400 leading-tight">
-                      {opt.desc}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
           </div>
 
           {/* Moderation notice */}
