@@ -488,6 +488,20 @@ the demand side of India's fashion and textile supply chain.
 `src/index.css` are both the **buyer coral**, so vendor pages hardcode `#256fef`.
 **Shell:** `DashboardLayout` — sidebar + header.
 
+### Changed 2026-11-16 (Seller Home audit, the nine High items left; branch `seller-home/fixes`, not live)
+- **Advertise.** Paid days start when Cosora approves the campaign, however long review takes; the card of a campaign
+  in review says so. Pausing keeps the remaining days (Trusted Seal and Verified Certificate keep running). A campaign
+  marked "Changes needed" has **Edit and resubmit**: the title, the picture and who sees the ad. After payment the page
+  says the ads are waiting for review, and never "You were not charged" once money has moved. Back from Advertise no
+  longer returns to the slideshow.
+- **Quotes.** A sent quote can't be changed, or taken back to pending, once the buyer's request is closed, past its
+  deadline or removed.
+- **Leads** load much faster for sellers with many requirements to rank; the order is unchanged.
+- **Video Closeups upload.** A PNG cover works; a failed upload leaves nothing behind.
+- **Upload Catalogue** no longer asks "Who can view this catalogue?": every approved catalogue is shown to all buyers.
+- **Chats.** The header shows the other person's real name and picture, and no rating, place or request number.
+- Cosora-Admin › Ads: a campaign waiting for review shows "Runs for N days from approval" and can always be approved.
+
 ### Changed 2026-11-16 (Seller Home fixes, audit SH-001…SH-033; branch `seller-home/fixes`, not live)
 - After registering, the welcome screen says what happens next and has a "Go to Seller Home" button; a notice
   "Your registration is in" lands in the bell. Seller Home opens with **Getting started**: what the seller still has to

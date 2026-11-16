@@ -6,6 +6,31 @@ with no need to dictate format, context, or reference each time.
 
 ## Open
 
+### Bring the five unreleased October review fixes up to date — added 2026-11-16
+- Task: re-check, re-test and release the five fixes still sitting on branch `fix/review-2026-10-13` (commit `0330b78`,
+  worktree `.worktrees/review-fixes`, base `f1e3775`), or decide each is no longer needed.
+- Context: the 2026-10-13 buyer-side code review fixed six findings on that branch and it was never released. Mitra
+  brought only the ad payment fix into the Seller Home release (2026-11-16, "Only the ad payment fix"). Still there:
+  (1) a chat participant can rewrite the participants, the preview and the dates of a conversation
+  (`20261013100000_conversation_columns_are_server_owned`); (2) `submit_report` is unthrottled and doesn't check the
+  message belongs to the conversation (`…100100_submit_report_limits`); (3) quote-request reference images sit in the
+  public `product-images` bucket (`…100200_rfq_attachments_private_bucket`, plus app changes); (4) the CSP report
+  endpoint accepts any `*.vercel.app` host and its table stops at 5,000 rows (`…100300`, `api/csp-report.ts`);
+  (5) eight edge functions read the caller from the token without asking Auth (`verifiedUserId`), the two ad payment
+  functions among them. The branch is a month behind `main`, its migration numbers are taken by other files, and the
+  security fixes released on 2026-11-13 (F02–F07) may already cover some of it: each needs checking against today's code.
+- Reference: `subscription-session/SESSION-CONTEXT.md` (2026-10-13 entries); `documentation/securityflags.md` on that
+  branch; Seller Home high-priority fixes plan, 2026-11-16.
+- Status: Open
+
+### Check the overseas harness's last case — added 2026-11-16
+- Task: find out why `scripts/subscriptions/p7_overseas.sql` check 19 ("the head start can't be skipped by the buyer's
+  later edits") fails on the local stack with "A request can't be moved to other sellers", and fix the harness or the rule.
+- Context: seen on 2026-11-16 while re-running the lead harnesses; the other 18 pass. It is a guard on updates to
+  `rfqs`, not something the Seller Home fixes touch, and it was not investigated.
+- Reference: `documentation/test.md`, "p7_overseas".
+- Status: Open
+
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
 - Context: Mitra raised Free to 10 ("allow 10 lisitng for free plan", other plans unchanged; migration
@@ -17,7 +42,8 @@ with no need to dictate format, context, or reference each time.
 - Status: Open
 
 ### Turn on the live-update hub — added 2026-11-16
-- Task: after the Seller Home fixes are released, Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches,
+- Task: after the Seller Home fixes are released (both sets: migrations `20261116100000`–`100400` and `110000`–`110300`,
+  then `razorpay-verify-payment` and `razorpay-webhook`, then both apps), Mitra turns on `live_updates_hub` (Cosora-Admin › Feature switches,
   with a reason), first for a few accounts, then everyone.
 - Context: one private Broadcast channel per account replaces each tab's per-page table subscriptions (SH-030,
   SH-031, SH-036). Off, nothing changes. Watch Realtime's connection count and the `realtime.messages` partitions

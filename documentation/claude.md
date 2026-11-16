@@ -1306,6 +1306,52 @@ undocumented. Deep technical rationale for each lives in
   notifications, chats, the legal pages) keep the side the person came from. So Back after Buyer/Seller shows a
   whole page. A new seller page adds its path to `SELLER_PATHS`; a page that picks its frame by side goes in
   `SHARED_PATHS`.
+- **A campaign's paid days start when Cosora approves it, and are kept while it is paused** (Mitra, 2026-11-16, "Give
+  paused days back"; Seller Home audit SH-088; migration `20261116110300`).
+  - `approve_ad_campaign()` moves a window that has already begun to start now, with the length that was paid for; one
+    booked to start later keeps its dates. Until approval a campaign has a length, not dates: no surface says "ends on"
+    or "already ended" for a campaign in review (seller cards: "Your paid time (N days) starts when it is approved").
+  - `advertisements.paused_at` is when the pause began (the first one, when Cosora pauses on top of the seller); only
+    `ad_apply_decision()` writes it. `resume_ad_campaign()` adds the paused time back to `ends_at`: the time since the
+    later of the pause and the start date. A seller's pause and Cosora's are treated alike.
+  - **Trusted Seal and Verified Certificate get nothing back** (`ad_seal_sources(placement)` non-empty): the badge stays
+    on the profile while paused, so the days keep running.
+  - The sweep never ends a paused campaign that holds its days (`paused_at` before `ends_at`, not a seal). The app's
+    mirror is `holdsDays()` in `src/lib/campaignRunState.ts`; change the two together.
+  - A new status move goes through `ad_apply_decision()`, or the pause clock is wrong.
+- **"Changes needed" is answered in the app: Edit and resubmit** (SH-089, 2026-11-16). The seller may change what
+  `enforce_ads_moderation` allows after changes are requested: the title, the picture (one of the promoted listing's)
+  and who the ad is shown to. The ad types, the days and the listing stay as paid for. `saveAndResubmitCampaign()`
+  sends only what changed and then calls `resubmit_ad_campaign()`; the plan's reach is still `ad_reach_check`'s to
+  refuse. A new reason code that asks for something the dialog can't change needs the dialog widened with it.
+- **A paid ad order is completed by one database transaction** (SH-090, 2026-11-16; migration `20261116110200`; written
+  2026-10-13 and never released until now). `public.ad_order_fulfil(order, rows)` (service role) marks the order paid
+  and inserts every campaign together. `razorpay-verify-payment` and `razorpay-webhook` reach it only through
+  `supabase/functions/_shared/adPublish.ts`; neither writes an order's status or a campaign itself. A failure writes
+  nothing and answers `retry` (the webhook answers 503 so Razorpay delivers again); an order whose plan can't run ads
+  goes to refund review in one write. A new way to pay for ads calls `publishOrder()`.
+  - **The page never says "You were not charged" unless it knows** (a bad signature, or a failure before payment). After
+    a good signature it says the payment was received and what happened to the ads, with the payment ID.
+  - **Nothing says "your ads are live" at payment**: every campaign lands in review.
+- **Lead ranking is computed for the whole pool in one query** (SH-076, 2026-11-16; migration `20261116110100`).
+  `match_vendor_rfqs` calls nothing per requirement; `admin.rfq_fit_set()` scores them all. The results did not
+  change, and `scripts/seller-home/lead_ranking_equivalence.sql` holds that against `admin.rfq_fit()`, the one-pair
+  reference. A Fit rule changes in both (`documentation/ranking.md`, section 6).
+  - **A SQL function with a `SET` clause is never inlined, even when IMMUTABLE.** `admin.fit_values()` called once
+    per answer was 0.7 s of a 0.8 s call; the same rule written inline took 0.09 s. In a hot query write such a rule
+    inline and let a harness hold it to the function.
+- **The chat header shows what the database knows, and nothing else** (SH-100, 2026-11-16): the other person's name
+  and picture. No rating, no "Online / Offline" (Cosora has no presence), no place, no request (a conversation isn't
+  tied to one). `getOrCreateConversation()` invents nothing; the thread never reads a name from the id in the address.
+- **A catalogue has no "who can view" choice** (Mitra, 2026-11-16, "Remove the question"; SH-071): every approved
+  catalogue is shown to all buyers. The form asked and saved nothing, so "Private" price lists were public. Don't add
+  the control back without a column, a read policy and a private bucket behind it.
+- **A video's cover is stored as the bucket takes it** (SH-068, 2026-11-16): a JPEG or WebP as it is, a PNG redrawn as
+  a JPEG in the browser (`coverForUpload()`), checked before the clip is uploaded. Anything `createProductVideo()` put
+  in Storage is removed again when a later step fails. A new upload flow that writes a file and then a row does the same.
+- **In a SECURITY DEFINER function `current_user` is the function's owner.** To ask "is this the seller's own request?"
+  there, read the caller from the token (`auth.uid()`); `current_user = 'authenticated'` is only true in an invoker
+  function or trigger. (2026-11-16: `enforce_quote_rfq_open()` let a seller un-win an order until this was fixed.)
 - **Seller pages are vendor blue** (Mitra, 2026-11-15, "all seller pages"). `.vendor-shell` and `body.vendor-theme`
   (set by `DashboardLayout`, so portalled dialogs follow) make `--primary`, `--accent` and `--ring` `218 86% 54%`
   (#256fef). It is a fixed value: it doesn't follow a theme colour changed in Cosora-Admin yet (ToDo, shadcn tokens).
@@ -1396,6 +1442,9 @@ undocumented. Deep technical rationale for each lives in
   an existing quote after the buyer closed the request. Enforced by `trg_quotes_accepting_rfq`
   (migration `20260923081708`), which fires before the lead cap so a closed request reports
   "closed", not a cap hit. Accepting or rejecting a quote is unaffected.
+  Since 2026-11-16 (SH-075, migration `20261116110000`) the trigger fires on **every** update: a seller can't change a
+  quote's price or words, or move an accepted quote back to pending, once the request is closed, past its deadline or
+  removed by Cosora. Only a change of status by someone other than the seller (the buyer deciding) passes untested.
 - **The product and requirement forms keep every answer (Ranking Part 1, F1, Mitra 2026-10-07).** A
   field with a column of its own writes that column; every other answer goes into `products.attributes` or
   `rfqs.attributes` (jsonb object, at most 8 KB), keyed by the form's own field id. `productAttributes()` and

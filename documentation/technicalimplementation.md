@@ -4546,6 +4546,54 @@ The buyer sign-up audit of 2026-11-13 (items 1–15). Plan and findings: `subscr
     send an account that is already signed in on arrival to its place. `cleanPhoneDigits()` drops a written country code
     (exactly code + a full number, or code + 0 + number) and leading zeros; the phone inputs have no `maxLength`.
 
+## Seller Home high-priority fixes (2026-11-16; branch `seller-home/fixes`, not live)
+
+The audit's nine High items outside sections A–C. Plan, rulings and review:
+`documentation/seller-home-high-fixes-plan-2026-11-16.md`.
+
+- **Release order.** Migrations `20261116110000`, `110100`, `110200`, `110300` (after the A–C ones, `100000`–`100400`);
+  then deploy `razorpay-verify-payment` and `razorpay-webhook` (they call `ad_order_fulfil`, so the migration goes
+  first; `_shared/adPublish.ts` ships with them); then the buyer app and Cosora-Admin (branch
+  `seller-home/high-fixes`). The admin app reads no new column, so it doesn't depend on the order.
+- **Quotes** (`20261116110000`). `trg_quotes_accepting_rfq` is `before insert or update` with no column list.
+  `enforce_quote_rfq_open()` returns early on an update only when `to_jsonb(new) - 'status' - 'updated_at'` equals the
+  old row's and the status isn't being moved by the quote's own seller (`auth.uid() = old.vendor_id`; the function is
+  a definer, so `current_user` can't tell). The app's own save is an upsert, whose INSERT half was already checked;
+  the hole was a plain PATCH.
+- **Lead ranking** (`20261116110100`). `admin.rfq_fit_set(vendor, rfq ids)` is one SQL query: the seller's
+  capabilities, location history and capacity read once; `mine` = the values its live listings carry per matched
+  question (each listing's attributes spread out once, "colours" also under "colors", plus fabric, gsm, pattern and
+  sizes); answers joined to `attribute_definitions` and to `mine`, with `admin.fit_values()`'s rule inline; weights
+  summed in the answers' own order (`sum(w order by ord)`) so the floating-point totals equal the old loop's;
+  a category's family and unit worked out once per category. `match_vendor_rfqs` reads the seller's blocks and the
+  open category once, computes similarity in the pool, and joins the fit. The harness makes 5,000 requirements and
+  ten sellers (one with 121 listings) and compares rows, scores and order with the old function kept in `pg_temp`.
+- **Paid ad orders** (`20261116110200`, `_shared/adPublish.ts`). `publishOrder()` reads the waiting order, asks
+  `adReach`, builds the rows, and calls `ad_order_fulfil`, which locks the order row, refuses unknown keys and rows
+  for another seller, marks it paid and inserts the campaigns. Answers: published; `already`; `retry` (nothing
+  written); `blocked` + `refundFlagged` (one PATCH from `created` to `refund_review`). `payments.ts` asks up to
+  three times while the answer is retry. The caller on the free and demo paths is still read from the token the
+  gateway verified (`vendorIdFromJwt`): asking Auth again is one of the October fixes left out.
+- **Ad days** (`20261116110300`). Approval: `ends_at = now() + (ends_at - starts_at)`, `starts_at = now()` when the
+  window has begun; seals are granted to the new end. `ad_apply_decision()` sets `paused_at = coalesce(paused_at,
+  now())` on a paused status and clears it otherwise. Resume: `ends_at += greatest(0, now() - greatest(paused_at,
+  starts_at))` unless the placement carries a seal, then the usual status decision (a refusal undoes the update with
+  the call). Sweep: a paused campaign past `ends_at` is ended only when `paused_at` is null, at or after `ends_at`,
+  or the campaign is a seal. Campaigns paused at release take `paused_at` from `admin.ad_review_log`.
+  `trg_ads_paused_at` nulls a browser's value on a new draft. The app mirrors the rule in `holdsDays()`
+  (`src/lib/campaignRunState.ts`), which is checked before "Finished".
+- **Edit and resubmit** (`src/components/vendor/EditCampaignDialog.tsx`). `fetchCampaignForEdit()` reads the seller's
+  campaign only while it is `changes_requested`, with the promoted listing's pictures; `saveAndResubmitCampaign()`
+  updates the changed columns (filtered on the status, asking for the row back) and calls `resubmit_ad_campaign()`.
+  Categories and states can be switched on and off (states within `adStateAllowance`); cities and countries only off.
+- **Small ones.** `AdvertisementSlideshow` replaces its history entry on the way to `/advertisements`.
+  `createProductVideo()` converts the cover first (`coverForUpload()`), tracks what it uploaded and removes it on any
+  later failure (a Bunny video has no row to delete it by; `bunny-reconcile` lists those). `UploadCatalogue` has no
+  visibility state. `ChatThread` takes the name and picture from `useChatThread()` (`otherName`, `otherAvatar`) and
+  shows "User" until they arrive.
+- **Harness note.** In one SQL statement a query doesn't see what a function it calls has just written
+  (`if f(x) <> 'a' or (select col from t ...)` reads the old row): call, then read, in two statements.
+
 ## Seller Home fixes (2026-11-16; branch `seller-home/fixes`, not live)
 
 The Seller Home audit of 2026-11-15, sections A–C (SH-001…SH-033). Audit `documentation/seller-home-audit-2026-11-15.md`;

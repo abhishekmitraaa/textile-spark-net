@@ -1,3 +1,26 @@
+- 2026-11-16 (branch `seller-home/fixes`, admin branch `seller-home/high-fixes`; migrations `20261116110000`–`110300`;
+  **not live**: production migrations, three functions to deploy and the merges each need Mitra's yes)
+  **Seller Home audit: the nine High items left after A–C (SH-068, 071, 075, 076, 086, 088, 089, 090, 100).**
+  - Why: Mitra, 2026-11-16, "before the release, I want you to do more big fixes ... plan a fix for all the bugs which
+    were in high priority and then fix them". Decisions: remove the catalogue's "Who can view" question; give paused ad
+    days back (seals excepted) and start paid days at approval; bring only the ad payment fix from the unreleased
+    `fix/review-2026-10-13`. Plan and build record `documentation/seller-home-high-fixes-plan-2026-11-16.md`.
+  - Database: a quote's terms (and a seller's move back to pending) need an open request, on every update
+    (`20261116110000`); lead ranking set-based, `admin.rfq_fit_set()`, same rows, scores and order, 2–49 s → under
+    0.2 s over 5,140 requirements (`110100`); `ad_order_fulfil()` marks an order paid and inserts its campaigns in one
+    transaction (`110200`); paid ad days start at approval, `advertisements.paused_at`, resume gives the paused time
+    back, the sweep leaves a paused campaign that holds its days (`110300`).
+  - Functions (deploy after the migrations): `razorpay-verify-payment` and `razorpay-webhook` publish through
+    `_shared/adPublish.ts`; a failure writes nothing and answers retry (the webhook 503).
+  - App: the Advertise slideshow no longer traps Back; a PNG video cover is stored as a JPEG and a failed upload
+    leaves no files; the catalogue form's unsaved visibility question is gone; the chat header shows the real name and
+    picture only; campaign cards say when paid days start and that paused days are kept; "Changes needed" opens Edit
+    and resubmit; payment messages say what happened to the money. Cosora-Admin: a campaign in review shows "Runs for
+    N days from approval" and can be approved however long review took.
+  - Tests: `tests/local/seller-home-high.spec.ts` 10/10; `scripts/seller-home/high_fixes.sql` (14 checks) and
+    `lead_ranking_equivalence.sql`; `scripts/discount-flow-check.mjs` 114 checks. Each RED first.
+  - Left out, on purpose: the other five October review fixes (ToDo); refunds for rejected campaigns; the audit's
+    Medium and Low items.
 - 2026-11-16 (branch `seller-home/fixes`; migrations `20261116100000`–`100400`; **not live**: production migrations, the
   merge and the switch each need Mitra's yes) **Seller Home fixes, audit sections A–C (SH-001…SH-033).**
   - Why: Mitra, 2026-11-15, "formulate a plan and fix this above issues"; decisions: vendor blue on all seller pages,
