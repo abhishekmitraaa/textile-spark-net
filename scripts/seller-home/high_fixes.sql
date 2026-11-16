@@ -7,6 +7,7 @@
 --   quote_terms_open           the seller revises a quote on an open request; an accepted one goes back to pending
 --   quote_terms_closed         the seller can't change the terms once the buyer closed the request
 --   quote_status_after_close   the buyer can still accept, shortlist or reject a quote on a closed request
+--   quote_unwin_after_close    the seller can't move an accepted quote back to pending on a closed request
 --   quote_terms_expired        ... nor once the request's deadline has passed
 --   quote_terms_removed        ... nor once Cosora removed the request
 
@@ -69,6 +70,21 @@ begin
     raise exception 'quote_status_after_close: the buyer could not decide a quote on a closed request';
   end if;
 
+  -- quote_unwin_after_close (the status alone, no terms changed)
+  perform set_config('request.jwt.claims', json_build_object('sub', vendor, 'role', 'authenticated')::text, true);
+  execute 'set local role authenticated';
+  refused := false;
+  begin
+    update public.quotes set status = 'pending' where id = q;
+  exception when sqlstate 'P0001' then
+    refused := true;
+  end;
+  execute 'reset role';
+  if not refused or (select status from public.quotes where id = q) <> 'accepted' then
+    raise exception 'quote_unwin_after_close: the seller moved an accepted quote to % on a closed request',
+      (select status from public.quotes where id = q);
+  end if;
+
   -- quote_terms_expired
   update public.rfqs set status = 'active', expires_at = now() - interval '1 hour' where id = rfq;
   if (select expires_at from public.rfqs where id = rfq) > now() then raise exception 'setup: the deadline did not move'; end if;
@@ -96,7 +112,7 @@ begin
   execute 'reset role';
   if not refused then raise exception 'quote_terms_removed: the seller changed a quote on a request Cosora removed'; end if;
 
-  raise notice 'Task 5 quotes: 5 checks passed';
+  raise notice 'Task 5 quotes: 6 checks passed';
 end $$;
 
 rollback;

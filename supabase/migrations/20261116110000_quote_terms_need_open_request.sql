@@ -6,8 +6,9 @@
 -- the order and dropping Total Order Value), or push new words to a buyer after Cosora removed the request.
 --
 -- Now the trigger fires on every update, and the function passes one only when nothing but the status (the buyer's
--- shortlist, accept or reject, which stays allowed after the request closes) or updated_at changed. Every other rule in
--- the function is as it was.
+-- shortlist, accept or reject, which stays allowed after the request closes) or updated_at changed. The seller's own
+-- status move is not passed: the only one a seller may make is back to "pending" (enforce_quote_update_roles), which
+-- on a closed request un-wins the order just as a changed price did. Every other rule in the function is as it was.
 
 create or replace function public.enforce_quote_rfq_open()
 returns trigger
@@ -27,7 +28,10 @@ begin
   -- An update that leaves the terms alone (the buyer deciding the quote, a touch of updated_at) isn't a quote being
   -- sent. Anything else is, whoever writes it: the price, the quantity, the words, the request or the seller.
   if tg_op = 'UPDATE'
-     and (to_jsonb(new) - 'status' - 'updated_at') = (to_jsonb(old) - 'status' - 'updated_at') then
+     and (to_jsonb(new) - 'status' - 'updated_at') = (to_jsonb(old) - 'status' - 'updated_at')
+     -- ... unless it is the seller moving the status: that is the quote being put back on the table. (The caller is
+     -- read from the token: this function is a definer, so current_user is its owner.)
+     and not (new.status is distinct from old.status and coalesce(auth.uid() = old.vendor_id, false)) then
     return new;
   end if;
 
