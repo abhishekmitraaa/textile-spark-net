@@ -6,7 +6,7 @@
  *   LOCAL_ADMIN_URL=http://localhost:5185 npx playwright test -c playwright.local.config.ts tests/local/seller-home-high.spec.ts
  */
 import { expect, test, type Browser, type Page } from "@playwright/test";
-import { BUYER_URL, contextWithSession, freshAccount, service, sql } from "./stack";
+import { ADMIN_URL, BUYER_URL, contextWithSession, freshAccount, service, signedInContext, sql } from "./stack";
 import { PNG } from "./registrationForm";
 
 const made: string[] = [];
@@ -184,4 +184,28 @@ test("campaign cards tell the truth about days", async ({ browser }) => {
   expect(left).toBeGreaterThan(3.95);
   expect(left).toBeLessThan(4.05);
   await page.context().close();
+});
+
+test("a campaign reviewed late is approved for its full days", async ({ browser }) => {
+  const who = await seller("hi-late");
+  const title = `Hi Late Ad ${Date.now().toString(36)}`;
+  sql(`insert into public.advertisements (vendor_id, title, placement, status, starts_at, ends_at, daily_budget)
+       values ('${who.id}', '${title}', 'openListing', 'pending_review', now() - interval '5 days', now() - interval '2 days', 22);`);
+  const ctx = await signedInContext(browser, "admin", { width: 1440, height: 1000 });
+  const page = await ctx.newPage();
+  await page.goto(`${ADMIN_URL}/ads`);
+  const card = page.locator("div", { has: page.getByRole("heading", { name: title }) }).filter({ has: page.getByRole("button", { name: "Approve" }) }).last();
+  await expect(card.getByRole("heading", { name: title })).toBeVisible({ timeout: 20_000 });
+  // Paid five days ago for three days: not "already ended", and Approve works.
+  await expect(card).not.toContainText("already ended");
+  await card.getByRole("button", { name: "Show creative, targeting and history" }).click();
+  await expect(card).toContainText("3 days from approval");
+  await expect(card.getByRole("button", { name: "Approve" })).toBeEnabled();
+  await card.getByRole("button", { name: "Approve" }).click();
+  await expect(page.getByText("Approved — now live")).toBeVisible({ timeout: 15_000 });
+  const row = sql(`select status || '|' || round(extract(epoch from ends_at - now()) / 86400.0, 2) from public.advertisements where title = '${title}'`).split("|");
+  expect(row[0]).toBe("active");
+  expect(Number(row[1])).toBeGreaterThan(2.95);
+  expect(Number(row[1])).toBeLessThan(3.05);
+  await ctx.close();
 });
