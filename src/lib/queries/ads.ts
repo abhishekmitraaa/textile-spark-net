@@ -43,6 +43,8 @@ export interface AdRow {
   clicks: number;
   startsAt: string | null;
   endsAt: string | null;
+  /** When the current pause began. A paused campaign that isn't a seal gets this time back when it resumes. */
+  pausedAt: string | null;
   createdAt: string;
   /**
    * Why the campaign is in the state it is in — the reason code and note the
@@ -61,6 +63,7 @@ interface RawAd {
   daily_budget: number | null; placement: string | null; status: string;
   impressions: number; clicks: number; starts_at: string | null; ends_at: string | null; created_at: string;
   moderation_reason: string | null; moderated_at: string | null;
+  paused_at?: string | null;
 }
 
 function mapAd(a: RawAd): AdRow {
@@ -69,7 +72,7 @@ function mapAd(a: RawAd): AdRow {
     dailyBudget: a.daily_budget != null ? Number(a.daily_budget) : null,
     placement: a.placement, status: (a.status as AdStatus) ?? "draft",
     impressions: a.impressions, clicks: a.clicks,
-    startsAt: a.starts_at, endsAt: a.ends_at, createdAt: a.created_at,
+    startsAt: a.starts_at, endsAt: a.ends_at, pausedAt: a.paused_at ?? null, createdAt: a.created_at,
     moderationReason: a.moderation_reason, moderatedAt: a.moderated_at,
   };
 }

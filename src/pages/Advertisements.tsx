@@ -135,7 +135,7 @@ const FAQS = [
   { q: "How long does it take for my ad to go live?", a: "After you pay, Cosora reviews the ad's picture, text and products, and it runs once approved. Your Campaigns shows where it is." },
   { q: "Can I target specific cities or regions?", a: "Yes, on a paid plan. How many locations an ad can target depends on your plan; the plan page lists each one's reach." },
   { q: "How do I track my ad performance?",       a: "Your Campaigns, on this page, shows each campaign's impressions, clicks and click-through rate." },
-  { q: "Can I pause or stop my ad campaign?",     a: "Absolutely. You can pause, resume, or stop your ads at any time. No long-term commitments or cancellation fees." },
+  { q: "Can I pause or stop my ad campaign?",     a: "Absolutely. You can pause, resume, or stop your ads at any time. A paused ad keeps its remaining days until you resume it; Trusted Seal and Verified Certificate keep running while paused. No long-term commitments or cancellation fees." },
 ];
 
 // ─────────────────────────────────────────────────────────────

@@ -8830,5 +8830,12 @@
  "Payment received, but your plan cannot run these ads": "भुगतान मिल गया, लेकिन आपका प्लान ये विज्ञापन नहीं चला सकता",
  "The order has been sent for a refund review.": "ऑर्डर रिफ़ंड समीक्षा के लिए भेज दिया गया है।",
  "We couldn't confirm your payment": "हम आपके भुगतान की पुष्टि नहीं कर सके",
- "If money left your account, contact support with this payment ID: {0}": "अगर आपके खाते से पैसे कटे हैं, तो इस भुगतान ID के साथ सहायता से संपर्क करें: {0}"
+ "If money left your account, contact support with this payment ID: {0}": "अगर आपके खाते से पैसे कटे हैं, तो इस भुगतान ID के साथ सहायता से संपर्क करें: {0}",
+ "Absolutely. You can pause, resume, or stop your ads at any time. A paused ad keeps its remaining days until you resume it; Trusted Seal and Verified Certificate keep running while paused. No long-term commitments or cancellation fees.": "बिल्कुल। आप अपने विज्ञापन किसी भी समय रोक, फिर शुरू या बंद कर सकते हैं। रोका गया विज्ञापन अपने बचे हुए दिन तब तक सुरक्षित रखता है जब तक आप उसे फिर शुरू नहीं करते; Trusted Seal और Verified Certificate रोके जाने पर भी चलते रहते हैं। कोई लंबी अवधि की प्रतिबद्धता या रद्द करने का शुल्क नहीं।",
+ "Paused by Cosora: {0}. Its remaining days are kept.": "कोसोरा ने रोका: {0}। इसके बचे हुए दिन सुरक्षित हैं।",
+ "Paused by Cosora. Its remaining days are kept. Contact support to resume it.": "कोसोरा ने रोका है। इसके बचे हुए दिन सुरक्षित हैं। फिर शुरू करने के लिए सहायता से संपर्क करें।",
+ "You paused this campaign. Its remaining days are kept until you resume.": "आपने यह अभियान रोका है। इसके बचे हुए दिन तब तक सुरक्षित हैं जब तक आप इसे फिर शुरू नहीं करते।",
+ "You paused this campaign. The seal's days keep running while it is paused.": "आपने यह अभियान रोका है। रोके जाने के दौरान भी सील के दिन चलते रहते हैं।",
+ "Paid and waiting for Cosora to review it, since {0}. Your paid time ({1} day{2}) starts when it is approved.": "भुगतान हो चुका है और {0} से कोसोरा की समीक्षा की प्रतीक्षा है। आपका भुगतान किया हुआ समय ({1} दिन) मंज़ूरी मिलने पर शुरू होगा।",
+ "Paid and waiting for Cosora to review it. Your paid time ({0} day{1}) starts when it is approved.": "भुगतान हो चुका है और कोसोरा की समीक्षा की प्रतीक्षा है। आपका भुगतान किया हुआ समय ({0} दिन) मंज़ूरी मिलने पर शुरू होगा।"
 }

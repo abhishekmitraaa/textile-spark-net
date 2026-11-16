@@ -519,6 +519,8 @@
  ],
  "computed_source": "Text the code builds into a variable or a constant before rendering it, which the extractor (display positions only) can't see: the plan buttons on /subscription (Subscription.tsx) and the missed-calls note on Advertisements (lib/queries/callAnalytics.ts). Also Profile.tsx's placeholders, CompetitorAds.tsx's \"Category average\", BusinessProfile.tsx's \"Your brand\" and Analytics.tsx's activity notes. Found by the subscriptions sweep in Hindi, 2026-10-09. Also the Interest Preference count (InterestPreference.tsx, 2026-10-11). Add such text here. Since 2026-10-13 also the GSTIN and PAN messages on /onboarding (Onboarding.tsx, gstinProblem) and the ones trg_vendor_profiles_tax_ids raises (migration 20261013100000). Since 2026-10-18 also \"Guest\", the search greeting for a visitor who is not signed in (Search.tsx, greetName). Since 2026-11-14 also the messages trg_buyer_profiles_field_checks and trg_profiles_field_checks raise (migration 20261114100100). Also the buyer roles of Sub-role and Edit Profile (src/data/buyerRoles.ts, 2026-11-14).",
  "computed": [
+  "Paid and waiting for Cosora to review it, since {0}. Your paid time ({1} day{2}) starts when it is approved.",
+  "Paid and waiting for Cosora to review it. Your paid time ({0} day{1}) starts when it is approved.",
   "See the quotes you've sent",
   "See the quotes you've received",
   "User",

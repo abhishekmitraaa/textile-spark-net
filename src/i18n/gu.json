@@ -8830,5 +8830,12 @@
  "Payment received, but your plan cannot run these ads": "ચુકવણી મળી ગઈ, પરંતુ તમારો પ્લાન આ જાહેરાતો ચલાવી શકતો નથી",
  "The order has been sent for a refund review.": "ઓર્ડર રિફંડ સમીક્ષા માટે મોકલવામાં આવ્યો છે.",
  "We couldn't confirm your payment": "અમે તમારી ચુકવણીની પુષ્ટિ કરી શક્યા નથી",
- "If money left your account, contact support with this payment ID: {0}": "જો તમારા ખાતામાંથી પૈસા કપાયા હોય, તો આ ચુકવણી ID સાથે સપોર્ટનો સંપર્ક કરો: {0}"
+ "If money left your account, contact support with this payment ID: {0}": "જો તમારા ખાતામાંથી પૈસા કપાયા હોય, તો આ ચુકવણી ID સાથે સપોર્ટનો સંપર્ક કરો: {0}",
+ "Absolutely. You can pause, resume, or stop your ads at any time. A paused ad keeps its remaining days until you resume it; Trusted Seal and Verified Certificate keep running while paused. No long-term commitments or cancellation fees.": "ચોક્કસ. તમે તમારી જાહેરાતો કોઈપણ સમયે થોભાવી, ફરી શરૂ કરી અથવા બંધ કરી શકો છો. થોભાવેલી જાહેરાત તેના બાકીના દિવસો તમે ફરી શરૂ કરો ત્યાં સુધી સાચવી રાખે છે; Trusted Seal અને Verified Certificate થોભાવ્યા પછી પણ ચાલુ રહે છે. કોઈ લાંબા ગાળાની પ્રતિબદ્ધતા કે રદ કરવાની ફી નથી.",
+ "Paused by Cosora: {0}. Its remaining days are kept.": "કોસોરાએ થોભાવ્યું: {0}. તેના બાકીના દિવસો સચવાયેલા છે.",
+ "Paused by Cosora. Its remaining days are kept. Contact support to resume it.": "કોસોરાએ થોભાવ્યું છે. તેના બાકીના દિવસો સચવાયેલા છે. ફરી શરૂ કરવા માટે સપોર્ટનો સંપર્ક કરો.",
+ "You paused this campaign. Its remaining days are kept until you resume.": "તમે આ ઝુંબેશ થોભાવી છે. તમે ફરી શરૂ કરો ત્યાં સુધી તેના બાકીના દિવસો સચવાયેલા છે.",
+ "You paused this campaign. The seal's days keep running while it is paused.": "તમે આ ઝુંબેશ થોભાવી છે. થોભાવેલી હોય ત્યારે પણ સીલના દિવસો ચાલુ રહે છે.",
+ "Paid and waiting for Cosora to review it, since {0}. Your paid time ({1} day{2}) starts when it is approved.": "ચુકવણી થઈ ગઈ છે અને {0} થી કોસોરાની સમીક્ષાની રાહ જોવાઈ રહી છે. તમારો ચૂકવેલો સમય ({1} દિવસ) મંજૂરી મળ્યા પછી શરૂ થશે.",
+ "Paid and waiting for Cosora to review it. Your paid time ({0} day{1}) starts when it is approved.": "ચુકવણી થઈ ગઈ છે અને કોસોરાની સમીક્ષાની રાહ જોવાઈ રહી છે. તમારો ચૂકવેલો સમય ({0} દિવસ) મંજૂરી મળ્યા પછી શરૂ થશે."
 }

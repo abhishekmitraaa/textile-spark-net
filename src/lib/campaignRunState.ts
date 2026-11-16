@@ -17,6 +17,10 @@ export interface CampaignLike {
   status: string;
   startsAt?: string | null;
   endsAt?: string | null;
+  /** When the current pause began (advertisements.paused_at). */
+  pausedAt?: string | null;
+  /** The comma-joined placements; a seal placement keeps running while paused. */
+  placement?: string | null;
   moderationReason?: string | null;
   moderatedAt?: string | null;
 }
@@ -60,6 +64,33 @@ export function moderationReasonText(raw: string | null | undefined, labels: Rec
   return note ? `${labels[m[1]]} — ${note}` : labels[m[1]];
 }
 
+const SEAL_PLACEMENTS = ["trustedSeal", "verifiedCertificate"];
+const PAUSED = ["paused_by_vendor", "paused_by_admin", "paused"];
+
+/** Trusted Seal and Verified Certificate: the badge stays on the profile while paused, so the days keep running. */
+export function isSealCampaign(placement: string | null | undefined): boolean {
+  return (placement ?? "").split(",").some((p) => SEAL_PLACEMENTS.includes(p.trim()));
+}
+
+/**
+ * A paused campaign holds its remaining days when the pause began before its end date and it isn't a seal:
+ * resume_ad_campaign() adds the paused time back (migration 20261116110300). The sweep's rule, mirrored.
+ */
+export function holdsDays(c: CampaignLike): boolean {
+  if (!PAUSED.includes(c.status) || !c.pausedAt || isSealCampaign(c.placement)) return false;
+  const paused = new Date(c.pausedAt).getTime();
+  if (Number.isNaN(paused)) return false;
+  const ends = c.endsAt ? new Date(c.endsAt).getTime() : NaN;
+  return Number.isNaN(ends) || paused < ends;
+}
+
+/** How many days were paid for: the length of the window, which starts when Cosora approves the campaign. */
+function daysBooked(c: CampaignLike): number | null {
+  if (!c.startsAt || !c.endsAt) return null;
+  const days = Math.round((new Date(c.endsAt).getTime() - new Date(c.startsAt).getTime()) / 86_400_000);
+  return Number.isFinite(days) && days > 0 ? days : null;
+}
+
 export function runStateOf(c: CampaignLike, now: Date = new Date(), reasonLabels: Record<string, string> = {}): RunState {
   const s = c.status;
   const ends = c.endsAt ? new Date(c.endsAt) : null;
@@ -92,12 +123,29 @@ export function runStateOf(c: CampaignLike, now: Date = new Date(), reasonLabels
   }
   if (s === "pending_review") {
     const since = fmt(c.moderatedAt) ?? null;
+    const n = daysBooked(c);
+    // The days that were paid for start at approval (SH-088), so time in review costs the seller nothing.
+    const booked = (lead: string) => `${lead} Your paid time (${n} day${n === 1 ? "" : "s"}) starts when it is approved.`;
     return {
       label: "Waiting for review", tone: "waiting",
       reason: since
-        ? `Paid and waiting for Cosora to review it, since ${since}.`
-        : "Paid and waiting for Cosora to review it. Payment does not publish a campaign.",
+        ? (n ? booked(`Paid and waiting for Cosora to review it, since ${since}.`) : `Paid and waiting for Cosora to review it, since ${since}.`)
+        : (n ? booked("Paid and waiting for Cosora to review it.") : "Paid and waiting for Cosora to review it. Payment does not publish a campaign."),
       serving: false, action: "none",
+    };
+  }
+  if (holdsDays(c)) {
+    if (s === "paused_by_admin") {
+      return {
+        label: "Paused by Cosora", tone: "attention",
+        reason: why ? `Paused by Cosora: ${why}. Its remaining days are kept.` : "Paused by Cosora. Its remaining days are kept. Contact support to resume it.",
+        serving: false, action: "none",
+      };
+    }
+    return {
+      label: "Paused", tone: "stopped",
+      reason: "You paused this campaign. Its remaining days are kept until you resume.",
+      serving: false, action: "resume",
     };
   }
   if (s === "expired" || s === "ended" || (ends && ends.getTime() <= now.getTime())) {
@@ -118,7 +166,13 @@ export function runStateOf(c: CampaignLike, now: Date = new Date(), reasonLabels
     };
   }
   if (s === "paused_by_vendor" || s === "paused") {
-    return { label: "Paused", tone: "stopped", reason: "You paused this campaign.", serving: false, action: "resume" };
+    return {
+      label: "Paused", tone: "stopped",
+      reason: isSealCampaign(c.placement)
+        ? "You paused this campaign. The seal's days keep running while it is paused."
+        : "You paused this campaign.",
+      serving: false, action: "resume",
+    };
   }
   if (s === "scheduled") {
     const on = fmt(c.startsAt);

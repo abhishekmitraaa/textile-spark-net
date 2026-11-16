@@ -156,3 +156,32 @@ test("a chat header invents nothing", async ({ browser }) => {
   await expect(page.getByText("New enquiry")).toHaveCount(0);
   await page.context().close();
 });
+
+// ─────────────────────────── Task 8: ad days (SH-088) ───────────────────────────
+
+test("campaign cards tell the truth about days", async ({ browser }) => {
+  const who = await seller("hi-ads");
+  sql(`insert into public.advertisements (vendor_id, title, placement, status, starts_at, ends_at, daily_budget, paused_at) values
+         ('${who.id}', 'Hi Waiting Ad', 'openListing', 'pending_review', now() - interval '5 days', now() - interval '2 days', 22, null),
+         ('${who.id}', 'Hi Paused Ad', 'openListing', 'paused_by_vendor', now() - interval '6 days', now() - interval '1 day', 22, now() - interval '5 days'),
+         ('${who.id}', 'Hi Paused Seal', 'trustedSeal', 'paused_by_vendor', now() - interval '2 days', now() + interval '5 days', 44, now() - interval '1 day');`);
+  const page = await open(browser, who.session, "/advertisements");
+  const card = (title: string) => page.locator("div.rounded-xl.border", { hasText: title }).last();
+
+  // Paid five days ago for three days, still in review: nothing has run out.
+  await expect(card("Hi Waiting Ad")).toContainText("Waiting for review", { timeout: 20_000 });
+  await expect(card("Hi Waiting Ad")).toContainText("Your paid time (3 days) starts when it is approved.");
+
+  // A seal keeps running while paused, and says so.
+  await expect(card("Hi Paused Seal")).toContainText("The seal's days keep running while it is paused.");
+
+  // Paused past its end date, but the pause began with four days left: not finished, and Resume gives them back.
+  await expect(card("Hi Paused Ad")).toContainText("Its remaining days are kept until you resume.");
+  await expect(card("Hi Paused Ad")).not.toContainText("Finished");
+  await card("Hi Paused Ad").getByRole("button", { name: "Resume" }).click();
+  await expect(card("Hi Paused Ad")).toContainText("Live", { timeout: 15_000 });
+  const left = Number(sql(`select round(extract(epoch from ends_at - now()) / 86400.0, 2) from public.advertisements where vendor_id = '${who.id}' and title = 'Hi Paused Ad'`));
+  expect(left).toBeGreaterThan(3.95);
+  expect(left).toBeLessThan(4.05);
+  await page.context().close();
+});
