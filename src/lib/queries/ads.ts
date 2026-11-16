@@ -185,6 +185,84 @@ export async function resubmitMyCampaign(id: string): Promise<void> {
   if (error) throw error;
 }
 
+/** A campaign Cosora sent back, as the Edit and resubmit dialog needs it. */
+export interface CampaignForEdit {
+  id: string;
+  title: string;
+  imageUrl: string | null;
+  productId: string | null;
+  /** The promoted listing's pictures, in the listing's order. Empty for a seal or certificate campaign. */
+  pictures: string[];
+  targetCategories: string[];
+  targetCities: string[];
+  targetStates: string[];
+  targetCountries: string[];
+}
+
+const textList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
+/** The seller's own campaign, only while it is waiting for their changes; null otherwise. */
+export async function fetchCampaignForEdit(id: string): Promise<CampaignForEdit | null> {
+  const { data, error } = await supabase
+    .from("advertisements")
+    .select("id, title, image_url, product_id, status, target_categories, target_cities, target_states, target_countries, products ( product_images ( url, position ) )")
+    .eq("id", id)
+    .eq("status", "changes_requested")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const row = data as unknown as {
+    id: string; title: string; image_url: string | null; product_id: string | null;
+    target_categories: unknown; target_cities: unknown; target_states: unknown; target_countries: unknown;
+    products: { product_images: { url: string; position: number }[] | null } | null;
+  };
+  const pictures = [...(row.products?.product_images ?? [])].sort((a, b) => a.position - b.position).map((i) => i.url);
+  return {
+    id: row.id, title: row.title, imageUrl: row.image_url, productId: row.product_id,
+    // The picture in use is always offered, even when the listing no longer carries it.
+    pictures: row.image_url && !pictures.includes(row.image_url) ? [row.image_url, ...pictures] : pictures,
+    targetCategories: textList(row.target_categories), targetCities: textList(row.target_cities),
+    targetStates: textList(row.target_states), targetCountries: textList(row.target_countries),
+  };
+}
+
+/** What a seller may change after "changes needed" (enforce_ads_moderation's list). Only the keys present are sent. */
+export interface CampaignEdit {
+  title?: string;
+  imageUrl?: string | null;
+  targetCategories?: string[];
+  targetCities?: string[];
+  targetStates?: string[];
+  targetCountries?: string[];
+}
+
+/**
+ * Saves the seller's changes, then sends the campaign back to review (changes_requested → pending_review).
+ * The update asks for the row back: one that RLS or the status filter turned away matches nothing and would
+ * otherwise read as saved. A refusal by the database (the plan's reach) surfaces as its own message.
+ */
+export async function saveAndResubmitCampaign(id: string, changes: CampaignEdit): Promise<void> {
+  const patch: {
+    title?: string; image_url?: string | null;
+    target_categories?: string[] | null; target_cities?: string[] | null;
+    target_states?: string[]; target_countries?: string[];
+  } = {};
+  if (changes.title !== undefined) patch.title = changes.title;
+  if (changes.imageUrl !== undefined) patch.image_url = changes.imageUrl;
+  // Empty means "everyone" / "everywhere", stored the way the booking form stores it.
+  if (changes.targetCategories !== undefined) patch.target_categories = changes.targetCategories.length ? changes.targetCategories : null;
+  if (changes.targetCities !== undefined) patch.target_cities = changes.targetCities.length ? changes.targetCities : null;
+  if (changes.targetStates !== undefined) patch.target_states = changes.targetStates;
+  if (changes.targetCountries !== undefined) patch.target_countries = changes.targetCountries;
+  if (Object.keys(patch).length > 0) {
+    const { data, error } = await supabase
+      .from("advertisements").update(patch).eq("id", id).eq("status", "changes_requested").select("id");
+    if (error) throw error;
+    if (!data?.length) throw new Error("This campaign is no longer waiting for changes. Refresh the page and look again.");
+  }
+  await resubmitMyCampaign(id);
+}
+
 /** Convenience for the dashboard's single pause/resume toggle. */
 export async function setCampaignRunning(id: string, running: boolean): Promise<void> {
   if (running) await resumeMyCampaign(id);

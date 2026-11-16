@@ -209,3 +209,55 @@ test("a campaign reviewed late is approved for its full days", async ({ browser 
   expect(Number(row[1])).toBeLessThan(3.05);
   await ctx.close();
 });
+
+// ─────────────────────────── Task 9: Edit and resubmit (SH-089) ───────────────────────────
+
+/** A seller with a live listing (two pictures) and a campaign Cosora sent back. */
+async function campaignSentBack(prefix: string) {
+  const who = await seller(prefix);
+  const pic = (n: number) => `http://127.0.0.1:54321/storage/v1/object/public/product-images/${who.id}/hi-${n}.jpg`;
+  const product = sql(`insert into public.products (vendor_id, name, status, price_value) values ('${who.id}', 'Hi Polo Shirt', 'live', 250) returning id`).split("\n")[0];
+  sql(`insert into public.product_images (product_id, url, position) values ('${product}', '${pic(1)}', 0), ('${product}', '${pic(2)}', 1);
+       insert into public.advertisements (vendor_id, product_id, title, image_url, placement, status, starts_at, ends_at, daily_budget, moderation_reason, moderated_at)
+       values ('${who.id}', '${product}', 'Hi Old Title', '${pic(1)}', 'openListing', 'changes_requested', now() - interval '2 days', now() + interval '1 day', 22,
+               'poor_creative Use a clearer photo', now());`);
+  return { who, pic };
+}
+
+test("a seller edits and resubmits a campaign", async ({ browser }) => {
+  const { who, pic } = await campaignSentBack("hi-edit");
+  const page = await open(browser, who.session, "/advertisements");
+  const card = page.locator("div.rounded-xl.border", { hasText: "Hi Old Title" }).last();
+  await expect(card).toContainText("Changes needed", { timeout: 20_000 });
+  await card.getByRole("button", { name: "Edit and resubmit" }).click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText("Image or copy quality");
+  await expect(dialog).toContainText("Use a clearer photo");
+  await dialog.getByLabel("Title").fill("Hi New Title");
+  await dialog.getByRole("button", { name: "Use picture 2" }).click();
+  await dialog.getByRole("button", { name: "Resubmit for review" }).click();
+
+  await expect(dialog).toBeHidden({ timeout: 15_000 });
+  await expect(page.locator("div.rounded-xl.border", { hasText: "Hi New Title" }).last()).toContainText("Waiting for review");
+  const row = sql(`select status || '|' || title || '|' || image_url from public.advertisements where vendor_id = '${who.id}'`).split("|");
+  expect(row).toEqual(["pending_review", "Hi New Title", pic(2)]);
+  expect(sql(`select decision || '>' || new_status from admin.ad_review_log l join public.advertisements a on a.id = l.ad_id
+               where a.vendor_id = '${who.id}' order by l.created_at desc limit 1`)).toBe("resubmitted>pending_review");
+  await page.context().close();
+});
+
+test("a campaign can't be resubmitted without a title", async ({ browser }) => {
+  const { who } = await campaignSentBack("hi-edit2");
+  const page = await open(browser, who.session, "/advertisements");
+  const card = page.locator("div.rounded-xl.border", { hasText: "Hi Old Title" }).last();
+  await card.getByRole("button", { name: "Edit and resubmit" }).click({ timeout: 20_000 });
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByLabel("Title")).toHaveValue("Hi Old Title");
+  await dialog.getByLabel("Title").fill("   ");
+  await expect(dialog.getByRole("button", { name: "Resubmit for review" })).toBeDisabled();
+  // Closing without saving changes nothing.
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(sql(`select status || '|' || title from public.advertisements where vendor_id = '${who.id}'`)).toBe("changes_requested|Hi Old Title");
+  await page.context().close();
+});

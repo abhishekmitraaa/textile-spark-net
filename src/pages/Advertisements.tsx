@@ -30,7 +30,8 @@ import { useMyAds, setCampaignRunning, deleteAd, useVendorCategories, useVendorH
 import { useFeatureFlag } from "@/lib/queries/featureFlags";
 import { INDIA_STATES } from "@/data/indiaStates";
 import { useLang } from "@/lib/i18n";
-import { runStateOf } from "@/lib/campaignRunState";
+import { runStateOf, moderationReasonText } from "@/lib/campaignRunState";
+import { EditCampaignDialog } from "@/components/vendor/EditCampaignDialog";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
@@ -1434,6 +1435,8 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
   ads: AdRow[]; onToggle: (id: string, status: "active" | "paused") => void; onDelete: (id: string) => void;
 }) {
   const { data: reasonLabels } = useAdReasonLabels();
+  // The campaign open in "Edit and resubmit" (SH-089): "changes needed" used to be a dead end.
+  const [editing, setEditing] = useState<AdRow | null>(null);
   if (ads.length === 0) return null;
   // Tone per run state, not per raw status: the states a vendor needs to tell
   // apart are "running", "waiting on Cosora", "needs your attention" and
@@ -1502,6 +1505,14 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
                     {rs.action === "pause" ? "Pause" : "Resume"}
                   </button>
                 )}
+                {rs.action === "edit_and_resubmit" && (
+                  <button
+                    onClick={() => setEditing(a)}
+                    className="text-[11px] font-semibold text-brand-vendor hover:underline shrink-0"
+                  >
+                    Edit and resubmit
+                  </button>
+                )}
                 <button onClick={() => onDelete(a.id)} className="p-1 text-gray-400 hover:text-red-500 shrink-0">
                   <X className="w-4 h-4" />
                 </button>
@@ -1520,6 +1531,11 @@ function MyCampaigns({ ads, onToggle, onDelete }: {
           );
         })}
       </div>
+      <EditCampaignDialog
+        adId={editing?.id ?? null}
+        reason={moderationReasonText(editing?.moderationReason, reasonLabels)}
+        onClose={() => setEditing(null)}
+      />
     </div>
   );
 }
