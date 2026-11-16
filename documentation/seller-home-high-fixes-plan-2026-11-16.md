@@ -264,3 +264,93 @@ and the five fixes; release notes: three functions to deploy for SH-090), admin 
   `npm run build`; admin build. **Step 3:** run `tests/local/seller-home-high.spec.ts`,
   `tests/local/seller-home-fixes.spec.ts` and every local spec touching ads, quotes, leads, chat, catalogues and
   videos; all SQL harnesses in `scripts/seller-home/`. **Step 4:** commit.
+
+---
+
+## Record of the build (2026-11-16)
+
+Copied from the execution ledger when the branch was finished; the ledger itself was scratch. Buyer branch
+`seller-home/fixes` (this plan's commits: `755a76c` … the final-review fix `4204975` and the docs after it); admin branch
+`seller-home/high-fixes` (`30565c6`, `f3db33a`). Nothing was pushed, merged, deployed or applied to production.
+
+### Final whole-branch review
+
+- Final review: fresh reviewer (opus, read-only) on 11c3ba0..7871404 and the admin diff c8b519c..f3db33a — 0 Critical, 1 Important, 6 Minor, "Ready with small fixes". Re-graded by effect: I1 Important; M1 raised to Important (the webhook usually beats the browser, and the seller was told "0 campaign sent for review" or "waiting for review" for an order in refund review); the reviewer's objection to the "bad signature → You were not charged" ruling raised to Important (it is the audit's own bug: the handler runs only after Razorpay took a payment).
+- Final: fixed I1 (a paid order whose campaigns the database refuses for good was retried for ever and left 'created', which staff's ledger reads as abandoned) — adPublish.ts sends a 400/409/422 from ad_order_fulfil to refund review, confirms the code's use and answers blocked with reason "refused"; 5xx, 401/403/404 and a failed fetch still answer retry — discount-flow-check E13 and F0 (refused) RED→GREEN, 116/116.
+- Final: fixed M1 and the bad-signature wording — the wording after a checkout moved to the import-free src/lib/adPaymentOutcome.ts (paidAdOutcome, freeAdOutcome): never "You were not charged" once Razorpay handed back a payment; an order the webhook handled first says "Payment received" and points at Your Campaigns with the payment ID, never "0 campaigns" or "waiting for review"; a refused order doesn't blame the plan — scripts/ad-payment-outcome-check.mjs RED (module missing) → GREEN, 14 checks.
+
+### Before releasing (from the review; each step still needs Mitra's yes)
+
+- **Compare six functions on production with what these migrations replace, before applying them:**
+  `enforce_quote_rfq_open` (`110000`), `match_vendor_rfqs` (`110100`), and `ad_apply_decision`,
+  `approve_ad_campaign`, `resume_ad_campaign`, `sweep_ad_schedules` (`110300`). The migrations were written against the
+  local copy of production's schema; a change made on production since (the SQL editor has been used before) would be
+  silently undone. Read `pg_get_functiondef()` for each and diff it with the local stack's pre-migration body.
+- Confirm on production that `authenticated` cannot execute `ad_apply_decision` (the `110300` self-check stops the
+  migration if it can, and that would be a hole today).
+- Order: migrations `20261116100000`–`100400`, then `110000`–`110300`; then deploy `razorpay-verify-payment` and
+  `razorpay-webhook`; then the buyer app and Cosora-Admin; then `live_updates_hub`.
+
+### Rulings made while building, in order (what was decided, why, what it costs if wrong)
+
+- Task 2: Ruling: a refused row on the Bunny path does not delete the Bunny video — bunny-delete-video needs the row to prove ownership, and bunny-reconcile already lists videos with no row — costs: an orphan at Bunny until reconcile runs, as before.
+- Task 2: Ruling: tests call the app's own createProductVideo() in the page (dynamic import) instead of driving the form — the form needs a decodable video and no fixture or ffmpeg exists; the hint text is asserted on the page — costs: the form's wiring to createProductVideo is not exercised by these tests.
+- Task 4: Ruling: the header shows the name only — presence doesn't exist ("Offline" was always shown), and a conversation stores no rating, place or request; a seller's real review average is not added to the header — costs: a buyer no longer sees any rating in the chat header (it was invented); adding the real one is new work.
+- Task 4: Ruling: the strip under the header stays as the way to the quotes page but reads "Quotes / See the quotes you've sent|received" — conversations have no rfq column, so there is no real request to name — costs: none known.
+- Task 4: Ruling: until the other person's name is read the header says "User" (the inbox's fallback), not a name built from the id in the address — costs: a brief "User" on slow connections.
+- Task 5: Ruling: scripts/quote-rfq-open-check.mjs and quote-status-roles-check.mjs were not run — they read .env and sign in to production; the SQL harness covers the same rules locally — costs: no HTTP-level check of this trigger until release.
+- Task 6: Ruling: admin.fit_values() is written inline in rfq_fit_set (answers and listings) — as a function with a SET clause it can't be inlined and one call per answer took ~0.7 s of a ~0.8 s call; the harness holds the inline rule to the function's results — costs: the "text and numbers, trimmed, lower case" rule now lives in three places (fit_values, rfq_fit_set twice); a change must touch all, and the harness fails if one is missed.
+- Task 6: Ruling: the harness makes its own data (5,000 requirements with answers and embeddings, ten sellers, one with 120 listings) because the local database has none — and times each call instead of comparing with the audit's 0.8 s estimate — costs: the harness takes about 4 minutes.
+- Task 6: Ruling: measured old 2.0–48.7 s per call and new 69–184 ms over 5,140 open requirements (limit set at 250 ms).
+- Task 7: Ruling: ported from 0330b78 by applying its diff for adPublish.ts, razorpay-webhook, razorpay-verify-payment, payments.ts and discount-flow-check.mjs (none of those files changed on main since f1e3775) and then putting vendorIdFromJwt back in place of verifiedUserId — Mitra chose only the ad payment fix — costs: the caller on the free and demo paths is still read from the gateway-verified token, as on main.
+- Task 7: Ruling: the port keeps the October decision that a plan lookup that fails answers "retry" instead of sending a good order to refund review (flow-check E10) — it sits in the same lines — costs: an order waits for the webhook's redelivery when the plan can't be read.
+- Task 7: Ruling: the two "your ads are live" success toasts now say the ads are waiting for review (audit SH-092, Medium) — they are the lines this task rewrites and Task 8 makes "days start at approval" true — costs: none known.
+- Task 7: Ruling: an unknown verify failure says "We couldn't confirm your payment … contact support with this payment ID", and "You were not charged" is kept only for a bad signature — costs: a seller whose payment truly failed for another reason is asked to contact support.
+- Task 8: Ruling: a paused campaign whose pause began at or after its end date holds no days (the sweep ends it) — otherwise pausing in the minutes between the end and the sweep would park it for ever — costs: none known.
+- Task 8: Ruling: paused_at is the server's: ad_apply_decision writes it, a browser's new draft gets null (trg_ads_paused_at), and enforce_ads_moderation already refuses an owner's change to any column outside its lists — costs: one more small trigger on advertisements.
+- Task 8: Ruling: campaigns paused at release get paused_at from the review log's pause time (else now), so they get that time back too — costs: sellers paused before the release get days they would have lost under the old rule.
+- Task 8: Ruling: the card says "Your paid time (N days) starts when it is approved." (one sentence for 1 and many, translatable) instead of the plan's "Your 3 days start…"; "changes needed" cards keep their text — costs: wording differs from the plan.
+- Task 8: Ruling: Cosora-Admin does not read paused_at (it shows "While paused: remaining days are kept" from the status and placement), so the admin app does not depend on the migration being applied first — costs: staff don't see when a pause began.
+- Task 8: Ruling: an admin browser test was added (a campaign paid 5 days ago for 3 days: "3 days from approval", Approve works, ends 3 days from now); it needs the admin app served from the admin worktree (:5186) — RED on the old admin app (:5185), GREEN on the new — costs: LOCAL_ADMIN_URL must point at the worktree's server until the admin branch merges.
+- Task 9: Ruling: saveAndResubmitCampaign takes only the keys that changed (CampaignEdit, all optional), not the plan's all-required shape — "a form save sends only the fields the user changed" (claude.md) — costs: none; the dialog diffs against what loaded.
+- Task 9: Ruling: the picture is chosen from the promoted listing's pictures (plus the one in use); there is no upload in the dialog — an ad's picture has always been the listing's, and a new upload would be a picture nobody reviewed with the listing — costs: a seller whose every listing photo is poor must add a photo to the listing first (the dialog says so).
+- Task 9: Ruling: targeting in the dialog: categories on and off (the seller's own), states on and off within the plan's allowance when the campaign reaches states, cities and countries off only — the booking form's pickers are inline in a 500-line component and adding a city or country means rebuilding them; the database's ad_reach_check stays the backstop and its message is shown — costs: a seller who needs to ADD a city or country must contact support or book again.
+- Task 9: Ruling: the update filters on status = 'changes_requested' and asks for the row back, then resubmit runs as a second call — a failure between them leaves the edit saved and the campaign still waiting for the seller, who can press Resubmit again — costs: not one transaction.
+- Task 10: Ruling: the full local suite (345 passed, 9 skipped, 1 failed: feeds.spec, the known leftover local data) was run once on the tree at 9b6250a; the docs commit after it changes no code — costs: none.
+- Final: Ruling: the Task 7 ruling "You were not charged is kept only for a bad signature" is withdrawn — the reviewer is right that a signature mismatch can be the server's key not matching the checkout's, with the money moved — costs: a seller whose payment truly didn't happen is asked to contact support with a payment ID.
+- Final: Ruling: 401/403/404 from ad_order_fulfil stay "retry" (a wrong key, or the functions deployed before the migration) — sending every order to refund review during a bad deploy would be worse than waiting — costs: with a lasting misconfiguration paid orders wait as 'created' until someone notices the webhook's 503s.
+- Final: Ruling: unverified suspicion "20261116110300 may undo production-only changes to ad_apply_decision / approve_ad_campaign / resume_ad_campaign / sweep_ad_schedules (and 110000 / 110100 to enforce_quote_rfq_open / match_vendor_rfqs)" — not settled here (production is not read from tests); made a release step: before applying, read each function's definition on production and compare it with what the migration replaces, and confirm `authenticated` can't execute ad_apply_decision — costs if skipped: a SQL-editor change to one of those six functions is silently reverted.
+- Final: Ruling: unverified suspicion "a free (₹0) order that fails three times says 'Please try again', but a new order would be refused for a single-use code whose use was already confirmed" — the code stands: the same order id can still be published by asking again, main behaved worse (order left paid with nothing), and it needs a publish failure on a ₹0 order — costs: that seller needs support to finish the order.
+- Final: Ruling: declined-to-judge "a paused campaign that holds its days never expires" — stands, it is what "paused days are kept" means (Mitra's decision) — costs: a campaign can stay paused, holding days, indefinitely.
+- Final: Ruling: declined-to-judge "a seal badge stays on while Cosora pauses that campaign for a policy reason" — stands, unchanged by this work (the badge is granted at approval to the end date; pausing never revoked it) — costs: a badge can outlive Cosora's confidence in the seller until someone suspends the account or the grant.
+- Final: Ruling: declined-to-judge "adPerformance.ts gives an order's revenue to the campaign whose start is nearest the payment, and approval now moves the start" — stands for now: it only matters to a seller who bought the same listing twice, and the per-campaign split is a display figure — costs: that seller's two campaigns may show each other's booked revenue. (Campaigns carry ad_order_id since September; the split should read it.)
+- Final: Ruling: declined-to-judge "the chat header says 'User' for someone with no name and no brand" — stands, the inbox says the same — costs: none beyond a bare label.
+- Final: Ruling: declined-to-judge "the inbox's QuoteChip still reads ChatSummary.rfqProduct" — stands, outside SH-100 (the thread header) — costs: unknown; not looked at.
+
+### Notes
+
+- Task 5: fixed after the commit security review — a seller's status-only move to pending on a closed request was still allowed; check quote_unwin_after_close RED→GREEN (6 checks pass).
+- Task 6: Note: scripts/subscriptions/p7_overseas.sql check 19 fails ("A request can't be moved to other sellers", a guard on rfqs updates) with or without this task's change; it does not read match_vendor_rfqs. Not fixed here; reported.
+- Task 7: Note: the SQL check ad_order_all_or_nothing was green from its first run — the local database already had ad_order_fulfil from the October worktree; the RED for this task is discount-flow-check E10–E12 and F0 (7 checks failed before the port, 114 pass after).
+- Task 8: Note: admin commit 30565c6 on cosora-admin branch seller-home/high-fixes (worktree cosora-admin/.worktrees/seller-home-high); admin typecheck and build pass.
+
+### Deferred minors (not fixed; Mitra decides)
+
+- Final: minor (deferred): M2 Edit and resubmit shows "Your plan reaches up to 0 states" if a state is tapped before the plan has loaded (the database enforces the real limit).
+- Final: minor (deferred): M3 Edit and resubmit offers a Categories picker on Trusted Seal / Verified Certificate campaigns, which aren't targeted by category.
+- Final: minor (deferred): M4 Cosora-Admin's ad analytics (adsAnalytics.ts schedule()) count a paused-and-resumed campaign's length as end − start ("Day 13 of 13" for a 3-day campaign paused 10 days, prepaid figure too big); Ads.tsx says paused days are kept even when the pause began after the end date.
+- Final: minor (deferred): M5 the quote migration's self-check compares two fixed strings ('trg_quotes_accepting_rfq' >= 'trg_quotes_lead_cap'), so it tests nothing.
+- Final: minor (deferred): M6 "Paused by Cosora: <note>. Its remaining days are kept." prints two full stops when Cosora's note ends with one.
+
+### Tasks
+
+- Task 1: complete (commits 755a76c..fa45c35, tests: npx playwright test -c playwright.local.config.ts tests/local/seller-home-high.spec.ts -g 'skips the slideshow' →   1 passed (5.7s))
+- Task 2: complete (commits fa45c35..3d0164b, tests: npx playwright test -c playwright.local.config.ts tests/local/seller-home-high.spec.ts -g 'cover|refused video' →   3 passed (12.7s))
+- Task 3: complete (commits 3d0164b..5add43d, tests: npx playwright test -c playwright.local.config.ts tests/local/seller-home-high.spec.ts -g 'visibility question' →   1 passed (5.0s))
+- Task 4: complete (commits 5add43d..09f535f, tests: npx playwright test -c playwright.local.config.ts tests/local/seller-home-high.spec.ts tests/local/chat-unread.spec.ts tests/local/chat-composer-keyboard.spec.ts →   8 passed (39.1s))
+- Task 5: complete (commits 09f535f..907595b, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/psqlf.sh scripts/seller-home/high_fixes.sql → ROLLBACK)
+- Task 7: complete (commits 752a833..74f20d2, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/t7.sh → DISCOUNT FLOWS CONSISTENT — 114 checks across 8 functions)
+- Task 6: complete (commits 907595b..74f20d2, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/psqlf.sh scripts/seller-home/lead_ranking_equivalence.sql → ROLLBACK)
+- Task 8: complete (commits 74f20d2..f8e6682, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/t8.sh →   2 passed (10.8s))
+- Task 9: complete (commits f8e6682..37c2d4c, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/t9.sh →   10 passed (46.6s))
+- Task 10: complete (commits 37c2d4c..7871404, tests: sh .superpowers/sdd/seller-home-high-fixes-plan-2026-11-16/t10.sh →   10 passed (53.2s))

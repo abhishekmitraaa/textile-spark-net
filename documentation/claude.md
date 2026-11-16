@@ -1328,10 +1328,15 @@ undocumented. Deep technical rationale for each lives in
   2026-10-13 and never released until now). `public.ad_order_fulfil(order, rows)` (service role) marks the order paid
   and inserts every campaign together. `razorpay-verify-payment` and `razorpay-webhook` reach it only through
   `supabase/functions/_shared/adPublish.ts`; neither writes an order's status or a campaign itself. A failure writes
-  nothing and answers `retry` (the webhook answers 503 so Razorpay delivers again); an order whose plan can't run ads
-  goes to refund review in one write. A new way to pay for ads calls `publishOrder()`.
-  - **The page never says "You were not charged" unless it knows** (a bad signature, or a failure before payment). After
-    a good signature it says the payment was received and what happened to the ads, with the payment ID.
+  nothing and answers `retry` (the webhook answers 503 so Razorpay delivers again); an order whose plan can't run ads,
+  or whose campaigns the database refuses for good (PostgREST 400, 409 or 422: a listing deleted since checkout), goes
+  to refund review in one write, so the payment is on record. A new way to pay for ads calls `publishOrder()`.
+  - **Once Razorpay's checkout has handed back a payment, the page never says "You were not charged"**, whatever the
+    server answers (a signature that doesn't verify can be the server's key not matching the checkout's). What it says
+    for each answer is `paidAdOutcome()` / `freeAdOutcome()` in `src/lib/adPaymentOutcome.ts`, held by
+    `node scripts/ad-payment-outcome-check.mjs`. It claims "waiting for review" and a number of campaigns only when
+    this call set them up: when Razorpay's own notice handled the order first, it says "Payment received" and points
+    at Your Campaigns with the payment ID.
   - **Nothing says "your ads are live" at payment**: every campaign lands in review.
 - **Lead ranking is computed for the whole pool in one query** (SH-076, 2026-11-16; migration `20261116110100`).
   `match_vendor_rfqs` calls nothing per requirement; `admin.rfq_fit_set()` scores them all. The results did not

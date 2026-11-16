@@ -126,8 +126,12 @@ is not what red is for; each skip message says how to re-arm it.
   old function's rows, scores and order (all rows, and the first 200). Per call over 5,140 requirements: old 2.0–48.7 s
   (48.7 s for the seller with 121 listings), new 69–184 ms. RED first: the function didn't exist; then the first
   set-based version failed `fast_enough` at 950 ms until `fit_values` was written inline.
-- **`scripts/discount-flow-check.mjs`: 114 checks.** Seven failed on the functions as they were (E2, E10, E11 ×2, E12,
-  F0 ×2: an order left `paid` with no campaigns; the webhook answering 200), all pass after the port.
+- **`scripts/discount-flow-check.mjs`: 116 checks.** Seven failed on the functions as they were (E2, E10, E11 ×2, E12,
+  F0 ×2: an order left `paid` with no campaigns; the webhook answering 200), all pass after the port. The final
+  review added E13 and a second F0 (the campaigns refused for good, 409): RED (retry, 503) → GREEN (refund review, 200).
+- **`scripts/ad-payment-outcome-check.mjs`: 14 checks** (final review). What the page says after a checkout, for every
+  answer: RED first (the module didn't exist; the old inline wording said "You were not charged" for a bad signature
+  and "0 campaign sent for review" when the webhook won).
 - Also re-run and passing: `scripts/ranking/fit_match.sql` 21/21, `scripts/rfq-leads/r2_same_leads.sql` 6/6,
   `tests/local/ranking-fit.spec.ts` 3/3, `scripts/seller-home/hub.sql`, `plan_and_small_fixes.sql`,
   `rfqs_select_equivalence.sql`, `summary.sql`, `scripts/rls-policy-check.sql` (156 policies, 0 findings),

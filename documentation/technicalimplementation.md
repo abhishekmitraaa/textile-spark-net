@@ -4551,6 +4551,10 @@ The buyer sign-up audit of 2026-11-13 (items 1–15). Plan and findings: `subscr
 The audit's nine High items outside sections A–C. Plan, rulings and review:
 `documentation/seller-home-high-fixes-plan-2026-11-16.md`.
 
+- **Before applying on production:** read `pg_get_functiondef()` of `enforce_quote_rfq_open`, `match_vendor_rfqs`,
+  `ad_apply_decision`, `approve_ad_campaign`, `resume_ad_campaign` and `sweep_ad_schedules` there and compare each with
+  what the migration replaces (written against the local copy; a later SQL-editor change would be undone), and confirm
+  `authenticated` can't execute `ad_apply_decision`.
 - **Release order.** Migrations `20261116110000`, `110100`, `110200`, `110300` (after the A–C ones, `100000`–`100400`);
   then deploy `razorpay-verify-payment` and `razorpay-webhook` (they call `ad_order_fulfil`, so the migration goes
   first; `_shared/adPublish.ts` ships with them); then the buyer app and Cosora-Admin (branch
@@ -4571,7 +4575,9 @@ The audit's nine High items outside sections A–C. Plan, rulings and review:
 - **Paid ad orders** (`20261116110200`, `_shared/adPublish.ts`). `publishOrder()` reads the waiting order, asks
   `adReach`, builds the rows, and calls `ad_order_fulfil`, which locks the order row, refuses unknown keys and rows
   for another seller, marks it paid and inserts the campaigns. Answers: published; `already`; `retry` (nothing
-  written); `blocked` + `refundFlagged` (one PATCH from `created` to `refund_review`). `payments.ts` asks up to
+  written: a 5xx, a 401/403/404, a failed fetch, or the plan couldn't be read); `blocked` + `refundFlagged` (one PATCH
+  from `created` to `refund_review`), with `reason` "plan" or "refused" (`ad_order_fulfil` answered 400, 409 or 422:
+  the same rows would be refused again). The page's words for each answer are `src/lib/adPaymentOutcome.ts`. `payments.ts` asks up to
   three times while the answer is retry. The caller on the free and demo paths is still read from the token the
   gateway verified (`vendorIdFromJwt`): asking Auth again is one of the October fixes left out.
 - **Ad days** (`20261116110300`). Approval: `ends_at = now() + (ends_at - starts_at)`, `starts_at = now()` when the

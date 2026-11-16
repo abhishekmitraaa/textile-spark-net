@@ -19,6 +19,11 @@
     N days from approval" and can be approved however long review took.
   - Tests: `tests/local/seller-home-high.spec.ts` 10/10; `scripts/seller-home/high_fixes.sql` (14 checks) and
     `lead_ranking_equivalence.sql`; `scripts/discount-flow-check.mjs` 114 checks. Each RED first.
+  - Final review (fresh reviewer, 0 Critical, 1 Important, 6 Minor) and its fix pass (`4204975`): a paid order the
+    database refuses for good goes to refund review instead of being retried for ever; the wording after a checkout
+    lives in `src/lib/adPaymentOutcome.ts` and never says "You were not charged" once a payment came back, or "0
+    campaigns" when Razorpay's notice got there first. Flow check 116; `scripts/ad-payment-outcome-check.mjs` 14.
+    Five minors deferred and the release pre-checks are in the plan's "Record of the build".
   - Left out, on purpose: the other five October review fixes (ToDo); refunds for rejected campaigns; the audit's
     Medium and Low items.
 - 2026-11-16 (branch `seller-home/fixes`; migrations `20261116100000`–`100400`; **not live**: production migrations, the
