@@ -762,7 +762,7 @@ const UploadVideo = () => {
                     </div>
                     <div>
                       <p className="text-xs font-semibold text-gray-700">Upload thumbnail</p>
-                      <p className="text-[10px] text-gray-400">JPG or PNG · 9:16 ratio preferred</p>
+                      <p className="text-[10px] text-gray-400">JPG, PNG or WebP · 9:16 ratio preferred</p>
                     </div>
                   </>
                 )}

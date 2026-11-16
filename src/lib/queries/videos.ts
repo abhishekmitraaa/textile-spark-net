@@ -1,4 +1,5 @@
 import { priceText } from "@/lib/currency";
+import { shrinkImage } from "@/lib/shrinkImage";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { fileExt } from "@/lib/fileExt";
@@ -288,6 +289,22 @@ export interface NewProductVideo {
 
 export const VIDEO_BUCKET = "product-videos";
 
+export const COVER_UNREADABLE = "That picture couldn't be read. Choose a JPG, PNG or WebP.";
+
+/**
+ * A cover as the bucket takes it (video/mp4, video/webm, image/jpeg, image/webp): a JPEG or WebP as it is, anything
+ * else redrawn as a JPEG. The picker offers PNG, and a PNG used to be refused by the bucket after the clip had already
+ * been uploaded (Seller Home audit SH-068).
+ */
+async function coverForUpload(file: File): Promise<{ blob: Blob; ext: string; type: string }> {
+  if (file.type === "image/jpeg") return { blob: file, ext: "jpg", type: "image/jpeg" };
+  if (file.type === "image/webp") return { blob: file, ext: "webp", type: "image/webp" };
+  const out = await shrinkImage(file, 1280, "jpeg").catch(() => null);
+  // shrinkImage hands back the file itself when the browser can't decode it.
+  if (!out || out.blob.type !== "image/jpeg") throw new Error(COVER_UNREADABLE);
+  return { blob: out.blob, ext: "jpg", type: "image/jpeg" };
+}
+
 // 50MB — the Free-plan ceiling (a bucket limit cannot exceed the project's
 // global file size limit, and Free caps that at 50MB). Mirrored by
 // storage.buckets.file_size_limit so bypassing the client gains nothing.
@@ -528,6 +545,8 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
   let thumbnail_url: string | null = null;
   let provider = "supabase";
   let bunny_video_id: string | null = null;
+  // What this call put in Storage: removed again if anything after it fails, so a retry strands nothing.
+  const uploaded: string[] = [];
 
   const slot = await requestBunnySlot(v.caption || "Video closeup", v.videoWidth, v.videoHeight);
 
@@ -543,6 +562,8 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     // back to the bundled placeholder via the img onError handlers.
     thumbnail_url = slot.thumbnailUrl;
   } else {
+    // Before the clip goes up: a cover that can't be used shouldn't cost a 50 MB upload first.
+    const cover = v.thumbnail ? await coverForUpload(v.thumbnail) : null;
     const key = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const vext = fileExt(v.file.name, "mp4");
     // Resumable, so a dropped connection mid-upload continues rather than
@@ -553,19 +574,23 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     // Record what comes back, never the proposal — recording the proposal is
     // what produced a broken video_url plus a permanently orphaned object.
     const vpath = await resumableUpload(`${vendorId}/${key}.${vext}`, v.file, v.onProgress);
+    uploaded.push(vpath);
     video_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(vpath).data.publicUrl;
 
-    if (v.thumbnail) {
-      const text = fileExt(v.thumbnail.name, "jpg");
+    if (cover) {
       // Derive the poster path from the video path that actually won, not from
       // `key`. On a resumed upload those differ, and pairing them means a retry
       // overwrites its own poster (upsert) instead of leaving one stranded.
-      const tpath = `${vpath.replace(/\.[^./]+$/, "")}-thumb.${text}`;
+      const tpath = `${vpath.replace(/\.[^./]+$/, "")}-thumb.${cover.ext}`;
       // Posters are small, so a plain upload is fine here — but note this lands
       // in the SAME bucket as the video, which is why the bucket's MIME allowlist
       // has to include image types.
-      const { error: te } = await supabase.storage.from(VIDEO_BUCKET).upload(tpath, v.thumbnail, { upsert: true });
-      if (te) throw te;
+      const { error: te } = await supabase.storage.from(VIDEO_BUCKET).upload(tpath, cover.blob, { upsert: true, contentType: cover.type });
+      if (te) {
+        await removeUploaded(uploaded);
+        throw te;
+      }
+      uploaded.push(tpath);
       thumbnail_url = supabase.storage.from(VIDEO_BUCKET).getPublicUrl(tpath).data.publicUrl;
     }
   }
@@ -603,7 +628,21 @@ export async function createProductVideo(vendorId: string, v: NewProductVideo): 
     bunny_video_id,
     status: "under_review",
   });
-  if (error) throw error;
+  if (error) {
+    // A Bunny video has no row to delete it by; bunny-reconcile lists those.
+    await removeUploaded(uploaded);
+    throw error;
+  }
+}
+
+/** Best effort: the caller is already failing with the real error. */
+async function removeUploaded(paths: string[]): Promise<void> {
+  if (!paths.length) return;
+  try {
+    await supabase.storage.from(VIDEO_BUCKET).remove(paths);
+  } catch {
+    /* the original error is the one to show */
+  }
 }
 
 /** Storage key from a public URL, or null if it isn't one of ours. */
