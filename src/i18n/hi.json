@@ -8855,5 +8855,10 @@
  "Other places this ad reaches": "अन्य जगहें जहाँ यह विज्ञापन पहुँचता है",
  "Tap one to stop showing the ad there.": "वहाँ विज्ञापन दिखाना बंद करने के लिए किसी एक पर टैप करें।",
  "Resubmit for review": "समीक्षा के लिए फिर भेजें",
- "Your plan reaches up to {0} state{1}. Remove one to add another.": "आपका प्लान अधिकतम {0} राज्य तक पहुँचता है। दूसरा जोड़ने के लिए एक हटाएँ।"
+ "Your plan reaches up to {0} state{1}. Remove one to add another.": "आपका प्लान अधिकतम {0} राज्य तक पहुँचता है। दूसरा जोड़ने के लिए एक हटाएँ।",
+ "Payment received": "भुगतान मिल गया",
+ "Your campaigns are listed under Your Campaigns. If none appear there, contact support with this payment ID: {0}": "आपके अभियान \"आपके अभियान\" के नीचे सूचीबद्ध हैं। अगर वहाँ कोई नहीं दिखता, तो इस भुगतान ID के साथ सहायता से संपर्क करें: {0}",
+ "Payment received, but these ads could not be set up": "भुगतान मिल गया, लेकिन ये विज्ञापन सेट नहीं किए जा सके",
+ "Your campaigns are listed under Your Campaigns.": "आपके अभियान \"आपके अभियान\" के नीचे सूचीबद्ध हैं।",
+ "These ads could not be set up": "ये विज्ञापन सेट नहीं किए जा सके"
 }

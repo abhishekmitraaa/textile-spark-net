@@ -12,6 +12,11 @@
 // `retry`, so the caller can ask again and the webhook can answer 5xx for Razorpay to
 // re-deliver.
 //
+// A refusal that would be the same on every attempt (the database turns the campaigns down: a listing deleted since
+// checkout, a value a constraint refuses) is not retried: the order goes to refund review, so the payment is on
+// record. Retrying it for ever left the order 'created', which staff's ledger reads as abandoned (final review,
+// 2026-11-16).
+//
 // The vendor's plan is still held to before anything is published (./adReach.ts):
 //   * nothing can be published on the plan: the order goes to refund review, in the same
 //     single write that takes it out of 'created';
@@ -34,6 +39,8 @@ export interface PublishResult {
   already?: boolean;
   blocked?: boolean;
   refundFlagged?: boolean;
+  /** Why it was blocked: "plan" (nothing can be published on the plan) or "refused" (the database turned the rows down). */
+  reason?: "plan" | "refused";
   requested?: number;
   allowed?: number;
 }
@@ -93,7 +100,7 @@ export async function publishOrder(url: string, key: string, orderId: string): P
     if (!flag.taken) return { ok: true, count: 0, already: true };
     // Charged the discounted price, so the code's use is the vendor's.
     if (flag.redemption) await confirmDiscount(url, key, flag.redemption, orderId);
-    return { ok: false, count: 0, blocked: true, refundFlagged: true, requested: decision.requested, allowed: 0 };
+    return { ok: false, count: 0, blocked: true, refundFlagged: true, reason: "plan", requested: decision.requested, allowed: 0 };
   }
 
   let done: { claimed?: boolean; count?: number; discount_redemption_id?: string | null };
@@ -105,6 +112,17 @@ export async function publishOrder(url: string, key: string, orderId: string): P
     });
     if (!r.ok) {
       console.error("ad_order_fulfil failed", orderId, r.status, (await r.text()).slice(0, 300));
+      // 400, 409 and 422 are PostgREST's answers to data the database refuses (a raised exception, a broken foreign
+      // key or constraint): the same rows will be refused again. Anything else (5xx, 401/403/404 while a deploy or
+      // a key is wrong, a timeout) may pass later, so the order waits.
+      if (r.status === 400 || r.status === 409 || r.status === 422) {
+        const flag = await sendToRefundReview(url, key, orderId);
+        if (!flag.done) return { ok: false, count: 0, retry: true, requested: decision.requested, allowed: decision.allowed };
+        if (!flag.taken) return { ok: true, count: 0, already: true };
+        // Charged the discounted price, so the code's use is the vendor's.
+        if (flag.redemption) await confirmDiscount(url, key, flag.redemption, orderId);
+        return { ok: false, count: 0, blocked: true, refundFlagged: true, reason: "refused", requested: decision.requested, allowed: decision.allowed };
+      }
       return { ok: false, count: 0, retry: true, requested: decision.requested, allowed: decision.allowed };
     }
     done = await r.json();

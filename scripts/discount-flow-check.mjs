@@ -68,7 +68,7 @@ function reset(over = {}) {
     check: { ok: true, code: "LAUNCH25", applies_to: "vendor_plan", kind: "percent", value: 25, discount_rupees: 575 },
     reserve: null, // defaults to check + redemption id
     confirmOk: true,
-    failIntent: false, failSubscription: false, failAds: false,
+    failIntent: false, failSubscription: false, failAds: false, refuseAds: false,
     adScope: "pan_india",
     // Subscriptions P5: whether state targeting is on for the vendor, and their own state.
     stateTargeting: true, homeState: "GJ", reachFails: false,
@@ -242,10 +242,13 @@ globalThis.fetch = async (input, init = {}) => {
     const o = S.adOrders.get(body.p_order_id);
     if (!o || o.status !== "created") return res({ claimed: false, count: 0 });
     if (S.failAds) return res({ message: "boom" }, 500);
+    // The database refuses the rows for good (a listing deleted since checkout: PostgREST answers 409).
+    if (S.refuseAds) return res({ code: "23503", message: "violates foreign key constraint advertisements_product_id_fkey" }, 409);
     o.status = "paid";
     S.ads.push(...body.p_rows);
     return res({ claimed: true, count: body.p_rows.length, discount_redemption_id: o.discount_redemption_id ?? null });
-  }  if (p === "/rest/v1/subscription_invoices") { S.invoices.push(body); return res(undefined, 201); }
+  }
+  if (p === "/rest/v1/subscription_invoices") { S.invoices.push(body); return res(undefined, 201); }
   if (p === "/rest/v1/advertisements") {
     if (S.failAds) return res({ message: "boom" }, 500);
     S.ads.push(...body);
@@ -628,6 +631,21 @@ check("E11 paid, campaigns fail to insert: the order is NOT left paid with nothi
 S.failAds = false;
 r = await call("razorpay-verify-payment", { orderId: "order_A8", paymentId: "pay_f", signature: sign("order_A8", "pay_f") });
 check("E11 and the retry publishes it", r.body.ok && S.ads.length === 3 && S.adOrders.get("order_A8").status === "paid");
+
+// Final review, 2026-11-16: a refusal that will never succeed must not be retried for ever. The order used to wait as
+// 'created' (which staff's ledger calls abandoned) with the money taken.
+reset({ refuseAds: true });
+S.adOrders.set("order_A11", { order_id: "order_A11", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A11", paymentId: "pay_h", signature: sign("order_A11", "pay_h") });
+check("E13 paid, the campaigns are refused for good (409): refund review, not retry",
+  r.body.ok === false && !r.body.retry && r.body.blocked === true && r.body.refundFlagged === true && r.body.reason === "refused"
+  && S.adOrders.get("order_A11").status === "refund_review" && S.ads.length === 0, JSON.stringify(r.body));
+
+reset({ refuseAds: true });
+S.adOrders.set("order_A12", { order_id: "order_A12", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_y", order_id: "order_A12" } } } });
+check("F0 webhook, the campaigns are refused for good: 200 (no redelivery) and the order is in refund review",
+  h.status === 200 && S.adOrders.get("order_A12").status === "refund_review" && S.ads.length === 0, `${h.status} ${h.text}`);
 
 reset({ adScope: "none" });
 S.adOrders.set("order_A9", { order_id: "order_A9", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });

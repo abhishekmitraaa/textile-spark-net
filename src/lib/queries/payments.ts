@@ -199,10 +199,12 @@ export async function openRazorpaySubscriptionCheckout(opts: {
  * What razorpay-verify-payment answers for an order.
  *   retry   nothing was written (the database was briefly unreachable); the same call can
  *           be made again, and the order is still waiting.
- *   blocked the payment went through but the plan can't run these ads; the order is in
- *           refund review.
+ *   blocked the payment went through but nothing could be published (the plan can't run these
+ *           ads, or `reason: "refused"`: the database turned them down); the order is in refund review.
+ *   already the order was not waiting: Razorpay's own notice handled it first.
+ * What the page says for each is `paidAdOutcome()` / `freeAdOutcome()` in `@/lib/adPaymentOutcome`.
  */
-export interface AdPublishAnswer { ok: boolean; count?: number; error?: string; retry?: boolean; blocked?: boolean; refundFlagged?: boolean }
+export interface AdPublishAnswer { ok: boolean; count?: number; error?: string; retry?: boolean; already?: boolean; blocked?: boolean; refundFlagged?: boolean; reason?: string }
 
 /** Asks once, and twice more a moment apart while the answer is "try again". */
 async function askToPublish(body: Record<string, unknown>): Promise<AdPublishAnswer> {

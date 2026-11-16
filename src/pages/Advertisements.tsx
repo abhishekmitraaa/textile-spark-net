@@ -32,6 +32,7 @@ import { INDIA_STATES } from "@/data/indiaStates";
 import { useLang } from "@/lib/i18n";
 import { runStateOf, moderationReasonText } from "@/lib/campaignRunState";
 import { EditCampaignDialog } from "@/components/vendor/EditCampaignDialog";
+import { paidAdOutcome, freeAdOutcome, type AdCheckoutMessage } from "@/lib/adPaymentOutcome";
 import { useMyProducts, type VendorProductRow } from "@/lib/queries/products";
 import { useVendorCalls, callAnalyticsForWindow, MISSED_CALLS_UNAVAILABLE } from "@/lib/queries/callAnalytics";
 import { useAdPerformance, adCountersTotal, revenueBookedSince } from "@/lib/queries/adPerformance";
@@ -1094,6 +1095,9 @@ function CostSummary({
     setQuoteNote(discountRefusal(reason));
   };
 
+  const say = (m: AdCheckoutMessage) =>
+    (m.kind === "success" ? toast.success : toast.error)(m.title, { description: m.description, duration: m.long ? 60_000 : undefined });
+
   // Fallback (no Razorpay keys): publish server-side from the spec after the
   // simulated checkout. Used by the mock PaymentModal. Ads are still created by
   // the server (the edge function), never inserted directly by the client.
@@ -1138,14 +1142,8 @@ function CostSummary({
         if (published.ok) {
           onCreated();
           setQuote(null);
-          toast.success("Your ads are submitted!", {
-            description: `${published.count ?? selectedProducts.length} campaign${(published.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review.`,
-          });
-        } else if (published.blocked) {
-          toast.error("Your plan cannot run these ads", { description: "Nothing was charged. The order has been sent to Cosora to review." });
-        } else {
-          toast.error("Couldn't publish your ads", { description: "Nothing was charged. Please try again." });
         }
+        say(freeAdOutcome(published, selectedProducts.length));
         return;
       }
       const res = await openRazorpayCheckout({
@@ -1165,30 +1163,9 @@ function CostSummary({
       if (verified.ok) {
         onCreated();
         setQuote(null);
-        toast.success("Payment received. Your ads are waiting for Cosora's review", {
-          description: `${verified.count ?? selectedProducts.length} campaign${(verified.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review. Your days start when Cosora approves them.`,
-        });
-      } else if (verified.retry) {
-        // The signature was good, so the money moved; only setting the campaigns up failed, three times. The order is
-        // still waiting, and Razorpay's own notice to Cosora sets it up when it is delivered again.
-        toast.error("Payment received, but your ads are not set up yet", {
-          description: `Please contact support with this payment ID: ${res.razorpay_payment_id}`,
-          duration: 60_000,
-        });
-      } else if (verified.blocked) {
-        toast.error("Payment received, but your plan cannot run these ads", {
-          description: "The order has been sent for a refund review.",
-          duration: 60_000,
-        });
-      } else if (verified.error === "bad_signature") {
-        toast.error("Payment could not be verified", { description: "You were not charged. Please try again." });
-      } else {
-        // Unknown: never say "not charged" when Razorpay may have taken the money.
-        toast.error("We couldn't confirm your payment", {
-          description: `If money left your account, contact support with this payment ID: ${res.razorpay_payment_id}`,
-          duration: 60_000,
-        });
       }
+      // What happened to the money, in words (src/lib/adPaymentOutcome.ts): never "not charged" after a payment.
+      say(paidAdOutcome(verified, res.razorpay_payment_id, selectedProducts.length));
     } catch (e) {
       if (e instanceof Error && e.message === "dismissed") toast.info("Payment cancelled");
       else toast.error("Checkout failed", { description: errorMessage(e) });

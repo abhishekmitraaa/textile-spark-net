@@ -8855,5 +8855,10 @@
  "Other places this ad reaches": "અન્ય સ્થળો જ્યાં આ જાહેરાત પહોંચે છે",
  "Tap one to stop showing the ad there.": "ત્યાં જાહેરાત બતાવવાનું બંધ કરવા માટે કોઈ એક પર ટેપ કરો.",
  "Resubmit for review": "સમીક્ષા માટે ફરી મોકલો",
- "Your plan reaches up to {0} state{1}. Remove one to add another.": "તમારો પ્લાન વધુમાં વધુ {0} રાજ્ય સુધી પહોંચે છે. બીજું ઉમેરવા માટે એક દૂર કરો."
+ "Your plan reaches up to {0} state{1}. Remove one to add another.": "તમારો પ્લાન વધુમાં વધુ {0} રાજ્ય સુધી પહોંચે છે. બીજું ઉમેરવા માટે એક દૂર કરો.",
+ "Payment received": "ચુકવણી મળી ગઈ",
+ "Your campaigns are listed under Your Campaigns. If none appear there, contact support with this payment ID: {0}": "તમારી ઝુંબેશો \"તમારી ઝુંબેશો\" નીચે સૂચિબદ્ધ છે. જો ત્યાં કોઈ ન દેખાય, તો આ ચુકવણી ID સાથે સપોર્ટનો સંપર્ક કરો: {0}",
+ "Payment received, but these ads could not be set up": "ચુકવણી મળી ગઈ, પરંતુ આ જાહેરાતો સેટ કરી શકાઈ નથી",
+ "Your campaigns are listed under Your Campaigns.": "તમારી ઝુંબેશો \"તમારી ઝુંબેશો\" નીચે સૂચિબદ્ધ છે.",
+ "These ads could not be set up": "આ જાહેરાતો સેટ કરી શકાઈ નથી"
 }
