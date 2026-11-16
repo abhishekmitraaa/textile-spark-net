@@ -61,7 +61,7 @@ function, so `grep` finds both.
 | Trending searches | everyone | `/search` | `trending_searches` | distinct visitors, then searches |
 | Sellers in lists | buyers, visitors | Recommended Premium Brands, brand suggestions on Following, sellers in search suggestions | `top_vendors`, `new_brand_suggestions`, `search_suggestions` | **paid plan**, then **Standing**, then rating / recency / followers |
 | A buyer's quotes | the buyer | My Quotes › a requirement | `quote_order_for_rfq` | **Standing** only (Recommended, the default sort) |
-| Requirements | sellers | Quotes › Leads | `match_vendor_rfqs` (with `admin.rfq_fit`) | **Fit** |
+| Requirements | sellers | Quotes › Leads | `match_vendor_rfqs` (with `admin.rfq_fit_set`) | **Fit** |
 | Sellers matched to a requirement | the database | lead alerts | `match_rfq_vendors`, `admin.lead_alert_fanout` | paid plan, then match + 0.1 × Standing; alerts: VIP first |
 
 ---
@@ -462,12 +462,20 @@ Live since 2026-11-15 (migration `20261115100000`). Design and calls: `documenta
 `match_vendor_rfqs` first decides the pool; Fit only orders it. A seller sees a requirement when it is:
 - open (section 2);
 - not their own;
-- not blocked either way between buyer and seller (`chat_blocked_between`);
+- not blocked either way between buyer and seller (`chat_blocked_between`'s rule; the seller's blocks are read once);
 - either from India, or overseas and visible to the seller's tier. VIP sees overseas requirements at once; Gold sees
   them after the VIP head start (`overseas_vip_until`, 24 hours); and anyone who already quoted keeps seeing it.
 
 The browser shows every open lead. A lead the score didn't reach (the first 200 by score are scored) keeps score 0
 and stays listed, newest first.
+
+**Fit is computed for the whole pool in one query** (2026-11-16, migration `20261116110100`, Seller Home audit SH-076).
+`admin.rfq_fit_set(vendor, rfq ids)` reads the seller's side once (capabilities, location history, capacity, the values
+its live listings carry under each matched question) and scores every requirement; `match_vendor_rfqs` calls nothing
+per requirement. The numbers did not change: `admin.rfq_fit(vendor, rfq)` is kept as the one-pair reference, and
+`scripts/seller-home/lead_ranking_equivalence.sql` holds the two to the same rows, the same scores to the last bit and
+the same order over 5,000 generated requirements (old 2–49 s a call, new under 0.2 s). **A change to a Fit rule is made
+in both functions**, and that harness and `scripts/ranking/fit_match.sql` are re-run.
 
 ### 6.2 The formula
 
@@ -688,7 +696,7 @@ doesn't depend on seller ids.
 | Search | `search_products`, `match_products`, `search_suggestions`; edge `embed-query` | see search.md §12 |
 | Ads | `search_ads`, `admin.search_ads_ranked`, `is_ad_eligible` | `scripts/todo-batch/search_ads.sql` |
 | Standing | `admin.vendor_standing_parts`, `admin.refresh_vendor_standing`, `public.vendor_standing`, `quote_order_for_rfq`, `top_vendors`, `new_brand_suggestions`; app `src/pages/MyQuotes.tsx`, `useQuoteOrder` | `scripts/ranking/standing.sql` (22), `tests/local/ranking-standing.spec.ts`, `profile-score-ranking.spec.ts` |
-| Fit | `match_vendor_rfqs`, `admin.rfq_fit`, `admin.fit_values`, `public.category_root_of`, `admin.vendor_location_history`; app `src/lib/queries/rfqs.ts`, `OpenRfqLeads.tsx`, `BuyerStateNudge.tsx` | `scripts/ranking/fit_match.sql` (21), `tests/local/ranking-fit.spec.ts` |
+| Fit | `match_vendor_rfqs`, `admin.rfq_fit_set` (and its one-pair reference `admin.rfq_fit`), `admin.fit_values`, `public.category_root_of`, `admin.vendor_location_history`; app `src/lib/queries/rfqs.ts`, `OpenRfqLeads.tsx`, `BuyerStateNudge.tsx` | `scripts/ranking/fit_match.sql` (21), `scripts/seller-home/lead_ranking_equivalence.sql`, `tests/local/ranking-fit.spec.ts` |
 | Attributes (F1/F3) | `attribute_definitions`, `attributes_problem`, `match_key` / `match_weight` | `scripts/ranking/f1_attributes.sql`, `f3_attribute_definitions.sql`, `tests/local/ranking-f3.spec.ts` |
 | Location, type, capacity (F2) | `india_states`, `vendor_capacity`, `state_code_for` | `scripts/ranking/f2_vendor_profile.sql` |
 | Lead alerts | `match_rfq_vendors`, `admin.lead_alert_fanout`, `lead_digest_run`, `my_lead_alerts` | `scripts/todo-open/deadline.sql`, lead alert specs |
