@@ -279,6 +279,8 @@ Copied from the execution ledger when the branch was finished; the ledger itself
 - Final: fixed I1 (a paid order whose campaigns the database refuses for good was retried for ever and left 'created', which staff's ledger reads as abandoned) — adPublish.ts sends a 400/409/422 from ad_order_fulfil to refund review, confirms the code's use and answers blocked with reason "refused"; 5xx, 401/403/404 and a failed fetch still answer retry — discount-flow-check E13 and F0 (refused) RED→GREEN, 116/116.
 - Final: fixed M1 and the bad-signature wording — the wording after a checkout moved to the import-free src/lib/adPaymentOutcome.ts (paidAdOutcome, freeAdOutcome): never "You were not charged" once Razorpay handed back a payment; an order the webhook handled first says "Payment received" and points at Your Campaigns with the payment ID, never "0 campaigns" or "waiting for review"; a refused order doesn't blame the plan — scripts/ad-payment-outcome-check.mjs RED (module missing) → GREEN, 14 checks.
 
+- Final: the full local suite after the fix pass: 344 passed, 9 skipped, 2 failed — `feeds.spec.ts` (leftover local listings, as before this work) and `audit-second.spec.ts` "a chat opens on its newest 40 messages" (a click racing a scroll in the test; 6/6 alone on this branch, 1 failure in 6 with the chat files as they were before Task 4, so not from this work). Ruling: the pass is closed with those two explained, neither fixed — costs: the chat-paging test stays flaky.
+
 ### Before releasing (from the review; each step still needs Mitra's yes)
 
 - **Compare six functions on production with what these migrations replace, before applying them:**

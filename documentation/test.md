@@ -140,6 +140,11 @@ is not what red is for; each skip message says how to re-arm it.
 - **Full local suite on the final tree (66 files, 355 tests): 345 passed, 9 skipped, 1 failed.** The failure is
   `feeds.spec.ts` "every listing once", the leftover interest-seller listings on the local database (the same as before
   this work).
+- **Full local suite again after the final review's fix pass (355 tests): 344 passed, 9 skipped, 2 failed.** `feeds.spec.ts`
+  as above, and `audit-second.spec.ts` "a chat opens on its newest 40 messages and loads older ones": the click on
+  "Load earlier messages" races the scroll that loads the same page (the button is detached mid-click). It is a flake
+  in the test, not from this work: alone it passed 6 of 6 on this branch and failed 1 of 6 with the three chat files
+  put back as they were before the chat-header change. Not fixed.
 - **Not passing, not from this work:** `scripts/subscriptions/p7_overseas.sql` check 19 fails ("A request can't be
   moved to other sellers"); the other 18 pass. ToDo "Check the overseas harness's last case".
 - **Not tested:** the two payment functions on an edge runtime (they ran in Node through the flow check); a real
