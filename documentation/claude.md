@@ -63,7 +63,8 @@ Rules decided before or outside of Claude Code sessions.
   account manager, overseas requirements and bulk import: `subscription_plans.limits`, read
   through `vendor_entitlements()` (subscriptions P0-P12). The plans page's copy
   (`subscription_plans.display`) must say what the limits give; `scripts/subscriptions/p13_truth_pass.sql`
-  checks it. **The Free plan allows 10 listings** (Mitra, 2026-11-16, "allow 10 lisitng for free plan"; the other
+  checks it. **The Free plan allows 10 listings** (Mitra, 2026-11-16, "allow 10 lisitng for free plan", confirmed the same day
+  knowing Basic also allows 10: "We'll give 10 free listing"; the other
   plans unchanged; `20261116100200`, which also resumed Free sellers' paused listings up to 10). **Leads are the same on every plan** (Mitra, 2026-10-02): the same ranked feed and
   no cap on how many a vendor quotes on (RFQ/leads R2), except requirements from overseas buyers,
   which only Gold and VIP see, VIP 24 hours first (Mitra, 2026-10-08; subscriptions P7).

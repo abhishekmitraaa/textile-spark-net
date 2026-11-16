@@ -9,9 +9,10 @@ with no need to dictate format, context, or reference each time.
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
 - Context: Mitra raised Free to 10 ("allow 10 lisitng for free plan", other plans unchanged; migration
-  `20261116100200`). The answer still reads "Our Free plan costs nothing and gives you 2 listings", and it calls Basic
-  the plan "with 10 product listings": Free and Basic now allow the same number, so the answer (and perhaps Basic's
-  offer) is Mitra's and Andy's to settle. FAQ text is Andy's wording, published verbatim; don't change it in code.
+  `20261116100200`), and confirmed it the same day knowing Basic also allows 10 ("We'll give 10 free listing"). The
+  answer still reads "Our Free plan costs nothing and gives you 2 listings" and calls Basic the plan "with 10 product
+  listings": Andy rewords it so Free says 10 and Basic is no longer sold on its listing count. FAQ text is Andy's
+  wording, published verbatim; don't change it in code.
 - Reference: Seller Home fixes, 2026-11-16 (SH-011).
 - Status: Open
 
