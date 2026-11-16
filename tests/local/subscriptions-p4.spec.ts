@@ -29,7 +29,8 @@ test.afterEach(() => {
   }
 });
 
-/** A listed seller on Gold with four published listings, A the most viewed. */
+/** A listed seller on Gold with twelve published listings: eight fillers viewed most, then A, B, C and D. Free allows 10
+ *  (since 2026-11-16; it was 2), so the lapse keeps the fillers, A and B, and pauses C and D. */
 async function sellerOnGold(prefix: string, periodEnd: string) {
   const who = await freshAccount(prefix, { seller: true });
   made.push(who.id);
@@ -39,10 +40,13 @@ async function sellerOnGold(prefix: string, periodEnd: string) {
          ('${who.id}', 'P4 Listing B', 'live', 30, 100, now() - interval '3 minutes'),
          ('${who.id}', 'P4 Listing C', 'live', 20, 100, now() - interval '2 minutes'),
          ('${who.id}', 'P4 Listing D', 'live', 10, 100, now() - interval '1 minute');
+       insert into public.products (vendor_id, name, status, views_count, price_value, created_at)
+       select '${who.id}', 'P4 Filler ' || lpad(g::text, 2, '0'), 'live', 100 + g, 100, now() - interval '10 minutes'
+         from generate_series(1, 8) g;
        insert into public.vendor_subscriptions (vendor_id, plan_id, billing_cycle, status, current_period_start, current_period_end)
        values ('${who.id}', 'gold', 'monthly', 'active', (${periodEnd}) - interval '1 month', ${periodEnd});`);
   const idOf = (name: string) => sql(`select id from public.products where vendor_id = '${who.id}' and name = '${name}'`);
-  const states = () => sql(`select string_agg(right(name, 1) || '=' || status::text, ' ' order by name) from public.products where vendor_id = '${who.id}'`);
+  const states = () => sql(`select string_agg(right(name, 1) || '=' || status::text, ' ' order by name) from public.products where vendor_id = '${who.id}' and name like 'P4 Listing %'`);
   return { who, idOf, states };
 }
 
@@ -63,7 +67,7 @@ test("grace days on Subscription, then the lapse pauses listings and the seller 
   await expect(ending.getByRole("button", { name: "Renew Gold" })).toBeVisible();
   expect(states()).toBe("A=live B=live C=live D=live");
 
-  // The grace days pass and the daily job runs: Free allows 2, the two most viewed stay.
+  // The grace days pass and the daily job runs: Free allows 10, the ten most viewed stay.
   sql(`update public.vendor_subscriptions set current_period_end = now() - interval '8 days' where vendor_id = '${who.id}';
        select public.expire_subscriptions();`);
   expect(sql(`select status from public.vendor_subscriptions where vendor_id = '${who.id}'`)).toBe("expired");
@@ -74,16 +78,16 @@ test("grace days on Subscription, then the lapse pauses listings and the seller 
   const banner = page.getByTestId("listings-cap-banner");
   await expect(banner).toHaveAttribute("data-state", "paused");
   await expect(banner).toContainText("2 listings are paused");
-  await expect(banner).toContainText("Your Free plan allows 2 listings.");
+  await expect(banner).toContainText("Your Free plan allows 10 listings.");
 
   // Swap: C in, A out.
   await banner.getByRole("button", { name: "Choose which are live" }).click();
   const dialog = page.getByTestId("live-listings-dialog");
-  await expect(dialog.getByTestId("live-pick-count")).toHaveText("2 of 2 chosen");
+  await expect(dialog.getByTestId("live-pick-count")).toHaveText("10 of 10 chosen");
   await expect(dialog.getByTestId(`live-pick-${idOf("P4 Listing C")}`)).toBeDisabled();   // full: nothing more can be ticked
   await dialog.getByTestId(`live-pick-${idOf("P4 Listing A")}`).click();
   await dialog.getByTestId(`live-pick-${idOf("P4 Listing C")}`).click();
-  await expect(dialog.getByTestId("live-pick-count")).toHaveText("2 of 2 chosen");
+  await expect(dialog.getByTestId("live-pick-count")).toHaveText("10 of 10 chosen");
   await dialog.getByTestId("live-pick-save").click();
   await expect(page.getByText("Your live listings are updated")).toBeVisible();
   expect(states()).toBe("A=paused B=live C=live D=paused");
@@ -114,19 +118,22 @@ test("before the plan ends the seller picks the listings to keep, and the lapse 
   const banner = page.getByTestId("listings-cap-banner");
   await expect(banner).toHaveAttribute("data-state", "next");
   await expect(banner).toContainText("Your plan is about to end");
-  await expect(banner).toContainText("which allows 2 listings. You have 4.");
+  await expect(banner).toContainText("which allows 10 listings. You have 12.");
 
-  // Starts from what the database would keep (A and B); the seller keeps B and D instead.
+  // Starts from what the database would keep (the fillers, A and B); the seller keeps B and D instead of A.
   await banner.getByRole("button", { name: "Choose listings" }).click();
   const dialog = page.getByTestId("live-listings-dialog");
-  await expect(dialog.getByTestId("live-pick-count")).toHaveText("2 of 2 chosen");
+  await expect(dialog.getByTestId("live-pick-count")).toHaveText("10 of 10 chosen");
   await expect(dialog.getByTestId(`live-pick-${idOf("P4 Listing A")}`)).toBeChecked();
   await dialog.getByTestId(`live-pick-${idOf("P4 Listing A")}`).click();
   await dialog.getByTestId(`live-pick-${idOf("P4 Listing D")}`).click();
   await dialog.getByTestId("live-pick-save").click();
   await expect(page.getByText("Your choice is saved")).toBeVisible();
-  expect(sql(`select keep_product_ids::text from public.vendor_subscriptions where vendor_id = '${who.id}'`))
-    .toBe(`{${idOf("P4 Listing B")},${idOf("P4 Listing D")}}`);
+  const kept = sql(`select array_to_string(keep_product_ids, ',') from public.vendor_subscriptions where vendor_id = '${who.id}'`).split(",");
+  expect(kept).toHaveLength(10);
+  expect(kept).toEqual(expect.arrayContaining([idOf("P4 Listing B"), idOf("P4 Listing D")]));
+  expect(kept).not.toContain(idOf("P4 Listing A"));
+  expect(kept).not.toContain(idOf("P4 Listing C"));
   expect(states()).toBe("A=live B=live C=live D=live");   // nothing changes until the plan does
 
   // A reminder goes out once (3 days left: the 4-day one), then the plan and its grace days pass.
