@@ -39,14 +39,14 @@ const AdvertisementSlideshow = () => {
       return () => clearTimeout(timer);
     } else {
       const timer = setTimeout(() => {
-        navigate("/advertisements");
+        navigate("/advertisements", { replace: true });
       }, SLIDE_DURATION);
       return () => clearTimeout(timer);
     }
   }, [current, navigate]);
 
   const handleSkip = () => {
-    navigate("/advertisements");
+    navigate("/advertisements", { replace: true });
   };
 
   return (
