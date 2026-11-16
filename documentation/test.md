@@ -107,6 +107,39 @@ is not what red is for; each skip message says how to re-arm it.
 | `registration-documents.spec.ts` | 2026-10-02. A new account registers end to end: the documents step has no Skip and its Next waits for the PAN card, a business registration (a wrong Udyam number is flagged) and a masked Aadhaar with consent; the product step has no Skip without a catalogue and needs a product with a photo; the rows stored (masked Aadhaar, Udyam kind and number, no GST row) are all unreviewed. Then `/kyc` as a seller with nothing: adds a shop licence, a masked Aadhaar (consent required) and a two-file catalogue (PDF and CSV) |
 | `plans-and-refunds.spec.ts` | 2026-10-02, demo checkout (no Razorpay keys). A new seller buys Basic; ten days in, Gold costs ₹2,299 less the unused part of Basic, shown in the checkout and on the upgrade invoice; Silver is paid now and starts when Gold ends ("Switching to Silver on …"); renewing and a second downgrade are refused before paying. The guarantee: hidden for a demo payment; with a Razorpay payment id it offers ₹2,713 back, the seller asks, Cosora-Admin lists it and won't close until refunded, closing ends the plan and the seller sees "We refunded ₹2,713" |
 | `seller-home-fixes.spec.ts` | 2026-11-16, the Seller Home audit's sections A–C (36 cases): one summary call and four states; score skeleton; a blocked buyer's lead never shows; direct requests first, archived chats out; no invented claims; Next step; alerts card by plan; paise kept; no button in a link; quick-action ticks; laptop right column; neutral analysis; vendor blue; Back/Forward after switching and Help keeping the side; welcome screen; Getting started; the registration notice; the agreement prompt on home and publishing pages only; Documents (KYC); the hub (badge, bell, token refresh, one channel, switch off); `/leads?rfq=`; counts after a quote; admin and built-in banners; header search; phone Sign Out; TierGate Retry | fresh accounts |
+| `seller-home-high.spec.ts` | 2026-11-16, the Seller Home audit's nine High items left after A–C (10 cases): Back from Advertise skips the slideshow; a PNG video cover is stored as a JPEG, a refused video row and a corrupt cover leave no files; the catalogue form has no visibility question; the chat header invents nothing; campaign cards say when paid days start and that paused days are kept, and Resume gives them back; Cosora-Admin approves a campaign reviewed late for its full days; a seller edits and resubmits a campaign; no resubmit without a title | fresh accounts; the admin case needs the admin app from `cosora-admin/.worktrees/seller-home-high` (`LOCAL_ADMIN_URL`) |
+
+#### 2026-11-16 — Seller Home high-priority fixes (branch `seller-home/fixes`, admin `seller-home/high-fixes`, local stack)
+- **`tests/local/seller-home-high.spec.ts`: 10/10.** Each was run RED first on the code before its task: the slideshow
+  (Back landed on /advertisements' previous entry, the slideshow); the three video cases (the bucket's "mime type
+  image/png is not supported"); the catalogue question; the chat header ("4.6", "RFQ-NEW"); the campaign cards; Edit and
+  resubmit (no button). The admin case was RED against the old admin app on :5185 ("already ended", Approve disabled)
+  and GREEN against the worktree's on :5186. The video cases call the app's own `createProductVideo()` in the page
+  (no decodable video fixture exists), so the form's wiring to it is not exercised.
+- **`scripts/seller-home/high_fixes.sql`: 14 checks pass** (quotes 6, ad orders 1, ad days 7). RED first:
+  `quote_terms_closed` (an accepted ₹250 quote on a closed request became ₹1.00 and pending),
+  `quote_unwin_after_close` (found by the commit security review), `ad_approve_late` ("has already ended").
+  `ad_order_all_or_nothing` was green from its first run: the local database already had `ad_order_fulfil` from the
+  October worktree.
+- **`scripts/seller-home/lead_ranking_equivalence.sql`: passes** (about 4 minutes). 5,000 generated open requirements
+  and ten sellers: `admin.rfq_fit_set` equals `admin.rfq_fit` exactly for every pair; `match_vendor_rfqs` returns the
+  old function's rows, scores and order (all rows, and the first 200). Per call over 5,140 requirements: old 2.0–48.7 s
+  (48.7 s for the seller with 121 listings), new 69–184 ms. RED first: the function didn't exist; then the first
+  set-based version failed `fast_enough` at 950 ms until `fit_values` was written inline.
+- **`scripts/discount-flow-check.mjs`: 114 checks.** Seven failed on the functions as they were (E2, E10, E11 ×2, E12,
+  F0 ×2: an order left `paid` with no campaigns; the webhook answering 200), all pass after the port.
+- Also re-run and passing: `scripts/ranking/fit_match.sql` 21/21, `scripts/rfq-leads/r2_same_leads.sql` 6/6,
+  `tests/local/ranking-fit.spec.ts` 3/3, `scripts/seller-home/hub.sql`, `plan_and_small_fixes.sql`,
+  `rfqs_select_equivalence.sql`, `summary.sql`, `scripts/rls-policy-check.sql` (156 policies, 0 findings),
+  `npm run rls:check`, `scripts/ad-pricing-check.mjs`, the typecheck, `npm run i18n:check` (8,000/8,000),
+  `npm run build`; Cosora-Admin typecheck and build.
+- **Full local suite on the final tree (66 files, 355 tests): 345 passed, 9 skipped, 1 failed.** The failure is
+  `feeds.spec.ts` "every listing once", the leftover interest-seller listings on the local database (the same as before
+  this work).
+- **Not passing, not from this work:** `scripts/subscriptions/p7_overseas.sql` check 19 fails ("A request can't be
+  moved to other sellers"); the other 18 pass. ToDo "Check the overseas harness's last case".
+- **Not tested:** the two payment functions on an edge runtime (they ran in Node through the flow check); a real
+  Razorpay payment; `scripts/quote-rfq-open-check.mjs` and `quote-status-roles-check.mjs` (they sign in to production).
 
 #### 2026-11-16 — Seller Home fixes (branch `seller-home/fixes`, local stack)
 - **`tests/local/seller-home-fixes.spec.ts`: 36/36** (34 by Task 12; the final review added "an unregistered seller keeps the seller menu after a buyer page" and "laptop dialogs cover the sidebar", both RED first). Every test was run RED first on the code before its task (except "a registration notice is written", which Task 3 had already made pass, and "switch off keeps today's behaviour", which guards the old path). "forward after that shows the buyer menu" was also run with only the seller half of the fix (fails), "quote count updates on return" without the dashboard refresh (fails), and "phone menu sign out is tappable" with the old z-indexes (fails).
