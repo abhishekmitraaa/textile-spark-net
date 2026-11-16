@@ -132,10 +132,12 @@ export const getOrCreateConversation = (id: string): Conversation => {
   if (found) return found;
   const name = prettifyVendorName(id);
   return {
-    id, name, avatar: null, online: false, rating: 4.6, reviews: 0,
-    location: "India", verified: true, rfqId: "RFQ-NEW", rfqProduct: "New enquiry",
-    lastMessage: "", timestamp: "Now", unread: 0,
-    messages: [{ id: "m1", sender: "vendor", text: "Hi! Thanks for reaching out. How can we help with your requirement?", time: "Now" }],
+    // Nothing invented (Seller Home audit SH-100): no rating, place, request or first message. The thread reads the
+    // real name, picture and messages from the database.
+    id, name, avatar: null, online: false, rating: 0, reviews: 0,
+    location: "", verified: false, rfqId: "", rfqProduct: "",
+    lastMessage: "", timestamp: "", unread: 0,
+    messages: [],
   };
 };
 

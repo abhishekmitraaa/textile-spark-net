@@ -8817,5 +8817,7 @@
  "We couldn't check your plan": "हम आपका प्लान जाँच नहीं सके",
  "This page depends on your plan. Check your connection and try again.": "यह पेज आपके प्लान पर निर्भर है। अपना कनेक्शन जाँचें और फिर से कोशिश करें।",
  "JPG, PNG or WebP · 9:16 ratio preferred": "JPG, PNG या WebP · 9:16 अनुपात बेहतर",
- "That picture couldn't be read. Choose a JPG, PNG or WebP.": "वह तस्वीर पढ़ी नहीं जा सकी। JPG, PNG या WebP चुनें।"
+ "That picture couldn't be read. Choose a JPG, PNG or WebP.": "वह तस्वीर पढ़ी नहीं जा सकी। JPG, PNG या WebP चुनें।",
+ "See the quotes you've sent": "आपके भेजे हुए कोट देखें",
+ "See the quotes you've received": "आपको मिले हुए कोट देखें"
 }

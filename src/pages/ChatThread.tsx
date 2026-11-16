@@ -20,7 +20,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  ArrowLeft, Phone, Star, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
+  ArrowLeft, Phone, MoreVertical, FileText, ChevronRight, Send, Mic, Camera, Paperclip,
   Plus, X, ShieldCheck, ShieldAlert, Image as ImageIcon, File as FileIcon, User, Headphones,
   Eye, CheckCheck, Check, Star as StarIcon, Archive, Ban, Flag, Trash2, MailOpen, Loader2, Download,
 } from "lucide-react";
@@ -70,7 +70,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
   // a block either way (20261018160000). The DB is what actually refuses the
   // insert; everything below is the honest UI for it.
   const {
-    messages, otherName, sendText, sendAttachment, shareContact, conversationId, underReview, refreshStatus,
+    messages, otherName, otherAvatar, sendText, sendAttachment, shareContact, conversationId, underReview, refreshStatus,
     memberState, updateState, block, blocked, setBlocked, markRead, hasOlder, loadingOlder, loadOlder,
   } = useChatThread(vendorId);
   const locked = underReview || blocked;
@@ -131,7 +131,10 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recorder.cancel is stable
   }, [locked]);
 
-  const initials = useMemo(() => (conv?.name ?? "").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [conv?.name]);
+  // The other person as the database names them. Until that read lands the header shows "User", never a name made
+  // from the account id in the address (SH-100).
+  const shownName = otherName ?? "User";
+  const initials = useMemo(() => shownName.split(/\s+/).filter(Boolean).map((w) => w[0]).join("").slice(0, 2).toUpperCase(), [shownName]);
 
   if (!conv) {
     return (
@@ -155,7 +158,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
     );
   }
 
-  const displayName = otherName ?? conv.name;
+  const displayName = shownName;
   const otherLabel = isSeller ? "buyer" : "seller";
 
   // The draft survives a rejected send (blocklisted term, locked thread,
@@ -263,20 +266,13 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
           {onBack && (
             <button onClick={onBack} aria-label="Back to Messages" className="p-1 -ml-1 rounded-full hover:bg-gray-100"><ArrowLeft className="w-5 h-5 text-gray-700" /></button>
           )}
-          <button onClick={goProfile} className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
+          <button onClick={goProfile} data-testid="chat-header" className="flex items-center gap-2.5 flex-1 min-w-0 text-left">
             <div className="relative shrink-0">
-              {conv.avatar ? <img src={conv.avatar} alt="" className="w-9 h-9 rounded-full object-cover lg:w-10 lg:h-10" /> : <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-brand-buyer/20 to-brand-buyer/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
-              {conv.online && <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white" />}
+              {otherAvatar ? <img src={otherAvatar} alt="" className="w-9 h-9 rounded-full object-cover lg:w-10 lg:h-10" /> : <div data-testid="chat-header-avatar" className="w-9 h-9 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-brand-buyer/20 to-brand-buyer/40 flex items-center justify-center text-xs font-bold text-gray-700">{initials}</div>}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-bold text-gray-900 truncate leading-tight lg:text-[15px]">{otherName ?? conv.name}</p>
-              <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
-                {conv.online ? <span className="text-emerald-500 font-medium">Online</span> : <span>Offline</span>}
-                <span className="text-gray-300">·</span>
-                <span className="inline-flex items-center gap-0.5"><Star className="w-3 h-3 text-yellow-400 fill-yellow-400" /> {conv.rating} ({conv.reviews})</span>
-                <span className="text-gray-300 hidden xs:inline">·</span>
-                <span className="hidden xs:inline truncate">{conv.location}</span>
-              </div>
+              {/* The name only: Cosora has no presence, and a chat stores no rating, place or request (SH-100). */}
+              <p className="text-sm font-bold text-gray-900 truncate leading-tight lg:text-[15px]" data-no-translate>{shownName}</p>
             </div>
           </button>
           {/* Calling reveals the other party's real phone number (useCallVendor
@@ -284,7 +280,7 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
               not be able to take it off-platform, so the affordance goes away
               entirely rather than sitting there dead. */}
           {!locked && (
-            <button onClick={() => vendorId && callVendor(vendorId, conv.rfqProduct)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
+            <button onClick={() => vendorId && callVendor(vendorId)} aria-label="Call" className="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center shrink-0"><Phone className="w-4 h-4 text-white" /></button>
           )}
           <div className="relative shrink-0">
             <button onClick={() => setMenuOpen((o) => !o)} aria-label="More" className="p-1.5 rounded-full hover:bg-gray-100"><MoreVertical className="w-5 h-5 text-gray-600" /></button>
@@ -306,13 +302,14 @@ export function ChatThreadView({ vendorId, onBack, embedded = false }: ChatThrea
           </div>
         </div>
 
-        {/* RFQ banner → quotes page */}
+        {/* The way to the quotes page. A chat isn't tied to one request, so the strip names none (it used to show an
+            invented "RFQ-NEW · New enquiry", SH-100). */}
         <button onClick={goQuote} className="w-full bg-brand-buyer/5 border-t border-brand-buyer/10 transition-colors hover:bg-brand-buyer/10">
           <div className={cn("mx-auto w-full max-w-2xl flex items-center gap-2 px-4 py-2", THREAD_WIDE)}>
             <FileText className="w-4 h-4 text-brand-buyer shrink-0" />
             <div className="flex-1 text-left min-w-0">
-              <p className="text-xs font-bold text-gray-900">{conv.rfqId}</p>
-              <p className="text-[11px] text-gray-500 truncate">{conv.rfqProduct}</p>
+              <p className="text-xs font-bold text-gray-900">Quotes</p>
+              <p className="text-[11px] text-gray-500 truncate">{isSeller ? "See the quotes you've sent" : "See the quotes you've received"}</p>
             </div>
             <ChevronRight className="w-4 h-4 text-brand-buyer shrink-0" />
           </div>

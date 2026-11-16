@@ -132,3 +132,27 @@ test("the catalogue form has no visibility question", async ({ browser }) => {
   await expect(page.getByText("Verified Only")).toHaveCount(0);
   await page.context().close();
 });
+
+// ─────────────────────────── Task 4: the chat header (SH-100) ───────────────────────────
+
+test("a chat header invents nothing", async ({ browser }) => {
+  const who = await seller("hi-hdr");
+  const buyer = await freshAccount("hi-hdr-b");
+  made.push(buyer.id);
+  sql(`update public.profiles set full_name = 'Hdr Buyer' where id = '${buyer.id}';
+       with c as (insert into public.conversations (user_a, user_b)
+                  values (least('${who.id}'::uuid, '${buyer.id}'::uuid), greatest('${who.id}'::uuid, '${buyer.id}'::uuid)) returning id)
+       insert into public.messages (conversation_id, sender_id, body) select id, '${buyer.id}', 'Do you make polo shirts?' from c;`);
+  const page = await open(browser, who.session, `/chats/${buyer.id}`);
+  const header = page.getByTestId("chat-header");
+  await expect(header).toContainText("Hdr Buyer", { timeout: 20_000 });
+  await expect(page.getByText("Do you make polo shirts?")).toBeVisible();
+  await expect(page.getByTestId("chat-header-avatar")).toHaveText("HB");
+  // No rating, presence, place or request that nothing stores.
+  await expect(header).not.toContainText("4.6");
+  await expect(header).not.toContainText("Offline");
+  await expect(header).not.toContainText("India");
+  await expect(page.getByText("RFQ-NEW")).toHaveCount(0);
+  await expect(page.getByText("New enquiry")).toHaveCount(0);
+  await page.context().close();
+});

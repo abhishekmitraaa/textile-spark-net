@@ -204,6 +204,7 @@ export function useChatThread(otherId: string | undefined) {
   const qc = useQueryClient();
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [otherName, setOtherName] = useState<string | null>(null);
+  const [otherAvatar, setOtherAvatar] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [status, setStatus] = useState<ConversationStatus>("active");
   // State as well as a ref: the ref is what the stable callbacks read, the
@@ -284,12 +285,13 @@ export function useChatThread(otherId: string | undefined) {
       // the chat (star, archive, deleted-for-me) and whether either of us blocked the other.
       const [{ data: vp }, { data: pr }, { data: ms }, { data: bs }] = await Promise.all([
         supabase.from("vendor_profiles").select("brand_name").eq("id", otherId).maybeSingle(),
-        supabase.from("profiles").select("full_name").eq("id", otherId).maybeSingle(),
+        supabase.from("profiles").select("full_name, avatar_url").eq("id", otherId).maybeSingle(),
         supabase.from("conversation_member_state").select("starred_at, archived_at, cleared_at").eq("conversation_id", conv.id).maybeSingle(),
         supabase.rpc("chat_block_state", { p_other: otherId }),
       ]);
       if (cancelled) return;
       setOtherName(vp?.brand_name ?? pr?.full_name ?? null);
+      setOtherAvatar(pr?.avatar_url ?? null);
       const clearedAt = ms?.cleared_at ?? null;
       setMemberState({ starred: Boolean(ms?.starred_at), archived: Boolean(ms?.archived_at), clearedAt });
       setBlock(toBlockState(bs));
@@ -595,6 +597,7 @@ export function useChatThread(otherId: string | undefined) {
     loadingOlder,
     loadOlder,
     otherName,
+    otherAvatar,
     ready,
     sendText,
     sendAttachment,
