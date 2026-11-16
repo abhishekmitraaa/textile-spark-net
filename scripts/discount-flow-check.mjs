@@ -236,7 +236,16 @@ globalThis.fetch = async (input, init = {}) => {
       return res([{ ...row }]);
     }
   }
-  if (p === "/rest/v1/subscription_invoices") { S.invoices.push(body); return res(undefined, 201); }
+  // public.ad_order_fulfil (20261013100400): the order is marked paid and its campaigns are
+  // inserted in one transaction, so a failure leaves both untouched.
+  if (p === "/rest/v1/rpc/ad_order_fulfil") {
+    const o = S.adOrders.get(body.p_order_id);
+    if (!o || o.status !== "created") return res({ claimed: false, count: 0 });
+    if (S.failAds) return res({ message: "boom" }, 500);
+    o.status = "paid";
+    S.ads.push(...body.p_rows);
+    return res({ claimed: true, count: body.p_rows.length, discount_redemption_id: o.discount_redemption_id ?? null });
+  }  if (p === "/rest/v1/subscription_invoices") { S.invoices.push(body); return res(undefined, 201); }
   if (p === "/rest/v1/advertisements") {
     if (S.failAds) return res({ message: "boom" }, 500);
     S.ads.push(...body);
@@ -566,7 +575,7 @@ r = await call("razorpay-verify-payment", { orderId: freeAdOrder, free: true }, 
 check("E2 free order, someone else's: refused", r.body.error === "unknown_order" && S.ads.length === 0);
 r = await call("razorpay-verify-payment", { orderId: freeAdOrder, free: true });
 check("E2 free: confirmed, claimed, published", r.body.ok && S.ads.length === 3 && S.adOrders.get(freeAdOrder).status === "paid"
-  && indexOf((c) => c.url.endsWith("/rpc/discount_confirm")) < indexOf((c) => c.method === "PATCH" && c.url.includes("/ad_orders")));
+  && indexOf((c) => c.url.endsWith("/rpc/discount_confirm")) < indexOf((c) => c.url.endsWith("/rpc/ad_order_fulfil")));
 
 reset({ check: { ok: true, code: "ADS10", applies_to: "ad_purchase", kind: "percent", value: 10, discount_rupees: 31 } });
 r = await call("razorpay-verify-payment", { demo: true, spec: SPEC, discountCode: "ads10" }, { env: DEMO });
@@ -606,7 +615,26 @@ check("E9 state targeting off: cities clamped as before, no states",
 reset({ reachFails: true });
 S.adOrders.set("order_A5", { order_id: "order_A5", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
 r = await call("razorpay-verify-payment", { orderId: "order_A5", paymentId: "pay_e", signature: sign("order_A5", "pay_e") });
-check("E10 the plan can't be read: nothing published (never over-reach), refund review", S.ads.length === 0 && S.adOrders.get("order_A5").status === "refund_review");
+// Changed 2026-10-13: a lookup that failed is not "no ads on the plan". The order used to go to
+// refund review; now nothing is written and the answer says to try again.
+check("E10 the plan can't be read: nothing published (never over-reach), the order waits and says retry",
+  S.ads.length === 0 && S.adOrders.get("order_A5").status === "created" && r.body.ok === false && r.body.retry === true, JSON.stringify(r.body));
+
+reset({ failAds: true });
+S.adOrders.set("order_A8", { order_id: "order_A8", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A8", paymentId: "pay_f", signature: sign("order_A8", "pay_f") });
+check("E11 paid, campaigns fail to insert: the order is NOT left paid with nothing; it waits and says retry",
+  S.ads.length === 0 && S.adOrders.get("order_A8").status === "created" && r.body.ok === false && r.body.retry === true, JSON.stringify(r.body));
+S.failAds = false;
+r = await call("razorpay-verify-payment", { orderId: "order_A8", paymentId: "pay_f", signature: sign("order_A8", "pay_f") });
+check("E11 and the retry publishes it", r.body.ok && S.ads.length === 3 && S.adOrders.get("order_A8").status === "paid");
+
+reset({ adScope: "none" });
+S.adOrders.set("order_A9", { order_id: "order_A9", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+r = await call("razorpay-verify-payment", { orderId: "order_A9", paymentId: "pay_g", signature: sign("order_A9", "pay_g") });
+check("E12 no ads on the plan: refund review in ONE write that also takes the order out of 'created'",
+  r.body.blocked === true && r.body.refundFlagged === true && S.adOrders.get("order_A9").status === "refund_review"
+  && S.calls.filter((c) => c.method === "PATCH" && c.url.includes("/ad_orders")).length === 1 && S.ads.length === 0, JSON.stringify(r.body));
 
 reset({ failAds: true });
 r = await call("razorpay-verify-payment", { demo: true, spec: SPEC, discountCode: "ADS10" }, { env: DEMO });
@@ -617,6 +645,16 @@ r = await call("razorpay-verify-payment", { demo: true, spec: SPEC }, { env: DEM
 check("E6 demo, no code: exactly as before (no discount calls)", r.body.ok && S.ads.length === 3 && S.calls.filter((c) => c.url.includes("/rpc/discount_")).length === 0);
 
 // ── F. razorpay-webhook ─────────────────────────────────────────────────────
+// 2026-10-13: the webhook used to answer 200 whatever happened, so Razorpay never retried.
+reset({ failAds: true });
+S.adOrders.set("order_A10", { order_id: "order_A10", vendor_id: VENDOR, spec: SPEC, amount: 50700, status: "created" });
+h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_z", order_id: "order_A10" } } } });
+check("F0 webhook, campaigns fail to insert: 503 so Razorpay delivers again; the order still waits",
+  h.status === 503 && S.adOrders.get("order_A10").status === "created" && S.ads.length === 0, `${h.status} ${h.text}`);
+S.failAds = false;
+h = await hook("razorpay-webhook", { event: "payment.captured", payload: { payment: { entity: { id: "pay_z", order_id: "order_A10" } } } });
+check("F0 and the redelivery publishes it", h.status === 200 && S.ads.length === 3 && S.adOrders.get("order_A10").status === "paid");
+
 reset();
 S.adOrders.set("order_A1", { order_id: "order_A1", vendor_id: VENDOR, spec: SPEC, amount: 30800, status: "created",
   discount_paise: 19900, discount_code: "CERT500", discount_redemption_id: "red-2" });

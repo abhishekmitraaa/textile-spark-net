@@ -8819,5 +8819,16 @@
  "JPG, PNG or WebP · 9:16 ratio preferred": "JPG, PNG या WebP · 9:16 अनुपात बेहतर",
  "That picture couldn't be read. Choose a JPG, PNG or WebP.": "वह तस्वीर पढ़ी नहीं जा सकी। JPG, PNG या WebP चुनें।",
  "See the quotes you've sent": "आपके भेजे हुए कोट देखें",
- "See the quotes you've received": "आपको मिले हुए कोट देखें"
+ "See the quotes you've received": "आपको मिले हुए कोट देखें",
+ "Your ads are waiting for Cosora's review": "आपके विज्ञापन Cosora की समीक्षा की प्रतीक्षा में हैं",
+ "{0} campaign{1} sent for review. Your days start when Cosora approves them.": "{0} अभियान समीक्षा के लिए भेजे गए। आपके दिन तब शुरू होंगे जब Cosora उन्हें मंज़ूर करेगा।",
+ "Your plan cannot run these ads": "आपका प्लान ये विज्ञापन नहीं चला सकता",
+ "Nothing was charged. The order has been sent to Cosora to review.": "कोई शुल्क नहीं लिया गया। ऑर्डर Cosora को समीक्षा के लिए भेज दिया गया है।",
+ "Payment received. Your ads are waiting for Cosora's review": "भुगतान मिल गया। आपके विज्ञापन Cosora की समीक्षा की प्रतीक्षा में हैं",
+ "Payment received, but your ads are not set up yet": "भुगतान मिल गया, लेकिन आपके विज्ञापन अभी सेट नहीं हुए हैं",
+ "Please contact support with this payment ID: {0}": "कृपया इस भुगतान ID के साथ सहायता से संपर्क करें: {0}",
+ "Payment received, but your plan cannot run these ads": "भुगतान मिल गया, लेकिन आपका प्लान ये विज्ञापन नहीं चला सकता",
+ "The order has been sent for a refund review.": "ऑर्डर रिफ़ंड समीक्षा के लिए भेज दिया गया है।",
+ "We couldn't confirm your payment": "हम आपके भुगतान की पुष्टि नहीं कर सके",
+ "If money left your account, contact support with this payment ID: {0}": "अगर आपके खाते से पैसे कटे हैं, तो इस भुगतान ID के साथ सहायता से संपर्क करें: {0}"
 }

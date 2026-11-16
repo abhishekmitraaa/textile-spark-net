@@ -195,27 +195,41 @@ export async function openRazorpaySubscriptionCheckout(opts: {
   });
 }
 
+/**
+ * What razorpay-verify-payment answers for an order.
+ *   retry   nothing was written (the database was briefly unreachable); the same call can
+ *           be made again, and the order is still waiting.
+ *   blocked the payment went through but the plan can't run these ads; the order is in
+ *           refund review.
+ */
+export interface AdPublishAnswer { ok: boolean; count?: number; error?: string; retry?: boolean; blocked?: boolean; refundFlagged?: boolean }
+
+/** Asks once, and twice more a moment apart while the answer is "try again". */
+async function askToPublish(body: Record<string, unknown>): Promise<AdPublishAnswer> {
+  let answer: AdPublishAnswer = { ok: false, error: "no_response" };
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise((r) => setTimeout(r, 1500 * attempt));
+    const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", { body });
+    if (error) throw error;
+    answer = (data as AdPublishAnswer | null) ?? { ok: false, error: "no_response" };
+    if (!answer.retry) break;
+  }
+  return answer;
+}
+
 // Live: server verifies the signature and publishes the recorded intent
 // (spec/vendor come from the server, not the client).
 export async function verifyRazorpayPayment(input: {
   orderId: string; paymentId: string; signature: string;
-}): Promise<{ ok: boolean; count?: number; error?: string }> {
-  const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", {
-    body: { orderId: input.orderId, paymentId: input.paymentId, signature: input.signature },
-  });
-  if (error) throw error;
-  return data ?? { ok: false, error: "no_response" };
+}): Promise<AdPublishAnswer> {
+  return askToPublish({ orderId: input.orderId, paymentId: input.paymentId, signature: input.signature });
 }
 
 // A code took this order to ₹0, so there was no Razorpay checkout: the server
 // fulfils it only if the order is the caller's, costs ₹0 and its code's use
 // confirms.
-export async function publishFreeAdOrder(orderId: string): Promise<{ ok: boolean; count?: number; error?: string }> {
-  const { data, error } = await supabase.functions.invoke("razorpay-verify-payment", {
-    body: { orderId, free: true },
-  });
-  if (error) throw error;
-  return data ?? { ok: false, error: "no_response" };
+export async function publishFreeAdOrder(orderId: string): Promise<AdPublishAnswer> {
+  return askToPublish({ orderId, free: true });
 }
 
 // Demo (no gateway configured): publish the campaigns server-side from the spec.

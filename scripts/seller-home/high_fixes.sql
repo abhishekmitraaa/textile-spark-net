@@ -10,6 +10,10 @@
 --   quote_unwin_after_close    the seller can't move an accepted quote back to pending on a closed request
 --   quote_terms_expired        ... nor once the request's deadline has passed
 --   quote_terms_removed        ... nor once Cosora removed the request
+--
+-- Task 7 (SH-090), a paid ad order gets its campaigns or stays waiting:
+--   ad_order_all_or_nothing    one bad campaign row leaves the order 'created' with no campaigns; good rows mark it
+--                              paid and insert them all; a second call claims nothing
 
 begin;
 
@@ -113,6 +117,51 @@ begin
   if not refused then raise exception 'quote_terms_removed: the seller changed a quote on a request Cosora removed'; end if;
 
   raise notice 'Task 5 quotes: 6 checks passed';
+end $$;
+
+-- ─────────────────────────── Task 7: a paid ad order ───────────────────────────
+do $$
+declare
+  vendor uuid;
+  oid text := 'order_hx_' || replace(gen_random_uuid()::text, '-', '');
+  good jsonb;
+  ans jsonb;
+  failed boolean := false;
+begin
+  select vp.id into vendor from public.vendor_profiles vp where vp.onboarding_complete order by vp.created_at limit 1;
+  insert into public.ad_orders (order_id, vendor_id, spec, amount, status) values (oid, vendor, '{}'::jsonb, 6600, 'created');
+  good := jsonb_build_object('vendor_id', vendor, 'product_id', null, 'title', 'hx campaign', 'image_url', null,
+    'daily_budget', 22, 'placement', 'openListing', 'status', 'active',
+    'starts_at', now(), 'ends_at', now() + interval '3 days',
+    'target_categories', null, 'target_cities', null, 'target_states', '[]'::jsonb, 'target_countries', '[]'::jsonb,
+    'ad_order_id', oid);
+
+  -- One good row and one the table refuses (a state code that isn't one): nothing may be kept.
+  begin
+    perform public.ad_order_fulfil(oid, jsonb_build_array(good, good || jsonb_build_object('target_states', jsonb_build_array('not-a-state'))));
+  exception when others then
+    failed := true;
+  end;
+  if not failed then raise exception 'ad_order_all_or_nothing: a refused campaign row did not fail the call'; end if;
+  if (select status from public.ad_orders where order_id = oid) <> 'created'
+     or exists (select 1 from public.advertisements where ad_order_id = oid) then
+    raise exception 'ad_order_all_or_nothing: a failed call left the order % with % campaigns',
+      (select status from public.ad_orders where order_id = oid), (select count(*) from public.advertisements where ad_order_id = oid);
+  end if;
+
+  ans := public.ad_order_fulfil(oid, jsonb_build_array(good, good));
+  if not (ans ->> 'claimed')::boolean or (ans ->> 'count')::int <> 2
+     or (select status from public.ad_orders where order_id = oid) <> 'paid'
+     or (select count(*) from public.advertisements where ad_order_id = oid and status = 'pending_review') <> 2 then
+    raise exception 'ad_order_all_or_nothing: good rows should mark the order paid with 2 campaigns in review (%)', ans;
+  end if;
+
+  ans := public.ad_order_fulfil(oid, jsonb_build_array(good));
+  if (ans ->> 'claimed')::boolean or (select count(*) from public.advertisements where ad_order_id = oid) <> 2 then
+    raise exception 'ad_order_all_or_nothing: a second call published again (%)', ans;
+  end if;
+
+  raise notice 'Task 7 ad orders: ad_order_all_or_nothing passed';
 end $$;
 
 rollback;

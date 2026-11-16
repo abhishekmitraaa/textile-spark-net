@@ -58,21 +58,11 @@ function json(body: unknown, status = 200): Response {
 import { buildAdRows, computeOrderPaise, type AdSpec } from "../_shared/adPricing.ts";
 import { adAmounts, confirmDiscount, normaliseCode, releaseDiscount, reserveDiscount } from "../_shared/discounts.ts";
 import { adReach } from "../_shared/adReach.ts";
+// Claiming the order and inserting its campaigns is one transaction now, shared with
+// razorpay-webhook: ../_shared/adPublish.ts (written 2026-10-13, released with the Seller Home fixes, SH-090).
+import { publishOrder } from "../_shared/adPublish.ts";
 
-
-// Flag a claimed live/webhook order that shouldn't have published (Free vendor)
-// for refund / admin review — a durable trace on the order itself, never a
-// silent drop. (Ad refunds are a manual admin follow-up; this project has no
-// automated ad-refund gateway call, mirroring the manual subscription refund.)
-async function flagOrderForRefund(url: string, key: string, orderId: string): Promise<boolean> {
-  const r = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ status: "refund_review" }),
-  });
-  return r.ok;
-}
-// Demo mode has no pre-recorded intent, so record the blocked attempt as its own
+// Demo mode has no pre-recorded intent, so record the blocked attempt as its own
 // 'refund_review' ad_orders row (durable trace) instead of vanishing silently.
 // Returns whether the trace actually persisted, so the response never claims a
 // flag that didn't happen.
@@ -115,12 +105,6 @@ async function hmacHex(secret: string, data: string): Promise<string> {
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
-function safeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let out = 0;
-  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return out === 0;
-}
 function vendorIdFromJwt(req: Request): string | null {
   const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
   const part = token.split(".")[1];
@@ -131,39 +115,12 @@ function vendorIdFromJwt(req: Request): string | null {
     return null;
   }
 }
-
-// Claim the intent ('created' → 'paid') and publish its campaigns exactly once.
-// Holds the stored spec to the vendor's plan before inserting: an order that
-// can't be published is flagged for refund; reach beyond the plan is clamped.
-async function publishOrder(url: string, key: string, orderId: string): Promise<{ ok: boolean; count: number; blocked?: boolean; refundFlagged?: boolean; requested?: number; allowed?: number }> {
-  const claim = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=representation" },
-    body: JSON.stringify({ status: "paid", paid_at: new Date().toISOString() }),
-  });
-  const claimed = claim.ok ? await claim.json() : [];
-  if (!Array.isArray(claimed) || claimed.length === 0) return { ok: true, count: 0 }; // already paid / unknown
-  const order = claimed[0];
-  // Charged the discounted price, so the code's use is the vendor's.
-  if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
-  const decision = await adReach(url, key, order.vendor_id, order.spec as AdSpec);
-  if (!decision.ok) {
-    // Paid, but nothing can be published on this plan: flag the order for refund/admin review.
-    const flagged = await flagOrderForRefund(url, key, orderId);
-    return { ok: false, count: 0, blocked: true, refundFlagged: flagged, requested: decision.requested, allowed: 0 };
-  }
-  // Stamp the paying order onto every campaign it produced, so revenue is
-  // attributable per campaign (migration advertisements_ad_order_id_fk).
-  // One order becomes many rows, which is why the FK lives on the campaign.
-  const rows = buildAdRows(order.vendor_id, decision.spec)
-    .map((r) => ({ ...r, ad_order_id: orderId }));
-  const ok = await insertAds(url, key, rows);
-  // No seal grant here any more — see the note where grantSeals used to be.
-  // The rows land on `pending_review` regardless of the 'active' requested in
-  // buildAdRows(): guard_ad_activation redirects them on INSERT.
-  return { ok, count: ok ? rows.length : 0, requested: decision.requested, allowed: decision.allowed };
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let out = 0;
+  for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return out === 0;
 }
-
 Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);

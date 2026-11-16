@@ -1109,8 +1109,8 @@ function CostSummary({
     if (!res.ok) throw new Error(res.error || "Could not publish ads");
     onCreated();
     setQuote(null);
-    toast.success("Payment successful — your ads are live!", {
-      description: `${res.count ?? selectedProducts.length} campaign${(res.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
+    toast.success("Your ads are waiting for Cosora's review", {
+      description: `${res.count ?? selectedProducts.length} campaign${(res.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review. Your days start when Cosora approves them.`,
     });
   };
 
@@ -1140,6 +1140,8 @@ function CostSummary({
           toast.success("Your ads are submitted!", {
             description: `${published.count ?? selectedProducts.length} campaign${(published.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review.`,
           });
+        } else if (published.blocked) {
+          toast.error("Your plan cannot run these ads", { description: "Nothing was charged. The order has been sent to Cosora to review." });
         } else {
           toast.error("Couldn't publish your ads", { description: "Nothing was charged. Please try again." });
         }
@@ -1162,11 +1164,29 @@ function CostSummary({
       if (verified.ok) {
         onCreated();
         setQuote(null);
-        toast.success("Payment successful — your ads are live!", {
-          description: `${verified.count ?? selectedProducts.length} campaign${(verified.count ?? selectedProducts.length) > 1 ? "s" : ""} now showing to buyers.`,
+        toast.success("Payment received. Your ads are waiting for Cosora's review", {
+          description: `${verified.count ?? selectedProducts.length} campaign${(verified.count ?? selectedProducts.length) > 1 ? "s" : ""} sent for review. Your days start when Cosora approves them.`,
         });
-      } else {
+      } else if (verified.retry) {
+        // The signature was good, so the money moved; only setting the campaigns up failed, three times. The order is
+        // still waiting, and Razorpay's own notice to Cosora sets it up when it is delivered again.
+        toast.error("Payment received, but your ads are not set up yet", {
+          description: `Please contact support with this payment ID: ${res.razorpay_payment_id}`,
+          duration: 60_000,
+        });
+      } else if (verified.blocked) {
+        toast.error("Payment received, but your plan cannot run these ads", {
+          description: "The order has been sent for a refund review.",
+          duration: 60_000,
+        });
+      } else if (verified.error === "bad_signature") {
         toast.error("Payment could not be verified", { description: "You were not charged. Please try again." });
+      } else {
+        // Unknown: never say "not charged" when Razorpay may have taken the money.
+        toast.error("We couldn't confirm your payment", {
+          description: `If money left your account, contact support with this payment ID: ${res.razorpay_payment_id}`,
+          duration: 60_000,
+        });
       }
     } catch (e) {
       if (e instanceof Error && e.message === "dismissed") toast.info("Payment cancelled");

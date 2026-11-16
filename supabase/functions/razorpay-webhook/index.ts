@@ -20,22 +20,11 @@
 //   events: payment.captured (and optionally order.paid)
 //   secret: set the same value as the RAZORPAY_WEBHOOK_SECRET function secret
 
-// Price table, amount formula and campaign-row construction moved to
-// ../_shared/adPricing.ts on 2026-09-14. buildAdRows() carries the per-vendor
-// billing fix: trustedSeal / verifiedCertificate now produce ONE campaign row
-// with product_id = null instead of one per product.
-import { buildAdRows, type AdSpec } from "../_shared/adPricing.ts";
-import { confirmDiscount } from "../_shared/discounts.ts";
-import { adReach } from "../_shared/adReach.ts";
-
-
-async function flagOrderForRefund(url: string, key: string, orderId: string): Promise<void> {
-  await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify({ status: "refund_review" }),
-  });
-}
+// Claiming the order and inserting its campaigns is one transaction now, shared with
+// razorpay-verify-payment: ../_shared/adPublish.ts (2026-10-13). When nothing could be
+// written this answers 503, so Razorpay delivers the event again; it used to answer 200
+// whatever happened.
+import { publishOrder } from "../_shared/adPublish.ts";
 
 // ── REMOVED 2026-09-14: grantSeals(). ──
 //
@@ -69,36 +58,6 @@ function safeEqual(a: string, b: string): boolean {
   let out = 0;
   for (let i = 0; i < a.length; i++) out |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return out === 0;
-}
-
-async function publishOrder(url: string, key: string, orderId: string): Promise<number> {
-  const claim = await fetch(`${url}/rest/v1/ad_orders?order_id=eq.${encodeURIComponent(orderId)}&status=eq.created`, {
-    method: "PATCH",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=representation" },
-    body: JSON.stringify({ status: "paid", paid_at: new Date().toISOString() }),
-  });
-  const claimed = claim.ok ? await claim.json() : [];
-  if (!Array.isArray(claimed) || claimed.length === 0) return 0;
-  const order = claimed[0];
-  // Charged the discounted price, so the code's use is the vendor's.
-  if (order.discount_redemption_id) await confirmDiscount(url, key, order.discount_redemption_id, orderId);
-  const decision = await adReach(url, key, order.vendor_id, order.spec as AdSpec);
-  if (!decision.ok) {
-    // Paid, but nothing can be published on this plan: flag for refund/admin review.
-    await flagOrderForRefund(url, key, orderId);
-    return 0;
-  }
-  // Stamp the paying order onto every campaign it produced — same as
-  // verify-payment, since either path may be the one that publishes.
-  const rows = buildAdRows(order.vendor_id, decision.spec)
-    .map((r) => ({ ...r, ad_order_id: orderId }));
-  if (rows.length === 0) return 0;
-  const ins = await fetch(`${url}/rest/v1/advertisements`, {
-    method: "POST",
-    headers: { apikey: key, authorization: `Bearer ${key}`, "content-type": "application/json", prefer: "return=minimal" },
-    body: JSON.stringify(rows),
-  });
-  return ins.ok ? rows.length : 0;
 }
 
 function orderIdFromEvent(evt: Record<string, unknown>): string | null {
@@ -136,6 +95,9 @@ Deno.serve(async (req: Request): Promise<Response> => {
 
   const url = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const count = await publishOrder(url, serviceKey, orderId);
-  return new Response(JSON.stringify({ ok: true, published: count }), { status: 200, headers: { "content-type": "application/json" } });
+  const result = await publishOrder(url, serviceKey, orderId);
+  if (result.retry) {
+    return new Response(JSON.stringify({ ok: false, retry: true }), { status: 503, headers: { "content-type": "application/json" } });
+  }
+  return new Response(JSON.stringify({ ok: true, published: result.count, refundFlagged: result.refundFlagged ?? false }), { status: 200, headers: { "content-type": "application/json" } });
 });

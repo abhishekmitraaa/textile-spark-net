@@ -8819,5 +8819,16 @@
  "JPG, PNG or WebP · 9:16 ratio preferred": "JPG, PNG અથવા WebP · 9:16 ગુણોત્તર વધુ સારો",
  "That picture couldn't be read. Choose a JPG, PNG or WebP.": "તે ચિત્ર વાંચી શકાયું નહીં. JPG, PNG અથવા WebP પસંદ કરો.",
  "See the quotes you've sent": "તમે મોકલેલા ક્વોટ જુઓ",
- "See the quotes you've received": "તમને મળેલા ક્વોટ જુઓ"
+ "See the quotes you've received": "તમને મળેલા ક્વોટ જુઓ",
+ "Your ads are waiting for Cosora's review": "તમારી જાહેરાતો Cosora ની સમીક્ષાની રાહ જોઈ રહી છે",
+ "{0} campaign{1} sent for review. Your days start when Cosora approves them.": "{0} ઝુંબેશ સમીક્ષા માટે મોકલાઈ. Cosora તેને મંજૂર કરે ત્યારે તમારા દિવસો શરૂ થશે.",
+ "Your plan cannot run these ads": "તમારો પ્લાન આ જાહેરાતો ચલાવી શકતો નથી",
+ "Nothing was charged. The order has been sent to Cosora to review.": "કોઈ ચાર્જ લેવાયો નથી. ઓર્ડર Cosora ને સમીક્ષા માટે મોકલવામાં આવ્યો છે.",
+ "Payment received. Your ads are waiting for Cosora's review": "ચુકવણી મળી ગઈ. તમારી જાહેરાતો Cosora ની સમીક્ષાની રાહ જોઈ રહી છે",
+ "Payment received, but your ads are not set up yet": "ચુકવણી મળી ગઈ, પરંતુ તમારી જાહેરાતો હજુ સેટ થઈ નથી",
+ "Please contact support with this payment ID: {0}": "કૃપા કરીને આ ચુકવણી ID સાથે સપોર્ટનો સંપર્ક કરો: {0}",
+ "Payment received, but your plan cannot run these ads": "ચુકવણી મળી ગઈ, પરંતુ તમારો પ્લાન આ જાહેરાતો ચલાવી શકતો નથી",
+ "The order has been sent for a refund review.": "ઓર્ડર રિફંડ સમીક્ષા માટે મોકલવામાં આવ્યો છે.",
+ "We couldn't confirm your payment": "અમે તમારી ચુકવણીની પુષ્ટિ કરી શક્યા નથી",
+ "If money left your account, contact support with this payment ID: {0}": "જો તમારા ખાતામાંથી પૈસા કપાયા હોય, તો આ ચુકવણી ID સાથે સપોર્ટનો સંપર્ક કરો: {0}"
 }
