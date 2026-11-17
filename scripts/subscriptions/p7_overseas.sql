@@ -328,16 +328,27 @@ begin
         -- sent to one vendor, then opened to everyone
         insert into public.rfqs (id, buyer_id, title, category_id, vendor_id) values (rfq, abroad, 'P7 sent then opened', c1, basic);
         got := (select (overseas_vip_until is null)::text from public.rfqs where id = rfq);
-        update public.rfqs set vendor_id = null where id = rfq;
-        -- no category, then one a VIP lists in; Gold's category, then the VIP's
+        -- Since 2026-10-17 (trg_rfqs_reviewed_content_guard) the buyer can't open a sent request to everyone or
+        -- change a requirement's category: both are refused. Only staff edit a requirement after that, so the head
+        -- start must still follow staff's edits, below.
+        declare v_refused int := 0;
+        begin
+          begin update public.rfqs set vendor_id = null where id = rfq; exception when insufficient_privilege then v_refused := v_refused + 1; end;
+          begin update public.rfqs set category_id = c1 where id = rfq4; exception when insufficient_privilege then v_refused := v_refused + 1; end;
+          got := got || ' refused=' || v_refused;
+        end;
+        reset role;
+        -- Open requirements are written by staff's review since 2026-10-17 (admin_rfq_review copies them in).
         insert into public.rfqs (id, buyer_id, title) values (rfq2, abroad, 'P7 category later');
-        update public.rfqs set category_id = c1 where id = rfq2;
         insert into public.rfqs (id, buyer_id, title, category_id) values (rfq3, abroad, 'P7 category moved', c2);
+        -- Staff's edits (the trusted path): sent to one vendor, then opened to everyone; no category, then one a VIP
+        -- lists in; Gold's category, then the VIP's; too late for a head start; and a running head start isn't
+        -- shortened by moving to Gold's category.
+        update public.rfqs set vendor_id = null where id = rfq;
+        update public.rfqs set category_id = c1 where id = rfq2;
         update public.rfqs set category_id = c1 where id = rfq3;
         update public.rfqs set category_id = c1 where id = rfq4;
-        -- a head start already running isn't shortened by moving to Gold's category
         update public.rfqs set category_id = c2 where id = rfq;
-        reset role;
         got := got || ' opened=' || (select (overseas_vip_until > now() + interval '23 hours')::text from public.rfqs where id = rfq)
                || ' later=' || (select (overseas_vip_until = created_at + interval '24 hours')::text from public.rfqs where id = rfq2)
                || ' moved=' || (select (overseas_vip_until = created_at + interval '24 hours')::text from public.rfqs where id = rfq3)
@@ -346,7 +357,7 @@ begin
         set local role authenticated;
         got := got || ' gold reads=' || (select count(*) from public.rfqs where id in (rfq, rfq2, rfq3, rfq4));
         reset role;
-        want := 'true opened=true later=true moved=true late=true gold reads=1';
+        want := 'true refused=2 opened=true later=true moved=true late=true gold reads=1';
       end if;
       reset role;
       raise exception using errcode = 'P0099',

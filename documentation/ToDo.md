@@ -23,14 +23,6 @@ with no need to dictate format, context, or reference each time.
   branch; Seller Home high-priority fixes plan, 2026-11-16.
 - Status: Open
 
-### Check the overseas harness's last case — added 2026-11-16
-- Task: find out why `scripts/subscriptions/p7_overseas.sql` check 19 ("the head start can't be skipped by the buyer's
-  later edits") fails on the local stack with "A request can't be moved to other sellers", and fix the harness or the rule.
-- Context: seen on 2026-11-16 while re-running the lead harnesses; the other 18 pass. It is a guard on updates to
-  `rfqs`, not something the Seller Home fixes touch, and it was not investigated.
-- Reference: `documentation/test.md`, "p7_overseas".
-- Status: Open
-
 ### Andy: the FAQ "Lowest billing plan?" says Free gives 2 listings — added 2026-11-16
 - Task: Andy rewords the answer in Cosora-Admin › FAQs: the Free plan allows 10 listings since 2026-11-16.
 - Context: Mitra raised Free to 10 ("allow 10 lisitng for free plan", other plans unchanged; migration
