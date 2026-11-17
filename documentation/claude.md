@@ -1346,7 +1346,8 @@ undocumented. Deep technical rationale for each lives in
 - **Review averages and breakdowns come from `vendor_review_stats()`** (2026-11-17, SH-108); review lists load
   `REVIEW_PAGE` (100) at a time. A reply is at most 2,000 characters (the reply functions and a CHECK).
 - **A seller sees a buyer through `chat_buyer_card()` only** (Mitra, 2026-11-17, "Small buyer card"; SH-107): name,
-  company, city, member since, to the other person in a conversation, never while blocked. Buyers have no store page.
+  company, city, member since, only to someone the buyer has written to in a chat (a conversation row alone isn't
+  enough: anyone can start one), never while blocked. Buyers have no store page.
 - **The lead alert history leaves out a buyer with a block either way** (2026-11-17, SH-084), like every other way a
   seller sees a buyer's requirements.
 - **Opening a chat writes nothing** (2026-11-17, SH-105): `useChatThread()` reads the conversation; the first message

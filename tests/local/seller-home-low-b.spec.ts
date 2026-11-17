@@ -138,8 +138,12 @@ test("in a chat the seller sees the buyer's small card, never while blocked; nam
   await expect(p).toHaveURL(new RegExp(`/chats/${b.id}`));
   await p.context().close();
 
-  // Someone outside the conversation gets nothing; a block hides it from the seller too.
+  // Someone outside the conversation gets nothing; nor does someone who started a chat the buyer never answered
+  // (anyone can start one); a block hides it from the seller too.
   const other = await account("lbchato", true);
+  expect((await clientFor(other.session).rpc("chat_buyer_card", { p_other: b.id })).data).toEqual([]);
+  const oc = conversation(other.id, b.id);
+  sql(`insert into public.messages (conversation_id, sender_id, body) values ('${oc}', '${other.id}', 'Hi, who are you?')`);
   expect((await clientFor(other.session).rpc("chat_buyer_card", { p_other: b.id })).data).toEqual([]);
   sql(`insert into public.chat_blocks (blocker_id, blocked_id) values ('${b.id}', '${s.id}')`);
   expect((await clientFor(s.session).rpc("chat_buyer_card", { p_other: b.id })).data).toEqual([]);

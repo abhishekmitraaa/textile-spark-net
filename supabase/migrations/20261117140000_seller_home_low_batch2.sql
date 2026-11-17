@@ -137,8 +137,10 @@ begin
 end $function$;
 
 -- ── SH-107: the small buyer card in a chat (Mitra, 2026-11-17, "Small buyer card") ──
--- What the buyer already shows a seller: name, company, city, member since. To the other person in a conversation
--- with them only, never while either has blocked the other. No contact details.
+-- What the buyer already shows a seller: name, company, city, member since. Only to someone the buyer has written to
+-- in a chat (a message from the buyer in a conversation with the caller), never while either has blocked the other.
+-- A conversation row alone isn't enough: anyone can start one with a first message, so it would have opened any
+-- buyer's company and city to anyone (commit security review, 2026-11-17). No contact details.
 create or replace function public.chat_buyer_card(p_other uuid)
 returns table (name text, company text, city text, member_since timestamptz)
 language sql
@@ -156,6 +158,7 @@ as $function$
      and (select auth.uid()) is not null
      and p_other <> (select auth.uid())
      and exists (select 1 from public.conversations c
+                   join public.messages m on m.conversation_id = c.id and m.sender_id = p_other
                   where (c.user_a = (select auth.uid()) and c.user_b = p_other)
                      or (c.user_b = (select auth.uid()) and c.user_a = p_other))
      and not public.chat_blocked_between((select auth.uid()), p_other)
