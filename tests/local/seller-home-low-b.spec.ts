@@ -85,7 +85,7 @@ test("a direct request and its chat are one touch; a blocked buyer's requirement
 });
 
 // ── SH-099 ──
-test("ad impressions are capped by the function itself; the page says only what is true", async ({ browser }) => {
+test("every ad impression is recorded; the page says only what is true", async ({ browser }) => {
   const s = await account("lbads");
   const ad = firstId(sql(`set session_replication_role = replica;
     insert into public.advertisements (vendor_id, title, placement, status, starts_at, ends_at)
@@ -93,17 +93,20 @@ test("ad impressions are capped by the function itself; the page says only what 
     set session_replication_role = origin;`));
   const impressions = () => Number(sql(`select impressions from public.advertisements where id = '${ad}'`));
   const anon = clientFor(null);
-  // 40 signed-out calls with no session: one viewer, so one impression (the 5-second spacing).
+  // Every impression is recorded, with no daily cap (Mitra, 2026-11-18): 40 signed-out calls, 10 sessions, one signed in.
   for (let i = 0; i < 40; i++) await anon.rpc("ad_impression", { ad });
-  expect(impressions()).toBe(1);
-  // Ten "different" sessions: each one is a viewer, capped like any other.
+  expect(impressions()).toBe(40);
   for (let i = 0; i < 10; i++) await anon.rpc("ad_impression", { ad, p_session: `lb-${tag}-${i}` });
-  expect(impressions()).toBe(11);
-  // The owner's own views don't count.
+  expect(impressions()).toBe(50);
   await clientFor(s.session).rpc("ad_impression", { ad });
-  expect(impressions()).toBe(11);
-  // A browser can't read the counter.
-  expect((await anon.from("ad_impression_daily").select("n").limit(1)).error).not.toBeNull();
+  expect(impressions()).toBe(51);
+  // A campaign that isn't running records nothing.
+  sql(`set session_replication_role = replica; update public.advertisements set status = 'paused_by_vendor' where id = '${ad}';
+       set session_replication_role = origin;`);
+  await anon.rpc("ad_impression", { ad });
+  expect(impressions()).toBe(51);
+  sql(`set session_replication_role = replica; update public.advertisements set status = 'active' where id = '${ad}';
+       set session_replication_role = origin;`);
 
   // The X only on a draft: a submitted campaign has a review history nobody deletes.
   sql(`insert into admin.ad_review_log (ad_id, decision) values ('${ad}', 'submitted')`);

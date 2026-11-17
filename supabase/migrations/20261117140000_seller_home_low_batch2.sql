@@ -2,7 +2,7 @@
 -- Plan and record: documentation/seller-home-low-fixes-plan-2026-11-17.md.
 --
 --   SH-084  the lead alert history leaves out requirements of a buyer with a block either way
---   SH-099  ad_impression keeps its own daily counter per viewer, so the cap holds for any caller
+--   SH-099  ad_impression records every impression: no daily cap (Mitra, 2026-11-18)
 --   SH-107  chat_buyer_card(): the small buyer card in a chat (Mitra, "Small buyer card")
 --   SH-108  vendor_review_stats(): review averages and breakdowns from the database; replies at most 2,000 characters
 --
@@ -79,60 +79,20 @@ begin
 end
 $function$;
 
--- ── SH-099: ad impressions count against a cap the function itself keeps ──
--- ad_impression capped on engagement_events rows that only the browser wrote (logEngagement), so a direct RPC call was
--- never capped: 40 signed-out calls added 40 impressions. The counter is now its own, one row per campaign, viewer and
--- India day, the same keying as ad_click's: a signed-in viewer by account, a signed-out one by session, else one shared
--- "unkeyed" viewer. At most 8 a day per viewer (ad_frequency_capped's cap) and one per 5 seconds (its throttle). The
--- owner's own views aren't counted, as with clicks. ad_frequency_capped / ad_logging_throttled stay for serving.
-create table if not exists public.ad_impression_daily (
-  ad_id      uuid not null references public.advertisements (id) on delete cascade,
-  viewer_key text not null,
-  day        date not null,
-  n          integer not null default 0,
-  last_at    timestamptz not null default now(),
-  primary key (ad_id, viewer_key, day)
-);
-alter table public.ad_impression_daily enable row level security;
-revoke all on table public.ad_impression_daily from public, anon, authenticated;
-
+-- ── SH-099: every impression is recorded (Mitra, 2026-11-18: "there should be no daily cap and all the impressions
+-- should be recorded") ──
+-- ad_impression skipped a call when ad_frequency_capped (8 a day per viewer) or ad_logging_throttled (5 seconds) said
+-- so, and both read engagement_events rows only the browser wrote, so the cap held for the app and for nobody else.
+-- There is no cap now, for anyone: each call counts one impression on a running campaign. The browser's ad_impression
+-- engagement event is analytics only. The two helpers are left in place, read by nothing.
 create or replace function public.ad_impression(ad uuid, p_session text default null)
 returns void
 language plpgsql
 security definer
 set search_path to 'public'
 as $function$
-declare
-  v_uid  uuid := auth.uid();
-  v_ses  text := nullif(btrim(coalesce(p_session, '')), '');
-  v_key  text;
-  v_day  date := (now() at time zone 'Asia/Kolkata')::date;
-  v_n    integer;
 begin
   if ad is null then return; end if;
-  if v_uid is not null then
-    v_key := 'u:' || v_uid::text;
-  elsif v_ses is not null and char_length(v_ses) <= 64 then
-    v_key := 's:' || v_ses;
-  else
-    v_key := 'unkeyed';
-  end if;
-  -- A running campaign, not the caller's own.
-  if not exists (select 1 from public.advertisements a where a.id = ad and a.status = 'active'
-                   and (v_uid is null or a.vendor_id <> v_uid)) then
-    return;
-  end if;
-  if random() < 0.002 then delete from public.ad_impression_daily d where d.day < v_day - 1; end if;
-
-  -- Counted only when under the cap and not within 5 seconds of the last one; the row lock orders two at once.
-  insert into public.ad_impression_daily as d (ad_id, viewer_key, day, n, last_at)
-  values (ad, v_key, v_day, 1, now())
-  on conflict (ad_id, viewer_key, day) do update
-     set n = d.n + 1, last_at = now()
-   where d.n < 8 and d.last_at < now() - interval '5 seconds'
-  returning d.n into v_n;
-  if v_n is null then return; end if;
-
   update public.advertisements set impressions = impressions + 1 where id = ad and status = 'active';
 end $function$;
 
@@ -262,9 +222,8 @@ begin
   if position('v_peers' in pg_get_functiondef('public.my_lead_alerts(integer)'::regprocedure)) = 0 then
     raise exception 'SH-084 self-check: lead alert history ignores blocks';
   end if;
-  if has_table_privilege('anon', 'public.ad_impression_daily', 'select')
-     or has_table_privilege('authenticated', 'public.ad_impression_daily', 'select') then
-    raise exception 'SH-099 self-check: browsers can read the impression counter';
+  if position('ad_frequency_capped' in pg_get_functiondef('public.ad_impression(uuid, text)'::regprocedure)) > 0 then
+    raise exception 'SH-099 self-check: ad_impression still caps';
   end if;
   if has_function_privilege('anon', 'public.chat_buyer_card(uuid)', 'execute') then
     raise exception 'SH-107 self-check: a visitor can read a buyer card';

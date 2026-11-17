@@ -1,7 +1,8 @@
 - 2026-11-17 (branch `seller-home/low-fixes`; migration `20261117140000`; built and tested locally, **not released**)
   **Seller Home audit, Low items batch 2 (7): SH-083, 084, 085, 099, 107, 108, 109**, and the `audit-second` flake.
   - Decision: SH-107 "Small buyer card". Record `documentation/seller-home-low-fixes-plan-2026-11-17.md`.
-  - Database: lead alert history leaves out blocked buyers; `ad_impression` keeps its own daily counter per viewer;
+  - Database: lead alert history leaves out blocked buyers; `ad_impression` records every impression, no daily cap
+    (Mitra, 2026-11-18);
     `chat_buyer_card()`; `vendor_review_stats()`; replies at most 2,000 characters.
   - App: Repeat Buyers counts a request and its chat once; Quotes prints paise; the ads page drops "No subscriptions",
     "Automatically finds and updates audiences" and the dead "Date Range", shows the X on drafts only and doesn't claim

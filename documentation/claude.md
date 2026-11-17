@@ -1340,9 +1340,10 @@ undocumented. Deep technical rationale for each lives in
   body is in `external-strings.json` → `notifications`, with `{0}` where SQL joins text. Text a buyer wrote inside a
   title ("New requirement: …", "Follow-up due: …") renders in `data-no-translate` (`NoticeTitle`). A new `notify()`
   text adds its entry in the same change.
-- **Ad impressions are counted by `ad_impression()` alone, against its own daily counter** (2026-11-17, SH-099;
-  `20261117140000`): `ad_impression_daily`, 8 a day per viewer (account, else session, else one shared "unkeyed"), 5 s
-  apart, never the owner's own. The browser's `ad_impression` engagement event is analytics only and caps nothing.
+- **Every ad impression is recorded, with no daily cap** (Mitra, 2026-11-18: "there should be no daily cap and all the
+  impressions should be recorded"; SH-099, `20261117140000`). `ad_impression()` adds one to a running campaign on every
+  call, whoever calls; nothing caps or spaces it. Don't add a cap without asking. The browser's `ad_impression`
+  engagement event is analytics only.
 - **Review averages and breakdowns come from `vendor_review_stats()`** (2026-11-17, SH-108); review lists load
   `REVIEW_PAGE` (100) at a time. A reply is at most 2,000 characters (the reply functions and a CHECK).
 - **A seller sees a buyer through `chat_buyer_card()` only** (Mitra, 2026-11-17, "Small buyer card"; SH-107): name,
